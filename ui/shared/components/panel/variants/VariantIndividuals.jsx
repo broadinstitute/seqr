@@ -6,7 +6,7 @@ import { Popup, Icon, Header } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
-import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
+import { VerticalSpacer } from '../../Spacers'
 import HpoPanel from '../HpoPanel'
 
 const IndividualsContainer = styled.div`
@@ -106,34 +106,53 @@ const svGenotype = (genotype, isHemiX) => {
   const hasGenotype = Number.isInteger(genotype.numAlt) && genotype.numAlt >= 0
   const isAltCn = Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2)
   if (!hasGenotype) {
-    return <span>CN: {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}</span>
+    return (
+      <span>
+        CN:
+        {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}
+      </span>
+    )
   }
   return (
     <span>
+      {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
       {isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}/{genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
-      {isAltCn && <span><br />CN: <b><i>{genotype.cn}</i></b></span>}
+      {isAltCn && (
+        <span>
+          <br />
+          CN:
+          <b><i>{genotype.cn}</i></b>
+        </span>
+      )}
     </span>
   )
 }
 
 export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
-    {warning &&
+    {warning && (
       <Popup
         flowing
         trigger={<Icon name="warning sign" color="yellow" />}
-        content={<div><b>Warning:</b> {warning}</div>}
+        content={
+          <div>
+            <b>Warning: </b>
+            {warning}
+          </div>
+        }
       />
-    }
-    {variant.svType ?
+    )}
+    {variant.svType ? (
       <Header.Content>
         {svGenotype(genotype, isHemiX)}
-      </Header.Content> :
+      </Header.Content>
+    ) : (
       <Header.Content>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
-        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
+        /
+        {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
       </Header.Content>
-    }
+    )}
   </AlleleContainer>
 ))
 
@@ -166,10 +185,12 @@ const GENOTYPE_DETAILS = [
 const genotypeDetails = (genotype, variant) => GENOTYPE_DETAILS.map(
   ({ shouldHide, title, field, variantField, format }) => {
     const value = field ? genotype[field] : variant[variantField]
-    return value && !(shouldHide && shouldHide(value, variant)) ?
+    return value && !(shouldHide && shouldHide(value, variant)) ? (
       <div key={title}>
-        {title}:<HorizontalSpacer width={10} /><b>{format ? format(value) : value}</b>
-      </div> : null
+        {`${title}:  `}
+        <b>{format ? format(value) : value}</b>
+      </div>
+    ) : null
   },
 ).filter(val => val)
 
@@ -209,27 +230,34 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
 
   const content = (
     <span>
-      {genotype.otherSample && <Popup
-        flowing
-        header="Additional Sample Type"
-        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-        content={
-          <div>
-            {hasConflictingNumAlt &&
-              <div>
-                <VerticalSpacer height={5} />
-                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
-                <VerticalSpacer height={5} />
-              </div>
-            }
-            {genotypeDetails(genotype.otherSample, variant)}
-          </div>
-        }
-      />}
+      {genotype.otherSample && (
+        <Popup
+          flowing
+          header="Additional Sample Type"
+          trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
+          content={
+            <div>
+              {hasConflictingNumAlt && (
+                <div>
+                  <VerticalSpacer height={5} />
+                  <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                  <VerticalSpacer height={5} />
+                </div>
+              )}
+              {genotypeDetails(genotype.otherSample, variant)}
+            </div>
+          }
+        />
+      )}
       <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
       <VerticalSpacer height={2} />
-      {genotype.gq || genotype.qs || '-'}{!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
-      {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
+      {`${genotype.gq || genotype.qs || '-'}${!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}`}
+      {variant.genotypeFilters && (
+        <small>
+          <br />
+          {variant.genotypeFilters}
+        </small>
+      )}
     </span>
   )
 

@@ -292,7 +292,8 @@ class BasePedigreeImage extends React.PureComponent {
             confirmCloseIfNotSaved
           />
         </Modal>
-      </PedigreeJsContainer>)
+      </PedigreeJsContainer>
+    )
   }
 
 }
@@ -320,11 +321,13 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
     return null
   }
 
-  const image = hasPedImage && <SafePedigreeImage
-    family={family}
-    disablePedigreeZoom={disablePedigreeZoom}
-    maxHeight={compact ? '35' : '150'}
-  />
+  const image = hasPedImage && (
+    <SafePedigreeImage
+      family={family}
+      disablePedigreeZoom={disablePedigreeZoom}
+      maxHeight={compact ? '35' : '150'}
+    />
+  )
   if (disablePedigreeZoom) {
     return image
   }
@@ -335,25 +338,33 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       modalName={modalId}
       title={`Family ${family.displayName}`}
       trigger={
-        image ? <span>{compact && `(${family.individualGuids.length}) `} {image}</span> :
-        <ButtonLink content="Edit Pedigree Image" icon="edit" />
+        image ? (
+          <span>
+            {compact && `(${family.individualGuids.length}) `}
+            {image}
+          </span>
+        ) : <ButtonLink content="Edit Pedigree Image" icon="edit" />
       }
     >
       <Segment basic textAlign="center">
-        <SafePedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} modalId={modalId} maxHeight="250" /><br />
+        <SafePedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} modalId={modalId} maxHeight="250" />
+        <br />
       </Segment>
       <NoBorderTable basic="very" compact="very" collapsing>
         <Table.Body>
           <Table.Row>
-            {family.pedigreeImage &&
+            {family.pedigreeImage && (
               <Table.Cell>
-                <a key="zoom" href={family.pedigreeImage} target="_blank">Original Size <Icon name="zoom" /></a>
+                <a key="zoom" href={family.pedigreeImage} target="_blank" rel="noreferrer">
+                  Original Size
+                  <Icon name="zoom" />
+                </a>
               </Table.Cell>
-            }
+            )}
             {isEditable && <Table.Cell><EditPedigreeImageButton key="upload" family={family} /></Table.Cell>}
-            {isEditable && family.pedigreeImage &&
+            {isEditable && family.pedigreeImage && (
               <Table.Cell><DeletePedigreeImageButton familyGuid={family.familyGuid} modalId={modalId} /></Table.Cell>
-            }
+            )}
           </Table.Row>
         </Table.Body>
       </NoBorderTable>

@@ -35,16 +35,17 @@ class ButtonPanel extends React.PureComponent {
     const { handleClose, cancelButtonText, handleSave, submitButtonText, saveStatus, saveErrorMessage } = this.props
     return (
       <ContainerDiv>
-        {handleClose &&
+        {handleClose && (
           <StyledButton tabIndex={0} onClick={handleClose} type="button">
             {cancelButtonText || 'Cancel'}
           </StyledButton>
-        }
+        )}
         <StyledButton tabIndex={0} onClick={handleSave} type="submit" color="blue">
           {submitButtonText || 'Submit'}
         </StyledButton>
         <StyledRequestStatus status={saveStatus} errorMessage={saveErrorMessage} />
-      </ContainerDiv>)
+      </ContainerDiv>
+    )
   }
 
 }

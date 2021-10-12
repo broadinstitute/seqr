@@ -76,16 +76,14 @@ AfFilter.propTypes = {
 
 export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }) => (
   <span>
-    {!inlineAF &&
+    {!inlineAF && (
       <div>
         <AfFilter value={value} onChange={onChange} />
         <VerticalSpacer height={15} />
       </div>
-    }
+    )}
     <Form.Group inline>
-      {inlineAF &&
-        <AfFilter value={value} onChange={onChange} inline />
-      }
+      {inlineAF && <AfFilter value={value} onChange={onChange} inline />}
       <FrequencyIntegerInput
         label="AC"
         field="ac"
@@ -95,8 +93,7 @@ export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }
         onChange={onChange}
       />
       {homHemi &&
-        <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />
-      }
+        <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />}
       {children}
     </Form.Group>
   </span>

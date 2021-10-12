@@ -17,7 +17,7 @@ const MATCHMAKER_PROJECT_FIELDS = [
 const EDITABLE_FIELD_KEYS = ['projectGuid', ...MATCHMAKER_PROJECT_FIELDS.map(({ name }) => name)]
 
 const EditProjectButton = React.memo(props => (
-  props.project && props.project.canEdit ?
+  props.project && props.project.canEdit ? (
     <UpdateButton
       buttonText="Edit Project"
       modalTitle="Edit Project"
@@ -27,7 +27,8 @@ const EditProjectButton = React.memo(props => (
       initialValues={props.project}
       trigger={props.trigger}
       submitButtonText="Save"
-    /> : null
+    />
+  ) : null
 ))
 
 EditProjectButton.propTypes = {

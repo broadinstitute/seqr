@@ -91,12 +91,13 @@ class DispatchRequestButton extends React.PureComponent {
         children ?
           React.cloneElement(children, { onClick: this.handleButtonClick, key: 'button' }) :
           <ButtonLink key="button" onClick={this.handleButtonClick} content={buttonContent} {...props} />,
-        (!hideNoRequestStatus || requestStatus !== NONE) ?
+        (!hideNoRequestStatus || requestStatus !== NONE) ? (
           <RequestStatus
             key="status"
             status={requestStatus}
             errorMessage={requestErrorMessage}
-          /> : null,
+          />
+        ) : null,
         <Confirm
           key="confirm"
           content={confirmDialog}

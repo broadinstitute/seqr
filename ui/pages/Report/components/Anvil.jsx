@@ -33,13 +33,13 @@ class Anvil extends React.PureComponent {
         <HorizontalSpacer width={20} />
         <InlineHeader size="medium" content="Loaded Before:" />
         <Input type="date" onChange={this.onDataChange} />
-        {project &&
+        {project && (
           <div>
             <a href={`/api/report/anvil/${project.guid}?loadedBefore=${loadedBefore || ''}`}>
-              Download AnVIL metadata for {project.title}
+              {`Download AnVIL metadata for ${project.title}`}
             </a>
           </div>
-        }
+        )}
       </div>
     )
   }

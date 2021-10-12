@@ -18,7 +18,8 @@ const LocusLists = ({ match }) => (
         <Route path={`${match.url}`} component={() => <LocusListTables tableButtons={LOCUS_LIST_TABLE_BUTTONS} />} />
       </Switch>
     </Container>
-  </LocusListsLoader>)
+  </LocusListsLoader>
+)
 
 LocusLists.propTypes = {
   match: PropTypes.object,

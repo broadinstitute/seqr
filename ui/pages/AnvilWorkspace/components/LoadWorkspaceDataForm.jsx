@@ -109,13 +109,14 @@ const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
   <div>
     <Header size="large" textAlign="center">
-      Load data to seqr from AnVIL Workspace &quot;{namespace}/{name}&quot;
+      {`Load data to seqr from AnVIL Workspace "${namespace}/${name}"`}
     </Header>
     <Segment basic textAlign="center">
       <Message info compact>
         In order to load your data to seqr, you must have a joint called VCF available in your workspace. For more
         information about generating and validating this file,
-        see <b><a href={VCF_DOCUMENTATION_URL} target="_blank">this documentation</a></b>.
+        see &nbsp;
+        <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
       </Message>
     </Segment>
     <ReduxFormWrapper
@@ -132,7 +133,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
       Need help? please submit &nbsp;
       <a href="https://github.com/broadinstitute/seqr/issues/new?labels=bug&template=bug_report.md">GitHub Issues</a>
       , &nbsp; or &nbsp;
-      <a href="mailto:seqr@broadinstitute.org" target="_blank">
+      <a href="mailto:seqr@broadinstitute.org" target="_blank" rel="noreferrer">
         Email Us
       </a>
     </p>

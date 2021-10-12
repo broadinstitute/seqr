@@ -138,7 +138,8 @@ const freqFieldLayout = fieldComponents => (
       }
       {fieldComponents.slice(MAX_FREQ_COMPONENTS_PER_ROW)}
     </Form.Group>
-  </Form.Field>)
+  </Form.Field>
+)
 
 export const ANNOTATION_PANEL = {
   name: 'annotations',
@@ -184,11 +185,11 @@ const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
-      {inputProps &&
+      {inputProps && (
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={e => e.stopPropagation()}>
           {configuredField({ ...inputProps, name })}
         </ToggleHeaderFieldColumn>
-      }
+      )}
     </Grid.Row>
   </Grid>
 ))
@@ -206,7 +207,12 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
   )
   return (
     <FormSection name={name}>
-      {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
+      {helpText && (
+        <i>
+          {helpText}
+          <VerticalSpacer height={20} />
+        </i>
+      )}
       <Form.Group widths="equal">
         <Form.Field width={2} />
         {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
@@ -254,9 +260,15 @@ class VariantSearchFormPanels extends React.PureComponent {
     return (
       <div>
         <ExpandCollapseCategoryContainer>
-          <ButtonLink onClick={this.expandAll}>Expand All &nbsp;<Icon name="plus" /></ButtonLink>
+          <ButtonLink onClick={this.expandAll}>
+            Expand All &nbsp;
+            <Icon name="plus" />
+          </ButtonLink>
           <b>| &nbsp;&nbsp;</b>
-          <ButtonLink onClick={this.collapseAll}>Collapse All &nbsp;<Icon name="minus" /></ButtonLink>
+          <ButtonLink onClick={this.collapseAll}>
+            Collapse All &nbsp;
+            <Icon name="minus" />
+          </ButtonLink>
         </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
         <FormSection name="search">

@@ -18,33 +18,39 @@ const BulkUploadForm = React.memo(({
       <Table.Body>
         <Table.Row>
           <Table.Cell colSpan={2}>
-            To {actionDescription}, upload a table in one of these formats:
+            {`To ${actionDescription}, upload a table in one of these formats:`}
           </Table.Cell>
         </Table.Row>
         <Table.Row><Table.Cell /></Table.Row>
         {uploadFormats.map(({ title, ext, formatLinks }) => (
           <Table.Row key={title}>
             <Table.HeaderCell collapsing>
-              {title} ({formatLinks ? formatLinks.map(
-                ({ href, linkExt }, i) => <span key={linkExt}>{i > 0 && ' / '}<a href={href} target="_blank">.{linkExt}</a></span>,
-              ) : `.${ext}`})
+              {title}
+              {`(${formatLinks ? formatLinks.map(({ href, linkExt }, i) => (
+                <span key={linkExt}>
+                  {i > 0 && ' / '}
+                  <a href={href} target="_blank" rel="noreferrer">{`.${linkExt}`}</a>
+                </span>
+              )) : `.${ext}`})`}
             </Table.HeaderCell>
             <Table.Cell>
-              {ext &&
+              {ext && (
                 <span>
-                  download &nbsp;
-                  {blankExportConfig &&
-                  <span>
-                    template: <FileLink {...blankExportConfig} ext={ext} linkContent="blank" /> &nbsp;
-                  </span>
-                  }
-                  {exportConfig &&
-                  <span>
-                    {blankExportConfig && 'or'} <FileLink {...exportConfig} ext={ext} linkContent="current individuals" />
-                  </span>
-                  }
+                  download
+                  {blankExportConfig && (
+                    <span>
+                      &nbsp; template:
+                      <FileLink {...blankExportConfig} ext={ext} linkContent="blank" />
+                    </span>
+                  )}
+                  {exportConfig && (
+                    <span>
+                      {blankExportConfig && ' or'}
+                      <FileLink {...exportConfig} ext={ext} linkContent="current individuals" />
+                    </span>
+                  )}
                 </span>
-              }
+              )}
             </Table.Cell>
           </Table.Row>
         ))}
@@ -77,12 +83,7 @@ const BulkUploadForm = React.memo(({
             <Table.Cell>{field.description}</Table.Cell>
           </Table.Row>
         ))}
-        {details &&
-        <Table.Row>
-          <Table.Cell colSpan={2}>
-            {details}
-          </Table.Cell>
-        </Table.Row>}
+        {details && <Table.Row><Table.Cell colSpan={2}>{details}</Table.Cell></Table.Row>}
       </Table.Body>
     </NoBorderTable>
     <FileUploadField

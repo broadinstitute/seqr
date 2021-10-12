@@ -15,11 +15,13 @@ const ProjectFilterContent = React.memo((
   if (Object.values(projectSamples || {}).some(sample => sample.isActive)) {
     filterInput = filterInputComponent ? React.createElement(filterInputComponent, { ...props, value }) : null
   } else {
-    filterInput = <Message
-      color="red"
-      header="Search is not enabled for this project"
-      content="Please contact the seqr team to add this functionality"
-    />
+    filterInput = (
+      <Message
+        color="red"
+        header="Search is not enabled for this project"
+        content="Please contact the seqr team to add this functionality"
+      />
+    )
   }
   return (
     <div>
@@ -28,7 +30,8 @@ const ProjectFilterContent = React.memo((
           trigger={<ButtonLink onClick={removeField}><Icon name="remove" color="grey" /></ButtonLink>}
           content="Remove this project from search"
         />
-        Project: <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
+        Project:
+        <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
       </Header>
       {filterInput}
       <VerticalSpacer height={10} />

@@ -36,21 +36,29 @@ const LocusListItem = React.memo(({ project, locusList, updateLocusLists: onSubm
       <Popup
         position="right center"
         trigger={<HelpIcon />}
-        content={<div><b>{locusList.numEntries} Genes</b><br /><i>{locusList.description}</i></div>}
+        content={
+          <div>
+            <b>{`${locusList.numEntries} Genes`}</b>
+            <br />
+            <i>{locusList.description}</i>
+          </div>
+        }
         size="small"
       />
-      {project.canEdit &&
+      {project.canEdit && (
         <DeleteButton
           initialValues={submitValues}
           onSubmit={onSubmit}
           size="tiny"
           confirmDialog={
             <div className="content">
-              Are you sure you want to remove <b>{locusList.name}</b> from this project
+              Are you sure you want to remove
+              <b>{locusList.name}</b>
+              from this project
             </div>
           }
         />
-      }
+      )}
     </ItemContainer>
   )
 })
@@ -125,11 +133,17 @@ class AddGeneLists extends React.PureComponent {
       <Modal
         title="Add Gene Lists"
         modalName={this.modalName}
-        trigger={<ButtonLink>Add Gene List <Icon name="plus" /></ButtonLink>}
+        trigger={
+          <ButtonLink>
+            Add Gene List
+            <Icon name="plus" />
+          </ButtonLink>
+        }
         size="large"
       >
         <LocusListsLoader>
-          Add an existing Gene List to {project.name} or <CreateLocusListButton />
+          {`Add an existing Gene List to ${project.name} or `}
+          <CreateLocusListButton />
           <LocusListTables
             basicFields
             omitLocusLists={project.locusListGuids}

@@ -114,8 +114,8 @@ const CaseReviewStatus = React.memo(({ individual }) => (
     {
       individual.caseReviewStatusLastModifiedDate ? (
         <Detail>
-          CHANGED ON {new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
-          { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
+          {`CHANGED ON ${new Date(individual.caseReviewStatusLastModifiedDate).toLocaleDateString()}
+          ${individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}`}`}
         </Detail>
       ) : null
     }
@@ -130,7 +130,7 @@ const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSub
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
     <Label color={color} size="small">
-      {title}: {new Date(mmeSubmission[dateField]).toLocaleDateString()}
+      {`${title}: ${new Date(mmeSubmission[dateField]).toLocaleDateString()}`}
     </Label>
   </Link>
 ))
@@ -157,13 +157,13 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
           }
           content={
             <div>
-              <b>Originally Submitted: </b>{new Date(mmeSubmission.createdDate).toLocaleDateString()}
+              <b>Originally Submitted: </b>
+              {new Date(mmeSubmission.createdDate).toLocaleDateString()}
             </div>
           }
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
-    )
-  }
+    )}
   </div>
 ))
 
@@ -173,7 +173,7 @@ DataDetails.propTypes = {
   loadedSamples: PropTypes.arrayOf(PropTypes.object),
 }
 
-const formatGene = gene => <span>{gene.gene} {gene.comments ? ` (${gene.comments.trim()})` : ''}</span>
+const formatGene = gene => `${gene.gene} ${gene.comments ? ` (${gene.comments.trim()})` : ''}`
 
 const AgeDetails = ({ birthYear, deathYear }) => {
   if (!!deathYear || deathYear === 0) {
@@ -183,12 +183,7 @@ const AgeDetails = ({ birthYear, deathYear }) => {
     } else {
       deathSummary = '(date unknown)'
     }
-    return (
-      <div>
-        Deceased {deathSummary}
-        {birthYear > 0 && <span> - Born in {birthYear}</span>}
-      </div>
-    )
+    return <div>{`Deceased ${deathSummary}${birthYear > 0 ? ` - Born in ${birthYear}` : ''}`}</div>
   }
   return birthYear > 0 ? new Date().getFullYear() - birthYear : 'Unknown'
 }
@@ -225,7 +220,8 @@ const GeneEntry = ({ name, icon }) => (
       />
     </Form.Field>
     <Field name={`${name}.comments`} placeholder="Comments" component={Form.Input} width={9} />
-  </Form.Group>)
+  </Form.Group>
+)
 
 GeneEntry.propTypes = {
   icon: PropTypes.node,
@@ -293,7 +289,8 @@ const HpoQualifiers = ({ input }) => (
         ),
       },
     }))}
-  />)
+  />
+)
 
 HpoQualifiers.propTypes = {
   input: PropTypes.object,
@@ -352,14 +349,15 @@ const getTermPanes = (term, addItem) => ([{
 
 const BaseHpoCategory = ({ category, hpoTerms, addItem, ...props }) => (
   <DataLoader contentId={category} content={hpoTerms} reloadOnIdUpdate {...props}>
-    {Object.values(hpoTerms || {}).length > 0 &&
+    {Object.values(hpoTerms || {}).length > 0 && (
       <Tab.Pane attached={false}>
         {Object.values(hpoTerms).map(term => (
           <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />
         ))}
       </Tab.Pane>
-    }
-  </DataLoader>)
+    )}
+  </DataLoader>
+)
 
 BaseHpoCategory.propTypes = {
   category: PropTypes.string,
@@ -401,7 +399,8 @@ const HpoTermSelector = ({ addItem }) => (
     />
     <VerticalSpacer height={10} />
     <ScrollingTab panes={getCategoryPanes(addItem)} defaultActiveIndex={null} />
-  </div>)
+  </div>
+)
 
 HpoTermSelector.propTypes = {
   addItem: PropTypes.func,
@@ -450,7 +449,8 @@ class HpoTermsEditor extends React.PureComponent {
     const { showDetails, showAddItem } = this.state
     return (
       <div>
-        {header && <div><Header dividing {...header} /><VerticalSpacer height={5} /></div>}
+        {header && <Header dividing {...header} />}
+        {header && <VerticalSpacer height={5} />}
         {value.map(({ index, ...item }) => (
           <HpoTermDetails
             key={item.id}
@@ -644,7 +644,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       placeholder: 'Search for OMIM disorder',
       categories: OMIM_CATEGORIES,
     },
-    itemDisplay: mim => <a target="_blank" href={`https://www.omim.org/entry/${mim}`}>{mim}</a>,
+    itemDisplay: mim => <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${mim}`}>{mim}</a>,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
     }),
@@ -711,17 +711,19 @@ const IndividualRow = React.memo((
   // only show active or first/ last inactive samples
   loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
-  const leftContent =
+  const leftContent = (
     <div>
       <div>
-        <PedigreeIcon sex={sex} affected={affected} /> {displayName}
+        <PedigreeIcon sex={sex} affected={affected} />
+        {displayName}
       </div>
       <div>
         <Detail>
-          ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
+          {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
         </Detail>
       </div>
     </div>
+  )
 
   const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
   const rightContent = editCaseReview ?

@@ -92,7 +92,8 @@ const INHERITANCE_PANEL = {
     <span>
       Filter by the mode of inheritance. Choose from the built-in search methods (described
       <Modal trigger={<DetailLink>here</DetailLink>} title="Inheritance Searching" modalName="inheritanceModes">
-        <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
+        <i>seqr</i>
+        implements the following set of standard Mendelian inheritance methods to identify variants that
         segregate with a phenotype in a family
         {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(
           ({ value, text, detail }) => <Header key={value} content={text} subheader={detail} />,
@@ -107,7 +108,8 @@ const INHERITANCE_PANEL = {
           <List.Item>All methods assume complete penetrance</List.Item>
           <List.Item>seqr assumes unphased genotypes</List.Item>
         </List>
-      </Modal>) or specify custom alternate allele counts. You can also specify the affected status for an individual
+      </Modal>
+      ) or specify custom alternate allele counts. You can also specify the affected status for an individual
       that differs from the status in the pedigree.
     </span>
   ),
@@ -167,7 +169,8 @@ const SVFrequecyHeaderFilter = ({ value, onChange }) => (
       label="Callset"
       width={16}
     />
-  </Form.Group>)
+  </Form.Group>
+)
 
 SVFrequecyHeaderFilter.propTypes = {
   value: PropTypes.object,

@@ -139,12 +139,14 @@ export class Multiselect extends React.PureComponent {
 
   render() {
     const { allowAdditions, ...props } = this.props
-    return <AddableSelect
-      {...props}
-      renderLabel={this.renderLabel}
-      allowAdditions={allowAdditions || false}
-      multiple
-    />
+    return (
+      <AddableSelect
+        {...props}
+        renderLabel={this.renderLabel}
+        allowAdditions={allowAdditions || false}
+        multiple
+      />
+    )
   }
 
 }
@@ -207,13 +209,15 @@ export class AddableSelect extends React.PureComponent {
   render() {
     const { addValueOptions, ...props } = this.props
     const { options } = this.state
-    return <Select
-      {...props}
-      options={options}
-      allowAdditions={props.allowAdditions !== false}
-      onAddItem={this.handleAddition}
-      search
-    />
+    return (
+      <Select
+        {...props}
+        options={options}
+        allowAdditions={props.allowAdditions !== false}
+        onAddItem={this.handleAddition}
+        search
+      />
+    )
   }
 
 }
@@ -243,12 +247,14 @@ export class SearchInput extends React.PureComponent {
   render() {
     const { options, onChange, ...props } = this.props
     const { results } = this.state
-    return <Search
-      {...props}
-      results={results || options}
-      onResultSelect={this.handleResultSelect}
-      onSearchChange={this.handleSearchChange}
-    />
+    return (
+      <Search
+        {...props}
+        results={results || options}
+        onResultSelect={this.handleResultSelect}
+        onSearchChange={this.handleSearchChange}
+      />
+    )
   }
 
 }
@@ -428,12 +434,14 @@ ButtonRadioGroup.propTypes = {
 
 export const BooleanCheckbox = React.memo((props) => {
   const { value, onChange, ...baseProps } = props
-  return <BaseSemanticInput
-    {...baseProps}
-    inputType="Checkbox"
-    checked={Boolean(value)}
-    onChange={data => onChange(data.checked)}
-  />
+  return (
+    <BaseSemanticInput
+      {...baseProps}
+      inputType="Checkbox"
+      checked={Boolean(value)}
+      onChange={data => onChange(data.checked)}
+    />
+  )
 })
 
 BooleanCheckbox.propTypes = {

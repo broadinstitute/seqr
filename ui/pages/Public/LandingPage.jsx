@@ -49,7 +49,10 @@ const LandingPage = ({ googleLoginEnabled }) => (
       </Grid>
     </Segment>
     <PageSegment textAlign="center" size="big" secondary>
-      <Header size="medium">About <i>seqr</i></Header>
+      <Header size="medium">
+        About &nbsp;
+        <i>seqr</i>
+      </Header>
       <VerticalSpacer height={10} />
       Next Generation Sequencing (NGS) is a powerful diagnostic and research tool for Mendelian disease, but without
       proper tools, this data can be inaccessible to researchers. We have developed seqr as an open source web interface
@@ -57,22 +60,26 @@ const LandingPage = ({ googleLoginEnabled }) => (
       Broad Institute.
     </PageSegment>
     <PageSegment size="large">
-      <Header textAlign="center" size="large"><i>seqr</i> is available through three methods:</Header>
+      <Header textAlign="center" size="large">
+        <i>seqr</i>
+        &nbsp; is available through three methods:
+      </Header>
       <VerticalSpacer height={10} />
       <List ordered>
         <List.Item>
           Available for all collaborators within the &nbsp;
-          <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor> or
-          Mendelian Genomics Research Center with data pre-loaded into projects
+          <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor>
+          &nbsp; or Mendelian Genomics Research Center with data pre-loaded into projects
         </List.Item>
         <List.Item>
-          Available for use on the <Anchor href="https://anvilproject.org">AnVIL platform</Anchor> where requests
-          can be placed for loading a joint called vcf into seqr
+          Available for use on the &nbsp;
+          <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
+          &nbsp; where requests can be placed for loading a joint called vcf into seqr
         </List.Item>
         <List.Item>
           Available on GitHub as an &nbsp;
-          <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor> for download and local
-          installation
+          <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor>
+          &nbsp;for download and local installation
         </List.Item>
       </List>
     </PageSegment>
@@ -83,8 +90,9 @@ const LandingPage = ({ googleLoginEnabled }) => (
           <Anchor href="mailto:seqr@broadinstitute.org">contact us</Anchor>
         </List.Item>
         <List.Item>
-          Please use the <Anchor href="http://github.com/broadinstitute/seqr/issues">github issues page</Anchor> to
-          submit bug reports or feature requests
+          Please use the &nbsp;
+          <Anchor href="http://github.com/broadinstitute/seqr/issues">github issues page</Anchor>
+          &nbsp; to submit bug reports or feature requests
         </List.Item>
         <List.Item>
           Training videos for use of seqr are available on the &nbsp;
@@ -94,7 +102,8 @@ const LandingPage = ({ googleLoginEnabled }) => (
         </List.Item>
       </List>
     </PageSegment>
-  </Segment.Group>)
+  </Segment.Group>
+)
 
 LandingPage.propTypes = {
   googleLoginEnabled: PropTypes.bool,

@@ -21,7 +21,8 @@ const Login = ({ onSubmit }) => (
       submitButtonText="Log In"
     />
     <Link to="/login/forgot_password">Forgot Password?</Link>
-  </UserFormContainer>)
+  </UserFormContainer>
+)
 
 Login.propTypes = {
   onSubmit: PropTypes.func,

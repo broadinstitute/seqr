@@ -17,8 +17,10 @@ const POLICY_FORM_FIELDS = [
     label: (
       // eslint-disable-next-line jsx-a11y/label-has-for
       <label>
-        I accept the <Link target="_blank" to="/terms_of_service">Terms of Service</Link> and
-        the <Link target="_blank" to="/privacy_policy">Privacy Policy</Link>
+        I accept the &nbsp;
+        <Link target="_blank" to="/terms_of_service">Terms of Service</Link>
+        &nbsp; and the &nbsp;
+        <Link target="_blank" to="/privacy_policy">Privacy Policy</Link>
       </label>
     ),
   },

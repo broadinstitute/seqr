@@ -83,16 +83,17 @@ class BaseFieldView extends React.PureComponent {
 
     if (formFields) {
       const fieldModalId = `edit-${this.getFieldId() || 'new'}-${field}-${modalId}`
-      return showInLine ?
+      return showInLine ? (
         <span key="edit">
-          {showInLineButton ?
+          {showInLineButton ? (
             <ButtonLink
               size="tiny"
               labelPosition={editLabel && 'right'}
               icon={editIconName || 'write'}
               content={editLabel}
               onClick={this.toggleButtonVisibility}
-            /> :
+            />
+          ) : (
             <Segment compact>
               <ReduxFormWrapper
                 noModal
@@ -106,8 +107,9 @@ class BaseFieldView extends React.PureComponent {
                 showErrorPanel={showErrorPanel}
               />
             </Segment>
-          }
-        </span> :
+          )}
+        </span>
+      ) : (
         <UpdateButton
           showInLine={showInLine}
           key="edit"
@@ -124,6 +126,7 @@ class BaseFieldView extends React.PureComponent {
           confirmDialog={addConfirm}
           size="tiny"
         />
+      )
     }
     return (
       <DispatchRequestButton
@@ -170,26 +173,29 @@ class BaseFieldView extends React.PureComponent {
 
     return (
       <span style={style || {}}>
-        {isPrivate && <Popup
-          trigger={<Icon name="lock" size="small" />}
-          position="top center"
-          size="small"
-          content="Only visible to internal users."
-        />}
+        {isPrivate && (
+          <Popup
+            trigger={<Icon name="lock" size="small" />}
+            position="top center"
+            size="small"
+            content="Only visible to internal users."
+          />
+        )}
         {fieldName && [
-          <b key="name">{fieldName}{hasValue ? ':' : null}<HorizontalSpacer width={10} /></b>,
+          <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
+          <HorizontalSpacer key="spacer" width={10} />,
           ...buttons,
           compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
           !compact && <br key="br" />,
         ]}
-        {
-          hasValue && !hideValue && showInLineButton &&
+        {hasValue && !hideValue && showInLineButton && (
           <FieldValue compact={compact} fieldName={fieldName} hasButtons={hasButtons}>
             {fieldDisplay(fieldValue, compact, this.getFieldId())}
           </FieldValue>
-        }
+        )}
         {!fieldName && buttons}
-      </span>)
+      </span>
+    )
   }
 
 }

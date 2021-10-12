@@ -27,7 +27,16 @@ const PageHeader = React.memo(({ user, googleLoginEnabled, onSubmit }) => (
       user.isDataManager ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
       <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
       <Menu.Item key="spacer" position="right" />,
-      <Dropdown item key="user" trigger={<span>Logged in as <b>{user.displayName || user.email}</b></span>}>
+      <Dropdown
+        item
+        key="user"
+        trigger={
+          <span>
+            Logged in as &nbsp;
+            <b>{user.displayName || user.email}</b>
+          </span>
+        }
+      >
         <Dropdown.Menu>
           <UpdateButton
             trigger={<Dropdown.Item icon="write" text="Edit User Info" />}

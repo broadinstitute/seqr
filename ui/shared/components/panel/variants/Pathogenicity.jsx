@@ -34,10 +34,11 @@ const HGMD_CLASS_NAMES = {
 }
 const hgmdName = hgmdClass => HGMD_CLASS_NAMES[hgmdClass]
 
-const ClinvarStars = React.memo(({ goldStars }) => goldStars != null &&
+const ClinvarStars = React.memo(({ goldStars }) => goldStars != null && (
   <StarsContainer>
     {Array.from(Array(4).keys()).map(i => (i < goldStars ? <StarIcon key={i} goldstar="yes" /> : <StarIcon key={i} />))}
-  </StarsContainer>)
+  </StarsContainer>
+))
 
 ClinvarStars.propTypes = {
   goldStars: PropTypes.number,
@@ -57,7 +58,10 @@ PathogenicityLabel.propTypes = {
 }
 
 const PathogenicityLink = React.memo(({ href, ...labelProps }) => (
-  <a href={href} target="_blank"><PathogenicityLabel {...labelProps} /><HorizontalSpacer width={5} /></a>
+  <a href={href} target="_blank" rel="noreferrer">
+    <PathogenicityLabel {...labelProps} />
+    <HorizontalSpacer width={5} />
+  </a>
 ))
 
 PathogenicityLink.propTypes = {
@@ -78,9 +82,10 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
 
   return (
     <span>
-      {clinvar.clinicalSignificance &&
+      {clinvar.clinicalSignificance && (
         <span>
-          <b>ClinVar:<HorizontalSpacer width={5} /></b>
+          <b>ClinVar:</b>
+          <HorizontalSpacer width={5} />
           <PathogenicityLink
             key={clinvar.clinicalSignificance}
             significance={clinvar.clinicalSignificance}
@@ -89,18 +94,19 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
             goldStars={clinvar.goldStars}
           />
         </span>
-      }
-      {showHgmd &&
+      )}
+      {showHgmd && (
         <span>
           <HorizontalSpacer width={5} />
-          <b>HGMD:<HorizontalSpacer width={5} /></b>
+          <b>HGMD:</b>
+          <HorizontalSpacer width={5} />
           <PathogenicityLink
             significance={variant.hgmd.class}
             href={`https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`}
             formatName={hgmdName}
           />
         </span>
-      }
+      )}
     </span>
   )
 })

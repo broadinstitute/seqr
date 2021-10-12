@@ -159,7 +159,8 @@ export const successStoryTypeDisplay = tag => (
   <span>
     <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
     {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
-  </span>)
+  </span>
+)
 
 // FAMILY FIELDS
 

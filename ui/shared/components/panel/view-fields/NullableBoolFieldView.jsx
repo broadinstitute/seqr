@@ -36,14 +36,16 @@ const nullableBoolDisplay = (value) => {
 
 const NullableBoolFieldView = React.memo((props) => {
   const fields = getNullableBoolField(props)
-  return <BaseFieldView
-    fieldDisplay={nullableBoolDisplay}
-    formFields={fields}
-    style={BLOCK_DISPLAY_STYLE}
-    showEmptyValues
-    compact
-    {...props}
-  />
+  return (
+    <BaseFieldView
+      fieldDisplay={nullableBoolDisplay}
+      formFields={fields}
+      style={BLOCK_DISPLAY_STYLE}
+      showEmptyValues
+      compact
+      {...props}
+    />
+  )
 })
 
 NullableBoolFieldView.propTypes = {

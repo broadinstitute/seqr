@@ -42,8 +42,12 @@ export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, fil
     const endQuery = noQuery || url.endsWith('?')
     return (
       <a href={`${url}${noQuery ? '?' : ''}${!endQuery ? '&' : ''}file_format=${ext}`}>
-        {linkContent ||
-        <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>}
+        {linkContent || (
+          <span>
+            <img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} />
+            {` .${ext}`}
+          </span>
+        )}
       </a>
     )
   }
@@ -88,7 +92,7 @@ const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps })
             downloads.map(({ name, ...downloadProps }) => ([
               <Table.Row key={1}>
                 <NameCell colSpan="2">
-                  <b>{name}:</b>
+                  <b>{`${name}:`}</b>
                 </NameCell>
               </Table.Row>,
               <Table.Row key={2}>
@@ -96,7 +100,8 @@ const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps })
                   <FileLink {...downloadProps} ext="xls" />
                 </LinkCell>
                 <LinkCell>
-                  <FileLink {...downloadProps} ext="tsv" /><br />
+                  <FileLink {...downloadProps} ext="tsv" />
+                  <br />
                 </LinkCell>
               </Table.Row>,
             ]))

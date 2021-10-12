@@ -15,22 +15,26 @@ const MarkdownContainer = styled.div`
 const TextFieldView = React.memo((props) => {
   const { textPopup, textAnnotation, fieldValidator, additionalEditFields = [], ...baseProps } = props
   const fields = [{ name: props.field, component: RichTextEditor, validate: fieldValidator }, ...additionalEditFields]
-  return <BaseFieldView
-    fieldDisplay={(initialText) => {
-      const markdown =
-        <MarkdownContainer inline={!!textAnnotation}>
-          <ReactMarkdown linkTarget="_blank">{initialText || ''}</ReactMarkdown>
-        </MarkdownContainer>
-      return (
-        <span>
-          {textPopup ? textPopup(markdown) : markdown}
-          {textAnnotation && <span><HorizontalSpacer width={10} />{textAnnotation}</span>}
-        </span>
-      )
-    }}
-    formFields={fields}
-    {...baseProps}
-  />
+  return (
+    <BaseFieldView
+      fieldDisplay={(initialText) => {
+        const markdown = (
+          <MarkdownContainer inline={!!textAnnotation}>
+            <ReactMarkdown linkTarget="_blank">{initialText || ''}</ReactMarkdown>
+          </MarkdownContainer>
+        )
+        return (
+          <span>
+            {textPopup ? textPopup(markdown) : markdown}
+            {textAnnotation && <HorizontalSpacer width={10} />}
+            {textAnnotation}
+          </span>
+        )
+      }}
+      formFields={fields}
+      {...baseProps}
+    />
+  )
 })
 
 TextFieldView.propTypes = {

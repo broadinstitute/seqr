@@ -81,10 +81,10 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
 
   const severity = CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]
   return (
-    <StyledVariantRow key={variant.variant} severity={severity} isSV={!!variant.svType} isCompoundHet >
+    <StyledVariantRow key={variant.variant} severity={severity} isSV={!!variant.svType} isCompoundHet>
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
-        {variant.discoveryTags && variant.discoveryTags.length > 0 &&
+        {variant.discoveryTags && variant.discoveryTags.length > 0 && (
           <InlinePopup
             on="click"
             position="right center"
@@ -96,7 +96,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
               displayAnnotationFirst
             />}
           />
-      }
+        )}
       </Grid.Column>
       {variant.familyGuids.map(familyGuid => (
         <Grid.Column key={familyGuid} width={16}>
@@ -121,11 +121,12 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
       <Grid.Column><Annotations variant={variant} /></Grid.Column>
       <Grid.Column><Predictions variant={variant} /></Grid.Column>
       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-      {!isCompoundHet &&
-      <Grid.Column width={16}>
-        <VariantIndividuals variant={variant} />
-        {showReads}
-      </Grid.Column>}
+      {!isCompoundHet && (
+        <Grid.Column width={16}>
+          <VariantIndividuals variant={variant} />
+          {showReads}
+        </Grid.Column>
+      )}
       <Grid.Column width={16}>
         {reads}
       </Grid.Column>
@@ -200,11 +201,11 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
       <StyledCompoundHetRows stackable columns="equal">
         {compHetRows(mainVariants || variants, mainGeneId, props)}
       </StyledCompoundHetRows>
-      {mainVariants &&
+      {mainVariants && (
         <Grid.Column width={16}>
           <NestedVariantTab panes={nestedVariantPanes(variants, mainGeneId, props)} />
         </Grid.Column>
-      }
+      )}
     </StyledVariantRow>
   )
 })

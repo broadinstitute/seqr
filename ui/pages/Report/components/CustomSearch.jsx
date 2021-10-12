@@ -83,7 +83,8 @@ const CustomSearch = React.memo((
             form={CUSTOM_SEARCH_FORM_NAME}
             initialValues={searchParams}
           >
-            <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
+            <InlineHeader content="Include All Projects: " />
+            {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
             {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
             <VariantSearchFormPanels panels={PANELS} />
             {configuredField(CUSTOM_QUERY_FIELD)}
@@ -92,8 +93,7 @@ const CustomSearch = React.memo((
       </Grid.Column>
     </Grid.Row>
     {match.params.searchHash &&
-      <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />
-    }
+      <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />}
   </Grid>
 ))
 

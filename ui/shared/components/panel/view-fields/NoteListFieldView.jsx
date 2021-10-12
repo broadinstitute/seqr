@@ -19,7 +19,7 @@ const CORE_PROPS = {
 const NOTE_ANNOTATION_STYLE = { color: 'gray' }
 const noteAnnotation = note => note.createdBy && (
   <i style={NOTE_ANNOTATION_STYLE}>
-    By {note.createdBy} ({new Date(note.lastModifiedDate).toLocaleDateString()})
+    {`By ${note.createdBy} (${new Date(note.lastModifiedDate).toLocaleDateString()})`}
   </i>
 )
 
@@ -27,7 +27,7 @@ const NoteListFieldView = React.memo((
   { notes, initialValues, idField, isEditable, modalTitle, fieldName, getTextPopup, user, ...props },
 ) => {
   const nonEmptyInitialValues = initialValues || {}
-  const addField =
+  const addField = (
     <TextFieldView
       {...props}
       {...CORE_PROPS}
@@ -39,6 +39,7 @@ const NoteListFieldView = React.memo((
       modalTitle={`Add ${modalTitle}`}
       initialValues={nonEmptyInitialValues}
     />
+  )
   return (
     <div>
       {fieldName && addField}

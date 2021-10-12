@@ -25,9 +25,6 @@
   //"reportUnusedDisableDirectives": true, // TODO re-enable
   "rules": {
     "arrow-parens": ["error", "as-needed", { "requireForBlockBody": true }],
-    "import/no-cycle": 0, // TODO re-enable
-    "import/no-useless-path-segments": 0, // TODO re-enable
-    "import/prefer-default-export": 0, // TODO enable
     "jsx-a11y/label-has-associated-control": "off",
     "max-len": ["error", 120, 2, {
       "ignoreUrls": true,
@@ -47,23 +44,29 @@
     "semi": ["error", "never"],
 
     "react/forbid-prop-types": ["error", { "forbid": ["any", "array"] }],
+    "react/jsx-filename-extension": ["error", { "extensions": [".js", ".jsx"]} ],
+    "react/jsx-props-no-spreading": ["error", {
+      "html": "enforce",
+      "custom": "ignore",
+    }],
+    "react/jsx-wrap-multilines": ["error", {
+      "declaration": "parens-new-line",
+      "assignment": "parens-new-line",
+      "return": "parens-new-line",
+      "arrow": "parens-new-line",
+      "condition": "parens-new-line",
+      "logical": "parens-new-line",
+      "prop": "ignore"
+    }],
     "react/no-deprecated": "off", // TODO re-enable with https://github.com/broadinstitute/seqr-private/issues/1057
     "react/require-default-props": "off",
     "react/require-optimization": "error",
-    "react/state-in-constructor": ["error", "never"], // TODO re-enable
+    "react/state-in-constructor": ["error", "never"],
     "react/static-property-placement": ["error", "static public field"],
 
-    "react/jsx-curly-newline": 0, // TODO re-enable
-    "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
-    "react/jsx-first-prop-new-line": 0,
-    "react/jsx-fragments": 0, // TODO re-enable
-    "react/jsx-max-props-per-line": 0,
-    "react/jsx-no-target-blank": 0,
-    "react/jsx-one-expression-per-line": 0, // TODO should be [2, { "allow": "single-child" }],
-    "react/jsx-props-no-multi-spaces": 0, // TODO re-enable
-    "react/jsx-props-no-spreading": 0,
-    "react/jsx-tag-spacing": 0, // TODO re-enable
-    "react/jsx-wrap-multilines": 0,
+    "import/no-cycle": 0, // TODO re-enable
+    "import/no-useless-path-segments": 0, // TODO re-enable
+    "import/prefer-default-export": 0, // TODO enable
 
     "react-perf/jsx-no-new-array-as-prop": 0, // TODO re-enable
     "react-perf/jsx-no-new-function-as-prop": 0, // TODO re-enable

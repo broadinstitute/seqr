@@ -214,16 +214,18 @@ const SV_FIELDS = [
 ].map(formatField)
 
 const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...props }) => (
-  user.isAnalyst ? <UpdateButton
-    key={`manual${variantType}`}
-    modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
-    modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}
-    modalSize="large"
-    buttonText={`Add Manual ${variantType}`}
-    editIconName="plus"
-    showErrorPanel
-    {...props}
-  /> : null
+  user.isAnalyst ? (
+    <UpdateButton
+      key={`manual${variantType}`}
+      modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
+      modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}
+      modalSize="large"
+      buttonText={`Add Manual ${variantType}`}
+      editIconName="plus"
+      showErrorPanel
+      {...props}
+    />
+  ) : null
 ))
 
 BaseCreateVariantButton.propTypes = {

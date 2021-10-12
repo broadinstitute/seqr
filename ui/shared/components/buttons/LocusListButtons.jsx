@@ -57,7 +57,12 @@ const DeleteLocusList = React.memo(({ locusList, onSubmit, size, iconOnly, histo
   <DeleteButton
     initialValues={locusList}
     onSubmit={onSubmit}
-    confirmDialog={<div className="content">Are you sure you want to delete <b>{locusList.name}</b></div>}
+    confirmDialog={
+      <div className="content">
+        Are you sure you want to delete
+        <b>{locusList.name}</b>
+      </div>
+    }
     buttonText={iconOnly ? null : 'Delete Gene List'}
     size={size}
     onSuccess={() => history.push('/gene_lists')}

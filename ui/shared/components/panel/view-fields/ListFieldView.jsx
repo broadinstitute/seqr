@@ -58,12 +58,14 @@ const ListFieldView = React.memo((
     value => <div key={itemKey ? itemKey(value) : value}>{itemDisplay ? itemDisplay(value) : value}</div>,
   ))
 
-  return <BaseFieldView
-    formFields={fields}
-    initialValues={defaultedInitialValues}
-    fieldDisplay={fieldDisplay}
-    {...props}
-  />
+  return (
+    <BaseFieldView
+      formFields={fields}
+      initialValues={defaultedInitialValues}
+      fieldDisplay={fieldDisplay}
+      {...props}
+    />
+  )
 })
 
 ListFieldView.propTypes = {

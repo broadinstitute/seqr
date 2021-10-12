@@ -29,21 +29,31 @@ const ICON_LOOKUP = {
 
 const PedigreeIcon = React.memo((props) => {
   const iconProps = ICON_LOOKUP[`${props.sex}${props.affected}`]
-  return <Popup
-    trigger={iconProps.iconGroup || <span><Icon name={iconProps.icon || 'warning sign'} />{props.label}</span>}
-    content={
-      <div>
-        <b>Sex:</b> {SEX_LOOKUP[props.sex] || 'INVALID'} <br />
-        <b>Status:</b> {AFFECTED_LOOKUP[props.affected] || 'INVALID'}
-        {props.popupContent}
-      </div>
-    }
-    header={props.popupHeader}
-    size="small"
-    wide="very"
-    position="top center"
-    hoverable
-  />
+  return (
+    <Popup
+      trigger={iconProps.iconGroup || (
+        <span>
+          <Icon name={iconProps.icon || 'warning sign'} />
+          {props.label}
+        </span>
+      )}
+      content={
+        <div>
+          <b>Sex:</b>
+          {SEX_LOOKUP[props.sex] || 'INVALID'}
+          <br />
+          <b>Status:</b>
+          {AFFECTED_LOOKUP[props.affected] || 'INVALID'}
+          {props.popupContent}
+        </div>
+      }
+      header={props.popupHeader}
+      size="small"
+      wide="very"
+      position="top center"
+      hoverable
+    />
+  )
 })
 
 PedigreeIcon.propTypes = {

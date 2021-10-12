@@ -18,7 +18,8 @@ const ForgotPassword = ({ onSubmit }) => (
     successMessage="An email to reset your password has been sent. If you do not receive the email, please contact us."
     form="reset-password"
     fields={FIELDS}
-  />)
+  />
+)
 
 ForgotPassword.propTypes = {
   onSubmit: PropTypes.func,

@@ -119,7 +119,11 @@ const COLUMNS = [
           const color = (sampleType === SAMPLE_TYPE_EXOME && '#73AB3D') || (sampleType === SAMPLE_TYPE_GENOME && '#4682b4') || 'black'
           return (
             <div key={sampleType}>
-              <span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
+              <span style={{ color }}>
+                {numSamples}
+                &nbsp;
+                <b>{sampleType}</b>
+              </span>
               {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}
             </div>
           )

@@ -7,4 +7,5 @@ export default () => (
   <div>
     <DocumentTitle title="seqr: home" />
     <ProjectsTable />
-  </div>)
+  </div>
+)

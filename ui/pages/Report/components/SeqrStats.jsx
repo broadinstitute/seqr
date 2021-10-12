@@ -22,7 +22,7 @@ const SeqrStats = React.memo(({ stats, error, loading, load }) => (
         </Table.Row>
         {Object.entries(stats.sampleCountByType || {}).map(([sampleType, count]) => (
           <Table.Row key={sampleType}>
-            <Table.Cell textAlign="right"><b>{sampleType} samples</b></Table.Cell>
+            <Table.Cell textAlign="right"><b>{`${sampleType} samples`}</b></Table.Cell>
             <Table.Cell>{count}</Table.Cell>
           </Table.Row>
         ))}

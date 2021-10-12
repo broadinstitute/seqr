@@ -43,7 +43,8 @@ const INDEX_COLUMNS = [
 const BaseDeleteIndexButton = ({ onSubmit, index }) => (
   <DispatchRequestButton confirmDialog={`Are you sure you want to delete "${index}"`} onSubmit={onSubmit}>
     <Button negative size="small" compact content="Delete Index" />
-  </DispatchRequestButton>)
+  </DispatchRequestButton>
+)
 
 BaseDeleteIndexButton.propTypes = {
   index: PropTypes.string,
@@ -58,7 +59,8 @@ const DeleteIndexButton = connect(null, mapDeleteIndexDispatchToProps)(BaseDelet
 
 const ElasticsearchStatus = React.memo(({ data, loading, load }) => (
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>
-    <InlineHeader size="small" content="Elasticsearch Host:" /> {data.elasticsearchHost}
+    <InlineHeader size="small" content="Elasticsearch Host: " />
+    {data.elasticsearchHost}
 
     <Header size="medium" content="Disk Status:" />
     <DataTable

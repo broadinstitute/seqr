@@ -22,23 +22,23 @@ class RequestStatus extends React.PureComponent {
       case IN_PROGRESS:
         return <ColoredIcon loading name="spinner" color="#4183c4" />
       case SUCCEEDED:
-        return <Popup
-          trigger={
-            <ColoredIcon name="check circle" color="#00C000" />
-          }
-          content="Success"
-          position="top center"
-          size="small"
-        />
+        return (
+          <Popup
+            trigger={<ColoredIcon name="check circle" color="#00C000" />}
+            content="Success"
+            position="top center"
+            size="small"
+          />
+        )
       case ERROR:
-        return <Popup
-          trigger={
-            <ColoredIcon name="warning circle" color="#F00000" />
-          }
-          content={`Error: ${errorMessage || ''}`}
-          position="top center"
-          size="small"
-        />
+        return (
+          <Popup
+            trigger={<ColoredIcon name="warning circle" color="#F00000" />}
+            content={`Error: ${errorMessage || ''}`}
+            position="top center"
+            size="small"
+          />
+        )
       default:
         return <ColoredIcon name="square outline" color="rgba(0, 0, 0, 0.0)" />
     }

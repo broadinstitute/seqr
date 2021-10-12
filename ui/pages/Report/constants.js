@@ -78,9 +78,9 @@ const formatFamilySummary = row => (
     <PedigreeImagePanel family={pedigreeImageFamily(row)} disablePedigreeZoom compact />
     <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row.family_id}</Link>
     {row.extras_variant_tag_list &&
-      <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
-    }
-  </div>)
+      <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>}
+  </div>
+)
 
 export const DISCOVERY_SHEET_COLUMNS = [
   { name: 't0', content: 'T0', format: formatT0, style: { minWidth: '100px' } },

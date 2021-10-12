@@ -44,26 +44,32 @@ const predictionFieldValue = (
 }
 
 const Prediction = ({ field, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
-  const indicator = infoValue ? <Popup
-    header={infoTitle}
-    content={infoValue}
-    trigger={<Icon name="question circle" size="small" color={color} />}
-  /> : <Icon name="circle" size="small" color={color} />
+  const indicator = infoValue ? (
+    <Popup
+      header={infoTitle}
+      content={infoValue}
+      trigger={<Icon name="question circle" size="small" color={color} />}
+    />
+  ) : <Icon name="circle" size="small" color={color} />
   const fieldName = snakecaseToTitlecase(field)
-  const fieldDisplay = dangerThreshold ? <Popup
-    header={`${fieldName} Color Ranges`}
-    content={
-      <div>
-        <div>Red &gt; {dangerThreshold}</div>
-        <div>Yellow &gt; {warningThreshold}</div>
-      </div>}
-    trigger={<span>{fieldName}</span>}
-  /> : fieldName
+  const fieldDisplay = dangerThreshold ? (
+    <Popup
+      header={`${fieldName} Color Ranges`}
+      content={
+        <div>
+          <div>{`Red > ${dangerThreshold}`}</div>
+          <div>{`Yellow > ${warningThreshold}`}</div>
+        </div>
+      }
+      trigger={<span>{fieldName}</span>}
+    />
+  ) : fieldName
 
   return (
     <div>
-      {indicator} {fieldDisplay}
-      <PredictionValue> {value}</PredictionValue>
+      {indicator}
+      {fieldDisplay}
+      <PredictionValue>{value}</PredictionValue>
     </div>
   )
 }
@@ -137,20 +143,19 @@ class Predictions extends React.PureComponent {
           predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
             <Prediction key={predictorField.field} {...predictorField} />))
         }
-        {
-          predictorFields.length > NUM_TO_SHOW_ABOVE_THE_FOLD &&
-            <Transition.Group animation="fade down" duration="500">
-              {
-                showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
-                  <Prediction key={predictorField.field} {...predictorField} />
-                ))
-              }
-              <ButtonLink onClick={this.toggleShowMore}>
-                <HorizontalSpacer width={20} />
-                {showMore ? 'hide' : 'show more...'}
-              </ButtonLink>
-            </Transition.Group>
-        }
+        {predictorFields.length > NUM_TO_SHOW_ABOVE_THE_FOLD && (
+          <Transition.Group animation="fade down" duration="500">
+            {
+              showMore && predictorFields.slice(NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
+                <Prediction key={predictorField.field} {...predictorField} />
+              ))
+            }
+            <ButtonLink onClick={this.toggleShowMore}>
+              <HorizontalSpacer width={20} />
+              {showMore ? 'hide' : 'show more...'}
+            </ButtonLink>
+          </Transition.Group>
+        )}
       </div>
     )
   }

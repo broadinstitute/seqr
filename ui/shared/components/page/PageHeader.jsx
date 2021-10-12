@@ -91,17 +91,17 @@ export const PageHeaderLayout = React.memo(({
             {breadcrumbs}
           </Breadcrumb>
         </BreadcrumbContainer>
-        {
-          description &&
+        {description && (
           <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
             {description}
           </div>
-        }
+        )}
         {button}
       </Grid.Column>
       <Grid.Column width={3}>
-        {entityLinks &&
-          <b><br />
+        {entityLinks && (
+          <b>
+            <br />
             {entityLinks.map(({ popup, content, ...linkProps }) => (
               <div key={content}>
                 <ButtonLink as={NavLink} {...linkProps}>{content}</ButtonLink>
@@ -109,7 +109,7 @@ export const PageHeaderLayout = React.memo(({
               </div>
             ))}
           </b>
-        }
+        )}
         <br />
         <br />
       </Grid.Column>
@@ -155,7 +155,10 @@ export const GenePageHeader = connect(mapStateToProps)(BaseGenePageHeader)
 export const SimplePageHeader = ({ page, pages }) => ([
   <Menu attached key="submenu">
     <Menu.Item key="title">
-      <Header size="medium"><HorizontalSpacer width={90} /> {snakecaseToTitlecase(page)} Pages:</Header>
+      <Header size="medium">
+        <HorizontalSpacer width={90} />
+        {`${snakecaseToTitlecase(page)} Pages:`}
+      </Header>
     </Menu.Item>
     {pages.map(
       ({ path }) => <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
@@ -189,4 +192,5 @@ export default () => (
     <Route path="/summary_data" component={SummaryDataPageHeader} />
     <Route path="/variant_search/:pageType/:entityGuid" component={VariantSearchPageHeader} />
     <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={({ match }) => <PageHeaderLayout {...match.params} />} />
-  </Switch>)
+  </Switch>
+)

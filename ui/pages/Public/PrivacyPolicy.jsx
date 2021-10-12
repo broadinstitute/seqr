@@ -1,3 +1,5 @@
+/* eslint-disable react/jsx-one-expression-per-line */
+
 import React from 'react'
 import { Header, Segment, List } from 'semantic-ui-react'
 
@@ -396,4 +398,5 @@ export default () => (
     requester’s identity.  We may charge you a reasonable fee for subsequent copies of Personal Information that you
     request.  In addition, if we consider that a request is manifestly unfounded or excessive, we may either request a
     reasonable fee to deal with the request or refuse to deal with the request.
-  </Segment>)
+  </Segment>
+)

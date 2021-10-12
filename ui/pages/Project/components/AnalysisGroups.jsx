@@ -17,12 +17,19 @@ const AnalysisGroups = React.memo(({ project, analysisGroupsByGuid }) => Object.
     <Popup
       position="right center"
       trigger={<HelpIcon />}
-      content={<div><b>{ag.familyGuids.length} Families</b><br /><i>{ag.description}</i></div>}
+      content={
+        <div>
+          <b>{`${ag.familyGuids.length} Families`}</b>
+          <br />
+          <i>{ag.description}</i>
+        </div>
+      }
       size="tiny"
     />
     <UpdateAnalysisGroupButton analysisGroup={ag} iconOnly />
     <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly size="tiny" />
-  </div>)))
+  </div>
+)))
 
 AnalysisGroups.propTypes = {
   project: PropTypes.object,

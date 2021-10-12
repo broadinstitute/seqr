@@ -68,11 +68,11 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
             />
           </CompactColumn>
         ))}
-        {locusList.canEdit &&
+        {locusList.canEdit && (
           <CompactColumn key="delete" width={2}>
             <DeleteLocusListButton locusList={locusList} />
           </CompactColumn>
-        }
+        )}
       </Grid>
       <Header size="medium" dividing>
         <BaseFieldView
@@ -91,8 +91,7 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
             <Grid.Column key={display}>
               {gene ? <ShowGeneModal gene={gene} pagene={pagene} /> : display}
             </Grid.Column>
-          )) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>
-        }
+          )) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>}
       </Grid>
     </div>
   )

@@ -87,7 +87,8 @@ const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
     formFields={LINK_VARIANT_FIELDS}
     onSubmit={onSubmit}
     showErrorPanel
-  />)
+  />
+)
 
 BaseLinkSavedVariants.propTypes = {
   familyGuid: PropTypes.string,
@@ -181,19 +182,18 @@ const BaseProjectSavedVariants = React.memo(({ project, analysisGroup, loadProje
       getUpdateTagUrl={getUpdateTagUrl}
       loadVariants={loadVariants}
       project={project}
-      tableSummaryComponent={
-        summaryProps => (
-          <Grid.Row>
-            <Grid.Column width={16}>
-              <VariantTagTypeBar
-                height={30}
-                project={project}
-                analysisGroup={analysisGroup}
-                {...summaryProps}
-              />
-            </Grid.Column>
-          </Grid.Row>)
-      }
+      tableSummaryComponent={summaryProps => (
+        <Grid.Row>
+          <Grid.Column width={16}>
+            <VariantTagTypeBar
+              height={30}
+              project={project}
+              analysisGroup={analysisGroup}
+              {...summaryProps}
+            />
+          </Grid.Column>
+        </Grid.Row>
+      )}
       {...props}
     />
   )
@@ -229,7 +229,8 @@ const RoutedSavedVariants = ({ match }) => (
     <Route path={`${match.url}/family/:familyGuid/:tag?`} component={ProjectSavedVariants} />
     <Route path={`${match.url}/analysis_group/:analysisGroupGuid/:tag?`} component={ProjectSavedVariants} />
     <Route path={`${match.url}/:tag?`} component={ProjectSavedVariants} />
-  </Switch>)
+  </Switch>
+)
 
 RoutedSavedVariants.propTypes = {
   match: PropTypes.object,

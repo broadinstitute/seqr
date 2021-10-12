@@ -100,14 +100,16 @@ export const UpdateAnalysisGroup = React.memo((
   const fields = [...FORM_FIELDS]
   fields[2].families = Object.values(projectFamiliesByGuid)
 
-  return <UpdateButton
-    modalTitle={title}
-    buttonText={iconOnly ? null : title}
-    onSubmit={onSubmit}
-    formFields={fields}
-    showErrorPanel
-    {...buttonProps}
-  />
+  return (
+    <UpdateButton
+      modalTitle={title}
+      buttonText={iconOnly ? null : title}
+      onSubmit={onSubmit}
+      formFields={fields}
+      showErrorPanel
+      {...buttonProps}
+    />
+  )
 })
 
 UpdateAnalysisGroup.propTypes = {
@@ -119,14 +121,21 @@ UpdateAnalysisGroup.propTypes = {
 }
 
 export const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
-  project.canEdit ? <DeleteButton
-    initialValues={analysisGroup}
-    onSubmit={onSubmit}
-    confirmDialog={<div className="content">Are you sure you want to delete <b>{analysisGroup.name}</b></div>}
-    buttonText={iconOnly ? null : 'Delete AnalysisGroup'}
-    size={size}
-    onSuccess={() => history.push(`/project/${analysisGroup.projectGuid}/project_page`)}
-  /> : null
+  project.canEdit ? (
+    <DeleteButton
+      initialValues={analysisGroup}
+      onSubmit={onSubmit}
+      confirmDialog={
+        <div className="content">
+          Are you sure you want to delete
+          <b>{analysisGroup.name}</b>
+        </div>
+      }
+      buttonText={iconOnly ? null : 'Delete AnalysisGroup'}
+      size={size}
+      onSuccess={() => history.push(`/project/${analysisGroup.projectGuid}/project_page`)}
+    />
+  ) : null
 ))
 
 DeleteAnalysisGroup.propTypes = {

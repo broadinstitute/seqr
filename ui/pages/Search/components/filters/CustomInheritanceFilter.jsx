@@ -72,18 +72,21 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
                   />
                 </Table.Cell>
               ))}
-              {i === 0 ?
+              {i === 0 ? (
                 <Table.Cell collapsing rowSpan={individuals.length}>
                   <PedigreeImagePanel key="pedigree" family={family} />
-                </Table.Cell> : <Table.Cell collapsing />
-              }
+                </Table.Cell>
+
+              ) : <Table.Cell collapsing />}
             </Table.Row>
           )
-          return individual.sampleGuids.length ? row : <Popup
-            key={individual.individualGuid}
-            trigger={row}
-            content="Inheritance search is disabled for individuals with no loaded data"
-          />
+          return individual.sampleGuids.length ? row : (
+            <Popup
+              key={individual.individualGuid}
+              trigger={row}
+              content="Inheritance search is disabled for individuals with no loaded data"
+            />
+          )
         })}
       </Table.Body>
     </Table>

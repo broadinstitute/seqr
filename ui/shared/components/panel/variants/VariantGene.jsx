@@ -65,32 +65,33 @@ GeneLabel.propTypes = {
 const BaseLocusListLabels = React.memo((
   { locusListGuids, locusListsByGuid, compact, containerStyle, ...labelProps },
 ) => (
-  compact ?
+  compact ? (
     <GeneDetailSection
       compact
       color="teal"
       compactLabel="Gene Lists"
-      details={locusListGuids.length > 0 &&
-        <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+      details={
+        locusListGuids.length > 0 &&
+          <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
       }
-    /> :
+    />
+  ) : (
     <div style={containerStyle}>
-      <React.Fragment>
-        {locusListGuids.map(locusListGuid => (
-          <GeneDetailSection
-            key={locusListGuid}
-            color="teal"
-            maxWidth="7em"
-            showEmpty
-            label={(locusListsByGuid[locusListGuid] || {}).name}
-            description={(locusListsByGuid[locusListGuid] || {}).name}
-            details={(locusListsByGuid[locusListGuid] || {}).description}
-            containerStyle={containerStyle}
-            {...labelProps}
-          />
-        ))}
-      </React.Fragment>
-    </div>))
+      {locusListGuids.map(locusListGuid => (
+        <GeneDetailSection
+          key={locusListGuid}
+          color="teal"
+          maxWidth="7em"
+          showEmpty
+          label={(locusListsByGuid[locusListGuid] || {}).name}
+          description={(locusListsByGuid[locusListGuid] || {}).name}
+          details={(locusListsByGuid[locusListGuid] || {}).description}
+          containerStyle={containerStyle}
+          {...labelProps}
+        />
+      ))}
+    </div>
+  )))
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
@@ -146,9 +147,12 @@ const OMIM_SECTION = {
       {gene.omimPhenotypes.map(phenotype => (
         <ListItemLink
           key={phenotype.phenotypeDescription}
-          content={phenotype.phenotypeInheritance ?
-            <span>{phenotype.phenotypeDescription} (<i>{phenotype.phenotypeInheritance}</i>)</span> :
-            phenotype.phenotypeDescription}
+          content={phenotype.phenotypeInheritance ? (
+            <span>
+              {phenotype.phenotypeDescription}
+              <i>{`(${phenotype.phenotypeInheritance})`}</i>
+            </span>
+          ) : phenotype.phenotypeDescription}
           target="_blank"
           href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
         />
@@ -237,24 +241,27 @@ export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containe
           {...labelProps}
         />
       ))}
-      {showLocusLists && gene.locusListGuids.length > 0 &&
-        <LocusListLabels
-          locusListGuids={gene.locusListGuids}
-          compact={compact}
-          containerStyle={INLINE_STYLE}
-          {...labelProps}
-        />
+      {
+        showLocusLists && gene.locusListGuids.length > 0 && (
+          <LocusListLabels
+            locusListGuids={gene.locusListGuids}
+            compact={compact}
+            containerStyle={INLINE_STYLE}
+            {...labelProps}
+          />
+        )
       }
       {omimDetails && (compact ?
-        <GeneDetailSection compact details={omimDetails} {...OMIM_SECTION} {...labelProps} /> :
-        <OmimSegments>
-          <Segment color={OMIM_SECTION.color}>
-            <Label size="mini" color={OMIM_SECTION.color} content="OMIM" />
-          </Segment>
-          <Segment color={OMIM_SECTION.color}>
-            {omimDetails}
-          </Segment>
-        </OmimSegments>
+        <GeneDetailSection compact details={omimDetails} {...OMIM_SECTION} {...labelProps} /> : (
+          <OmimSegments>
+            <Segment color={OMIM_SECTION.color}>
+              <Label size="mini" color={OMIM_SECTION.color} content="OMIM" />
+            </Segment>
+            <Segment color={OMIM_SECTION.color}>
+              {omimDetails}
+            </Segment>
+          </OmimSegments>
+        )
       )}
     </div>
   )
@@ -291,18 +298,29 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
 
   let summaryDetail
   if (compact) {
-    summaryDetail = showInlineDetails ? <span>{geneDetails} {geneConsequence}</span> : geneConsequence
+    summaryDetail = showInlineDetails ? (
+      <span>
+        {geneDetails}
+        {geneConsequence}
+      </span>
+    ) : geneConsequence
   } else {
     summaryDetail = (
       <GeneLinks>
-        <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank">Decipher</a>
-        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        <a href={`https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`} target="_blank" rel="noreferrer">
+          Decipher
+        </a>
+        <HorizontalSpacer width={5} />
+        |
+        <HorizontalSpacer width={5} />
         <Popup
           trigger={<NavLink to={`/summary_data/saved_variants/ALL/${gene.geneId}`} target="_blank">seqr</NavLink>}
           content="Show all previously saved variants in this gene across all your seqr projects"
           size="tiny"
         />
-        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        <HorizontalSpacer width={5} />
+        |
+        <HorizontalSpacer width={5} />
         <Popup
           trigger={
             <SearchResultsLink location={geneId} familyGuids={variant.familyGuids} inheritanceMode={ANY_AFFECTED} />
@@ -322,7 +340,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
     </div>
   )
 
-  return compactDetails ?
+  return compactDetails ? (
     <Popup
       header="Gene Details"
       size="tiny"
@@ -331,12 +349,13 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
       hoverable
       trigger={geneSummary}
       content={geneDetails}
-    /> : (
-      <div>
-        {geneSummary}
-        {!showInlineDetails && geneDetails}
-      </div>
-    )
+    />
+  ) : (
+    <div>
+      {geneSummary}
+      {!showInlineDetails && geneDetails}
+    </div>
+  )
 })
 
 BaseVariantGene.propTypes = {
@@ -390,8 +409,9 @@ class VariantGenes extends React.PureComponent {
               compact
             />
           ))}
-          {!mainGeneId && geneIds.length > 0 &&
-            <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+          {
+            !mainGeneId && geneIds.length > 0 &&
+              <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
           }
         </div>
       )
@@ -401,7 +421,7 @@ class VariantGenes extends React.PureComponent {
 
     return (
       <div>
-        <ButtonLink fontWeight="bold" size="large" onClick={this.showGenes}>{geneIds.length} Genes</ButtonLink>
+        <ButtonLink fontWeight="bold" size="large" onClick={this.showGenes}>{`${geneIds.length} Genes`}</ButtonLink>
         <VerticalSpacer height={10} />
         <div>
           {[OMIM_SECTION, ...GENE_DETAIL_SECTIONS].map(({ showDetails, detailsDisplay, ...sectionConfig }) => {

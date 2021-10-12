@@ -26,7 +26,8 @@ import {
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
     <span id={`${individual.displayName}-${type}`}>
-      <PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}
+      <PedigreeIcon sex={individual.sex} affected={individual.affected} />
+      {individual.displayName}
     </span>,
   )
 
@@ -108,14 +109,14 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
   ), []).filter(track => track)
 }
 
-const ShowIgvButton = ({ type, showReads, ...props }) => (BUTTON_PROPS[type] ?
+const ShowIgvButton = ({ type, showReads, ...props }) => (BUTTON_PROPS[type] ? (
   <ButtonLink
     padding="0 0 0 1em"
     onClick={showReads && showReads(type === JUNCTION_TYPE ? [JUNCTION_TYPE, COVERAGE_TYPE] : [type])}
     {...BUTTON_PROPS[type]}
     {...props}
-  /> : null
-)
+  />
+) : null)
 
 ShowIgvButton.propTypes = {
   type: PropTypes.string,
@@ -261,59 +262,62 @@ class FamilyReads extends React.PureComponent {
     } = this.props
     const { openFamily, sampleTypes, rnaReferences } = this.state
 
-    const showReads = <ReadButtons
-      variant={variant}
-      familyGuid={familyGuid}
-      buttonProps={buttonProps}
-      igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
-      familiesByGuid={familiesByGuid}
-      showReads={this.showReads}
-    />
+    const showReads = (
+      <ReadButtons
+        variant={variant}
+        familyGuid={familyGuid}
+        buttonProps={buttonProps}
+        igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
+        familiesByGuid={familiesByGuid}
+        showReads={this.showReads}
+      />
+    )
 
     const igvSampleIndividuals = (
       openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
-    const reads = Object.keys(igvSampleIndividuals).length > 0 ?
+    const reads = Object.keys(igvSampleIndividuals).length > 0 ? (
       <Segment.Group horizontal>
-        {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) &&
-        <Segment>
-          { dnaTrackOptions.length > 0 &&
-            <CheckboxGroup
-              groupLabel="DNA Tracks"
-              value={sampleTypes}
-              options={dnaTrackOptions}
-              onChange={this.updateSampleTypes}
-            />
-          }
-          { rnaTrackOptions.length > 0 &&
-            <div>
+        {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) && (
+          <Segment>
+            {dnaTrackOptions.length > 0 && (
               <CheckboxGroup
-                groupLabel="RNA Tracks"
+                groupLabel="DNA Tracks"
                 value={sampleTypes}
-                options={rnaTrackOptions}
+                options={dnaTrackOptions}
                 onChange={this.updateSampleTypes}
               />
-              { sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) &&
-                <div>
-                  <b>RNA-seq Reference Tracks</b>
-                  <CheckboxGroup
-                    groupLabel="GTEx Tracks"
-                    value={rnaReferences}
-                    options={GTEX_TRACK_OPTIONS}
-                    onChange={this.updateRnaReferences}
-                  />
-                  <CheckboxGroup
-                    groupLabel="Mappability Tracks"
-                    value={rnaReferences}
-                    options={MAPPABILITY_TRACK_OPTIONS}
-                    onChange={this.updateRnaReferences}
-                  />
-                </div>
-              }
-            </div>
-          }
-        </Segment>}
+            )}
+            {rnaTrackOptions.length > 0 && (
+              <div>
+                <CheckboxGroup
+                  groupLabel="RNA Tracks"
+                  value={sampleTypes}
+                  options={rnaTrackOptions}
+                  onChange={this.updateSampleTypes}
+                />
+                {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
+                  <div>
+                    <b>RNA-seq Reference Tracks</b>
+                    <CheckboxGroup
+                      groupLabel="GTEx Tracks"
+                      value={rnaReferences}
+                      options={GTEX_TRACK_OPTIONS}
+                      onChange={this.updateRnaReferences}
+                    />
+                    <CheckboxGroup
+                      groupLabel="Mappability Tracks"
+                      value={rnaReferences}
+                      options={MAPPABILITY_TRACK_OPTIONS}
+                      onChange={this.updateRnaReferences}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </Segment>
+        )}
         <Segment>
           <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
           <VerticalSpacer height={20} />
@@ -326,7 +330,8 @@ class FamilyReads extends React.PureComponent {
             project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
           />
         </Segment>
-      </Segment.Group> : null
+      </Segment.Group>
+    ) : null
 
     return React.createElement(layout, { variant, reads, showReads, ...props })
   }

@@ -99,15 +99,23 @@ class HorizontalStackedBar extends React.PureComponent {
           }
           content={
             <div>
-              {title && <div><b>{title}</b><br /></div>}
+              {title && (
+                <div>
+                  <b>{title}</b>
+                  <br />
+                </div>
+              )}
               <NoBorderTable basic="very" compact="very">
                 <Table.Body>
                   {
                     popupData.map(d => (
-                      <TableRow key={d.name} verticalAlign="top" >
-                        {!d.header &&
-                          <TableCell collapsing textAlign="right">{d.count} <ColoredIcon name="square" size="small" color={d.color} /></TableCell>
-                        }
+                      <TableRow key={d.name} verticalAlign="top">
+                        {!d.header && (
+                          <TableCell collapsing textAlign="right">
+                            {d.count}
+                            <ColoredIcon name="square" size="small" color={d.color} />
+                          </TableCell>
+                        )}
                         <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>
                           {d.name}
                         </TableCell>
@@ -115,13 +123,13 @@ class HorizontalStackedBar extends React.PureComponent {
                       </TableRow>
                     ))
                   }
-                  {showTotal &&
+                  {showTotal && (
                     <TableRow>
                       <TableCell textAlign="right"><b>{total}</b></TableCell>
                       <TableCell><b>Total</b></TableCell>
                       <TableCell />
                     </TableRow>
-                  }
+                  )}
                 </Table.Body>
               </NoBorderTable>
             </div>
@@ -131,7 +139,8 @@ class HorizontalStackedBar extends React.PureComponent {
           hoverable
           flowing
         />
-      </BarContainer>)
+      </BarContainer>
+    )
   }
 
 }

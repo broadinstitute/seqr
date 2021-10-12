@@ -113,26 +113,27 @@ class RichTextEditor extends React.PureComponent {
             onChange={this.updateEditorState}
           />
         </div>
-      </div>)
+      </div>
+    )
   }
 
 }
 
 const InlineStyleButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
-    {
-      RichTextEditor.INLINE_STYLES.map(type => (
-        <Button
-          id={type.type}
-          key={type.label}
-          size="tiny"
-          icon={type.icon}
-          active={props.currentInlineStyle.has(type.type)}
-          onClick={props.onButtonClick}
-          toggle
-        />))
-    }
-  </div>))
+    {RichTextEditor.INLINE_STYLES.map(type => (
+      <Button
+        id={type.type}
+        key={type.label}
+        size="tiny"
+        icon={type.icon}
+        active={props.currentInlineStyle.has(type.type)}
+        onClick={props.onButtonClick}
+        toggle
+      />
+    ))}
+  </div>
+))
 
 InlineStyleButtonPanel.propTypes = {
   currentInlineStyle: PropTypes.object.isRequired,
@@ -141,18 +142,17 @@ InlineStyleButtonPanel.propTypes = {
 
 const BlockTypeButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
-    {
-      RichTextEditor.BLOCK_TYPES.map(type => (
-        <Button
-          id={type.type}
-          key={type.label}
-          size="tiny"
-          icon={type.icon}
-          active={type.type === props.currentBlockType}
-          onClick={props.onButtonClick}
-          toggle
-        />))
-    }
+    {RichTextEditor.BLOCK_TYPES.map(type => (
+      <Button
+        id={type.type}
+        key={type.label}
+        size="tiny"
+        icon={type.icon}
+        active={type.type === props.currentBlockType}
+        onClick={props.onButtonClick}
+        toggle
+      />
+    ))}
   </div>
 ))
 

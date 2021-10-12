@@ -100,9 +100,18 @@ const TableHeaderRow = React.memo(({
       <RegularFontHeaderCell width={5}>
         Showing &nbsp;
         {
-          visibleFamiliesCount !== totalFamiliesCount ?
-            <span><b>{visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span> :
-            <span>all <b>{totalFamiliesCount}</b></span>
+          visibleFamiliesCount !== totalFamiliesCount ? (
+            <span>
+              <b>{visibleFamiliesCount}</b>
+              out of
+              <b>{totalFamiliesCount}</b>
+            </span>
+          ) : (
+            <span>
+              all
+              <b>{totalFamiliesCount}</b>
+            </span>
+          )
         }
         &nbsp; families
       </RegularFontHeaderCell>
@@ -114,13 +123,13 @@ const TableHeaderRow = React.memo(({
         />
       </OverflowHeaderCell>
     </Table.Row>
-    {fields &&
+    {fields && (
       <Table.Row>
         <Table.HeaderCell colSpan={2} textAlign="left">
           <TableHeaderDetail fields={fields} showVariantDetails={showVariantDetails} offset />
         </Table.HeaderCell>
       </Table.Row>
-    }
+    )}
   </Table.Header>
 ))
 

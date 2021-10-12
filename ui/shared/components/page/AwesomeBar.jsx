@@ -93,19 +93,21 @@ class AwesomeBar extends React.PureComponent {
   render() {
     const { inputwidth, placeholder, asFormInput } = this.props
     const { isLoading, results, value } = this.state
-    return <AwesomebarSearch
-      category
-      selectFirstResult
-      inputwidth={inputwidth}
-      loading={isLoading}
-      onResultSelect={this.handleResultSelect}
-      onSearchChange={this.handleSearchChange}
-      results={results}
-      value={value}
-      minCharacters={1}
-      placeholder={placeholder || 'Search project, family, gene name, etc.'}
-      asFormInput={asFormInput}
-    />
+    return (
+      <AwesomebarSearch
+        category
+        selectFirstResult
+        inputwidth={inputwidth}
+        loading={isLoading}
+        onResultSelect={this.handleResultSelect}
+        onSearchChange={this.handleSearchChange}
+        results={results}
+        value={value}
+        minCharacters={1}
+        placeholder={placeholder || 'Search project, family, gene name, etc.'}
+        asFormInput={asFormInput}
+      />
+    )
   }
 
 }

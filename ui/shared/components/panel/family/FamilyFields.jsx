@@ -89,11 +89,14 @@ export const analysisStatusIcon = (
       content={
         <div>
           {compact && value.text}
-          {analysisStatusLastModifiedDate &&
+          {analysisStatusLastModifiedDate && (
             <i>
-              {compact && <br />}Changed on {new Date(analysisStatusLastModifiedDate).toLocaleDateString()}
-              <br />by {analysisStatusLastModifiedBy}
-            </i>}
+              {compact && <br />}
+              {`Changed on ${new Date(analysisStatusLastModifiedDate).toLocaleDateString()}`}
+              <br />
+              {`by ${analysisStatusLastModifiedBy}`}
+            </i>
+          )}
         </div>
       }
       position="top center"
@@ -116,8 +119,18 @@ export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
   const analystUsers = analysedByList.filter(analysedBy => analysedBy.createdBy.isAnalyst)
   const externalUsers = analysedByList.filter(analysedBy => !analysedBy.createdBy.isAnalyst)
   return [
-    analystUsers.length > 0 ? <div key="analyst"><b>CMG Analysts:</b> {formatAnalysedByList(analystUsers)}</div> : null,
-    externalUsers.length > 0 ? <div key="ext"><b>External Collaborators:</b> {formatAnalysedByList(externalUsers)}</div> : null,
+    analystUsers.length > 0 ? (
+      <div key="analyst">
+        <b>CMG Analysts:</b>
+        {formatAnalysedByList(analystUsers)}
+      </div>
+    ) : null,
+    externalUsers.length > 0 ? (
+      <div key="ext">
+        <b>External Collaborators:</b>
+        {formatAnalysedByList(externalUsers)}
+      </div>
+    ) : null,
   ]
 })
 

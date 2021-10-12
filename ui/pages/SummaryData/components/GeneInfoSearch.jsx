@@ -26,6 +26,7 @@ const GeneInfoSearch = () => (
       </Grid.Column>
       <Grid.Column width={5} />
     </Grid.Row>
-  </ContentGrid>)
+  </ContentGrid>
+)
 
 export default GeneInfoSearch

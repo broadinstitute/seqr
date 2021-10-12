@@ -79,10 +79,11 @@ const ProjectPageUI = React.memo(props => (
   <Grid stackable>
     <Grid.Row>
       <Grid.Column width={4}>
-        {props.match.params.analysisGroupGuid ? null :
-        <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
-          <AnalysisGroups />
-        </ProjectSection>}
+        {props.match.params.analysisGroupGuid ? null : (
+          <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+            <AnalysisGroups />
+          </ProjectSection>
+        )}
         <VerticalSpacer height={10} />
         <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
           <GeneLists project={props.project} />

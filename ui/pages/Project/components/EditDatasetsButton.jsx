@@ -166,13 +166,14 @@ const PANES = [
         formFields={formFields}
         initialValues={initialValues}
       />
-    </Tab.Pane>),
+    </Tab.Pane>
+  ),
 }))
 
 const IGV_ONLY_PANES = [PANES[1]]
 
 const EditDatasetsButton = React.memo(({ user }) => (
-  (user.isDataManager || user.isPm) ?
+  (user.isDataManager || user.isPm) ? (
     <Modal
       modalName={MODAL_NAME}
       title="Datasets"
@@ -180,7 +181,8 @@ const EditDatasetsButton = React.memo(({ user }) => (
       trigger={<ButtonLink>Edit Datasets</ButtonLink>}
     >
       <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />
-    </Modal> : null
+    </Modal>
+  ) : null
 ))
 
 EditDatasetsButton.propTypes = {

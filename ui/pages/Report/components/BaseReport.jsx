@@ -31,7 +31,8 @@ const BaseReport = React.memo(({
       inputwidth="350px"
       getResultHref={getResultHref(page)}
     />
-    or <NavLink to={`/report/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>view all {viewAllCategory} projects</NavLink>
+    or
+    <NavLink to={`/report/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>{`view all ${viewAllCategory} projects`}</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
     <DataTable

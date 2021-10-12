@@ -92,34 +92,33 @@ class SavedVariants extends React.PureComponent {
           familyGuid: variantGuid ? ((variantsToDisplay[0] || {}).familyGuids || [])[0] : familyGuid,
           ...tableState,
         })}
-        {!loading &&
+        {!loading && (
           <ControlsRow>
             <Grid.Column width={4}>
-              Showing {shownSummary} {filteredVariantsCount}
-              &nbsp;&nbsp;
+              {`Showing ${shownSummary} ${filteredVariantsCount}  `}
               <Dropdown
                 inline
                 options={tagOptions}
                 value={appliedTagCategoryFilter}
                 onChange={this.navigateToTag}
               />
-              &nbsp;variants {!allShown && `(${totalVariantsCount} total)`}
+              {` variants ${!allShown && `(${totalVariantsCount} total)`}`}
 
             </Grid.Column>
             <Grid.Column width={12} floated="right" textAlign="right">
               {additionalFilter}
-              {!variantGuid &&
+              {!variantGuid && (
                 <StateChangeForm
                   updateField={updateTableField}
                   initialValues={tableState}
                   fields={allFilters}
                 />
-              }
+              )}
               <HorizontalSpacer width={10} />
               <ExportTableButton downloads={variantExportConfig} />
             </Grid.Column>
           </ControlsRow>
-        }
+        )}
         <Grid.Row>
           <Grid.Column width={16}>
             <DataLoader

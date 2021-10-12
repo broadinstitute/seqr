@@ -83,10 +83,9 @@ const FamilyTable = React.memo((
 ) => (
   <div>
     <ExportContainer>
-      {headerStatus &&
+      {headerStatus && (
         <span>
-          {headerStatus.title}:
-          <HorizontalSpacer width={10} />
+          {`${headerStatus.title}:  `}
           <HorizontalStackedBar
             width={100}
             height={14}
@@ -95,7 +94,7 @@ const FamilyTable = React.memo((
           />
           <HorizontalSpacer width={10} />
         </span>
-      }
+      )}
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
@@ -110,18 +109,16 @@ const FamilyTable = React.memo((
     <Table celled striped padded fixed attached="bottom">
       <Table.Body>
         {loading && <TableLoading />}
-        {!loading && (visibleFamilies.length > 0 ?
-          visibleFamilies.map(family => (
-            <FamilyTableRow
-              key={family.familyGuid}
-              familyGuid={family.familyGuid}
-              noDetailFields={noDetailFields}
-              showVariantDetails={showVariantDetails}
-              tableName={tableName}
-              {...props}
-            />
-          )) : <EmptyTableRow tableName={tableName} />)
-        }
+        {!loading && (visibleFamilies.length > 0 ? visibleFamilies.map(family => (
+          <FamilyTableRow
+            key={family.familyGuid}
+            familyGuid={family.familyGuid}
+            noDetailFields={noDetailFields}
+            showVariantDetails={showVariantDetails}
+            tableName={tableName}
+            {...props}
+          />
+        )) : <EmptyTableRow tableName={tableName} />)}
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
     </Table>

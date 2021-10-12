@@ -25,7 +25,11 @@ const COLUMNS = [
     width: 4,
     noFormatExport: true,
     format: row => (
-      <div><ShowGeneModal gene={row} size="large" /><GeneDetails gene={row} margin="0.5em 0.5em 0 0" /></div>),
+      <div>
+        <ShowGeneModal gene={row} size="large" />
+        <GeneDetails gene={row} margin="0.5em 0.5em 0 0" />
+      </div>
+    ),
   },
   {
     name: 'numVariants',
@@ -45,7 +49,8 @@ const COLUMNS = [
         familyGuids={row.families.map(({ family }) => family.familyGuid)}
         buttonText={row.numVariants.toString()}
         initialSearch={row.search}
-      />),
+      />
+    ),
   },
   { name: 'numFamilies', content: '# Families', width: 2, noFormatExport: true },
   {
@@ -57,8 +62,10 @@ const COLUMNS = [
         row.families.map(({ family, count }, index) => (
           <span key={family.familyGuid}>
             {index > 0 && <span>,&nbsp;</span>}
-            <FamilyLink family={family} target="_blank" disableEdit /> ({count})
-          </span>))
+            <FamilyLink family={family} target="_blank" disableEdit />
+            {`(${count})`}
+          </span>
+        ))
     ),
   },
 ]

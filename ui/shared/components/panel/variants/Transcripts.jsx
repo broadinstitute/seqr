@@ -51,31 +51,39 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
                 <Table.Cell width={3}>
                   <TranscriptLink variant={variant} transcript={transcript} />
                   <div>
-                    {transcript.transcriptRank === 0 &&
-                      <span>
-                        <VerticalSpacer height={5} />
-                        <Label content="seqr Chosen Transcript" color="blue" size="small" />
-                      </span>
+                    {
+                      transcript.transcriptRank === 0 && (
+                        <span>
+                          <VerticalSpacer height={5} />
+                          <Label content="seqr Chosen Transcript" color="blue" size="small" />
+                        </span>
+                      )
                     }
-                    {transcript.canonical &&
-                      <span>
-                        <VerticalSpacer height={5} />
-                        <Label content="Canonical Transcript" color="green" size="small" />
-                      </span>
+                    {
+                      transcript.canonical && (
+                        <span>
+                          <VerticalSpacer height={5} />
+                          <Label content="Canonical Transcript" color="green" size="small" />
+                        </span>
+                      )
                     }
-                    {variant.variantGuid &&
-                      <span>
-                        <VerticalSpacer height={5} />
-                        {transcript.transcriptId === variant.selectedMainTranscriptId ?
-                          <Label content="User Chosen Transcript" color="purple" size="small" /> :
-                          <DispatchRequestButton
-                            onSubmit={updateMainTranscript(transcript.transcriptId)}
-                            confirmDialog="Are you sure want to update the main transcript for this variant?"
-                          >
-                            <Label as="a" content="Use as Main Transcript" color="violet" basic size="small" />
-                          </DispatchRequestButton>
-                        }
-                      </span>
+                    {
+                      variant.variantGuid && (
+                        <span>
+                          <VerticalSpacer height={5} />
+                          {
+                            transcript.transcriptId === variant.selectedMainTranscriptId ?
+                              <Label content="User Chosen Transcript" color="purple" size="small" /> : (
+                                <DispatchRequestButton
+                                  onSubmit={updateMainTranscript(transcript.transcriptId)}
+                                  confirmDialog="Are you sure want to update the main transcript for this variant?"
+                                >
+                                  <Label as="a" content="Use as Main Transcript" color="violet" basic size="small" />
+                                </DispatchRequestButton>
+                              )
+                          }
+                        </span>
+                      )
                     }
                   </div>
                 </Table.Cell>
@@ -84,18 +92,28 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
                 </Table.Cell>
                 <Table.Cell width={9}>
                   <AnnotationSection>
-                    <AnnotationLabel>Codons</AnnotationLabel>{transcript.codons}<br />
-                    <AnnotationLabel>Amino Acids</AnnotationLabel>{transcript.aminoAcids}<br />
+                    <AnnotationLabel>Codons</AnnotationLabel>
+                    {transcript.codons}
+                    <br />
+                    <AnnotationLabel>Amino Acids</AnnotationLabel>
+                    {transcript.aminoAcids}
+                    <br />
                   </AnnotationSection>
                   <AnnotationSection>
-                    <AnnotationLabel>Biotype</AnnotationLabel>{transcript.biotype}<br />
-                    <AnnotationLabel>cDNA Position</AnnotationLabel>{transcript.cdnaPosition}<br />
+                    <AnnotationLabel>Biotype</AnnotationLabel>
+                    {transcript.biotype}
+                    <br />
+                    <AnnotationLabel>cDNA Position</AnnotationLabel>
+                    {transcript.cdnaPosition}
+                    <br />
                   </AnnotationSection>
                   <AnnotationSection>
                     <AnnotationLabel>HGVS.C</AnnotationLabel>
-                    {transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}<br />
+                    {transcript.hgvsc && <ProteinSequence hgvs={transcript.hgvsc} />}
+                    <br />
                     <AnnotationLabel>HGVS.P</AnnotationLabel>
-                    {transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}<br />
+                    {transcript.hgvsp && <ProteinSequence hgvs={transcript.hgvsp} />}
+                    <br />
                   </AnnotationSection>
                 </Table.Cell>
               </Table.Row>

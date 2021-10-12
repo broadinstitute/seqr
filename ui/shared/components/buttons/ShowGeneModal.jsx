@@ -9,24 +9,24 @@ import { PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION } f
 const ShowGeneModal = ({ pagene, gene, modalId = 'gene', ...linkProps }) => (
   <Modal
     trigger={
-      <ButtonLink
-        {...linkProps}
-      >
-        {pagene?.confidenceLevel > 0 &&
+      <ButtonLink {...linkProps}>
+        {pagene?.confidenceLevel > 0 && (
           <ColoredIcon
             name="circle"
             title={PANEL_APP_CONFIDENCE_DESCRIPTION[pagene.confidenceLevel]}
             color={PANEL_APP_CONFIDENCE_LEVEL_COLORS[pagene.confidenceLevel]}
           />
-        }
+        )}
         {gene.geneSymbol}
-      </ButtonLink>}
+      </ButtonLink>
+    }
     title={gene.geneSymbol}
     modalName={`${modalId}-${gene.geneId}`}
     size="fullscreen"
   >
     <GeneDetail geneId={gene.geneId} />
-  </Modal>)
+  </Modal>
+)
 
 ShowGeneModal.propTypes = {
   pagene: PropTypes.object,

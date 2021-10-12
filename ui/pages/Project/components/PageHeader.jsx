@@ -35,12 +35,13 @@ const PageHeader = React.memo((
     }
   } else if (match.params.breadcrumb === 'analysis_group') {
     description = analysisGroup.description // eslint-disable-line prefer-destructuring
-    button =
+    button = (
       <span>
         <UpdateAnalysisGroupButton analysisGroup={analysisGroup} />
         <HorizontalSpacer width={10} />
         <DeleteAnalysisGroupButton analysisGroup={analysisGroup} />
       </span>
+    )
   }
 
   const headerProps = breadcrumbIdSections ? { breadcrumbIdSections } : match.params

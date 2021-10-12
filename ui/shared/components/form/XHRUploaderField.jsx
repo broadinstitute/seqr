@@ -30,18 +30,21 @@ export class XHRUploaderWithEvents extends XHRUploader {
   }
 
   renderInput() {
-    return <input
-      name="file-upload"
-      style={{ display: 'none' }}
-      multiple={this.props.maxFiles > 1}
-      type="file" ref={(c) => { if (c) { this.fileInput = c } }}
-      onChange={this.onFileSelect}
-      onClick={(event) => {
-        // allows the same file to be selected more than once (see
-        // https://stackoverflow.com/questions/39484895/how-to-allow-input-type-file-to-select-the-same-file-in-react-component)
-        event.target.value = null // eslint-disable-line no-param-reassign
-      }}
-    />
+    return (
+      <input
+        name="file-upload"
+        style={{ display: 'none' }}
+        multiple={this.props.maxFiles > 1}
+        type="file"
+        ref={(c) => { if (c) { this.fileInput = c } }}
+        onChange={this.onFileSelect}
+        onClick={(event) => {
+          // allows the same file to be selected more than once (see
+          // https://stackoverflow.com/questions/39484895/how-to-allow-input-type-file-to-select-the-same-file-in-react-component)
+          event.target.value = null // eslint-disable-line no-param-reassign
+        }}
+      />
+    )
   }
 
   /**
@@ -102,7 +105,7 @@ export class XHRUploaderWithEvents extends XHRUploader {
                 <div key={item.index}>
                   <div style={styles.fileDetails}>
                     <span className="icon-file icon-large">&nbsp;</span>
-                    <span style={styles.fileName}>{`${file.name}`}</span> {/* , ${file.type} */}
+                    <span style={styles.fileName}>{`${file.name}`}</span>
                     {sizeInMB && <span style={styles.fileSize}>{`${sizeInMB} Mb`}</span>}
                     <i
                       className={iconClass}
@@ -116,10 +119,12 @@ export class XHRUploaderWithEvents extends XHRUploader {
                   <div>
                     <progress
                       style={progressClass ? {} : styles.progress}
-                      className={progressClass} min="0" max="100"
+                      className={progressClass}
+                      min="0"
+                      max="100"
                       value={item.progress}
                     >
-                      {item.progress}%
+                      {`${item.progress}%`}
                     </progress>
                   </div>
                 </div>

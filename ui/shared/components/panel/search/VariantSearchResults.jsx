@@ -63,7 +63,8 @@ const BaseVariantSearchResultsContent = React.memo(({
     <LargeRow key="resultsSummary">
       <Grid.Column width={5}>
         {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
-        <b>{totalVariantsCount}</b> variants
+        <b>{totalVariantsCount}</b>
+        variants
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}
@@ -145,13 +146,13 @@ const BaseVariantSearchResults = React.memo(({
     unload={unload}
     initialLoad={initialLoad}
     reloadOnIdUpdate
-    errorMessage={errorMessage &&
+    errorMessage={errorMessage && (
       <Grid.Row>
         <Grid.Column width={16}>
           <Message error content={errorMessage} />
         </Grid.Column>
       </Grid.Row>
-    }
+    )}
   >
     {React.createElement(contentComponent || VariantSearchResultsContent, { match, displayVariants, ...props })}
   </DataLoader>

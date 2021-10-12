@@ -97,12 +97,12 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_OMIM_NUMBER]: {
     canEdit: true,
     component: SingleFieldView,
-    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
+    fieldDisplay: value => <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
     internal: true,
     component: ListFieldView,
-    itemDisplay: value => <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
+    itemDisplay: value => <a target="_blank" rel="noreferrer" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },
@@ -141,29 +141,32 @@ const Family = React.memo(({
 
   let leftContent = null
   if (!hidePedigree) {
-    const familyHeader = <InlineHeader
-      key="name"
-      size="small"
-      content={showFamilyPageLink ?
-        <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
-        family.displayName
-      }
-    />
+    const familyHeader = (
+      <InlineHeader
+        key="name"
+        size="small"
+        content={showFamilyPageLink ?
+          <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
+          family.displayName}
+      />
+    )
     leftContent = [
       compact ? familyHeader : <div key="header">{familyHeader}</div>,
       <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
     ]
   }
 
-  return <FamilyLayout
-    useFullWidth={useFullWidth}
-    compact={compact}
-    annotation={annotation}
-    fields={fields}
-    fieldDisplay={familyField}
-    leftContent={leftContent}
-    rightContent={rightContent}
-  />
+  return (
+    <FamilyLayout
+      useFullWidth={useFullWidth}
+      compact={compact}
+      annotation={annotation}
+      fields={fields}
+      fieldDisplay={familyField}
+      leftContent={leftContent}
+      rightContent={rightContent}
+    />
+  )
 })
 
 Family.propTypes = {

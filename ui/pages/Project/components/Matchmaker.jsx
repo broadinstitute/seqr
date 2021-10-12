@@ -18,7 +18,7 @@ import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
 import Family from 'shared/components/panel/family/Family'
 import DataTable, { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
 import {
   AFFECTED, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD, FAMILY_FIELD_MME_NOTES,
@@ -57,12 +57,8 @@ const MATCH_STATUS_EDIT_FIELDS = [
   { name: 'comments', label: 'Comments', component: BaseSemanticInput, inputType: 'TextArea', rows: 5 },
 ]
 
-const variantSummary = variant => (
-  <span>
-    {variant.chrom}:{variant.pos}
-    {variant.alt ? <span> {variant.ref} <Icon fitted name="angle right" /> {variant.alt}</span> : `-${variant.end}`}
-  </span>
-)
+const variantSummary =
+  variant => `${variant.chrom}:${variant.pos}${variant.alt ? ` ${variant.ref} > ${variant.alt}` : `-${variant.end}`}`
 
 const GENOTYPE_FIELDS = [
   { name: 'geneSymbol', content: 'Gene', width: 2 },
@@ -73,7 +69,7 @@ const GENOTYPE_FIELDS = [
     content: 'Tags',
     width: 8,
     format: val => val.tags.map(
-      tag => <ColoredLabel key={tag.tagGuid}size="small" color={tag.color} horizontal content={tag.name} />,
+      tag => <ColoredLabel key={tag.tagGuid} size="small" color={tag.color} horizontal content={tag.name} />,
     ),
   },
 ]
@@ -210,7 +206,8 @@ const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) => (
         {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
         <p>{val.comments}</p>
         <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
-      </div>)}
+      </div>
+    )}
   />
 ))
 
@@ -279,14 +276,24 @@ const DISPLAY_FIELDS = [
         const href = `/project/${val.originatingSubmission.projectGuid}/family_page/${val.originatingSubmission.familyGuid}/matchmaker_exchange`
         displayName = <Link to={href} target="_blank">{displayName}</Link>
       }
-      return patientFields.length ? <Popup
-        header="Patient Details"
-        trigger={<MatchContainer>{displayName} <Icon link name="info circle" /></MatchContainer>}
-        content={patientFields.map(k => (
-          <div key={k}>
-            <b>{camelcaseToTitlecase(k)}:</b> {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
-          </div>))}
-      /> : <MatchContainer>{displayName}</MatchContainer>
+      return patientFields.length ? (
+        <Popup
+          header="Patient Details"
+          trigger={
+            <MatchContainer>
+              {displayName}
+              &npbsp;
+              <Icon link name="info circle" />
+            </MatchContainer>
+          }
+          content={patientFields.map(k => (
+            <div key={k}>
+              <b>{`${camelcaseToTitlecase(k)}: `}</b>
+              {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
+            </div>
+          ))}
+        />
+      ) : <MatchContainer>{displayName}</MatchContainer>
     },
   },
   {
@@ -302,20 +309,20 @@ const DISPLAY_FIELDS = [
     content: 'Contact',
     verticalAlign: 'top',
     format: ({ patient }, isDownload) => patient.contact && (isDownload ?
-      patient.contact.institution || patient.contact.name :
-      <div>
-        <div><b>{patient.contact.institution}</b></div>
-        <div>{patient.contact.name}</div>
-        {patient.contact.email &&
-          <div>
-            <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
-          </div>
-        }
-        <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
-        <VerticalSpacer height={10} />
-        <ContactNotes contact={patient.contact} modalId={patient.id} />
-      </div>
-    ),
+      patient.contact.institution || patient.contact.name : (
+        <div>
+          <div><b>{patient.contact.institution}</b></div>
+          <div>{patient.contact.name}</div>
+          {patient.contact.email && (
+            <div>
+              <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
+            </div>
+          )}
+          <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
+          <VerticalSpacer height={10} />
+          <ContactNotes contact={patient.contact} modalId={patient.id} />
+        </div>
+      )),
   },
   {
     name: 'geneVariants',
@@ -356,17 +363,18 @@ const BaseMatchmakerIndividual = React.memo((
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
-    {mmeSubmission && !mmeSubmission.deletedDate ?
+    {mmeSubmission && !mmeSubmission.deletedDate ? (
       <Grid padded>
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {mmeSubmission.geneVariants && mmeSubmission.geneVariants.length ?
+            {mmeSubmission.geneVariants && mmeSubmission.geneVariants.length ? (
               <SubmissionGeneVariants
                 geneVariants={mmeSubmission.geneVariants}
                 modalId="submission"
                 horizontal
-              /> : <i>None</i>}
+              />
+            ) : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
         <Grid.Row>
@@ -376,7 +384,8 @@ const BaseMatchmakerIndividual = React.memo((
               <Phenotypes phenotypes={mmeSubmission.phenotypes} horizontal /> : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
-      </Grid> :
+      </Grid>
+    ) : (
       <div>
         <Header
           size="small"
@@ -396,12 +405,13 @@ const BaseMatchmakerIndividual = React.memo((
                 onSubmit={onSubmit}
                 showErrorPanel
               />
-            </div>}
+            </div>
+          }
         />
       </div>
-    }
+    )}
     <DataLoader content load={load} loading={false}>
-      {mmeSubmission && !mmeSubmission.deletedDate &&
+      {mmeSubmission && !mmeSubmission.deletedDate && (
         <div>
           <ButtonLink
             disabled={loading}
@@ -409,7 +419,8 @@ const BaseMatchmakerIndividual = React.memo((
             icon="search"
             labelPosition="right"
             content="Search for New Matches"
-          />|<HorizontalSpacer width={10} />
+          />
+          | &nbsp; &nbsp;
           <UpdateButton
             disabled={loading}
             buttonText="Update Submission"
@@ -421,7 +432,8 @@ const BaseMatchmakerIndividual = React.memo((
             formFields={SUBMISSION_EDIT_FIELDS}
             onSubmit={onSubmit}
             showErrorPanel
-          />|<HorizontalSpacer width={10} />
+          />
+          | &nbsp; &nbsp;
           <DeleteButton
             disabled={loading}
             onSubmit={onSubmit}
@@ -441,8 +453,9 @@ const BaseMatchmakerIndividual = React.memo((
             downloadFileName={`MME_matches_${individual.displayName}`}
             downloadAlign="none"
           />
-        </div>}
-      {mmeResults && mmeResults.removed && mmeResults.removed.length > 0 &&
+        </div>
+      )}
+      {mmeResults && mmeResults.removed && mmeResults.removed.length > 0 && (
         <div>
           <VerticalSpacer height={10} />
           <Header dividing disabled size="medium" content="Previous Matches" />
@@ -456,7 +469,8 @@ const BaseMatchmakerIndividual = React.memo((
             data={mmeResults.removed}
             loading={loading}
           />
-        </div>}
+        </div>
+      )}
     </DataLoader>
   </div>
 ))

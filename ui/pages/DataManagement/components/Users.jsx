@@ -44,7 +44,8 @@ const HIJAK_COLUMNS = [
         onClick={() => fetch(
           `/hijack/${val.id}/`, { method: 'POST', credentials: 'include' },
         ).then((response) => { window.location.href = response.url })}
-      />),
+      />
+    ),
   },
 ]
 

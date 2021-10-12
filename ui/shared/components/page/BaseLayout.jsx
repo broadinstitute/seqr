@@ -40,7 +40,8 @@ const BaseLayout = ({ children }) => (
       </Grid.Row>
     </ContentGrid>
     <Footer />
-  </LayoutContainer>)
+  </LayoutContainer>
+)
 
 export { BaseLayout as BaseLayoutComponent }
 

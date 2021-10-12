@@ -46,8 +46,7 @@ const CaseReviewStatusDropdown = React.memo(props => (
     />
     {/* edit case review discussion for individual: */}
     <div style={{ padding: '5px 12px' }}>
-      {
-        props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
+      {props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED && (
         <TextFieldView
           hideValue
           isEditable
@@ -58,7 +57,7 @@ const CaseReviewStatusDropdown = React.memo(props => (
           modalTitle={`${props.individual.displayName}: Case Review Discussion`}
           onSubmit={props.updateIndividualDiscussion}
         />
-      }
+      )}
     </div>
   </StatusContainer>
 ))

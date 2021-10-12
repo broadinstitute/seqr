@@ -92,7 +92,7 @@ const CollaboratorContainer = styled.div`
 
 const CollaboratorRow = React.memo(({ collaborator, update }) => (
   <CollaboratorContainer>
-    {update &&
+    {update && (
       <span>
         <HorizontalSpacer width={10} />
         <UpdateButton
@@ -111,13 +111,15 @@ const CollaboratorRow = React.memo(({ collaborator, update }) => (
           hideNoRequestStatus
           confirmDialog={
             <div className="content">
-              Are you sure you want to delete <b>{collaborator.displayName || collaborator.email}</b>. They will still
+              Are you sure you want to delete &nbsp;
+              <b>{collaborator.displayName || collaborator.email}</b>
+              . They will still
               have their user account and be able to log in, but will not be able to access this project anymore.
             </div>
           }
         />
       </span>
-    }
+    )}
     <Popup
       position="top center"
       trigger={<Icon link size="small" name={collaborator.hasEditPermissions ? 'star' : ''} />}
@@ -146,12 +148,18 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
     localCollabs.map(
       c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />,
     ),
-    ((project.canEdit && !project.workspaceName) ?
-      <div key="addButton" >
+    ((project.canEdit && !project.workspaceName) ? (
+      <div key="addButton">
         <br />
         <AddCollaboratorButton onSubmit={onSubmit} />
-      </div> : null),
-    (localCollabs.length && anvilCollabs.length) ? <p key="subheader"><br />AnVIL Workspace Users</p> : null,
+      </div>
+    ) : null),
+    (localCollabs.length && anvilCollabs.length) ? (
+      <p key="subheader">
+        <br />
+        AnVIL Workspace Users
+      </p>
+    ) : null,
     anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
   ]
 })

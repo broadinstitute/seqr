@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
-import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
@@ -49,7 +49,12 @@ const DetailSection = React.memo(({ title, content, button }) => (
   <div>
     <b>{title}</b>
     <DetailContent>{content}</DetailContent>
-    {button && <div><VerticalSpacer height={15} />{button}</div>}
+    {button && (
+      <div>
+        <VerticalSpacer height={15} />
+        {button}
+      </div>
+    )}
   </div>
 ))
 
@@ -67,7 +72,8 @@ const MME_COLUMNS = [
     format: row => (
       <NavLink to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
         <Icon name="linkify" link />
-      </NavLink>),
+      </NavLink>
+    ),
   },
   { name: 'familyName', content: 'Family', width: 2 },
   { name: 'geneSymbols', content: 'Genes', width: 3, format: ({ geneSymbols }) => (geneSymbols || []).join(', ') },
@@ -116,7 +122,7 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCo
       title={`${Object.keys(familiesByGuid).length} Families, ${individualsCount} Individuals`}
       content={
         sortBy(Object.keys(familySizeHistogram)).map(size => (
-          <div key={size}>{familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}</div>
+          <div key={size}>{`${familySizeHistogram[size]} ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}`}</div>
         ))
       }
       button={editIndividualsButton}
@@ -146,9 +152,9 @@ const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
   return (
     <DetailSection
       title="Matchmaker Submissions"
-      content={mmeSubmissionCount ?
+      content={mmeSubmissionCount ? (
         <div>
-          {mmeSubmissionCount - deletedSubmissionCount} submissions <HorizontalSpacer width={5} />
+          {`${mmeSubmissionCount - deletedSubmissionCount} submissions `}
           <Modal
             trigger={<ButtonLink icon="external" size="tiny" />}
             title={`Matchmaker Submissions for ${project.name}`}
@@ -157,9 +163,9 @@ const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
           >
             <MatchmakerSubmissionOverview />
           </Modal>
-          {deletedSubmissionCount > 0 && <div>{deletedSubmissionCount} removed submissions</div>}
-        </div> : 'No Submissions'
-      }
+          {deletedSubmissionCount > 0 && <div>{`${deletedSubmissionCount} removed submissions`}</div>}
+        </div>
+      ) : 'No Submissions'}
     />
   )
 })
@@ -183,7 +189,7 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
       title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
       content: Object.keys(loadedSampleCounts).sort().map(loadedDate => (
         <div key={loadedDate}>
-          { new Date(loadedDate).toLocaleDateString()} - {loadedSampleCounts[loadedDate]} samples
+          {`${new Date(loadedDate).toLocaleDateString()} - ${loadedSampleCounts[loadedDate]} samples`}
         </div>
       )),
     }
@@ -195,21 +201,23 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
       content: (
         <div>
           No Datasets Loaded
-          {project.workspaceName &&
+          {project.workspaceName && (
             <div>
-              <i>Where is my data?</i> <Popup
+              <i>Where is my data? </i>
+              <Popup
                 trigger={<HelpIcon />}
                 hoverable
                 content={
                   <div>
                     Loading data from AnVIL to seqr is a slow process, and generally takes a week.
                     If you have been waiting longer than this for your data, please reach
-                    out to <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>
+                    out to &nbsp;
+                    <a href="mailto:seqr@broadinstitute.org">seqr@broadinstitute.org</a>
                   </div>
                 }
               />
             </div>
-          }
+          )}
         </div>
       ),
       key: 'blank',
@@ -239,10 +247,13 @@ const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)
 
 const Anvil = React.memo(({ project, user }) => (
   project.workspaceName && user.isAnvil && (
-    <DetailSection title="AnVIL Workspace" content={
-      <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank">
-        {project.workspaceName}
-      </a>}
+    <DetailSection
+      title="AnVIL Workspace"
+      content={
+        <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank" rel="noreferrer">
+          {project.workspaceName}
+        </a>
+      }
     />
   )
 ))

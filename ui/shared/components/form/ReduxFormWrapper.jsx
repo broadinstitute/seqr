@@ -58,11 +58,12 @@ renderField.propTypes = {
 }
 
 export const helpLabel = (label, labelHelp) => (
-  labelHelp ?
+  labelHelp ? (
     <label>
       {label}
       <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" />
-    </label> : label
+    </label>
+  ) : label
 )
 
 export const configuredField = (field, formProps = {}) => {
@@ -81,22 +82,26 @@ export const configuredField = (field, formProps = {}) => {
     label: helpLabel(label, labelHelp),
     ...fieldProps,
   }
-  return isArrayField ?
-    <FieldArray {...baseProps} component={({ fields }) => (
-      <div className="field">
-        <label>{label}</label>
-        {fields.map((fieldPath, i) => (
-          <Field
-            key={fieldPath}
-            name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
-            removeField={(e) => { e.preventDefault(); fields.remove(i) }}
-            index={i}
-            {...singleFieldProps}
-          />))}
-        {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
-      </div>)}
-    /> :
-    <Field {...baseProps} {...singleFieldProps} />
+  return isArrayField ? (
+    <FieldArray
+      {...baseProps}
+      component={({ fields }) => (
+        <div className="field">
+          <label>{label}</label>
+          {fields.map((fieldPath, i) => (
+            <Field
+              key={fieldPath}
+              name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
+              removeField={(e) => { e.preventDefault(); fields.remove(i) }}
+              index={i}
+              {...singleFieldProps}
+            />
+          ))}
+          {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
+        </div>
+      )}
+    />
+  ) : <Field {...baseProps} {...singleFieldProps} />
 }
 
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
@@ -280,19 +285,16 @@ class ReduxFormWrapper extends React.Component {
       >
         {fieldComponents}
         {errorPanel}
-        {submitSucceeded && successMessage &&
-          <MessagePanel success visible content={successMessage} />
-        }
-        {
-          !submitOnChange &&
-            <ButtonPanel
-              cancelButtonText={cancelButtonText}
-              submitButtonText={submitButtonText}
-              saveStatus={saveStatus}
-              saveErrorMessage={saveErrorMessage}
-              handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
-            />
-        }
+        {submitSucceeded && successMessage && <MessagePanel success visible content={successMessage} />}
+        {!submitOnChange && (
+          <ButtonPanel
+            cancelButtonText={cancelButtonText}
+            submitButtonText={submitButtonText}
+            saveStatus={saveStatus}
+            saveErrorMessage={saveErrorMessage}
+            handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
+          />
+        )}
         <Confirm
           content={confirmDialog}
           open={confirming}

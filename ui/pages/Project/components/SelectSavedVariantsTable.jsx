@@ -11,8 +11,14 @@ import { loadFamilySavedVariants } from '../reducers'
 
 const variantSummary = variant => (
   <span>
-    {variant.chrom}:{variant.pos}
-    {variant.alt ? <span> {variant.ref} <Icon fitted name="angle right" /> {variant.alt}</span> : `-${variant.end}`}
+    {`${variant.chrom}:${variant.pos} `}
+    {variant.alt ? (
+      <span>
+        {variant.ref}
+        <Icon fitted name="angle right" />
+        {variant.alt}
+      </span>
+    ) : `-${variant.end}`}
   </span>
 )
 
@@ -30,7 +36,7 @@ export const TAG_COLUMN = {
   content: 'Tags',
   width: 8,
   format: val => val.tags.map(
-    tag => <ColoredLabel key={tag.tagGuid}size="small" color={tag.color} horizontal content={tag.name} />,
+    tag => <ColoredLabel key={tag.tagGuid} size="small" color={tag.color} horizontal content={tag.name} />,
   ),
 }
 

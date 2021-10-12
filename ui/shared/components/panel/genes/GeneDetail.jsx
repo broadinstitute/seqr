@@ -26,13 +26,14 @@ const CompactGrid = styled(Grid)`
 
 const GeneSection = React.memo(({ details }) => (
   <CompactGrid>
-    {details.map(row => row &&
+    {details.map(row => row && (
       <Grid.Row key={row.title}>
         <Grid.Column width={2} textAlign="right">
           <b>{row.title}</b>
         </Grid.Column>
         <Grid.Column width={14}>{row.content}</Grid.Column>
-      </Grid.Row>)}
+      </Grid.Row>
+    ))}
   </CompactGrid>
 ))
 
@@ -55,12 +56,22 @@ const textWithLinks = (text) => {
         Object.keys(linkMap).forEach((title) => {
           if (str && str.startsWith(`${title}:`)) {
             const id = str.replace(`${title}:`, '')
-            return <span key={i}>{title}: <a href={`${linkMap[title]}${id}`} target="_blank">{id}</a></span>
+            return (
+              <span key={i}>
+                {`${title}: `}
+                <a href={`${linkMap[title]}${id}`} target="_blank" rel="noreferrer">{id}</a>
+              </span>
+            )
           }
           return null
         })
         if (str && str.startsWith('DISEASE:') && str.endsWith('[')) {
-          return <span key={i}><b>{str.replace('DISEASE:', '').replace('[', '')}</b> [</span>
+          return (
+            <span key={i}>
+              <b>{str.replace('DISEASE:', '').replace('[', '')}</b>
+              &nbsp; [
+            </span>
+          )
         }
         if (str === ';') {
           return <br key={i} />
@@ -81,20 +92,18 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
     }
     return { value, ...config }
   }).filter(({ value }) => value)
-  return fieldsToShow.length ?
+  return fieldsToShow.length ? (
     <div>
-      {fieldsToShow.map(({ value, label, rankField }) => value &&
+      {fieldsToShow.map(({ value, label, rankField }) => value && (
         <span key={label}>
-          {label}: {value.toPrecision(4)}
-          {rankField &&
-            <span>
-              (ranked {scores[rankField]} most {rankDescription} out of {scores.totalGenes} genes under study)
-            </span>
-          }
+          {`${label}: ${value.toPrecision(4)} ${rankField ?
+            `(ranked ${scores[rankField]} most ${rankDescription} out of ${scores.totalGenes} genes under study)` : ''}`}
           <br />
-        </span>)}
-      <i style={{ color: 'gray' }}>NOTE: {note}</i>
-    </div> : 'No score available'
+        </span>
+      ))}
+      <i style={{ color: 'gray' }}>{`NOTE: ${note}`}</i>
+    </div>
+  ) : 'No score available'
 }
 
 ScoreDetails.propTypes = {
@@ -116,11 +125,13 @@ const STAT_DETAILS = [
         Missense contraint is a measure of the degree to which the number of missense variants found
         in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
         described in [
-        <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank">
+        <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank" rel="noreferrer">
           K. Samocha 2014
-        </a>]. In general this metric is most useful for genes that act via a dominant mechanism, and where
+        </a>
+        ]. In general this metric is most useful for genes that act via a dominant mechanism, and where
         a large proportion of the protein is heavily functionally constrained. For more details see
-        this <a href={EXAC_README_URL} target="_blank">README</a>.
+        this &nbsp;
+        <a href={EXAC_README_URL} target="_blank" rel="noreferrer">README</a>
       </span>
     ),
   },
@@ -179,17 +190,20 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
   const associationDetails = [
     {
       title: 'OMIM',
-      content: (gene.omimPhenotypes || []).length > 0 ?
+      content: (gene.omimPhenotypes || []).length > 0 ? (
         <div>
           {gene.omimPhenotypes.map(phenotype => (
-            <span key={phenotype.phenotypeDescription}>{phenotype.phenotypeMimNumber ?
-              <a href={`http://www.omim.org/entry/${phenotype.phenotypeMimNumber}`} target="_blank">
-                {phenotype.phenotypeDescription}
-              </a> : phenotype.phenotypeDescription}
+            <span key={phenotype.phenotypeDescription}>
+              {phenotype.phenotypeMimNumber ? (
+                <a href={`http://www.omim.org/entry/${phenotype.phenotypeMimNumber}`} target="_blank" rel="noreferrer">
+                  {phenotype.phenotypeDescription}
+                </a>
+              ) : phenotype.phenotypeDescription}
               <br />
             </span>
           ))}
-        </div> : <em>No disease associations</em>,
+        </div>
+      ) : <em>No disease associations</em>,
     },
   ]
   if (gene.diseaseDesc) {
@@ -219,7 +233,12 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
       {linkDetails.filter(linkConfig => linkConfig).map(linkConfig => (
         <Popup
           key={linkConfig.title}
-          trigger={<a href={linkConfig.link} target="_blank"><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
+          trigger={
+            <a href={linkConfig.link} target="_blank" rel="noreferrer">
+              <b>{linkConfig.title}</b>
+              <HorizontalSpacer width={20} />
+            </a>
+          }
           content={linkConfig.description}
         />
       ))}

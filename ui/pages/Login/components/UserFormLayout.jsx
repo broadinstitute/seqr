@@ -16,7 +16,8 @@ export const UserFormContainer = ({ header, subheader, children }) => (
       </Segment>
     </Grid.Column>
     <Grid.Column width={5} />
-  </Grid>)
+  </Grid>
+)
 
 UserFormContainer.propTypes = {
   header: PropTypes.string,

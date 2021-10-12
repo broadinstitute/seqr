@@ -32,7 +32,8 @@ const SUBMISSION_COLUMNS = [
     format: row => (
       <Link to={`/project/${row.projectGuid}/family_page/${row.familyGuid}/matchmaker_exchange`} target="_blank">
         {row.individualId}
-      </Link>),
+      </Link>
+    ),
   },
   { name: 'lastModifiedDate', content: 'Submitted Date', format: row => new Date(row.lastModifiedDate).toLocaleDateString() },
   {

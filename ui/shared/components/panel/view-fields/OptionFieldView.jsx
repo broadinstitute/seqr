@@ -28,7 +28,12 @@ const OptionFieldView = React.memo((
       fieldDisplay={fieldDisplay || ((value) => {
         const valueConfig = tagSelectOptions.find(option => option.value === value) || {}
         const annotation = tagAnnotation ? tagAnnotation(valueConfig, compact, props.initialValues) : null
-        return <span>{annotation}{compact && annotation ? '' : valueConfig.text}</span>
+        return (
+          <span>
+            {annotation}
+            {compact && annotation ? '' : valueConfig.text}
+          </span>
+        )
       })}
       {...props}
     />

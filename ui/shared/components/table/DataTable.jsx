@@ -210,10 +210,7 @@ class DataTable extends React.PureComponent {
       <TableContainer horizontalScroll={horizontalScroll}>
         {!hasFooter && (filterContainer ? React.createElement(filterContainer, {}, filterInput) : filterInput)}
         {exportConfig &&
-          <RightAligned topAlign={downloadAlign}>
-            <ExportTableButton downloads={exportConfig} />
-          </RightAligned>
-        }
+          <RightAligned topAlign={downloadAlign}><ExportTableButton downloads={exportConfig} /></RightAligned>}
         <StyledDataTable
           sortable
           selectable={!!selectRows}
@@ -223,7 +220,7 @@ class DataTable extends React.PureComponent {
         >
           <Table.Header>
             <Table.Row>
-              {selectRows &&
+              {selectRows && (
                 <Table.HeaderCell
                   width={1}
                   content={
@@ -234,7 +231,7 @@ class DataTable extends React.PureComponent {
                     />
                   }
                 />
-              }
+              )}
               {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) => (
                 <Table.HeaderCell
                   key={name}
@@ -249,17 +246,16 @@ class DataTable extends React.PureComponent {
             {tableContent}
           </Table.Body>
         </StyledDataTable>
-        {hasFooter &&
+        {hasFooter && (
           <Table {...tableProps} fixed={false} attached="bottom">
             <Table.Footer>
               <Table.Row>
                 {footer && <Table.HeaderCell collapsing={rowsPerPage} content={footer} />}
                 {filterInput && <Table.HeaderCell collapsing>{filterInput}</Table.HeaderCell>}
                 <Table.HeaderCell collapsing={!rowsPerPage} textAlign="right">
-                  {isPaginated &&
+                  {isPaginated && (
                     <div>
-                      Showing rows {rowSummary}
-                      &nbsp; &nbsp;
+                      {`Showing rows ${rowSummary}  `}
                       <Pagination
                         activePage={activePage}
                         totalPages={Math.ceil(totalRows / rowsPerPage)}
@@ -267,12 +263,12 @@ class DataTable extends React.PureComponent {
                         size="mini"
                       />
                     </div>
-                  }
+                  )}
                 </Table.HeaderCell>
               </Table.Row>
             </Table.Footer>
           </Table>
-        }
+        )}
       </TableContainer>
     )
   }

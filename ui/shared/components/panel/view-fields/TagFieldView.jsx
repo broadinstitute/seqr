@@ -146,23 +146,25 @@ const TagFieldView = React.memo((
     component: MetadataField,
   }] : []
 
-  return <OptionFieldView
-    field={field}
-    tagOptions={tagSelectOptions}
-    formFieldProps={formFieldProps}
-    additionalEditFields={additionalFields}
-    initialValues={simplifiedValue ? initialValues : mappedValues}
-    modalStyle={MODAL_STYLE}
-    fieldDisplay={displayFieldValues => (
-      <TagFieldDisplay
-        displayFieldValues={displayFieldValues}
-        popup={popup}
-        tagAnnotation={tagAnnotation}
-        displayMetadata={displayMetadata}
-      />
-    )}
-    {...props}
-  />
+  return (
+    <OptionFieldView
+      field={field}
+      tagOptions={tagSelectOptions}
+      formFieldProps={formFieldProps}
+      additionalEditFields={additionalFields}
+      initialValues={simplifiedValue ? initialValues : mappedValues}
+      modalStyle={MODAL_STYLE}
+      fieldDisplay={displayFieldValues => (
+        <TagFieldDisplay
+          displayFieldValues={displayFieldValues}
+          popup={popup}
+          tagAnnotation={tagAnnotation}
+          displayMetadata={displayMetadata}
+        />
+      )}
+      {...props}
+    />
+  )
 })
 
 TagFieldView.propTypes = {

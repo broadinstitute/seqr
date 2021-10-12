@@ -84,14 +84,28 @@ const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color
         {
           termsByCategory.map(category => (
             <div key={category.categoryName}>
-              <b>{category.categoryName}</b>: {
+              <b>{`${category.categoryName}: `}</b>
+              {
                 (category.terms || []).map(
                   (hpoTerm, i) => {
                     const qualifiers = (hpoTerm.qualifiers || []).map(
-                      ({ type, label }) => <span key={type}> - <b>{snakecaseToTitlecase(type)}:</b> {label}</span>,
+                      ({ type, label }) => (
+                        <span key={type}>
+                          &nbsp; -
+                          <b>{` ${snakecaseToTitlecase(type)}: `}</b>
+                          {label}
+                        </span>
+                      ),
                     )
-                    const notes = hpoTerm.notes ? <small> ({hpoTerm.notes})</small> : null
-                    return <span key={hpoTerm.id}>{hpoTerm.label || hpoTerm.id}{qualifiers}{notes}{i < category.terms.length - 1 ? ', ' : ''}</span>
+                    const notes = hpoTerm.notes ? <small>{` (${hpoTerm.notes})`}</small> : null
+                    return (
+                      <span key={hpoTerm.id}>
+                        {hpoTerm.label || hpoTerm.id}
+                        {qualifiers}
+                        {notes}
+                        {i < category.terms.length - 1 ? ', ' : ''}
+                      </span>
+                    )
                   },
                 )
               }

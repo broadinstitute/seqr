@@ -33,17 +33,17 @@ const NoEmphasis = styled.span`
 
 const variantSummary = (variant, includeGenomeVersion) => (
   <div>
-    {variant.chrom}:{variant.pos}
-    {variant.alt &&
+    {`${variant.chrom}:${variant.pos}`}
+    {variant.alt && (
       <span>
         <SequenceContainer>{variant.ref}</SequenceContainer>
         <Icon fitted name="angle right" />
         <SequenceContainer>{variant.alt}</SequenceContainer>
       </span>
-    }
-    {includeGenomeVersion && variant.genomeVersion &&
-      <NoEmphasis>({GENOME_VERSION_DISPLAY_LOOKUP[variant.genomeVersion] || variant.genomeVersion})</NoEmphasis>
-    }
+    )}
+    {includeGenomeVersion && variant.genomeVersion && (
+      <NoEmphasis>{`(${GENOME_VERSION_DISPLAY_LOOKUP[variant.genomeVersion] || variant.genomeVersion})`}</NoEmphasis>
+    )}
   </div>
 )
 
@@ -54,7 +54,7 @@ const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesByI
     )).map(([geneId, variants]) => (
       <TopAlignedItem key={geneId}>
         <ShowGeneModal gene={genesById[geneId]} modalId={modalId} />
-        {variants.length > 0 && variants[0].pos &&
+        {variants.length > 0 && variants[0].pos && (
           <List.List>
             {variants.map((variant, i) => (
               <List.Item key={`${variant.pos}-${variant.ref}-${variant.alt}`}>
@@ -62,7 +62,7 @@ const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesByI
               </List.Item>
             ))}
           </List.List>
-        }
+        )}
       </TopAlignedItem>
     ))}
   </List>
@@ -85,7 +85,7 @@ export const Phenotypes = React.memo(({ phenotypes, maxWidth, ...listProps }) =>
   <List bulleted {...listProps}>
     {phenotypes.map(phenotype => (
       <PhenotypeListItem key={phenotype.id} observed={phenotype.observed} maxWidth={maxWidth}>
-        {phenotype.label} ({phenotype.id})
+        {`${phenotype.label} (${phenotype.id})`}
       </PhenotypeListItem>
     ))}
   </List>
