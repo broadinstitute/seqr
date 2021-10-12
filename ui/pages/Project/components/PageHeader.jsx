@@ -31,10 +31,10 @@ const PageHeader = React.memo((
       description = ''
       button = <EditProjectButton project={project} />
     } else {
-      description = family.description // eslint-disable-line prefer-destructuring
+      description = family.description
     }
   } else if (match.params.breadcrumb === 'analysis_group') {
-    description = analysisGroup.description // eslint-disable-line prefer-destructuring
+    description = analysisGroup.description
     button = (
       <span>
         <UpdateAnalysisGroupButton analysisGroup={analysisGroup} />

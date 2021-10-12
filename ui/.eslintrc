@@ -22,7 +22,7 @@
       "babel-module": {}
     }
   },
-  //"reportUnusedDisableDirectives": true, // TODO re-enable
+  "reportUnusedDisableDirectives": true,
   "rules": {
     "arrow-parens": ["error", "as-needed", { "requireForBlockBody": true }],
     "jsx-a11y/label-has-associated-control": "off",

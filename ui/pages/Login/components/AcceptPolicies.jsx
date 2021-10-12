@@ -15,7 +15,6 @@ const POLICY_FORM_FIELDS = [
     component: BooleanCheckbox,
     validate: validators.required,
     label: (
-      // eslint-disable-next-line jsx-a11y/label-has-for
       <label>
         I accept the &nbsp;
         <Link target="_blank" to="/terms_of_service">Terms of Service</Link>

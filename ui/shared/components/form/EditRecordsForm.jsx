@@ -10,7 +10,6 @@ import ReduxFormWrapper from './ReduxFormWrapper'
 
 const ROWS_PER_PAGE = 12
 
-/* eslint-disable no-unused-expressions */
 const TableContainer = styled.div`
 
   padding: 0 1em;

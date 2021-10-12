@@ -38,7 +38,6 @@ const BLANK_EXPORT = {
 
 const UploadPedigreeField = React.memo(({ error }) => (
   <div className={`${error ? 'error' : ''} field`}>
-    {/* eslint-disable-next-line jsx-a11y/label-has-for */}
     <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm" color={error ? 'red' : null}>
       <BulkUploadForm

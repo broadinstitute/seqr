@@ -1,4 +1,3 @@
-/* eslint-disable react/no-multi-comp */
 /* eslint-disable max-classes-per-file */
 
 import React, { createElement } from 'react'
@@ -350,7 +349,6 @@ const BaseRadioGroup = React.memo((props) => {
   const { value, options, label, onChange, margin, widths, getOptionProps, formGroupAs, ...baseProps } = props
   return (
     <InlineFormGroup margin={margin} widths={widths} as={formGroupAs}>
-      {/* eslint-disable-next-line jsx-a11y/label-has-for */}
       {label && <label>{label}</label>}
       {options.map((option, i) => (
         <BaseSemanticInput
