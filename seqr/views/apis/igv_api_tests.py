@@ -32,12 +32,12 @@ class IgvAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @responses.activate
-    @mock.patch('seqr.views.apis.igv_api.file_iter')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.igv_api.safe_redis_get_json')
     @mock.patch('seqr.views.apis.igv_api.safe_redis_set_json')
-    def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_file_iter):
-        mock_file_iter.return_value.stdout = iter([b'token1\n', b'token2\n'])
-        mock_file_iter.return_value.wait.side_effect = [-1, 0, 0]
+    def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_subprocess):
+        mock_subprocess.return_value.stdout = iter([b'token1\n', b'token2\n'])
+        mock_subprocess.return_value.wait.side_effect = [-1, 0, 0]
         mock_get_redis.return_value = None
 
         responses.add(responses.GET, 'https://storage.googleapis.com/fc-secure-project_A/sample_1.bai',
@@ -54,12 +54,17 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(responses.calls[0].request.headers.get('x-goog-user-project'), 'anvil-datastorage')
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
         mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=EXPIRATION_TIME_IN_SECONDS)
-        mock_file_iter.assert_called_with('gs://project_A/sample_1.bai', byte_range=(100, 200), raw_content=True,
-                                          user=Any(object))
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai',
+                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
+            mock.call().wait(),
+            mock.call('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
+            mock.call().wait(),
+        ])
 
         mock_get_redis.reset_mock()
         mock_get_redis.return_value = None
-        mock_file_iter.reset_mock()
+        mock_subprocess.reset_mock()
         responses.add(responses.GET, 'https://storage.googleapis.com/project_A/sample_1.bed.gz',
                       stream=True,
                       body=b'\n'.join(STREAMING_READS_CONTENT), status=200)
@@ -71,7 +76,8 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertIsNone(responses.calls[1].request.headers.get('x-goog-user-project'))
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
         mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token2', expire=EXPIRATION_TIME_IN_SECONDS)
-        # mock_subprocess.assert_called_with('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        mock_subprocess.assert_called_with('gcloud auth print-access-token', stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT, shell=True)
 
     @mock.patch('seqr.views.apis.igv_api.file_iter')
     def test_proxy_local_to_igv(self, mock_file_iter):
