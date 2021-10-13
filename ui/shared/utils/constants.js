@@ -34,7 +34,9 @@ export const GENOME_VERSION_FIELD = {
 
 export const GENOME_VERSION_DISPLAY_LOOKUP = {
   GRCh37: 'hg19',
+  [GENOME_VERSION_37]: 'hg19',
   GRCh38: 'hg38',
+  [GENOME_VERSION_38]: 'hg38',
 }
 
 // PROJECT FIELDS

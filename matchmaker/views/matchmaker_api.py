@@ -1,5 +1,6 @@
 import json
 import requests
+from copy import deepcopy
 from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.db.models import prefetch_related_objects
@@ -61,11 +62,8 @@ def search_individual_mme_matches(request, submission_guid):
     """
 
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
-    check_mme_permissions(submission, request.user)
-    return _search_matches(submission, request.user)
-
-
-def _search_matches(submission, user):
+    user = request.user
+    check_mme_permissions(submission, user)
     patient_data = get_submission_json_for_external_match(submission)
 
     nodes_to_query = [node for node in MME_NODES.values() if node.get('url')]
@@ -202,7 +200,8 @@ def update_mme_submission(request, submission_guid=None):
     """
     Create or update the submission for the given individual.
     """
-    submission_json = json.loads(request.body)
+    submission_json_body = json.loads(request.body)
+    submission_json = deepcopy(submission_json_body)
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
@@ -255,8 +254,7 @@ def update_mme_submission(request, submission_guid=None):
 
     update_model_from_json(submission, submission_json, user=request.user, allow_unknown_keys=True)
 
-    # search for new matches
-    return _search_matches(submission, request.user)
+    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: submission_json_body}})
 
 
 @login_and_policies_required

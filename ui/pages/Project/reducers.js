@@ -244,7 +244,7 @@ export const loadMmeMatches = (submissionGuid, search) => {
 }
 
 export const updateMmeSubmission = (values) => {
-  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'submissionGuid')
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'submissionGuid') // TODO add callback to search on success
 }
 
 export const updateMmeSubmissionStatus = (values) => {
