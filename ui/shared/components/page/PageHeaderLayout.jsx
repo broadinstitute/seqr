@@ -30,7 +30,7 @@ const BreadcrumbContainer = styled.div`
   }
 `
 
-export const PageHeaderLayout = React.memo(({
+const PageHeaderLayout = React.memo(({
   entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, header, entityLinkPath, entityGuidLinkPath,
   entityLinks, button, description,
 }) => {
@@ -127,6 +127,7 @@ PageHeaderLayout.propTypes = {
   description: PropTypes.string,
 }
 
+export default PageHeaderLayout
 
 export const SimplePageHeader = ({ page, pages }) => ([
   <Menu attached key="submenu">

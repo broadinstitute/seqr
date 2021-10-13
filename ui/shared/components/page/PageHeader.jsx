@@ -11,7 +11,7 @@ import { SummaryDataPageHeader } from 'pages/SummaryData/SummaryData'
 import { getGenesById } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { PageHeaderLayout, SimplePageHeader } from './PageHeaderLayout'
+import PageHeaderLayout, { SimplePageHeader } from './PageHeaderLayout'
 
 const BaseGenePageHeader = React.memo(({ gene, match }) =>
   <PageHeaderLayout
