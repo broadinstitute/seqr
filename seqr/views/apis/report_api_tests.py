@@ -223,7 +223,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {'individualCount', 'familyCount', 'sampleCountByType'})
         self.assertEqual(response_json['individualCount'], 18)
         self.assertEqual(response_json['familyCount'], 14)
-        self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8})
+        self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8, 'WGS': 1})
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')

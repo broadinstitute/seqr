@@ -14,12 +14,13 @@ from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37
-from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, TRANSCRIPT_2
+from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT, TRANSCRIPT_2
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
 SV_INDEX_NAME = 'test_index_sv'
+SV_WGS_INDEX_NAME = 'test_index_sv_wgs'
 INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
 ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
 SUB_INDICES = ['sub_index_1', 'sub_index_2']
@@ -398,15 +399,50 @@ ES_SV_VARIANT = {
           'gene_id': 'ENSG00000037183'
         },
       ],
-      'cpx_intervals': [{'type': 'DUP', 'chrom': '1', 'start': 1000, 'end': 3000},
-                        {'type': 'INS', 'chrom': '20', 'start': 11000, 'end': 13000}],
+      'geneIds': ['ENSG00000228198'],
+      'sf': 0.000693825,
+      'sn': 10088
+    },
+    'matched_queries': {SV_INDEX_NAME: ['F000002_2']},
+  }
+
+ES_SV_WGS_VARIANT = {
+    '_source': {
+      'genotypes': [
+        {
+          'gq': 33,
+          'cn': 1,
+          'sample_id': 'NA21234',
+          'num_alt': 1,
+        }
+      ],
+      'xpos': 2049045387,
+      'end': 49045898,
+      'start': 49045387,
+      'xstart': 2049045387,
+      'pos': 49045387,
+      'svType': 'CPX',
+      'xstop': 2049045898,
+      'variantId': 'prefix_19107_CPX',
+      'sc': 7,
+      'contig': '2',
+      'sortedTranscriptConsequences': [
+        {
+          'gene_symbol': 'OR4F5',
+          'major_consequence': 'DUP_PARTIAL',
+          'gene_id': 'ENSG00000228198'
+        }
+      ],
+      'cpx_intervals': [{'type': 'DUP', 'chrom': '2', 'start': 1000, 'end': 3000},
+                        {'type': 'INV', 'chrom': '20', 'start': 11000, 'end': 13000}],
+      'sv_type_detail': 'dupINV',
       'gnomad_svs_ID': 'gnomAD-SV_v2.1_BND_1_1',
       'gnomad_svs_AF': 0.00679,
       'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
     },
-    'matched_queries': {SV_INDEX_NAME: ['F000002_2']},
+    'matched_queries': {SV_WGS_INDEX_NAME: ['F000014_14']},
   }
 
 OR2M3_COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
@@ -440,6 +476,7 @@ INDEX_ES_VARIANTS = {
     INDEX_NAME: ES_VARIANTS,
     SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT],
     SV_INDEX_NAME: [ES_SV_VARIANT],
+    SV_WGS_INDEX_NAME: [ES_SV_WGS_VARIANT],
     NO_LIFT_38_INDEX_NAME: [BUILD_38_NO_LIFTOVER_ES_VARIANT],
 }
 INDEX_ES_VARIANTS.update({k: ES_VARIANTS for k in SUB_INDICES + SECOND_SUB_INDICES})
@@ -707,6 +744,7 @@ CORE_INDEX_METADATA = {
 }
 INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
+INDEX_METADATA[SV_WGS_INDEX_NAME] = INDEX_METADATA[SV_INDEX_NAME]
 
 ALL_INHERITANCE_QUERY = {
     'bool': {
@@ -860,7 +898,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
         hit.update({
             '_index': index,
             '_id': hit['_source']['variantId'],
-            '_type': 'structural_variant' if SV_INDEX_NAME in index else 'variant',
+            '_type': 'structural_variant' if SV_INDEX_NAME in index or SV_WGS_INDEX_NAME in index else 'variant',
         })
         matched_queries = hit.pop('matched_queries')
         if include_matched_queries:
@@ -895,7 +933,7 @@ def create_mock_response(search, index=INDEX_NAME):
         for search_filter in search['query']['bool']['filter']:
             if not variant_id_filters:
                 variant_id_filters = search_filter.get('terms', {}).get('variantId')
-            possible_inheritance_filters = search_filter.get('bool', {}).get('should', [])
+            possible_inheritance_filters = search_filter.get('bool', {}).get('should', []) + [search_filter]
             if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
                 include_matched_queries = True
                 break
@@ -1571,6 +1609,36 @@ class EsUtilsTest(TestCase):
                 '_name': 'F000002_2'
             }}
         ], index=SV_INDEX_NAME)
+
+    @urllib3_responses.activate
+    def test_sv_wgs_get_es_variants(self):
+        self.families = Family.objects.filter(guid='F000014_14')
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'structural': ['CPX']},
+            'qualityFilter': {'min_gq_sv': 20},
+            'inheritance': {'mode': 'de_novo'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, _ = get_es_variants(results_model, num_results=2)
+        self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
+
+        self.assertExecutedSearch(filters=[
+            {'terms': {'transcriptConsequenceTerms': ['CPX']}},
+            {'bool': {
+                'must': [{'term': {'samples': 'NA21234'}},
+                    {'bool': {
+                        'must_not': [
+                            {'term': {'samples_gq_sv_0_to_10': 'NA21234'}},
+                            {'term': {'samples_gq_sv_10_to_20': 'NA21234'}},
+                        ],
+                    }}
+                ],
+                '_name': 'F000014_14'
+            }}
+        ], index=SV_WGS_INDEX_NAME)
 
     @urllib3_responses.activate
     def test_multi_dataset_get_es_variants(self):
@@ -2302,7 +2370,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'frameshift': ['frameshift_variant']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_GENOME_VERSION_VARIANT]
@@ -2357,7 +2425,7 @@ class EsUtilsTest(TestCase):
         },
         )
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT]
@@ -2467,7 +2535,7 @@ class EsUtilsTest(TestCase):
             'locus': {'rawVariantItems': '2-103343363-GAGA-G', 'genomeVersion': '38'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         # Test liftover variant to hg37 when liftover fails
         mock_liftover.side_effect = Exception()
@@ -2539,7 +2607,7 @@ class EsUtilsTest(TestCase):
     def test_get_es_variants_create_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         setup_search_responses()
         urllib3_responses.add_json(
@@ -2739,7 +2807,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'frameshift': ['frameshift_variant']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
         gene_counts = get_es_variant_gene_counts(results_model, None)
 

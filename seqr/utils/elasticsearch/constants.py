@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual
 
@@ -294,9 +296,11 @@ PREDICTION_FIELDS_CONFIG = {
 
 SNP_QUALITY_FIELDS = {'gq': 5, 'ab': 5}
 SV_QUALITY_FIELDS = {'qs': 10}
-QUALITY_FIELDS = {}
-QUALITY_FIELDS.update(SNP_QUALITY_FIELDS)
-QUALITY_FIELDS.update(SV_QUALITY_FIELDS)
+QUALITY_QUERY_FIELDS = {}
+QUALITY_QUERY_FIELDS.update(SNP_QUALITY_FIELDS)
+QUALITY_QUERY_FIELDS.update(SV_QUALITY_FIELDS)
+QUALITY_QUERY_FIELDS = deepcopy(QUALITY_QUERY_FIELDS)
+QUALITY_QUERY_FIELDS.update({'gq_sv': 10})
 BASE_GENOTYPE_FIELDS_CONFIG = {
     'sample_id': {},
     'sample_type': {},
