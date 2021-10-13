@@ -420,14 +420,13 @@ USER_FIELDS = {
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
-    'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview'
+    'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd',
 }
 
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
-    'analysisNotes', 'analysisSummary', 'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst',
-    'codedPhenotype', 'postDiscoveryOmimNumber', 'mmeNotes', 'pedigreeDataset',
-    'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy'
+    'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumber',
+    'pedigreeDataset', 'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy'
 }
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
@@ -436,6 +435,8 @@ INTERNAL_FAMILY_FIELDS = {
     'individualGuids', 'successStory', 'successStoryTypes', 'pubmedIds',
 }
 INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
+
+FAMILY_NOTE_FIELDS = {'noteGuid', 'note', 'noteType', 'lastModifiedDate', 'createdBy', 'familyGuid'}
 
 INDIVIDUAL_FIELDS_NO_FEATURES = {
     'projectGuid', 'familyGuid', 'individualGuid', 'individualId',

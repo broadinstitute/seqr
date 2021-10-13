@@ -39,6 +39,8 @@ test('getProjectExportUrls', () => {
   expect(exportFamilies[1].familyGuid).toEqual('F011652_1')
   expect(exportFamilies[0].firstSample.sampleGuid).toEqual('S2310656_wal_mc16200_mc16203')
   expect(exportFamilies[1].firstSample).toEqual(undefined)
+  expect(exportFamilies[0].analysisNotes.length).toEqual(2)
+  expect(exportFamilies[0].caseNotes).toEqual(undefined)
 
   const exportIndividuals = exportUrls[1].getRawData(STATE_WITH_2_FAMILIES)
 

@@ -14,7 +14,7 @@ import {
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
-  getFamiliesByGuid,
+  getFamiliesByGuid, getProjectsByGuid,
 } from 'redux/selectors'
 
 
@@ -152,11 +152,13 @@ export const getVisibleSortedSavedVariants = createSelector(
   getGenesById,
   getUser,
   getVariantTagsByGuid,
-  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user, variantTagsByGuid) => {
+  getFamiliesByGuid,
+  getProjectsByGuid,
+  (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user, variantTagsByGuid, familiesByGuid, projectsByGuid) => {
     // Always secondary sort on xpos
     pairedFilteredSavedVariants.sort((a, b) => {
       return VARIANT_SORT_LOOKUP[sort](
-        Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, user, variantTagsByGuid) ||
+        Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b, genesById, variantTagsByGuid, user, familiesByGuid, projectsByGuid) ||
         (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos
     })
     return pairedFilteredSavedVariants.slice(...visibleIndices)

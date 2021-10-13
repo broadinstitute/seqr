@@ -58,7 +58,7 @@ const PedigreeJsContainer = styled(FontAwesomeIconsContainer)`
 
 const EDIT_INDIVIDUAL_MODAL_ID = 'editPedIndividual'
 const EDIT_INDIVIDUAL_FIELDS = [
-  { name: 'display_name', label: 'Individual ID' },
+  { name: 'label', label: 'Individual ID' },
   { name: 'affected', label: 'Affected?', component: InlineToggle, fullHeight: true, asFormInput: true },
   { name: INDIVIDUAL_FIELD_SEX, label: 'Sex', ...INDIVIDUAL_FIELD_CONFIGS[INDIVIDUAL_FIELD_SEX].formFieldProps },
   { name: 'yob', label: 'Birth Year', component: YearSelector, width: 6 },
@@ -75,7 +75,7 @@ const EDIT_INDIVIDUAL_FIELDS = [
 
 const INDIVIDUAL_FIELD_MAP = {
   name: 'individualGuid',
-  display_name: 'displayName',
+  label: 'displayName',
   sex: 'sex',
   affected: 'affected',
   yob: 'birthYear',
@@ -87,11 +87,10 @@ const INDIVIDUAL_FIELD_MAP = {
 const PEDIGREE_JS_OPTS = {
   background: '#fff',
   diseases: [],
-  labels: ['age'],
+  labels: ['label', 'age'],
   zoomIn: 3,
   zoomOut: 3,
   zoomSrc: ['button'],
-  symbol_size: 40,
 }
 
 class BasePedigreeImage extends React.PureComponent {
@@ -138,7 +137,7 @@ class BasePedigreeImage extends React.PureComponent {
           </Table.Body>
         </NoBorderTable>
         <div ref={this.setContainerElement} id={this.containerId} />
-        <Modal title={(editIndividual.data || {}).display_name} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
+        <Modal title={(editIndividual.data || {}).label} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
           <ReduxFormWrapper
             onSubmit={editIndividual.save}
             form={EDIT_INDIVIDUAL_MODAL_ID}
@@ -183,7 +182,8 @@ class BasePedigreeImage extends React.PureComponent {
       targetDiv: this.containerId,
       btn_target: `${this.containerId}-buttons`,
       edit: this.editIndividual,
-      font_size: dataset.length < 6 ? '1.5em' : '.7em',
+      font_size: dataset.length < 6 ? '1.3em' : '.8em',
+      symbol_size: dataset.length < 6 ? 60 : 40,
       ...PEDIGREE_JS_OPTS,
     }
     const pedigreeOpts = buildPedigeeJs(opts)
