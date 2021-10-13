@@ -205,7 +205,7 @@ POSTGRES_DB_CONFIG = {
     'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'pgtest'),
 }
 DATABASES = {
-    'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
+    'default': dict(NAME=os.environ.get('POSTGRES_DATABASE', 'seqrdb'), **POSTGRES_DB_CONFIG),
     'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
 }
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
@@ -290,8 +290,9 @@ ELASTICSEARCH_SERVICE_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', '9200'
 ELASTICSEARCH_SERVER = '{host}:{port}'.format(
     host=ELASTICSEARCH_SERVICE_HOSTNAME, port=ELASTICSEARCH_SERVICE_PORT)
 
+SEQR_ELASTICSEARCH_USERNAME = os.environ.get('SEQR_ES_USERNAME', 'seqr')
 SEQR_ELASTICSEARCH_PASSWORD = os.environ.get('SEQR_ES_PASSWORD')
-ELASTICSEARCH_CREDENTIALS = ('seqr', SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
+ELASTICSEARCH_CREDENTIALS = (SEQR_ELASTICSEARCH_USERNAME, SEQR_ELASTICSEARCH_PASSWORD) if SEQR_ELASTICSEARCH_PASSWORD else None
 ELASTICSEARCH_PROTOCOL = os.environ.get('ELASTICSEARCH_PROTOCOL', 'http')
 ELASTICSEARCH_CA_PATH = os.environ.get('ELASTICSEARCH_CA_PATH')
 # if we have a custom CA certificate for elasticsearch, add it to the verification path for connections
