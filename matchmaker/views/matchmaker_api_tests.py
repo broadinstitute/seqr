@@ -563,7 +563,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
         new_submission_guid = next(iter(response_json['mmeSubmissionsByGuid']))
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
-            # 'mmeResultGuids': list(response_json['mmeResultsByGuid'].keys()),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
@@ -581,8 +580,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
-                'end': None,
-                'genomeVersion': 'GRCh38',
+                'genomeVersion': '38',
+                'numAlt': 2,
             }, {
                 'geneId': 'ENSG00000235249',
                 'alt': None,
@@ -590,7 +589,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'chrom': '14',
                 'pos': 77027623,
                 'end': 77028137,
-                'genomeVersion': 'GRCh38',
+                'genomeVersion': '38',
+                'numAlt': -1,
+                'cn': 3,
             }],
         }})
         self.assertEqual(
@@ -623,7 +624,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'mmeSubmissionsByGuid'})
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
-            # 'mmeResultGuids': sorted(list(response_json['mmeResultsByGuid'].keys()), reverse=True),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
@@ -672,13 +672,12 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         update_url = reverse(update_mme_submission, args=[SUBMISSION_GUID])
         response = self.client.post(update_url, content_type='application/json',  data=json.dumps({
-            'geneVariants': [{'geneId': 'ENSG00000235249', 'genomeVersion': '38'}]
+            'geneVariants': [{'geneId': 'ENSG00000235249'}]
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
-            'mmeResultGuids': mock.ANY,
             'individualGuid': INDIVIDUAL_GUID,
             'submissionGuid': SUBMISSION_GUID,
             'createdDate': '2018-05-23T09:07:49.719Z',

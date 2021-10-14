@@ -1,6 +1,5 @@
 import json
 import requests
-from copy import deepcopy
 from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.db.models import prefetch_related_objects
@@ -200,8 +199,7 @@ def update_mme_submission(request, submission_guid=None):
     """
     Create or update the submission for the given individual.
     """
-    submission_json_body = json.loads(request.body)
-    submission_json = deepcopy(submission_json_body)
+    submission_json = json.loads(request.body)
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
@@ -254,8 +252,13 @@ def update_mme_submission(request, submission_guid=None):
 
     update_model_from_json(submission, submission_json, user=request.user, allow_unknown_keys=True)
 
+    submission_response = get_json_for_matchmaker_submission(submission)
+    submission_response.update({
+        'phenotypes': phenotypes,
+        'geneVariants': gene_variants,
+    })
     response = {
-        'mmeSubmissionsByGuid': {submission.guid: submission_json_body}, # TODO fix on un-delete
+        'mmeSubmissionsByGuid': {submission.guid: submission_response},
     }
     if not submission_guid:
         response['individualsByGuid'] = {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}}
@@ -402,10 +405,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     contact_notes = {note.institution: _get_json_for_model(note, user=user)
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
-    submission_json = get_json_for_matchmaker_submission(
-        submission, individual_guid=submission.individual.guid,
-        additional_model_fields=['contact_name', 'contact_href', 'submission_id']
-    )
+    submission_json = get_json_for_matchmaker_submission(submission)
     submission_json.update({
         'mmeResultGuids': list(parsed_results_gy_guid.keys()),
         'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
