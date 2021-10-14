@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA, loadProject } from 'redux/rootReducer'
+import { RECEIVE_DATA, loadProjectDetails } from 'redux/utils/reducerUtils'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -125,7 +125,7 @@ export const loadProjectContext = (projectGuid) => {
     if (state.searchHashContextLoading.isLoading) {
       return
     }
-    loadProject(projectGuid)(dispatch, getState)
+    loadProjectDetails(projectGuid)(dispatch, getState)
   }
 }
 
