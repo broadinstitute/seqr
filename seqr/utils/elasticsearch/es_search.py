@@ -670,7 +670,7 @@ class EsSearch(object):
             for gen in genotypes.values():
                 for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
                     gen_field = conf.get('genotype_field', field)
-                    compare_func = conf.get('compare') or (lambda a, b: a == b)
+                    compare_func = conf.get('equal') or (lambda a, b: a == b)
                     if compare_func(gen.get(gen_field), hit[field]):
                         gen[gen_field] = None
 

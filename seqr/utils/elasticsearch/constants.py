@@ -342,6 +342,6 @@ SV_SAMPLE_OVERRIDE_FIELD_CONFIGS = {
     'num_exon':{'select_val': max, 'genotype_field': 'numExon'},
     'geneIds': {
         'select_val': lambda gene_lists: set([gene_id for gene_list in gene_lists for gene_id in (gene_list or [])]),
-        'compare': lambda a, b: set(a or []) == set(b or [])
+        'equal': lambda a, b: set(a or []) == set(b or [])
     },
 }
