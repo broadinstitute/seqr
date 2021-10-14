@@ -2,9 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Icon, Header } from 'semantic-ui-react'
+import { Popup, Icon, Header, Divider } from 'semantic-ui-react'
 
-import { getSortedIndividualsByFamily } from 'redux/selectors'
+import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { VerticalSpacer } from '../../Spacers'
 import HpoPanel from '../HpoPanel'
@@ -178,23 +178,46 @@ const GENOTYPE_DETAILS = [
   { title: 'Filter', variantField: 'genotypeFilters', shouldHide: val => (val || []).length < 1 },
   { title: 'Phred Likelihoods', field: 'pl' },
   { title: 'Quality Score', field: 'qs' },
-  { title: 'Start', field: 'start' },
-  { title: 'End', field: 'end' },
 ]
 
-const genotypeDetails = (genotype, variant) => GENOTYPE_DETAILS.map(
+const SV_GENOTYPE_DETAILS = [
+  { title: 'Start', field: 'start' },
+  { title: 'End', field: 'end' },
+  { title: '# Exons', field: 'numExon' },
+  {
+    title: 'Genes',
+    field: 'geneIds',
+    format: (val, genesById) => val.map(geneId => (genesById[geneId] || {}).geneSymbol || geneId).join(', '),
+  },
+]
+
+const formattedGenotypeDetails = (details, genotype, variant, genesById) => details.map(
   ({ shouldHide, title, field, variantField, format }) => {
     const value = field ? genotype[field] : variant[variantField]
     return value && !(shouldHide && shouldHide(value, variant)) ? (
       <div key={title}>
         {`${title}:  `}
-        <b>{format ? format(value) : value}</b>
+        <b>{format ? format(value, genesById) : value}</b>
       </div>
     ) : null
   },
 ).filter(val => val)
 
-const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
+const genotypeDetails = (genotype, variant, genesById) => {
+  const details = formattedGenotypeDetails(GENOTYPE_DETAILS, genotype, variant)
+  const svDetails = formattedGenotypeDetails(SV_GENOTYPE_DETAILS, genotype, variant, genesById)
+  if (svDetails.length < 1) {
+    return details
+  }
+  return [
+    ...details,
+    <VerticalSpacer height={10} key="spacer" />,
+    <Divider horizontal fitted key="divider">Sample SV</Divider>,
+    ...svDetails,
+  ]
+}
+
+const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
   if (!variant.genotypes) {
     return null
   }
@@ -226,13 +249,12 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
   }
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
-  const details = genotypeDetails(genotype, variant)
+  const details = genotypeDetails(genotype, variant, genesById)
 
   const content = (
     <span>
       {genotype.otherSample && (
         <Popup
-          flowing
           header="Additional Sample Type"
           trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
           content={
@@ -244,7 +266,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
                   <VerticalSpacer height={5} />
                 </div>
               )}
-              {genotypeDetails(genotype.otherSample, variant)}
+              {genotypeDetails(genotype.otherSample, variant, genesById)}
             </div>
           }
         />
@@ -261,16 +283,17 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet }) => {
     </span>
   )
 
-  return details.length ? <Popup position="top center" flowing trigger={content} content={details} /> : content
+  return details.length ? <Popup position="top center" trigger={content} content={details} /> : content
 })
 
 Genotype.propTypes = {
   variant: PropTypes.object,
   individual: PropTypes.object,
   isCompoundHet: PropTypes.bool,
+  genesById: PropTypes.object,
 }
 
-const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet }) => (
+const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById }) => (
   <IndividualsContainer>
     {(individuals || []).map(individual => (
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
@@ -284,7 +307,7 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
           }
         />
         <br />
-        <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} />
+        <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} genesById={genesById} />
       </IndividualCell>
     ))}
   </IndividualsContainer>
@@ -294,10 +317,12 @@ BaseVariantIndividuals.propTypes = {
   variant: PropTypes.object,
   individuals: PropTypes.arrayOf(PropTypes.object),
   isCompoundHet: PropTypes.bool,
+  genesById: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   individuals: getSortedIndividualsByFamily(state)[ownProps.familyGuid],
+  genesById: getGenesById(state),
 })
 
 const FamilyVariantIndividuals = connect(mapStateToProps)(BaseVariantIndividuals)

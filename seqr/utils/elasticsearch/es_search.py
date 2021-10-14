@@ -15,7 +15,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -635,20 +635,21 @@ class EsSearch(object):
                                    for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
+        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
                 sample = samples_by_id.get(genotype_hit['sample_id'])
                 if sample:
                     genotype_hit['sample_type'] = sample.sample_type
-                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
 
             if len(samples_by_id) != len(genotypes) and is_sv:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
                         genotypes[sample.individual.guid] = _get_field_values(
-                            {'sample_id': sample_id}, GENOTYPE_FIELDS_CONFIG)
+                            {'sample_id': sample_id}, genotype_fields_config)
                         genotypes[sample.individual.guid]['isRef'] = True
                         if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
                             genotypes[sample.individual.guid]['cn'] = 1
@@ -656,20 +657,22 @@ class EsSearch(object):
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
                 (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
-            start = min([gen.get('start') or hit['start'] for gen in genotypes.values() if not gen.get('isRef')])
-            end = max([gen.get('end') or hit['end'] for gen in genotypes.values() if not gen.get('isRef')])
-            num_exon = max([gen.get('numExon') or hit['num_exon'] for gen in genotypes.values() if not gen.get('isRef')])
-            if start != hit['start']:
-                hit['start'] = start
-                hit['xpos'] = get_xpos(hit['contig'], start)
-            if end != hit['end']:
-                hit['end'] = end
-            if num_exon != hit['num_exon']:
-                hit['num_exon'] = num_exon
+            for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                gen_field = conf.get('genotype_field', field)
+                val = conf['select_val']([
+                    gen.get(gen_field) or hit.get(field) for gen in genotypes.values() if not gen.get('isRef')
+                ])
+                if val != hit.get(field):
+                    hit[field] = val
+                    if field == 'start':
+                        hit['xpos'] = get_xpos(hit['contig'], val)
+
             for gen in genotypes.values():
-                if gen.get('start') == start and gen.get('end') == end:
-                    gen['start'] = None
-                    gen['end'] = None
+                for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                    gen_field = conf.get('genotype_field', field)
+                    compare_func = conf.get('equal') or (lambda a, b: a == b)
+                    if compare_func(gen.get(gen_field), hit[field]):
+                        gen[gen_field] = None
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -720,6 +723,9 @@ class EsSearch(object):
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)
+        if hit.get('geneIds'):
+            transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in hit['geneIds']}
+
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
