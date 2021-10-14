@@ -46,11 +46,13 @@ const mapStateToProps = (state, ownProps) => {
 
 const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 
+const submitForm = onSubmit => values => onSubmit(values[FILE_FIELD_NAME])
+
 const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) =>
   <ReduxFormWrapper
     form={`bulkUpload_${name}`}
     modalName={modalName}
-    onSubmit={values => onSubmit(values[FILE_FIELD_NAME])}
+    onSubmit={submitForm(onSubmit)}
     confirmCloseIfNotSaved
     closeOnSuccess
     showErrorPanel

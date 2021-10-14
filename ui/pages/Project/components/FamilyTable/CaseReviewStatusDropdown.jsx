@@ -28,6 +28,10 @@ const StatusContainer = styled.span`
   .ui.selection.active.dropdown .menu {
     max-height: none;
   }
+  
+  button.ui.button.basic.tiny.labeled.icon {
+    padding-top: 8px;
+  }
 `
 
 const STATUS_FORM_FIELDS = [{
@@ -44,22 +48,18 @@ const CaseReviewStatusDropdown = React.memo(props =>
       initialValues={props.individual}
       fields={STATUS_FORM_FIELDS}
     />
-    {/* edit case review discussion for individual: */}
-    <div style={{ padding: '5px 12px' }}>
-      {
-        props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
-        <TextFieldView
-          hideValue
-          isEditable
-          editLabel="Edit Questions"
-          initialValues={props.individual}
-          field="caseReviewDiscussion"
-          idField="individualGuid"
-          modalTitle={`${props.individual.displayName}: Case Review Discussion`}
-          onSubmit={props.updateIndividualDiscussion}
-        />
-      }
-    </div>
+    {props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED && (
+      <TextFieldView
+        hideValue
+        isEditable
+        editLabel="Edit Questions"
+        initialValues={props.individual}
+        field="caseReviewDiscussion"
+        idField="individualGuid"
+        modalTitle={`${props.individual.displayName}: Case Review Discussion`}
+        onSubmit={props.updateIndividualDiscussion}
+      />
+    )}
   </StatusContainer>,
 )
 
