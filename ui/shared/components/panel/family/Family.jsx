@@ -146,13 +146,13 @@ const Family = React.memo((
       key="name"
       size="small"
       content={showFamilyPageLink ?
-        <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
+        <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
         family.displayName
       }
     />
     leftContent = [
       compact ? familyHeader : <div key="header">{familyHeader}</div>,
-      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={project.canEdit} />,
+      <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={!disableEdit && project.canEdit} />,
     ]
   }
 
@@ -168,7 +168,7 @@ const Family = React.memo((
 })
 
 Family.propTypes = {
-  project: PropTypes.object.isRequired,
+  project: PropTypes.object,
   family: PropTypes.object.isRequired,
   fields: PropTypes.array,
   rightContent: PropTypes.node,
