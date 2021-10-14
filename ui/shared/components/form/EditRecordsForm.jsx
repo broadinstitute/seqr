@@ -82,6 +82,18 @@ class EditRecordsForm extends React.PureComponent
     }
   }
 
+  getFilteredRecords = (values, filterFunc) => {
+    const { entityKey } = this.props
+    return { [entityKey]: Object.values(values).filter(filterFunc) }
+  }
+
+  submitRecords = (values) => {
+    const { records, onSubmit, idField, columns } = this.props
+    onSubmit(this.getFilteredRecords(values, record => columns.map(field => field.name).some(
+      field => record[field] !== records[record[idField]][field],
+    )))
+  }
+
 
   render() {
     const { formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps } = this.props
@@ -90,14 +102,7 @@ class EditRecordsForm extends React.PureComponent
       { ...acc, [recordId]: toDelete }
     ), {})
 
-    const getFilteredRecords = (values, filterFunc) => ({ [entityKey]: Object.values(values).filter(filterFunc) })
-
     const getRowFilterVal = filterColumn ? row => row[filterColumn] : null
-
-    const submitRecords = values =>
-      onSubmit(getFilteredRecords(values, record => columns.map(field => field.name).some(
-        field => record[field] !== records[record[idField]][field],
-      )))
 
     return (
       <FormContentContainer>
@@ -105,7 +110,7 @@ class EditRecordsForm extends React.PureComponent
           form={formName}
           modalName={modalName}
           submitButtonText="Apply"
-          onSubmit={submitRecords}
+          onSubmit={this.submitRecords}
           confirmCloseIfNotSaved
           closeOnSuccess
           showErrorPanel
@@ -125,7 +130,7 @@ class EditRecordsForm extends React.PureComponent
               rowsPerPage={ROWS_PER_PAGE}
               footer={
                 <DeleteButton
-                  initialValues={getFilteredRecords(this.state.data, record => record.toDelete)}
+                  initialValues={this.getFilteredRecords(this.state.data, record => record.toDelete)}
                   onSubmit={onSubmit}
                   onSuccess={closeParentModal}
                   confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}

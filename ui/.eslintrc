@@ -71,9 +71,6 @@
     "react/jsx-props-no-spreading": 0,
     "react/jsx-no-target-blank": 0,
     "react/jsx-tag-spacing": 0, // TODO re-enable
-    "react-perf/jsx-no-new-array-as-prop": 0, // TODO re-enable
-    "react-perf/jsx-no-new-function-as-prop": 0, // TODO re-enable
-    "react-perf/jsx-no-new-object-as-prop": 0, // TODO re-enable
     "spaced-comment": 0,
 
     "jsx-a11y/iframe-has-title": 0,
