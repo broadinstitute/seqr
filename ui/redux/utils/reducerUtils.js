@@ -11,7 +11,9 @@ export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 
 // A helper action that handles create, update and delete requests
-export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath) => {
+export const updateEntity = (
+  values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath, onSuccess,
+) => {
   return (dispatch, getState) => {
     if (getUrlPath) {
       urlPath = getUrlPath(getState())
@@ -26,6 +28,9 @@ export const updateEntity = (values, receiveDataAction, urlPath, idField, action
     return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
       (responseJson) => {
         dispatch({ type: receiveDataAction, updatesById: responseJson })
+        if (onSuccess) {
+          onSuccess(responseJson, dispatch, getState)
+        }
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })

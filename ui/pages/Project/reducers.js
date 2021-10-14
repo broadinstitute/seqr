@@ -244,7 +244,10 @@ export const loadMmeMatches = (submissionGuid, search) => {
 }
 
 export const updateMmeSubmission = (values) => {
-  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'submissionGuid') // TODO add callback to search on success
+  const onSuccess = values.delete ? null : (responseJson, dispatch, getState) => (
+    loadMmeMatches(Object.keys(responseJson.mmeSubmissionsByGuid)[0], true)(dispatch, getState)
+  )
+  return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'submissionGuid', null, null, onSuccess)
 }
 
 export const updateMmeSubmissionStatus = (values) => {
