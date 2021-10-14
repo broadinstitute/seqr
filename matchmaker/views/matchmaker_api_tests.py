@@ -540,7 +540,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         # Test invalid inputs
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Genotypes or phentoypes are required')
+        self.assertEqual(response.reason_phrase, 'Genotypes or phenotypes are required')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'geneVariants': [{'pos': 123345}],

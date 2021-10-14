@@ -205,7 +205,7 @@ def update_mme_submission(request, submission_guid=None):
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
-        return create_json_response({}, status=400, reason='Genotypes or phentoypes are required')
+        return create_json_response({}, status=400, reason='Genotypes or phenotypes are required')
 
     genomic_features = []
     for gene_variant in gene_variants:
