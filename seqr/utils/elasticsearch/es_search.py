@@ -364,6 +364,11 @@ class EsSearch(object):
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
             )
 
+            if not family_samples_q:
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException('Invalid custom inheritance')
+
+
             # For recessive search, should be hom recessive, x-linked recessive, or compound het
             if inheritance_mode == RECESSIVE:
                 x_linked_q = _family_genotype_inheritance_filter(
@@ -1182,7 +1187,6 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
         affected = individual_affected_status[individual_guid]
 
         genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
-
         if genotype:
             if is_sv_comp_het and affected == Individual.AFFECTED_STATUS_UNAFFECTED:
                 # Unaffected individuals for SV compound het search can have any genotype so are not included
