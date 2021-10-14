@@ -70,7 +70,9 @@ const PANELS = [
   INHERITANCE_PANEL, HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
-const CustomSearch = React.memo(({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) =>
+const CustomSearch = React.memo((
+  { match, history, includeAllProjects, loadContext, loading, searchParams, ...props },
+) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
@@ -81,7 +83,8 @@ const CustomSearch = React.memo(({ match, history, includeAllProjects, loadConte
             form={CUSTOM_SEARCH_FORM_NAME}
             initialValues={searchParams}
           >
-            <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
+            <InlineHeader content="Include All Projects: " />
+            {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
             {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
             <VariantSearchFormPanels panels={PANELS} />
             {configuredField(CUSTOM_QUERY_FIELD)}
@@ -90,10 +93,9 @@ const CustomSearch = React.memo(({ match, history, includeAllProjects, loadConte
       </Grid.Column>
     </Grid.Row>
     {match.params.searchHash &&
-      <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />
-    }
-  </Grid>,
-)
+      <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />}
+  </Grid>
+))
 
 CustomSearch.propTypes = {
   match: PropTypes.object,

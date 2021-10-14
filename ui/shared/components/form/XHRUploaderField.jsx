@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable max-classes-per-file */
 
 import React from 'react'
 import Cookies from 'js-cookie'
@@ -8,7 +9,7 @@ import styled from 'styled-components'
 import { Field } from 'redux-form'
 import { Message } from 'semantic-ui-react'
 
-//XHRUploader widget: https://github.com/rma-consulting/react-xhr-uploader/blob/master/src/index.js
+// XHRUploader widget: https://github.com/rma-consulting/react-xhr-uploader/blob/master/src/index.js
 import XHRUploader from 'react-xhr-uploader'
 
 const MessagePanel = styled(Message)`
@@ -29,14 +30,21 @@ export class XHRUploaderWithEvents extends XHRUploader {
   }
 
   renderInput() {
-    return <input
-      name="file-upload"
-      style={{ display: 'none' }}
-      multiple={this.props.maxFiles > 1}
-      type="file" ref={(c) => { if (c) { this.fileInput = c } }}
-      onChange={this.onFileSelect}
-      onClick={(event) => { event.target.value = null }} // allows the same file to be selected more than once (see https://stackoverflow.com/questions/39484895/how-to-allow-input-type-file-to-select-the-same-file-in-react-component)
-    />
+    return (
+      <input
+        name="file-upload"
+        style={{ display: 'none' }}
+        multiple={this.props.maxFiles > 1}
+        type="file"
+        ref={(c) => { if (c) { this.fileInput = c } }}
+        onChange={this.onFileSelect}
+        onClick={(event) => {
+          // allows the same file to be selected more than once (see
+          // https://stackoverflow.com/questions/39484895/how-to-allow-input-type-file-to-select-the-same-file-in-react-component)
+          event.target.value = null // eslint-disable-line no-param-reassign
+        }}
+      />
+    )
   }
 
   /**
@@ -75,13 +83,12 @@ export class XHRUploaderWithEvents extends XHRUploader {
     }
   }
 
-
   renderFileSet() {
     const { items } = this.state
     const { progressClass } = this.props
     if (items.length > 0) {
       const { cancelIconClass, completeIconClass } = this.props
-      const { progress, styles } = this.state
+      const { styles } = this.state
       const cancelledItems = items.filter(item => item.cancelled === true)
       const filesetStyle = (items.length === cancelledItems.length) ? { display: 'none' } : styles.fileset
       return (
@@ -90,7 +97,6 @@ export class XHRUploaderWithEvents extends XHRUploader {
             items.filter(item => !item.cancelled).map((item) => {
               const { file } = item
               if (!file) {
-                console.log('not a file', this.state.items)
                 return null
               }
               const sizeInMB = (file.size / (1024 * 1024)).toPrecision(2)
@@ -99,7 +105,7 @@ export class XHRUploaderWithEvents extends XHRUploader {
                 <div key={item.index}>
                   <div style={styles.fileDetails}>
                     <span className="icon-file icon-large">&nbsp;</span>
-                    <span style={styles.fileName}>{`${file.name}`}</span> {/* , ${file.type} */}
+                    <span style={styles.fileName}>{`${file.name}`}</span>
                     {sizeInMB && <span style={styles.fileSize}>{`${sizeInMB} Mb`}</span>}
                     <i
                       className={iconClass}
@@ -113,10 +119,12 @@ export class XHRUploaderWithEvents extends XHRUploader {
                   <div>
                     <progress
                       style={progressClass ? {} : styles.progress}
-                      className={progressClass} min="0" max="100"
+                      className={progressClass}
+                      min="0"
+                      max="100"
                       value={item.progress}
                     >
-                      {item.progress}%
+                      {`${item.progress}%`}
                     </progress>
                   </div>
                 </div>
@@ -137,10 +145,20 @@ export class XHRUploaderWithEvents extends XHRUploader {
     }
     return nextState !== this.state
   }
+
 }
 
 class UploaderFieldComponent extends React.PureComponent {
-  onFinished = (xhr, uploaderState) => this.props.input.onChange({ uploaderState, ...JSON.parse(xhr.response) })
+
+  static propTypes = {
+    input: PropTypes.object,
+    uploaderProps: PropTypes.object,
+  }
+
+  onFinished = (xhr, uploaderState) => {
+    const { input } = this.props
+    input.onChange({ uploaderState, ...JSON.parse(xhr.response) })
+  }
 
   render() {
     const { input, uploaderProps } = this.props
@@ -158,11 +176,7 @@ class UploaderFieldComponent extends React.PureComponent {
       (input.value && input.value.info) ? <MessagePanel key="info" info visible list={input.value.info} /> : null,
     ])
   }
-}
 
-UploaderFieldComponent.propTypes = {
-  input: PropTypes.object,
-  uploaderProps: PropTypes.object,
 }
 
 export const uploadedFileHasErrors = value => value && value.errors && (value.errors.length ? value.errors : undefined)
@@ -170,7 +184,7 @@ const hasUploadedFile = value => (value && value.uploadedFileId ? undefined : 'F
 export const validateUploadedFile = value => uploadedFileHasErrors(value) || hasUploadedFile(value)
 export const warnUploadedFile = value => value && value.warnings && (value.warnings.length ? value.warnings : undefined)
 
-const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...props }) =>
+const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...props }) => (
   <Field
     name={name}
     validate={required ? validateUploadedFile : uploadedFileHasErrors}
@@ -179,8 +193,8 @@ const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...
     component={UploaderFieldComponent}
     onChange={onChange}
     normalize={normalize}
-  />,
-)
+  />
+))
 
 UploaderFormField.propTypes = {
   name: PropTypes.string.isRequired,

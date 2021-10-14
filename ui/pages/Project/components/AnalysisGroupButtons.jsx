@@ -17,7 +17,6 @@ import {
 import { updateAnalysisGroup } from '../reducers'
 import { getProjectFamiliesByGuid, getCurrentProject } from '../selectors'
 
-
 const FAMILY_FIELDS = [
   { name: FAMILY_DISPLAY_NAME, width: 3, content: 'Family' },
   {
@@ -29,13 +28,12 @@ const FAMILY_FIELDS = [
   { name: FAMILY_FIELD_DESCRIPTION, width: 9, content: 'Description' },
 ]
 
-
-const FamilySelectorField = React.memo(({ value, onChange, families }) =>
+const FamilySelectorField = React.memo(({ value, onChange, families }) => (
   <div>
     <FileUploadField
       name="uploadedFamilyIds"
       normalize={(newValue, previousValue) => {
-       if (newValue.errors) {
+        if (newValue.errors) {
           return { ...newValue, info: newValue.errors, errors: [] }
         }
         if (newValue.parsedData && newValue.uploadedFileId !== (previousValue || {}).uploadedFileId) {
@@ -68,15 +66,14 @@ const FamilySelectorField = React.memo(({ value, onChange, families }) =>
       value={value.reduce((acc, key) => ({ ...acc, [key]: true }), {})}
       onChange={newValue => onChange(Object.keys(newValue).filter(key => newValue[key]))}
     />
-  </div>,
-)
+  </div>
+))
 
 FamilySelectorField.propTypes = {
-  value: PropTypes.array,
-  families: PropTypes.array.isRequired,
+  value: PropTypes.arrayOf(PropTypes.string),
+  families: PropTypes.arrayOf(PropTypes.object).isRequired,
   onChange: PropTypes.func,
 }
-
 
 const FORM_FIELDS = [
   { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') },
@@ -89,7 +86,9 @@ const FORM_FIELDS = [
   },
 ]
 
-export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly }) => {
+export const UpdateAnalysisGroup = React.memo((
+  { project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly },
+) => {
   if (!project.canEdit) {
     return null
   }
@@ -101,14 +100,16 @@ export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmi
   const fields = [...FORM_FIELDS]
   fields[2].families = Object.values(projectFamiliesByGuid)
 
-  return <UpdateButton
-    modalTitle={title}
-    buttonText={iconOnly ? null : title}
-    onSubmit={onSubmit}
-    formFields={fields}
-    showErrorPanel
-    {...buttonProps}
-  />
+  return (
+    <UpdateButton
+      modalTitle={title}
+      buttonText={iconOnly ? null : title}
+      onSubmit={onSubmit}
+      formFields={fields}
+      showErrorPanel
+      {...buttonProps}
+    />
+  )
 })
 
 UpdateAnalysisGroup.propTypes = {
@@ -119,16 +120,22 @@ UpdateAnalysisGroup.propTypes = {
   onSubmit: PropTypes.func,
 }
 
-
 export const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
-  project.canEdit ? <DeleteButton
-    initialValues={analysisGroup}
-    onSubmit={onSubmit}
-    confirmDialog={<div className="content">Are you sure you want to delete <b>{analysisGroup.name}</b></div>}
-    buttonText={iconOnly ? null : 'Delete AnalysisGroup'}
-    size={size}
-    onSuccess={() => history.push(`/project/${analysisGroup.projectGuid}/project_page`)}
-  /> : null
+  project.canEdit ? (
+    <DeleteButton
+      initialValues={analysisGroup}
+      onSubmit={onSubmit}
+      confirmDialog={
+        <div className="content">
+          Are you sure you want to delete
+          <b>{analysisGroup.name}</b>
+        </div>
+      }
+      buttonText={iconOnly ? null : 'Delete AnalysisGroup'}
+      size={size}
+      onSuccess={() => history.push(`/project/${analysisGroup.projectGuid}/project_page`)}
+    />
+  ) : null
 ))
 
 DeleteAnalysisGroup.propTypes = {
@@ -151,4 +158,3 @@ const mapDispatchToProps = {
 
 export const UpdateAnalysisGroupButton = connect(mapStateToProps, mapDispatchToProps)(UpdateAnalysisGroup)
 export const DeleteAnalysisGroupButton = withRouter(connect(mapStateToProps, mapDispatchToProps)(DeleteAnalysisGroup))
-

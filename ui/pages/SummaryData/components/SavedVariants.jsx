@@ -104,13 +104,15 @@ const BaseSavedVariants = React.memo(({ loadAllProjectSavedVariants, geneDetail,
             inline
           />
           {gene && <HorizontalSpacer width={10} />}
-          {gene && <Form.Field
-            control={Label}
-            content={(geneDetail || {}).geneSymbol || gene}
-            inline
-            color="grey"
-            onRemove={removeGene}
-          />}
+          {gene && (
+            <Form.Field
+              control={Label}
+              content={(geneDetail || {}).geneSymbol || gene}
+              inline
+              color="grey"
+              onRemove={removeGene}
+            />
+          )}
           <HorizontalSpacer width={10} />
         </StyledForm>
       }
@@ -142,10 +144,8 @@ BaseSavedVariants.propTypes = {
 
 const ConnectedSavedVariants = connect(mapStateToProps, mapDispatchToProps)(BaseSavedVariants)
 
-const RoutedSavedVariants = ({ match }) =>
-  <Switch>
-    <Route path={`${match.url}/:tag?/:gene?`} component={ConnectedSavedVariants} />
-  </Switch>
+const RoutedSavedVariants =
+  ({ match }) => <Switch><Route path={`${match.url}/:tag?/:gene?`} component={ConnectedSavedVariants} /></Switch>
 
 RoutedSavedVariants.propTypes = {
   match: PropTypes.object,

@@ -1,4 +1,3 @@
-/* eslint-disable */
 const config = require('./webpack.config.dev');
 
 module.exports = function(proxyConfig) {

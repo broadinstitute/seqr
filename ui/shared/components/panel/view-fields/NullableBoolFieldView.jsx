@@ -27,7 +27,8 @@ const getNullableBoolField = ({ field }) => [{
 const nullableBoolDisplay = (value) => {
   if (value === true) {
     return <Label horizontal basic size="small" content="Yes" color="green" />
-  } else if (value === false) {
+  }
+  if (value === false) {
     return <Label horizontal basic size="small" content="No" color="red" />
   }
   return 'Unknown'
@@ -35,14 +36,16 @@ const nullableBoolDisplay = (value) => {
 
 const NullableBoolFieldView = React.memo((props) => {
   const fields = getNullableBoolField(props)
-  return <BaseFieldView
-    fieldDisplay={nullableBoolDisplay}
-    formFields={fields}
-    style={BLOCK_DISPLAY_STYLE}
-    showEmptyValues
-    compact
-    {...props}
-  />
+  return (
+    <BaseFieldView
+      fieldDisplay={nullableBoolDisplay}
+      formFields={fields}
+      style={BLOCK_DISPLAY_STYLE}
+      showEmptyValues
+      compact
+      {...props}
+    />
+  )
 })
 
 NullableBoolFieldView.propTypes = {

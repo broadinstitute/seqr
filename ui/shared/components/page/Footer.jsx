@@ -16,12 +16,12 @@ const TableHeaderCell = styled(Table.HeaderCell)`
   }
 `
 
-const Footer = React.memo(({ version }) =>
+const Footer = React.memo(({ version }) => (
   <Table>
     <Table.Header>
       <Table.Row>
         <TableHeaderCell width={1} />
-        <TableHeaderCell collapsing disabled>seqr {version}</TableHeaderCell>
+        <TableHeaderCell collapsing disabled>{`seqr ${version}`}</TableHeaderCell>
         <TableHeaderCell collapsing><Link to="/privacy_policy">Privacy Policy</Link></TableHeaderCell>
         <TableHeaderCell collapsing><Link to="/terms_of_service">Terms of Service</Link></TableHeaderCell>
         <TableHeaderCell>
@@ -33,6 +33,7 @@ const Footer = React.memo(({ version }) =>
           <a
             href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;tf=1&amp;to=seqr@broadinstitute.org"
             target="_blank"
+            rel="noreferrer"
           >
             Contact Us
           </a>
@@ -40,8 +41,8 @@ const Footer = React.memo(({ version }) =>
         <TableHeaderCell width={1} />
       </Table.Row>
     </Table.Header>
-  </Table>,
-)
+  </Table>
+))
 
 Footer.propTypes = {
   version: PropTypes.string,

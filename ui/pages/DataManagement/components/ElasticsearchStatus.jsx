@@ -25,11 +25,11 @@ const INDEX_COLUMNS = [
   {
     name: 'projects',
     content: 'Project(s)',
-    format: row => ((row.projects && row.projects.length) ? row.projects.map(project =>
+    format: row => ((row.projects && row.projects.length) ? row.projects.map(project => (
       <div key={project.projectGuid}>
         <Link to={`/project/${project.projectGuid}/project_page`} target="_blank">{project.projectName}</Link>
-      </div>,
-    ) : <DeleteIndexButton index={row.index} />),
+      </div>
+    )) : <DeleteIndexButton index={row.index} />),
   },
   { name: 'datasetType', content: 'Caller Type', format: row => (row.datasetType === 'SV' ? 'SV' : 'SNV') },
   { name: 'sampleType', content: 'Data Type' },
@@ -40,10 +40,11 @@ const INDEX_COLUMNS = [
   { name: 'sourceFilePath', content: 'File Path' },
 ]
 
-const BaseDeleteIndexButton = ({ onSubmit, index }) =>
+const BaseDeleteIndexButton = ({ onSubmit, index }) => (
   <DispatchRequestButton confirmDialog={`Are you sure you want to delete "${index}"`} onSubmit={onSubmit}>
     <Button negative size="small" compact content="Delete Index" />
   </DispatchRequestButton>
+)
 
 BaseDeleteIndexButton.propTypes = {
   index: PropTypes.string,
@@ -51,16 +52,15 @@ BaseDeleteIndexButton.propTypes = {
 }
 
 const mapDeleteIndexDispatchToProps = (dispatch, ownProps) => ({
-  onSubmit: () => {
-    return dispatch(deleteEsIndex(ownProps.index))
-  },
+  onSubmit: () => dispatch(deleteEsIndex(ownProps.index)),
 })
 
 const DeleteIndexButton = connect(null, mapDeleteIndexDispatchToProps)(BaseDeleteIndexButton)
 
-const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
+const ElasticsearchStatus = React.memo(({ data, loading, load }) => (
   <DataLoader load={load} content={Object.keys(data).length} loading={loading}>
-    <InlineHeader size="small" content="Elasticsearch Host:" /> {data.elasticsearchHost}
+    <InlineHeader size="small" content="Elasticsearch Host: " />
+    {data.elasticsearchHost}
 
     <Header size="medium" content="Disk Status:" />
     <DataTable
@@ -85,8 +85,8 @@ const ElasticsearchStatus = React.memo(({ data, loading, load }) =>
       data={data.indices}
       columns={INDEX_COLUMNS}
     />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 ElasticsearchStatus.propTypes = {
   data: PropTypes.object,

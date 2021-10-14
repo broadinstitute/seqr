@@ -5,10 +5,10 @@ import { ButtonLink } from '../StyledComponents'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import Modal from '../modal/Modal'
 
-const UpdateButton = React.memo((
-  { onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
-    disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div /> },
-) =>
+const UpdateButton = React.memo(({
+  onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
+  disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div />,
+}) => (
   <Modal
     title={modalTitle}
     modalName={modalId}
@@ -24,24 +24,25 @@ const UpdateButton = React.memo((
       />
     )}
   >
-    {React.cloneElement(formContainer, { children: (
-      <ReduxFormWrapper
-        onSubmit={onSubmit}
-        form={modalId}
-        initialValues={initialValues}
-        fields={formFields}
-        showErrorPanel={showErrorPanel}
-        confirmDialog={confirmDialog}
-        submitButtonText={submitButtonText}
-        confirmCloseIfNotSaved
-      />
-    ) }) }
-  </Modal>,
-)
-
+    {React.cloneElement(formContainer, {
+      children: (
+        <ReduxFormWrapper
+          onSubmit={onSubmit}
+          form={modalId}
+          initialValues={initialValues}
+          fields={formFields}
+          showErrorPanel={showErrorPanel}
+          confirmDialog={confirmDialog}
+          submitButtonText={submitButtonText}
+          confirmCloseIfNotSaved
+        />
+      ),
+    })}
+  </Modal>
+))
 
 UpdateButton.propTypes = {
-  formFields: PropTypes.array,
+  formFields: PropTypes.arrayOf(PropTypes.object),
   onSubmit: PropTypes.func,
   modalTitle: PropTypes.string,
   modalId: PropTypes.string.isRequired,

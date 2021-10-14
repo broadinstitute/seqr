@@ -18,6 +18,7 @@ const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
  https://github.com/facebook/draft-js/blob/master/examples/draft-0-10-0/rich/rich.html
  */
 class RichTextEditor extends React.PureComponent {
+
   static propTypes = {
     value: PropTypes.string,
     onChange: PropTypes.func,
@@ -40,26 +41,37 @@ class RichTextEditor extends React.PureComponent {
   constructor(props) {
     super(props)
 
+    const { value } = this.props
     let editorState
-    if (this.props.value) {
-      const rawData = markdownToDraft(this.props.value || '', { preserveNewlines: true })
+    if (value) {
+      const rawData = markdownToDraft(value, { preserveNewlines: true })
       const contentState = convertFromRaw(rawData)
       editorState = EditorState.createWithContent(contentState)
     } else {
       editorState = EditorState.createEmpty()
     }
 
-    this.state = { editorState }
+    this.state = { editorState } // eslint-disable-line react/state-in-constructor
 
     this.handleKeyCommand = this._handleKeyCommand.bind(this)
     this.setEditorRef = (ref) => { this.editor = ref }
   }
 
+  componentDidMount() {
+    this.editor.focus()
+  }
+
   getMarkdown() {
-    const content = this.state.editorState.getCurrentContent()
+    const { editorState } = this.state
+    const content = editorState.getCurrentContent()
     const markdown = draftToMarkdown(convertToRaw(content), { preserveNewlines: true })
     // Support for tabs. Required for RGP datstat imported notes
     return markdown ? markdown.replace(/' '{5}/g, TAB).replace(/\u00A0{5}/g, TAB) : markdown
+  }
+
+  updateEditorState = (editorState) => {
+    const { onChange } = this.props
+    this.setState({ editorState }, () => onChange(this.getMarkdown()))
   }
 
   _handleKeyCommand(command, editorState) {
@@ -71,12 +83,8 @@ class RichTextEditor extends React.PureComponent {
     return false
   }
 
-  updateEditorState = (editorState) => {
-    this.setState({ editorState }, () => this.props.onChange(this.getMarkdown()))
-  }
-
   render() {
-    const es = this.state.editorState
+    const { editorState: es } = this.state
     return (
       <div>
         <div style={{ padding: '0px 0px 10px 0px', textAlign: 'right' }}>
@@ -98,36 +106,34 @@ class RichTextEditor extends React.PureComponent {
         </div>
         <div style={{ minWidth: '590px', border: '1px #DDD solid', padding: '10px' }}>
           <Editor
-            editorState={this.state.editorState}
+            editorState={es}
             handleKeyCommand={this.handleKeyCommand}
             placeholder=""
             ref={this.setEditorRef}
             onChange={this.updateEditorState}
           />
         </div>
-      </div>)
+      </div>
+    )
   }
 
-  componentDidMount() {
-    this.editor.focus()
-  }
 }
 
 const InlineStyleButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
-    {
-      RichTextEditor.INLINE_STYLES.map(type =>
-        <Button
-          id={type.type}
-          key={type.label}
-          size="tiny"
-          icon={type.icon}
-          active={props.currentInlineStyle.has(type.type)}
-          onClick={props.onButtonClick}
-          toggle
-        />)
-    }
-  </div>))
+    {RichTextEditor.INLINE_STYLES.map(type => (
+      <Button
+        id={type.type}
+        key={type.label}
+        size="tiny"
+        icon={type.icon}
+        active={props.currentInlineStyle.has(type.type)}
+        onClick={props.onButtonClick}
+        toggle
+      />
+    ))}
+  </div>
+))
 
 InlineStyleButtonPanel.propTypes = {
   currentInlineStyle: PropTypes.object.isRequired,
@@ -136,18 +142,17 @@ InlineStyleButtonPanel.propTypes = {
 
 const BlockTypeButtonPanel = React.memo(props => (
   <div style={{ display: 'inline' }}>
-    {
-      RichTextEditor.BLOCK_TYPES.map(type =>
-        <Button
-          id={type.type}
-          key={type.label}
-          size="tiny"
-          icon={type.icon}
-          active={type.type === props.currentBlockType}
-          onClick={props.onButtonClick}
-          toggle
-        />)
-    }
+    {RichTextEditor.BLOCK_TYPES.map(type => (
+      <Button
+        id={type.type}
+        key={type.label}
+        size="tiny"
+        icon={type.icon}
+        active={type.type === props.currentBlockType}
+        onClick={props.onButtonClick}
+        toggle
+      />
+    ))}
   </div>
 ))
 

@@ -39,11 +39,10 @@ const CaseReviewTable = React.memo((props) => {
   )
 })
 
-
 export { CaseReviewTable as CaseReviewTableComponent }
 
 CaseReviewTable.propTypes = {
-  caseReviewStatusCounts: PropTypes.array,
+  caseReviewStatusCounts: PropTypes.arrayOf(PropTypes.object),
 }
 
 const mapStateToProps = state => ({
