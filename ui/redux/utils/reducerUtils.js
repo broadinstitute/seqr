@@ -11,43 +11,39 @@ export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
 
 // A helper action that handles create, update and delete requests
-export const updateEntity = (values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath) => {
-  return (dispatch, getState) => {
-    if (getUrlPath) {
-      urlPath = getUrlPath(getState())
-    }
-
-    let action = 'create'
-    if (values[idField]) {
-      urlPath = `${urlPath}/${values[idField]}`
-      action = values.delete ? 'delete' : 'update'
-    }
-
-    return new HttpRequestHelper(`${urlPath}/${action}${actionSuffix || ''}`,
-      (responseJson) => {
-        dispatch({ type: receiveDataAction, updatesById: responseJson })
-      },
-      (e) => {
-        throw new SubmissionError({ _error: [e.message] })
-      },
-    ).post(values)
+export const updateEntity = (
+  values, receiveDataAction, urlPath, idField, actionSuffix, getUrlPath,
+) => (dispatch, getState) => {
+  let action = 'create'
+  let subPath = ''
+  if (values[idField]) {
+    subPath = `/${values[idField]}`
+    action = values.delete ? 'delete' : 'update'
   }
+
+  const url = `${getUrlPath ? getUrlPath(getState()) : urlPath}${subPath}/${action}${actionSuffix || ''}`
+  return new HttpRequestHelper(url,
+    (responseJson) => {
+      dispatch({ type: receiveDataAction, updatesById: responseJson })
+    },
+    (e) => {
+      throw new SubmissionError({ _error: [e.message] })
+    }).post(values)
 }
 
 // A helper method to load a project and all its detail fields
-export const loadProjectDetails = (projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes') => {
-  return (dispatch, getState) => {
-    const project = getState().projectsByGuid[projectGuid]
-    if (!project || !project[detailField]) {
-      dispatch({ type: requestType || REQUEST_PROJECTS })
-      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        },
-      ).get()
-    }
+export const loadProjectDetails = (
+  projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes',
+) => (dispatch, getState) => {
+  const project = getState().projectsByGuid[projectGuid]
+  if (!project || !project[detailField]) {
+    dispatch({ type: requestType || REQUEST_PROJECTS })
+    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
   }
 }

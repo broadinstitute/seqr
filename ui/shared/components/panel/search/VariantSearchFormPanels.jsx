@@ -105,16 +105,16 @@ export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 
 export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
-  ...annotationGroups.map(groups =>
+  ...annotationGroups.map(groups => (
     <Form.Field key={groups[0]} width={3}>
-      {groups.map(group =>
+      {groups.map(group => (
         <div key={group}>
           {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
           <VerticalSpacer height={20} />
-        </div>,
-      )}
-    </Form.Field>,
-  ),
+        </div>
+      ))}
+    </Form.Field>
+  )),
   !hideOther ? (
     <Form.Field key={VEP_GROUP_OTHER} width={4}>
       {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[VEP_GROUP_OTHER]]}
@@ -124,27 +124,31 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
 
 const MAX_FREQ_COMPONENTS_PER_ROW = 6
 
-//Layout the frequency filter fields into two rows.
-const freqFieldLayout = fieldComponents =>
+// Layout the frequency filter fields into two rows.
+const freqFieldLayout = fieldComponents => (
   <Form.Field>
     <Form.Group widths="equal">
       {fieldComponents.slice(0, MAX_FREQ_COMPONENTS_PER_ROW)}
     </Form.Group>
     <Form.Group widths="equal">
       {// add empty fields to pad out the second row so the "equal" widths are the same
-        Array.from({ length: (2 * MAX_FREQ_COMPONENTS_PER_ROW) - fieldComponents.length }, (x, i) => i).map(e =>
-          <Form.Field key={e} />)
+        Array.from({ length: (2 * MAX_FREQ_COMPONENTS_PER_ROW) - fieldComponents.length }, (x, i) => i).map(
+          e => <Form.Field key={e} />,
+        )
       }
       {fieldComponents.slice(MAX_FREQ_COMPONENTS_PER_ROW)}
     </Form.Group>
   </Form.Field>
+)
 
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  fieldLayout: annotationFieldLayout([
+    [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
+  ]),
 }
 
 export const FREQUENCY_PANEL = {
@@ -177,18 +181,18 @@ export const QUALITY_PANEL = {
   fieldProps: { control: LabeledSlider, format: val => val || null },
 }
 
-const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) =>
+const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
-      {inputProps &&
+      {inputProps && (
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={e => e.stopPropagation()}>
           {configuredField({ ...inputProps, name })}
         </ToggleHeaderFieldColumn>
-      }
+      )}
     </Grid.Row>
-  </Grid>,
-)
+  </Grid>
+))
 
 HeaderContent.propTypes = {
   title: PropTypes.string.isRequired,
@@ -198,10 +202,17 @@ HeaderContent.propTypes = {
 }
 
 const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout }) => {
-  const fieldComponents = fields && configuredFields({ fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) })
+  const fieldComponents = fields && configuredFields(
+    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) },
+  )
   return (
     <FormSection name={name}>
-      {helpText && <i>{helpText} <VerticalSpacer height={20} /></i>}
+      {helpText && (
+        <i>
+          {helpText}
+          <VerticalSpacer height={20} />
+        </i>
+      )}
       <Form.Group widths="equal">
         <Form.Field width={2} />
         {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
@@ -212,7 +223,7 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
 })
 
 PanelContent.propTypes = {
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   name: PropTypes.string.isRequired,
   fieldProps: PropTypes.object,
   helpText: PropTypes.node,
@@ -220,11 +231,17 @@ PanelContent.propTypes = {
 }
 
 class VariantSearchFormPanels extends React.PureComponent {
+
+  static propTypes = {
+    panels: PropTypes.arrayOf(PropTypes.object),
+  }
+
   state = { active: {} }
 
   expandAll = (e) => {
+    const { panels } = this.props
     e.preventDefault()
-    this.setState({ active: this.props.panels.reduce((acc, { name }) => ({ ...acc, [name]: true }), {}) })
+    this.setState({ active: panels.reduce((acc, { name }) => ({ ...acc, [name]: true }), {}) })
   }
 
   collapseAll = (e) => {
@@ -237,24 +254,31 @@ class VariantSearchFormPanels extends React.PureComponent {
     this.setState({ active: { ...active, [name]: !active[name] } })
   }
 
-
   render() {
+    const { panels } = this.props
+    const { active } = this.state
     return (
       <div>
         <ExpandCollapseCategoryContainer>
-          <ButtonLink onClick={this.expandAll}>Expand All &nbsp;<Icon name="plus" /></ButtonLink>
+          <ButtonLink onClick={this.expandAll}>
+            Expand All &nbsp;
+            <Icon name="plus" />
+          </ButtonLink>
           <b>| &nbsp;&nbsp;</b>
-          <ButtonLink onClick={this.collapseAll}>Collapse All &nbsp;<Icon name="minus" /></ButtonLink>
+          <ButtonLink onClick={this.collapseAll}>
+            Collapse All &nbsp;
+            <Icon name="minus" />
+          </ButtonLink>
         </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
         <FormSection name="search">
           <Accordion fluid exclusive={false}>
-            {this.props.panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
-              const isActive = !!this.state.active[name]
+            {panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
+              const isActive = !!active[name]
               let attachedTitle = true
               if (i === 0) {
                 attachedTitle = 'top'
-              } else if (i === this.props.panels.length - 1 && !isActive) {
+              } else if (i === panels.length - 1 && !isActive) {
                 attachedTitle = 'bottom'
               }
               return [...acc,
@@ -273,23 +297,20 @@ class VariantSearchFormPanels extends React.PureComponent {
                   key={`${name}-content`}
                   active={isActive}
                   as={Segment}
-                  attached={i === this.props.panels.length - 1 ? 'bottom' : true}
+                  attached={i === panels.length - 1 ? 'bottom' : true}
                   padded
                   textAlign="center"
                 >
                   <PanelContent name={name} {...panelContentProps} />
                 </Accordion.Content>,
-              ] }, [])
-            }
+              ]
+            }, [])}
           </Accordion>
         </FormSection>
       </div>
     )
   }
-}
 
-VariantSearchFormPanels.propTypes = {
-  panels: PropTypes.array,
 }
 
 export default VariantSearchFormPanels

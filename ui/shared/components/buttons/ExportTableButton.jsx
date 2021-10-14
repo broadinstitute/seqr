@@ -36,19 +36,20 @@ const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : it
 
 export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, filename, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
-  if (!linkContent) {
-    linkContent =
-      <span><img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} /> &nbsp; .{ext}</span>
-  }
 
   if (url) {
-    if (!url.includes('?')) {
-      url += '?'
-    }
-    if (!url.endsWith('?')) {
-      url += '&'
-    }
-    return <a href={`${url}file_format=${ext}`}>{linkContent}</a>
+    const noQuery = !url.includes('?')
+    const endQuery = noQuery || url.endsWith('?')
+    return (
+      <a href={`${url}${noQuery ? '?' : ''}${!endQuery ? '&' : ''}file_format=${ext}`}>
+        {linkContent || (
+          <span>
+            <img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} />
+            {` .${ext}`}
+          </span>
+        )}
+      </a>
+    )
   }
 
   let content = rawData.map(row => processRow(row).map(
@@ -65,9 +66,9 @@ export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, fil
 BaseFileLink.propTypes = {
   ext: PropTypes.string.isRequired,
   url: PropTypes.string,
-  rawData: PropTypes.array,
+  rawData: PropTypes.arrayOf(PropTypes.object),
   processRow: PropTypes.func,
-  headers: PropTypes.array,
+  headers: PropTypes.arrayOf(PropTypes.string),
   filename: PropTypes.string,
   linkContent: PropTypes.node,
 }
@@ -79,7 +80,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FileLink = connect(mapStateToProps)(BaseFileLink)
 
-const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) =>
+const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) => (
   <Popup
     trigger={
       <ButtonLink icon="download" content={buttonText || 'Download Table'} {...buttonProps} />
@@ -88,39 +89,37 @@ const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps })
       <NoBorderTable>
         <Table.Body>
           {
-            downloads.map(({ name, ...downloadProps }) => {
-              return [
-                <Table.Row key={1}>
-                  <NameCell colSpan="2">
-                    <b>{name}:</b>
-                  </NameCell>
-                </Table.Row>,
-                <Table.Row key={2}>
-                  <LinkCell>
-                    <FileLink {...downloadProps} ext="xls" />
-                  </LinkCell>
-                  <LinkCell>
-                    <FileLink {...downloadProps} ext="tsv" /><br />
-                  </LinkCell>
-                </Table.Row>,
-              ]
-            })
+            downloads.map(({ name, ...downloadProps }) => ([
+              <Table.Row key={1}>
+                <NameCell colSpan="2">
+                  <b>{`${name}:`}</b>
+                </NameCell>
+              </Table.Row>,
+              <Table.Row key={2}>
+                <LinkCell>
+                  <FileLink {...downloadProps} ext="xls" />
+                </LinkCell>
+                <LinkCell>
+                  <FileLink {...downloadProps} ext="tsv" />
+                  <br />
+                </LinkCell>
+              </Table.Row>,
+            ]))
           }
         </Table.Body>
       </NoBorderTable>
     }
     on="click"
     position="bottom center"
-  />,
-)
-
+  />
+))
 
 ExportTableButton.propTypes = {
   /**
    * An array of urls with names:
    *  [{ name: 'table1', url: '/table1-export'},  { name: 'table2', url: '/table2-export' }]
    */
-  downloads: PropTypes.array.isRequired,
+  downloads: PropTypes.arrayOf(PropTypes.object).isRequired,
   buttonText: PropTypes.string,
 }
 

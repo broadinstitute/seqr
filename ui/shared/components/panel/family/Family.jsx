@@ -91,19 +91,18 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_FIRST_SAMPLE]: {
     component: BaseFieldView,
     showEmptyValues: true,
-    fieldDisplay: (loadedSample, compact, familyGuid) =>
-      <FirstSample familyGuid={familyGuid} compact={compact} />,
+    fieldDisplay: (loadedSample, compact, familyGuid) => <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     canEdit: true,
     component: SingleFieldView,
-    fieldDisplay: value => <a target="_blank" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
+    fieldDisplay: value => <a target="_blank" rel="noreferrer" href={`https://www.omim.org/entry/${value}`}>{value}</a>,
   },
   [FAMILY_FIELD_PMIDS]: {
     internal: true,
     component: ListFieldView,
-    itemDisplay: value => <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
+    itemDisplay: value => <a target="_blank" rel="noreferrer" href={`https://www.ncbi.nlm.nih.gov/pubmed/${value}`}>{value}</a>,
     addElementLabel: 'Add publication',
     addConfirm: 'This field is intended for publications which list this gene discovery on this particular family only. It is not intended for gene or phenotype level evidence, which should be added to the notes field.',
   },
@@ -112,10 +111,10 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   ...FAMILY_NOTES_FIELDS.reduce((acc, { id, noteType }) => ({ ...acc, [id]: getNoteField(noteType) }), {}),
 }
 
-const Family = React.memo((
-  { project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
-    showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree, disableInternalEdit,
-  }) => {
+const Family = React.memo(({
+  project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
+  showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree, disableInternalEdit,
+}) => {
   if (!family) {
     return <div>Family Not Found</div>
   }
@@ -142,35 +141,38 @@ const Family = React.memo((
 
   let leftContent = null
   if (!hidePedigree) {
-    const familyHeader = <InlineHeader
-      key="name"
-      size="small"
-      content={showFamilyPageLink ?
-        <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
-        family.displayName
-      }
-    />
+    const familyHeader = (
+      <InlineHeader
+        key="name"
+        size="small"
+        content={showFamilyPageLink ?
+          <Link to={`/project/${family.projectGuid}/family_page/${family.familyGuid}`}>{family.displayName}</Link> :
+          family.displayName}
+      />
+    )
     leftContent = [
       compact ? familyHeader : <div key="header">{familyHeader}</div>,
       <PedigreeImagePanel key="pedigree" family={family} disablePedigreeZoom={disablePedigreeZoom} compact={compact} isEditable={!disableEdit && project.canEdit} />,
     ]
   }
 
-  return <FamilyLayout
-    useFullWidth={useFullWidth}
-    compact={compact}
-    annotation={annotation}
-    fields={fields}
-    fieldDisplay={familyField}
-    leftContent={leftContent}
-    rightContent={rightContent}
-  />
+  return (
+    <FamilyLayout
+      useFullWidth={useFullWidth}
+      compact={compact}
+      annotation={annotation}
+      fields={fields}
+      fieldDisplay={familyField}
+      leftContent={leftContent}
+      rightContent={rightContent}
+    />
+  )
 })
 
 Family.propTypes = {
   project: PropTypes.object,
   family: PropTypes.object.isRequired,
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   rightContent: PropTypes.node,
   useFullWidth: PropTypes.bool,
   disablePedigreeZoom: PropTypes.bool,
@@ -182,7 +184,6 @@ Family.propTypes = {
   disableEdit: PropTypes.bool,
   disableInternalEdit: PropTypes.bool,
 }
-
 
 const mapStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.family.projectGuid],

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { getUser } from 'redux/selectors'
-import TextFieldView from '../view-fields/TextFieldView'
+import TextFieldView from './TextFieldView'
 
 const noteRequired = value => (value ? undefined : 'Note is required')
 
@@ -19,13 +19,15 @@ const CORE_PROPS = {
 const NOTE_ANNOTATION_STYLE = { color: 'gray' }
 const noteAnnotation = note => note.createdBy && (
   <i style={NOTE_ANNOTATION_STYLE}>
-    By {note.createdBy} ({new Date(note.lastModifiedDate).toLocaleDateString()})
+    {`By ${note.createdBy} (${new Date(note.lastModifiedDate).toLocaleDateString()})`}
   </i>
 )
 
-const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditable, modalTitle, fieldName, getTextPopup, user, ...props }) => {
+const NoteListFieldView = React.memo((
+  { notes, initialValues, idField, isEditable, modalTitle, fieldName, getTextPopup, user, ...props },
+) => {
   const nonEmptyInitialValues = initialValues || {}
-  const addField =
+  const addField = (
     <TextFieldView
       {...props}
       {...CORE_PROPS}
@@ -37,10 +39,11 @@ const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditabl
       modalTitle={`Add ${modalTitle}`}
       initialValues={nonEmptyInitialValues}
     />
+  )
   return (
     <div>
       {fieldName && addField}
-      {(notes || nonEmptyInitialValues.notes || []).map(note =>
+      {(notes || nonEmptyInitialValues.notes || []).map(note => (
         <div key={note.noteGuid}>
           <TextFieldView
             {...props}
@@ -54,8 +57,8 @@ const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditabl
             modalTitle={`Edit ${modalTitle}`}
             deleteConfirm="Are you sure you want to delete this note?"
           />
-        </div>,
-      )}
+        </div>
+      ))}
       {!fieldName && <div>{addField}</div>}
     </div>
   )
@@ -63,7 +66,7 @@ const NoteListFieldView = React.memo(({ notes, initialValues, idField, isEditabl
 
 NoteListFieldView.propTypes = {
   initialValues: PropTypes.object,
-  notes: PropTypes.array,
+  notes: PropTypes.arrayOf(PropTypes.object),
   idField: PropTypes.string,
   fieldName: PropTypes.string,
   modalTitle: PropTypes.string,

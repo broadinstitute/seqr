@@ -6,7 +6,6 @@ import { Popup } from 'semantic-ui-react'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 
-
 const FreqValue = styled.span`
   color: black;
 `
@@ -24,7 +23,7 @@ const FreqLink = React.memo(({ urls, value, displayValue, variant, queryParams, 
   const queryString = (queryParams && queryParams[genomeVersion]) ? `?${queryParams[genomeVersion]}` : ''
 
   return (
-    <a href={`http://${urls[genomeVersion]}/${path}${queryString}`} target="_blank">
+    <a href={`http://${urls[genomeVersion]}/${path}${queryString}`} target="_blank" rel="noreferrer">
       {displayValue || value}
     </a>
   )
@@ -68,10 +67,11 @@ const FreqSummary = React.memo((props) => {
 
   return (
     <div>
-      {titleContainer ? titleContainer(props) : fieldTitle}<HorizontalSpacer width={5} />
+      {titleContainer ? titleContainer(props) : fieldTitle}
+      <HorizontalSpacer width={5} />
       <FreqValue>
         <b>
-          {urls ?
+          {urls ? (
             <FreqLink
               urls={urls}
               queryParams={queryParams}
@@ -79,23 +79,33 @@ const FreqSummary = React.memo((props) => {
               displayValue={displayValue}
               variant={variant}
               getPath={getFreqLinkPath}
-            /> : displayValue
-          }
+            />
+          ) : displayValue}
         </b>
-        {population.hom !== null && population.hom !== undefined &&
-          <span><HorizontalSpacer width={5} />Hom={population.hom}</span>
-        }
-        {population.het !== null && population.het !== undefined &&
-          <span><HorizontalSpacer width={5} />Het={population.het}</span>
-        }
-        {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined &&
-          <span><HorizontalSpacer width={5} />Hemi={population.hemi}</span>
-        }
-        {acDisplay && population.ac !== null && population.ac !== undefined &&
+        {population.hom !== null && population.hom !== undefined && (
           <span>
-            <HorizontalSpacer width={5} />{acDisplay}={population.ac} out of {population.an}
+            <HorizontalSpacer width={5} />
+            {`Hom=${population.hom}`}
           </span>
-        }
+        )}
+        {population.het !== null && population.het !== undefined && (
+          <span>
+            <HorizontalSpacer width={5} />
+            {`Het=${population.het}`}
+          </span>
+        )}
+        {chrom.endsWith('X') && population.hemi !== null && population.hemi !== undefined && (
+          <span>
+            <HorizontalSpacer width={5} />
+            {`Hemi=${population.hemi}`}
+          </span>
+        )}
+        {acDisplay && population.ac !== null && population.ac !== undefined && (
+          <span>
+            <HorizontalSpacer width={5} />
+            {`${acDisplay}=${population.ac} out of ${population.an}`}
+          </span>
+        )}
       </FreqValue>
     </div>
   )
@@ -116,9 +126,14 @@ const getGenePath = ({ variant }) => `gene/${getVariantMainGeneId(variant)}`
 
 const gnomadLink = ({ fieldTitle, ...props }) => {
   const [detail, ...linkName] = fieldTitle.split(' ').reverse()
-  return <span><FreqLink {...props} displayValue={linkName.reverse().join(' ')} getPath={getGenePath} /> {detail}</span>
+  return (
+    <span>
+      <FreqLink {...props} displayValue={linkName.reverse().join(' ')} getPath={getGenePath} />
+      &nbsp;
+      {detail}
+    </span>
+  )
 }
-
 
 gnomadLink.propTypes = {
   fieldTitle: PropTypes.string,
@@ -168,38 +183,35 @@ const POPULATIONS = [
 
 const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
-  const freqContent = (
-    <div>
-      {POPULATIONS.map(pop =>
-        <FreqSummary key={pop.field} variant={variant} {...pop} />,
-      )}
-    </div>
-  )
+  const freqContent = <div>{POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>
 
   const hasAcPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac)
-  const hasGlobalAfPops = POPULATIONS.filter(
-    pop => populations[pop.field] && populations[pop.field].filter_af && (populations[pop.field].filter_af !== populations[pop.field].af))
+  const hasGlobalAfPops = POPULATIONS.filter(pop => (
+    populations[pop.field] && populations[pop.field].filter_af &&
+    (populations[pop.field].filter_af !== populations[pop.field].af)))
 
   return (
-    (hasAcPops.length || hasGlobalAfPops.length) ?
+    (hasAcPops.length || hasGlobalAfPops.length) ? (
       <Popup position="top center" flowing trigger={freqContent}>
         {hasGlobalAfPops.length > 0 && <Popup.Header content="Global AFs" />}
         <Popup.Content>
-          {hasGlobalAfPops.map(pop =>
-            <div key={pop.field}>{pop.fieldTitle}: {populations[pop.field].af.toPrecision(pop.precision || 2)}</div>,
-          )}
+          {hasGlobalAfPops.map(pop => (
+            <div key={pop.field}>
+              {`${pop.fieldTitle}: ${populations[pop.field].af.toPrecision(pop.precision || 2)}`}
+            </div>
+          ))}
         </Popup.Content>
         {hasGlobalAfPops.length > 0 && hasAcPops.length > 0 && <VerticalSpacer height={5} />}
         {hasAcPops.length > 0 && <Popup.Header content="Allele Counts" />}
         <Popup.Content>
-          {hasAcPops.map(pop =>
+          {hasAcPops.map(pop => (
             <div key={pop.field}>
-              {pop.fieldTitle}: {populations[pop.field].ac} out of {populations[pop.field].an}
-            </div>,
-          )}
+              {`${pop.fieldTitle}: ${populations[pop.field].ac} out of ${populations[pop.field].an}`}
+            </div>
+          ))}
         </Popup.Content>
       </Popup>
-      : freqContent
+    ) : freqContent
   )
 })
 

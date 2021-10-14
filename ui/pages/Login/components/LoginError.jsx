@@ -11,11 +11,16 @@ const ERROR_MESSAGES = {
     <span>
       Unable to authorize the selected Google user.
       Please register your account in AnVIL by signing in and registering
-      at <a href={ANVIL_URL} target="_blank">anvil.terra.bio</a>. <br />
+      at &nbsp;
+      <a href={ANVIL_URL} target="_blank" rel="noreferrer">anvil.terra.bio</a>
+      .
+      <br />
       If you have already registered your account, please log in to AnVIL and confirm
-      you have accepted their latest terms of service.  <br />
+      you have accepted their latest terms of service.
+      <br />
       If the email associated with your account is not managed by google,
-      follow <a href={GOGGLE_SETUP_URL} target="_blank">these instructions </a>
+      follow
+      <a href={GOGGLE_SETUP_URL} target="_blank" rel="noreferrer">these instructions </a>
       to register the email with google before registering with AnVIL.
     </span>
   ),
@@ -36,11 +41,9 @@ const LoginError = ({ location, match }) => (
   </Segment>
 )
 
-
 LoginError.propTypes = {
   location: PropTypes.object,
   match: PropTypes.object,
 }
-
 
 export default LoginError

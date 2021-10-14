@@ -9,11 +9,10 @@ import Modal from 'shared/components/modal/Modal'
 import { updateProject } from 'redux/rootReducer'
 import { getProjectCategoriesByGuid } from 'redux/selectors'
 
-
 const EditProjectCategoriesModal = React.memo((props) => {
-  const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
-    return { value: projectCategory.guid, text: projectCategory.name }
-  })
+  const categories = Object.values(props.projectCategoriesByGuid).map(
+    projectCategory => ({ value: projectCategory.guid, text: projectCategory.name }),
+  )
   const formName = `editProjectCategories-${props.project.projectGuid}-${props.triggerName}`
   const fields = [
     {

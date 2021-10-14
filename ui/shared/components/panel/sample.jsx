@@ -16,7 +16,7 @@ const iconColor = (loadedSample, isOutdated) => {
   return isOutdated ? 'grey' : 'green'
 }
 
-const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) =>
+const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
   <Popup
     trigger={
       <span>
@@ -24,21 +24,21 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) =>
         {loadedSample && <b>{loadedSample.sampleType}</b>}
         {loadedSample && loadedSample.datasetType === DATASET_TYPE_SV_CALLS && ' - SV'}
         {
-          !hoverDetails && (loadedSample ?
+          !hoverDetails && (loadedSample ? (
             <Detail>
               <HorizontalSpacer width={6} />
-              LOADED {new Date(loadedSample.loadedDate).toLocaleDateString().toUpperCase()}
-            </Detail> : <small>NO LOADED DATA</small>)
+              {`LOADED ${new Date(loadedSample.loadedDate).toLocaleDateString().toUpperCase()}`}
+            </Detail>
+          ) : <small>NO LOADED DATA</small>)
         }
       </span>
     }
     content={loadedSample ?
       `data was${isOutdated ? ' previously ' : ''} ${hoverDetails ? `${hoverDetails} on ${new Date(loadedSample.loadedDate).toLocaleDateString()}` : 'loaded'}` :
-      'no data available'
-    }
+      'no data available'}
     position="left center"
-  />,
-)
+  />
+))
 
 Sample.propTypes = {
   loadedSample: PropTypes.object,

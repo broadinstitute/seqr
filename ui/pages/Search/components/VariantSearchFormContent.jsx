@@ -72,8 +72,11 @@ const INHERITANCE_PANEL = {
         const { affected, genotype, ...coreFilter } = val.filter
         return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
-      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null :
-        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] }, annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val) }),
+      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null : {
+        mode: val,
+        filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] },
+        annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val),
+      }),
     },
   },
   fields: [
@@ -89,10 +92,11 @@ const INHERITANCE_PANEL = {
     <span>
       Filter by the mode of inheritance. Choose from the built-in search methods (described
       <Modal trigger={<DetailLink>here</DetailLink>} title="Inheritance Searching" modalName="inheritanceModes">
-        <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
+        <i>seqr</i>
+        implements the following set of standard Mendelian inheritance methods to identify variants that
         segregate with a phenotype in a family
-        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ value, text, detail }) =>
-          <Header key={value} content={text} subheader={detail} />,
+        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(
+          ({ value, text, detail }) => <Header key={value} content={text} subheader={detail} />,
         )}
 
         <Header size="small" content="Notes on inheritance searching:" />
@@ -104,7 +108,8 @@ const INHERITANCE_PANEL = {
           <List.Item>All methods assume complete penetrance</List.Item>
           <List.Item>seqr assumes unphased genotypes</List.Item>
         </List>
-      </Modal>) or specify custom alternate allele counts. You can also specify the affected status for an individual
+      </Modal>
+      ) or specify custom alternate allele counts. You can also specify the affected status for an individual
       that differs from the status in the pedigree.
     </span>
   ),
@@ -155,7 +160,7 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
 }
 
-const SVFrequecyHeaderFilter = ({ value, onChange }) =>
+const SVFrequecyHeaderFilter = ({ value, onChange }) => (
   <Form.Group inline>
     <AfFilter
       value={value[SV_CALLSET_FREQUENCY]}
@@ -165,9 +170,10 @@ const SVFrequecyHeaderFilter = ({ value, onChange }) =>
       width={16}
     />
   </Form.Group>
+)
 
 SVFrequecyHeaderFilter.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 
@@ -233,14 +239,18 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   return {
     ...typeAcc,
     [type]: [true, false].reduce((analystAcc, hasHgmdBool) => {
-      const analystPanels = typePanels.map(({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]))
+      const analystPanels = typePanels.map(
+        ({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]),
+      )
       return {
         ...analystAcc,
         [hasHgmdBool]: [true, false].reduce((acc, annSecondaryBool) => ({
           ...acc,
-          [annSecondaryBool]: annSecondaryBool ? analystPanels : analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
+          [annSecondaryBool]: annSecondaryBool ? analystPanels :
+            analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
-      } }, {}),
+      }
+    }, {}),
   }
 }, {})
 

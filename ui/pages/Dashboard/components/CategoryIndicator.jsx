@@ -1,10 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import randomMC from 'random-material-color'
 import styled from 'styled-components'
 import { Icon } from 'semantic-ui-react'
 
+import { ButtonLink } from 'shared/components/StyledComponents'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
 const getColor = categoryNames => (
@@ -27,9 +27,12 @@ const CategoryIndicator = React.memo(({ project }) => {
     <EditProjectCategoriesModal
       project={project}
       trigger={
-        <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
-          <ComputedColoredIcon name={`${project.projectCategories.length === 0 ? 'outline ' : ''}star`} categoryNames={project.projectCategories} />
-        </a>
+        <ButtonLink>
+          <ComputedColoredIcon
+            name={`${project.projectCategories.length === 0 ? 'outline ' : ''}star`}
+            categoryNames={project.projectCategories}
+          />
+        </ButtonLink>
       }
       popup={popup}
       triggerName="categoryIndicator"
@@ -42,4 +45,3 @@ CategoryIndicator.propTypes = {
 }
 
 export default CategoryIndicator
-
