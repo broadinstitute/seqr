@@ -15,7 +15,7 @@ import { CheckboxGroup } from '../../form/Inputs'
 import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
-import { getLocus } from '../variants/Annotations'
+import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED } from '../../../utils/constants'
 import { ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   GTEX_TRACK_OPTIONS, MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,

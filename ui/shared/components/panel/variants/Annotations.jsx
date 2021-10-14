@@ -10,22 +10,14 @@ import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
-import Transcripts, { TranscriptLink } from './Transcripts'
+import Transcripts from './Transcripts'
 import { LocusListLabels } from './VariantGene'
+import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
 import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
-
-
-const SequenceContainer = styled.span`
-  word-break: break-all;
-  color: ${props => props.color || 'inherit'};
-`
 
 const LargeText = styled.div`
   font-size: 1.2em;
 `
-
-export const getLocus = (chrom, pos, rangeSize, endOffset = 0) =>
-  `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`
 
 const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
@@ -49,32 +41,6 @@ UcscBrowserLink.propTypes = {
   variant: PropTypes.object,
   useLiftover: PropTypes.bool,
   includeEnd: PropTypes.bool,
-}
-
-const MAX_SEQUENCE_LENGTH = 30
-const SEQUENCE_POPUP_STYLE = { wordBreak: 'break-all' }
-
-const Sequence = React.memo(({ sequence, ...props }) =>
-  <SequenceContainer {...props}>
-    {sequence.length > MAX_SEQUENCE_LENGTH ?
-      <Popup trigger={<span>{`${sequence.substring(0, MAX_SEQUENCE_LENGTH)}...`}</span>} content={sequence} style={SEQUENCE_POPUP_STYLE} /> :
-      sequence
-    }
-  </SequenceContainer>,
-)
-
-Sequence.propTypes = {
-  sequence: PropTypes.string.isRequired,
-}
-
-const parseHgvs = hgvs => (hgvs || '').split(':').pop()
-
-export const ProteinSequence = React.memo(({ hgvs }) =>
-  <Sequence color="black" sequence={parseHgvs(hgvs)} />,
-)
-
-ProteinSequence.propTypes = {
-  hgvs: PropTypes.string.isRequired,
 }
 
 const LOF_FILTER_MAP = {

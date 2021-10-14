@@ -4,7 +4,7 @@ import { SubmissionError } from 'redux-form'
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity, loadProject } from 'redux/rootReducer'
+import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity, loadProjectDetails } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
@@ -29,7 +29,7 @@ export const loadCurrentProject = (projectGuid) => {
     if (!project) {
       dispatch({ type: REQUEST_PROJECTS })
     }
-    return loadProject(projectGuid, REQUEST_PROJECT_DETAILS, 'detailsLoaded')(dispatch, getState)
+    return loadProjectDetails(projectGuid, REQUEST_PROJECT_DETAILS, 'detailsLoaded')(dispatch, getState)
   }
 }
 
