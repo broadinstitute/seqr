@@ -9,7 +9,6 @@ import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
-
 const PageHeaderRow = styled(Grid.Row)`
   padding: 9px;
   background-color: #F7F7F7;
@@ -85,25 +84,25 @@ const PageHeaderLayout = React.memo(({
             {breadcrumbs}
           </Breadcrumb>
         </BreadcrumbContainer>
-        {
-          description &&
+        {description && (
           <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
             {description}
           </div>
-        }
+        )}
         {button}
       </Grid.Column>
       <Grid.Column width={3}>
-        {entityLinks &&
-          <b><br />
-            {entityLinks.map(({ popup, content, ...linkProps }) =>
+        {entityLinks && (
+          <b>
+            <br />
+            {entityLinks.map(({ popup, content, ...linkProps }) => (
               <div key={content}>
                 <ButtonLink as={NavLink} {...linkProps}>{content}</ButtonLink>
                 {popup && <Popup content={popup} trigger={<Icon name="question circle outline" color="grey" />} />}
-              </div>,
-            )}
+              </div>
+            ))}
           </b>
-        }
+        )}
         <br />
         <br />
       </Grid.Column>
@@ -117,12 +116,12 @@ PageHeaderLayout.propTypes = {
   entityGuid: PropTypes.string,
   breadcrumb: PropTypes.string,
   breadcrumbId: PropTypes.string,
-  breadcrumbIdSections: PropTypes.array,
+  breadcrumbIdSections: PropTypes.arrayOf(PropTypes.object),
   title: PropTypes.string,
   header: PropTypes.string,
   entityLinkPath: PropTypes.string,
   entityGuidLinkPath: PropTypes.string,
-  entityLinks: PropTypes.array,
+  entityLinks: PropTypes.arrayOf(PropTypes.object),
   button: PropTypes.node,
   description: PropTypes.string,
 }
@@ -132,10 +131,13 @@ export default PageHeaderLayout
 export const SimplePageHeader = ({ page, pages }) => ([
   <Menu attached key="submenu">
     <Menu.Item key="title">
-      <Header size="medium"><HorizontalSpacer width={90} /> {snakecaseToTitlecase(page)} Pages:</Header>
+      <Header size="medium">
+        <HorizontalSpacer width={90} />
+        {`${snakecaseToTitlecase(page)} Pages:`}
+      </Header>
     </Menu.Item>
-    {pages.map(({ path }) =>
-      <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
+    {pages.map(
+      ({ path }) => <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
     )}
   </Menu>,
   <VerticalSpacer height={20} key="spacer" />,
@@ -143,5 +145,5 @@ export const SimplePageHeader = ({ page, pages }) => ([
 
 SimplePageHeader.propTypes = {
   page: PropTypes.string,
-  pages: PropTypes.array,
+  pages: PropTypes.arrayOf(PropTypes.object),
 }

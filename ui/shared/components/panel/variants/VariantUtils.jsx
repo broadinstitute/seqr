@@ -19,20 +19,19 @@ export const TranscriptLink = styled.a.attrs(({ variant, transcript }) => ({
   font-weight: normal;
 `
 
-export const getLocus = (chrom, pos, rangeSize, endOffset = 0) =>
-  `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`
+export const getLocus =
+  (chrom, pos, rangeSize, endOffset = 0) => `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`
 
 const MAX_SEQUENCE_LENGTH = 30
 const SEQUENCE_POPUP_STYLE = { wordBreak: 'break-all' }
 
-export const Sequence = React.memo(({ sequence, ...props }) =>
+export const Sequence = React.memo(({ sequence, ...props }) => (
   <SequenceContainer {...props}>
     {sequence.length > MAX_SEQUENCE_LENGTH ?
       <Popup trigger={<span>{`${sequence.substring(0, MAX_SEQUENCE_LENGTH)}...`}</span>} content={sequence} style={SEQUENCE_POPUP_STYLE} /> :
-      sequence
-    }
-  </SequenceContainer>,
-)
+      sequence}
+  </SequenceContainer>
+))
 
 Sequence.propTypes = {
   sequence: PropTypes.string.isRequired,
@@ -40,9 +39,7 @@ Sequence.propTypes = {
 
 const parseHgvs = hgvs => (hgvs || '').split(':').pop()
 
-export const ProteinSequence = React.memo(({ hgvs }) =>
-  <Sequence color="black" sequence={parseHgvs(hgvs)} />,
-)
+export const ProteinSequence = React.memo(({ hgvs }) => <Sequence color="black" sequence={parseHgvs(hgvs)} />)
 
 ProteinSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,

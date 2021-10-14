@@ -1,5 +1,3 @@
-/* eslint-disable react/no-array-index-key */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -41,7 +39,7 @@ const STATUS_FORM_FIELDS = [{
   options: CASE_REVIEW_STATUS_OPTIONS,
 }]
 
-const CaseReviewStatusDropdown = React.memo(props =>
+const CaseReviewStatusDropdown = React.memo(props => (
   <StatusContainer>
     <StateChangeForm
       updateField={props.updateIndividualField}
@@ -60,9 +58,8 @@ const CaseReviewStatusDropdown = React.memo(props =>
         onSubmit={props.updateIndividualDiscussion}
       />
     )}
-  </StatusContainer>,
-)
-
+  </StatusContainer>
+))
 
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
@@ -72,20 +69,19 @@ CaseReviewStatusDropdown.propTypes = {
   updateIndividualDiscussion: PropTypes.func.isRequired,
 }
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    updateIndividualField: individualField => (value) => {
-      dispatch(updateIndividual({
-        individualGuid: ownProps.individual.individualGuid,
-        individualField: toSnakecase(camelcaseToTitlecase(individualField)),
-        [individualField]: value,
-      }))
-    },
-    updateIndividualDiscussion: (updates) => {
-      dispatch(updateIndividual({
-        individualGuid: ownProps.individual.individualGuid, individualField: 'case_review_discussion', ...updates }))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  updateIndividualField: individualField => (value) => {
+    dispatch(updateIndividual({
+      individualGuid: ownProps.individual.individualGuid,
+      individualField: toSnakecase(camelcaseToTitlecase(individualField)),
+      [individualField]: value,
+    }))
+  },
+  updateIndividualDiscussion: (updates) => {
+    dispatch(updateIndividual(
+      { individualGuid: ownProps.individual.individualGuid, individualField: 'case_review_discussion', ...updates },
+    ))
+  },
+})
 
 export default connect(null, mapDispatchToProps)(CaseReviewStatusDropdown)

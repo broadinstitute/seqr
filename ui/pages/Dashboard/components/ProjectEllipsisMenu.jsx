@@ -42,8 +42,9 @@ const ProjectEllipsisMenu = React.memo((props) => {
 
   if (props.project.hasCaseReview) {
     menuItems.unshift(
-      <Dropdown.Item key="caseReview" onClick={() => {
-        window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}
+      <Dropdown.Item
+        key="caseReview"
+        onClick={() => { window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}
       >
         Case Review Page
       </Dropdown.Item>,
@@ -74,9 +75,7 @@ const ProjectEllipsisMenu = React.memo((props) => {
   )
 })
 
-
 export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }
-
 
 ProjectEllipsisMenu.propTypes = {
   user: PropTypes.object.isRequired,

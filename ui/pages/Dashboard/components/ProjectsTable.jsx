@@ -21,7 +21,6 @@ import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getVisibleProjects } from '../selectors'
 
-
 const ProjectTableContainer = styled.div`
   th {
     padding: 12px 10px 12px 3px !important; 
@@ -111,8 +110,8 @@ const COLUMNS = [
         return null
       }
       if (isExport) {
-        return Object.entries(project.sampleTypeCounts).map(([sampleType, numSamples]) =>
-          `${sampleType}: ${numSamples}`,
+        return Object.entries(project.sampleTypeCounts).map(
+          ([sampleType, numSamples]) => `${sampleType}: ${numSamples}`,
         ).join(', ')
       }
       return Object.entries(project.sampleTypeCounts).map(
@@ -120,10 +119,16 @@ const COLUMNS = [
           const color = (sampleType === SAMPLE_TYPE_EXOME && '#73AB3D') || (sampleType === SAMPLE_TYPE_GENOME && '#4682b4') || 'black'
           return (
             <div key={sampleType}>
-              <span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
+              <span style={{ color }}>
+                {numSamples}
+                &nbsp;
+                <b>{sampleType}</b>
+              </span>
               {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}
-            </div>)
-        })
+            </div>
+          )
+        },
+      )
     },
   },
   {
@@ -147,7 +152,8 @@ const COLUMNS = [
           project.analysisStatusCounts[d.value] ?
             [...acc, { ...d, count: project.analysisStatusCounts[d.value] }] :
             acc
-        ), [])
+        ), [],
+      )
       if (isExport) {
         return statusData.map(({ name, count }) => `${name}: ${count}`).join(', ')
       }
@@ -187,7 +193,7 @@ const getColumns = (googleLoginEnabled, isAnvil, isSuperuser) => {
   return isSuperuser ? SUPERUSER_COLUMNS_NO_ANVIL : COLUMNS_NO_ANVIL
 }
 
-const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) =>
+const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, googleLoginEnabled }) => (
   <DataLoader content load={load} loading={false}>
     <ProjectTableContainer>
       <VerticalSpacer height={10} />
@@ -210,11 +216,11 @@ const ProjectsTable = React.memo(({ visibleProjects, loading, load, user, google
         downloadFileName="projects"
       />
     </ProjectTableContainer>
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 ProjectsTable.propTypes = {
-  visibleProjects: PropTypes.array.isRequired,
+  visibleProjects: PropTypes.arrayOf(PropTypes.object).isRequired,
   loading: PropTypes.bool.isRequired,
   user: PropTypes.object,
   load: PropTypes.func,

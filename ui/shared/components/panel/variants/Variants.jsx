@@ -27,11 +27,14 @@ const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) =>
   background-color: ${({ severity, isSV }) => {
     if (severity > 0) {
       return '#eaa8a857'
-    } else if (severity === 0) {
+    }
+    if (severity === 0) {
       return '#f5d55c57'
-    } else if (severity < 0) {
+    }
+    if (severity < 0) {
       return '#21a92624'
-    } else if (isSV) {
+    }
+    if (isSV) {
       return '#f3f8fa'
     }
     return 'inherit'
@@ -64,26 +67,24 @@ const NestedVariantTab = styled(Tab).attrs({
   }
 `
 
-const tagFamily = tag =>
+const tagFamily = tag => (
   <LoadedFamilyLabel
     familyGuid={tag.savedVariant.familyGuid}
     path={`saved_variants/variant/${tag.savedVariant.variantGuid}`}
     disableEdit
     target="_blank"
   />
-
+)
 
 const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVariants, reads, showReads }) => {
-  if (!mainGeneId) {
-    mainGeneId = getVariantMainGeneId(variant)
-  }
+  const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
 
   const severity = CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]
   return (
-    <StyledVariantRow key={variant.variant} severity={severity} isSV={!!variant.svType} isCompoundHet >
+    <StyledVariantRow key={variant.variant} severity={severity} isSV={!!variant.svType} isCompoundHet>
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
-        {variant.discoveryTags && variant.discoveryTags.length > 0 &&
+        {variant.discoveryTags && variant.discoveryTags.length > 0 && (
           <InlinePopup
             on="click"
             position="right center"
@@ -95,18 +96,24 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
               displayAnnotationFirst
             />}
           />
-      }
+        )}
       </Grid.Column>
-      {variant.familyGuids.map(familyGuid =>
+      {variant.familyGuids.map(familyGuid => (
         <Grid.Column key={familyGuid} width={16}>
-          <FamilyVariantTags familyGuid={familyGuid} variant={variant} key={variant.variantId} isCompoundHet={isCompoundHet} linkToSavedVariants={linkToSavedVariants} />
-        </Grid.Column>,
-      )}
+          <FamilyVariantTags
+            familyGuid={familyGuid}
+            variant={variant}
+            key={variant.variantId}
+            isCompoundHet={isCompoundHet}
+            linkToSavedVariants={linkToSavedVariants}
+          />
+        </Grid.Column>
+      ))}
       <Grid.Column>
         {variant.svName && <Header size="medium" content={variant.svName} />}
-        {!isCompoundHet && mainGeneId && <VariantGene geneId={mainGeneId} variant={variant} />}
-        {!isCompoundHet && mainGeneId && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
-        <VariantGenes mainGeneId={mainGeneId} variant={variant} />
+        {!isCompoundHet && variantMainGeneId && <VariantGene geneId={variantMainGeneId} variant={variant} />}
+        {!isCompoundHet && variantMainGeneId && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
+        <VariantGenes mainGeneId={variantMainGeneId} variant={variant} />
         {isCompoundHet && Object.keys(variant.transcripts || {}).length > 1 && <VerticalSpacer height={20} />}
         {isCompoundHet && <VariantIndividuals variant={variant} isCompoundHet />}
         {isCompoundHet && showReads}
@@ -114,11 +121,12 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
       <Grid.Column><Annotations variant={variant} /></Grid.Column>
       <Grid.Column><Predictions variant={variant} /></Grid.Column>
       <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-      {!isCompoundHet &&
-      <Grid.Column width={16}>
-        <VariantIndividuals variant={variant} />
-        {showReads}
-      </Grid.Column>}
+      {!isCompoundHet && (
+        <Grid.Column width={16}>
+          <VariantIndividuals variant={variant} />
+          {showReads}
+        </Grid.Column>
+      )}
       <Grid.Column width={16}>
         {reads}
       </Grid.Column>
@@ -137,9 +145,15 @@ Variant.propTypes = {
 
 const VariantWithReads = props => <FamilyReads layout={Variant} {...props} />
 
-const compHetRows = (variants, mainGeneId, props) => variants.map(compoundHet =>
-  <VariantWithReads variant={compoundHet} key={compoundHet.variantId} mainGeneId={mainGeneId} isCompoundHet {...props} />,
-)
+const compHetRows = (variants, mainGeneId, props) => variants.map(compoundHet => (
+  <VariantWithReads
+    variant={compoundHet}
+    key={compoundHet.variantId}
+    mainGeneId={mainGeneId}
+    isCompoundHet
+    {...props}
+  />
+))
 
 const nestedVariantPanes = (variants, mainGeneId, props) => ([
   {
@@ -157,8 +171,9 @@ const nestedVariantPanes = (variants, mainGeneId, props) => ([
 })))
 
 const CompoundHets = React.memo(({ variants, ...props }) => {
-  const sharedGeneIds = variants.slice(1).reduce((acc, v) =>
-    acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}))
+  const sharedGeneIds = variants.slice(1).reduce(
+    (acc, v) => acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}),
+  )
   let mainGeneId = sharedGeneIds[0]
   if (sharedGeneIds.length > 1) {
     const mainSharedGene = variants.map(v => getVariantMainGeneId(v)).find(geneId => sharedGeneIds.includes(geneId))
@@ -175,29 +190,28 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
   return (
     <StyledVariantRow>
       <VerticalSpacer height={16} />
-      {allVariants[0].familyGuids.map(familyGuid =>
+      {allVariants[0].familyGuids.map(familyGuid => (
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags familyGuid={familyGuid} variant={allVariants} />
-        </Grid.Column>,
-      )}
+        </Grid.Column>
+      ))}
       <Grid.Column width={16}>
         {mainGeneId && <VariantGene geneId={mainGeneId} variant={allVariants[0]} areCompoundHets />}
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
         {compHetRows(mainVariants || variants, mainGeneId, props)}
       </StyledCompoundHetRows>
-      {mainVariants &&
+      {mainVariants && (
         <Grid.Column width={16}>
           <NestedVariantTab panes={nestedVariantPanes(variants, mainGeneId, props)} />
         </Grid.Column>
-      }
+      )}
     </StyledVariantRow>
   )
 })
 
-
 CompoundHets.propTypes = {
-  variants: PropTypes.array,
+  variants: PropTypes.arrayOf(PropTypes.object),
 }
 
 const Variants = React.memo(({ variants, ...props }) => (
@@ -210,7 +224,7 @@ const Variants = React.memo(({ variants, ...props }) => (
 ))
 
 Variants.propTypes = {
-  variants: PropTypes.array,
+  variants: PropTypes.arrayOf(PropTypes.object),
 }
 
 export default Variants

@@ -6,9 +6,8 @@ import { Popup, Icon, Header, Divider } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
-import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
+import { VerticalSpacer } from '../../Spacers'
 import HpoPanel from '../HpoPanel'
-
 
 const IndividualsContainer = styled.div`
   display: inline-block;
@@ -73,8 +72,8 @@ const PAR_REGIONS = {
   },
 }
 
-const isHemiXVariant = (variant, individual) =>
-  individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
+const isHemiXVariant =
+  (variant, individual) => individual.sex === 'M' && (variant.chrom === 'X' || variant.chrom === 'Y') &&
   PAR_REGIONS[variant.genomeVersion][variant.chrom].every(region => variant.pos < region[0] || variant.pos > region[1])
 
 const missingParentVariant = variant => (parentGuid) => {
@@ -82,8 +81,8 @@ const missingParentVariant = variant => (parentGuid) => {
   return parentGenotype.numAlt === 0 && parentGenotype.affected !== 'A'
 }
 
-const isHemiUPDVariant = (numAlt, variant, individual) =>
-  numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant))
+const isHemiUPDVariant = (numAlt, variant, individual) => (
+  numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant)))
 
 const Allele = styled.div.attrs(({ isAlt, variant }) => ({ children: isAlt ? variant.alt : variant.ref }))`
   display: inline-block;
@@ -107,36 +106,55 @@ const svGenotype = (genotype, isHemiX) => {
   const hasGenotype = Number.isInteger(genotype.numAlt) && genotype.numAlt >= 0
   const isAltCn = Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2)
   if (!hasGenotype) {
-    return <span>CN: {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}</span>
+    return (
+      <span>
+        CN: &nbsp;
+        {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}
+      </span>
+    )
   }
   return (
     <span>
+      {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
       {isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}/{genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
-      {isAltCn && <span><br />CN: <b><i>{genotype.cn}</i></b></span>}
+      {isAltCn && (
+        <span>
+          <br />
+          CN: &nbsp;
+          <b><i>{genotype.cn}</i></b>
+        </span>
+      )}
     </span>
   )
 }
 
-export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) =>
+export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
-    {warning &&
+    {warning && (
       <Popup
         flowing
         trigger={<Icon name="warning sign" color="yellow" />}
-        content={<div><b>Warning:</b> {warning}</div>}
+        content={
+          <div>
+            <b>Warning: </b>
+            {warning}
+          </div>
+        }
       />
-    }
-    {variant.svType ?
+    )}
+    {variant.svType ? (
       <Header.Content>
         {svGenotype(genotype, isHemiX)}
-      </Header.Content> :
+      </Header.Content>
+    ) : (
       <Header.Content>
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
-        /{isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
+        /
+        {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
       </Header.Content>
-    }
-  </AlleleContainer>,
-)
+    )}
+  </AlleleContainer>
+))
 
 Alleles.propTypes = {
   genotype: PropTypes.object,
@@ -173,14 +191,17 @@ const SV_GENOTYPE_DETAILS = [
   },
 ]
 
-const formattedGenotypeDetails = (details, genotype, variant, genesById) =>
-  details.map(({ shouldHide, title, field, variantField, format }) => {
+const formattedGenotypeDetails = (details, genotype, variant, genesById) => details.map(
+  ({ shouldHide, title, field, variantField, format }) => {
     const value = field ? genotype[field] : variant[variantField]
-    return value && !(shouldHide && shouldHide(value, variant)) ?
+    return value && !(shouldHide && shouldHide(value, variant)) ? (
       <div key={title}>
-        {title}:<HorizontalSpacer width={10} /><b>{format ? format(value, genesById) : value}</b>
-      </div> : null
-  }).filter(val => val)
+        {`${title}:  `}
+        <b>{format ? format(value, genesById) : value}</b>
+      </div>
+    ) : null
+  },
+).filter(val => val)
 
 const genotypeDetails = (genotype, variant, genesById) => {
   const details = formattedGenotypeDetails(GENOTYPE_DETAILS, genotype, variant)
@@ -232,26 +253,33 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const content = (
     <span>
-      {genotype.otherSample && <Popup
-        header="Additional Sample Type"
-        trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
-        content={
-          <div>
-            {hasConflictingNumAlt &&
-              <div>
-                <VerticalSpacer height={5} />
-                <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
-                <VerticalSpacer height={5} />
-              </div>
-            }
-            {genotypeDetails(genotype.otherSample, variant, genesById)}
-          </div>
-        }
-      />}
+      {genotype.otherSample && (
+        <Popup
+          header="Additional Sample Type"
+          trigger={<Icon name="plus circle" color={hasConflictingNumAlt ? 'red' : 'green'} />}
+          content={
+            <div>
+              {hasConflictingNumAlt && (
+                <div>
+                  <VerticalSpacer height={5} />
+                  <Alleles genotype={genotype.otherSample} variant={variant} isHemiX={isHemiX} />
+                  <VerticalSpacer height={5} />
+                </div>
+              )}
+              {genotypeDetails(genotype.otherSample, variant, genesById)}
+            </div>
+          }
+        />
+      )}
       <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
       <VerticalSpacer height={2} />
-      {genotype.gq || genotype.qs || '-'}{!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}
-      {variant.genotypeFilters && <small><br />{variant.genotypeFilters}</small>}
+      {`${genotype.gq || genotype.qs || '-'}${!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}`}
+      {variant.genotypeFilters && (
+        <small>
+          <br />
+          {variant.genotypeFilters}
+        </small>
+      )}
     </span>
   )
 
@@ -265,10 +293,9 @@ Genotype.propTypes = {
   genesById: PropTypes.object,
 }
 
-
 const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet, genesById }) => (
   <IndividualsContainer>
-    {(individuals || []).map(individual =>
+    {(individuals || []).map(individual => (
       <IndividualCell key={individual.individualGuid} numIndividuals={individuals.length}>
         <PedigreeIcon
           sex={individual.sex}
@@ -281,14 +308,14 @@ const BaseVariantIndividuals = React.memo(({ variant, individuals, isCompoundHet
         />
         <br />
         <Genotype variant={variant} individual={individual} isCompoundHet={isCompoundHet} genesById={genesById} />
-      </IndividualCell>,
-    )}
+      </IndividualCell>
+    ))}
   </IndividualsContainer>
 ))
 
 BaseVariantIndividuals.propTypes = {
   variant: PropTypes.object,
-  individuals: PropTypes.array,
+  individuals: PropTypes.arrayOf(PropTypes.object),
   isCompoundHet: PropTypes.bool,
   genesById: PropTypes.object,
 }
@@ -300,14 +327,18 @@ const mapStateToProps = (state, ownProps) => ({
 
 const FamilyVariantIndividuals = connect(mapStateToProps)(BaseVariantIndividuals)
 
-const VariantIndividuals = React.memo(({ variant, isCompoundHet }) =>
+const VariantIndividuals = React.memo(({ variant, isCompoundHet }) => (
   <span>
-    {variant.familyGuids.map(familyGuid =>
-      <FamilyVariantIndividuals key={familyGuid} familyGuid={familyGuid} variant={variant} isCompoundHet={isCompoundHet} />,
-    )}
-  </span>,
-)
-
+    {variant.familyGuids.map(familyGuid => (
+      <FamilyVariantIndividuals
+        key={familyGuid}
+        familyGuid={familyGuid}
+        variant={variant}
+        isCompoundHet={isCompoundHet}
+      />
+    ))}
+  </span>
+))
 
 VariantIndividuals.propTypes = {
   variant: PropTypes.object,

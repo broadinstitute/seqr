@@ -4,8 +4,9 @@ import PropTypes from 'prop-types'
 import { Select } from '../../form/Inputs'
 import BaseFieldView from './BaseFieldView'
 
-const OptionFieldView = React.memo(({ field, tagOptions, fieldDisplay, tagAnnotation, compact, formFieldProps = {}, additionalEditFields = [], ...props }) => {
-
+const OptionFieldView = React.memo((
+  { field, tagOptions, fieldDisplay, tagAnnotation, compact, formFieldProps = {}, additionalEditFields = [], ...props },
+) => {
   const tagSelectOptions = tagOptions.map(({ name, ...tag }) => ({ value: name, text: name, ...tag }))
 
   const fields = [
@@ -27,7 +28,12 @@ const OptionFieldView = React.memo(({ field, tagOptions, fieldDisplay, tagAnnota
       fieldDisplay={fieldDisplay || ((value) => {
         const valueConfig = tagSelectOptions.find(option => option.value === value) || {}
         const annotation = tagAnnotation ? tagAnnotation(valueConfig, compact, props.initialValues) : null
-        return <span>{annotation}{compact && annotation ? '' : valueConfig.text}</span>
+        return (
+          <span>
+            {annotation}
+            {compact && annotation ? '' : valueConfig.text}
+          </span>
+        )
       })}
       {...props}
     />
@@ -37,9 +43,9 @@ const OptionFieldView = React.memo(({ field, tagOptions, fieldDisplay, tagAnnota
 OptionFieldView.propTypes = {
   field: PropTypes.string.isRequired,
   initialValues: PropTypes.object.isRequired,
-  tagOptions: PropTypes.array.isRequired,
+  tagOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
   tagAnnotation: PropTypes.func,
-  additionalEditFields: PropTypes.array,
+  additionalEditFields: PropTypes.arrayOf(PropTypes.object),
   formFieldProps: PropTypes.object,
   fieldDisplay: PropTypes.func,
   compact: PropTypes.bool,

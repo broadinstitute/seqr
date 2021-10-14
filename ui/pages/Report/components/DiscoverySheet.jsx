@@ -9,7 +9,7 @@ import BaseReport from './BaseReport'
 
 const getDownloadFilename = projectGuid => `discovery_sheet_${projectGuid}`
 
-const DiscoverySheet = React.memo(props =>
+const DiscoverySheet = React.memo(props => (
   <BaseReport
     page="discovery_sheet"
     viewAllCategory="CMG"
@@ -18,15 +18,11 @@ const DiscoverySheet = React.memo(props =>
     columns={DISCOVERY_SHEET_COLUMNS}
     getDownloadFilename={getDownloadFilename}
     {...props}
-  />,
-)
+  />
+))
 
 DiscoverySheet.propTypes = {
   match: PropTypes.object,
-  data: PropTypes.array,
-  loading: PropTypes.bool,
-  loadingError: PropTypes.string,
-  load: PropTypes.func,
 }
 
 const mapStateToProps = state => ({

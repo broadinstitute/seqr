@@ -15,7 +15,6 @@ import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
 
-
 const ExportContainer = styled.span`
   float: right;
   padding-bottom: 15px;
@@ -33,20 +32,30 @@ const OverflowCell = styled(Table.Cell)`
 
 class FamilyTableRow extends React.PureComponent {
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      showDetails: props.showDetails,
-    }
+  static propTypes = {
+    familyGuid: PropTypes.string.isRequired,
+    tableName: PropTypes.string,
+    detailFields: PropTypes.arrayOf(PropTypes.object),
+    noDetailFields: PropTypes.arrayOf(PropTypes.object),
+    showVariantDetails: PropTypes.bool,
+    showDetails: PropTypes.bool,
   }
 
+  state = { showDetails: null }
+
   toggle = () => {
-    this.setState({ showDetails: !this.state.showDetails })
+    const { showDetails } = this.props
+    this.setState(prevState => (
+      { showDetails: !(prevState.showDetails === null ? showDetails : prevState.showDetails) }
+    ))
   }
 
   render() {
-    const { familyGuid, showVariantDetails, detailFields, noDetailFields, tableName } = this.props
+    const {
+      familyGuid, showVariantDetails, detailFields, noDetailFields, tableName, showDetails: initialShowDetails,
+    } = this.props
+    const { showDetails } = this.state
+    const showFamilyDetails = showDetails === null ? initialShowDetails : showDetails
     return (
       <Table.Row>
         <OverflowCell>
@@ -56,36 +65,27 @@ class FamilyTableRow extends React.PureComponent {
             showFamilyPageLink
             showVariantDetails={showVariantDetails}
             tableName={tableName}
-            fields={this.state.showDetails ? detailFields : noDetailFields}
-            compact={!this.state.showDetails}
-            disableEdit={!this.state.showDetails}
-            annotation={detailFields && noDetailFields && <ToggleIcon rotated={this.state.showDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
-            showIndividuals={this.state.showDetails}
+            fields={showFamilyDetails ? detailFields : noDetailFields}
+            compact={!showFamilyDetails}
+            disableEdit={!showFamilyDetails}
+            annotation={detailFields && noDetailFields && <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
+            showIndividuals={showFamilyDetails}
           />
         </OverflowCell>
       </Table.Row>
     )
   }
-}
 
-FamilyTableRow.propTypes = {
-  familyGuid: PropTypes.string.isRequired,
-  tableName: PropTypes.string,
-  detailFields: PropTypes.array,
-  noDetailFields: PropTypes.array,
-  showVariantDetails: PropTypes.bool,
-  showDetails: PropTypes.bool,
 }
 
 const FamilyTable = React.memo((
   { visibleFamilies, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
-) =>
+) => (
   <div>
     <ExportContainer>
-      {headerStatus &&
+      {headerStatus && (
         <span>
-          {headerStatus.title}:
-          <HorizontalSpacer width={10} />
+          {`${headerStatus.title}:  `}
           <HorizontalStackedBar
             width={100}
             height={14}
@@ -94,7 +94,7 @@ const FamilyTable = React.memo((
           />
           <HorizontalSpacer width={10} />
         </span>
-      }
+      )}
       <ExportTableButton downloads={exportUrls} />
       <HorizontalSpacer width={45} />
     </ExportContainer>
@@ -109,34 +109,31 @@ const FamilyTable = React.memo((
     <Table celled striped padded fixed attached="bottom">
       <Table.Body>
         {loading && <TableLoading />}
-        {!loading && (visibleFamilies.length > 0 ?
-          visibleFamilies.map(family =>
-            <FamilyTableRow
-              key={family.familyGuid}
-              familyGuid={family.familyGuid}
-              noDetailFields={noDetailFields}
-              showVariantDetails={showVariantDetails}
-              tableName={tableName}
-              {...props}
-            />,
-          ) : <EmptyTableRow tableName={tableName} />)
-        }
+        {!loading && (visibleFamilies.length > 0 ? visibleFamilies.map(family => (
+          <FamilyTableRow
+            key={family.familyGuid}
+            familyGuid={family.familyGuid}
+            noDetailFields={noDetailFields}
+            showVariantDetails={showVariantDetails}
+            tableName={tableName}
+            {...props}
+          />
+        )) : <EmptyTableRow tableName={tableName} />)}
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
     </Table>
-  </div>,
-)
-
+  </div>
+))
 
 export { FamilyTable as FamilyTableComponent }
 
 FamilyTable.propTypes = {
-  visibleFamilies: PropTypes.array.isRequired,
+  visibleFamilies: PropTypes.arrayOf(PropTypes.object).isRequired,
   loading: PropTypes.bool,
   headerStatus: PropTypes.object,
-  exportUrls: PropTypes.array,
+  exportUrls: PropTypes.arrayOf(PropTypes.object),
   showVariantDetails: PropTypes.bool,
-  noDetailFields: PropTypes.array,
+  noDetailFields: PropTypes.arrayOf(PropTypes.object),
   tableName: PropTypes.string,
   match: PropTypes.object,
 }

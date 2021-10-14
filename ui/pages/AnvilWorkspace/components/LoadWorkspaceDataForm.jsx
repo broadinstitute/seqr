@@ -36,9 +36,8 @@ const BLANK_EXPORT = {
   processRow: val => val,
 }
 
-const UploadPedigreeField = React.memo(({ error }) =>
+const UploadPedigreeField = React.memo(({ error }) => (
   <div className={`${error ? 'error' : ''} field`}>
-    {/* eslint-disable-next-line jsx-a11y/label-has-for */}
     <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm" color={error ? 'red' : null}>
       <BulkUploadForm
@@ -50,8 +49,8 @@ const UploadPedigreeField = React.memo(({ error }) =>
         url="/api/upload_temp_file"
       />
     </Segment>
-  </div>,
-)
+  </div>
+))
 
 UploadPedigreeField.propTypes = {
   error: PropTypes.bool,
@@ -92,31 +91,31 @@ const FORM_FIELDS = [
   DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX,
 ]
 
-const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => {
-  return new HttpRequestHelper(`/api/create_project_from_workspace/submit/${namespace}/${name}`,
-    (responseJson) => {
-      window.location.href = `/project/${responseJson.projectGuid}/project_page`
-    },
-    (e) => {
-      if (e.body && e.body.errors) {
-        throw new SubmissionError({ _error: e.body.errors })
-      } else {
-        throw new SubmissionError({ _error: [e.message] })
-      }
-    },
-  ).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
-}
+const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => new HttpRequestHelper(
+  `/api/create_project_from_workspace/submit/${namespace}/${name}`,
+  (responseJson) => {
+    window.location.href = `/project/${responseJson.projectGuid}/project_page`
+  },
+  (e) => {
+    if (e.body && e.body.errors) {
+      throw new SubmissionError({ _error: e.body.errors })
+    } else {
+      throw new SubmissionError({ _error: [e.message] })
+    }
+  },
+).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
 
-const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
+const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
   <div>
     <Header size="large" textAlign="center">
-      Load data to seqr from AnVIL Workspace &quot;{namespace}/{name}&quot;
+      {`Load data to seqr from AnVIL Workspace "${namespace}/${name}"`}
     </Header>
     <Segment basic textAlign="center">
       <Message info compact>
         In order to load your data to seqr, you must have a joint called VCF available in your workspace. For more
         information about generating and validating this file,
-        see <b><a href={VCF_DOCUMENTATION_URL} target="_blank">this documentation</a></b>.
+        see &nbsp;
+        <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
       </Message>
     </Segment>
     <ReduxFormWrapper
@@ -133,12 +132,12 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) =>
       Need help? please submit &nbsp;
       <a href="https://github.com/broadinstitute/seqr/issues/new?labels=bug&template=bug_report.md">GitHub Issues</a>
       , &nbsp; or &nbsp;
-      <a href="mailto:seqr@broadinstitute.org" target="_blank">
+      <a href="mailto:seqr@broadinstitute.org" target="_blank" rel="noreferrer">
         Email Us
       </a>
     </p>
-  </div>,
-)
+  </div>
+))
 
 LoadWorkspaceDataForm.propTypes = {
   namespace: PropTypes.string.isRequired,

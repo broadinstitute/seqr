@@ -28,28 +28,27 @@ import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
 import VariantTagTypeBar from './VariantTagTypeBar'
 
-
-const ProjectSectionComponent = React.memo(({ loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit }) => {
-  return ([
-    <SectionHeader key="header">{label}</SectionHeader>,
-    <div key="content">
-      {loading ? <Loader key="content" inline active /> : children}
-    </div>,
-    editButton && (project.canEdit || collaboratorEdit) ? (
-      <div key="edit">
-        <VerticalSpacer height={15} />
-        {editButton}
-      </div>
-    ) : null,
-    linkText ? (
-      <div key="link">
-        <VerticalSpacer height={15} />
-        <HorizontalSpacer width={35} />
-        <Link to={`/project/${project.projectGuid}/${linkPath}`}>{linkText}</Link>
-      </div>
-    ) : null,
-  ])
-})
+const ProjectSectionComponent = React.memo((
+  { loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit },
+) => ([
+  <SectionHeader key="header">{label}</SectionHeader>,
+  <div key="content">
+    {loading ? <Loader key="content" inline active /> : children}
+  </div>,
+  editButton && (project.canEdit || collaboratorEdit) ? (
+    <div key="edit">
+      <VerticalSpacer height={15} />
+      {editButton}
+    </div>
+  ) : null,
+  linkText ? (
+    <div key="link">
+      <VerticalSpacer height={15} />
+      <HorizontalSpacer width={35} />
+      <Link to={`/project/${project.projectGuid}/${linkPath}`}>{linkText}</Link>
+    </div>
+  ) : null,
+]))
 
 ProjectSectionComponent.propTypes = {
   loading: PropTypes.bool,
@@ -80,10 +79,11 @@ const ProjectPageUI = React.memo(props => (
   <Grid stackable>
     <Grid.Row>
       <Grid.Column width={4}>
-        {props.match.params.analysisGroupGuid ? null :
-        <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
-          <AnalysisGroups />
-        </ProjectSection>}
+        {props.match.params.analysisGroupGuid ? null : (
+          <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+            <AnalysisGroups />
+          </ProjectSection>
+        )}
         <VerticalSpacer height={10} />
         <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
           <GeneLists project={props.project} />
@@ -139,4 +139,3 @@ const mapStateToProps = (state, ownProps) => ({
 export { ProjectPageUI as ProjectPageUIComponent }
 
 export default connect(mapStateToProps)(ProjectPageUI)
-

@@ -34,8 +34,8 @@ const ANALYST_SUMMARY_DATA_PAGES = [
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
 ]
 
-const BaseSummaryDataPageHeader = ({ user }) =>
-  <SimplePageHeader page="summary_data" pages={user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES} />
+const BaseSummaryDataPageHeader = ({ user }) => (
+  <SimplePageHeader page="summary_data" pages={user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES} />)
 
 BaseSummaryDataPageHeader.propTypes = {
   user: PropTypes.object,
@@ -49,8 +49,8 @@ export const SummaryDataPageHeader = connect(mapStateToProps)(BaseSummaryDataPag
 
 const SummaryData = ({ match, user }) => (
   <Switch>
-    {(user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES).map(({ path, params, component }) =>
-      <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
+    {(user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES).map(
+      ({ path, params, component }) => <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
     )}
     <Route path={match.url} component={null} />
     <Route component={() => <Error404 />} />

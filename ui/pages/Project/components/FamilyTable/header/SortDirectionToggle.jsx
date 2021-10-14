@@ -12,15 +12,15 @@ const SortButton = styled(Button)`
 
 const toggleSort = (value, onChange) => () => onChange(-1 * value)
 
-const SortDirectionToggle = React.memo(({ value, onChange }) =>
+const SortDirectionToggle = React.memo(({ value, onChange }) => (
   <SortButton
     circular
     basic
     onClick={toggleSort(value, onChange)}
     size="small"
     icon={`arrow ${value === 1 ? 'down' : 'up'}`}
-  />,
-)
+  />
+))
 
 SortDirectionToggle.propTypes = {
   value: PropTypes.number.isRequired,

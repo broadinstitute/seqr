@@ -5,7 +5,6 @@ import { Segment } from 'semantic-ui-react'
 import { launch } from 'gtex-d3/src/GeneExpressionViolinPlot'
 import 'gtex-d3/css/violin.css'
 
-
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 const GtexContainer = styled(Segment)`
@@ -123,21 +122,21 @@ class Gtex extends React.PureComponent {
     geneId: PropTypes.string.isRequired,
   }
 
-  render() {
-    return <GtexContainer id={GTEX_CONTAINER_ID} />
-  }
-
   componentDidMount() {
+    const { geneId } = this.props
     new HttpRequestHelper(`${GTEX_HOST}reference/gene`,
       (responseJson) => {
         launchGtex(responseJson.gene[0].gencodeId)
       },
       () => {
-        launchGtex(this.props.geneId)
-      },
-    ).get({ format: 'json', geneId: this.props.geneId })
-
+        launchGtex(geneId)
+      }).get({ format: 'json', geneId })
   }
+
+  render() {
+    return <GtexContainer id={GTEX_CONTAINER_ID} />
+  }
+
 }
 
 export default Gtex
