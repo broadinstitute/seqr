@@ -5,7 +5,7 @@ import { Route, Switch } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
 import { Error404 } from 'shared/components/page/Errors'
-import { SimplePageHeader } from 'shared/components/page/PageHeader'
+import { SimplePageHeader } from 'shared/components/page/PageHeaderLayout'
 import GeneDetail from 'shared/components/panel/genes/GeneDetail'
 
 import SuccessStory from './components/SuccessStory'

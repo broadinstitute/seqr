@@ -7,7 +7,7 @@ import {
   REQUEST_SAVED_SEARCHES,
   REQUEST_SEARCHED_VARIANTS,
   RECEIVE_SEARCHED_VARIANTS,
-} from 'redux/rootReducer'
+} from 'redux/utils/reducerUtils'
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
-import { PageHeaderLayout } from 'shared/components/page/PageHeader'
+import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import {

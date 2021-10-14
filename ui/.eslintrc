@@ -64,8 +64,6 @@
     "react/state-in-constructor": ["error", "never"],
     "react/static-property-placement": ["error", "static public field"],
 
-    "import/no-cycle": 0, // TODO re-enable
-
     "react-perf/jsx-no-new-array-as-prop": 0, // TODO re-enable
     "react-perf/jsx-no-new-function-as-prop": 0, // TODO re-enable
     "react-perf/jsx-no-new-object-as-prop": 0 // TODO re-enable

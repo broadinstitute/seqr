@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { getProjectsByGuid, getFamiliesByGuid, getAnalysisGroupsByGuid, getSearchesByHash } from 'redux/selectors'
-import { PageHeaderLayout } from 'shared/components/page/PageHeader'
+import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { getSelectedAnalysisGroups } from '../constants'
 
