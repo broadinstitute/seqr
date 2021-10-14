@@ -254,7 +254,12 @@ def update_mme_submission(request, submission_guid=None):
 
     update_model_from_json(submission, submission_json, user=request.user, allow_unknown_keys=True)
 
-    return create_json_response({'mmeSubmissionsByGuid': {submission.guid: submission_json_body}})
+    response = {
+        'mmeSubmissionsByGuid': {submission.guid: submission_json_body}, # TODO fix on un-delete
+    }
+    if not submission_guid:
+        response['individualsByGuid'] = {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}}
+    return create_json_response(response)
 
 
 @login_and_policies_required
