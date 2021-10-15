@@ -128,7 +128,7 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         results = response.json()['results']
 
-        self.assertEqual(len(results), 2)
+        self.assertEqual(len(results), 3)
         self.assertDictEqual(results[0], {
             'patient': {
                 'id': 'NA19675_1_01',
@@ -226,7 +226,7 @@ class ExternalAPITest(TestCase):
 
         message_template = """Dear collaborators,
 
-    matchbox found a match between a patient from Test Institute and the following 2 case(s) 
+    matchbox found a match between a patient from Test Institute and the following 3 case(s) 
     in matchbox. The following information was included with the query,
 
     genes: FAM138A, OR4F29, OR4F5
@@ -245,9 +245,10 @@ Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox 
 be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         match1 = 'seqr ID NA19675_1 from project 1kg project n\u00e5me with uni\u00e7\u00f8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange'
         match2 = 'seqr ID NA20888 from project Test Reprocessed Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange'
+        match3 = 'seqr ID NA21234 from project Non-Analyst Project in family 14 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0004_non_analyst_project/family_page/F000014_14/matchmaker_exchange'
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
-            matches='{}\n{}'.format(match1, match2),
+            matches='\n'.join([match1, match2, match3]),
             emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org, test_user@broadinstitute.org'
         ))
 
@@ -278,7 +279,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
             'matchmaker_matches',
             """A match request for 12345 came in from Test Institute today.
         The contact information given was: test@test.com.
-        We found 2 existing matching individuals but no new ones, *so no results were sent back*."""
+        We found 3 existing matching individuals but no new ones, *so no results were sent back*."""
         )
         mock_email.assert_not_called()
 
