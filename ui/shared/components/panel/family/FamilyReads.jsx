@@ -23,6 +23,8 @@ import {
   DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
 } from './constants'
 
+const MIN_LOCUS_RANGE_SIZE = 100
+
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
     <span id={`${individual.displayName}-${type}`}>
@@ -179,11 +181,12 @@ ReadButtons.propTypes = {
 const IgvPanel = React.memo((
   { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences },
 ) => {
+  const size = variant.end && variant.end - variant.pos
   const locus = variant && getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
-    100,
-    variant.end && variant.end - variant.pos,
+    size ? Math.max(Math.round(size / 3), MIN_LOCUS_RANGE_SIZE) : MIN_LOCUS_RANGE_SIZE,
+    size,
   )
 
   const tracks = rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes))

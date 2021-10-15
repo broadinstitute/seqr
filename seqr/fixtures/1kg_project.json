@@ -2067,12 +2067,12 @@
         "last_modified_date": "2019-02-05T06:42:55.397Z",
         "submission_id": "P0004517",
         "label": "P0004517",
-       "contact_name": "Sam Baxter",
+        "contact_name": "Sam Baxter",
         "contact_href": "mailto:matchmaker@broadinstitute.org",
         "genomic_features": [
             {
                 "gene": {
-                    "id": "ENSG00000233750"
+                    "id": "ENSG00000186092"
                 }
             }
         ]
