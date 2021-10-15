@@ -35,9 +35,14 @@ class CustomModal extends React.PureComponent {
     }
   }
 
+  confirmClose = () => {
+    const { close } = this.props
+    close(true)
+  }
+
   render() {
     const {
-      trigger: triggerProp, popup, open, isOpen, size, title, children, confirmContent, cancelClose, close,
+      trigger: triggerProp, popup, open, isOpen, size, title, children, confirmContent, cancelClose,
     } = this.props
     let trigger = triggerProp ? React.cloneElement(triggerProp, { onClick: open }) : null
     if (popup) {
@@ -56,7 +61,7 @@ class CustomModal extends React.PureComponent {
           content={confirmContent}
           open={confirmContent != null}
           onCancel={cancelClose}
-          onConfirm={() => close(true)}
+          onConfirm={this.confirmClose}
         />
       </Modal>
     )

@@ -1,14 +1,31 @@
-/* eslint-disable no-underscore-dangle */
-
 import React from 'react'
+import styled from 'styled-components'
 import PropTypes from 'prop-types'
-import { Button } from 'semantic-ui-react'
+import { Button, Segment } from 'semantic-ui-react'
 import { Editor, EditorState, RichUtils, convertToRaw, convertFromRaw } from 'draft-js'
 import { draftToMarkdown, markdownToDraft } from 'markdown-draft-js'
 
 import 'draft-js/dist/Draft.css'
 
 const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
+
+const ButtonContainer = styled(Segment)`
+  padding: 0 !important;
+`
+
+const EditorContainer = styled(Segment)`
+  min-width: 590px;
+`
+
+const INLINE_STYLES = [
+  { label: 'Bold', type: 'BOLD', icon: 'bold' },
+  { label: 'Italic', type: 'ITALIC', icon: 'italic' },
+]
+
+const BLOCK_TYPES = [
+  { label: 'Bullet List', type: 'unordered-list-item', icon: 'unordered list' },
+  { label: 'Numbered List', type: 'ordered-list-item', icon: 'ordered list' },
+]
 
 /*
  Draft.js-based rich text editor.
@@ -23,16 +40,6 @@ class RichTextEditor extends React.PureComponent {
     value: PropTypes.string,
     onChange: PropTypes.func,
   }
-
-  static BLOCK_TYPES = [
-    { label: 'Bullet List', type: 'unordered-list-item', icon: 'unordered list' },
-    { label: 'Numbered List', type: 'ordered-list-item', icon: 'ordered list' },
-  ]
-
-  static INLINE_STYLES = [
-    { label: 'Bold', type: 'BOLD', icon: 'bold' },
-    { label: 'Italic', type: 'ITALIC', icon: 'italic' },
-  ]
 
   static defaultProps = {
     onChange: () => {},
@@ -52,14 +59,13 @@ class RichTextEditor extends React.PureComponent {
     }
 
     this.state = { editorState } // eslint-disable-line react/state-in-constructor
-
-    this.handleKeyCommand = this._handleKeyCommand.bind(this)
-    this.setEditorRef = (ref) => { this.editor = ref }
   }
 
   componentDidMount() {
     this.editor.focus()
   }
+
+  setEditorRef = (ref) => { this.editor = ref }
 
   getMarkdown() {
     const { editorState } = this.state
@@ -74,7 +80,7 @@ class RichTextEditor extends React.PureComponent {
     this.setState({ editorState }, () => onChange(this.getMarkdown()))
   }
 
-  _handleKeyCommand(command, editorState) {
+  handleKeyCommand = (command, editorState) => {
     const newState = RichUtils.handleKeyCommand(editorState, command)
     if (newState) {
       this.setState({ editorState: newState })
@@ -83,28 +89,50 @@ class RichTextEditor extends React.PureComponent {
     return false
   }
 
+  toggleInlineStyle = (e, data) => {
+    const { editorState } = this.state
+    e.preventDefault()
+    this.updateEditorState(RichUtils.toggleInlineStyle(editorState, data.id))
+  }
+
+  toggleBlockStyle = (e, data) => {
+    const { editorState } = this.state
+    e.preventDefault()
+    this.updateEditorState(RichUtils.toggleBlockType(editorState, data.id))
+  }
+
   render() {
     const { editorState: es } = this.state
+    const currentInlineStyle = es.getCurrentInlineStyle()
+    const currentBlockType = es.getCurrentContent().getBlockForKey(es.getSelection().getStartKey()).getType()
     return (
       <div>
-        <div style={{ padding: '0px 0px 10px 0px', textAlign: 'right' }}>
-          <InlineStyleButtonPanel
-            currentInlineStyle={es.getCurrentInlineStyle()}
-            onButtonClick={(e, data) => {
-              e.preventDefault()
-              this.updateEditorState(RichUtils.toggleInlineStyle(es, data.id))
-            }}
-          />
-          {' '}
-          <BlockTypeButtonPanel
-            currentBlockType={es.getCurrentContent().getBlockForKey(es.getSelection().getStartKey()).getType()}
-            onButtonClick={(e, data) => {
-              e.preventDefault()
-              this.updateEditorState(RichUtils.toggleBlockType(es, data.id))
-            }}
-          />
-        </div>
-        <div style={{ minWidth: '590px', border: '1px #DDD solid', padding: '10px' }}>
+        <ButtonContainer basic textAlign="right">
+          {INLINE_STYLES.map(type => (
+            <Button
+              id={type.type}
+              key={type.label}
+              size="tiny"
+              icon={type.icon}
+              active={currentInlineStyle.has(type.type)}
+              onClick={this.toggleInlineStyle}
+              toggle
+            />
+          ))}
+          &nbsp; &nbsp;
+          {BLOCK_TYPES.map(type => (
+            <Button
+              id={type.type}
+              key={type.label}
+              size="tiny"
+              icon={type.icon}
+              active={type.type === currentBlockType}
+              onClick={this.toggleBlockStyle}
+              toggle
+            />
+          ))}
+        </ButtonContainer>
+        <EditorContainer>
           <Editor
             editorState={es}
             handleKeyCommand={this.handleKeyCommand}
@@ -112,53 +140,11 @@ class RichTextEditor extends React.PureComponent {
             ref={this.setEditorRef}
             onChange={this.updateEditorState}
           />
-        </div>
+        </EditorContainer>
       </div>
     )
   }
 
-}
-
-const InlineStyleButtonPanel = React.memo(props => (
-  <div style={{ display: 'inline' }}>
-    {RichTextEditor.INLINE_STYLES.map(type => (
-      <Button
-        id={type.type}
-        key={type.label}
-        size="tiny"
-        icon={type.icon}
-        active={props.currentInlineStyle.has(type.type)}
-        onClick={props.onButtonClick}
-        toggle
-      />
-    ))}
-  </div>
-))
-
-InlineStyleButtonPanel.propTypes = {
-  currentInlineStyle: PropTypes.object.isRequired,
-  onButtonClick: PropTypes.func.isRequired,
-}
-
-const BlockTypeButtonPanel = React.memo(props => (
-  <div style={{ display: 'inline' }}>
-    {RichTextEditor.BLOCK_TYPES.map(type => (
-      <Button
-        id={type.type}
-        key={type.label}
-        size="tiny"
-        icon={type.icon}
-        active={type.type === props.currentBlockType}
-        onClick={props.onButtonClick}
-        toggle
-      />
-    ))}
-  </div>
-))
-
-BlockTypeButtonPanel.propTypes = {
-  currentBlockType: PropTypes.string.isRequired,
-  onButtonClick: PropTypes.func.isRequired,
 }
 
 export default RichTextEditor
