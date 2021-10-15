@@ -273,7 +273,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
       )}
       <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
       <VerticalSpacer height={2} />
-      {`${genotype.gq || genotype.qs || '-'}${!variant.svType && genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}`}
+      {`${genotype.gq || genotype.qs || '-'}${variant.svType ? '' : genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}`}
       {variant.genotypeFilters && (
         <small>
           <br />
