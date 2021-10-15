@@ -207,6 +207,8 @@ AwesomebarItemSelector.propTypes = {
   value: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
 }
 
+const getResultTitle = result => result.title
+
 const GeneEntry = ({ name, icon }) => (
   <Form.Group inline>
     <Form.Field width={1}>{icon}</Form.Field>
@@ -216,7 +218,7 @@ const GeneEntry = ({ name, icon }) => (
         placeholder="Search for gene"
         component={AwesomebarItemSelector}
         categories={GENE_CATEGORIES}
-        parseResultItem={result => result.title}
+        parseResultItem={getResultTitle}
       />
     </Form.Field>
     <Field name={`${name}.comments`} placeholder="Comments" component={Form.Input} width={9} />
@@ -272,6 +274,8 @@ const HPO_QUALIFIERS = [
   },
 ]
 
+const updateInput = (input, type) => val => input.onChange(({ ...input.value, [type]: val }))
+
 const HpoQualifiers = ({ input }) => (
   <Accordion
     exclusive={false}
@@ -281,7 +285,7 @@ const HpoQualifiers = ({ input }) => (
       content: {
         content: (
           <RadioGroup
-            onChange={val => input.onChange(({ ...input.value, [type]: val }))}
+            onChange={updateInput(input, type)}
             value={input.value[type]}
             options={options.map(value => ({ value, text: value }))}
             margin="0 1em"
@@ -295,6 +299,9 @@ const HpoQualifiers = ({ input }) => (
 HpoQualifiers.propTypes = {
   input: PropTypes.object,
 }
+
+const formatQualifiers = val => (val || []).reduce((acc, { type, label }) => ({ ...acc, [type]: label }), {})
+const normalizeQualifiers = val => Object.entries(val || {}).map(([type, label]) => ({ type, label }))
 
 const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showDetails }) => (
   <div>
@@ -318,8 +325,8 @@ const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showD
         key="qualifiers"
         name={`${name}.qualifiers`}
         component={HpoQualifiers}
-        format={val => (val || []).reduce((acc, { type, label }) => ({ ...acc, [type]: label }), {})}
-        normalize={val => Object.entries(val || {}).map(([type, label]) => ({ type, label }))}
+        format={formatQualifiers}
+        normalize={normalizeQualifiers}
       />,
       <Form.Group key="notes">
         <Field name={`${name}.notes`} placeholder="Comments" component={Form.Input} width={16} />
@@ -389,10 +396,12 @@ const getCategoryPanes = addItem => Object.entries(CATEGORY_NAMES).map(
   }),
 ).sort((a, b) => a.menuItem.localeCompare(b.menuItem))
 
+const parseHpoResult = result => ({ id: result.key, label: result.title, category: result.category })
+
 const HpoTermSelector = ({ addItem }) => (
   <div>
     <AwesomeBarFormInput
-      parseResultItem={result => ({ id: result.key, label: result.title, category: result.category })}
+      parseResultItem={parseHpoResult}
       categories={HPO_CATEGORIES}
       placeholder="Search for HPO terms"
       onChange={addItem}

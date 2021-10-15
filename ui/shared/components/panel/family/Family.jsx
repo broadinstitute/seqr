@@ -112,7 +112,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
 }
 
 const Family = React.memo(({
-  project, family, fields = [], rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
+  project, family, fields, rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
   showFamilyPageLink, annotation, updateFamily: dispatchUpdateFamily, hidePedigree, disableInternalEdit,
 }) => {
   if (!family) {

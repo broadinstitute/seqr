@@ -64,21 +64,27 @@ ProjectFilter.propTypes = {
 const PROJECT_SEARCH_CATEGORIES = ['projects']
 const PROJECT_GROUP_SEARCH_CATEGORIES = ['project_groups']
 
-export const AddProjectButton = React.memo(({ addElement, addProjectGroup, processAddedElement }) => (
+const getResultKey = result => result.key
+
+const addProjectGroupElement = (addProjectGroup, addElement) => val => addProjectGroup(val, addElement)
+
+export const AddProjectButton = React.memo(({ addElement, addProjectGroup, processAddedElement = getResultKey }) => (
   <div>
     <InlineHeader content="Add Project:" />
     <AwesomeBar
       categories={PROJECT_SEARCH_CATEGORIES}
       placeholder="Search for a project"
       inputwidth="400px"
-      onResultSelect={result => addElement(processAddedElement ? processAddedElement(result) : result.key)}
+      onResultSelect={addElement}
+      parseResultItem={processAddedElement}
     />
     <InlineHeader content="Add Project Group:" />
     <AwesomeBar
       categories={PROJECT_GROUP_SEARCH_CATEGORIES}
       placeholder="Search for a project group"
       inputwidth="400px"
-      onResultSelect={result => addProjectGroup(result.key, addElement)}
+      onResultSelect={addProjectGroupElement(addProjectGroup, addElement)}
+      parseResultItem={getResultKey}
     />
   </div>
 ))
