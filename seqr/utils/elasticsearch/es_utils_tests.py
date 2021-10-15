@@ -1170,6 +1170,12 @@ class EsUtilsTest(TestCase):
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
         )
 
+        search_model.search['inheritance']['filter'] = {'genotype': {'I000004_hg00731': 'ref_ref'}}
+        search_model.save()
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
+
         search_model.search['inheritance']['filter'] = {}
         search_model.search['annotations'] = {'structural': ['DEL']}
         search_model.save()
