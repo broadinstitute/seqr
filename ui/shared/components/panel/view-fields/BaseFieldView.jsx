@@ -21,163 +21,183 @@ const FieldValue = styled.div`
 `
 
 class BaseFieldView extends React.PureComponent {
-  constructor(props) {
-    super(props)
-    this.state = {
-      showInLineButton: true,
-    }
-    this.toggleButtonVisibility = this.toggleButtonVisibility.bind(this)
+
+  static propTypes = {
+    showInLine: PropTypes.bool,
+    fieldDisplay: PropTypes.func,
+    formFields: PropTypes.arrayOf(PropTypes.object),
+    isVisible: PropTypes.bool,
+    isPrivate: PropTypes.bool,
+    isEditable: PropTypes.bool,
+    isDeletable: PropTypes.bool,
+    onSubmit: PropTypes.func,
+    modalTitle: PropTypes.string,
+    addConfirm: PropTypes.string,
+    deleteConfirm: PropTypes.string,
+    fieldName: PropTypes.string,
+    field: PropTypes.string.isRequired,
+    idField: PropTypes.string,
+    initialValues: PropTypes.object,
+    fieldValue: PropTypes.any, // eslint-disable-line react/forbid-prop-types
+    compact: PropTypes.bool,
+    style: PropTypes.object,
+    editLabel: PropTypes.string,
+    editIconName: PropTypes.string,
+    hideValue: PropTypes.bool,
+    showEmptyValues: PropTypes.bool,
+    user: PropTypes.object,
+    modalStyle: PropTypes.object,
+    showErrorPanel: PropTypes.bool,
+    modalId: PropTypes.string,
+    modalSize: PropTypes.string,
+    defaultId: PropTypes.string,
   }
 
-  toggleButtonVisibility() {
-    this.setState({
-      showInLineButton: !this.state.showInLineButton,
-    })
+  static defaultProps = {
+    fieldDisplay: val => val,
+  }
+
+  state = { showInLineButton: true }
+
+  toggleButtonVisibility = () => {
+    this.setState(prevState => ({
+      showInLineButton: !prevState.showInLineButton,
+    }))
+  }
+
+  getFieldId = () => {
+    const { initialValues, idField, defaultId } = this.props
+    return initialValues[idField] || defaultId
+  }
+
+  getEditButton = () => {
+    const {
+      initialValues, modalId, isEditable, formFields, showInLine, editLabel, editIconName, onSubmit, showErrorPanel,
+      addConfirm, modalTitle, modalSize, modalStyle, field,
+    } = this.props
+    const { showInLineButton } = this.state
+
+    if (!isEditable) {
+      return null
+    }
+
+    if (formFields) {
+      const fieldModalId = `edit-${this.getFieldId() || 'new'}-${field}-${modalId}`
+      return showInLine ? (
+        <span key="edit">
+          {showInLineButton ? (
+            <ButtonLink
+              size="tiny"
+              labelPosition={editLabel && 'right'}
+              icon={editIconName || 'write'}
+              content={editLabel}
+              onClick={this.toggleButtonVisibility}
+            />
+          ) : (
+            <Segment compact>
+              <ReduxFormWrapper
+                noModal
+                inline
+                key="edit"
+                onSubmit={onSubmit}
+                onSubmitSucceeded={this.toggleButtonVisibility}
+                form={fieldModalId}
+                initialValues={initialValues}
+                fields={formFields}
+                showErrorPanel={showErrorPanel}
+              />
+            </Segment>
+          )}
+        </span>
+      ) : (
+        <UpdateButton
+          showInLine={showInLine}
+          key="edit"
+          modalTitle={modalTitle}
+          modalId={fieldModalId}
+          modalSize={modalSize}
+          buttonText={editLabel}
+          editIconName={editIconName}
+          onSubmit={onSubmit}
+          initialValues={initialValues}
+          formFields={formFields}
+          formContainer={<div style={modalStyle} />}
+          showErrorPanel={showErrorPanel}
+          confirmDialog={addConfirm}
+          size="tiny"
+        />
+      )
+    }
+    return (
+      <DispatchRequestButton
+        key="edit"
+        buttonContent={<Icon link size="small" name="plus" />}
+        onSubmit={() => onSubmit(initialValues)}
+        confirmDialog={addConfirm}
+      />
+    )
   }
 
   render() {
-    if (this.props.isVisible !== undefined && !this.props.isVisible) {
-      return null
-    }
-    if (this.props.isPrivate && !this.props.user.isAnalyst) {
-      return null
-    }
-    const fieldValue = this.props.fieldValue || this.props.initialValues[this.props.field]
-    const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || this.props.showEmptyValues
-    if (!this.props.isEditable && !hasValue) {
-      return null
-    }
-    const fieldId = this.props.initialValues[this.props.idField] || this.props.defaultId
-    const modalId = this.props.isEditable ? `edit-${fieldId || 'new'}-${this.props.field}-${this.props.modalId}` : null
+    const {
+      isVisible, isPrivate, isEditable, isDeletable, user, field, initialValues, fieldValue: propFieldValue, style,
+      showEmptyValues, onSubmit, deleteConfirm, fieldName, compact, hideValue, fieldDisplay,
+    } = this.props
+    const { showInLineButton } = this.state
 
-    let editButton
-    if (this.props.isEditable) {
-      if (this.props.formFields) {
-        editButton =
-          this.props.showInLine ?
-            <span key="edit">
-              {this.state.showInLineButton ?
-                <ButtonLink
-                  size="tiny"
-                  labelPosition={this.props.editLabel && 'right'}
-                  icon={this.props.editIconName || 'write'}
-                  content={this.props.editLabel}
-                  onClick={this.toggleButtonVisibility}
-                />
-                :
-                <Segment compact>
-                  <ReduxFormWrapper
-                    noModal
-                    inline
-                    key="edit"
-                    onSubmit={this.props.onSubmit}
-                    onSubmitSucceeded={this.toggleButtonVisibility}
-                    form={this.props.modalId}
-                    initialValues={this.props.initialValues}
-                    fields={this.props.formFields}
-                    showErrorPanel={this.props.showErrorPanel}
-                  />
-                </Segment>
-              }
-            </span>
-            :
-            <UpdateButton
-              showInLine={this.props.showInLine}
-              key="edit"
-              modalTitle={this.props.modalTitle}
-              modalId={modalId}
-              modalSize={this.props.modalSize}
-              buttonText={this.props.editLabel}
-              editIconName={this.props.editIconName}
-              onSubmit={this.props.onSubmit}
-              initialValues={this.props.initialValues}
-              formFields={this.props.formFields}
-              formContainer={<div style={this.props.modalStyle} />}
-              showErrorPanel={this.props.showErrorPanel}
-              confirmDialog={this.props.addConfirm}
-              size="tiny"
-            />
-      } else {
-        editButton =
-          <DispatchRequestButton
-            key="edit"
-            buttonContent={<Icon link size="small" name="plus" />}
-            onSubmit={() => this.props.onSubmit(this.props.initialValues)}
-            confirmDialog={this.props.addConfirm}
-          />
-      }
+    if (isVisible !== undefined && !isVisible) {
+      return null
+    }
+    if (isPrivate && !user.isAnalyst) {
+      return null
+    }
+    const fieldValue = propFieldValue || initialValues[field]
+    const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || showEmptyValues
+    if (!isEditable && !hasValue) {
+      return null
     }
 
-    const deleteButton = this.props.isDeletable && (
+    const editButton = this.getEditButton()
+
+    const deleteButton = isDeletable && (
       <DeleteButton
         size="tiny"
         key="delete"
-        initialValues={this.props.initialValues}
-        onSubmit={this.props.onSubmit}
-        confirmDialog={this.props.deleteConfirm}
+        initialValues={initialValues}
+        onSubmit={onSubmit}
+        confirmDialog={deleteConfirm}
       />
     )
     const buttons = [editButton, deleteButton]
     const hasButtons = editButton || deleteButton
 
     return (
-      <span style={this.props.style || {}}>
-        {this.props.isPrivate && <Popup
-          trigger={<Icon name="lock" size="small" />}
-          position="top center"
-          size="small"
-          content="Only visible to internal users."
-        />}
-        {this.props.fieldName && [
-          <b key="name">{this.props.fieldName}{hasValue ? ':' : null}<HorizontalSpacer width={10} /></b>,
+      <span style={style || {}}>
+        {isPrivate && (
+          <Popup
+            trigger={<Icon name="lock" size="small" />}
+            position="top center"
+            size="small"
+            content="Only visible to internal users."
+          />
+        )}
+        {fieldName && [
+          <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
+          <HorizontalSpacer key="spacer" width={10} />,
           ...buttons,
-          this.props.compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
-          !this.props.compact && <br key="br" />,
+          compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
+          !compact && <br key="br" />,
         ]}
-        {
-          hasValue && !this.props.hideValue && this.state.showInLineButton &&
-          <FieldValue compact={this.props.compact} fieldName={this.props.fieldName} hasButtons={hasButtons}>
-            {this.props.fieldDisplay(fieldValue, this.props.compact, fieldId)}
+        {hasValue && !hideValue && showInLineButton && (
+          <FieldValue compact={compact} fieldName={fieldName} hasButtons={hasButtons}>
+            {fieldDisplay(fieldValue, compact, this.getFieldId())}
           </FieldValue>
-        }
-        {!this.props.fieldName && buttons}
-      </span>)
+        )}
+        {!fieldName && buttons}
+      </span>
+    )
   }
-}
 
-BaseFieldView.propTypes = {
-  showInLine: PropTypes.bool,
-  fieldDisplay: PropTypes.func,
-  formFields: PropTypes.array,
-  isVisible: PropTypes.any,
-  isPrivate: PropTypes.bool,
-  isEditable: PropTypes.bool,
-  isDeletable: PropTypes.bool,
-  onSubmit: PropTypes.func,
-  modalTitle: PropTypes.string,
-  addConfirm: PropTypes.string,
-  deleteConfirm: PropTypes.string,
-  fieldName: PropTypes.string,
-  field: PropTypes.string.isRequired,
-  idField: PropTypes.string,
-  initialValues: PropTypes.object,
-  fieldValue: PropTypes.any,
-  compact: PropTypes.bool,
-  style: PropTypes.object,
-  editLabel: PropTypes.string,
-  editIconName: PropTypes.string,
-  hideValue: PropTypes.bool,
-  showEmptyValues: PropTypes.bool,
-  user: PropTypes.object,
-  modalStyle: PropTypes.object,
-  showErrorPanel: PropTypes.bool,
-  modalId: PropTypes.string,
-  modalSize: PropTypes.string,
-  defaultId: PropTypes.string,
-}
-
-BaseFieldView.defaultProps = {
-  fieldDisplay: val => val,
 }
 
 const mapStateToProps = state => ({

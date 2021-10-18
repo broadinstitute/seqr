@@ -1,10 +1,11 @@
+/* eslint-disable react/jsx-one-expression-per-line */
+
 import React from 'react'
 import { Header, Segment, List } from 'semantic-ui-react'
 
-export default () =>
+export default () => (
   <Segment basic padded="very">
     <Header dividing content="Privacy Policy" subheader="Last Updated 10/27/2020" size="huge" />
-
 
     The Broad Institute of MIT& Harvard (<b>&quot;Broad&quot;</b>) values your privacy. This Privacy Policy
     (<b>&quot;Policy&quot;</b>) provides important information about how Broad collects and uses your Personal
@@ -80,7 +81,6 @@ export default () =>
     Device Information as described in Section 6 below; your Location Information as described in Section 6 below; and
     how you use our Site and App, such as the web pages you view, the links you click, the length of time you visit our
     Platform, and the web page or web site that led you to our Platform.
-
 
     <Header content="6. What kind of information do we collect?" size="medium" />
     We collect various types of information:
@@ -227,7 +227,6 @@ export default () =>
         purposes.  This information will not identify you personally.
       </List.Item>
     </List>
-
 
     <Header content="11. Can other users see my Personal Information?" size="medium" />
     The Platform allows you to interact with other users.  Therefore, any information that you post to the Platform,
@@ -400,3 +399,4 @@ export default () =>
     request.  In addition, if we consider that a request is manifestly unfounded or excessive, we may either request a
     reasonable fee to deal with the request or refuse to deal with the request.
   </Segment>
+)

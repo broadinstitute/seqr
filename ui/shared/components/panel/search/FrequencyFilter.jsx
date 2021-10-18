@@ -30,7 +30,7 @@ const AF_STEP_LABELS = {
 
 const AF_OPTIONS = AF_STEPS.map(value => ({ value }))
 
-const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inlineAF, onChange }) =>
+const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inlineAF, onChange }) => (
   <IntegerInput
     label={label}
     value={(value || {})[field]}
@@ -44,8 +44,8 @@ const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inli
       }
       onChange({ ...value, ...updateFields })
     }}
-  />,
-)
+  />
+))
 
 FrequencyIntegerInput.propTypes = {
   value: PropTypes.object,
@@ -76,16 +76,14 @@ AfFilter.propTypes = {
 
 export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }) => (
   <span>
-    {!inlineAF &&
+    {!inlineAF && (
       <div>
         <AfFilter value={value} onChange={onChange} />
         <VerticalSpacer height={15} />
       </div>
-    }
+    )}
     <Form.Group inline>
-      {inlineAF &&
-        <AfFilter value={value} onChange={onChange} inline />
-      }
+      {inlineAF && <AfFilter value={value} onChange={onChange} inline />}
       <FrequencyIntegerInput
         label="AC"
         field="ac"
@@ -95,8 +93,7 @@ export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }
         onChange={onChange}
       />
       {homHemi &&
-        <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />
-      }
+        <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />}
       {children}
     </Form.Group>
   </span>
@@ -110,23 +107,21 @@ FrequencyFilter.propTypes = {
   children: PropTypes.node,
 }
 
-const formatHeaderValue = values =>
-  Object.values(values).reduce((acc, value) => ({
-    af: value.af === acc.af ? value.af : null,
-    ac: value.ac === acc.ac ? value.ac : null,
-    hh: value.hh === acc.hh ? value.hh : null,
-  }), Object.values(values)[0])
+const formatHeaderValue = values => Object.values(values).reduce((acc, value) => ({
+  af: value.af === acc.af ? value.af : null,
+  ac: value.ac === acc.ac ? value.ac : null,
+  hh: value.hh === acc.hh ? value.hh : null,
+}), Object.values(values)[0])
 
 export const HeaderFrequencyFilter = ({ value, onChange, ...props }) => {
   const { callset, sv_callset: svCallset, ...freqValues } = value || {}
   const headerValue = freqValues ? formatHeaderValue(freqValues) : {}
 
-  const onCallsetChange = val =>
-    onChange({ ...freqValues, [THIS_CALLSET_FREQUENCY]: val, [SV_CALLSET_FREQUENCY]: val })
+  const onCallsetChange = val => onChange({ ...freqValues, [THIS_CALLSET_FREQUENCY]: val, [SV_CALLSET_FREQUENCY]: val })
 
-  const onFreqChange = val =>
-    onChange(FREQUENCIES.filter(({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY).reduce(
-      (acc, { name }) => ({ ...acc, [name]: val }), value || {}))
+  const onFreqChange = val => onChange(FREQUENCIES.filter(
+    ({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY,
+  ).reduce((acc, { name }) => ({ ...acc, [name]: val }), value || {}))
 
   return (
     <FrequencyFilter {...props} value={headerValue} onChange={onFreqChange} homHemi inlineAF>
@@ -147,4 +142,3 @@ HeaderFrequencyFilter.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
 }
-

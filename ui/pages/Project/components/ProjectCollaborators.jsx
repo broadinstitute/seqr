@@ -17,8 +17,7 @@ import { USER_NAME_FIELDS } from 'shared/utils/constants'
 import { updateCollaborator } from '../reducers'
 import { getUserOptions, getCurrentProject } from '../selectors'
 
-
-const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) =>
+const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) => (
   <DataLoader load={load} loading={false} content>
     <AddableSelect
       loading={loading}
@@ -27,15 +26,15 @@ const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, 
       value={value.username || value.email}
       {...props}
     />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 CollaboratorEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
   usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
-  value: PropTypes.any,
+  value: PropTypes.object,
 }
 
 const mapDropdownStateToProps = state => ({
@@ -71,7 +70,6 @@ const EDIT_FIELDS = [
   },
 ]
 
-
 const AddCollaboratorButton = React.memo(({ onSubmit }) => (
   <UpdateButton
     modalId="addCollaborator"
@@ -92,9 +90,9 @@ const CollaboratorContainer = styled.div`
   white-space: nowrap;
 `
 
-const CollaboratorRow = React.memo(({ collaborator, update }) =>
+const CollaboratorRow = React.memo(({ collaborator, update }) => (
   <CollaboratorContainer>
-    {update &&
+    {update && (
       <span>
         <HorizontalSpacer width={10} />
         <UpdateButton
@@ -113,13 +111,15 @@ const CollaboratorRow = React.memo(({ collaborator, update }) =>
           hideNoRequestStatus
           confirmDialog={
             <div className="content">
-              Are you sure you want to delete <b>{collaborator.displayName || collaborator.email}</b>. They will still
+              Are you sure you want to delete &nbsp;
+              <b>{collaborator.displayName || collaborator.email}</b>
+              . They will still
               have their user account and be able to log in, but will not be able to access this project anymore.
             </div>
           }
         />
       </span>
-    }
+    )}
     <Popup
       position="top center"
       trigger={<Icon link size="small" name={collaborator.hasEditPermissions ? 'star' : ''} />}
@@ -128,8 +128,8 @@ const CollaboratorRow = React.memo(({ collaborator, update }) =>
     />
     {collaborator.displayName && `${collaborator.displayName} - `}
     <a href={`mailto:${collaborator.email}`}>{collaborator.email}</a>
-  </CollaboratorContainer>,
-)
+  </CollaboratorContainer>
+))
 
 CollaboratorRow.propTypes = {
   collaborator: PropTypes.object.isRequired,
@@ -137,23 +137,32 @@ CollaboratorRow.propTypes = {
 }
 
 const getSortedCollabs = (project, isAnvil) => orderBy(
-  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc'])
+  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
+  ['desc', 'asc'],
+)
 
 const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
   const localCollabs = getSortedCollabs(project, false)
   const anvilCollabs = getSortedCollabs(project, true)
   return [
-    localCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />),
-    ((project.canEdit && !project.workspaceName) ?
-      <div key="addButton" >
+    localCollabs.map(
+      c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />,
+    ),
+    ((project.canEdit && !project.workspaceName) ? (
+      <div key="addButton">
         <br />
         <AddCollaboratorButton onSubmit={onSubmit} />
-      </div> : null),
-    (localCollabs.length && anvilCollabs.length) ? <p key="subheader"><br />AnVIL Workspace Users</p> : null,
+      </div>
+    ) : null),
+    (localCollabs.length && anvilCollabs.length) ? (
+      <p key="subheader">
+        <br />
+        AnVIL Workspace Users
+      </p>
+    ) : null,
     anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
   ]
 })
-
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,

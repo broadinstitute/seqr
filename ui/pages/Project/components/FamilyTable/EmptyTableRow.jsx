@@ -13,14 +13,14 @@ const EmptyCell = styled(Table.Cell)`
   border-width: 0px;
 `
 
-const EmptyTableRow = React.memo(({ familiesFilter }) =>
+const EmptyTableRow = React.memo(({ familiesFilter }) => (
   <Table.Row>
     <EmptyCell>
       0 families
       { familiesFilter !== SHOW_ALL ? ` with filter "${FAMILY_FILTER_LOOKUP[familiesFilter].name}"` : ' in this project' }
     </EmptyCell>
-  </Table.Row>,
-)
+  </Table.Row>
+))
 
 export { EmptyTableRow as EmptyTableRowComponent }
 
