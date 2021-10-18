@@ -76,7 +76,6 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, minJ
         } else if (type === JUNCTION_TYPE) {
           track.indexURL = `${track.url}.tbi`
           track.minJunctionEndsVisible = minJunctionEndsVisible
-          track.updated = minJunctionEndsVisible
 
           const coverageSample = getIndivSampleType(COVERAGE_TYPE, individualGuid)
           if (coverageSample) {
@@ -89,6 +88,7 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, minJ
               tracks: [coverageTrack, track],
             }
           }
+          track.updated = minJunctionEndsVisible
         } else if (type === COVERAGE_TYPE && getIndivSampleType(JUNCTION_TYPE, individualGuid)) {
           return null
         } else if (type === GCNV_TYPE) {
@@ -184,9 +184,11 @@ ReadButtons.propTypes = {
 
 const updateJunctionRefs = (tracks, minVisible) => tracks.map(track => ({
   ...track,
-  updated: minVisible,
-  tracks: track.tracks.map(tr => (
-    { ...tr, ...(tr.type === JUNCTION_TYPE) ? { minJunctionEndsVisible: minVisible } : {} })),
+  ...(track.type === 'merged') ? {
+    updated: minVisible,
+    tracks: track.tracks.map(tr => (
+      { ...tr, ...(tr.type === JUNCTION_TYPE) ? { minJunctionEndsVisible: minVisible } : {} })),
+  } : {},
 }))
 
 const IgvPanel = React.memo((
