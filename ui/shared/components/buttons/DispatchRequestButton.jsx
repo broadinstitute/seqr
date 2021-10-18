@@ -81,6 +81,10 @@ class DispatchRequestButton extends React.PureComponent {
     this.setState({ requestStatus: NONE, requestErrorMessage: null })
   }
 
+  hideConfirmDialog = () => {
+    this.setState({ isConfirmDialogVisible: false })
+  }
+
   render() {
     const {
       buttonContainer, buttonContent, confirmDialog, children, onSuccess, onSubmit, hideNoRequestStatus, ...props
@@ -103,7 +107,7 @@ class DispatchRequestButton extends React.PureComponent {
           content={confirmDialog}
           open={isConfirmDialogVisible}
           onConfirm={this.performAction}
-          onCancel={() => this.setState({ isConfirmDialogVisible: false })}
+          onCancel={this.hideConfirmDialog}
         />,
       ],
     })

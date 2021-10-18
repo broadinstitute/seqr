@@ -132,10 +132,15 @@ class BaseFieldView extends React.PureComponent {
       <DispatchRequestButton
         key="edit"
         buttonContent={<Icon link size="small" name="plus" />}
-        onSubmit={() => onSubmit(initialValues)}
+        onSubmit={this.submitInitialValues}
         confirmDialog={addConfirm}
       />
     )
+  }
+
+  submitInitialValues = () => {
+    const { onSubmit, initialValues } = this.props
+    return onSubmit(initialValues)
   }
 
   render() {
@@ -172,7 +177,7 @@ class BaseFieldView extends React.PureComponent {
     const hasButtons = editButton || deleteButton
 
     return (
-      <span style={style || {}}>
+      <span style={style || null}>
         {isPrivate && (
           <Popup
             trigger={<Icon name="lock" size="small" />}
