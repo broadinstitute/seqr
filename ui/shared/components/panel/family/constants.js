@@ -43,7 +43,6 @@ export const GCNV_TRACK_OPTIONS = {
   height: 200,
   min: 0,
   max: 5,
-  autoscale: true,
   onlyHandleClicksForHighlightedSamples: true,
 }
 

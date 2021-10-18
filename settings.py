@@ -75,7 +75,7 @@ CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'data:')
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
 IGV_CSS1_HASH = "'sha256-mMr3XKHeuAZnT2THF0+nzpjf/J0GLygO9xHcQduGITY='"
-IGV_CSS2_HASH = "'sha256-m7BbAVh3TyZH136+WARZw8eulS+0pHbppq98KGFYbhA='"
+IGV_CSS2_HASH = "'sha256-/OhxYpMV/kE3A/RxJL4MplY3PG7a/Pxg3csCRBRyWeg='"
 CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
 CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
 
