@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual
 
