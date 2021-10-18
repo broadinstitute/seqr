@@ -1,31 +1,12 @@
 #####################################################
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
-KUBERNETES_VERSION: '1.18.20-gke.501'
 ELASTICSEARCH_VERSION: 7.8.1
 LINKERD_VERSION: 'stable-2.10.0'
-POSTGRES_VERSION: '12'
 
-DEFAULT_POOL_MACHINE_TYPE: 'n1-highmem-8'
-DEFAULT_POOL_NUM_NODES: 2
-NODE_POOLS:
-  es-data-nodes:
-    num_nodes: 4
-    machine_type: n1-highmem-8
-    labels: nodeType=data
-#  es-loading-nodes:
-#    num_nodes: 3
-
-DISKS: seqr-static-files, es-data
-
-POSTGRES_DISK_SIZE: '200Gb'
-SEQR_STATIC_FILES_DISK_SIZE: '50Gb'
-
-ES_DATA_NUM_DISKS: 4
 ES_DATA_DISK_TYPE: pd-ssd
 ES_DATA_DISK_SIZE: 3200
 ES_LOADING_DISK_SIZE: '100Gi'
 ES_POD_VOLUME_SIZE: '50Gi'
-#ES_DATA_SNAPSHOTS:  snp-es-cluster-prod-es-data-disk-1, snp-es-cluster-prod-es-data-disk-2, snp-es-cluster-prod-es-data-disk-3
 
 ELASTICSEARCH_JVM_MEMORY: 22g
 ELASTICSEARCH_CONTAINER_MEMORY: 44Gi
@@ -46,13 +27,9 @@ ANALYST_PROJECT_CATEGORY: analyst-projects
 ANALYST_USER_GROUP: analysts
 PM_USER_GROUP: project-managers
 
-
-# this is a security measure to prevent kubectl commands from working unless they are run on a machine with a listed ip address
-# this allows cluster administration only from known machines or from machines on google cloud.
-MASTER_AUTHORIZED_NETWORKS: '69.173.112.0/21,69.173.127.232/29,69.173.127.128/26,69.173.127.0/25,69.173.127.240/28,69.173.127.224/30,69.173.127.230/31,69.173.120.0/22,69.173.127.228/32,69.173.126.0/24,69.173.96.0/20,69.173.64.0/19,69.173.127.192/27,69.173.124.0/23'
-
 TERRA_PERMS_CACHE_EXPIRE_SECONDS: 60
 TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS: 300
+
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######
 GCLOUD_PROJECT: 'seqr-project'
