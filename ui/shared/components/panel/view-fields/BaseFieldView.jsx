@@ -26,6 +26,7 @@ class BaseFieldView extends React.PureComponent {
     showInLine: PropTypes.bool,
     fieldDisplay: PropTypes.func,
     formFields: PropTypes.arrayOf(PropTypes.object),
+    formFieldProps: PropTypes.object,
     isVisible: PropTypes.bool,
     isPrivate: PropTypes.bool,
     isEditable: PropTypes.bool,
@@ -51,6 +52,7 @@ class BaseFieldView extends React.PureComponent {
     modalId: PropTypes.string,
     modalSize: PropTypes.string,
     defaultId: PropTypes.string,
+    additionalEditFields: PropTypes.arrayOf(PropTypes.object),
   }
 
   static defaultProps = {
@@ -70,10 +72,15 @@ class BaseFieldView extends React.PureComponent {
     return initialValues[idField] || defaultId
   }
 
+  getFormFields = () => {
+    const { field, formFieldProps, additionalEditFields = [] } = this.props
+    return [...additionalEditFields, { name: field, ...formFieldProps }]
+  }
+
   getEditButton = () => {
     const {
       initialValues, modalId, isEditable, formFields, showInLine, editLabel, editIconName, onSubmit, showErrorPanel,
-      addConfirm, modalTitle, modalSize, modalStyle, field,
+      addConfirm, modalTitle, modalSize, modalStyle, field, formFieldProps,
     } = this.props
     const { showInLineButton } = this.state
 
@@ -81,7 +88,7 @@ class BaseFieldView extends React.PureComponent {
       return null
     }
 
-    if (formFields) {
+    if (formFields || formFieldProps) {
       const fieldModalId = `edit-${this.getFieldId() || 'new'}-${field}-${modalId}`
       return showInLine ? (
         <span key="edit">
@@ -103,7 +110,7 @@ class BaseFieldView extends React.PureComponent {
                 onSubmitSucceeded={this.toggleButtonVisibility}
                 form={fieldModalId}
                 initialValues={initialValues}
-                fields={formFields}
+                fields={formFields || this.getFormFields()}
                 showErrorPanel={showErrorPanel}
               />
             </Segment>
@@ -120,7 +127,7 @@ class BaseFieldView extends React.PureComponent {
           editIconName={editIconName}
           onSubmit={onSubmit}
           initialValues={initialValues}
-          formFields={formFields}
+          formFields={formFields || this.getFormFields()}
           formContainer={<div style={modalStyle} />}
           showErrorPanel={showErrorPanel}
           confirmDialog={addConfirm}
