@@ -52,6 +52,16 @@ class IGV extends React.PureComponent {
       tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
         this.browser.loadTrack(track)
       })
+
+      tracks.filter(track => prevTrackIds.includes(getTrackId(track))).forEach((track) => {
+        if (track.name) {
+          const prevTrack = prevProps.tracks.find(pTr => pTr.name === track.name)
+          if (track.updated !== prevTrack.updated) {
+            this.browser.removeTrackByName(track.name)
+            this.browser.loadTrack(track)
+          }
+        }
+      })
     }
   }
 
