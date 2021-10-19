@@ -1,9 +1,3 @@
-# steps:
-# - name: 'gcr.io/cloud-builders/docker'
-#   args: [ 'build', '-t', 'us-central1-docker.pkg.dev/tgg-sre-testing/seqr-testing/seqr-new', '-f', 'deploy/docker/seqr/Dockerfile-new', '.' ]
-
-# images: ['us-central1-docker.pkg.dev/tgg-sre-testing/seqr-testing/seqr-new']
-
 steps:
   - name: gcr.io/kaniko-project/executor:latest
     args: ["--dockerfile=deploy/docker/seqr/Dockerfile-new",
