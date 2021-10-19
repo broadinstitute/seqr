@@ -84,11 +84,9 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, minJ
               type: 'merged',
               name: track.name,
               height: track.height,
-              updated: minJunctionEndsVisible,
               tracks: [coverageTrack, track],
             }
           }
-          track.updated = minJunctionEndsVisible
         } else if (type === COVERAGE_TYPE && getIndivSampleType(JUNCTION_TYPE, individualGuid)) {
           return null
         } else if (type === GCNV_TYPE) {
@@ -185,7 +183,6 @@ ReadButtons.propTypes = {
 const updateJunctionRefs = (tracks, minVisible) => tracks.map(track => ({
   ...track,
   ...(track.type === 'merged') ? {
-    updated: minVisible,
     tracks: track.tracks.map(tr => (
       { ...tr, ...(tr.type === JUNCTION_TYPE) ? { minJunctionEndsVisible: minVisible } : {} })),
   } : {},
