@@ -48,6 +48,8 @@ class BaseFieldView extends React.PureComponent {
     showEmptyValues: PropTypes.bool,
     user: PropTypes.object,
     modalStyle: PropTypes.object,
+    modalPopup: PropTypes.object,
+    modalTrigger: PropTypes.node,
     showErrorPanel: PropTypes.bool,
     modalId: PropTypes.string,
     modalSize: PropTypes.string,
@@ -80,7 +82,7 @@ class BaseFieldView extends React.PureComponent {
   getEditButton = () => {
     const {
       initialValues, modalId, isEditable, formFields, showInLine, editLabel, editIconName, onSubmit, showErrorPanel,
-      addConfirm, modalTitle, modalSize, modalStyle, field, formFieldProps,
+      addConfirm, modalTitle, modalSize, modalStyle, field, formFieldProps, modalTrigger, modalPopup,
     } = this.props
     const { showInLineButton } = this.state
 
@@ -123,8 +125,10 @@ class BaseFieldView extends React.PureComponent {
           modalTitle={modalTitle}
           modalId={fieldModalId}
           modalSize={modalSize}
+          trigger={modalTrigger}
           buttonText={editLabel}
           editIconName={editIconName}
+          modalPopup={modalPopup}
           onSubmit={onSubmit}
           initialValues={initialValues}
           formFields={formFields || this.getFormFields()}
@@ -182,32 +186,31 @@ class BaseFieldView extends React.PureComponent {
     )
     const buttons = [editButton, deleteButton]
     const hasButtons = editButton || deleteButton
-
-    return (
-      <span style={style || null}>
-        {isPrivate && (
-          <Popup
-            trigger={<Icon name="lock" size="small" />}
-            position="top center"
-            size="small"
-            content="Only visible to internal users."
-          />
-        )}
-        {fieldName && [
-          <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
-          <HorizontalSpacer key="spacer" width={10} />,
-          ...buttons,
-          compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
-          !compact && <br key="br" />,
-        ]}
-        {hasValue && !hideValue && showInLineButton && (
-          <FieldValue compact={compact} fieldName={fieldName} hasButtons={hasButtons}>
-            {fieldDisplay(fieldValue, compact, this.getFieldId())}
-          </FieldValue>
-        )}
-        {!fieldName && buttons}
-      </span>
-    )
+    const content = [
+      isPrivate && (
+        <Popup
+          key="private"
+          trigger={<Icon name="lock" size="small" />}
+          position="top center"
+          size="small"
+          content="Only visible to internal users."
+        />
+      ),
+      fieldName && [
+        <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
+        <HorizontalSpacer key="spacer" width={10} />,
+        ...buttons,
+        compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
+        !compact && <br key="br" />,
+      ],
+      hasValue && !hideValue && showInLineButton && (
+        <FieldValue key="value" compact={compact} fieldName={fieldName} hasButtons={hasButtons}>
+          {fieldDisplay(fieldValue, compact, this.getFieldId())}
+        </FieldValue>
+      ),
+      !fieldName && buttons,
+    ].filter(val => val)
+    return style ? <span style={style}>{content}</span> : content
   }
 
 }
