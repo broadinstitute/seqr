@@ -109,7 +109,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
           />
         </Grid.Column>
       ))}
-      <Grid.Column>
+      <Grid.Column width={4}>
         {variant.svName && <Header size="medium" content={variant.svName} />}
         {!isCompoundHet && variantMainGeneId && <VariantGene geneId={variantMainGeneId} variant={variant} />}
         {!isCompoundHet && variantMainGeneId && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
@@ -118,15 +118,23 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
         {isCompoundHet && <VariantIndividuals variant={variant} isCompoundHet />}
         {isCompoundHet && showReads}
       </Grid.Column>
-      <Grid.Column><Annotations variant={variant} /></Grid.Column>
-      <Grid.Column><Predictions variant={variant} /></Grid.Column>
-      <Grid.Column><Frequencies variant={variant} /></Grid.Column>
-      {!isCompoundHet && (
-        <Grid.Column width={16}>
-          <VariantIndividuals variant={variant} />
-          {showReads}
-        </Grid.Column>
-      )}
+      <Grid.Column width={12}>
+        <Grid columns="equal">
+          <Grid.Row>
+            <Grid.Column><Annotations variant={variant} /></Grid.Column>
+            <Grid.Column><Predictions variant={variant} /></Grid.Column>
+            <Grid.Column><Frequencies variant={variant} /></Grid.Column>
+          </Grid.Row>
+          {!isCompoundHet && (
+            <Grid.Row>
+              <Grid.Column width={16}>
+                <VariantIndividuals variant={variant} />
+                {showReads}
+              </Grid.Column>
+            </Grid.Row>
+          )}
+        </Grid>
+      </Grid.Column>
       <Grid.Column width={16}>
         {reads}
       </Grid.Column>
@@ -215,7 +223,7 @@ CompoundHets.propTypes = {
 }
 
 const Variants = React.memo(({ variants, ...props }) => (
-  <Grid stackable divided="vertically" columns="equal">
+  <Grid stackable divided="vertically">
     {variants.map(variant => (Array.isArray(variant) ?
       <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} {...props} /> :
       <VariantWithReads variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />

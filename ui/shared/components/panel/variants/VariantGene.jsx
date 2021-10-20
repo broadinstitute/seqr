@@ -396,7 +396,6 @@ class VariantGenes extends React.PureComponent {
     const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
       <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
 
-
     if (geneIds.length < 6 || showAll) {
       return (
         <div>
