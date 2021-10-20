@@ -19,8 +19,9 @@ import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions, getInputProjectsCount } from '../../selectors'
 import { loadProjectFamiliesContext, loadProjectGroupContext } from '../../reducers'
 
-
-const ProjectFamiliesFilterInput = React.memo(({ familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props }) => {
+const ProjectFamiliesFilterInput = React.memo((
+  { familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props },
+) => {
   const allFamiliesSelected = !value.familyGuids || value.familyGuids.length === familyOptions.length
 
   const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
@@ -35,8 +36,12 @@ const ProjectFamiliesFilterInput = React.memo(({ familyOptions, analysisGroupOpt
       const newGroupGuid = analysisGroups.find(analysisGroupGuid => !selectedAnalysisGroups.includes(analysisGroupGuid))
       onFamiliesChange([...new Set([...value.familyGuids, ...projectAnalysisGroupsByGuid[newGroupGuid].familyGuids])])
     } else if (analysisGroups.length < selectedAnalysisGroups.length) {
-      const removedGroupGuid = selectedAnalysisGroups.find(analysisGroupGuid => !analysisGroups.includes(analysisGroupGuid))
-      onFamiliesChange(value.familyGuids.filter(familyGuid => !projectAnalysisGroupsByGuid[removedGroupGuid].familyGuids.includes(familyGuid)))
+      const removedGroupGuid = selectedAnalysisGroups.find(
+        analysisGroupGuid => !analysisGroups.includes(analysisGroupGuid),
+      )
+      onFamiliesChange(value.familyGuids.filter(
+        familyGuid => !projectAnalysisGroupsByGuid[removedGroupGuid].familyGuids.includes(familyGuid),
+      ))
     }
   }
 
@@ -80,10 +85,10 @@ const ProjectFamiliesFilterInput = React.memo(({ familyOptions, analysisGroupOpt
 })
 
 ProjectFamiliesFilterInput.propTypes = {
-  familyOptions: PropTypes.array,
-  analysisGroupOptions: PropTypes.array,
+  familyOptions: PropTypes.arrayOf(PropTypes.object),
+  analysisGroupOptions: PropTypes.arrayOf(PropTypes.object),
   projectAnalysisGroupsByGuid: PropTypes.object,
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 
@@ -116,8 +121,8 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 
 const ProjectFamiliesFilter = connect(mapStateToProps, mapDispatchToProps)(ProjectFilter)
 
-const AddProjectFamiliesButton = props =>
-  <AddProjectButton processAddedElement={result => ({ projectGuid: result.key })} {...props} />
+const AddProjectFamiliesButton = props => (
+  <AddProjectButton processAddedElement={result => ({ projectGuid: result.key })} {...props} />)
 
 const mapAddProjectDispatchToProps = {
   addProjectGroup: loadProjectGroupContext,
@@ -134,6 +139,11 @@ const PROJECT_FAMILIES_FIELD = {
 }
 
 class AllProjectFamiliesField extends React.PureComponent {
+
+  static propTypes = {
+    numProjects: PropTypes.number,
+  }
+
   state = { viewAllProjects: false }
 
   viewProjects = (e) => {
@@ -142,13 +152,12 @@ class AllProjectFamiliesField extends React.PureComponent {
   }
 
   render() {
-    return this.props.numProjects < 20 || this.state.viewAllProjects ?
-      configuredField(PROJECT_FAMILIES_FIELD) : <ButtonLink onClick={this.viewProjects} content={`Show all ${this.props.numProjects} searched projects`} />
+    const { numProjects } = this.props
+    const { viewAllProjects } = this.state
+    return numProjects < 20 || viewAllProjects ?
+      configuredField(PROJECT_FAMILIES_FIELD) : <ButtonLink onClick={this.viewProjects} content={`Show all ${numProjects} searched projects`} />
   }
-}
 
-AllProjectFamiliesField.propTypes = {
-  numProjects: PropTypes.number,
 }
 
 const mapAllProjectFamiliesFieldStateToProps = state => ({

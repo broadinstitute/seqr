@@ -4,13 +4,13 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Header, List, Form, Grid } from 'semantic-ui-react'
 
-import { getUser, getAnnotationSecondary } from 'redux/selectors'
+import { getAnnotationSecondary } from 'redux/selectors'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
-  ANALYST_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL, IN_SILICO_PANEL,
+  HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL, IN_SILICO_PANEL,
   annotationFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
@@ -29,7 +29,7 @@ import {
   ALL_RECESSIVE_INHERITANCE_FILTERS,
   NUM_ALT_OPTIONS,
 } from '../constants'
-import { getDatasetTypes } from '../selectors'
+import { getDatasetTypes, getHasHgmdPermission } from '../selectors'
 
 const SavedSearchColumn = styled(Grid.Column)`
   font-size: 0.75em;
@@ -72,8 +72,11 @@ const INHERITANCE_PANEL = {
         const { affected, genotype, ...coreFilter } = val.filter
         return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
-      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null :
-        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] }, annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val) }),
+      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null : {
+        mode: val,
+        filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] },
+        annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val),
+      }),
     },
   },
   fields: [
@@ -89,10 +92,11 @@ const INHERITANCE_PANEL = {
     <span>
       Filter by the mode of inheritance. Choose from the built-in search methods (described
       <Modal trigger={<DetailLink>here</DetailLink>} title="Inheritance Searching" modalName="inheritanceModes">
-        <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
+        <i>seqr</i>
+        implements the following set of standard Mendelian inheritance methods to identify variants that
         segregate with a phenotype in a family
-        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ value, text, detail }) =>
-          <Header key={value} content={text} subheader={detail} />,
+        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(
+          ({ value, text, detail }) => <Header key={value} content={text} subheader={detail} />,
         )}
 
         <Header size="small" content="Notes on inheritance searching:" />
@@ -104,7 +108,8 @@ const INHERITANCE_PANEL = {
           <List.Item>All methods assume complete penetrance</List.Item>
           <List.Item>seqr assumes unphased genotypes</List.Item>
         </List>
-      </Modal>) or specify custom alternate allele counts. You can also specify the affected status for an individual
+      </Modal>
+      ) or specify custom alternate allele counts. You can also specify the affected status for an individual
       that differs from the status in the pedigree.
     </span>
   ),
@@ -163,7 +168,7 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
 }
 
-const SVFrequecyHeaderFilter = ({ value, onChange }) =>
+const SVFrequecyHeaderFilter = ({ value, onChange }) => (
   <Form.Group inline>
     <AfFilter
       value={value[SV_CALLSET_FREQUENCY]}
@@ -173,31 +178,37 @@ const SVFrequecyHeaderFilter = ({ value, onChange }) =>
       width={16}
     />
   </Form.Group>
+)
 
 SVFrequecyHeaderFilter.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 
-const QS_FILTER_FIELD = {
+const SV_QS_FILTER_FIELD = {
   name: 'min_qs',
-  label: 'SV Quality Score',
-  labelHelp: (
-    <span>The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering:<br />
-      WGS: &gt; 10; <br />
-      WES: duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.
-    </span>),
+  label: 'WES SV Quality Score',
+  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplication >= 50, deletion >= 100, homozygous deletion >= 400.',
   min: 0,
   max: 1000,
   step: 10,
   component: DividedFormField,
 }
 
+const SV_GQ_FILTER_FIELD = {
+  name: 'min_gq_sv',
+  label: 'WGS SV Genotype Quality',
+  labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 50.',
+  min: 0,
+  max: 1000,
+  step: 10,
+}
+
 const PANELS = [
   INHERITANCE_PANEL,
   {
     [DATASET_TYPE_SV_CALLS]: null,
-    isAnalyst: { [true]: ANALYST_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
+    hasHgmdPermission: { [true]: HGMD_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
   ANNOTATION_PANEL_MAP,
   IN_SILICO_PANEL_MAP,
@@ -223,11 +234,11 @@ const PANELS = [
     ...QUALITY_PANEL,
     [ALL_DATASET_TYPE]: {
       ...QUALITY_PANEL,
-      fields: [...QUALITY_PANEL.fields, QS_FILTER_FIELD],
+      fields: [...QUALITY_PANEL.fields, SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
     },
     [DATASET_TYPE_SV_CALLS]: {
       ...QUALITY_PANEL,
-      fields: [QS_FILTER_FIELD],
+      fields: [SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
     },
   },
 ]
@@ -236,19 +247,23 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   const typePanels = PANELS.map(panel => (panel[type] === undefined ? panel : panel[type])).filter(panel => panel)
   return {
     ...typeAcc,
-    [type]: [true, false].reduce((analystAcc, isAnalystBool) => {
-      const analystPanels = typePanels.map(({ isAnalyst, ...panel }) => (isAnalyst === undefined ? panel : isAnalyst[isAnalystBool]))
+    [type]: [true, false].reduce((analystAcc, hasHgmdBool) => {
+      const analystPanels = typePanels.map(
+        ({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]),
+      )
       return {
         ...analystAcc,
-        [isAnalystBool]: [true, false].reduce((acc, annSecondaryBool) => ({
+        [hasHgmdBool]: [true, false].reduce((acc, annSecondaryBool) => ({
           ...acc,
-          [annSecondaryBool]: annSecondaryBool ? analystPanels : analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
+          [annSecondaryBool]: annSecondaryBool ? analystPanels :
+            analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
-      } }, {}),
+      }
+    }, {}),
   }
 }, {})
 
-const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary, datasetTypes }) => (
+const VariantSearchFormContent = React.memo(({ hasHgmdPermission, displayAnnotationSecondary, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
     <Header size="huge" block>
@@ -262,18 +277,18 @@ const VariantSearchFormContent = React.memo(({ user, displayAnnotationSecondary,
       </Grid>
     </Header>
     <Header content="Customize Search:" />
-    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][user.isAnalyst][displayAnnotationSecondary]} />
+    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][hasHgmdPermission][displayAnnotationSecondary]} />
   </div>
 ))
 
 VariantSearchFormContent.propTypes = {
-  user: PropTypes.object,
+  hasHgmdPermission: PropTypes.bool,
   displayAnnotationSecondary: PropTypes.bool,
   datasetTypes: PropTypes.string,
 }
 
 const mapStateToProps = state => ({
-  user: getUser(state),
+  hasHgmdPermission: getHasHgmdPermission(state),
   displayAnnotationSecondary: getAnnotationSecondary(state),
   datasetTypes: getDatasetTypes(state),
 })

@@ -21,7 +21,7 @@ from seqr.views.utils.permissions_utils import data_manager_required
 
 from seqr.models import Sample, Individual
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -142,7 +142,7 @@ def upload_qc_pipeline_output(request):
         dataset_type=dataset_type,
     ).exclude(
         individual__family__project__name__in=EXCLUDE_PROJECTS
-    ).exclude(individual__family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY)
+    ).exclude(individual__family__project__projectcategory__name=DEMO_PROJECT_CATEGORY)
 
     sample_individuals = {
         agg['sample_id']: agg['individuals'] for agg in
@@ -168,7 +168,7 @@ def upload_qc_pipeline_output(request):
     if missing_sample_ids:
         individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
             family__project__name__in=EXCLUDE_PROJECTS).exclude(
-            family__project__projectcategory__name=EXCLUDE_PROJECT_CATEGORY).filter(
+            family__project__projectcategory__name=DEMO_PROJECT_CATEGORY).filter(
             sample__sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS).distinct()
         individual_db_ids_by_id = defaultdict(list)
         for individual in individuals:
@@ -321,7 +321,6 @@ EXCLUDE_PROJECTS = [
     '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
-EXCLUDE_PROJECT_CATEGORY = 'Demo'
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1

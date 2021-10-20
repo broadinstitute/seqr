@@ -57,13 +57,12 @@ const CASE_REVIEW_STATUS_NMI_REVIEW = 'N'
 const CASE_REVIEW_STATUS_LOST = 'L'
 const CASE_REVIEW_STATUS_INACTIVE = 'V'
 
-
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
   { value: CASE_REVIEW_STATUS_UNCERTAIN,                   name: 'Uncertain',             color: '#fddb28' },
   { value: CASE_REVIEW_STATUS_ACCEPTED,                    name: 'Accepted',              color: '#8BC34A' },
-  { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },  //#C5CAE9
-  { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },  //#673AB7
+  { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#4f5cb3' },
+  { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#F44336' },
   { value: CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS, name: 'Pending Results and Records', color: '#996699' },
   { value: CASE_REVIEW_STATUS_NMI_REVIEW,                  name: 'NMI Review',            color: '#3827c1' },
   { value: CASE_REVIEW_STATUS_WAITLIST,                    name: 'Waitlist',              color: '#990099' },
@@ -100,7 +99,6 @@ const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 const SHOW_CLOSED = 'SHOW_CLOSED'
 
-
 const SOLVED_STATUSES = new Set([
   FAMILY_STATUS_SOLVED,
   FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE,
@@ -120,18 +118,16 @@ const ANALYSIS_IN_PROGRESS_STATUSES = new Set([
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
 ])
 
-const caseReviewStatusFilter = status => individualsByGuid => family =>
-  family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).some(
-    individual => individual.caseReviewStatus === status,
-  )
+const caseReviewStatusFilter = status => individualsByGuid => family => family.individualGuids.map(
+  individualGuid => individualsByGuid[individualGuid],
+).some(individual => individual.caseReviewStatus === status)
 
-const familyIsInReview = (family, individualsByGuid) =>
-  family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).every(
-    individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW,
-  )
+const familyIsInReview = (family, individualsByGuid) => family.individualGuids.map(
+  individualGuid => individualsByGuid[individualGuid],
+).every(individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW)
 
-const familyIsAssignedToMe = (family, user) =>
-  (family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
+const familyIsAssignedToMe = (family, user) => (
+  family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
 
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
 const IN_REVIEW_FAMILIES_FILTER = {
@@ -156,51 +152,49 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_DATA_LOADED,
     category: 'Data Status:',
     name: 'Data Loaded',
-    createFilter: (individualsByGuid, user, samplesByFamily) => family =>
-      (samplesByFamily[family.familyGuid] || []).filter(sample => sample.isActive).length > 0,
+    createFilter: (individualsByGuid, user, samplesByFamily) => family => (
+      (samplesByFamily[family.familyGuid] || []).filter(sample => sample.isActive).length > 0),
   },
   {
     value: SHOW_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'Phenotypes Entered',
-    createFilter: individualsByGuid => family =>
-      family.individualGuids.some(individualGuid => (individualsByGuid[individualGuid].features || []).length > 0),
+    createFilter: individualsByGuid => family => (
+      family.individualGuids.some(individualGuid => (individualsByGuid[individualGuid].features || []).length > 0)),
   },
   {
     value: SHOW_NO_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'No Phenotypes Entered',
-    createFilter: individualsByGuid => family =>
-      family.individualGuids.every(individualGuid => (individualsByGuid[individualGuid].features || []).length < 1),
+    createFilter: individualsByGuid => family => (
+      family.individualGuids.every(individualGuid => (individualsByGuid[individualGuid].features || []).length < 1)),
   },
   { ...ASSIGNED_TO_ME_FILTER, category: 'Analysed By:' },
   {
     value: SHOW_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Analysed By Me',
-    createFilter: (individualsByGuid, user) => family =>
-      family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
+    createFilter: (individualsByGuid, user) => family => (
+      family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email)),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Not Analysed By Me',
-    createFilter: (individualsByGuid, user) => family =>
-      !family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
+    createFilter: (individualsByGuid, user) => family => (
+      !family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email)),
   },
   {
     value: SHOW_ANALYSED_BY_CMG,
     category: 'Analysed By:',
     name: 'Analysed By CMG',
-    createFilter: () => family =>
-      family.analysedBy.some(analysedBy => analysedBy.createdBy.isAnalyst),
+    createFilter: () => family => family.analysedBy.some(analysedBy => analysedBy.createdBy.isAnalyst),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_CMG,
     category: 'Analysed By:',
     name: 'Not Analysed By CMG',
-    createFilter: () => family =>
-      family.analysedBy.every(analysedBy => !analysedBy.createdBy.isAnalyst),
+    createFilter: () => family => family.analysedBy.every(analysedBy => !analysedBy.createdBy.isAnalyst),
   },
   {
     value: SHOW_ANALYSED,
@@ -218,15 +212,13 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_SOLVED,
     category: 'Analysis Status:',
     name: 'Solved',
-    createFilter: () => family =>
-      SOLVED_STATUSES.has(family.analysisStatus),
+    createFilter: () => family => SOLVED_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_STRONG_CANDIDATE,
     category: 'Analysis Status:',
     name: 'Strong Candidate',
-    createFilter: () => family =>
-      STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
+    createFilter: () => family => STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
@@ -244,8 +236,7 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ANALYSIS_IN_PROGRESS,
     category: 'Analysis Status:',
     name: 'Analysis In Progress',
-    createFilter: () => family =>
-      ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
+    createFilter: () => family => ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
   },
   { ...ACCEPTED_FILTER, category: 'Analysis Status:' },
   { ...IN_REVIEW_FAMILIES_FILTER, category: 'Analysis Status:' },
@@ -256,14 +247,15 @@ export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
     name: 'Assigned To Me - In Review',
-    createFilter: (individualsByGuid, user) => family =>
-      familyIsAssignedToMe(family, user) && familyIsInReview(family, individualsByGuid),
+    createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(
+      family, user,
+    ) && familyIsInReview(family, individualsByGuid),
   },
   { ...ASSIGNED_TO_ME_FILTER, name: 'Assigned To Me - All' },
   { ...IN_REVIEW_FAMILIES_FILTER, category: 'Case Review Status:' },
   { ...ACCEPTED_FILTER, category: 'Case Review Status:' },
-  ...CASE_REVIEW_STATUS_OPTIONS.filter(({ value }) =>
-    value !== CASE_REVIEW_STATUS_ACCEPTED && value !== CASE_REVIEW_STATUS_IN_REVIEW,
+  ...CASE_REVIEW_STATUS_OPTIONS.filter(
+    ({ value }) => value !== CASE_REVIEW_STATUS_ACCEPTED && value !== CASE_REVIEW_STATUS_IN_REVIEW,
   ).map(({ name, value }) => ({
     value: `SHOW_${name.toUpperCase()}`,
     category: 'Case Review Status:',
@@ -279,7 +271,6 @@ export const FAMILY_FILTER_LOOKUP = [...FAMILY_FILTER_OPTIONS, ...CASE_REVIEW_FA
   }), {},
 )
 
-
 export const SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
 export const SORT_BY_FAMILY_ADDED_DATE = 'FAMILY_ADDED_DATE'
 const SORT_BY_DATA_LOADED_DATE = 'DATA_LOADED_DATE'
@@ -289,7 +280,8 @@ const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 const SORT_BY_ANALYSED_DATE = 'SORT_BY_ANALYSED_DATE'
 
 const FAMILY_ANALYSIS_STATUS_SORT_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
-  (acc, { value }, i) => ({ ...acc, [value]: i.toString(36) }), {})
+  (acc, { value }, i) => ({ ...acc, [value]: i.toString(36) }), {},
+)
 
 export const FAMILY_SORT_OPTIONS = [
   {
@@ -300,14 +292,15 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_FAMILY_ADDED_DATE,
     name: 'Date Added',
-    createSortKeyGetter: individualsByGuid => family =>
-      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
-        (acc, individual) => {
-          const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
-          return indivCreatedDate > acc ? indivCreatedDate : acc
-        },
-        '2000-01-01T01:00:00.000Z',
-      ),
+    createSortKeyGetter: individualsByGuid => family => family.individualGuids.map(
+      individualGuid => individualsByGuid[individualGuid],
+    ).reduce(
+      (acc, individual) => {
+        const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
+        return indivCreatedDate > acc ? indivCreatedDate : acc
+      },
+      '2000-01-01T01:00:00.000Z',
+    ),
   },
   {
     value: SORT_BY_DATA_LOADED_DATE,
@@ -333,22 +326,22 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_ANALYSED_DATE,
     name: 'Date Last Analysed',
-    createSortKeyGetter: () => family =>
-      family.analysedBy.map(
-        ({ lastModifiedDate }) => lastModifiedDate,
-      ).sort()[family.analysedBy.length - 1] || '3000-01-01T01:00:00.000Z',
+    createSortKeyGetter: () => family => family.analysedBy.map(
+      ({ lastModifiedDate }) => lastModifiedDate,
+    ).sort()[family.analysedBy.length - 1] || '3000-01-01T01:00:00.000Z',
   },
   {
     value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,
     name: 'Date Review Status Changed',
-    createSortKeyGetter: individualsByGuid => family =>
-      family.individualGuids.map(individualGuid => individualsByGuid[individualGuid]).reduce(
-        (acc, individual) => {
-          const indivCaseReviewStatusLastModifiedDate = individual.caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'
-          return indivCaseReviewStatusLastModifiedDate > acc ? indivCaseReviewStatusLastModifiedDate : acc
-        },
-        '2000-01-01T01:00:00.000Z',
-      ),
+    createSortKeyGetter: individualsByGuid => family => family.individualGuids.map(
+      individualGuid => individualsByGuid[individualGuid],
+    ).reduce(
+      (acc, individual) => {
+        const indivCaseReviewStatusLastModifiedDate = individual.caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'
+        return indivCaseReviewStatusLastModifiedDate > acc ? indivCaseReviewStatusLastModifiedDate : acc
+      },
+      '2000-01-01T01:00:00.000Z',
+    ),
   },
 ]
 
@@ -422,9 +415,7 @@ export const ONSET_AGE_OPTIONS = [
   { value: 'L', text: 'Late onset' },
 ]
 
-const ONSET_AGE_LOOKUP = ONSET_AGE_OPTIONS.reduce((acc, option) =>
-  ({ ...acc, [option.value]: option.text }),
-{})
+const ONSET_AGE_LOOKUP = ONSET_AGE_OPTIONS.reduce((acc, option) => ({ ...acc, [option.value]: option.text }), {})
 
 export const INHERITANCE_MODE_OPTIONS = [
   { value: 'S', text: 'Sporadic' },
@@ -441,7 +432,9 @@ export const INHERITANCE_MODE_OPTIONS = [
   { value: 'F', text: 'Multifactorial inheritance' },
   { value: 'M', text: 'Mitochondrial inheritance' },
 ]
-export const INHERITANCE_MODE_LOOKUP = INHERITANCE_MODE_OPTIONS.reduce((acc, { text, value }) => ({ ...acc, [value]: text }), {})
+export const INHERITANCE_MODE_LOOKUP = INHERITANCE_MODE_OPTIONS.reduce(
+  (acc, { text, value }) => ({ ...acc, [value]: text }), {},
+)
 
 export const AR_FIELDS = {
   arFertilityMeds: 'Fertility medications',
@@ -584,7 +577,6 @@ export const CASE_REVIEW_FAMILY_EXPORT_DATA = [
   { header: 'Internal Case Review Summary', field: FAMILY_FIELD_INTERNAL_SUMMARY, format: stripMarkdown },
   { header: 'Internal Case Review Notes', field: FAMILY_FIELD_INTERNAL_NOTES, format: stripMarkdown },
 ]
-
 
 export const INDIVIDUAL_NOTES_CONFIG = tableConfigForField(INDIVIDUAL_FIELD_CONFIGS)(INDIVIDUAL_FIELD_NOTES)
 

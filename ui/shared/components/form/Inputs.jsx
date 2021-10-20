@@ -1,4 +1,4 @@
-/* eslint-disable react/no-multi-comp */
+/* eslint-disable max-classes-per-file */
 
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
@@ -15,11 +15,32 @@ export class BaseSemanticInput extends React.Component {
   static propTypes = {
     onChange: PropTypes.func,
     inputType: PropTypes.string.isRequired,
-    options: PropTypes.array,
+    options: PropTypes.arrayOf(PropTypes.object),
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    const { options } = this.props
+    if (nextProps.options) {
+      if (nextProps.options.length !== (options || []).length) {
+        return true
+      }
+      Object.entries(nextProps.options).forEach(([i, opt]) => { // eslint-disable-line consistent-return
+        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== options[i][k])) {
+          return true
+        }
+      })
+    }
+    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(
+      k => nextProps[k] !== this.props[k], // eslint-disable-line react/destructuring-assignment
+    )) {
+      return true
+    }
+    return nextState !== this.state
   }
 
   handleChange = (e, data) => {
-    this.props.onChange(data.value === undefined ? data : data.value)
+    const { onChange } = this.props
+    onChange(data.value === undefined ? data : data.value)
   }
 
   render() {
@@ -27,26 +48,9 @@ export class BaseSemanticInput extends React.Component {
     return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
-    if (nextProps.options) {
-      if (nextProps.options.length !== (this.props.options || []).length) {
-        return true
-      }
-      Object.entries(nextProps.options).forEach(([i, opt]) => { //eslint-disable-line consistent-return
-        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== this.props.options[i][k])) {
-          return true
-        }
-      })
-    }
-    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(k => nextProps[k] !== this.props[k])) {
-      return true
-    }
-    return nextState !== this.state
-  }
 }
 
-
-export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) =>
+export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) => (
   <BaseSemanticInput
     {...props}
     value={Number.isInteger(value) ? value : ''}
@@ -63,8 +67,8 @@ export const IntegerInput = React.memo(({ onChange, min, max, value, ...props })
         onChange(val)
       }
     }}
-  />,
-)
+  />
+))
 
 IntegerInput.propTypes = {
   onChange: PropTypes.func,
@@ -73,20 +77,17 @@ IntegerInput.propTypes = {
   max: PropTypes.number,
 }
 
+const labelStyle = color => (color ? { color: 'white', backgroundColor: color } : {})
 
-const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
-
-const styledOption = (option) => {
-  return {
-    value: option.value,
-    key: option.key || option.text || option.value,
-    text: option.text || option.name || option.value,
-    label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
-    color: option.color,
-    disabled: option.disabled,
-    description: option.description,
-  }
-}
+const styledOption = option => ({
+  value: option.value,
+  key: option.key || option.text || option.value,
+  text: option.text || option.name || option.value,
+  label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
+  color: option.color,
+  disabled: option.disabled,
+  description: option.description,
+})
 
 const processOptions = (options, includeCategories) => {
   let currCategory = null
@@ -102,28 +103,25 @@ const processOptions = (options, includeCategories) => {
   }, []).map(styledOption)
 }
 
-export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
+export const Dropdown = React.memo(({ options, includeCategories, ...props }) => (
   <BaseSemanticInput
     {...props}
     inputType="Dropdown"
     options={processOptions(options, includeCategories)}
     noResultsMessage={null}
     tabIndex="0"
-  />,
-)
-
+  />
+))
 
 Dropdown.propTypes = {
-  options: PropTypes.array,
+  options: PropTypes.arrayOf(PropTypes.object),
   includeCategories: PropTypes.bool,
 }
 
-export const Select = props =>
-  <Dropdown selection fluid {...props} />
-
+export const Select = props => <Dropdown selection fluid {...props} />
 
 Select.propTypes = {
-  options: PropTypes.array,
+  options: PropTypes.arrayOf(PropTypes.object),
 }
 
 export const StyledSemanticInput = styled(BaseSemanticInput)`
@@ -137,23 +135,29 @@ export const StyledSemanticInput = styled(BaseSemanticInput)`
 `
 
 export class Multiselect extends React.PureComponent {
+
   static propTypes = {
     color: PropTypes.string,
     allowAdditions: PropTypes.bool,
   }
 
   renderLabel = (data) => {
-    return { color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) }
+    const { color } = this.props
+    return { color, content: data.text || data.value, style: labelStyle(data.color) }
   }
 
   render() {
-    return <AddableSelect
-      {...this.props}
-      renderLabel={this.renderLabel}
-      allowAdditions={this.props.allowAdditions || false}
-      multiple
-    />
+    const { allowAdditions, ...props } = this.props
+    return (
+      <AddableSelect
+        {...props}
+        renderLabel={this.renderLabel}
+        allowAdditions={allowAdditions || false}
+        multiple
+      />
+    )
   }
+
 }
 
 export const LargeMultiselect = styled(({ dispatch, ...props }) => <Multiselect {...props} />)`
@@ -172,11 +176,12 @@ export const LargeMultiselect = styled(({ dispatch, ...props }) => <Multiselect 
 `
 
 export class AddableSelect extends React.PureComponent {
+
   static propTypes = {
-    options: PropTypes.array,
+    options: PropTypes.arrayOf(PropTypes.object),
     allowAdditions: PropTypes.bool,
     addValueOptions: PropTypes.bool,
-    value: PropTypes.any,
+    value: PropTypes.arrayOf(PropTypes.string),
   }
 
   constructor(props) {
@@ -184,69 +189,83 @@ export class AddableSelect extends React.PureComponent {
 
     let { options } = props
     if (props.addValueOptions && props.value) {
-      const valueOptions = props.value.filter(val => !props.options.some(({ value }) => value === val)).map(value => ({ value }))
+      const valueOptions = props.value.filter(
+        val => !props.options.some(({ value }) => value === val),
+      ).map(value => ({ value }))
       options = [...options, ...valueOptions]
     }
-    this.state = { options }
+    this.state = { options } // eslint-disable-line react/state-in-constructor
   }
 
-  handleAddition = (e, { value }) => {
-    this.setState({
-      options: [{ value }, ...this.state.options],
-    })
+  componentDidUpdate(prevProps) {
+    const { options } = this.props
+    if (options.length !== prevProps.options.length) {
+      this.resetOptions()
+    }
   }
 
   resetOptions = () => {
-    this.setState({ options: this.props.options })
+    const { options } = this.props
+    this.setState({ options })
+  }
+
+  handleAddition = (e, { value }) => {
+    this.setState(prevState => ({
+      options: [{ value }, ...prevState.options],
+    }))
   }
 
   render() {
     const { addValueOptions, ...props } = this.props
-    return <Select
-      {...props}
-      options={this.state.options}
-      allowAdditions={this.props.allowAdditions !== false}
-      onAddItem={this.handleAddition}
-      search
-    />
+    const { options } = this.state
+    return (
+      <Select
+        {...props}
+        options={options}
+        allowAdditions={props.allowAdditions !== false}
+        onAddItem={this.handleAddition}
+        search
+      />
+    )
   }
 
-  componentDidUpdate(prevProps) {
-    if (this.props.options.length !== prevProps.options.length) {
-      this.resetOptions()
-    }
-  }
 }
 
-
 export class SearchInput extends React.PureComponent {
+
   static propTypes = {
     onChange: PropTypes.func,
-    options: PropTypes.array,
+    options: PropTypes.arrayOf(PropTypes.object),
   }
 
-  state = {
-    results: this.props.options,
-  }
+  state = { results: null }
 
-  handleResultSelect = (e, { result }) => this.props.onChange(e, result.title)
+  handleResultSelect = (e, { result }) => {
+    const { onChange } = this.props
+    onChange(e, result.title)
+  }
 
   handleSearchChange = (e, data) => {
+    const { options, onChange } = this.props
     this.setState({
-      results: this.props.options.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
+      results: options.filter(({ title }) => title.toLowerCase().includes(data.value.toLowerCase())),
     })
-    this.props.onChange(e, data)
+    onChange(e, data)
   }
 
   render() {
     const { options, onChange, ...props } = this.props
-    return <Search
-      {...props}
-      results={this.state.results}
-      onResultSelect={this.handleResultSelect}
-      onSearchChange={this.handleSearchChange}
-    />
+    const { results } = this.state
+    return (
+      <Search
+        {...props}
+        results={results || options}
+        onResultSelect={this.handleResultSelect}
+        onSearchChange={this.handleSearchChange}
+      />
+    )
   }
+
 }
 
 const YEAR_OPTIONS = [...Array(130).keys()].map(i => ({ value: i + 1900 }))
@@ -255,14 +274,15 @@ const YEAR_OPTIONS_ALIVE = [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS_UNKNOW
 const yearOptions = (includeAlive, includeUnknown) => {
   if (includeAlive) {
     return YEAR_OPTIONS_ALIVE
-  } else if (includeUnknown) {
+  }
+  if (includeUnknown) {
     return YEAR_OPTIONS_UNKNOWN
   }
   return YEAR_OPTIONS
 }
 
-export const YearSelector = ({ includeAlive, includeUnknown, ...props }) =>
-  <Select search inline options={yearOptions(includeAlive, includeUnknown)} {...props} />
+export const YearSelector = ({ includeAlive, includeUnknown, ...props }) => (
+  <Select search inline options={yearOptions(includeAlive, includeUnknown)} {...props} />)
 
 YearSelector.propTypes = {
   includeAlive: PropTypes.bool,
@@ -275,7 +295,9 @@ const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
 `
 
 export const CheckboxGroup = React.memo((props) => {
-  const { value, options, label, groupLabel, onChange, ...baseProps } = props
+  const { value, label, groupLabel, onChange, ...baseProps } = props
+  const options = props.options.map(styledOption)
+  const numSelected = options.filter(opt => value.includes(opt.value)).length
   return (
     <List>
       <List.Item>
@@ -283,21 +305,22 @@ export const CheckboxGroup = React.memo((props) => {
           <BaseSemanticInput
             {...baseProps}
             inputType="Checkbox"
-            checked={value.length === options.length}
-            indeterminate={value.length > 0 && value.length < options.length}
+            checked={numSelected === options.length}
+            indeterminate={numSelected > 0 && numSelected < options.length}
             label={groupLabel || label}
             onChange={({ checked }) => {
+              const remainValue = value.filter(val => !options.find(opt => opt.value === val))
               if (checked) {
-                onChange(options.map(option => option.value))
+                onChange(options.map(option => option.value).concat(remainValue))
               } else {
-                onChange([])
+                onChange(remainValue)
               }
             }}
           />
         </List.Header>
         <List.List>
-          {options.map(option =>
-            <List.Item key={option.value}>
+          {options.map(option => (
+            <List.Item key={option.key}>
               <BaseSemanticInput
                 {...baseProps}
                 inputType="Checkbox"
@@ -311,8 +334,8 @@ export const CheckboxGroup = React.memo((props) => {
                   }
                 }}
               />
-            </List.Item>,
-          )}
+            </List.Item>
+          ))}
         </List.List>
       </List.Item>
     </List>
@@ -320,8 +343,8 @@ export const CheckboxGroup = React.memo((props) => {
 })
 
 CheckboxGroup.propTypes = {
-  value: PropTypes.any,
-  options: PropTypes.array,
+  value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
+  options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func,
   label: PropTypes.node,
   groupLabel: PropTypes.string,
@@ -336,27 +359,26 @@ const BaseRadioGroup = React.memo((props) => {
   const { value, options, label, onChange, margin, widths, getOptionProps, formGroupAs, ...baseProps } = props
   return (
     <InlineFormGroup margin={margin} widths={widths} as={formGroupAs}>
-      {/* eslint-disable-next-line jsx-a11y/label-has-for */}
       {label && <label>{label}</label>}
-      {options.map((option, i) =>
+      {options.map((option, i) => (
         <BaseSemanticInput
           {...baseProps}
           {...getOptionProps(option, value, onChange, i)}
           key={option.value}
           inline
           inputType="Radio"
-        />,
-      )}
+        />
+      ))}
     </InlineFormGroup>
   )
 })
 
 BaseRadioGroup.propTypes = {
-  value: PropTypes.any,
-  options: PropTypes.array,
+  value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
+  options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func,
   label: PropTypes.node,
-  formGroupAs: PropTypes.any,
+  formGroupAs: PropTypes.elementType,
   margin: PropTypes.string,
   widths: PropTypes.string,
   getOptionProps: PropTypes.func,
@@ -372,9 +394,7 @@ const getRadioOptionProps = (option, value, onChange) => ({
   },
 })
 
-export const RadioGroup = React.memo((props) => {
-  return <BaseRadioGroup getOptionProps={getRadioOptionProps} {...props} />
-})
+export const RadioGroup = React.memo(props => <BaseRadioGroup getOptionProps={getRadioOptionProps} {...props} />)
 
 const getButtonRadioOptionProps = label => (option, value, onChange, i) => ({
   active: value === option.value,
@@ -405,7 +425,14 @@ const RadioButtonGroup = styled(({ radioLabelStyle, ...props }) => <Button.Group
 
 export const ButtonRadioGroup = React.memo(({ label, radioLabelStyle, ...props }) => {
   const formGroupAs = groupProps => <RadioButtonGroup radioLabelStyle={radioLabelStyle} {...groupProps} />
-  return <BaseRadioGroup as={Button} formGroupAs={formGroupAs} getOptionProps={getButtonRadioOptionProps(label)} {...props} />
+  return (
+    <BaseRadioGroup
+      as={Button}
+      formGroupAs={formGroupAs}
+      getOptionProps={getButtonRadioOptionProps(label)}
+      {...props}
+    />
+  )
 })
 
 ButtonRadioGroup.propTypes = {
@@ -415,16 +442,18 @@ ButtonRadioGroup.propTypes = {
 
 export const BooleanCheckbox = React.memo((props) => {
   const { value, onChange, ...baseProps } = props
-  return <BaseSemanticInput
-    {...baseProps}
-    inputType="Checkbox"
-    checked={Boolean(value)}
-    onChange={data => onChange(data.checked)}
-  />
+  return (
+    <BaseSemanticInput
+      {...baseProps}
+      inputType="Checkbox"
+      checked={Boolean(value)}
+      onChange={data => onChange(data.checked)}
+    />
+  )
 })
 
 BooleanCheckbox.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
   onChange: PropTypes.func,
 }
 
@@ -502,7 +531,7 @@ export const LabeledSlider = styled(Slider).attrs(props => ({
   }
 `
 
-export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) =>
+export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) => (
   <LabeledSlider
     {...props}
     min={0}
@@ -512,24 +541,23 @@ export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...p
     value={steps.indexOf(value)}
     valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
     onChange={val => onChange(steps[val])}
-  />,
-)
-
+  />
+))
 
 StepSlider.propTypes = {
-  value: PropTypes.any,
-  steps: PropTypes.array,
+  value: PropTypes.number,
+  steps: PropTypes.arrayOf(PropTypes.number),
   stepLabels: PropTypes.object,
   onChange: PropTypes.func,
 }
 
-export const Pagination = React.memo(({ onChange, value, error, ...props }) =>
+export const Pagination = React.memo(({ onChange, value, error, ...props }) => (
   <PaginationComponent
     activePage={value}
     onPageChange={(e, data) => onChange(data.activePage)}
     {...props}
-  />,
-)
+  />
+))
 
 Pagination.propTypes = {
   value: PropTypes.number,
@@ -538,9 +566,8 @@ Pagination.propTypes = {
 }
 
 const JSON_EDITOR_MODES = ['code', 'tree']
-export const JsonInput = React.memo(({ value, onChange }) =>
-  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />,
-)
+export const JsonInput = React.memo(({ value, onChange }) => (
+  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />))
 
 JsonInput.propTypes = {
   value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),

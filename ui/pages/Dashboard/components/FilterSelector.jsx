@@ -20,7 +20,9 @@ const FilterContainer = styled.span`
 const FilterSelector = React.memo((props) => {
   const options = [
     { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
-    ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
+    ...Object.values(props.projectCategoriesByGuid).map(
+      projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }),
+    ),
   ]
   return (
     <FilterContainer>
@@ -36,7 +38,6 @@ const FilterSelector = React.memo((props) => {
     </FilterContainer>
   )
 })
-
 
 export { FilterSelector as FilterSelectorComponent }
 

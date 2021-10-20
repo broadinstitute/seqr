@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/rootReducer'
+import { RECEIVE_DATA, REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_XPOS } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -13,71 +13,61 @@ const RECEIVE_MME = 'RECEIVE_MME'
 const RECEIVE_SAVED_VARIANT_TAGS = 'RECEIVE_SAVED_VARIANT_TAGS'
 const UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE = 'UPDATE_ALL_PROJECT_VARIANT_STATE'
 
-
 // Data actions
 
-export const loadMme = () => {
-  return (dispatch) => {
-    dispatch({ type: REQUEST_MME })
-    new HttpRequestHelper('/api/summary_data/matchmaker',
+export const loadMme = () => (dispatch) => {
+  dispatch({ type: REQUEST_MME })
+  new HttpRequestHelper('/api/summary_data/matchmaker',
+    (responseJson) => {
+      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      dispatch({ type: RECEIVE_MME, newValue: responseJson })
+    },
+    (e) => {
+      dispatch({ type: RECEIVE_MME, error: e.message, newValue: [] })
+    }).get()
+}
+
+export const loadSuccessStory = successStoryTypes => (dispatch) => {
+  if (successStoryTypes) {
+    dispatch({ type: REQUEST_SUCCESS_STORY })
+    new HttpRequestHelper(`/api/summary_data/success_story/${successStoryTypes}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        dispatch({ type: RECEIVE_MME, newValue: responseJson })
+        dispatch({ type: RECEIVE_SUCCESS_STORY, newValue: responseJson.rows })
       },
       (e) => {
-        dispatch({ type: RECEIVE_MME, error: e.message, newValue: [] })
-      },
-    ).get()
+        dispatch({ type: RECEIVE_SUCCESS_STORY, error: e.message, newValue: [] })
+      }).get()
   }
 }
 
-export const loadSuccessStory = (successStoryTypes) => {
-  return (dispatch) => {
-    if (successStoryTypes) {
-      dispatch({ type: REQUEST_SUCCESS_STORY })
-      new HttpRequestHelper(`/api/summary_data/success_story/${successStoryTypes}`,
-        (responseJson) => {
-          console.log(responseJson.errors)
-          dispatch({ type: RECEIVE_SUCCESS_STORY, newValue: responseJson.rows })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_SUCCESS_STORY, error: e.message, newValue: [] })
-        },
-      ).get()
-    }
-  }
-}
-
-export const loadSavedVariants = ({ tag, gene = '' }) => {
-  return (dispatch, getState) => {
-    // Do not load if already loaded
-    if (tag) {
-      if (getState().savedVariantTags[tag]) {
-        return
-      }
-    } else if (!gene) {
+export const loadSavedVariants = ({ tag, gene = '' }) => (dispatch, getState) => {
+  // Do not load if already loaded
+  if (tag) {
+    if (getState().savedVariantTags[tag]) {
       return
     }
-
-    dispatch({ type: REQUEST_SAVED_VARIANTS })
-    new HttpRequestHelper(`/api/summary_data/saved_variants/${tag}`,
-      (responseJson) => {
-        if (tag && !gene) {
-          dispatch({
-            type: RECEIVE_SAVED_VARIANT_TAGS,
-            updates: { [tag]: true },
-          })
-        }
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      },
-    ).get({ gene })
+  } else if (!gene) {
+    return
   }
+
+  dispatch({ type: REQUEST_SAVED_VARIANTS })
+  new HttpRequestHelper(`/api/summary_data/saved_variants/${tag}`,
+    (responseJson) => {
+      if (tag && !gene) {
+        dispatch({
+          type: RECEIVE_SAVED_VARIANT_TAGS,
+          updates: { [tag]: true },
+        })
+      }
+      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+    },
+    (e) => {
+      dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+    }).get({ gene })
 }
 
-export const updateAllProjectSavedVariantTable = updates => ({ type: UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, updates })
+export const updateAllProjectSavedVariantTable = updates => (
+  { type: UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, updates })
 
 export const reducers = {
   successStoryLoading: loadingReducer(REQUEST_SUCCESS_STORY, RECEIVE_SUCCESS_STORY),

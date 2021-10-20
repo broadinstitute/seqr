@@ -12,6 +12,7 @@ import AcceptCookies from './AcceptCookies'
 import Header from './Header'
 import PageHeader from './PageHeader'
 import Footer from './Footer'
+import WarningMessages from './WarningMessages'
 
 const LayoutContainer = styled.div`
   height: calc(100% - 32px);
@@ -23,12 +24,13 @@ const ContentGrid = styled(Grid)`
   align-content: flex-start;
 `
 
-const BaseLayout = ({ children }) =>
+const BaseLayout = ({ children }) => (
   <LayoutContainer>
     <Header />
     <ContentGrid>
       <AcceptCookies />
       <PageHeader />
+      <WarningMessages />
       <Grid.Row>
         <Grid.Column width={1} />
         <Grid.Column width={14}>
@@ -39,6 +41,7 @@ const BaseLayout = ({ children }) =>
     </ContentGrid>
     <Footer />
   </LayoutContainer>
+)
 
 export { BaseLayout as BaseLayoutComponent }
 

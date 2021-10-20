@@ -26,5 +26,5 @@ export const getSampleMetadataColumns = createSelector(
   },
 )
 
-export const getSearchIncludeAllProjectsInput = state =>
-  formValueSelector(CUSTOM_SEARCH_FORM_NAME)(state, INCLUDE_ALL_PROJECTS)
+export const getSearchIncludeAllProjectsInput =
+  state => formValueSelector(CUSTOM_SEARCH_FORM_NAME)(state, INCLUDE_ALL_PROJECTS)

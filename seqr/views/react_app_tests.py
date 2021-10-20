@@ -6,6 +6,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
+@mock.patch('seqr.views.react_app.DEBUG', False)
 class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
@@ -16,7 +17,12 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
         self.assertSetEqual(set(initial_json[user_key].keys()), USER_FIELDS)
         self.assertEqual(initial_json[user_key]['username'], user)
-        self.assertEqual(initial_json['meta']['googleLoginEnabled'], google_enabled)
+        self.assertDictEqual(initial_json['meta'], {
+            'version': mock.ANY,
+            'hijakEnabled': False,
+            'googleLoginEnabled': google_enabled,
+            'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
+        })
 
         self.assertEqual(self.get_initial_page_window('gaTrackingId', response), ga_token_id)
         nonce = self.get_initial_page_window('__webpack_nonce__', response)
@@ -24,9 +30,9 @@ class DashboardPageTest(AuthenticationTestCase):
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
-        self.assertRegex(content, r'static/app(-.*)js')
+        self.assertRegex(content, r'src="/static/app(-.*)js"')
         self.assertRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
-        self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 4)
+        self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 5)
 
     @mock.patch('seqr.views.react_app.GA_TOKEN_ID', MOCK_GA_TOKEN)
     @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
@@ -49,8 +55,8 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         content = response.content.decode('utf-8')
-        self.assertNotRegex(content, r'static/app(-.*)js')
-        self.assertContains(response, 'app.js')
+        self.assertNotRegex(content, r'src="/static/app(-.*)js"')
+        self.assertContains(response, 'src="/app.js"')
         self.assertNotRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
 
     def test_no_login_react_page(self):

@@ -8,7 +8,7 @@ import { Select, InlineToggle, JsonInput } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
-  ANALYST_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import VariantSearchResults from 'shared/components/panel/search/VariantSearchResults'
@@ -67,10 +67,12 @@ const INHERITANCE_PANEL = {
 }
 
 const PANELS = [
-  INHERITANCE_PANEL, ANALYST_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
+  INHERITANCE_PANEL, HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
-const CustomSearch = React.memo(({ match, history, includeAllProjects, loadContext, loading, searchParams, ...props }) =>
+const CustomSearch = React.memo((
+  { match, history, includeAllProjects, loadContext, loading, searchParams, ...props },
+) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
@@ -81,7 +83,8 @@ const CustomSearch = React.memo(({ match, history, includeAllProjects, loadConte
             form={CUSTOM_SEARCH_FORM_NAME}
             initialValues={searchParams}
           >
-            <InlineHeader content="Include All Projects:" /> {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
+            <InlineHeader content="Include All Projects: " />
+            {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
             {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
             <VariantSearchFormPanels panels={PANELS} />
             {configuredField(CUSTOM_QUERY_FIELD)}
@@ -90,10 +93,9 @@ const CustomSearch = React.memo(({ match, history, includeAllProjects, loadConte
       </Grid.Column>
     </Grid.Row>
     {match.params.searchHash &&
-      <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />
-    }
-  </Grid>,
-)
+      <VariantSearchResults match={match} history={history} contextLoading={loading} {...props} />}
+  </Grid>
+))
 
 CustomSearch.propTypes = {
   match: PropTypes.object,

@@ -17,10 +17,11 @@ import {
   UNAFFECTED,
 } from 'shared/utils/constants'
 
-export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) =>
-  Object.values(analysisGroupsByGuid).filter(
-    group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
-  )
+export const getSelectedAnalysisGroups = (
+  analysisGroupsByGuid, familyGuids,
+) => Object.values(analysisGroupsByGuid).filter(
+  group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
+)
 
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
@@ -120,14 +121,13 @@ export const INHERITANCE_LOOKUP = {
   },
 }
 
-export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) =>
-  ({ ...acc, [JSON.stringify(filter)]: mode }), {},
-)
+export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) => (
+  { ...acc, [JSON.stringify(filter)]: mode }), {})
 
 export const INHERITANCE_FILTER_OPTIONS = [
-  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER, ANY_AFFECTED,
+  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER,
+  DE_NOVO_FILTER, ANY_AFFECTED,
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
-
 
 const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
@@ -188,7 +188,7 @@ export const PATHOGENICITY_FIELDS = [
   CLINVAR_FIELD,
 ]
 
-export const ANALYST_PATHOGENICITY_FIELDS = [
+export const HGMD_PATHOGENICITY_FIELDS = [
   CLINVAR_FIELD,
   {
     name: HGMD_NAME,
@@ -206,7 +206,7 @@ export const ANY_PATHOGENICITY_FILTER = {
   },
 }
 
-export const ANALYST_PATHOGENICITY_FILTER_OPTIONS = [
+export const HGMD_PATHOGENICITY_FILTER_OPTIONS = [
   ANY_PATHOGENICITY_FILTER,
   {
     text: 'Pathogenic/ Likely Path.',
@@ -223,7 +223,7 @@ export const ANALYST_PATHOGENICITY_FILTER_OPTIONS = [
     },
   },
 ]
-export const PATHOGENICITY_FILTER_OPTIONS = ANALYST_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
+export const PATHOGENICITY_FILTER_OPTIONS = HGMD_PATHOGENICITY_FILTER_OPTIONS.map(({ text, value }) => ({
   text, value: { [CLINVAR_NAME]: value[CLINVAR_NAME] },
 }))
 
@@ -292,7 +292,6 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
       { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
     ), {}),
   }))[0]
-
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'

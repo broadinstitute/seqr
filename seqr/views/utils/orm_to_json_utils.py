@@ -256,8 +256,8 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
-def get_json_for_family_notes(notes):
-    return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
+def get_json_for_family_notes(notes, **kwargs):
+    return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}], **kwargs)
 
 
 def get_json_for_family_note(note):
@@ -355,7 +355,7 @@ def _get_json_for_individual(individual, user=None, **kwargs):
     return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
-def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_nested=False):
+def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_nested=False, **kwargs):
     """Returns a JSON representation of the given list of Samples.
 
     Args:
@@ -365,14 +365,14 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     """
 
     if project_guid or not skip_nested:
-        kwargs = {'nested_fields': [
+        additional_kwargs = {'nested_fields': [
             {'fields': ('individual', 'guid'), 'value': individual_guid},
             {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
         ]}
     else:
-        kwargs = {'additional_model_fields': ['individual_id']}
+        additional_kwargs = {'additional_model_fields': ['individual_id']}
 
-    return _get_json_for_models(samples, guid_key='sampleGuid', **kwargs)
+    return _get_json_for_models(samples, guid_key='sampleGuid', **additional_kwargs, **kwargs)
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -387,7 +387,7 @@ def get_json_for_sample(sample, **kwargs):
     return _get_json_for_model(sample, get_json_for_models=get_json_for_samples, **kwargs)
 
 
-def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False):
+def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, **kwargs):
     """Returns a JSON representation of the given list of AnalysisGroups.
 
     Args:
@@ -405,11 +405,11 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
     prefetch_related_objects(analysis_groups, 'families')
 
     if project_guid or not skip_nested:
-        kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+        additional_kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
     else:
-        kwargs = {'additional_model_fields': ['project_id']}
+        additional_kwargs = {'additional_model_fields': ['project_id']}
 
-    return _get_json_for_models(analysis_groups, process_result=_process_result, **kwargs)
+    return _get_json_for_models(analysis_groups, process_result=_process_result, **additional_kwargs, **kwargs)
 
 
 def get_json_for_analysis_group(analysis_group, **kwargs):
@@ -720,7 +720,7 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
                 result.update({
                     'items': [{
                         'geneId': gene.gene_id,
-                        'pagene': _get_json_for_model(gene.palocuslistgene, user=user)
+                        'pagene': _get_json_for_model(gene.palocuslistgene, user=user, is_analyst=is_analyst)
                         if hasattr(gene, 'palocuslistgene') else None
                     } for gene in gene_set.all()] + intervals,
                 })
@@ -740,7 +740,7 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
         })
 
         if hasattr(locus_list, 'palocuslist'):
-            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user)
+            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user, is_analyst=is_analyst)
             result.update({
                 'paLocusList': pa_locus_list_json,
             })
@@ -748,9 +748,9 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
     prefetch_related_objects(locus_lists, 'created_by')
     prefetch_related_objects(locus_lists, 'locuslistgene_set')
     prefetch_related_objects(locus_lists, 'locuslistinterval_set')
+    prefetch_related_objects(locus_lists, 'palocuslist')
 
     if include_pagenes:
-        prefetch_related_objects(locus_lists, 'palocuslist')
         prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
 
     return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
@@ -854,5 +854,7 @@ def get_json_for_matchmaker_submissions(models, individual_guid=None, additional
     )
 
 
-def get_json_for_matchmaker_submission(submission, **kwargs):
-    return _get_json_for_model(submission, get_json_for_models=get_json_for_matchmaker_submissions, **kwargs)
+def get_json_for_matchmaker_submission(submission):
+    return _get_json_for_model(
+        submission, get_json_for_models=get_json_for_matchmaker_submissions, individual_guid=submission.individual.guid,
+        additional_model_fields=['contact_name', 'contact_href', 'submission_id'])

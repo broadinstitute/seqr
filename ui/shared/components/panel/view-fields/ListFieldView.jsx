@@ -7,20 +7,20 @@ import { BaseSemanticInput } from '../../form/Inputs'
 import { validators } from '../../form/ReduxFormWrapper'
 import { ButtonLink } from '../../StyledComponents'
 
-const RemovableInput = React.memo(({ removeField, itemComponent, ...props }) =>
-  React.createElement(itemComponent || BaseSemanticInput, {
+const RemovableInput = React.memo(({ removeField, itemComponent, ...props }) => React.createElement(
+  itemComponent || BaseSemanticInput, {
     icon: <Icon name="remove" link onClick={removeField} />,
     inputType: 'Input',
     ...props,
-  }),
-)
+  },
+))
 
 RemovableInput.propTypes = {
   removeField: PropTypes.func,
   itemComponent: PropTypes.func,
 }
 
-const AddElementButton = React.memo(({ addElement, addElementLabel }) =>
+const AddElementButton = React.memo(({ addElement, addElementLabel }) => (
   <ButtonLink
     icon="plus"
     content={addElementLabel}
@@ -28,15 +28,17 @@ const AddElementButton = React.memo(({ addElement, addElementLabel }) =>
       e.preventDefault()
       addElement()
     }}
-  />,
-)
+  />
+))
 
 AddElementButton.propTypes = {
   addElementLabel: PropTypes.string,
   addElement: PropTypes.func,
 }
 
-const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldProps = {}, itemJoin, itemDisplay, itemKey, ...props }) => {
+const ListFieldView = React.memo((
+  { addElementLabel, initialValues, formFieldProps = {}, itemJoin, itemDisplay, itemKey, ...props },
+) => {
   const fields = [{
     name: props.field,
     isArrayField: true,
@@ -52,16 +54,18 @@ const ListFieldView = React.memo(({ addElementLabel, initialValues, formFieldPro
     [props.field]: (initialValue && initialValue.length) ? initialValue : [''],
   }
 
-  const fieldDisplay = values => (itemJoin ? values.join(itemJoin) : values.map(value =>
-    <div key={itemKey ? itemKey(value) : value}>{itemDisplay ? itemDisplay(value) : value}</div>,
+  const fieldDisplay = values => (itemJoin ? values.join(itemJoin) : values.map(
+    value => <div key={itemKey ? itemKey(value) : value}>{itemDisplay ? itemDisplay(value) : value}</div>,
   ))
 
-  return <BaseFieldView
-    formFields={fields}
-    initialValues={defaultedInitialValues}
-    fieldDisplay={fieldDisplay}
-    {...props}
-  />
+  return (
+    <BaseFieldView
+      formFields={fields}
+      initialValues={defaultedInitialValues}
+      fieldDisplay={fieldDisplay}
+      {...props}
+    />
+  )
 })
 
 ListFieldView.propTypes = {

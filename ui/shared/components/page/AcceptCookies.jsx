@@ -8,33 +8,36 @@ const COOKIE_ACTIONS = [{
   content: 'Accept',
   onClick: () => {
     Cookies.set('accepted_cookies', true)
-    window.location.href = window.location.href
+    window.location.href = window.location.href // eslint-disable-line no-self-assign
   },
 }]
 
 const AcceptCookies = () => (
-  Cookies.get('accepted_cookies') ? null :
-  <Modal
-    open
-    size="small"
-    closeOnDimmerClick={false}
-    closeOnEscape={false}
-    header="This website uses cookies"
-    content={
-      <Modal.Content>
-        seqr collects cookies to improve our user experience and ensure the secure functioning of our site. For more
-        details, see our <Link target="_blank" to="/privacy_policy">Privacy Policy</Link>. By
-        clicking &quot;Accept&quot;, you consent to the use of these cookies.
-      </Modal.Content>
-    }
-    actions={COOKIE_ACTIONS}
-  />
+  Cookies.get('accepted_cookies') ? null : (
+    <Modal
+      open
+      size="small"
+      closeOnDimmerClick={false}
+      closeOnEscape={false}
+      header="This website uses cookies"
+      content={
+        <Modal.Content>
+          seqr collects cookies to improve our user experience and ensure the secure functioning of our site. For more
+          details, see our &npsp;
+          <Link target="_blank" to="/privacy_policy">Privacy Policy</Link>
+          . By clicking &quot;Accept&quot;, you consent to the use of these cookies.
+        </Modal.Content>
+      }
+      actions={COOKIE_ACTIONS}
+    />
+  )
 )
 
 const NO_COOKIE_PAGES = ['/matchmaker', '/privacy_policy', '/terms_of_service']
 
-export default () =>
+export default () => (
   <Switch>
     {NO_COOKIE_PAGES.map(page => <Route key={page} path={page} component={null} />)}
     <Route component={AcceptCookies} />
   </Switch>
+)

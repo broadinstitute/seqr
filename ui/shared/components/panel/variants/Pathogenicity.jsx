@@ -4,11 +4,10 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Label, Icon } from 'semantic-ui-react'
 
-import { getUser } from 'redux/selectors'
-import { CLINSIG_SEVERITY } from '../../../utils/constants'
+import { getUser, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
+import { CLINSIG_SEVERITY, getPermissionedHgmdClass } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
-
 
 const StarsContainer = styled.span`
   margin-left: 10px;
@@ -35,23 +34,22 @@ const HGMD_CLASS_NAMES = {
 }
 const hgmdName = hgmdClass => HGMD_CLASS_NAMES[hgmdClass]
 
-const ClinvarStars = React.memo(({ goldStars }) => goldStars != null &&
+const ClinvarStars = React.memo(({ goldStars }) => goldStars != null && (
   <StarsContainer>
     {Array.from(Array(4).keys()).map(i => (i < goldStars ? <StarIcon key={i} goldstar="yes" /> : <StarIcon key={i} />))}
-  </StarsContainer>,
-)
+  </StarsContainer>
+))
 
 ClinvarStars.propTypes = {
   goldStars: PropTypes.number,
 }
 
-
-const PathogenicityLabel = React.memo(({ significance, formatName, goldStars }) =>
+const PathogenicityLabel = React.memo(({ significance, formatName, goldStars }) => (
   <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[significance.toLowerCase()]] || 'grey'} size="medium" horizontal basic>
     {formatName ? formatName(significance) : significance}
     <ClinvarStars goldStars={goldStars} />
-  </Label>,
-)
+  </Label>
+))
 
 PathogenicityLabel.propTypes = {
   significance: PropTypes.string.isRequired,
@@ -59,17 +57,16 @@ PathogenicityLabel.propTypes = {
   goldStars: PropTypes.number,
 }
 
-const PathogenicityLink = React.memo(({ href, ...labelProps }) =>
-  <a href={href} target="_blank">
+const PathogenicityLink = React.memo(({ href, ...labelProps }) => (
+  <a href={href} target="_blank" rel="noreferrer">
     <PathogenicityLabel {...labelProps} />
     <HorizontalSpacer width={5} />
-  </a>,
-)
+  </a>
+))
 
 PathogenicityLink.propTypes = {
   href: PropTypes.string.isRequired,
 }
-
 
 const clinvarUrl = (clinvar) => {
   const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
@@ -77,17 +74,18 @@ const clinvarUrl = (clinvar) => {
   return baseUrl + variantPath
 }
 
-const Pathogenicity = React.memo(({ variant, user }) => {
+const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
-  if (!clinvar.variationId && !clinvar.alleleId && !(user.isAnalyst && (variant.hgmd || {}).class)) {
+  if (!clinvar.variationId && !clinvar.alleleId && !showHgmd) {
     return null
   }
 
   return (
     <span>
-      {clinvar.clinicalSignificance &&
+      {clinvar.clinicalSignificance && (
         <span>
-          <b>ClinVar:<HorizontalSpacer width={5} /></b>
+          <b>ClinVar:</b>
+          <HorizontalSpacer width={5} />
           <PathogenicityLink
             key={clinvar.clinicalSignificance}
             significance={clinvar.clinicalSignificance}
@@ -96,30 +94,32 @@ const Pathogenicity = React.memo(({ variant, user }) => {
             goldStars={clinvar.goldStars}
           />
         </span>
-      }
-      {user.isAnalyst && variant.hgmd.class &&
+      )}
+      {showHgmd && (
         <span>
           <HorizontalSpacer width={5} />
-          <b>HGMD:<HorizontalSpacer width={5} /></b>
+          <b>HGMD:</b>
+          <HorizontalSpacer width={5} />
           <PathogenicityLink
             significance={variant.hgmd.class}
             href={`https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`}
             formatName={hgmdName}
           />
         </span>
-      }
+      )}
     </span>
   )
 })
 
 Pathogenicity.propTypes = {
   variant: PropTypes.object,
-  user: PropTypes.object,
+  showHgmd: PropTypes.bool,
 }
 
-
-const mapStateToProps = state => ({
-  user: getUser(state),
+const mapStateToProps = (state, ownProps) => ({
+  showHgmd: !!getPermissionedHgmdClass(
+    ownProps.variant, getUser(state), getFamiliesByGuid(state), getProjectsByGuid(state),
+  ),
 })
 
 export { Pathogenicity as BasePathogenicity }

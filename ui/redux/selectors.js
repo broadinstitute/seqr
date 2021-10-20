@@ -33,6 +33,7 @@ export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoadi
 export const getVersion = state => state.meta.version
 export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
 export const getHijakEnabled = state => state.meta.hijakEnabled
+export const getWarningMessages = state => state.meta.warningMessages
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getSearchesByHash = state => state.searchesByHash
@@ -47,8 +48,7 @@ export const getVariantSearchDisplay = state => state.variantSearchDisplay
 export const getAnnotationSecondary = (state) => {
   try {
     return !!state.form.variantSearch.values.search.inheritance.annotationSecondary
-  }
-  catch (err) {
+  } catch (err) {
     return false
   }
 }
@@ -60,35 +60,31 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
   acc[entity.projectGuid][entityGuid] = entity
 
   return acc
-
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
 export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
-const groupByFamilyGuid = objs =>
-  objs.reduce((acc, o) => {
-    if (!acc[o.familyGuid]) {
-      acc[o.familyGuid] = []
-    }
-    acc[o.familyGuid].push(o)
-    return acc
-  }, {})
+const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
+  if (!acc[o.familyGuid]) {
+    acc[o.familyGuid] = []
+  }
+  acc[o.familyGuid].push(o)
+  return acc
+}, {})
 
 export const getNotesByFamilyType = createSelector(
   getFamilyNotesByGuid,
-  notesByGuid =>
-    Object.values(notesByGuid).reduce((acc, note) => {
-      if (!acc[note.familyGuid]) {
-        acc[note.familyGuid] = {}
-      }
-      if (!acc[note.familyGuid][note.noteType]) {
-        acc[note.familyGuid][note.noteType] = []
-      }
-      acc[note.familyGuid][note.noteType].push(note)
-      return acc
-    }, {})
-  ,
+  notesByGuid => Object.values(notesByGuid).reduce((acc, note) => {
+    if (!acc[note.familyGuid]) {
+      acc[note.familyGuid] = {}
+    }
+    if (!acc[note.familyGuid][note.noteType]) {
+      acc[note.familyGuid][note.noteType] = []
+    }
+    acc[note.familyGuid][note.noteType].push(note)
+    return acc
+  }, {}),
 )
 
 export const getIndividualsByFamily = createSelector(
@@ -130,61 +126,60 @@ const getSortedSamples = createSelector(
 export const getSamplesByFamily = createSelector(
   getIndividualsByGuid,
   getSortedSamples,
-  (individualsByGuid, sortedSamples) =>
-    sortedSamples.reduce((acc, sample) => {
-      const { familyGuid } = individualsByGuid[sample.individualGuid]
-      if (!acc[familyGuid]) {
-        acc[familyGuid] = []
-      }
-      acc[familyGuid].push(sample)
-      return acc
-    }, {}),
+  (individualsByGuid, sortedSamples) => sortedSamples.reduce((acc, sample) => {
+    const { familyGuid } = individualsByGuid[sample.individualGuid]
+    if (!acc[familyGuid]) {
+      acc[familyGuid] = []
+    }
+    acc[familyGuid].push(sample)
+    return acc
+  }, {}),
 )
 
 export const getHasActiveVariantSampleByFamily = createSelector(
   getSamplesByFamily,
-  (samplesByFamily) => {
-    return Object.entries(samplesByFamily).reduce((acc, [familyGuid, familySamples]) => ({
+  samplesByFamily => Object.entries(samplesByFamily).reduce(
+    (acc, [familyGuid, familySamples]) => ({
       ...acc,
       [familyGuid]: familySamples.some(({ isActive }) => isActive),
-    }), {})
-  },
+    }), {},
+  ),
 )
 
 export const getIGVSamplesByFamilySampleIndividual = createSelector(
   getIndividualsByGuid,
   getIgvSamplesByGuid,
-  (individualsByGuid, igvSamplesByGuid) =>
-    Object.values(igvSamplesByGuid).reduce((acc, sample) => {
-      const { familyGuid } = individualsByGuid[sample.individualGuid]
-      if (!acc[familyGuid]) {
-        acc[familyGuid] = {}
-      }
-      if (!acc[familyGuid][sample.sampleType]) {
-        acc[familyGuid][sample.sampleType] = {}
-      }
-      acc[familyGuid][sample.sampleType][sample.individualGuid] = sample
-      return acc
-    }, {}),
+  (individualsByGuid, igvSamplesByGuid) => Object.values(igvSamplesByGuid).reduce((acc, sample) => {
+    const { familyGuid } = individualsByGuid[sample.individualGuid]
+    if (!acc[familyGuid]) {
+      acc[familyGuid] = {}
+    }
+    if (!acc[familyGuid][sample.sampleType]) {
+      acc[familyGuid][sample.sampleType] = {}
+    }
+    acc[familyGuid][sample.sampleType][sample.individualGuid] = sample
+    return acc
+  }, {}),
 )
 
 // Saved variant selectors
-export const getVariantId = variant =>
-  (Array.isArray(variant) ? variant : [variant]).map(({ variantId }) => variantId).sort().join(',')
+export const getVariantId = variant => (
+  Array.isArray(variant) ? variant : [variant]).map(({ variantId }) => variantId).sort().join(',')
 
-const groupByVariantGuidFields = (variantTagNotes, objectsByGuid, savedVariantsByGuid, field) =>
-  Object.values(objectsByGuid).forEach((o) => {
-    const variantGuids = o.variantGuids.sort().join(',')
-    if (!variantTagNotes[variantGuids]) {
-      variantTagNotes[variantGuids] = {
-        variantGuids, variants: o.variantGuids.map(variantGuid => savedVariantsByGuid[variantGuid]),
-      }
+const groupByVariantGuidFields = (variantTagNotes, objectsByGuid, savedVariantsByGuid, field) => Object.values(
+  objectsByGuid,
+).forEach((o) => {
+  const variantGuids = o.variantGuids.sort().join(',')
+  if (!variantTagNotes[variantGuids]) {
+    variantTagNotes[variantGuids] = { // eslint-disable-line no-param-reassign
+      variantGuids, variants: o.variantGuids.map(variantGuid => savedVariantsByGuid[variantGuid]),
     }
-    if (!variantTagNotes[variantGuids][field]) {
-      variantTagNotes[variantGuids][field] = []
-    }
-    variantTagNotes[variantGuids][field].push(o)
-  })
+  }
+  if (!variantTagNotes[variantGuids][field]) {
+    variantTagNotes[variantGuids][field] = [] // eslint-disable-line no-param-reassign
+  }
+  variantTagNotes[variantGuids][field].push(o)
+})
 
 export const getVariantTagNotesByFamilyVariants = createSelector(
   getVariantTagsByGuid,
@@ -236,25 +231,17 @@ const getLocusListsWithGenes = createSelector(
   getLocusListsByGuid,
   getGenesById,
   getPaGenesById,
-  (locusListsByGuid, genesById, pagenesById) =>
-    Object.entries(locusListsByGuid).reduce(
-      (acc, [locusListGuid, locusList]) => ({
-        ...acc,
-        [locusListGuid]: {
-          ...locusList,
-          items:
-            locusList.items &&
-            locusList.items.map((item) => {
-              return {
-                ...item,
-                gene: genesById[item.geneId],
-                pagene: pagenesById[item.geneId],
-              }
-            }),
-        },
-      }),
-      {},
-    ),
+  (locusListsByGuid, genesById, pagenesById) => Object.entries(locusListsByGuid).reduce(
+    (acc, [locusListGuid, locusList]) => ({
+      ...acc,
+      [locusListGuid]: {
+        ...locusList,
+        items:
+          locusList.items &&
+          locusList.items.map(item => ({ ...item, gene: genesById[item.geneId], pagene: pagenesById[item.geneId] })),
+      },
+    }), {},
+  ),
 )
 
 export const getParsedLocusList = createSelector(
@@ -312,25 +299,27 @@ export const getSearchGeneBreakdownValues = createSelector(
   getFamiliesByGuid,
   getGenesById,
   getSearchesByHash,
-  (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) =>
-    Object.entries(geneBreakdowns[searchHash] || {}).map(
-      ([geneId, counts]) => ({
-        numVariants: counts.total,
-        numFamilies: Object.keys(counts.families).length,
-        families: Object.entries(counts.families).map(([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count })),
-        search: searchesByHash[searchHash].search,
-        ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
-      }),
+  (geneBreakdowns, searchHash, familiesByGuid, genesById, searchesByHash) => Object.entries(
+    geneBreakdowns[searchHash] || {},
+  ).map(([geneId, counts]) => ({
+    numVariants: counts.total,
+    numFamilies: Object.keys(counts.families).length,
+    families: Object.entries(counts.families).map(
+      ([familyGuid, count]) => ({ family: familiesByGuid[familyGuid], count }),
     ),
+    search: searchesByHash[searchHash].search,
+    ...(genesById[geneId] || { geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {} }),
+  })),
 )
 
 export const getLocusListIntervalsByChromProject = createSelector(
   getProjectsByGuid,
   getLocusListsByGuid,
-  (projectsByGuid, locusListsByGuid) =>
-    Object.entries(projectsByGuid).reduce((acc, [projectGuid, { locusListGuids = [] }]) => {
+  (projectsByGuid, locusListsByGuid) => Object.entries(projectsByGuid).reduce(
+    (acc, [projectGuid, { locusListGuids = [] }]) => {
       const projectIntervals = locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid]).reduce(
-        (acc2, { intervals = [] }) => [...acc2, ...intervals], [])
+        (acc2, { intervals = [] }) => [...acc2, ...intervals], [],
+      )
       projectIntervals.forEach((interval) => {
         if (!acc[interval.chrom]) {
           acc[interval.chrom] = {}
@@ -341,7 +330,8 @@ export const getLocusListIntervalsByChromProject = createSelector(
         acc[interval.chrom][projectGuid].push(interval)
       })
       return acc
-    }, {}),
+    }, {},
+  ),
 )
 
 export const getLocusListTableData = createSelector(

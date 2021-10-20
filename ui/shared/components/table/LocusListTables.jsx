@@ -34,7 +34,8 @@ const FIELD_LOOKUP = LOCUS_LIST_FIELDS.reduce(
 )
 
 const BASIC_FIELDS = [LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD].map(
-  field => FIELD_LOOKUP[field])
+  field => FIELD_LOOKUP[field],
+)
 
 const NAME_WITH_LINK_FIELD = {
   ...FIELD_LOOKUP[LOCUS_LIST_NAME_FIELD],
@@ -44,13 +45,8 @@ const NAME_WITH_LINK_FIELD = {
 const CORE_FIELDS = [
   NAME_WITH_LINK_FIELD,
   ...[LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME].map(
-    field => FIELD_LOOKUP[field]),
-  {
-    name: 'numProjects',
-    content: 'Projects',
-    width: 1,
-    format: null,
-  },
+    field => FIELD_LOOKUP[field],
+  ), { name: 'numProjects', content: 'Projects', width: 1, format: null },
 ]
 
 const MY_TABLE = {
@@ -74,13 +70,14 @@ const PUBLIC_TABLE = {
 }
 const TABLES = [MY_TABLE, PUBLIC_TABLE]
 
-const getLocusListFilterVal = list =>
-  [list[LOCUS_LIST_NAME_FIELD], list[LOCUS_LIST_DESCRIPTION_FIELD] || '', ...(list.items || []).map(
-    ({ gene }) => (gene || {}).geneSymbol)].join()
+const getLocusListFilterVal = list => [
+  list[LOCUS_LIST_NAME_FIELD], list[LOCUS_LIST_DESCRIPTION_FIELD] || '', ...(list.items || []).map(
+    ({ gene }) => (gene || {}).geneSymbol,
+  )].join()
 
-const LocusListTables = React.memo(({ tableData, basicFields, omitLocusLists, tableButtons, dispatch, ...tableProps }) => {
-  return TABLES.map(
-    ({ name, tableFields }) =>
+const LocusListTables = React.memo(
+  ({ tableData, basicFields, omitLocusLists, tableButtons, dispatch, ...tableProps }) => TABLES.map(
+    ({ name, tableFields }) => (
       <div key={name}>
         <VerticalSpacer height={5} />
         <Header size="large" dividing content={`${name} Gene Lists`} />
@@ -96,18 +93,18 @@ const LocusListTables = React.memo(({ tableData, basicFields, omitLocusLists, ta
           {...tableProps}
         />
         {tableButtons && tableButtons[name]}
-      </div>,
-  )
-})
+      </div>
+    ),
+  ),
+)
 
 LocusListTables.propTypes = {
   tableData: PropTypes.object,
   basicFields: PropTypes.bool,
-  omitLocusLists: PropTypes.array,
+  omitLocusLists: PropTypes.arrayOf(PropTypes.string),
   tableButtons: PropTypes.object,
   dispatch: PropTypes.func,
 }
-
 
 const mapStateToProps = (state, ownProps) => ({
   tableData: getLocusListTableData(state, ownProps),

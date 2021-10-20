@@ -17,28 +17,18 @@ const IGVContainer = styled(FontAwesomeIconsContainer)`
   }
 `
 
-const getTrackId = track =>
-  // merged tracks do not have a URL
-  track.url || track.name
+const getTrackId = track => track.url || track.name // merged tracks do not have a URL
 
 class IGV extends React.PureComponent {
 
   static propTypes = {
-    tracks: PropTypes.array,
+    tracks: PropTypes.arrayOf(PropTypes.object),
   }
 
   constructor(props) {
     super(props)
     this.container = null
     this.browser = null
-  }
-
-  setContainerElement = (element) => {
-    this.container = element
-  }
-
-  render() {
-    return <IGVContainer><div ref={this.setContainerElement} /></IGVContainer>
   }
 
   componentDidMount() {
@@ -50,20 +40,29 @@ class IGV extends React.PureComponent {
   }
 
   componentDidUpdate(prevProps) {
-    if (this.browser && prevProps.tracks !== this.props.tracks) {
+    const { tracks } = this.props
+    if (this.browser && prevProps.tracks !== tracks) {
       const prevTrackIds = prevProps.tracks.map(getTrackId)
-      const newTrackIds = this.props.tracks.map(getTrackId)
+      const newTrackIds = tracks.map(getTrackId)
 
       prevProps.tracks.filter(track => track.name && !newTrackIds.includes(getTrackId(track))).forEach((track) => {
         this.browser.removeTrackByName(track.name)
       })
 
-      this.props.tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
+      tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
         this.browser.loadTrack(track)
       })
-
     }
   }
+
+  setContainerElement = (element) => {
+    this.container = element
+  }
+
+  render() {
+    return <IGVContainer><div ref={this.setContainerElement} /></IGVContainer>
+  }
+
 }
 
 export default IGV

@@ -3,8 +3,9 @@ import DocumentTitle from 'react-document-title'
 
 import ProjectsTable from './components/ProjectsTable'
 
-export default () =>
+export default () => (
   <div>
     <DocumentTitle title="seqr: home" />
     <ProjectsTable />
   </div>
+)
