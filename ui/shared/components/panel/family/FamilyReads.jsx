@@ -39,7 +39,7 @@ const getTrackOptions = (type, sample, individual) => {
   return { url, name, type, ...TRACK_OPTIONS[type] }
 }
 
-const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, minJunctionEndsVisible) => {
+const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
   const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { filePath, sampleId }]) => {
       if (!acc[filePath]) {
@@ -75,7 +75,6 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, minJ
           }
         } else if (type === JUNCTION_TYPE) {
           track.indexURL = `${track.url}.tbi`
-          track.minJunctionEndsVisible = minJunctionEndsVisible
 
           const coverageSample = getIndivSampleType(COVERAGE_TYPE, individualGuid)
           if (coverageSample) {
@@ -180,16 +179,22 @@ ReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
-const updateJunctionRefs = (tracks, minVisible) => tracks.map(track => ({
+const optionReducer = trackType => (acc, { type, field, value }) => ({
+  ...acc,
+  ...(trackType === type) ? { [field]: value } : {},
+})
+
+const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
   ...track,
+  ...options.reduce(optionReducer(track.type), {}),
   ...(track.type === 'merged') ? {
     tracks: track.tracks.map(tr => (
-      { ...tr, ...(tr.type === JUNCTION_TYPE) ? { minJunctionEndsVisible: minVisible } : {} })),
+      { ...tr, ...options.reduce(optionReducer(tr.type), {}) })),
   } : {},
 }))
 
 const IgvPanel = React.memo((
-  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible },
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, options },
 ) => {
   const size = variant.end && variant.end - variant.pos
   const locus = variant && getLocus(
@@ -199,9 +204,9 @@ const IgvPanel = React.memo((
     size,
   )
 
-  const rnaRefs = updateJunctionRefs(rnaReferences, minJunctionEndsVisible)
-  const tracks = rnaRefs.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes,
-    minJunctionEndsVisible))
+  const tracks = applyUserTrackSettings(
+    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)), options,
+  )
 
   return (
     <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
@@ -212,7 +217,7 @@ IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
-  minJunctionEndsVisible: PropTypes.number,
+  options: PropTypes.arrayOf(PropTypes.object),
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -353,7 +358,7 @@ class FamilyReads extends React.PureComponent {
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
-            minJunctionEndsVisible={minJunctionEndsVisible}
+            options={[{ type: JUNCTION_TYPE, field: 'minJunctionEndsVisible', value: minJunctionEndsVisible }]}
             individualsByGuid={individualsByGuid}
             project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
           />
