@@ -36,20 +36,17 @@ const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : it
 
 export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, filename, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
+  const linkBody = linkContent || (
+    <span>
+      <img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} />
+      {` .${ext}`}
+    </span>
+  )
 
   if (url) {
     const noQuery = !url.includes('?')
     const endQuery = noQuery || url.endsWith('?')
-    return (
-      <a href={`${url}${noQuery ? '?' : ''}${!endQuery ? '&' : ''}file_format=${ext}`}>
-        {linkContent || (
-          <span>
-            <img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} />
-            {` .${ext}`}
-          </span>
-        )}
-      </a>
-    )
+    return <a href={`${url}${noQuery ? '?' : ''}${!endQuery ? '&' : ''}file_format=${ext}`}>{linkBody}</a>
   }
 
   let content = rawData.map(row => processRow(row).map(
@@ -60,7 +57,7 @@ export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, fil
   }
   const href = URL.createObjectURL(new Blob([content], {  type: 'application/octet-stream' }))
 
-  return <a href={href} download={`${filename}.${extConfig.dataExt || ext}`}>{linkContent}</a>
+  return <a href={href} download={`${filename}.${extConfig.dataExt || ext}`}>{linkBody}</a>
 })
 
 BaseFileLink.propTypes = {
