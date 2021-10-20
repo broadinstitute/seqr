@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Label, Popup, List, Header, Segment } from 'semantic-ui-react'
+import { Label, Popup, List, Header, Segment, Divider } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
 import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD, ANY_AFFECTED } from '../../../utils/constants'
@@ -18,6 +18,11 @@ const TS_THRESHOLD = 0.993
 
 const INLINE_STYLE = {
   display: 'inline-block',
+}
+
+const PADDED_INLINE_STYLE = {
+  marginTop: '0.5em',
+  ...INLINE_STYLE,
 }
 
 const BaseGeneLabelContent = styled(
@@ -229,24 +234,31 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
 `
 
 export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containerStyle, ...labelProps }) => {
+  const geneDetails = GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => (
+    { ...sectionConfig, detail: showDetails(gene) && detailsDisplay(gene) }
+  )).filter(({ detail }) => detail).map(({ detail, ...sectionConfig }) => (
+    <GeneDetailSection
+      key={sectionConfig.label}
+      compact={compact}
+      details={detail}
+      {...sectionConfig}
+      {...labelProps}
+    />
+  ))
+  const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
+  const showDivider = geneDetails.length > 0 && hasLocusLists
   const omimDetails = OMIM_SECTION.showDetails(gene) && OMIM_SECTION.detailsDisplay(gene)
+
   return (
     <div style={containerStyle}>
-      {GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => (
-        <GeneDetailSection
-          key={sectionConfig.label}
-          compact={compact}
-          details={showDetails(gene) && detailsDisplay(gene)}
-          {...sectionConfig}
-          {...labelProps}
-        />
-      ))}
+      {geneDetails}
+      {showDivider && <Divider fitted />}
       {
-        showLocusLists && gene.locusListGuids.length > 0 && (
+        hasLocusLists && (
           <LocusListLabels
             locusListGuids={gene.locusListGuids}
             compact={compact}
-            containerStyle={INLINE_STYLE}
+            containerStyle={showDivider ? PADDED_INLINE_STYLE : INLINE_STYLE}
             {...labelProps}
           />
         )
