@@ -7,7 +7,7 @@ import { Field } from 'redux-form'
 import { Label, Popup, Form, Input } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { SearchInput, YearSelector } from 'shared/components/form/Inputs'
+import { SearchInput, YearSelector, RadioButtonGroup } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
@@ -305,7 +305,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
       field => individual[field] || individual[field] === false,
     ).map(field => <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>),
-    subFieldProps: { margin: '5px 0', radioLabelStyle: 'width: 250px', ...NULLABLE_BOOL_FIELD },
+    subFieldProps: {
+      margin: '5px 0',
+      groupContainer: props => <RadioButtonGroup radioLabelStyle="width: 250px" {...props} />,
+      ...NULLABLE_BOOL_FIELD,
+    },
     individualFields: individual => ({
       isVisible: individual.affected === AFFECTED,
       fieldValue: individual,
