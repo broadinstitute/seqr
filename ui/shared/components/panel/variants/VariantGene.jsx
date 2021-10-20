@@ -393,6 +393,10 @@ class VariantGenes extends React.PureComponent {
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
 
+    const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
+      <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+
+
     if (geneIds.length < 6 || showAll) {
       return (
         <div>
@@ -406,10 +410,7 @@ class VariantGenes extends React.PureComponent {
               compact
             />
           ))}
-          {
-            !mainGeneId && geneIds.length > 0 &&
-              <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
-          }
+          {geneSearchLink}
         </div>
       )
     }
@@ -438,6 +439,7 @@ class VariantGenes extends React.PureComponent {
             )
           })}
         </div>
+        {geneSearchLink}
       </div>
     )
   }
