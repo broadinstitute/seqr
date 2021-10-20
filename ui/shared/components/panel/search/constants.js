@@ -1,4 +1,4 @@
-import { RadioGroup, BooleanCheckbox, BaseSemanticInput, SearchableInput } from 'shared/components/form/Inputs'
+import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -459,88 +459,99 @@ export const IN_SILICO_FIELDS = [
     name: 'polyphen',
     label: 'Polyphen',
     labelHelp: 'Enter a value for Polyphen prediction',
-    component: SearchableInput,
+    component: Select,
     options: [{
-      title: 'benign',
+      text: '',
+      value: null,
+    },
+    {
+      text: 'benign',
       value: 'B',
     },
     {
-      title: 'possibly damaging',
+      text: 'possibly damaging',
       value: 'P',
     },
     {
-      title: 'probably damaging',
+      text: 'probably damaging',
       value: 'D',
     }],
-    value: '',
   },
   {
     name: 'sift',
     label: 'Sift',
     labelHelp: 'Enter a value for Sift prediction',
-    component: SearchableInput,
+    component: Select,
     options: [{
-      title: 'tolerated',
+      text: '',
+      value: null,
+    },
+    {
+      text: 'tolerated',
       value: 'T',
     },
     {
-      title: 'damaging',
+      text: 'damaging',
       value: 'D',
     }],
-    value: '',
   },
   {
     name: 'mut_taster',
     label: 'Mut Taster',
     labelHelp: 'Enter value for Mutation Taster prediction',
-    component: SearchableInput,
+    component: Select,
     options: [{
-      title: 'polymorphism (N)',
+      text: '',
+      value: null,
+    },
+    {
+      text: 'polymorphism (N)',
       value: 'N',
     },
     {
-      title: 'polymorphism (P)',
+      text: 'polymorphism (P)',
       value: 'P',
     },
     {
-      title: 'damaging',
+      text: 'disease causing',
       value: 'D',
-    },
-    {
-      title: 'disease causing',
-      value: 'A',
     }],
-    value: '',
   },
   {
     name: 'fathmm',
     label: 'FATHMM',
     labelHelp: 'Enter a value for FATHMM prediction',
-    component: SearchableInput,
+    component: Select,
     options: [{
-      title: 'tolerated',
+      text: '',
+      value: null,
+    },
+    {
+      text: 'tolerated',
       value: 'T',
     },
     {
-      title: 'damaging',
+      text: 'damaging',
       value: 'D',
     }],
-    value: '',
   },
   {
     name: 'metasvm',
     label: 'METASVM',
     labelHelp: 'Enter a value for METASVM prediction',
-    component: SearchableInput,
+    component: Select,
     options: [{
-      title: 'tolerated',
+      text: '',
+      value: null,
+    },
+    {
+      text: 'tolerated',
       value: 'T',
     },
     {
-      title: 'damaging',
+      text: 'damaging',
       value: 'D',
     }],
-    value: '',
   },
 ]
 

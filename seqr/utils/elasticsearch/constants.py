@@ -292,7 +292,24 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 
-PREDICTION_FIELD_LOOKUP = {val.get('response_key', key).lower(): key for key, val in PREDICTION_FIELDS_CONFIG.items()}
+PREDICTION_FIELD_LOOKUP = {
+    'cadd': 'cadd_PHRED',
+    'dann': 'dbnsfp_DANN_score',
+    'eigen': 'eigen_Eigen_phred',
+    'fathmm': 'dbnsfp_FATHMM_pred',
+    'gerp_rs': 'dbnsfp_GERP_RS',
+    'mpc': 'mpc_MPC',
+    'metasvm': 'dbnsfp_MetaSVM_pred',
+    'mut_taster': 'dbnsfp_MutationTaster_pred',
+    'phastcons_100_vert': 'dbnsfp_phastCons100way_vertebrate',
+    'polyphen': 'dbnsfp_Polyphen2_HVAR_pred',
+    'primate_ai': 'primate_ai_score',
+    'splice_ai': 'splice_ai_delta_score',
+    'splice_ai_consequence': 'splice_ai_splice_consequence',
+    'revel': 'dbnsfp_REVEL_score',
+    'sift': 'dbnsfp_SIFT_pred',
+    'strvctvre': 'StrVCTVRE_score',
+}
 
 QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}

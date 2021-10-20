@@ -106,25 +106,21 @@ export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 const IN_SILICO_FILTER_ROW_CHUNK_SIZE = 5
 
-export const inSilicoFilterGridLayout = (fieldComponentChunk) => {
-  return (
-    <Grid.Row>
-      { fieldComponentChunk.map((fieldComponent) => {
-        return (
-          <Grid.Column width={3}>
-            {fieldComponent}
-          </Grid.Column>
-        )
-      },
-    )}
-    </Grid.Row>
-  )
-}
+export const inSilicoFilterGridLayout = fieldComponentChunk => (
+  <Grid.Row>
+    { fieldComponentChunk.map(fieldComponent => (
+      <Grid.Column width={3}>
+        {fieldComponent}
+      </Grid.Column>
+    ))}
+  </Grid.Row>
+)
 
 export const inSilicoFieldLayout = (fieldComponents) => {
   const numberOfRows = Math.ceil(fieldComponents.length / IN_SILICO_FILTER_ROW_CHUNK_SIZE)
   const fieldComponentsCopy = [...fieldComponents]
   const fieldComponentChunks = []
+  // eslint-disable-next-line no-plusplus
   for (let i = numberOfRows; i > 0; i--) {
     const fieldComponentChunk = fieldComponentsCopy.splice(0, IN_SILICO_FILTER_ROW_CHUNK_SIZE)
     fieldComponentChunks.push(fieldComponentChunk)
@@ -132,10 +128,9 @@ export const inSilicoFieldLayout = (fieldComponents) => {
   return (
     <Form.Field>
       <Grid>
-        {fieldComponentChunks.map((fieldComponentChunk, index) => {
-          return inSilicoFilterGridLayout(fieldComponentChunk, index, fieldComponentChunks.length)
-        })
-        }
+        { fieldComponentChunks.map((fieldComponentChunk, index) => (
+          inSilicoFilterGridLayout(fieldComponentChunk, index, fieldComponentChunks.length)
+        ))}
       </Grid>
     </Form.Field>
   )

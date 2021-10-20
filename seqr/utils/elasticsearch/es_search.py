@@ -201,10 +201,11 @@ class EsSearch(object):
 
         q = Q()
         for in_silico_filter_key in list(in_silico_filters.keys()):
-            if len(in_silico_filters[in_silico_filter_key]) == 0:
+            if in_silico_filters[in_silico_filter_key] is None or len(in_silico_filters[in_silico_filter_key]) == 0:
                 del in_silico_filters[in_silico_filter_key]
 
         for in_silico_filter in in_silico_filters:
+
             prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
 
             prediction_value = in_silico_filters[in_silico_filter]
