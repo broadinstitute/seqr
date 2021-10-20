@@ -141,8 +141,8 @@ class Predictions extends React.PureComponent {
     return (
       <div>
         {
-          predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField =>
-            <Prediction key={predictorField.field} {...predictorField} />)
+          predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (
+            <Prediction key={predictorField.field} {...predictorField} />))
         }
         {
           predictorFields.slice(0, NUM_TO_SHOW_ABOVE_THE_FOLD).map(predictorField => (

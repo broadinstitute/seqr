@@ -58,20 +58,13 @@ const BaseVariantSearchResultsContent = React.memo(({
   const paginationFields = totalVariantsCount > recordsPerPage ?
     [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
   const fields = [...FIELDS, ...paginationFields]
-<<<<<<< HEAD
-=======
 
->>>>>>> 4ad5d46a7... Updated custom annotations logic as requested
   return [
     <LargeRow key="resultsSummary">
       <Grid.Column width={5}>
         {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
-<<<<<<< HEAD
         <b>{totalVariantsCount}</b>
         variants
-=======
-        <b>{totalVariantsCount}</b> variants{displayVariants.length < totalVariantsCount ? <span>, after filtering showing <b>{displayVariants.length}</b> variants</span> : null}
->>>>>>> 4ad5d46a7... Updated custom annotations logic as requested
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}
