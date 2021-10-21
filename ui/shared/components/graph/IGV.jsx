@@ -17,7 +17,7 @@ const IGVContainer = styled(FontAwesomeIconsContainer)`
   }
 `
 
-const getTrackId = track => track.url || track.name // merged tracks do not have a URL
+const getTrackId = track => track.name || track.url // merged tracks do not have a URL
 
 class IGV extends React.PureComponent {
 

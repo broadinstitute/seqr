@@ -200,3 +200,9 @@ export const FontAwesomeIconsContainer = styled.div`
     content: "\\f05b";
   } 
 `
+
+export const SampleNameText = styled.span`
+  word-wrap: break-word;
+  word-break: break-all;  
+  white-space: normal;
+`

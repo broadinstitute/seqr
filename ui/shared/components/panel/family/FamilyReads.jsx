@@ -13,7 +13,8 @@ import {
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup } from '../../form/Inputs'
 import IGV from '../../graph/IGV'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, SampleNameText } from '../../StyledComponents'
+import ColorPicker from '../../ColorPicker'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED } from '../../../utils/constants'
@@ -38,7 +39,7 @@ const getTrackOptions = (type, sample, individual) => {
   return { url, name, type, ...TRACK_OPTIONS[type] }
 }
 
-const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
+const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, sampleGcnvColors) => {
   const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { filePath, sampleId }]) => {
       if (!acc[filePath]) {
@@ -95,13 +96,21 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
             ...track,
             indexURL: `${track.url}.tbi`,
             highlightSamples: Object.entries(batch).reduce((higlightAcc, [iGuid, sampleId]) => ({
-              [sampleId || individualsByGuid[iGuid].individualId]:
-                individualsByGuid[iGuid].affected === AFFECTED ? 'red' : 'blue',
+              [sampleId || individualsByGuid[iGuid].individualId]: sampleGcnvColors[iGuid],
               ...higlightAcc,
             }), {}),
-            name: individualGuids.length === 1 ? track.name : individualGuids.map(
-              iGuid => individualsByGuid[iGuid].displayName,
-            ).join(', '),
+            name: ReactDOMServer.renderToString(
+              <div>
+                { individualGuids.map(iGuid => (
+                  <span
+                    key={iGuid}
+                    color={`${sampleGcnvColors[iGuid]}`}
+                  >
+                    {`${individualsByGuid[iGuid].displayName} `}
+                  </span>
+                ))}
+              </div>,
+            ),
           } : null
         }
 
@@ -179,7 +188,7 @@ ReadButtons.propTypes = {
 }
 
 const IgvPanel = React.memo((
-  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences },
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, sampleGcnvColors },
 ) => {
   const size = variant.end && variant.end - variant.pos
   const locus = variant && getLocus(
@@ -189,7 +198,9 @@ const IgvPanel = React.memo((
     size,
   )
 
-  const tracks = rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes))
+  const tracks = rnaReferences.concat(
+    getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes, sampleGcnvColors),
+  )
 
   return (
     <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
@@ -201,8 +212,30 @@ IgvPanel.propTypes = {
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
   individualsByGuid: PropTypes.object,
+  sampleGcnvColors: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
+}
+
+const SamplePanel = (
+  { individualsByGuid, sampleGcnvColors, updateSampleColor },
+) => Object.entries(sampleGcnvColors).map(([iGuid, sampleColor]) => (
+  <div style={{ whiteSpace: 'nowrap' }} key={iGuid}>
+    <SampleNameText>{individualsByGuid[iGuid].displayName}</SampleNameText>
+    <span style={{ marginLeft: '8px' }}>
+      <ColorPicker
+        key={sampleColor}
+        color={sampleColor}
+        colorChangedHandler={newColor => updateSampleColor({ ...sampleGcnvColors, [iGuid]: newColor })}
+      />
+    </span>
+  </div>
+))
+
+SamplePanel.propTypes = {
+  individualsByGuid: PropTypes.object,
+  sampleGcnvColors: PropTypes.object,
+  updateSampleColor: PropTypes.func,
 }
 
 class FamilyReads extends React.PureComponent {
@@ -222,12 +255,26 @@ class FamilyReads extends React.PureComponent {
     openFamily: null,
     sampleTypes: [],
     rnaReferences: [],
+    sampleGcnvColors: {},
+  }
+
+  getSampleGcnvColors = (familyGuid) => {
+    const { igvSamplesByFamilySampleIndividual, individualsByGuid } = this.props
+    const igvSampleIndividuals = (
+      familyGuid && (igvSamplesByFamilySampleIndividual || {})[familyGuid]) || {}
+    return Object.keys(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
+      (acc, iGuid) => ({
+        ...acc,
+        [iGuid]: individualsByGuid[iGuid].affected === AFFECTED ? 'red' : 'blue',
+      }), {},
+    )
   }
 
   showReads = familyGuid => sampleTypes => () => {
     this.setState({
       openFamily: familyGuid,
       sampleTypes,
+      sampleGcnvColors: sampleTypes.includes(GCNV_TYPE) ? this.getSampleGcnvColors(familyGuid) : {},
     })
   }
 
@@ -258,12 +305,16 @@ class FamilyReads extends React.PureComponent {
     })
   }
 
+  updateSampleGcnvColor = (sampleGcnvColors) => {
+    this.setState({ sampleGcnvColors })
+  }
+
   render() {
     const {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
       projectsByGuid, ...props
     } = this.props
-    const { openFamily, sampleTypes, rnaReferences } = this.state
+    const { openFamily, sampleTypes, rnaReferences, sampleGcnvColors } = this.state
 
     const showReads = (
       <ReadButtons
@@ -282,7 +333,7 @@ class FamilyReads extends React.PureComponent {
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const reads = Object.keys(igvSampleIndividuals).length > 0 ? (
       <Segment.Group horizontal>
-        {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) && (
+        {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0 || Object.keys(sampleGcnvColors).length > 0) && (
           <Segment>
             {dnaTrackOptions.length > 0 && (
               <CheckboxGroup
@@ -290,6 +341,13 @@ class FamilyReads extends React.PureComponent {
                 value={sampleTypes}
                 options={dnaTrackOptions}
                 onChange={this.updateSampleTypes}
+              />
+            )}
+            {Object.keys(sampleGcnvColors).length > 0 && (
+              <SamplePanel
+                individualsByGuid={individualsByGuid}
+                sampleGcnvColors={sampleGcnvColors}
+                updateSampleColor={this.updateSampleGcnvColor}
               />
             )}
             {rnaTrackOptions.length > 0 && (
@@ -330,6 +388,7 @@ class FamilyReads extends React.PureComponent {
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
             individualsByGuid={individualsByGuid}
+            sampleGcnvColors={sampleGcnvColors}
             project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
           />
         </Segment>
