@@ -39,10 +39,6 @@ const geneSection = details => (
   </CompactGrid>
 )
 
-// GeneSection.propTypes = {
-//   details: PropTypes.arrayOf(PropTypes.object),
-// }
-
 const textWithLinks = (text) => {
   const linkMap = {
     PubMed: 'http://www.ncbi.nlm.nih.gov/pubmed/',
