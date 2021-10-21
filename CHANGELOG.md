@@ -2,6 +2,9 @@
 
 ## dev
 
+## 10/21/21
+* Support updated WES SV loading pipeline format
+
 ## 9/30/21
 * Allow project-specific HGMD access (REQUIRES DB MIGRATION)
 * Demo project available to all users (REQUIRES DB MIGRATION)

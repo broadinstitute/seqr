@@ -39,6 +39,7 @@ class AwesomeBar extends React.PureComponent {
     getResultHref: PropTypes.func,
     onResultSelect: PropTypes.func,
     asFormInput: PropTypes.bool,
+    parseResultItem: PropTypes.func,
   }
 
   state = {}
@@ -77,12 +78,13 @@ class AwesomeBar extends React.PureComponent {
   }
 
   handleResultSelect = (e, obj) => {
-    const { getResultHref, onResultSelect, newWindow, history } = this.props
+    const { getResultHref, onResultSelect, parseResultItem, newWindow, history } = this.props
     e.preventDefault()
     this.setState({ value: obj.result.title })
     const href = getResultHref ? getResultHref(obj.result) : obj.result.href
     if (onResultSelect) {
-      onResultSelect(obj.result)
+      const result = parseResultItem ? parseResultItem(obj.result) : obj.result
+      onResultSelect(result)
     } else if (newWindow) {
       window.open(href, '_blank')
     } else {
@@ -114,8 +116,10 @@ class AwesomeBar extends React.PureComponent {
 
 export { AwesomeBar as AwesomeBarComponent }
 
-export const AwesomeBarFormInput = React.memo(({ onChange, parseResultItem = result => result.key, ...props }) => (
-  <AwesomeBar onResultSelect={result => onChange(parseResultItem(result))} asFormInput {...props} />
+const defaultParseResultItem = result => result.key
+
+export const AwesomeBarFormInput = React.memo(({ onChange, parseResultItem = defaultParseResultItem, ...props }) => (
+  <AwesomeBar onResultSelect={onChange} parseResultItem={parseResultItem} asFormInput {...props} />
 ))
 
 AwesomeBarFormInput.propTypes = {

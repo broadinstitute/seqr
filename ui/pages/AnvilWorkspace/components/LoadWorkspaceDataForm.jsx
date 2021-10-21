@@ -91,7 +91,7 @@ const FORM_FIELDS = [
   DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX,
 ]
 
-const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => new HttpRequestHelper(
+const createProjectFromWorkspace = (namespace, name) => ({ uploadedFile, ...values }) => new HttpRequestHelper(
   `/api/create_project_from_workspace/submit/${namespace}/${name}`,
   (responseJson) => {
     window.location.href = `/project/${responseJson.projectGuid}/project_page`
@@ -121,7 +121,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
     <ReduxFormWrapper
       form="loadWorkspaceData"
       modalName="loadWorkspaceData"
-      onSubmit={values => createProjectFromWorkspace(values, namespace, name)}
+      onSubmit={createProjectFromWorkspace(namespace, name)}
       confirmCloseIfNotSaved
       closeOnSuccess
       showErrorPanel

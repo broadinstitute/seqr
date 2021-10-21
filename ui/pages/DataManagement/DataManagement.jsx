@@ -28,7 +28,7 @@ const DataManagement = ({ match, user }) => (
       {DATA_MANAGEMENT_PAGES.map(({ path, params, component }) => (
         <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />))}
       <Route path={match.url} component={null} />
-      <Route component={() => <Error404 />} />
+      <Route component={Error404} />
     </Switch>
   ) : <Error401 />
 )

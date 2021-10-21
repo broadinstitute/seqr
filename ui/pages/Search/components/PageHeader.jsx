@@ -60,17 +60,14 @@ const PAGE_CONFIGS = {
   variant: entityGuid => ({ entity: { name: entityGuid } }),
 }
 
-export const PageHeader = React.memo((
-  { projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match },
-) => {
+const getPageHeaderProps = ({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
   const { pageType, entityGuid } = match.params
 
-  let project
   const breadcrumbIdSections = []
   const { entity, entityUrlPath, actualPageType, description } =
     PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash)
   if (entity) {
-    project = projectsByGuid[entity.projectGuid]
+    const project = projectsByGuid[entity.projectGuid]
     breadcrumbIdSections.push({ content: snakecaseToTitlecase(actualPageType || pageType) })
     breadcrumbIdSections.push({
       content: entity.displayName || entity.name,
@@ -78,14 +75,12 @@ export const PageHeader = React.memo((
     })
   }
 
-  return (
-    <PageHeaderLayout
-      entity="variant_search"
-      breadcrumbIdSections={breadcrumbIdSections}
-      description={description}
-    />
-  )
-})
+  return { description, breadcrumbIdSections }
+}
+
+export const PageHeader = React.memo(
+  props => <PageHeaderLayout entity="variant_search" {...getPageHeaderProps(props)} />,
+)
 
 PageHeader.propTypes = {
   projectsByGuid: PropTypes.object,

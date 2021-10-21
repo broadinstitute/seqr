@@ -1576,7 +1576,7 @@ class EsUtilsTest(TestCase):
     def test_sv_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DEL']},
+            'annotations': {'structural': ['DUP']},
             'freqs': {'sv_callset': {'af': 0.1}},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},
@@ -1594,7 +1594,7 @@ class EsUtilsTest(TestCase):
                     {'range': {'sf': {'lte': 0.1}}}
                 ]
             }},
-            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['DUP', 'gCNV_DUP']}},
             {'bool': {
                 'must': [
                     {'bool': {
@@ -1992,14 +1992,14 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, num_results=10)
 
         annotation_secondary_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
         ]}}
 
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+                    {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{
@@ -3011,7 +3011,7 @@ class EsUtilsTest(TestCase):
                 dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
             _set_cache(cache_key, None)
             annotations = {'frameshift': ['frameshift_variant']} if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS \
-                else {'structural': ['DEL']}
+                else {'structural': ['DEL', 'gCNV_DEL']}
             search_model.search = {
                 'inheritance': {'mode': mode, 'filter': inheritance_filter},
                 'annotations': annotations,
@@ -3020,7 +3020,7 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model, num_results=2)
 
             index = INDEX_NAME if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else SV_INDEX_NAME
-            annotation_query = {'terms': {'transcriptConsequenceTerms': [next(iter(annotations.values()))[0]]}}
+            annotation_query = {'terms': {'transcriptConsequenceTerms': next(iter(annotations.values()))}}
             if expected_comp_het_filter:
                 self.assertExecutedSearches([
                     dict(gene_aggs=True, start_index=0, size=1, index=index, filters=[

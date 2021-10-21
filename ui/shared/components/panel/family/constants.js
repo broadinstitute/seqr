@@ -43,7 +43,6 @@ export const GCNV_TRACK_OPTIONS = {
   height: 200,
   min: 0,
   max: 5,
-  autoscale: true,
   onlyHandleClicksForHighlightedSamples: true,
 }
 
@@ -387,3 +386,9 @@ export const MAPPABILITY_TRACK_OPTIONS = MAPPABILITY_TRACKS.map((track, i) => {
     },
   }
 })
+
+export const JUNCTION_VISIBILITY_OPTIONS = [
+  { value: 2, text: 'only local junctions' },
+  { value: 1, text: 'semi-local junctions' },
+  { value: 0, text: 'all junctions' },
+]

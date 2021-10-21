@@ -60,8 +60,8 @@ class SavedVariants extends React.PureComponent {
   }
 
   navigateToTag = (e, data) => {
-    const { history, getUpdateTagUrl } = this.props
-    history.push(getUpdateTagUrl(data.value))
+    const { history, getUpdateTagUrl, match } = this.props
+    history.push(getUpdateTagUrl(data.value, match))
   }
 
   render() {

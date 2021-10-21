@@ -12,7 +12,7 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
-import { InlineHeader } from 'shared/components/StyledComponents'
+import { InlineHeader, ColoredDiv } from 'shared/components/StyledComponents'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS, SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME } from 'shared/utils/constants'
 
 import CreateProjectButton from './CreateProjectButton'
@@ -119,11 +119,11 @@ const COLUMNS = [
           const color = (sampleType === SAMPLE_TYPE_EXOME && '#73AB3D') || (sampleType === SAMPLE_TYPE_GENOME && '#4682b4') || 'black'
           return (
             <div key={sampleType}>
-              <span style={{ color }}>
+              <ColoredDiv color={color}>
                 {numSamples}
                 &nbsp;
                 <b>{sampleType}</b>
-              </span>
+              </ColoredDiv>
               {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}
             </div>
           )

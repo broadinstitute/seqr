@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUserOptionsByUsername, getUserOptionsIsLoading } from 'redux/selectors'
+import { getUserOptionsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -17,22 +17,15 @@ import { USER_NAME_FIELDS } from 'shared/utils/constants'
 import { updateCollaborator } from '../reducers'
 import { getUserOptions, getCurrentProject } from '../selectors'
 
-const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) => (
+const CollaboratorEmailDropdown = React.memo(({ load, ...props }) => (
   <DataLoader load={load} loading={false} content>
-    <AddableSelect
-      loading={loading}
-      additionLabel="New Collaborator: "
-      onChange={val => onChange(usersByUsername[val] || { email: val })}
-      value={value.username || value.email}
-      {...props}
-    />
+    <AddableSelect additionLabel="New Collaborator: " {...props} />
   </DataLoader>
 ))
 
 CollaboratorEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
-  usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
   value: PropTypes.object,
 }
@@ -40,7 +33,6 @@ CollaboratorEmailDropdown.propTypes = {
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
   options: getUserOptions(state),
-  usersByUsername: getUserOptionsByUsername(state),
 })
 
 const mapDropdownDispatchToProps = {
@@ -52,6 +44,8 @@ const CREATE_FIELDS = [
     name: 'user',
     label: 'Email',
     component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(CollaboratorEmailDropdown),
+    format: value => value && (value.username ? value : value.email),
+    normalize: value => (typeof value === 'object' ? value : { email: value }),
     validate: value => (
       /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test((value || {}).email) ? undefined : 'Invalid email address'
     ),
@@ -74,7 +68,7 @@ const AddCollaboratorButton = React.memo(({ onSubmit }) => (
   <UpdateButton
     modalId="addCollaborator"
     modalTitle="Add Collaborator"
-    onSubmit={updates => onSubmit(updates.user)}
+    onSubmit={onSubmit}
     formFields={CREATE_FIELDS}
     editIconName="plus"
     buttonText="Add Collaborator"
@@ -141,7 +135,7 @@ const getSortedCollabs = (project, isAnvil) => orderBy(
   ['desc', 'asc'],
 )
 
-const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
+const ProjectCollaborators = React.memo(({ project, onSubmit, addCollaborator }) => {
   const localCollabs = getSortedCollabs(project, false)
   const anvilCollabs = getSortedCollabs(project, true)
   return [
@@ -151,7 +145,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
     ((project.canEdit && !project.workspaceName) ? (
       <div key="addButton">
         <br />
-        <AddCollaboratorButton onSubmit={onSubmit} />
+        <AddCollaboratorButton onSubmit={addCollaborator} />
       </div>
     ) : null),
     (localCollabs.length && anvilCollabs.length) ? (
@@ -167,6 +161,7 @@ const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
+  addCollaborator: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
@@ -175,6 +170,7 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = {
   onSubmit: updateCollaborator,
+  addCollaborator: updates => updateCollaborator(updates.user),
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectCollaborators)

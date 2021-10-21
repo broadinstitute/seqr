@@ -19,7 +19,7 @@ const LoginPage = ({ match, googleLoginEnabled }) => (
         <Route key="forgot" path={`${match.url}/forgot_password`} component={ForgotPassword} />,
         <Route key="reset" path={`${match.url}/set_password/:userToken`} component={SetPassword} />,
       ]}
-    <Route component={() => <Error404 />} />
+    <Route component={Error404} />
   </Switch>
 )
 

@@ -160,11 +160,15 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
 }
 
+const svCallsetChange = (onChange, initialValues) => val => onChange(
+  { ...initialValues, [SV_CALLSET_FREQUENCY]: val },
+)
+
 const SVFrequecyHeaderFilter = ({ value, onChange }) => (
   <Form.Group inline>
     <AfFilter
       value={value[SV_CALLSET_FREQUENCY]}
-      onChange={val => onChange({ ...value, [SV_CALLSET_FREQUENCY]: val })}
+      onChange={svCallsetChange(onChange, value)}
       inline
       label="Callset"
       width={16}

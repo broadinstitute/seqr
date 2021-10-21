@@ -3,12 +3,15 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Label, Popup, List, Header, Segment } from 'semantic-ui-react'
+import { Label, Popup, List, Header, Segment, Divider } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
-import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD, ANY_AFFECTED } from '../../../utils/constants'
+import {
+  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, ANY_AFFECTED, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
+  PANEL_APP_CONFIDENCE_DESCRIPTION,
+} from '../../../utils/constants'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader, ButtonLink } from '../../StyledComponents'
+import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 
@@ -20,9 +23,20 @@ const INLINE_STYLE = {
   display: 'inline-block',
 }
 
-const BaseGeneLabelContent = styled(
-  ({ color, label, maxWidth, containerStyle, dispatch, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
-)`
+const PADDED_INLINE_STYLE = {
+  marginTop: '0.5em',
+  ...INLINE_STYLE,
+}
+
+const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, containerStyle, dispatch, ...props }) => {
+  const labelProps = {
+    ...props,
+    size: 'mini',
+    content: label,
+  }
+  return customColor ?
+    <ColoredLabel {...labelProps} color={customColor} /> : <Label {...labelProps} color={color || 'grey'} />
+})`
    margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
    overflow: hidden;
    text-overflow: ellipsis;
@@ -63,7 +77,7 @@ GeneLabel.propTypes = {
 }
 
 const BaseLocusListLabels = React.memo((
-  { locusListGuids, locusListsByGuid, compact, containerStyle, ...labelProps },
+  { locusListGuids, locusListsByGuid, locusListConfidence, compact, containerStyle, ...labelProps },
 ) => (
   compact ? (
     <GeneDetailSection
@@ -77,24 +91,41 @@ const BaseLocusListLabels = React.memo((
     />
   ) : (
     <div style={containerStyle}>
-      {locusListGuids.map(locusListGuid => (
-        <GeneDetailSection
-          key={locusListGuid}
-          color="teal"
-          maxWidth="7em"
-          showEmpty
-          label={(locusListsByGuid[locusListGuid] || {}).name}
-          description={(locusListsByGuid[locusListGuid] || {}).name}
-          details={(locusListsByGuid[locusListGuid] || {}).description}
-          containerStyle={containerStyle}
-          {...labelProps}
-        />
-      ))}
+      {locusListGuids.map((locusListGuid) => {
+        const panelAppConfidence = locusListConfidence && locusListConfidence[locusListGuid]
+        let { description } = locusListsByGuid[locusListGuid] || {}
+        if (panelAppConfidence) {
+          description = (
+            <div>
+              {description}
+              <br />
+              <br />
+              <b>PanelApp gene confidence: &nbsp;</b>
+              {PANEL_APP_CONFIDENCE_DESCRIPTION[panelAppConfidence]}
+            </div>
+          )
+        }
+        return (
+          <GeneDetailSection
+            key={locusListGuid}
+            color="teal"
+            customColor={panelAppConfidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppConfidence]}
+            maxWidth="7em"
+            showEmpty
+            label={(locusListsByGuid[locusListGuid] || {}).name}
+            description={(locusListsByGuid[locusListGuid] || {}).name}
+            details={description}
+            containerStyle={containerStyle}
+            {...labelProps}
+          />
+        )
+      })}
     </div>
   )))
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
+  locusListConfidence: PropTypes.object,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object.isRequired,
   containerStyle: PropTypes.object,
@@ -229,24 +260,32 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
 `
 
 export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containerStyle, ...labelProps }) => {
+  const geneDetails = GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => (
+    { ...sectionConfig, detail: showDetails(gene) && detailsDisplay(gene) }
+  )).filter(({ detail }) => detail).map(({ detail, ...sectionConfig }) => (
+    <GeneDetailSection
+      key={sectionConfig.label}
+      compact={compact}
+      details={detail}
+      {...sectionConfig}
+      {...labelProps}
+    />
+  ))
+  const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
+  const showDivider = geneDetails.length > 0 && hasLocusLists
   const omimDetails = OMIM_SECTION.showDetails(gene) && OMIM_SECTION.detailsDisplay(gene)
+
   return (
     <div style={containerStyle}>
-      {GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => (
-        <GeneDetailSection
-          key={sectionConfig.label}
-          compact={compact}
-          details={showDetails(gene) && detailsDisplay(gene)}
-          {...sectionConfig}
-          {...labelProps}
-        />
-      ))}
+      {geneDetails}
+      {showDivider && <Divider fitted />}
       {
-        showLocusLists && gene.locusListGuids.length > 0 && (
+        hasLocusLists && (
           <LocusListLabels
             locusListGuids={gene.locusListGuids}
+            locusListConfidence={gene.locusListConfidence}
             compact={compact}
-            containerStyle={INLINE_STYLE}
+            containerStyle={showDivider ? PADDED_INLINE_STYLE : INLINE_STYLE}
             {...labelProps}
           />
         )
@@ -393,6 +432,9 @@ class VariantGenes extends React.PureComponent {
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
 
+    const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
+      <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+
     if (geneIds.length < 6 || showAll) {
       return (
         <div>
@@ -406,10 +448,7 @@ class VariantGenes extends React.PureComponent {
               compact
             />
           ))}
-          {
-            !mainGeneId && geneIds.length > 0 &&
-              <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
-          }
+          {geneSearchLink}
         </div>
       )
     }
@@ -438,6 +477,7 @@ class VariantGenes extends React.PureComponent {
             )
           })}
         </div>
+        {geneSearchLink}
       </div>
     )
   }
