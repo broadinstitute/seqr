@@ -101,7 +101,10 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
           <br />
         </span>
       ))}
-      <i style={{ color: 'gray' }}>{`NOTE: ${note}`}</i>
+      <i style={{ color: 'gray' }}>
+        NOTE: &nbsp;
+        {note}
+      </i>
     </div>
   ) : 'No score available'
 }
