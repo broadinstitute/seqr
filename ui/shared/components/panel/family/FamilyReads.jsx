@@ -11,7 +11,7 @@ import {
   getProjectsByGuid,
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
-import { CheckboxGroup } from '../../form/Inputs'
+import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
 import IGV from '../../graph/IGV'
 import { ButtonLink } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
@@ -21,6 +21,7 @@ import {
   ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   GTEX_TRACK_OPTIONS, MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
   DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
+  JUNCTION_VISIBILITY_OPTIONS,
 } from './constants'
 
 const MIN_LOCUS_RANGE_SIZE = 100
@@ -178,8 +179,15 @@ ReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
+const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
+  ...options[track.type] ? { ...track, ...options[track.type] } : track,
+  ...(track.type === 'merged') ? {
+    tracks: track.tracks.map(tr => (options[tr.type] ? { ...tr, ...options[tr.type] } : tr)),
+  } : {},
+}))
+
 const IgvPanel = React.memo((
-  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences },
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible },
 ) => {
   const size = variant.end && variant.end - variant.pos
   const locus = variant && getLocus(
@@ -189,7 +197,10 @@ const IgvPanel = React.memo((
     size,
   )
 
-  const tracks = rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes))
+  const tracks = applyUserTrackSettings(
+    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)),
+    { [JUNCTION_TYPE]: { minJunctionEndsVisible } },
+  )
 
   return (
     <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
@@ -200,6 +211,7 @@ IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
+  minJunctionEndsVisible: PropTypes.number,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -222,6 +234,7 @@ class FamilyReads extends React.PureComponent {
     openFamily: null,
     sampleTypes: [],
     rnaReferences: [],
+    minJunctionEndsVisible: 0,
   }
 
   showReads = familyGuid => sampleTypes => () => {
@@ -258,12 +271,16 @@ class FamilyReads extends React.PureComponent {
     })
   }
 
+  junctionsOptionChange = (minJunctionEndsVisible) => {
+    this.setState({ minJunctionEndsVisible })
+  }
+
   render() {
     const {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
       projectsByGuid, ...props
     } = this.props
-    const { openFamily, sampleTypes, rnaReferences } = this.state
+    const { openFamily, sampleTypes, rnaReferences, minJunctionEndsVisible } = this.state
 
     const showReads = (
       <ReadButtons
@@ -315,6 +332,12 @@ class FamilyReads extends React.PureComponent {
                       options={MAPPABILITY_TRACK_OPTIONS}
                       onChange={this.updateRnaReferences}
                     />
+                    <RadioGroup
+                      label="Junctions Tracks Show:"
+                      value={minJunctionEndsVisible}
+                      options={JUNCTION_VISIBILITY_OPTIONS}
+                      onChange={this.junctionsOptionChange}
+                    />
                   </div>
                 )}
               </div>
@@ -329,6 +352,7 @@ class FamilyReads extends React.PureComponent {
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
+            minJunctionEndsVisible={minJunctionEndsVisible}
             individualsByGuid={individualsByGuid}
             project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
           />
