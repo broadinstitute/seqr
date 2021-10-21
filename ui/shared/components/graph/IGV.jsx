@@ -17,9 +17,16 @@ const IGVContainer = styled(FontAwesomeIconsContainer)`
   }
 `
 
-const TRACK_UPDATE_PROPERTIES = ['minJunctionEndsVisible']
+const TRACK_UPDATE_PROPERTIES = ['minJunctionEndsVisible', 'highlightSamples']
 
 const getTrackId = track => track.url || track.name // merged tracks do not have a URL
+
+const notEqual = (a, b) => {
+  if (typeof a === 'object' && typeof b === 'object') {
+    return Object.keys(a).some(k => a[k] !== b[k])
+  }
+  return a !== b
+}
 
 class IGV extends React.PureComponent {
 
@@ -60,8 +67,9 @@ class IGV extends React.PureComponent {
         const prevTrack = track.name && prevTracksById[getTrackId(track)]
         if (prevTrack) {
           const optionChanged = (track.type === 'merged') ?
-            track.tracks.some((tr, i) => TRACK_UPDATE_PROPERTIES.some(prop => tr[prop] !== prevTrack.tracks[i][prop])) :
-            TRACK_UPDATE_PROPERTIES.some(prop => track[prop] !== prevTrack[prop])
+            track.tracks.some(
+              (tr, i) => TRACK_UPDATE_PROPERTIES.some(prop => notEqual(tr[prop], prevTrack.tracks[i][prop])),
+            ) : TRACK_UPDATE_PROPERTIES.some(prop => notEqual(track[prop], prevTrack[prop]))
           if (optionChanged) {
             this.browser.removeTrackByName(track.name)
             this.browser.loadTrack(track)

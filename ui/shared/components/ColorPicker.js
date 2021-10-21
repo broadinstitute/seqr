@@ -29,6 +29,8 @@ const StyledPopup = styled(Popup).attrs({ flowing: true })`
   }
 `
 
+const colorStyle = color => ({ background: color })
+
 class ColorPicker extends React.PureComponent {
 
   static propTypes = {
@@ -52,6 +54,10 @@ class ColorPicker extends React.PureComponent {
     colorChangedHandler(color.hex)
   }
 
+  setColor = (color) => {
+    this.setState({ color })
+  }
+
   render() {
     const { color } = this.state
     return (
@@ -60,14 +66,14 @@ class ColorPicker extends React.PureComponent {
         position="left center"
         trigger={
           <ColorSwatchBorder>
-            <ColorSwatch style={{ background: color }} />
+            <ColorSwatch style={colorStyle(color)} />
           </ColorSwatchBorder>
         }
         content={
           <SwatchesPicker
             color={color}
             onChangeComplete={this.handleApply}
-            onChange={newColor => this.setState({ color: newColor })}
+            onChange={this.setColor}
           />
         }
       />

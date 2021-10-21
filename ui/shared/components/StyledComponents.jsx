@@ -205,4 +205,5 @@ export const SampleNameText = styled.span`
   word-wrap: break-word;
   word-break: break-all;  
   white-space: normal;
+  color: black;
 `
