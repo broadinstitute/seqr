@@ -6,9 +6,12 @@ import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid } from 'redux/selectors'
-import { MISSENSE_THRESHHOLD, LOF_THRESHHOLD, ANY_AFFECTED } from '../../../utils/constants'
+import {
+  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, ANY_AFFECTED, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
+  PANEL_APP_CONFIDENCE_DESCRIPTION,
+} from '../../../utils/constants'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader, ButtonLink } from '../../StyledComponents'
+import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 
@@ -25,9 +28,15 @@ const PADDED_INLINE_STYLE = {
   ...INLINE_STYLE,
 }
 
-const BaseGeneLabelContent = styled(
-  ({ color, label, maxWidth, containerStyle, dispatch, ...props }) => <Label {...props} size="mini" color={color || 'grey'} content={label} />,
-)`
+const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, containerStyle, dispatch, ...props }) => {
+  const labelProps = {
+    ...props,
+    size: 'mini',
+    content: label,
+  }
+  return customColor ?
+    <ColoredLabel {...labelProps} color={customColor} /> : <Label {...labelProps} color={color || 'grey'} />
+})`
    margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
    overflow: hidden;
    text-overflow: ellipsis;
@@ -68,7 +77,7 @@ GeneLabel.propTypes = {
 }
 
 const BaseLocusListLabels = React.memo((
-  { locusListGuids, locusListsByGuid, compact, containerStyle, ...labelProps },
+  { locusListGuids, locusListsByGuid, locusListConfidence, compact, containerStyle, ...labelProps },
 ) => (
   compact ? (
     <GeneDetailSection
@@ -82,24 +91,41 @@ const BaseLocusListLabels = React.memo((
     />
   ) : (
     <div style={containerStyle}>
-      {locusListGuids.map(locusListGuid => (
-        <GeneDetailSection
-          key={locusListGuid}
-          color="teal"
-          maxWidth="7em"
-          showEmpty
-          label={(locusListsByGuid[locusListGuid] || {}).name}
-          description={(locusListsByGuid[locusListGuid] || {}).name}
-          details={(locusListsByGuid[locusListGuid] || {}).description}
-          containerStyle={containerStyle}
-          {...labelProps}
-        />
-      ))}
+      {locusListGuids.map((locusListGuid) => {
+        const panelAppConfidence = locusListConfidence && locusListConfidence[locusListGuid]
+        let { description } = locusListsByGuid[locusListGuid] || {}
+        if (panelAppConfidence) {
+          description = (
+            <div>
+              {description}
+              <br />
+              <br />
+              <b>PanelApp gene confidence: &nbsp;</b>
+              {PANEL_APP_CONFIDENCE_DESCRIPTION[panelAppConfidence]}
+            </div>
+          )
+        }
+        return (
+          <GeneDetailSection
+            key={locusListGuid}
+            color="teal"
+            customColor={panelAppConfidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppConfidence]}
+            maxWidth="7em"
+            showEmpty
+            label={(locusListsByGuid[locusListGuid] || {}).name}
+            description={(locusListsByGuid[locusListGuid] || {}).name}
+            details={description}
+            containerStyle={containerStyle}
+            {...labelProps}
+          />
+        )
+      })}
     </div>
   )))
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
+  locusListConfidence: PropTypes.object,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object.isRequired,
   containerStyle: PropTypes.object,
@@ -257,6 +283,7 @@ export const GeneDetails = React.memo(({ gene, compact, showLocusLists, containe
         hasLocusLists && (
           <LocusListLabels
             locusListGuids={gene.locusListGuids}
+            locusListConfidence={gene.locusListConfidence}
             compact={compact}
             containerStyle={showDivider ? PADDED_INLINE_STYLE : INLINE_STYLE}
             {...labelProps}

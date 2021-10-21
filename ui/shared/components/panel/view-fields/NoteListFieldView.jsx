@@ -5,15 +5,13 @@ import { connect } from 'react-redux'
 import { getUser } from 'redux/selectors'
 import TextFieldView from './TextFieldView'
 
-const noteRequired = value => (value ? undefined : 'Note is required')
-
 const userCanEdit = (note, user) => (
   note.createdBy === user.displayName || note.createdBy === user.email
 )
 
 const CORE_PROPS = {
   field: 'note',
-  fieldValidator: noteRequired,
+  required: true,
 }
 
 const NOTE_ANNOTATION_STYLE = { color: 'gray' }

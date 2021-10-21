@@ -45,7 +45,7 @@ class Project extends React.PureComponent {
           <Route path={`${match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
           <Route path={`${match.url}/family_page/:familyGuid`} component={FamilyPage} />
           <Route path={`${match.url}/saved_variants`} component={SavedVariants} />
-          <Route component={() => <Error404 />} />
+          <Route component={Error404} />
         </Switch>
       )
     }

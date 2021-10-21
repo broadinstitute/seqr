@@ -13,6 +13,8 @@ const NOTES_CATEGORY = 'Functional Data'
 
 const MODAL_STYLE = { minHeight: 'calc(90vh - 100px)' }
 
+const TAG_FIELD_PROPS = { component: LargeMultiselect, defaultOpen: true }
+
 const MetadataFormGroup = styled(Form.Group).attrs({ inline: true })`
   label, .label {
     white-space: nowrap;
@@ -102,30 +104,41 @@ TagFieldDisplay.propTypes = {
   displayMetadata: PropTypes.bool,
 }
 
-const TagFieldView = React.memo((
-  { simplifiedValue, initialValues, field, tagOptions, popup, tagAnnotation, validate, displayMetadata, ...props },
-) => {
-  const fieldValues = (initialValues || {})[field] || []
+class TagFieldView extends React.PureComponent {
 
-  const tagSelectOptions = tagOptions.map(
-    (tag, i) => ({ ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }),
-  )
-
-  const tagOptionsMap = tagSelectOptions.reduce((acc, tag) => ({ [tag.name]: tag, ...acc }), {})
-
-  const mappedValues = {
-    ...initialValues,
-    [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
+  static propTypes = {
+    field: PropTypes.string.isRequired,
+    idField: PropTypes.string.isRequired,
+    initialValues: PropTypes.object,
+    tagOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
+    onSubmit: PropTypes.func.isRequired,
+    displayMetadata: PropTypes.bool,
+    popup: PropTypes.func,
+    tagAnnotation: PropTypes.func,
+    simplifiedValue: PropTypes.bool,
+    validate: PropTypes.func,
   }
 
-  const formFieldProps = simplifiedValue ?
-    {
-      component: LargeMultiselect,
-      defaultOpen: true,
-    } :
-    {
-      component: LargeMultiselect,
-      defaultOpen: true,
+  getSimplifiedProps() {
+    const { initialValues } = this.props
+    return { initialValues, formFieldProps: TAG_FIELD_PROPS, tagOptions: this.tagSelectOptions() }
+  }
+
+  getMappedProps() {
+    const { field, initialValues, validate } = this.props
+
+    const fieldValues = this.fieldValues()
+    const tagSelectOptions = this.tagSelectOptions()
+
+    const tagOptionsMap = tagSelectOptions.reduce((acc, tag) => ({ [tag.name]: tag, ...acc }), {})
+
+    const mappedValues = {
+      ...initialValues,
+      [field]: fieldValues.map(tag => tagOptionsMap[tag.name]).sort((a, b) => a.optionIndex - b.optionIndex),
+    }
+
+    const formFieldProps = {
+      ...TAG_FIELD_PROPS,
       normalize: (value, previousValue, allValues, previousAllValues) => value.map(
         option => previousAllValues[field].find(
           prevFieldValue => prevFieldValue.name === option,
@@ -133,51 +146,64 @@ const TagFieldView = React.memo((
       ),
       format: options => options.map(tag => tag.name),
     }
+    if (validate) {
+      formFieldProps.validate = validate
+    }
 
-  if (validate) {
-    formFieldProps.validate = validate
+    return { initialValues: mappedValues, formFieldProps, tagOptions: tagSelectOptions }
   }
 
-  const additionalFields = tagSelectOptions.some(({ metadataTitle }) => metadataTitle) ? [{
-    name: field,
-    key: 'test',
-    isArrayField: true,
-    validate: val => ((!val || !val.metadataTitle || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required'),
-    component: MetadataField,
-  }] : []
+  fieldValues = () => {
+    const { field, initialValues } = this.props
+    return (initialValues || {})[field] || []
+  }
 
-  return (
-    <OptionFieldView
-      field={field}
-      tagOptions={tagSelectOptions}
-      formFieldProps={formFieldProps}
-      additionalEditFields={additionalFields}
-      initialValues={simplifiedValue ? initialValues : mappedValues}
-      modalStyle={MODAL_STYLE}
-      fieldDisplay={displayFieldValues => (
-        <TagFieldDisplay
-          displayFieldValues={displayFieldValues}
-          popup={popup}
-          tagAnnotation={tagAnnotation}
-          displayMetadata={displayMetadata}
-        />
-      )}
-      {...props}
-    />
-  )
-})
+  tagSelectOptions = () => {
+    const { tagOptions } = this.props
+    const fieldValues = this.fieldValues()
 
-TagFieldView.propTypes = {
-  field: PropTypes.string.isRequired,
-  idField: PropTypes.string.isRequired,
-  initialValues: PropTypes.object,
-  tagOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
-  onSubmit: PropTypes.func.isRequired,
-  displayMetadata: PropTypes.bool,
-  popup: PropTypes.func,
-  tagAnnotation: PropTypes.func,
-  simplifiedValue: PropTypes.bool,
-  validate: PropTypes.func,
+    return tagOptions.map(
+      (tag, i) => ({ ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }),
+    )
+  }
+
+  fieldDisplay = (displayFieldValues) => {
+    const { popup, tagAnnotation, displayMetadata } = this.props
+    return (
+      <TagFieldDisplay
+        displayFieldValues={displayFieldValues}
+        popup={popup}
+        tagAnnotation={tagAnnotation}
+        displayMetadata={displayMetadata}
+      />
+    )
+  }
+
+  render() {
+    const {
+      simplifiedValue, field, tagOptions, popup, tagAnnotation, validate, displayMetadata, ...props
+    } = this.props
+
+    const additionalFields = tagOptions.some(({ metadataTitle }) => metadataTitle) ? [{
+      name: field,
+      key: 'test',
+      isArrayField: true,
+      validate: val => ((!val || !val.metadataTitle || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required'),
+      component: MetadataField,
+    }] : []
+
+    return (
+      <OptionFieldView
+        field={field}
+        additionalEditFields={additionalFields}
+        modalStyle={MODAL_STYLE}
+        fieldDisplay={this.fieldDisplay}
+        {...props}
+        {...(simplifiedValue ? this.getSimplifiedProps() : this.getMappedProps())}
+      />
+    )
+  }
+
 }
 
 export default TagFieldView
