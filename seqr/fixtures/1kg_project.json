@@ -1889,6 +1889,18 @@
   }
 },
 {
+  "model": "panelapp.palocuslistgene",
+  "pk": 1,
+  "fields": {
+    "seqr_locus_list_gene": 12,
+    "confidence_level": "3",
+    "biotype": null,
+    "penetrance": null,
+     "mode_of_pathogenicity": null,
+     "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal"
+  }
+},
+{
   "model": "seqr.locuslistinterval",
   "pk": 12,
   "fields": {

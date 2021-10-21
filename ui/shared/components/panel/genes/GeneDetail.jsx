@@ -16,6 +16,8 @@ import { HorizontalSpacer } from '../../Spacers'
 
 const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
 
+const GRAY_STYLE = { color: 'gray' }
+
 const CompactGrid = styled(Grid)`
   padding: 10px !important;
   
@@ -24,7 +26,7 @@ const CompactGrid = styled(Grid)`
   }
 `
 
-const GeneSection = React.memo(({ details }) => (
+const geneSection = details => (
   <CompactGrid>
     {details.map(row => row && (
       <Grid.Row key={row.title}>
@@ -35,11 +37,7 @@ const GeneSection = React.memo(({ details }) => (
       </Grid.Row>
     ))}
   </CompactGrid>
-))
-
-GeneSection.propTypes = {
-  details: PropTypes.arrayOf(PropTypes.object),
-}
+)
 
 const textWithLinks = (text) => {
   const linkMap = {
@@ -101,7 +99,10 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
           <br />
         </span>
       ))}
-      <i style={{ color: 'gray' }}>{`NOTE: ${note}`}</i>
+      <i style={GRAY_STYLE}>
+        NOTE: &nbsp;
+        {note}
+      </i>
     </div>
   ) : 'No score available'
 }
@@ -243,11 +244,11 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
         />
       ))}
       <SectionHeader>Basics</SectionHeader>
-      <GeneSection details={basicDetails} />
+      {geneSection(basicDetails)}
       <SectionHeader>Stats</SectionHeader>
-      <GeneSection details={statDetails} />
+      {geneSection(statDetails)}
       <SectionHeader>Disease Associations</SectionHeader>
-      <GeneSection details={associationDetails} />
+      {geneSection(associationDetails)}
       <SectionHeader>Shared Notes</SectionHeader>
       <p>
         Information saved here will be shared across seqr. Please consider using this space to share gene-specific

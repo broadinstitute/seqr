@@ -36,20 +36,17 @@ const escapeExportItem = item => (item.replace ? item.replace(/"/g, '\'\'') : it
 
 export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, filename, ext, linkContent }) => {
   const extConfig = EXT_CONFIG[ext]
+  const linkBody = linkContent || (
+    <span>
+      <img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} />
+      {` .${ext}`}
+    </span>
+  )
 
   if (url) {
     const noQuery = !url.includes('?')
     const endQuery = noQuery || url.endsWith('?')
-    return (
-      <a href={`${url}${noQuery ? '?' : ''}${!endQuery ? '&' : ''}file_format=${ext}`}>
-        {linkContent || (
-          <span>
-            <img alt={ext} src={`/static/images/table_${extConfig.imageName || ext}.png`} />
-            {` .${ext}`}
-          </span>
-        )}
-      </a>
-    )
+    return <a href={`${url}${noQuery ? '?' : ''}${!endQuery ? '&' : ''}file_format=${ext}`}>{linkBody}</a>
   }
 
   let content = rawData.map(row => processRow(row).map(
@@ -60,7 +57,7 @@ export const BaseFileLink = React.memo(({ url, rawData, processRow, headers, fil
   }
   const href = URL.createObjectURL(new Blob([content], {  type: 'application/octet-stream' }))
 
-  return <a href={href} download={`${filename}.${extConfig.dataExt || ext}`}>{linkContent}</a>
+  return <a href={href} download={`${filename}.${extConfig.dataExt || ext}`}>{linkBody}</a>
 })
 
 BaseFileLink.propTypes = {
@@ -74,13 +71,14 @@ BaseFileLink.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  rawData: ownProps.getRawData ? ownProps.getRawData(state) : ownProps.rawData,
-  headers: ownProps.getHeaders ? ownProps.getHeaders(state) : ownProps.headers,
+  rawData: ownProps.getRawData ? ownProps.getRawData(state, ownProps) : ownProps.rawData,
+  headers: ownProps.getHeaders ? ownProps.getHeaders(state, ownProps) : ownProps.headers,
+  filename: ownProps.getFilename ? ownProps.getFilename(state, ownProps) : ownProps.filename,
 })
 
 export const FileLink = connect(mapStateToProps)(BaseFileLink)
 
-const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps }) => (
+const ExportTableButton = React.memo(({ downloads, buttonText, downloadData, ...buttonProps }) => (
   <Popup
     trigger={
       <ButtonLink icon="download" content={buttonText || 'Download Table'} {...buttonProps} />
@@ -97,10 +95,10 @@ const ExportTableButton = React.memo(({ downloads, buttonText, ...buttonProps })
               </Table.Row>,
               <Table.Row key={2}>
                 <LinkCell>
-                  <FileLink {...downloadProps} ext="xls" />
+                  <FileLink {...downloadProps} downloadData={downloadData} ext="xls" />
                 </LinkCell>
                 <LinkCell>
-                  <FileLink {...downloadProps} ext="tsv" />
+                  <FileLink {...downloadProps} downloadData={downloadData} ext="tsv" />
                   <br />
                 </LinkCell>
               </Table.Row>,
@@ -121,6 +119,7 @@ ExportTableButton.propTypes = {
    */
   downloads: PropTypes.arrayOf(PropTypes.object).isRequired,
   buttonText: PropTypes.string,
+  downloadData: PropTypes.object,
 }
 
 export default ExportTableButton

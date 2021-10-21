@@ -64,6 +64,38 @@ export const helpLabel = (label, labelHelp) => (
   ) : label
 )
 
+const removeField = (fields, i) => (e) => {
+  e.preventDefault()
+  fields.remove(i)
+}
+
+const ArrayFieldItem = ({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label, fields }) => (
+  <div className="field">
+    <label>{label}</label>
+    {fields.map((fieldPath, i) => (
+      <Field
+        key={fieldPath}
+        name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
+        removeField={removeField(fields, i)}
+        index={i}
+        {...singleFieldProps}
+      />
+    ))}
+    {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
+  </div>
+)
+
+ArrayFieldItem.propTypes = {
+  addArrayElement: PropTypes.func,
+  addArrayElementProps: PropTypes.object,
+  arrayFieldName: PropTypes.string,
+  singleFieldProps: PropTypes.object,
+  label: PropTypes.string,
+  fields: PropTypes.arrayOf(PropTypes.string),
+}
+
+const arrayFieldItem = fieldProps => arrayProps => <ArrayFieldItem {...fieldProps} {...arrayProps} />
+
 export const configuredField = (field, formProps = {}) => {
   const {
     component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
@@ -83,21 +115,7 @@ export const configuredField = (field, formProps = {}) => {
   return isArrayField ? (
     <FieldArray
       {...baseProps}
-      component={({ fields }) => (
-        <div className="field">
-          <label>{label}</label>
-          {fields.map((fieldPath, i) => (
-            <Field
-              key={fieldPath}
-              name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
-              removeField={(e) => { e.preventDefault(); fields.remove(i) }}
-              index={i}
-              {...singleFieldProps}
-            />
-          ))}
-          {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
-        </div>
-      )}
+      component={arrayFieldItem({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label })}
     />
   ) : <Field {...baseProps} {...singleFieldProps} />
 }
@@ -243,6 +261,12 @@ class ReduxFormWrapper extends React.Component {
     handleClose()
   }
 
+  handleConfirmedSubmit = () => {
+    const { handleSubmit } = this.props
+    this.hideConfirmDialog()
+    handleSubmit()
+  }
+
   render() {
     const {
       submitSucceeded, submitFailed, errorMessages, warningMessages, children, confirmDialog, handleSubmit, size,
@@ -297,10 +321,7 @@ class ReduxFormWrapper extends React.Component {
           content={confirmDialog}
           open={confirming}
           onCancel={this.hideConfirmDialog}
-          onConfirm={() => {
-            this.hideConfirmDialog()
-            handleSubmit()
-          }}
+          onConfirm={this.handleConfirmedSubmit}
         />
       </StyledForm>
     )

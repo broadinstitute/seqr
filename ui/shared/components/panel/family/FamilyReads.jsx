@@ -11,7 +11,7 @@ import {
   getProjectsByGuid,
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
-import { CheckboxGroup } from '../../form/Inputs'
+import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
 import IGV from '../../graph/IGV'
 import { ButtonLink, SampleNameText } from '../../StyledComponents'
 import ColorPicker from '../../ColorPicker'
@@ -22,6 +22,7 @@ import {
   ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   GTEX_TRACK_OPTIONS, MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
   DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
+  JUNCTION_VISIBILITY_OPTIONS,
 } from './constants'
 
 const MIN_LOCUS_RANGE_SIZE = 100
@@ -99,18 +100,9 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes, samp
               [sampleId || individualsByGuid[iGuid].individualId]: sampleGcnvColors[iGuid],
               ...higlightAcc,
             }), {}),
-            name: ReactDOMServer.renderToString(
-              <div>
-                { individualGuids.map(iGuid => (
-                  <span
-                    key={iGuid}
-                    color={`${sampleGcnvColors[iGuid]}`}
-                  >
-                    {`${individualsByGuid[iGuid].displayName} `}
-                  </span>
-                ))}
-              </div>,
-            ),
+            name: individualGuids.length === 1 ? track.name : individualGuids.map(
+              iGuid => individualsByGuid[iGuid].displayName,
+            ).join(', '),
           } : null
         }
 
@@ -187,8 +179,15 @@ ReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
+const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
+  ...options[track.type] ? { ...track, ...options[track.type] } : track,
+  ...(track.type === 'merged') ? {
+    tracks: track.tracks.map(tr => (options[tr.type] ? { ...tr, ...options[tr.type] } : tr)),
+  } : {},
+}))
+
 const IgvPanel = React.memo((
-  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, sampleGcnvColors },
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, sampleGcnvColors, minJunctionEndsVisible },
 ) => {
   const size = variant.end && variant.end - variant.pos
   const locus = variant && getLocus(
@@ -198,8 +197,9 @@ const IgvPanel = React.memo((
     size,
   )
 
-  const tracks = rnaReferences.concat(
-    getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes, sampleGcnvColors),
+  const tracks = applyUserTrackSettings(
+    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes, sampleGcnvColors)),
+    { [JUNCTION_TYPE]: { minJunctionEndsVisible } },
   )
 
   return (
@@ -211,6 +211,7 @@ IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
+  minJunctionEndsVisible: PropTypes.number,
   individualsByGuid: PropTypes.object,
   sampleGcnvColors: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
@@ -256,6 +257,7 @@ class FamilyReads extends React.PureComponent {
     sampleTypes: [],
     rnaReferences: [],
     sampleGcnvColors: {},
+    minJunctionEndsVisible: 0,
   }
 
   getSampleGcnvColors = (familyGuid) => {
@@ -307,6 +309,9 @@ class FamilyReads extends React.PureComponent {
 
   updateSampleGcnvColor = (sampleGcnvColors) => {
     this.setState({ sampleGcnvColors })
+
+  junctionsOptionChange = (minJunctionEndsVisible) => {
+    this.setState({ minJunctionEndsVisible })
   }
 
   render() {
@@ -314,7 +319,7 @@ class FamilyReads extends React.PureComponent {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
       projectsByGuid, ...props
     } = this.props
-    const { openFamily, sampleTypes, rnaReferences, sampleGcnvColors } = this.state
+    const { openFamily, sampleTypes, rnaReferences, sampleGcnvColors, minJunctionEndsVisible } = this.state
 
     const showReads = (
       <ReadButtons
@@ -373,6 +378,12 @@ class FamilyReads extends React.PureComponent {
                       options={MAPPABILITY_TRACK_OPTIONS}
                       onChange={this.updateRnaReferences}
                     />
+                    <RadioGroup
+                      label="Junctions Tracks Show:"
+                      value={minJunctionEndsVisible}
+                      options={JUNCTION_VISIBILITY_OPTIONS}
+                      onChange={this.junctionsOptionChange}
+                    />
                   </div>
                 )}
               </div>
@@ -387,6 +398,7 @@ class FamilyReads extends React.PureComponent {
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
+            minJunctionEndsVisible={minJunctionEndsVisible}
             individualsByGuid={individualsByGuid}
             sampleGcnvColors={sampleGcnvColors}
             project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}

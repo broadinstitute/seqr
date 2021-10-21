@@ -4,10 +4,10 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Field } from 'redux-form'
-import { Label, Popup, Form, Input, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
+import { Label, Popup, Form, Input } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { SearchInput, RadioGroup, YearSelector } from 'shared/components/form/Inputs'
+import { SearchInput, YearSelector, RadioButtonGroup } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
@@ -16,19 +16,16 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import NullableBoolFieldView, { NULLABLE_BOOL_FIELD } from 'shared/components/panel/view-fields/NullableBoolFieldView'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
-import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
 import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
-import DataLoader from 'shared/components/DataLoader'
-import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
+import { ColoredIcon } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS } from 'shared/utils/constants'
 
-import { updateIndividual, loadHpoTerms } from 'redux/rootReducer'
-import {
-  getSamplesByGuid, getMmeSubmissionsByGuid, getHpoTermsByParent, getHpoTermsIsLoading,
-} from 'redux/selectors'
+import { updateIndividual } from 'redux/rootReducer'
+import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import { HPO_FIELD_RENDER } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
@@ -48,16 +45,6 @@ const Detail = styled.div`
 const CaseReviewDropdownContainer = styled.div`
   float: right;
   width: 220px;
-`
-
-const ScrollingTab = styled(Tab).attrs({ menu: { attached: true } })`
-  .menu.attached {
-    overflow-x: scroll;
-  }
-  
-  .menu.text {
-    margin: .1em -.5em;
-  }
 `
 
 const FLAG_TITLE = {
@@ -207,6 +194,8 @@ AwesomebarItemSelector.propTypes = {
   value: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
 }
 
+const getResultTitle = result => result.title
+
 const GeneEntry = ({ name, icon }) => (
   <Form.Group inline>
     <Form.Field width={1}>{icon}</Form.Field>
@@ -216,7 +205,7 @@ const GeneEntry = ({ name, icon }) => (
         placeholder="Search for gene"
         component={AwesomebarItemSelector}
         categories={GENE_CATEGORIES}
-        parseResultItem={result => result.title}
+        parseResultItem={getResultTitle}
       />
     </Form.Field>
     <Field name={`${name}.comments`} placeholder="Comments" component={Form.Input} width={9} />
@@ -226,248 +215,6 @@ const GeneEntry = ({ name, icon }) => (
 GeneEntry.propTypes = {
   icon: PropTypes.node,
   name: PropTypes.string,
-}
-
-const getFlattenedHpoTermsByCategory = (features, nonstandardFeatures) => Object.values(getHpoTermsForCategory(
-  (features || []).map((term, index) => ({ ...term, index })),
-  nonstandardFeatures && nonstandardFeatures.map((term, index) => ({ ...term, index })),
-)).reduce((acc, { categoryName, terms }) => [...acc, { ...terms[0], categoryName }, ...terms.slice(1)], [])
-
-const HPO_QUALIFIERS = [
-  {
-    type: 'age_of_onset',
-    options: [
-      'Congenital onset',
-      'Embryonal onset',
-      'Fetal onset',
-      'Neonatal onset',
-      'Infantile onset',
-      'Childhood onset',
-      'Juvenile onset',
-      'Adult onset',
-      'Young adult onset',
-      'Middle age onset',
-      'Late onset',
-    ],
-  },
-  {
-    type: 'pace_of_progression',
-    options: ['Nonprogressive', 'Slow progression', 'Progressive', 'Rapidly progressive', 'Variable progression rate'],
-  },
-  {
-    type: 'severity',
-    options: ['Borderline', 'Mild', 'Moderate', 'Severe', 'Profound'],
-  },
-  {
-    type: 'temporal_pattern',
-    options: ['Insidious onset', 'Chronic', 'Subacute', 'Acute'],
-  },
-  {
-    type: 'spatial_pattern',
-    options: ['Generalized', 'Localized', 'Distal', 'Proximal'],
-  },
-  {
-    type: 'laterality',
-    options: ['Bilateral', 'Unilateral', 'Left', 'Right'],
-  },
-]
-
-const HpoQualifiers = ({ input }) => (
-  <Accordion
-    exclusive={false}
-    panels={HPO_QUALIFIERS.map(({ type, options }) => ({
-      key: type,
-      title: { content: <b>{snakecaseToTitlecase(type)}</b> },
-      content: {
-        content: (
-          <RadioGroup
-            onChange={val => input.onChange(({ ...input.value, [type]: val }))}
-            value={input.value[type]}
-            options={options.map(value => ({ value, text: value }))}
-            margin="0 1em"
-          />
-        ),
-      },
-    }))}
-  />
-)
-
-HpoQualifiers.propTypes = {
-  input: PropTypes.object,
-}
-
-const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showDetails }) => (
-  <div>
-    {value.categoryName ? <Header content={value.categoryName} size="small" /> : null}
-    <Form.Group inline>
-      <Form.Field width={1}>{icon}</Form.Field>
-      <Form.Field width={13}>
-        {value.label ? `${value.label} (${value.id})` : value.id}
-      </Form.Field>
-      <Form.Field width={2}>
-        <ButtonLink
-          floated="right"
-          size="small"
-          onClick={toggleShowDetails}
-          content={showDetails ? 'Hide Details' : 'Edit Details'}
-        />
-      </Form.Field>
-    </Form.Group>
-    {showDetails && [
-      <Field
-        key="qualifiers"
-        name={`${name}.qualifiers`}
-        component={HpoQualifiers}
-        format={val => (val || []).reduce((acc, { type, label }) => ({ ...acc, [type]: label }), {})}
-        normalize={val => Object.entries(val || {}).map(([type, label]) => ({ type, label }))}
-      />,
-      <Form.Group key="notes">
-        <Field name={`${name}.notes`} placeholder="Comments" component={Form.Input} width={16} />
-      </Form.Group>,
-    ]}
-  </div>
-))
-
-HpoTermDetails.propTypes = {
-  icon: PropTypes.node,
-  value: PropTypes.object,
-  name: PropTypes.string,
-  showDetails: PropTypes.bool,
-  toggleShowDetails: PropTypes.func,
-}
-
-const CATEGORY_MENU = { text: true }
-
-const getTermPanes = (term, addItem) => ([{
-  menuItem: {
-    key: term.id,
-    content: term.label,
-    icon: { name: 'plus', color: 'green', size: 'large', onClick: () => addItem(term) },
-  },
-  render: () => <HpoCategory category={term.id} addItem={addItem} />,
-}])
-
-const BaseHpoCategory = ({ category, hpoTerms, addItem, ...props }) => (
-  <DataLoader contentId={category} content={hpoTerms} reloadOnIdUpdate {...props}>
-    {Object.values(hpoTerms || {}).length > 0 && (
-      <Tab.Pane attached={false}>
-        {Object.values(hpoTerms).map(term => (
-          <Tab key={term.id} menu={CATEGORY_MENU} defaultActiveIndex={null} panes={getTermPanes(term, addItem)} />
-        ))}
-      </Tab.Pane>
-    )}
-  </DataLoader>
-)
-
-BaseHpoCategory.propTypes = {
-  category: PropTypes.string,
-  hpoTerms: PropTypes.object,
-  addItem: PropTypes.func,
-}
-
-const mapCategoryStateToProps = (state, ownProps) => {
-  const hpoTerms = getHpoTermsByParent(state)[ownProps.category]
-  return {
-    hpoTerms,
-    loading: !hpoTerms && getHpoTermsIsLoading(state),
-  }
-}
-
-const mapCategoryDispatchToProps = {
-  load: loadHpoTerms,
-}
-
-const HpoCategory = connect(mapCategoryStateToProps, mapCategoryDispatchToProps)(BaseHpoCategory)
-
-const HPO_CATEGORIES = ['hpo_terms']
-
-const getCategoryPanes = addItem => Object.entries(CATEGORY_NAMES).map(
-  ([key, menuItem]) => ({
-    key,
-    menuItem,
-    render: () => <HpoCategory category={key} addItem={addItem} />,
-  }),
-).sort((a, b) => a.menuItem.localeCompare(b.menuItem))
-
-const HpoTermSelector = ({ addItem }) => (
-  <div>
-    <AwesomeBarFormInput
-      parseResultItem={result => ({ id: result.key, label: result.title, category: result.category })}
-      categories={HPO_CATEGORIES}
-      placeholder="Search for HPO terms"
-      onChange={addItem}
-    />
-    <VerticalSpacer height={10} />
-    <ScrollingTab panes={getCategoryPanes(addItem)} defaultActiveIndex={null} />
-  </div>
-)
-
-HpoTermSelector.propTypes = {
-  addItem: PropTypes.func,
-}
-
-class HpoTermsEditor extends React.PureComponent {
-
-  static propTypes = {
-    value: PropTypes.arrayOf(PropTypes.object),
-    name: PropTypes.string,
-    onChange: PropTypes.func,
-    header: PropTypes.object,
-    allowAdditions: PropTypes.bool,
-  }
-
-  state = { showDetails: {}, showAddItem: false }
-
-  toggleShowDetails = id => (e) => {
-    e.preventDefault()
-    this.setState(prevState => ({
-      showDetails: { ...prevState.showDetails, [id]: !prevState.showDetails[id] },
-    }))
-  }
-
-  toggleShowAddItems = (e) => {
-    e.preventDefault()
-    this.setState(prevState => ({
-      showAddItem: !prevState.showAddItem,
-    }))
-  }
-
-  addItem = (data) => {
-    const { onChange, value } = this.props
-    onChange([...value, data])
-    this.setState({ showAddItem: false })
-  }
-
-  removeItem = (e, data) => {
-    const { onChange, value } = this.props
-    e.preventDefault()
-    onChange(value.filter(({ id }) => id !== data.id))
-  }
-
-  render() {
-    const { value, name, allowAdditions, header } = this.props
-    const { showDetails, showAddItem } = this.state
-    return (
-      <div>
-        {header && <Header dividing {...header} />}
-        {header && <VerticalSpacer height={5} />}
-        {value.map(({ index, ...item }) => (
-          <HpoTermDetails
-            key={item.id}
-            value={item}
-            name={`${name}[${index}]`}
-            icon={<Icon name="remove" link id={item.id} onClick={this.removeItem} />}
-            showDetails={!!showDetails[item.id]}
-            toggleShowDetails={this.toggleShowDetails(item.id)}
-          />
-        ))}
-        {allowAdditions && (showAddItem ? <HpoTermSelector addItem={this.addItem} /> :
-        <ButtonLink icon="plus" content="Add Feature" onClick={this.toggleShowAddItems} />)}
-        {allowAdditions && <VerticalSpacer height={20} />}
-      </div>
-    )
-  }
-
 }
 
 const YEAR_SELECTOR_PROPS = {
@@ -558,7 +305,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     fieldDisplay: individual => Object.keys(AR_FIELDS).filter(
       field => individual[field] || individual[field] === false,
     ).map(field => <div key={field}>{individual[field] ? AR_FIELDS[field] : <s>{AR_FIELDS[field]}</s>}</div>),
-    subFieldProps: { margin: '5px 0', radioLabelStyle: 'width: 250px', ...NULLABLE_BOOL_FIELD },
+    subFieldProps: {
+      margin: '5px 0',
+      groupContainer: props => <RadioButtonGroup radioLabelStyle="width: 250px" {...props} />,
+      ...NULLABLE_BOOL_FIELD,
+    },
     individualFields: individual => ({
       isVisible: individual.affected === AFFECTED,
       fieldValue: individual,
@@ -602,41 +353,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       />
     )),
   },
-  features: {
-    fieldDisplay: individual => <HpoPanel individual={individual} />,
-    formFields: [
-      {
-        name: 'nonstandardFeatures',
-        component: HpoTermsEditor,
-        format: val => getFlattenedHpoTermsByCategory([], val),
-        allowAdditions: false,
-        header: { content: 'Present', color: 'green' },
-      },
-      {
-        name: 'features',
-        component: HpoTermsEditor,
-        format: val => getFlattenedHpoTermsByCategory(val),
-        allowAdditions: true,
-      },
-      {
-        name: 'absentNonstandardFeatures',
-        component: HpoTermsEditor,
-        format: val => getFlattenedHpoTermsByCategory([], val),
-        allowAdditions: false,
-        header: { content: 'Not Present', color: 'red' },
-      },
-      {
-        name: 'absentFeatures',
-        component: HpoTermsEditor,
-        format: val => getFlattenedHpoTermsByCategory(val),
-        allowAdditions: true,
-      },
-    ],
-    individualFields: individual => ({
-      initialValues: { ...individual, individualField: 'hpo_terms' },
-      fieldValue: individual,
-    }),
-  },
+  features: HPO_FIELD_RENDER,
   disorders: {
     component: ListFieldView,
     formFieldProps: {
@@ -699,67 +416,75 @@ const NON_CASE_REVIEW_FIELDS = [
   ...INDIVIDUAL_FIELDS,
 ]
 
-const IndividualRow = React.memo((
-  { project, individual, mmeSubmission, samplesByGuid, dispatchUpdateIndividual, tableName },
-) => {
-  const { displayName, sex, affected, createdDate, sampleGuids } = individual
+class IndividualRow extends React.PureComponent {
 
-  let loadedSamples = sampleGuids.map(
-    sampleGuid => samplesByGuid[sampleGuid],
-  )
-  loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
-  // only show active or first/ last inactive samples
-  loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
+  static propTypes = {
+    project: PropTypes.object.isRequired,
+    individual: PropTypes.object.isRequired,
+    mmeSubmission: PropTypes.object,
+    samplesByGuid: PropTypes.object.isRequired,
+    dispatchUpdateIndividual: PropTypes.func,
+    tableName: PropTypes.string,
+  }
 
-  const leftContent = (
-    <div>
+  individualFieldDisplay = (
+    { component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field },
+  ) => {
+    const { project, individual, dispatchUpdateIndividual } = this.props
+    return React.createElement(component || BaseFieldView, {
+      key: field.field,
+      isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
+      onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
+      modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${individual.displayName}`,
+      initialValues: individual,
+      idField: 'individualGuid',
+      ...individualFields(individual),
+      ...field,
+    })
+  }
+
+  render() {
+    const { individual, mmeSubmission, samplesByGuid, tableName } = this.props
+    const { displayName, sex, affected, createdDate, sampleGuids } = individual
+
+    let loadedSamples = sampleGuids.map(
+      sampleGuid => samplesByGuid[sampleGuid],
+    )
+    loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
+    // only show active or first/ last inactive samples
+    loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
+
+    const leftContent = (
       <div>
-        <PedigreeIcon sex={sex} affected={affected} />
-        {displayName}
+        <div>
+          <PedigreeIcon sex={sex} affected={affected} />
+          {displayName}
+        </div>
+        <div>
+          <Detail>
+            {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
+          </Detail>
+        </div>
       </div>
-      <div>
-        <Detail>
-          {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
-        </Detail>
-      </div>
-    </div>
-  )
+    )
 
-  const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
-  const rightContent = editCaseReview ?
-    <CaseReviewStatus individual={individual} /> :
-    <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
+    const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
+    const rightContent = editCaseReview ?
+      <CaseReviewStatus individual={individual} /> :
+      <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
 
-  const fields = editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS
+    const fields = editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS
 
-  return (
-    <FamilyLayout
-      fields={fields}
-      fieldDisplay={(
-        { component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field },
-      ) => React.createElement(component || BaseFieldView, {
-        key: field.field,
-        isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
-        onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
-        modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${displayName}`,
-        initialValues: individual,
-        idField: 'individualGuid',
-        ...individualFields(individual),
-        ...field,
-      })}
-      leftContent={leftContent}
-      rightContent={rightContent}
-    />
-  )
-})
+    return (
+      <FamilyLayout
+        fields={fields}
+        fieldDisplay={this.individualFieldDisplay}
+        leftContent={leftContent}
+        rightContent={rightContent}
+      />
+    )
+  }
 
-IndividualRow.propTypes = {
-  project: PropTypes.object.isRequired,
-  individual: PropTypes.object.isRequired,
-  mmeSubmission: PropTypes.object,
-  samplesByGuid: PropTypes.object.isRequired,
-  dispatchUpdateIndividual: PropTypes.func,
-  tableName: PropTypes.string,
 }
 
 export { IndividualRow as IndividualRowComponent }

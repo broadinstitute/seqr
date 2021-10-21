@@ -40,6 +40,15 @@ const formatInitialValue = (match) => {
   return { successStoryTypes: queryToArr }
 }
 
+const redirectSuccessStoryTypes = history => value => history.push(`/summary_data/success_story/${value.successStoryTypes}`)
+
+const fieldDisplay = value => value.map(tag => (
+  <span>
+    {successStoryTypeDisplay(tag)}
+    <HorizontalSpacer width={4} />
+  </span>
+))
+
 const SuccessStory = React.memo(({ match, data, loading, loadingError, load, history }) => (
   <DataLoader contentId={match.params.successStoryTypes} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Types:" />
@@ -50,15 +59,10 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
       idField="row_id"
       initialValues={formatInitialValue(match)}
       tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}
-      onSubmit={value => history.push(`/summary_data/success_story/${value.successStoryTypes}`)}
+      onSubmit={redirectSuccessStoryTypes(history)}
       showIconOnly
       simplifiedValue
-      fieldDisplay={value => value.map(tag => (
-        <span>
-          {successStoryTypeDisplay(tag)}
-          <HorizontalSpacer width={4} />
-        </span>
-      ))}
+      fieldDisplay={fieldDisplay}
     />
     or &nbsp;
     <NavLink to="/summary_data/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>

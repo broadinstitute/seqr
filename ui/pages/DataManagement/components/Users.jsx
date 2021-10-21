@@ -34,19 +34,13 @@ const COLUMNS = [
   hasFieldColumn('isActive', 'Active?'),
 ]
 
+const hijakLogIn = (e, { value }) => fetch(
+  `/hijack/${value.id}/`, { method: 'POST', credentials: 'include' },
+).then((response) => { window.location.href = response.url })
+
 const HIJAK_COLUMNS = [
   ...COLUMNS,
-  {
-    name: 'id',
-    format: val => (
-      <Button
-        content="Log In"
-        onClick={() => fetch(
-          `/hijack/${val.id}/`, { method: 'POST', credentials: 'include' },
-        ).then((response) => { window.location.href = response.url })}
-      />
-    ),
-  },
+  { name: 'id', format: val => <Button content="Log In" value={val} onClick={hijakLogIn} /> },
 ]
 
 const getUserFilterVal = ({ email, displayName }) => `${email}-${displayName}`

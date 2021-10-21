@@ -16,6 +16,15 @@ const MessagePanel = styled(Message)`
   margin: 2em !important;
 `
 
+const NO_DISPLAY_STYLE = { display: 'none' }
+const POINTER_CURSOR_STYLE = { cursor: 'pointer' }
+
+const onClickInput = (event) => {
+  // allows the same file to be selected more than once (see
+  // https://stackoverflow.com/questions/39484895/how-to-allow-input-type-file-to-select-the-same-file-in-react-component)
+  event.target.value = null // eslint-disable-line no-param-reassign
+}
+
 export class XHRUploaderWithEvents extends XHRUploader {
 
   static propTypes = {
@@ -29,20 +38,18 @@ export class XHRUploaderWithEvents extends XHRUploader {
     this.state = { ...this.state, ...(this.props.initialState || {}) }
   }
 
+  setFileInputRef = (c) => { if (c) { this.fileInput = c } }
+
   renderInput() {
     return (
       <input
         name="file-upload"
-        style={{ display: 'none' }}
+        style={NO_DISPLAY_STYLE}
         multiple={this.props.maxFiles > 1}
         type="file"
-        ref={(c) => { if (c) { this.fileInput = c } }}
+        ref={this.setFileInputRef}
         onChange={this.onFileSelect}
-        onClick={(event) => {
-          // allows the same file to be selected more than once (see
-          // https://stackoverflow.com/questions/39484895/how-to-allow-input-type-file-to-select-the-same-file-in-react-component)
-          event.target.value = null // eslint-disable-line no-param-reassign
-        }}
+        onClick={onClickInput}
       />
     )
   }
@@ -83,6 +90,11 @@ export class XHRUploaderWithEvents extends XHRUploader {
     }
   }
 
+  cancelFileItem = item => (e) => {
+    e.stopPropagation()
+    this.cancelFile(item.index)
+  }
+
   renderFileSet() {
     const { items } = this.state
     const { progressClass } = this.props
@@ -90,7 +102,7 @@ export class XHRUploaderWithEvents extends XHRUploader {
       const { cancelIconClass, completeIconClass } = this.props
       const { styles } = this.state
       const cancelledItems = items.filter(item => item.cancelled === true)
-      const filesetStyle = (items.length === cancelledItems.length) ? { display: 'none' } : styles.fileset
+      const filesetStyle = (items.length === cancelledItems.length) ? NO_DISPLAY_STYLE : styles.fileset
       return (
         <div style={filesetStyle}>
           {
@@ -107,18 +119,11 @@ export class XHRUploaderWithEvents extends XHRUploader {
                     <span className="icon-file icon-large">&nbsp;</span>
                     <span style={styles.fileName}>{`${file.name}`}</span>
                     {sizeInMB && <span style={styles.fileSize}>{`${sizeInMB} Mb`}</span>}
-                    <i
-                      className={iconClass}
-                      style={{ cursor: 'pointer' }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        this.cancelFile(item.index)
-                      }}
-                    />
+                    <i className={iconClass} style={POINTER_CURSOR_STYLE} onClick={this.cancelFileItem(item)} />
                   </div>
                   <div>
                     <progress
-                      style={progressClass ? {} : styles.progress}
+                      style={progressClass ? undefined : styles.progress}
                       className={progressClass}
                       min="0"
                       max="100"
