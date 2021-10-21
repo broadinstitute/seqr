@@ -19,6 +19,7 @@ const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_COLLABORATORS = 'REQUEST_COLLABORATORS'
+const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 
 // Data actions
@@ -29,6 +30,23 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   if (!project) {
     dispatch({ type: REQUEST_PROJECT_DETAILS })
     new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
+
+export const loadFamilies = () => (dispatch, getState) => {
+  const { currentProjectGuid, familiesByGuid } = getState()
+  const loadedProjectFamilies = Object.values(familiesByGuid).some(
+    ({ projectGuid }) => projectGuid === currentProjectGuid,
+  )
+  if (!loadedProjectFamilies) {
+    dispatch({ type: REQUEST_FAMILIES })
+    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_families`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -270,6 +288,7 @@ export const reducers = {
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   collaboratorsLoading: loadingReducer(REQUEST_COLLABORATORS, RECEIVE_DATA),
+  familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
   geneListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,

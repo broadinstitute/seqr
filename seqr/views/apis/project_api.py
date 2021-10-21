@@ -13,7 +13,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_saved_variants, \
-    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions
+    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
 from seqr.views.utils.project_context_utils import get_projects_child_entities
@@ -134,7 +134,7 @@ def project_page_data(request, project_guid):
     update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
     return create_json_response({
         'projectsByGuid': {
-            project.guid: _get_json_for_project(project, request.user)
+            project.guid: _get_json_for_project(project, request.user, add_project_category_guids_field=False)
         },
     })
 
@@ -164,6 +164,17 @@ def project_page_data(request, project_guid):
     # })
     #
     # return create_json_response(response)
+
+
+@login_and_policies_required
+def project_families(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    families = _get_json_for_families(
+        Family.objects.filter(project=project), request.user, project_guid=project_guid, add_individual_guids_field=True
+    )
+    return create_json_response({
+        'familiesByGuid': {f['familyGuid']: f for f in families},
+    })
 
 
 def _retrieve_mme_submissions(project, individuals_by_guid):

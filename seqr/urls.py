@@ -119,7 +119,7 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
     igv_genomes_proxy
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
-    project_page_data
+    project_page_data, project_families
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
 from matchmaker.views import external_api
@@ -172,6 +172,7 @@ api_endpoints = {
     'dashboard': dashboard_page_data,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
+    'project/(?P<project_guid>[^/]+)/get_families': project_families,
 
     'project/create_project': create_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,

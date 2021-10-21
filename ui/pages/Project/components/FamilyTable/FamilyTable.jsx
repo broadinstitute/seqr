@@ -5,12 +5,14 @@ import { Table, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
+import DataLoader from 'shared/components/DataLoader'
 import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import { getVisibleFamiliesInSortedOrder, getProjectDetailsIsLoading, getProjectExportUrls } from '../../selectors'
+import { getVisibleFamiliesInSortedOrder, getFamiliesLoading, getProjectExportUrls } from '../../selectors'
+import { loadFamilies } from '../../reducers'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
@@ -79,9 +81,9 @@ class FamilyTableRow extends React.PureComponent {
 }
 
 const FamilyTable = React.memo((
-  { visibleFamilies, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
+  { visibleFamilies, load, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
 ) => (
-  <div>
+  <DataLoader load={load} loading={false} content>
     <ExportContainer>
       {headerStatus && (
         <span>
@@ -122,7 +124,7 @@ const FamilyTable = React.memo((
       </Table.Body>
       <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
     </Table>
-  </div>
+  </DataLoader>
 ))
 
 export { FamilyTable as FamilyTableComponent }
@@ -130,6 +132,7 @@ export { FamilyTable as FamilyTableComponent }
 FamilyTable.propTypes = {
   visibleFamilies: PropTypes.arrayOf(PropTypes.object).isRequired,
   loading: PropTypes.bool,
+  load: PropTypes.func,
   headerStatus: PropTypes.object,
   exportUrls: PropTypes.arrayOf(PropTypes.object),
   showVariantDetails: PropTypes.bool,
@@ -140,8 +143,12 @@ FamilyTable.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
-  loading: getProjectDetailsIsLoading(state),
+  loading: getFamiliesLoading(state),
   exportUrls: getProjectExportUrls(state, ownProps),
 })
 
-export default withRouter(connect(mapStateToProps)(FamilyTable))
+const mapDispatchToProps = {
+  load: loadFamilies,
+}
+
+export default withRouter(connect(mapStateToProps, mapDispatchToProps)(FamilyTable))

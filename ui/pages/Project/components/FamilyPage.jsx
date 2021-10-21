@@ -34,7 +34,7 @@ SearchLink.propTypes = {
 }
 
 const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(
+  const discoveryGenes = (project.discoveryTags || []).filter(tag => tag.familyGuids.includes(familyGuid)).map(
     tag => (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol,
   ).filter(val => val)
   return discoveryGenes.length > 0 ? (

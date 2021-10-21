@@ -108,7 +108,7 @@ const TableHeaderRow = React.memo(({
             </span>
           ) : (
             <span>
-              all
+              all &nbsp;
               <b>{totalFamiliesCount}</b>
             </span>
           )
