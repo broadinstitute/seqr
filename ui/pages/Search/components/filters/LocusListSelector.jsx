@@ -40,7 +40,7 @@ class BaseLocusListDropdown extends React.Component {
           label="Gene List"
           value={locusList.locusListGuid}
           onChange={locusListGuid => onChange({ locusListGuid })}
-          options={[{ text: 'None', value: null }].concat(projectLocusListOptions)}
+          options={projectLocusListOptions}
         />
       </div>
     )
