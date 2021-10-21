@@ -5,6 +5,7 @@ const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const PurgeCSSPlugin = require('purgecss-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const glob = require('glob');
 const paths = require('./paths');
@@ -185,7 +186,12 @@ module.exports = {
     new webpack.ProvidePlugin({
       $: "jquery",
       d3: "d3",
-    })
+    }),
+
+    new BundleAnalyzerPlugin({
+      analyzerMode: 'server',
+      // analyzerMode: 'disabled',
+    }),
   ],
   // Turn off performance hints during development because we don't do any
   // splitting or minification in interest of speed. These warnings become

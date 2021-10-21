@@ -10,6 +10,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const paths = require('./paths');
 const getClientEnvironment = require('./env');
@@ -212,7 +213,11 @@ module.exports = {
     new webpack.ProvidePlugin({
       $: "jquery",
       d3: "d3",
-    })
+    }),
+    new BundleAnalyzerPlugin({
+      analyzerMode: 'server',
+      // analyzerMode: 'disabled',
+    }),
   ],
   optimization: {
     minimize: true,
