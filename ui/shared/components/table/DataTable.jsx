@@ -136,11 +136,29 @@ class DataTable extends React.PureComponent {
     selectRows({ ...selectedRows, [rowId]: newSelected })
   }
 
+  handlePageChange = (e, d) => this.setState({ activePage: d.activePage })
+
+  exportConfig = (sortedData) => {
+    const { columns, downloadFileName, downloadTableType } = this.props
+    if (!downloadFileName) {
+      return null
+    }
+    return [
+      {
+        name: downloadTableType || 'All Data',
+        filename: downloadFileName,
+        rawData: sortedData,
+        headers: columns.map(config => config.downloadColumn || config.content),
+        processRow: row => columns.map(getRowColumnContent(row, true)),
+      },
+    ]
+  }
+
   render() {
     const {
-      data, defaultSortColumn, defaultSortDescending, getRowFilterVal, idField, columns, selectRows, selectedRows = {},
+      data = [], defaultSortColumn, defaultSortDescending, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
-      fixedWidth, includeSelectedRowData, filterContainer, loadingProps = {}, ...tableProps
+      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
     const sortedDirection = direction || (defaultSortDescending ? DESCENDING : ASCENDING)
@@ -151,18 +169,7 @@ class DataTable extends React.PureComponent {
       sortedData = sortedData.reverse()
     }
 
-    let exportConfig
-    if (downloadFileName) {
-      exportConfig = [
-        {
-          name: downloadTableType || 'All Data',
-          filename: downloadFileName,
-          rawData: sortedData,
-          headers: columns.map(config => config.downloadColumn || config.content),
-          processRow: row => columns.map(getRowColumnContent(row, true)),
-        },
-      ]
-    }
+    const exportConfig = this.exportConfig(sortedData)
 
     if (filter) {
       sortedData = sortedData.filter(row => getRowFilterVal(row).toLowerCase().includes(filter))
@@ -259,7 +266,7 @@ class DataTable extends React.PureComponent {
                       <Pagination
                         activePage={activePage}
                         totalPages={Math.ceil(totalRows / rowsPerPage)}
-                        onPageChange={(e, d) => this.setState({ activePage: d.activePage })}
+                        onPageChange={this.handlePageChange}
                         size="mini"
                       />
                     </div>
@@ -278,7 +285,7 @@ class DataTable extends React.PureComponent {
 export default DataTable
 
 const EMPTY_OBJECT = {}
-export const SelectableTableFormInput = React.memo(({ value, onChange, error, data = [], ...props }) => (
+export const SelectableTableFormInput = React.memo(({ value, onChange, error, data, ...props }) => (
   <DataTable
     basic="very"
     fixed

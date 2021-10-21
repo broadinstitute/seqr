@@ -57,7 +57,7 @@ const BaseVariantSearchResultsContent = React.memo(({
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ?
     [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
-  const fields = [...FIELDS, ...paginationFields]
+  const fields = [...FIELDS, ...paginationFields] // eslint-disable-line react-perf/jsx-no-new-array-as-prop
 
   return [
     <LargeRow key="resultsSummary">

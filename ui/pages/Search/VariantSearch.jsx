@@ -1,8 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Route, Switch } from 'react-router-dom'
-import { Header, Grid } from 'semantic-ui-react'
+import { Grid } from 'semantic-ui-react'
 
+import { Error404 } from 'shared/components/page/Errors'
 import VariantSearchForm from './components/VariantSearchForm'
 import VariantSearchResults from './components/VariantSearchResults'
 
@@ -29,7 +30,7 @@ const VariantSearch = ({ match }) => (
           <Route path={SEARCH_FORM_PAGES.map(pagePath => `${match.url}/${pagePath}`)} component={VariantSearchForm} />
           <Route path={`${match.url}/${SINGLE_VARIANT_RESULTS_PATH}`} />
           <Route path={match.url} exact component={VariantSearchForm} />
-          <Route component={() => <Header size="huge" textAlign="center">Error 404: Page Not Found</Header>} />
+          <Route component={Error404} />
         </Switch>
       </Grid.Column>
     </Grid.Row>

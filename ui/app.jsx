@@ -22,6 +22,7 @@ import TermsOfService from 'pages/Public/TermsOfService'
 import rootReducer from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
 import configureStore from 'redux/utils/configureStore'
+import { Error404 } from 'shared/components/page/Errors'
 
 import 'semantic-ui-css/semantic.min.css'
 import 'shared/global.css'
@@ -60,7 +61,7 @@ ReactDOM.render(
           <Route path="/privacy_policy" component={PrivacyPolicy} />
           <Route path="/terms_of_service" component={TermsOfService} />
           <Route path="/accept_policies" component={AcceptPolicies} />
-          <Route component={() => <div>Invalid URL</div>} />
+          <Route component={Error404} />
         </Switch>
       </BaseLayout>
     </BrowserRouter>

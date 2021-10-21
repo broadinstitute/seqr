@@ -520,7 +520,7 @@ export const getMmeDefaultContactEmail = createSelector(
 export const getUserOptions = createSelector(
   getUserOptionsByUsername,
   usersOptionsByUsername => Object.values(usersOptionsByUsername).map(
-    user => ({ key: user.username, value: user.username, text: user.email }),
+    user => ({ key: user.username, value: user, text: user.email }),
   ),
 )
 

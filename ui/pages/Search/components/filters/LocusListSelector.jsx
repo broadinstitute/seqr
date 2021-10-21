@@ -30,8 +30,13 @@ class BaseLocusListDropdown extends React.Component {
     }
   }
 
+  onChange = (locusListGuid) => {
+    const { onChange } = this.props
+    onChange({ locusListGuid })
+  }
+
   render() {
-    const { locusList, projectLocusListOptions, onChange } = this.props
+    const { locusList, projectLocusListOptions } = this.props
     return (
       <div>
         <Dropdown
@@ -39,7 +44,7 @@ class BaseLocusListDropdown extends React.Component {
           selection
           label="Gene List"
           value={locusList.locusListGuid}
-          onChange={locusListGuid => onChange({ locusListGuid })}
+          onChange={this.onChange}
           options={projectLocusListOptions}
         />
       </div>

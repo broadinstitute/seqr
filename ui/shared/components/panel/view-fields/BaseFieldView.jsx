@@ -26,6 +26,7 @@ class BaseFieldView extends React.PureComponent {
     showInLine: PropTypes.bool,
     fieldDisplay: PropTypes.func,
     formFields: PropTypes.arrayOf(PropTypes.object),
+    formFieldProps: PropTypes.object,
     isVisible: PropTypes.bool,
     isPrivate: PropTypes.bool,
     isEditable: PropTypes.bool,
@@ -47,10 +48,13 @@ class BaseFieldView extends React.PureComponent {
     showEmptyValues: PropTypes.bool,
     user: PropTypes.object,
     modalStyle: PropTypes.object,
+    modalPopup: PropTypes.object,
+    modalTrigger: PropTypes.node,
     showErrorPanel: PropTypes.bool,
     modalId: PropTypes.string,
     modalSize: PropTypes.string,
     defaultId: PropTypes.string,
+    additionalEditFields: PropTypes.arrayOf(PropTypes.object),
   }
 
   static defaultProps = {
@@ -70,10 +74,15 @@ class BaseFieldView extends React.PureComponent {
     return initialValues[idField] || defaultId
   }
 
+  getFormFields = () => {
+    const { field, formFieldProps, additionalEditFields = [] } = this.props
+    return [...additionalEditFields, { name: field, ...formFieldProps }]
+  }
+
   getEditButton = () => {
     const {
       initialValues, modalId, isEditable, formFields, showInLine, editLabel, editIconName, onSubmit, showErrorPanel,
-      addConfirm, modalTitle, modalSize, modalStyle, field,
+      addConfirm, modalTitle, modalSize, modalStyle, field, formFieldProps, modalTrigger, modalPopup,
     } = this.props
     const { showInLineButton } = this.state
 
@@ -81,7 +90,7 @@ class BaseFieldView extends React.PureComponent {
       return null
     }
 
-    if (formFields) {
+    if (formFields || formFieldProps) {
       const fieldModalId = `edit-${this.getFieldId() || 'new'}-${field}-${modalId}`
       return showInLine ? (
         <span key="edit">
@@ -103,7 +112,7 @@ class BaseFieldView extends React.PureComponent {
                 onSubmitSucceeded={this.toggleButtonVisibility}
                 form={fieldModalId}
                 initialValues={initialValues}
-                fields={formFields}
+                fields={formFields || this.getFormFields()}
                 showErrorPanel={showErrorPanel}
               />
             </Segment>
@@ -116,11 +125,13 @@ class BaseFieldView extends React.PureComponent {
           modalTitle={modalTitle}
           modalId={fieldModalId}
           modalSize={modalSize}
+          trigger={modalTrigger}
           buttonText={editLabel}
           editIconName={editIconName}
+          modalPopup={modalPopup}
           onSubmit={onSubmit}
           initialValues={initialValues}
-          formFields={formFields}
+          formFields={formFields || this.getFormFields()}
           formContainer={<div style={modalStyle} />}
           showErrorPanel={showErrorPanel}
           confirmDialog={addConfirm}
@@ -132,10 +143,15 @@ class BaseFieldView extends React.PureComponent {
       <DispatchRequestButton
         key="edit"
         buttonContent={<Icon link size="small" name="plus" />}
-        onSubmit={() => onSubmit(initialValues)}
+        onSubmit={this.submitInitialValues}
         confirmDialog={addConfirm}
       />
     )
+  }
+
+  submitInitialValues = () => {
+    const { onSubmit, initialValues } = this.props
+    return onSubmit(initialValues)
   }
 
   render() {
@@ -170,32 +186,31 @@ class BaseFieldView extends React.PureComponent {
     )
     const buttons = [editButton, deleteButton]
     const hasButtons = editButton || deleteButton
-
-    return (
-      <span style={style || {}}>
-        {isPrivate && (
-          <Popup
-            trigger={<Icon name="lock" size="small" />}
-            position="top center"
-            size="small"
-            content="Only visible to internal users."
-          />
-        )}
-        {fieldName && [
-          <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
-          <HorizontalSpacer key="spacer" width={10} />,
-          ...buttons,
-          compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
-          !compact && <br key="br" />,
-        ]}
-        {hasValue && !hideValue && showInLineButton && (
-          <FieldValue compact={compact} fieldName={fieldName} hasButtons={hasButtons}>
-            {fieldDisplay(fieldValue, compact, this.getFieldId())}
-          </FieldValue>
-        )}
-        {!fieldName && buttons}
-      </span>
-    )
+    const content = [
+      isPrivate && (
+        <Popup
+          key="private"
+          trigger={<Icon name="lock" size="small" />}
+          position="top center"
+          size="small"
+          content="Only visible to internal users."
+        />
+      ),
+      fieldName && [
+        <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
+        <HorizontalSpacer key="spacer" width={10} />,
+        ...buttons,
+        compact && (hasButtons ? <HorizontalSpacer width={10} key="hs" /> : null),
+        !compact && <br key="br" />,
+      ],
+      hasValue && !hideValue && showInLineButton && (
+        <FieldValue key="value" compact={compact} fieldName={fieldName} hasButtons={hasButtons}>
+          {fieldDisplay(fieldValue, compact, this.getFieldId())}
+        </FieldValue>
+      ),
+      !fieldName && buttons,
+    ].filter(val => val)
+    return style ? <span style={style}>{content}</span> : content
   }
 
 }

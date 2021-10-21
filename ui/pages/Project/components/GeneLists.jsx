@@ -21,61 +21,59 @@ const ItemContainer = styled.div`
   white-space: nowrap;
 `
 
-const LocusListItem = React.memo(({ project, locusList, updateLocusLists: onSubmit }) => {
-  const submitValues = { locusListGuids: [locusList.locusListGuid] }
-  return (
-    <ItemContainer key={locusList.locusListGuid}>
-      <Modal
-        title={`${locusList.name} Gene List`}
-        modalName={`${project.projectGuid}-${locusList.name}-genes`}
-        trigger={<ButtonLink>{locusList.name}</ButtonLink>}
-        size="large"
-      >
-        <LocusListDetailPanel locusListGuid={locusList.locusListGuid} />
-      </Modal>
-      <Popup
-        position="right center"
-        trigger={<HelpIcon />}
-        content={
-          <div>
-            <b>{`${locusList.numEntries} Genes`}</b>
-            <br />
-            <i>{locusList.description}</i>
+const LocusListItem = React.memo(({ project, locusList, onSubmit }) => (
+  <ItemContainer key={locusList.locusListGuid}>
+    <Modal
+      title={`${locusList.name} Gene List`}
+      modalName={`${project.projectGuid}-${locusList.name}-genes`}
+      trigger={<ButtonLink>{locusList.name}</ButtonLink>}
+      size="large"
+    >
+      <LocusListDetailPanel locusListGuid={locusList.locusListGuid} />
+    </Modal>
+    <Popup
+      position="right center"
+      trigger={<HelpIcon />}
+      content={
+        <div>
+          <b>{`${locusList.numEntries} Genes`}</b>
+          <br />
+          <i>{locusList.description}</i>
+        </div>
+      }
+      size="small"
+    />
+    {project.canEdit && (
+      <DeleteButton
+        onSubmit={onSubmit}
+        size="tiny"
+        confirmDialog={
+          <div className="content">
+            Are you sure you want to remove &nbsp;
+            <b>{locusList.name}</b>
+            &nbsp; from this project
           </div>
         }
-        size="small"
       />
-      {project.canEdit && (
-        <DeleteButton
-          initialValues={submitValues}
-          onSubmit={onSubmit}
-          size="tiny"
-          confirmDialog={
-            <div className="content">
-              Are you sure you want to remove
-              <b>{locusList.name}</b>
-              from this project
-            </div>
-          }
-        />
-      )}
-    </ItemContainer>
-  )
-})
+    )}
+  </ItemContainer>
+))
 
 LocusListItem.propTypes = {
   project: PropTypes.object.isRequired,
   locusList: PropTypes.object.isRequired,
-  updateLocusLists: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   locusList: getLocusListsByGuid(state)[ownProps.locusListGuid],
 })
 
-const mapDispatchToProps = { setModalConfirm, closeModal, updateLocusLists }
+const mapItemDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: values => dispatch(updateLocusLists({ ...values, locusListGuids: [ownProps.locusListGuid] })),
+})
 
-const LocusList = connect(mapStateToProps, mapDispatchToProps)(LocusListItem)
+const LocusList = connect(mapStateToProps, mapItemDispatchToProps)(LocusListItem)
 
 export const GeneLists = React.memo(({ project }) => project.locusListGuids.map(
   locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
@@ -160,5 +158,7 @@ class AddGeneLists extends React.PureComponent {
   }
 
 }
+
+const mapDispatchToProps = { setModalConfirm, closeModal, updateLocusLists }
 
 export const AddGeneListsButton = connect(null, mapDispatchToProps)(AddGeneLists)

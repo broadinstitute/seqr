@@ -38,17 +38,36 @@ const NO_HEADER_PAGES = [
 const SIMPLE_HEADER_PAGES = [
   { page: 'data_management', pages: DATA_MANAGEMENT_PAGES },
   { page: 'report', pages: REPORT_PAGES },
-]
+].map(({ page, ...props }) => ({
+  key: page,
+  path: `/${page}`,
+  component: () => <SimplePageHeader page={page} {...props} />,
+}))
+
+const nullComponent = () => null
+
+const noHeaderRoute = page => <Route key={page} path={page} component={nullComponent} />
+
+const simpleHeaderRoute = props => <Route {...props} />
+
+const ProjectSavedVariantsPageHeader = ({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />
+ProjectSavedVariantsPageHeader.propTypes = {
+  match: PropTypes.object,
+}
+
+const DefaultPageHeaderLayout = ({ match }) => <PageHeaderLayout {...match.params} />
+DefaultPageHeaderLayout.propTypes = {
+  match: PropTypes.object,
+}
 
 export default () => (
   <Switch>
-    {NO_HEADER_PAGES.map(page => <Route key={page} path={page} component={() => null} />)}
-    {SIMPLE_HEADER_PAGES.map(({ page, ...props }) => (
-      <Route key={page} path={`/${page}`} component={() => <SimplePageHeader page={page} {...props} />} />))}
-    <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={({ match }) => <ProjectPageHeader match={match} breadcrumb="saved_variants" />} />
+    {NO_HEADER_PAGES.map(noHeaderRoute)}
+    {SIMPLE_HEADER_PAGES.map(simpleHeaderRoute)}
+    <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={ProjectSavedVariantsPageHeader} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection*" component={ProjectPageHeader} />
     <Route path="/summary_data" component={SummaryDataPageHeader} />
     <Route path="/variant_search/:pageType/:entityGuid" component={VariantSearchPageHeader} />
-    <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={({ match }) => <PageHeaderLayout {...match.params} />} />
+    <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={DefaultPageHeaderLayout} />
   </Switch>
 )

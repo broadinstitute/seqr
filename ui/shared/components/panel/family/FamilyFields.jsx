@@ -47,7 +47,7 @@ const BaseAnalystEmailDropdown = React.memo(({ load, loading, onChange, value, .
     <Select
       loading={loading}
       additionLabel="Assigned Analyst: "
-      onChange={val => onChange(val)}
+      onChange={onChange}
       value={value}
       placeholder="Unassigned"
       search

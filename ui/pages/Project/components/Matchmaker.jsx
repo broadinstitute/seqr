@@ -92,6 +92,10 @@ const PHENOTYPE_FIELDS = [
 
 const EMPTY_LIST = []
 
+const updateIndividualFeatures = (onChange, individual) => newValue => onChange(
+  individual.features.filter(feature => newValue[feature.id]).map(feature => ({ observed: 'yes', ...feature })),
+)
+
 const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) => (
   <SelectableTableFormInput
     idField="id"
@@ -99,9 +103,7 @@ const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) => 
     columns={PHENOTYPE_FIELDS}
     data={individual.features || EMPTY_LIST}
     value={value}
-    onChange={newValue => onChange(
-      individual.features.filter(feature => newValue[feature.id]).map(feature => ({ observed: 'yes', ...feature })),
-    )}
+    onChange={updateIndividualFeatures(onChange, individual)}
   />
 ))
 
@@ -188,6 +190,16 @@ const contactedLabel = (val) => {
   return val.weContacted ? 'We Contacted Host' : 'Not Contacted'
 }
 
+const displayMatchStatus = val => (
+  <div>
+    <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
+    {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
+    {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
+    <p>{val.comments}</p>
+    <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
+  </div>
+)
+
 const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) => (
   <BaseFieldView
     initialValues={initialValues}
@@ -199,15 +211,7 @@ const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) => (
     modalTitle="Edit MME Submission Status"
     formFields={MATCH_STATUS_EDIT_FIELDS}
     onSubmit={onSubmit}
-    fieldDisplay={val => (
-      <div>
-        <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
-        {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
-        {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
-        <p>{val.comments}</p>
-        <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
-      </div>
-    )}
+    fieldDisplay={displayMatchStatus}
   />
 ))
 

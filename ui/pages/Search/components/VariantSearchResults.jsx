@@ -36,7 +36,7 @@ const BaseVariantSearchResults = React.memo((
   }
 
   if (ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter)) {
-    const compoundHetDisplay = { flattenCompoundHet }
+    const compoundHetDisplay = { flattenCompoundHet } // eslint-disable-line react-perf/jsx-no-new-object-as-prop
     resultProps.additionalDisplayEdit = (
       <span>
         <ReduxFormWrapper
