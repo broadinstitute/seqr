@@ -180,9 +180,9 @@ ReadButtons.propTypes = {
 }
 
 const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
-  ...Object.keys(options).includes(track.type) ? { ...track, ...options[track.type] } : track,
+  ...options[track.type] ? { ...track, ...options[track.type] } : track,
   ...(track.type === 'merged') ? {
-    tracks: track.tracks.map(tr => (Object.keys(options).includes(tr.type) ? { ...tr, ...options[tr.type] } : tr)),
+    tracks: track.tracks.map(tr => (options[tr.type] ? { ...tr, ...options[tr.type] } : tr)),
   } : {},
 }))
 
