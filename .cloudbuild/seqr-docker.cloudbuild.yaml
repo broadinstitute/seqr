@@ -1,7 +1,7 @@
 steps:
-  - name: gcr.io/kaniko-project/executor:latest
+  - name: gcr.io/kaniko-project/executor:v1.6.0
     args: ["--dockerfile=deploy/docker/seqr/Dockerfile-new",
           "--context=.",
-          "--destination=us-central1-docker.pkg.dev/tgg-sre-testing/seqr-testing/seqr-new",
+          "--destination=us-central1-docker.pkg.dev/tgg-sre-testing/seqr-testing/seqr-new:latest",
           "--cache=true",
           "--cache-ttl=24h"]
