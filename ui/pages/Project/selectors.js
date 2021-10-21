@@ -50,6 +50,7 @@ export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getCollaboratorsLoading = state => state.collaboratorsLoading.isLoading
 export const getGeneListsLoading = state => state.geneListsLoading.isLoading
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
+export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],

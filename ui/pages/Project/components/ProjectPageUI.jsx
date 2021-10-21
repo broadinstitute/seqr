@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
+import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { SectionHeader } from 'shared/components/StyledComponents'
 import {
@@ -18,7 +19,9 @@ import {
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
   getProjectAnalysisGroupsByGuid,
+  getTagTypesLoading,
 } from '../selectors'
+import { loadTagTypes } from '../reducers'
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
 import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
@@ -95,14 +98,16 @@ const ProjectPageUI = React.memo(props => (
         </ProjectSection>
         <VerticalSpacer height={10} />
         <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
-          <VariantTagTypeBar
-            project={props.project}
-            analysisGroup={props.analysisGroup}
-            height={20}
-            showAllPopupCategorie
-          />
-          <VerticalSpacer height={10} />
-          <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
+          <DataLoader load={props.load} loading={props.tagTypesLoading} content={props.project.variantTagTypes}>
+            <VariantTagTypeBar
+              project={props.project}
+              analysisGroup={props.analysisGroup}
+              height={20}
+              showAllPopupCategorie
+            />
+            <VerticalSpacer height={10} />
+            <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
+          </DataLoader>
         </ProjectSection>
       </Grid.Column>
       <Grid.Column width={4}>
@@ -128,14 +133,21 @@ ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisGroup: PropTypes.object,
   match: PropTypes.object,
+  tagTypesLoading: PropTypes.bool,
+  load: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
+  tagTypesLoading: getTagTypesLoading(state),
 })
+
+const mapDispatchToProps = {
+  load: loadTagTypes,
+}
 
 export { ProjectPageUI as ProjectPageUIComponent }
 
-export default connect(mapStateToProps)(ProjectPageUI)
+export default connect(mapStateToProps, mapDispatchToProps)(ProjectPageUI)

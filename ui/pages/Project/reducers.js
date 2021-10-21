@@ -21,6 +21,7 @@ const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_COLLABORATORS = 'REQUEST_COLLABORATORS'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
+const REQUEST_TAG_TYPES = 'REQUEST_TAG_TYPES'
 
 // Data actions
 
@@ -58,6 +59,21 @@ export const loadFamilies = () => (dispatch, getState) => {
 
 export const loadCollaborators = () => () => {} // TODO REQUEST_COLLABORATORS
 export const loadGeneLists = () => () => {} // TODO REQUEST_GENE_LISTS
+
+export const loadTagTypes = () => (dispatch, getState) => {
+  const { currentProjectGuid, projectsByGuid } = getState()
+  const project = projectsByGuid[currentProjectGuid]
+  if (!project.variantTagTypes) {
+    dispatch({ type: REQUEST_TAG_TYPES })
+    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_tag_types`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
 
 export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatch, getState) => {
   const state = getState()
@@ -290,6 +306,7 @@ export const reducers = {
   collaboratorsLoading: loadingReducer(REQUEST_COLLABORATORS, RECEIVE_DATA),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
   geneListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
+  tagTypesLoading: loadingReducer(REQUEST_TAG_TYPES, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSearch: '',

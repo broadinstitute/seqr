@@ -16,7 +16,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
-from seqr.views.utils.project_context_utils import get_projects_child_entities
+from seqr.views.utils.project_context_utils import get_projects_child_entities, _add_tag_types
 from settings import ANALYST_PROJECT_CATEGORY
 
 
@@ -175,6 +175,17 @@ def project_families(request, project_guid):
     return create_json_response({
         'familiesByGuid': {f['familyGuid']: f for f in families},
     })
+
+
+@login_and_policies_required
+def project_tag_types(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    projects_by_guid = {project_guid: {}}
+    _add_tag_types(projects_by_guid, project_guid)
+    tag_types = projects_by_guid[project_guid]['variantTagTypes']
+    _add_tag_type_counts(project, tag_types)
+    tag_types.sort(key=lambda variant_tag_type: variant_tag_type['order'] or 0)
+    return create_json_response({'projectsByGuid': projects_by_guid})
 
 
 def _retrieve_mme_submissions(project, individuals_by_guid):
