@@ -6,6 +6,7 @@ import { connect } from 'react-redux'
 
 import { getLocusListsByGuid } from 'redux/selectors'
 import { setModalConfirm, closeModal } from 'redux/utils/modalReducer'
+import DataLoader from 'shared/components/DataLoader'
 import { LocusListsLoader } from 'shared/components/LocusListLoader'
 import LocusListDetailPanel from 'shared/components/panel/genes/LocusListDetail'
 import LocusListTables from 'shared/components/table/LocusListTables'
@@ -14,7 +15,8 @@ import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButt
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import Modal from 'shared/components/modal/Modal'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
-import { updateLocusLists } from '../reducers'
+import { loadGeneLists, updateLocusLists } from '../reducers'
+import { getGeneListsLoading } from '../selectors'
 
 const ItemContainer = styled.div`
   padding: 2px 0px;
@@ -77,13 +79,29 @@ const mapDispatchToProps = { setModalConfirm, closeModal, updateLocusLists }
 
 const LocusList = connect(mapStateToProps, mapDispatchToProps)(LocusListItem)
 
-export const GeneLists = React.memo(({ project }) => project.locusListGuids.map(
-  locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
+export const LoadedGeneLists = React.memo(({ load, loading, project }) => (
+  <DataLoader load={load} loading={loading} content={project.locusListGuids}>
+    {(project.locusListGuids || []).map(
+      locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
+    )}
+  </DataLoader>
 ))
 
-GeneLists.propTypes = {
+LoadedGeneLists.propTypes = {
   project: PropTypes.object.isRequired,
+  load: PropTypes.func,
+  loading: PropTypes.bool,
 }
+
+const mapGeneListStateToProps = state => ({
+  loading: getGeneListsLoading(state),
+})
+
+const mapGeneListDispatchToProps = {
+  load: loadGeneLists,
+}
+
+export const GeneLists = connect(mapGeneListStateToProps, mapGeneListDispatchToProps)(LoadedGeneLists)
 
 class AddGeneLists extends React.PureComponent {
 

@@ -35,7 +35,7 @@ export const updateEntity = (
 }
 
 // A helper method to load a project and all its detail fields
-export const loadProjectDetails = (
+export const loadProjectDetails = ( // TODO deprecated, will not load variantTagTypes
   projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes',
 ) => (dispatch, getState) => {
   const project = getState().projectsByGuid[projectGuid]

@@ -4,7 +4,7 @@ import { SubmissionError } from 'redux-form'
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_PROJECTS, REQUEST_SAVED_VARIANTS, updateEntity, loadProjectDetails } from 'redux/utils/reducerUtils'
+import { REQUEST_SAVED_VARIANTS, updateEntity } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
@@ -18,6 +18,8 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
+const REQUEST_COLLABORATORS = 'REQUEST_COLLABORATORS'
+const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 
 // Data actions
 
@@ -25,10 +27,19 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
   const project = getState().projectsByGuid[projectGuid]
   if (!project) {
-    dispatch({ type: REQUEST_PROJECTS })
+    dispatch({ type: REQUEST_PROJECT_DETAILS })
+    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
   }
-  return loadProjectDetails(projectGuid, REQUEST_PROJECT_DETAILS, 'detailsLoaded')(dispatch, getState)
 }
+
+export const loadCollaborators = () => () => {} // TODO REQUEST_COLLABORATORS
+export const loadGeneLists = () => () => {} // TODO REQUEST_GENE_LISTS
 
 export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatch, getState) => {
   const state = getState()
@@ -258,6 +269,8 @@ export const reducers = {
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
+  collaboratorsLoading: loadingReducer(REQUEST_COLLABORATORS, RECEIVE_DATA),
+  geneListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSearch: '',

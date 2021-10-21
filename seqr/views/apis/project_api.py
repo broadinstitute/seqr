@@ -132,33 +132,38 @@ def project_page_data(request, project_guid):
     """
     project = get_project_and_check_permissions(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
-
-    is_analyst = user_is_analyst(request.user)
-    response = get_projects_child_entities([project], request.user, is_analyst=is_analyst)
-
-    for i in response['individualsByGuid'].values():
-        i['mmeSubmissionGuid'] = None
-    response['mmeSubmissionsByGuid'] = _retrieve_mme_submissions(project, response['individualsByGuid'])
-
-    project_json = response['projectsByGuid'][project_guid]
-    project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
-    project_json['detailsLoaded'] = True
-    project_json['discoveryTags'] = _get_discovery_tags(project)
-
-    _add_tag_type_counts(project, project_json['variantTagTypes'])
-    project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
-
-    gene_ids = set()
-    for tag in project_json['discoveryTags']:
-        gene_ids.update(list(tag.get('transcripts', {}).keys()))
-    for submission in response['mmeSubmissionsByGuid'].values():
-        gene_ids.update(submission['geneIds'])
-
-    response.update({
-        'genesById': get_genes(gene_ids),
+    return create_json_response({
+        'projectsByGuid': {
+            project.guid: _get_json_for_project(project, request.user)
+        },
     })
 
-    return create_json_response(response)
+    # is_analyst = user_is_analyst(request.user)
+    # response = get_projects_child_entities([project], request.user, is_analyst=is_analyst)
+    #
+    # for i in response['individualsByGuid'].values():
+    #     i['mmeSubmissionGuid'] = None
+    # response['mmeSubmissionsByGuid'] = _retrieve_mme_submissions(project, response['individualsByGuid'])
+    #
+    # project_json = response['projectsByGuid'][project_guid]
+    # project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
+    # project_json['detailsLoaded'] = True
+    # project_json['discoveryTags'] = _get_discovery_tags(project)
+    #
+    # _add_tag_type_counts(project, project_json['variantTagTypes'])
+    # project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
+    #
+    # gene_ids = set()
+    # for tag in project_json['discoveryTags']:
+    #     gene_ids.update(list(tag.get('transcripts', {}).keys()))
+    # for submission in response['mmeSubmissionsByGuid'].values():
+    #     gene_ids.update(submission['geneIds'])
+    #
+    # response.update({
+    #     'genesById': get_genes(gene_ids),
+    # })
+    #
+    # return create_json_response(response)
 
 
 def _retrieve_mme_submissions(project, individuals_by_guid):
