@@ -172,8 +172,17 @@ def project_families(request, project_guid):
     families = _get_json_for_families(
         Family.objects.filter(project=project), request.user, project_guid=project_guid, add_individual_guids_field=True
     )
+    families_by_guid = {f['familyGuid']: dict(discoveryTags=[], **f) for f in families}
+
+    gene_ids = set()
+    for tag in _get_discovery_tags(project):
+        gene_ids.update(list(tag.get('transcripts', {}).keys()))
+        for family_guid in tag['familyGuids']:
+            families_by_guid[family_guid]['discoveryTags'].append(tag)
+
     return create_json_response({
-        'familiesByGuid': {f['familyGuid']: f for f in families},
+        'familiesByGuid': families_by_guid,
+        'genesById': get_genes(gene_ids),
     })
 
 

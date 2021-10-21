@@ -33,8 +33,8 @@ SearchLink.propTypes = {
   children: PropTypes.node,
 }
 
-const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
-  const discoveryGenes = (project.discoveryTags || []).filter(tag => tag.familyGuids.includes(familyGuid)).map(
+const DiscoveryGenes = React.memo(({ family, genesById }) => {
+  const discoveryGenes = (family.discoveryTags || []).map(
     tag => (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol,
   ).filter(val => val)
   return discoveryGenes.length > 0 ? (
@@ -46,8 +46,7 @@ const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
 })
 
 DiscoveryGenes.propTypes = {
-  project: PropTypes.object.isRequired,
-  familyGuid: PropTypes.string.isRequired,
+  family: PropTypes.object.isRequired,
   genesById: PropTypes.object.isRequired,
 }
 
@@ -56,7 +55,7 @@ const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, g
     <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
     <HorizontalSpacer width={10} />
     <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
-    <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
+    <DiscoveryGenes family={family} genesById={genesById} />
     {!compact && (
       <div>
         <VerticalSpacer height={20} />
