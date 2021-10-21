@@ -9,38 +9,40 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 
 
-def get_projects_child_entities(projects, user, is_analyst=None):
+def get_projects_child_entities(projects, user, is_analyst=None, include_family_entities=True):
     project_guid = projects[0].guid if len(projects) == 1 else None
     has_case_review_perm = has_case_review_permissions(projects[0], user)
     if is_analyst is None:
         is_analyst = user_is_analyst(user)
 
-    response = _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm)
+    response = _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm, include_family_entities)
 
     _add_tag_types(response['projectsByGuid'], project_guid)
 
     return response
 
-def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm):
+def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm, include_family_entities):
     projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
 
-    family_models = Family.objects.filter(project__in=projects)
-    families = _get_json_for_families(
-        family_models, user, project_guid=project_guid, skip_nested=True,
-        is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+    if include_family_entities:
+        family_models = Family.objects.filter(project__in=projects)
+        families = _get_json_for_families(
+            family_models, user, project_guid=project_guid, skip_nested=True,
+            is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid), is_analyst=is_analyst)
+        family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project__guid=project_guid), is_analyst=is_analyst)
 
-    individual_models = Individual.objects.filter(family__in=family_models)
-    individuals = _get_json_for_individuals(
-        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=True,
-        is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+        individual_models = Individual.objects.filter(family__in=family_models)
+        individuals = _get_json_for_individuals(
+            individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=True,
+            is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    sample_models = Sample.objects.filter(individual__in=individual_models)
+        igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
+        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True,
+                                           is_analyst=is_analyst)
+
+    sample_models = Sample.objects.filter(individual__family__project__in=projects)
     samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
-
-    igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-    igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
 
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
     analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
@@ -51,21 +53,24 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
 
     response = {
         'projectsByGuid': projects_by_guid,
-        'familiesByGuid': {f['familyGuid']: f for f in families},
-        'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
-        'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
-        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
         'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
+    if include_family_entities:
+        response.update({
+            'familiesByGuid': {f['familyGuid']: f for f in families},
+            'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
+            'individualsByGuid': {i['individualGuid']: i for i in individuals},
+            'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
+        })
 
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
     else:
         _add_parent_ids(response, projects, family_models, individual_models, locus_lists_models)
 
-    _add_child_ids(response)
+    _add_child_ids(response, include_family_entities)
 
     return response
 
@@ -104,10 +109,14 @@ def _add_parent_ids(response, projects, family_models, individual_models, locus_
             if project.guid in response['projectsByGuid']:
                 response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
 
-def _add_child_ids(response):
+def _add_child_ids(response, include_family_entities):
     sample_guids_by_individual = defaultdict(list)
     for sample in response['samplesByGuid'].values():
         sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
+
+    if not include_family_entities:
+        return
+
     igv_sample_guids_by_individual = defaultdict(list)
     for sample in response['igvSamplesByGuid'].values():
         igv_sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])

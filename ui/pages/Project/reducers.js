@@ -18,11 +18,8 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
-const REQUEST_COLLABORATORS = 'REQUEST_COLLABORATORS'
+const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
-const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
-const REQUEST_TAG_TYPES = 'REQUEST_TAG_TYPES'
-const REQUEST_SAMPLES = 'REQUEST_SAMPLES'
 
 // Data actions
 
@@ -61,17 +58,12 @@ const loadProjectChildEntities = (entityType, dispatchType) => (dispatch, getSta
 
 export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES)
 
-export const loadCollaborators = () => () => {} // TODO REQUEST_COLLABORATORS
-export const loadGeneLists = () => () => {} // TODO REQUEST_GENE_LISTS
-
-export const loadSamples = () => loadProjectChildEntities('samples', REQUEST_SAMPLES)
-
-export const loadTagTypes = () => (dispatch, getState) => {
+export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
   const project = projectsByGuid[currentProjectGuid]
   if (!project.variantTagTypes) {
-    dispatch({ type: REQUEST_TAG_TYPES })
-    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_tag_types`,
+    dispatch({ type: REQUEST_PROJECT_OVERVIEW })
+    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_overview`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -309,11 +301,8 @@ export const reducers = {
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
-  collaboratorsLoading: loadingReducer(REQUEST_COLLABORATORS, RECEIVE_DATA),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
-  geneListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
-  tagTypesLoading: loadingReducer(REQUEST_TAG_TYPES, RECEIVE_DATA),
-  samplesLoading: loadingReducer(REQUEST_SAMPLES, RECEIVE_DATA),
+  projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSearch: '',

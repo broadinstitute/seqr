@@ -188,25 +188,18 @@ def project_families(request, project_guid):
 
 
 @login_and_policies_required
-def project_samples(request, project_guid):
+def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    samples = get_json_for_samples(
-        Sample.objects.filter(individual__family__project=project), project_guid=project_guid)
 
-    return create_json_response({
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
-    })
+    is_analyst = user_is_analyst(request.user)
+    response = get_projects_child_entities([project], request.user, is_analyst=is_analyst, include_family_entities=False)
 
+    project_json = response['projectsByGuid'][project_guid]
+    project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
+    _add_tag_type_counts(project, project_json['variantTagTypes'])
+    project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
 
-@login_and_policies_required
-def project_tag_types(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
-    projects_by_guid = {project_guid: {}}
-    _add_tag_types(projects_by_guid, project_guid)
-    tag_types = projects_by_guid[project_guid]['variantTagTypes']
-    _add_tag_type_counts(project, tag_types)
-    tag_types.sort(key=lambda variant_tag_type: variant_tag_type['order'] or 0)
-    return create_json_response({'projectsByGuid': projects_by_guid})
+    return create_json_response(response)
 
 
 def _retrieve_mme_submissions(project, individuals_by_guid):

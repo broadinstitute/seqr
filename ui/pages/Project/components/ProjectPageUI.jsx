@@ -19,9 +19,9 @@ import {
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
   getProjectAnalysisGroupsByGuid,
-  getTagTypesLoading,
+  getProjectOverviewIsLoading,
 } from '../selectors'
-import { loadTagTypes } from '../reducers'
+import { loadProjectOverview } from '../reducers'
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
 import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
@@ -80,25 +80,25 @@ const NO_DETAIL_FIELDS = [
 
 const ProjectPageUI = React.memo(props => (
   <Grid stackable>
-    <Grid.Row>
-      <Grid.Column width={4}>
-        {props.match.params.analysisGroupGuid ? null : (
-          <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
-            <AnalysisGroups />
+    <DataLoader load={props.load} loading={props.loading} content>
+      <Grid.Row>
+        <Grid.Column width={4}>
+          {props.match.params.analysisGroupGuid ? null : (
+            <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+              <AnalysisGroups />
+            </ProjectSection>
+          )}
+          <VerticalSpacer height={10} />
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
+            <GeneLists project={props.project} />
           </ProjectSection>
-        )}
-        <VerticalSpacer height={10} />
-        <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
-          <GeneLists project={props.project} />
-        </ProjectSection>
-      </Grid.Column>
-      <Grid.Column width={8}>
-        <ProjectSection label="Overview">
-          <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
-        </ProjectSection>
-        <VerticalSpacer height={10} />
-        <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
-          <DataLoader load={props.load} loading={props.tagTypesLoading} content={props.project.variantTagTypes}>
+        </Grid.Column>
+        <Grid.Column width={8}>
+          <ProjectSection label="Overview">
+            <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
+          </ProjectSection>
+          <VerticalSpacer height={10} />
+          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar
               project={props.project}
               analysisGroup={props.analysisGroup}
@@ -107,15 +107,15 @@ const ProjectPageUI = React.memo(props => (
             />
             <VerticalSpacer height={10} />
             <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
-          </DataLoader>
-        </ProjectSection>
-      </Grid.Column>
-      <Grid.Column width={4}>
-        <ProjectSection label="Collaborators">
-          <ProjectCollaborators />
-        </ProjectSection>
-      </Grid.Column>
-    </Grid.Row>
+          </ProjectSection>
+        </Grid.Column>
+        <Grid.Column width={4}>
+          <ProjectSection label="Collaborators">
+            <ProjectCollaborators />
+          </ProjectSection>
+        </Grid.Column>
+      </Grid.Row>
+    </DataLoader>
     <Grid.Row>
       <Grid.Column width={16}>
         <SectionHeader>Families</SectionHeader>
@@ -133,19 +133,19 @@ ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisGroup: PropTypes.object,
   match: PropTypes.object,
-  tagTypesLoading: PropTypes.bool,
-  load: PropTypes.func,
+  load: PropTypes.bool,
+  loading: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
-  tagTypesLoading: getTagTypesLoading(state),
+  loading: getProjectOverviewIsLoading(state),
 })
 
 const mapDispatchToProps = {
-  load: loadTagTypes,
+  load: loadProjectOverview,
 }
 
 export { ProjectPageUI as ProjectPageUIComponent }

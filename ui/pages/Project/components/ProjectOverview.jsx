@@ -7,7 +7,6 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
-import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
@@ -26,9 +25,7 @@ import {
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissions,
   getProjectAnalysisGroupMmeSubmissionDetails,
-  getSamplesLoading,
 } from '../selectors'
-import { loadSamples } from '../reducers'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
 import EditDatasetsButton from './EditDatasetsButton'
@@ -181,7 +178,7 @@ Matchmaker.propTypes = {
 const mapMatchmakerStateToProps = (state, ownProps) => ({
   mmeSubmissions: getProjectAnalysisGroupMmeSubmissions(state, ownProps),
 })
-// TODO load
+
 const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
 
 const Dataset = React.memo(({ project, samplesByType, user }) => {
@@ -241,29 +238,12 @@ Dataset.propTypes = {
   user: PropTypes.object.isRequired,
 }
 
-const LoadedDataset = ({ load, loading, samplesByType, ...props }) => (
-  <DataLoader load={load} loading={loading} content>
-    <Dataset samplesByType={samplesByType} {...props} />
-  </DataLoader>
-)
-
-LoadedDataset.propTypes = {
-  samplesByType: PropTypes.object.isRequired,
-  loading: PropTypes.bool,
-  load: PropTypes.func,
-}
-
 const mapDatasetStateToProps = (state, ownProps) => ({
   user: getUser(state),
   samplesByType: getProjectAnalysisGroupSamplesByTypes(state, ownProps),
-  loading: getSamplesLoading(state),
 })
 
-const mapDispatchToProps = {
-  load: loadSamples,
-}
-
-const DatasetOverview = connect(mapDatasetStateToProps, mapDispatchToProps)(LoadedDataset)
+const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)
 
 const Anvil = React.memo(({ project, user }) => (
   project.workspaceName && user.isAnvil && (

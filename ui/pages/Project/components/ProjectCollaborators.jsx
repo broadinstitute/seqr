@@ -14,8 +14,8 @@ import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
-import { updateCollaborator, loadCollaborators } from '../reducers'
-import { getUserOptions, getCurrentProject, getCollaboratorsLoading } from '../selectors'
+import { updateCollaborator } from '../reducers'
+import { getUserOptions, getCurrentProject } from '../selectors'
 
 const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) => (
   <DataLoader load={load} loading={false} content>
@@ -137,11 +137,11 @@ CollaboratorRow.propTypes = {
 }
 
 const getSortedCollabs = (project, isAnvil) => orderBy(
-  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
+  (project.collaborators || []).filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
   ['desc', 'asc'],
 )
 
-const ProjectCollaboratorsContent = React.memo(({ project, onSubmit }) => {
+const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
   const localCollabs = getSortedCollabs(project, false)
   const anvilCollabs = getSortedCollabs(project, true)
   return [
@@ -164,30 +164,16 @@ const ProjectCollaboratorsContent = React.memo(({ project, onSubmit }) => {
   ]
 })
 
-ProjectCollaboratorsContent.propTypes = {
+ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
 }
 
-const ProjectCollaborators = React.memo(({ load, loading, project, ...props }) => (
-  <DataLoader load={load} loading={loading} content={project.collaborators}>
-    <ProjectCollaboratorsContent project={project} {...props} />
-  </DataLoader>
-))
-
-ProjectCollaborators.propTypes = {
-  load: PropTypes.func,
-  loading: PropTypes.bool,
-  project: PropTypes.object.isRequired,
-}
-
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
-  loading: getCollaboratorsLoading(state),
 })
 
 const mapDispatchToProps = {
-  load: loadCollaborators,
   onSubmit: updateCollaborator,
 }
 
