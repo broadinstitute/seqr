@@ -198,6 +198,7 @@ def project_overview(request, project_guid):
     project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
     _add_tag_type_counts(project, project_json['variantTagTypes'])
     project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
+    # TODO summary data only for matchmaker
 
     return create_json_response(response)
 
