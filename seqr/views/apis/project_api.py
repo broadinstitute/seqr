@@ -13,7 +13,8 @@ from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_saved_variants, \
-    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families
+    get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
+    get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
 from seqr.views.utils.project_context_utils import get_projects_child_entities, _add_tag_types
@@ -183,6 +184,17 @@ def project_families(request, project_guid):
     return create_json_response({
         'familiesByGuid': families_by_guid,
         'genesById': get_genes(gene_ids),
+    })
+
+
+@login_and_policies_required
+def project_samples(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    samples = get_json_for_samples(
+        Sample.objects.filter(individual__family__project=project), project_guid=project_guid)
+
+    return create_json_response({
+        'samplesByGuid': {s['sampleGuid']: s for s in samples},
     })
 
 

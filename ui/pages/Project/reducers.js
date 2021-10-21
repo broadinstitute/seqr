@@ -22,6 +22,7 @@ const REQUEST_COLLABORATORS = 'REQUEST_COLLABORATORS'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
 const REQUEST_TAG_TYPES = 'REQUEST_TAG_TYPES'
+const REQUEST_SAMPLES = 'REQUEST_SAMPLES'
 
 // Data actions
 
@@ -40,14 +41,15 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   }
 }
 
-export const loadFamilies = () => (dispatch, getState) => {
-  const { currentProjectGuid, familiesByGuid } = getState()
-  const loadedProjectFamilies = Object.values(familiesByGuid).some(
-    ({ projectGuid }) => projectGuid === currentProjectGuid,
+const loadProjectChildEntities = (entityType, dispatchType) => (dispatch, getState) => {
+  const state = getState()
+  const entities = state[`${entityType}ByGuid`]
+  const loadedProjectFamilies = Object.values(entities).some(
+    ({ projectGuid }) => projectGuid === state.currentProjectGuid,
   )
   if (!loadedProjectFamilies) {
-    dispatch({ type: REQUEST_FAMILIES })
-    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_families`,
+    dispatch({ type: dispatchType })
+    new HttpRequestHelper(`/api/project/${state.currentProjectGuid}/get_${entityType}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -57,8 +59,12 @@ export const loadFamilies = () => (dispatch, getState) => {
   }
 }
 
+export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES)
+
 export const loadCollaborators = () => () => {} // TODO REQUEST_COLLABORATORS
 export const loadGeneLists = () => () => {} // TODO REQUEST_GENE_LISTS
+
+export const loadSamples = () => loadProjectChildEntities('samples', REQUEST_SAMPLES)
 
 export const loadTagTypes = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
@@ -307,6 +313,7 @@ export const reducers = {
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
   geneListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
   tagTypesLoading: loadingReducer(REQUEST_TAG_TYPES, RECEIVE_DATA),
+  samplesLoading: loadingReducer(REQUEST_SAMPLES, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
     familiesSearch: '',
