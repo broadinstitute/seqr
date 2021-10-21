@@ -179,22 +179,15 @@ ReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
-const optionReducer = trackType => (acc, { type, field, value }) => ({
-  ...acc,
-  ...(trackType === type) ? { [field]: value } : {},
-})
-
 const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
-  ...track,
-  ...options.reduce(optionReducer(track.type), {}),
+  ...Object.keys(options).includes(track.type) ? { ...track, ...options[track.type] } : track,
   ...(track.type === 'merged') ? {
-    tracks: track.tracks.map(tr => (
-      { ...tr, ...options.reduce(optionReducer(tr.type), {}) })),
+    tracks: track.tracks.map(tr => (Object.keys(options).includes(tr.type) ? { ...tr, ...options[tr.type] } : tr)),
   } : {},
 }))
 
 const IgvPanel = React.memo((
-  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, options },
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible },
 ) => {
   const size = variant.end && variant.end - variant.pos
   const locus = variant && getLocus(
@@ -205,7 +198,8 @@ const IgvPanel = React.memo((
   )
 
   const tracks = applyUserTrackSettings(
-    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)), options,
+    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)),
+    { [JUNCTION_TYPE]: { minJunctionEndsVisible } },
   )
 
   return (
@@ -217,7 +211,7 @@ IgvPanel.propTypes = {
   variant: PropTypes.object,
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
-  options: PropTypes.arrayOf(PropTypes.object),
+  minJunctionEndsVisible: PropTypes.number,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -358,7 +352,7 @@ class FamilyReads extends React.PureComponent {
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
-            options={[{ type: JUNCTION_TYPE, field: 'minJunctionEndsVisible', value: minJunctionEndsVisible }]}
+            minJunctionEndsVisible={minJunctionEndsVisible}
             individualsByGuid={individualsByGuid}
             project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
           />
