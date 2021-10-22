@@ -211,7 +211,7 @@ module.exports = {
       contextRegExp: /moment$/,
     }),
     new webpack.ProvidePlugin({
-      $: "jquery",
+      $: "jquery/jquery/dist/jquery.min",
       d3: "d3",
     }),
     new BundleAnalyzerPlugin({
