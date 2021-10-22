@@ -311,7 +311,6 @@ PREDICTION_FIELD_LOOKUP = {
     'strvctvre': 'StrVCTVRE_score',
 }
 
-QUALITY_FIELDS = {'gq': 5, 'ab': 5, 'qs': 10}
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}
 SHARED_QUALITY_FIELDS = {'gq': 5}
 SNP_QUALITY_FIELDS = {'ab': 5}
