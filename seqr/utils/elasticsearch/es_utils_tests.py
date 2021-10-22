@@ -424,6 +424,7 @@ ES_SV_WGS_VARIANT = {
       'svType': 'CPX',
       'xstop': 2049045898,
       'variantId': 'prefix_19107_CPX',
+      'algorithms': ['wham', 'manta'],
       'sc': 7,
       'contig': '2',
       'sortedTranscriptConsequences': [

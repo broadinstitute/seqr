@@ -243,21 +243,16 @@ const Annotations = React.memo(({ variant }) => {
           title="Transcripts"
           size="large"
           trigger={
-            <Popup
-              trigger={
-                <ButtonLink size={svType && 'big'}>
-                  {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
-                  {svType && svTypeDetail && (
-                  <Popup
-                    trigger={<Icon name="info circle" size="small" corner="top right" />}
-                    content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
-                    position="top center"
-                  />
-                  )}
-                </ButtonLink>
-              }
-              content={`Algorithms: ${algorithms}`}
-            />
+            <ButtonLink size={svType && 'big'}>
+              {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
+              {svType && svTypeDetail && (
+                <Popup
+                  trigger={<Icon name="info circle" size="small" corner="top right" />}
+                  content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
+                  position="top center"
+                />
+              )}
+            </ButtonLink>
           }
           popup={transcriptPopupProps}
         >
@@ -268,6 +263,16 @@ const Annotations = React.memo(({ variant }) => {
         <b>
           <HorizontalSpacer width={5} />
           {svSizeDisplay(end - pos)}
+        </b>
+      )}
+      {algorithms && (
+        <b>
+          <HorizontalSpacer width={5} />
+          <Popup
+            trigger={<Icon name="help circle" />}
+            content={`Algorithms: ${algorithms}`}
+            position="top center"
+          />
         </b>
       )}
       {Number.isInteger(numExon) && (
