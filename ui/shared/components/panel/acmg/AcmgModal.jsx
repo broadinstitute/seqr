@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { Button, Icon, Modal } from 'semantic-ui-react'
 import AcmgScoreCriteria from './AcmgScoreCriteria'
 import AcmgCriteria from './AcmgCriteria'
+import { VerticalSpacer } from '../../Spacers'
 
 const getButtonBackgroundColor = (classification) => {
   const categoryColors = {
@@ -13,7 +14,6 @@ const getButtonBackgroundColor = (classification) => {
     'Likely Pathogenic': 'orange',
     Uncertain: 'yellow',
   }
-
   return categoryColors[classification]
 }
 
@@ -28,6 +28,7 @@ const AcmgModal = (props) => {
 
   return (
     <div>
+      <VerticalSpacer height={12} />
       <Button color={buttonBackgroundColor} tabIndex={0} onClick={() => { setActive(true) }}>Classify {acmgClassification}</Button>
       <Modal open={active} dimmer="blurring" size="fullscreen" >
         <Icon name="close" onClick={() => { setActive(false) }} />

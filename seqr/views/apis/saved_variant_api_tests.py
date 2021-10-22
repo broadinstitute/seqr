@@ -7,7 +7,7 @@ from django.urls.base import reverse
 from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
-    update_variant_main_transcript, update_variant_functional_data_handler
+    update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS,\
     AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
@@ -794,6 +794,19 @@ class SavedVariantAPITest(object):
         saved_variant = SavedVariant.objects.get(guid=VARIANT_GUID)
         self.assertEqual(saved_variant.selected_main_transcript_id, transcript_id)
 
+    def test_update_variant_acmg_classification(self):
+        update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])
+        acmg_classification = {
+            'classify': 'Uncertain',
+            'criteria': ['PM2_P'],
+            'score': 1
+        }
+        # self.check_manager_login(update_variant_acmg_classification_url, request_data={'acmgClassification': acmg_classification})
+
+        response = self.client.post(update_variant_acmg_classification_url)
+        # self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'savedVariantByGuid': {VARIANT_GUID: {'acmgClassification': acmg_classification}}})
+
 
 # Tests for AnVIL access disabled
 class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
@@ -864,6 +877,10 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
         super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
         assert_no_list_ws_has_al(self, 2)
 
+    def test_update_variant_acmg_classification(self):
+        super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
+        assert_no_list_ws_has_al(self, 1)
+
 
 # Test for permissions from AnVIL and local
 class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
@@ -919,4 +936,8 @@ class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
 
     def test_update_variant_main_transcript(self):
         super(MixSavedVariantAPITest, self).test_update_variant_main_transcript()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_variant_acmg_classification(self):
+        super(MixSavedVariantAPITest, self).test_update_variant_acmg_classification()
         assert_no_list_ws_has_al(self, 1)
