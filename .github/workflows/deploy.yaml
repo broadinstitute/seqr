@@ -57,4 +57,15 @@ jobs:
         run: docker push --all-tags $DOCKER_IMAGE
 
       - name: restart seqr instances
-        run: gcloud compute instance-groups managed rolling-action replace seqr-$DEPLOYMENT_TYPE-group --region australia-southeast1 --max-unavailable 0 --max-surge 3
+        run: |
+          gcloud compute instance-groups managed rolling-action replace \
+            seqr-$DEPLOYMENT_TYPE-group \
+            --region australia-southeast1 \
+            --max-unavailable 0 \
+            --max-surge 3
+
+      - name: restart seqr reference-updater
+          # Used for Cloud Scheduler tasks.
+          gcloud run deploy \
+            seqr-$DEPLOYMENT_TYPE-reference-updater \
+            --image=$DOCKER_IMAGE:gcloud-$DEPLOYMENT_TYPE
