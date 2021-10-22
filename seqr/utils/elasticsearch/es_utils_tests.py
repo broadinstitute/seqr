@@ -1328,6 +1328,7 @@ class EsUtilsTest(TestCase):
                 'topmed': {'ac': 2, 'af': None},
             },
             'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
+            'in_silico': {'cadd': '15', 'sift': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
         })
@@ -1446,6 +1447,7 @@ class EsUtilsTest(TestCase):
                     ]
                 }
             },
+            {'bool': {'must': [{'range': {'cadd_PHRED': {'gte': 15.0}}}, {'prefix': {'dbnsfp_SIFT_pred': 'D'}}]}},
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
             {'bool': {
                     'should': [
