@@ -206,7 +206,7 @@ const svSizeDisplay = (size) => {
 }
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals } = variant
+  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -243,16 +243,21 @@ const Annotations = React.memo(({ variant }) => {
           title="Transcripts"
           size="large"
           trigger={
-            <ButtonLink size={svType && 'big'}>
-              {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && svTypeDetail && (
-                <Popup
-                  trigger={<Icon name="info circle" size="small" corner="top right" />}
-                  content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
-                  position="top center"
-                />
-              )}
-            </ButtonLink>
+            <Popup
+              trigger={
+                <ButtonLink size={svType && 'big'}>
+                  {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
+                  {svType && svTypeDetail && (
+                  <Popup
+                    trigger={<Icon name="info circle" size="small" corner="top right" />}
+                    content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
+                    position="top center"
+                  />
+                  )}
+                </ButtonLink>
+              }
+              content={`Algorithms: ${algorithms}`}
+            />
           }
           popup={transcriptPopupProps}
         >
