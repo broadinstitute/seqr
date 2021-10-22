@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Header } from 'semantic-ui-react'
 
 import { getProjectsByGuid, getSamplesGroupedByProjectGuid, getProjectsIsLoading, getCurrentSearchParams } from 'redux/selectors'
-import { Select, InlineToggle, JsonInput } from 'shared/components/form/Inputs'
+import { Select, InlineToggle, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
@@ -46,10 +46,23 @@ const INCLUDE_ALL_PROJECTS_FIELD = {
   fullHeight: true,
 }
 
+const getParsedJson = (value) => {
+  try {
+    return JSON.parse(value)
+  } catch (e) {
+    return value
+  }
+}
+
 const CUSTOM_QUERY_FIELD = {
   name: 'search.customQuery',
-  component: JsonInput,
-  format: val => val || {},
+  component: BaseSemanticInput,
+  inputType: 'TextArea',
+  rows: 10,
+  style: { fontFamily: 'monospace' },
+  format: val => (typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
+  normalize: getParsedJson,
+  validate: val => (typeof val === 'object' ? undefined : 'Invalid JSON'),
 }
 
 const INHERITANCE_PANEL = {
