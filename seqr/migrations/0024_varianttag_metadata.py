@@ -167,18 +167,18 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='varianttag',
-            name='metadata',
-            field=models.TextField(null=True),
-        ),
-        migrations.AddField(
-            model_name='varianttagtype',
-            name='metadata_title',
-            field=models.CharField(max_length=20, null=True),
-        ),
-        migrations.RunPython(merge_project_sanger_tags, reverse_code=migrations.RunPython.noop),
-        migrations.RunPython(update_validation_tag_types, reverse_code=revert_validation_tag_types),
-        migrations.RunPython(remove_unused_validation_tag_types, reverse_code=create_validation_tags),
-        migrations.RunPython(merge_duplicate_tags, reverse_code=split_duplicate_tags),
+        # migrations.AddField(
+        #     model_name='varianttag',
+        #     name='metadata',
+        #     field=models.TextField(null=True),
+        # ),
+        # migrations.AddField(
+        #     model_name='varianttagtype',
+        #     name='metadata_title',
+        #     field=models.CharField(max_length=20, null=True),
+        # ),
+        # migrations.RunPython(merge_project_sanger_tags, reverse_code=migrations.RunPython.noop),
+        # migrations.RunPython(update_validation_tag_types, reverse_code=revert_validation_tag_types),
+        # migrations.RunPython(remove_unused_validation_tag_types, reverse_code=create_validation_tags),
+        # migrations.RunPython(merge_duplicate_tags, reverse_code=split_duplicate_tags),
     ]
