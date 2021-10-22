@@ -13,7 +13,6 @@ import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
   FREQUENCIES,
-  IN_SILICO_FIELDS,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
   HGMD_PATHOGENICITY_FIELDS,
@@ -104,37 +103,6 @@ export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
-const IN_SILICO_FILTER_ROW_CHUNK_SIZE = 5
-
-export const inSilicoFilterGridLayout = fieldComponentChunk => (
-  <Grid.Row>
-    { fieldComponentChunk.map(fieldComponent => (
-      <Grid.Column width={3}>
-        {fieldComponent}
-      </Grid.Column>
-    ))}
-  </Grid.Row>
-)
-
-export const inSilicoFieldLayout = (fieldComponents) => {
-  const numberOfRows = Math.ceil(fieldComponents.length / IN_SILICO_FILTER_ROW_CHUNK_SIZE)
-  const fieldComponentsCopy = [...fieldComponents]
-  const fieldComponentChunks = []
-  // eslint-disable-next-line no-plusplus
-  for (let i = numberOfRows; i > 0; i--) {
-    const fieldComponentChunk = fieldComponentsCopy.splice(0, IN_SILICO_FILTER_ROW_CHUNK_SIZE)
-    fieldComponentChunks.push(fieldComponentChunk)
-  }
-  return (
-    <Form.Field>
-      <Grid>
-        { fieldComponentChunks.map((fieldComponentChunk, index) => (
-          inSilicoFilterGridLayout(fieldComponentChunk, index, fieldComponentChunks.length)
-        ))}
-      </Grid>
-    </Form.Field>
-  )
-}
 
 export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
   ...annotationGroups.map(groups => (
@@ -204,14 +172,6 @@ export const LOCATION_PANEL = {
   headerProps: { title: 'Location' },
   fields: LOCATION_FIELDS,
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
-}
-
-export const IN_SILICO_PANEL = {
-  name: 'in_silico',
-  headerProps: { title: 'In Silico Filters' },
-  fields: IN_SILICO_FIELDS,
-  fieldLayout: inSilicoFieldLayout,
-  helpText: 'Filter by in-silico predictors. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned. For text filters, variants with exactly matching classifications will be returned',
 }
 
 export const QUALITY_PANEL = {
