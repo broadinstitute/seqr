@@ -65,6 +65,7 @@ jobs:
             --max-surge 3
 
       - name: restart seqr reference-updater
+        run: |
           # Used for Cloud Scheduler tasks.
           gcloud run deploy \
             seqr-$DEPLOYMENT_TYPE-reference-updater \
