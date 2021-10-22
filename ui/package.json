@@ -1,5 +1,6 @@
 {
   "name": "seqr",
+  "description": "seqr ui depndencies",
   "version": "0.2.0",
   "devDependencies": {
     "@babel/core": "^7.15.5",
@@ -11,6 +12,7 @@
     "@babel/polyfill": "^7.12.1",
     "@babel/preset-env": "^7.8.3",
     "@babel/preset-react": "^7.8.3",
+    "@types/react": "^17.0.31",
     "acorn": "^8.5.0",
     "ajv": "^6.12.6",
     "autoprefixer": "7.1.6",
@@ -39,7 +41,7 @@
     "eslint-webpack-plugin": "^3.0.1",
     "fs-extra": "^9.1.0",
     "html-webpack-plugin": "^5.3.2",
-    "jest": "^26.6.3",
+    "jest": "^27.3.1",
     "mini-css-extract-plugin": "^2.3.0",
     "object-assign": "4.1.1",
     "postcss": "^8.3.8",
@@ -77,7 +79,7 @@
     "prop-types": "^15.7.2",
     "query-string": "^6.1.0",
     "random-material-color": "1.0.3",
-    "react": "^16.12.0",
+    "react": "^16.14.0",
     "react-document-title": "2.0.3",
     "react-dom": "^16.12.0",
     "react-error-boundary": "^3.1.3",
