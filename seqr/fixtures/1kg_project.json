@@ -341,7 +341,7 @@
         "family_id": "12",
         "display_name": "12",
         "description": "",
-        "pedigree_image": "ped.png",
+        "pedigree_image": null,
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
