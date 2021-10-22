@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch, NavLink } from 'react-router-dom'
 
-import { Form, Label } from 'semantic-ui-react'
+import { Form, Button } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
 import {
@@ -65,10 +65,12 @@ TAG_OPTIONS.push({
   label: { empty: true, circular: true, style: { backgroundColor: 'white' } },
 })
 
-const getUpdateTagUrl =
-  (selectedTag, match) => `/summary_data/saved_variants/${selectedTag}${match.params.gene ? `/${match.params.gene}` : ''}`
+const PAGE_URL = '/summary_data/saved_variants'
 
-const getGeneHref = tag => selectedGene => `/summary_data/saved_variants/${tag || SHOW_ALL}/${selectedGene.key}`
+const getUpdateTagUrl =
+  (selectedTag, match) => `${PAGE_URL}/${selectedTag}${match.params.gene ? `/${match.params.gene}` : ''}`
+
+const getGeneHref = tag => selectedGene => `${PAGE_URL}/${tag || SHOW_ALL}/${selectedGene.key}`
 
 const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) => {
   const { params } = props.match
@@ -93,13 +95,14 @@ const BaseSavedVariants = React.memo(({ loadVariants, geneDetail, ...props }) =>
           />
           {gene && <HorizontalSpacer width={10} />}
           {gene && (
-            <Form.Field
+            <Button
               as={NavLink}
-              control={Label}
               content={(geneDetail || {}).geneSymbol || gene}
-              inline
+              size="tiny"
               color="grey"
-              to={`/summary_data/saved_variants/${tag || SHOW_ALL}`}
+              icon="delete"
+              compact
+              to={(tag && tag !== SHOW_ALL) ? `${PAGE_URL}/${tag}` : PAGE_URL}
             />
           )}
           <HorizontalSpacer width={10} />
