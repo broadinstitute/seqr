@@ -1,4 +1,4 @@
-FROM debian:stretch
+FROM python:3.7-slim-bullseye
 
 LABEL maintainer="Broad TGG"
 
@@ -16,33 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-#  install the packages necessary to build Python source:
-RUN apt update && apt install -y --no-install-recommends build-essential zlib1g-dev libncurses5-dev libgdbm-dev \
-    libnss3-dev libssl-dev libreadline-dev libffi-dev libbz2-dev \
-    libncursesw5-dev libsqlite3-dev tk-dev libc6-dev ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-ARG PYTHON_MAIN_VER="3.7"
-ARG PYTHON_MINOR_VER="8"
-ARG PYTHON_VERSION=$PYTHON_MAIN_VER.$PYTHON_MINOR_VER
-
-# downland and install Python from soruce code
-WORKDIR /
-RUN curl -O https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tar.xz \
-    && tar -xf Python-$PYTHON_VERSION.tar.xz \
-    && rm -f Python-$PYTHON_VERSION.tar.xz
-
-WORKDIR /Python-$PYTHON_VERSION
-RUN ./configure --enable-optimizations \
-    && make -j "$(nproc)" \
-    && make install
-
-WORKDIR /
-RUN rm -rf ./Python-$PYTHON_VERSION \
-    && ln -s /usr/local/bin/pip$PYTHON_MAIN_VER /usr/local/bin/pip \
-    && ln -s /usr/local/bin/python$PYTHON_MAIN_VER /usr/local/bin/python
 
 # install dev dependencies for react, javascript development. These are not needed at runtime.
 RUN apt-get update \
