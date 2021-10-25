@@ -22,14 +22,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# install dev dependencies for react, javascript development. These are not needed at runtime.
-RUN apt-get update \
-    && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
-    && apt-get install -y --no-install-recommends \
-        nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 # install gcloud tools
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
