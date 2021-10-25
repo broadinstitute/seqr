@@ -3,6 +3,7 @@ FROM python:3.7-slim-bullseye
 LABEL maintainer="Broad TGG"
 
 # install commmon utilities, database clients for debugging
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
@@ -30,11 +31,6 @@ RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /e
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
-    && chmod +x ./kubectl \
-    && mv ./kubectl /usr/local/bin/kubectl
-
-
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 ARG SEQR_REPO=https://github.com/broadinstitute/seqr
@@ -46,7 +42,7 @@ RUN git clone -q --branch $SEQR_GIT_BRANCH $SEQR_REPO
 WORKDIR /seqr
 
 # install seqr dependencies
-RUN pip install wheel && pip install -r requirements.txt
+RUN pip install --no-cache-dir wheel && pip install --no-cache-dir -r requirements.txt
 
 ARG SEQR_SERVICE_PORT
 ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
