@@ -54,6 +54,15 @@ const getParsedJson = (value) => {
   }
 }
 
+const getJsonParseError = (value) => {
+  try {
+    JSON.parse(value)
+    return undefined
+  } catch (e) {
+    return e.toString()
+  }
+}
+
 const CUSTOM_QUERY_FIELD = {
   name: 'search.customQuery',
   component: BaseSemanticInput,
@@ -62,7 +71,7 @@ const CUSTOM_QUERY_FIELD = {
   style: { fontFamily: 'monospace' },
   format: val => (typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
   normalize: getParsedJson,
-  validate: val => (typeof val === 'object' ? undefined : 'Invalid JSON'),
+  validate: val => (typeof val === 'string' ? getJsonParseError(val) : undefined),
 }
 
 const INHERITANCE_PANEL = {
