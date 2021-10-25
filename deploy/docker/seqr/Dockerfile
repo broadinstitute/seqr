@@ -31,11 +31,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # install gcloud tools
-RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
-    && CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
-    && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
+RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install -y --no-install-recommends \
         google-cloud-sdk \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
