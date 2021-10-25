@@ -2,7 +2,7 @@ FROM python:3.7-slim-bullseye
 
 LABEL maintainer="Broad TGG"
 
-# install commmon utilities
+# install commmon utilities, database clients for debugging
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
@@ -12,9 +12,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     htop \
     less \
+    libpq-dev \
     nano \
     xterm \
+    postgresql \
+    postgresql-client \
     procps \
+    redis-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,19 +27,6 @@ RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_8.x | bash - \
     && apt-get install -y --no-install-recommends \
         nodejs \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# install database clients for debugging
-RUN apt-get update && apt-get install -y \
-    postgresql \
-    postgresql-client \
-    libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y \
-    redis-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
