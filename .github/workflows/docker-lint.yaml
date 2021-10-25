@@ -5,7 +5,7 @@ name: Dockerfile Linting
 on:
   push:
     branches:
-      - docker-rework
+      - docker-cleanup-part-1
     paths:
       - deploy/docker/seqr/Dockerfile
       - .hadolint.yaml
