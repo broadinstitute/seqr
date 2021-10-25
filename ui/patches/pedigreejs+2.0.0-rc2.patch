@@ -1,0 +1,38 @@
+diff --git a/node_modules/pedigreejs/es/pedigree_utils.js b/node_modules/pedigreejs/es/pedigree_utils.js
+index 160d8aa..b0e5fd3 100644
+--- a/node_modules/pedigreejs/es/pedigree_utils.js
++++ b/node_modules/pedigreejs/es/pedigree_utils.js
+@@ -65,29 +65,11 @@ export function getFormattedDate(time){
+  */
+ export function messages(title, msg, onConfirm, opts, dataset) {
+ 	if(onConfirm) {
+-		$('<div id="msgDialog">'+msg+'</div>').dialog({
+-				modal: true,
+-				title: title,
+-				width: 350,
+-				buttons: {
+-					"Yes": function () {
+-						$(this).dialog('close');
+-						onConfirm(opts, dataset);
+-					},
+-					"No": function () {
+-						$(this).dialog('close');
+-					}
+-				}
+-			});
++		if (confirm(msg) === true) {
++			onConfirm(opts, dataset);
++		}
+ 	} else {
+-		$('<div id="msgDialog">'+msg+'</div>').dialog({
+-			title: title,
+-			width: 350,
+-			buttons: [{
+-				text: "OK",
+-				click: function() { $( this ).dialog( "close" );}
+-			}]
+-		});
++		alert(msg)
+ 	}
+ }
+ 
