@@ -11,8 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     emacs \
     gcc \
     git \
+    gnupg \
     htop \
     less \
+    libc6-dev \
     libpq-dev \
     nano \
     xterm \
