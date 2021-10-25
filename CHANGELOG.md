@@ -2,6 +2,9 @@
 
 ## dev
 
+## 10/25/21
+* Add search filtering by in-silico score
+
 ## 10/21/21
 * Support updated WES SV loading pipeline format
 
