@@ -9,6 +9,7 @@ on:
     paths:
       - deploy/docker/seqr/Dockerfile
       - .hadolint.yaml
+      - .github/workflows/docker-lint.yaml
   # pull_request:
   #   types: [opened, synchronize, reopened]
 
