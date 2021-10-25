@@ -552,7 +552,7 @@ const onPageChange = onChange => (e, data) => onChange(data.activePage)
 export const Pagination = React.memo(({ onChange, value, error, ...props }) => (
   <PaginationComponent
     activePage={value}
-    onPageChange={onPageChange}
+    onPageChange={onPageChange(onChange)}
     {...props}
   />
 ))
