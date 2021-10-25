@@ -271,7 +271,8 @@ CORE_FIELDS_CONFIG = {
     'cpx_intervals': {
       'response_key': 'cpxIntervals',
       'format_value': lambda intervals:  [interval.to_dict() for interval in (intervals or [])],
-},
+    },
+    'algorithms': {'format_value': ', '.join}
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -292,6 +293,25 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 
+PREDICTION_FIELD_LOOKUP = {
+    'cadd': 'cadd_PHRED',
+    'dann': 'dbnsfp_DANN_score',
+    'eigen': 'eigen_Eigen_phred',
+    'fathmm': 'dbnsfp_FATHMM_pred',
+    'gerp_rs': 'dbnsfp_GERP_RS',
+    'mpc': 'mpc_MPC',
+    'metasvm': 'dbnsfp_MetaSVM_pred',
+    'mut_taster': 'dbnsfp_MutationTaster_pred',
+    'phastcons_100_vert': 'dbnsfp_phastCons100way_vertebrate',
+    'polyphen': 'dbnsfp_Polyphen2_HVAR_pred',
+    'primate_ai': 'primate_ai_score',
+    'splice_ai': 'splice_ai_delta_score',
+    'splice_ai_consequence': 'splice_ai_splice_consequence',
+    'revel': 'dbnsfp_REVEL_score',
+    'sift': 'dbnsfp_SIFT_pred',
+    'strvctvre': 'StrVCTVRE_score',
+}
+
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}
 SHARED_QUALITY_FIELDS = {'gq': 5}
 SNP_QUALITY_FIELDS = {'ab': 5}
@@ -305,6 +325,7 @@ BASE_GENOTYPE_FIELDS_CONFIG = {
     'sample_type': {},
     'num_alt': {'format_value': int, 'default_value': -1},
 }
+
 GENOTYPE_FIELDS_CONFIG = {
     'ad': {},
     'dp': {},

@@ -2,9 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { ErrorBoundary } from 'react-error-boundary'
-import $ from 'jquery'
-import 'jquery-ui/ui/widgets/dialog'
-import 'jquery-ui/themes/base/all.css'
 import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
@@ -159,7 +156,7 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   setPedigreeImage = (pedigreeOpts) => {
-    const svg = $(this.container.children[0])
+    const svg = $(this.container.children[0]) // eslint-disable-line no-undef
     svg2img(svg, 'pedigree', { resolution: 10 }).done(({ img }) => {
       this.setState({ pedigreeOpts, imgSrc: img })
     })
@@ -251,7 +248,7 @@ class BasePedigreeImage extends React.PureComponent {
     if (this.isEditablePedigree()) {
       // The refresh behavior is confusing - rather than resetting the pedigree to the initial state,
       // it resets it to a generic trio pedigree with arbitrary labels. This will never be useful, so remove the button
-      $('.fa-refresh').remove()
+      $('.fa-refresh').remove() // eslint-disable-line no-undef
       this.setState({ pedigreeOpts })
     } else {
       // For un-editable pedigrees, display as an img

@@ -5,7 +5,6 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 import Slider from 'react-rangeslider'
-import { JsonEditor } from 'jsoneditor-react'
 import 'react-rangeslider/lib/index.css'
 
 import { helpLabel } from './ReduxFormWrapper'
@@ -553,7 +552,7 @@ const onPageChange = onChange => (e, data) => onChange(data.activePage)
 export const Pagination = React.memo(({ onChange, value, error, ...props }) => (
   <PaginationComponent
     activePage={value}
-    onPageChange={onPageChange}
+    onPageChange={onPageChange(onChange)}
     {...props}
   />
 ))
@@ -562,13 +561,4 @@ Pagination.propTypes = {
   value: PropTypes.number,
   onChange: PropTypes.func,
   error: PropTypes.bool,
-}
-
-const JSON_EDITOR_MODES = ['code', 'tree']
-export const JsonInput = React.memo(({ value, onChange }) => (
-  <JsonEditor value={value} onChange={onChange} allowedModes={JSON_EDITOR_MODES} mode="code" search={false} />))
-
-JsonInput.propTypes = {
-  value: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  onChange: PropTypes.func,
 }

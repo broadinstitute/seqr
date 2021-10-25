@@ -15,14 +15,14 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
+    PREDICTION_FIELD_LOOKUP
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = SeqrLogger(__name__)
-
 
 class EsSearch(object):
 
@@ -196,6 +196,25 @@ class EsSearch(object):
     def filter(self, new_filter):
         self._search = self._search.filter(new_filter)
         return self
+
+    def filter_by_in_silico(self, in_silico_filters):
+
+        q = Q()
+        for in_silico_filter_key in list(in_silico_filters.keys()):
+            if in_silico_filters[in_silico_filter_key] is None or len(in_silico_filters[in_silico_filter_key]) == 0:
+                del in_silico_filters[in_silico_filter_key]
+
+        for in_silico_filter in in_silico_filters:
+
+            prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
+
+            prediction_value = in_silico_filters[in_silico_filter]
+            if prediction_value.isnumeric():
+                q &= Q('range', **{prediction_key: {'gte': float(prediction_value)}})
+            else:
+                q &= Q('prefix', **{prediction_key: prediction_value})
+
+        self.filter(q)
 
     def filter_by_frequency(self, frequencies):
         q = Q()
@@ -609,6 +628,7 @@ class EsSearch(object):
         response_total = response.hits.total['value']
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0), self._user)
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
+
 
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}

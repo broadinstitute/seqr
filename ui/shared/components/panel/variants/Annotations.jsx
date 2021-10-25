@@ -206,7 +206,7 @@ const svSizeDisplay = (size) => {
 }
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals } = variant
+  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -263,6 +263,16 @@ const Annotations = React.memo(({ variant }) => {
         <b>
           <HorizontalSpacer width={5} />
           {svSizeDisplay(end - pos)}
+        </b>
+      )}
+      {algorithms && (
+        <b>
+          <HorizontalSpacer width={5} />
+          <Popup
+            trigger={<Icon name="help circle" />}
+            content={`Algorithms: ${algorithms}`}
+            position="top center"
+          />
         </b>
       )}
       {Number.isInteger(numExon) && (
