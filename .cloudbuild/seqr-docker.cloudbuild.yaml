@@ -1,0 +1,12 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'deploy/docker/seqr'
+  args: [ 'build', '.', '-t', 'seqr-docker-cleanup-testing:$COMMIT_SHA']
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'deploy/docker/seqr'
+  args: [ 'tag', 'seqr-docker-cleanup-testing:$COMMIT_SHA', 'us-central1-docker.pkg.dev/tgg-sre-testing/seqr-testing/seqr-docker-cleanup-testing:$COMMIT_SHA']
+
+images:
+  - 'us-central1-docker.pkg.dev/tgg-sre-testing/seqr-testing/seqr-docker-cleanup-testing:$COMMIT_SHA'
+
+timeout: 900s

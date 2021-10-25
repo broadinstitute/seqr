@@ -61,6 +61,4 @@ COPY bashrc /root/.bashrc
 
 COPY entrypoint.sh /
 
-WORKDIR /seqr
-
 CMD [ "/entrypoint.sh" ]
