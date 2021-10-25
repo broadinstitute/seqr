@@ -722,6 +722,7 @@ PARSED_VARIANTS = [
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
         'cpxIntervals': None,
+        'algorithms': None,
         'genotypes': {
             'I000007_na20870': {
                 'ab': 1, 'ad': None, 'gq': 99, 'sampleId': 'NA20870', 'numAlt': 2, 'dp': 74, 'pl': None,
@@ -771,6 +772,7 @@ PARSED_VARIANTS = [
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000002_2', 'F000003_3'],
         'cpxIntervals': None,
+        'algorithms': None,
         'genotypes': {
             'I000004_hg00731': {
                 'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
@@ -834,6 +836,7 @@ PARSED_SV_VARIANT = {
     'chrom': '1',
     'familyGuids': ['F000002_2'],
     'cpxIntervals': None,
+    'algorithms': None,
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'numAlt': -1, 'geneIds': ['ENSG00000228198'],
@@ -901,6 +904,7 @@ PARSED_SV_WGS_VARIANT = {
     'familyGuids': ['F000014_14'],
     'cpxIntervals': [{'chrom': '2', 'end': 3000, 'start': 1000, 'type': 'DUP'},
                      {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INV'}],
+    'algorithms': 'wham, manta',
     'genotypes': {
         'I000018_na21234': {
             'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'geneIds': None,

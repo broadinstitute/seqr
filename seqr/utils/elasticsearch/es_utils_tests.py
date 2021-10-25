@@ -424,6 +424,7 @@ ES_SV_WGS_VARIANT = {
       'svType': 'CPX',
       'xstop': 2049045898,
       'variantId': 'prefix_19107_CPX',
+      'algorithms': ['wham', 'manta'],
       'sc': 7,
       'contig': '2',
       'sortedTranscriptConsequences': [
@@ -715,7 +716,8 @@ SV_MAPPING_FIELDS = [
 ]
 
 SOURCE_FIELDS = {
-    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID',
+    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'gnomad_exomes_FAF_AF','sv_callset_Hemi',
+    'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)

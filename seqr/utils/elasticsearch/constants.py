@@ -271,7 +271,8 @@ CORE_FIELDS_CONFIG = {
     'cpx_intervals': {
       'response_key': 'cpxIntervals',
       'format_value': lambda intervals:  [interval.to_dict() for interval in (intervals or [])],
-},
+    },
+    'algorithms': {'format_value': ', '.join}
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
