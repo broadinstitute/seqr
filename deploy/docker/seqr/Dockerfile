@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bzip2 \
     curl \
     emacs \
+    gcc \
     git \
     htop \
     less \
@@ -39,15 +40,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # install gcloud tools
-RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
-    && curl https://sdk.cloud.google.com | bash \
-    && apt-get update && apt-get install -y \
-        gcc \
-        libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install gsutil
-
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
