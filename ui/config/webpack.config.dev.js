@@ -185,7 +185,7 @@ module.exports = {
 
     new webpack.ProvidePlugin({
       $: "jquery/dist/jquery.min",
-      d3: "d3",
+      d3: require.resolve('./d3-bundle'),
     }),
 
     new BundleAnalyzerPlugin({
