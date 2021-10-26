@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Segment, Icon } from 'semantic-ui-react'
+import { Segment, Icon, Popup } from 'semantic-ui-react'
 
 import {
   getIndividualsByGuid,
@@ -12,9 +12,8 @@ import {
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
-import { helpLabel } from '../../form/ReduxFormWrapper'
 import IGV from '../../graph/IGV'
-import { ButtonLink, ColoredDiv } from '../../StyledComponents'
+import { ButtonLink } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED } from '../../../utils/constants'
@@ -320,9 +319,15 @@ class FamilyReads extends React.PureComponent {
                 />
                 {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
                   <div>
-                    <ColoredDiv color="black">
-                      {helpLabel('RNA-seq Reference Tracks', 'Normalized GTEx tracks are more comparable to patient RNA-seq data. If you want to explore if a splice junction is seen in any sample, aggregate GTEx tracks show all data. The y-axis range is expected to differ between a single patient sample and normalized or aggregate GTEx data.')}
-                    </ColoredDiv>
+                    <b>
+                      RNA-seq Reference Tracks
+                      <Popup
+                        trigger={<Icon name="question circle outline" />}
+                        content="Normalized GTEx tracks are more comparable to patient RNA-seq data. If you want to explore if a splice junction is seen in any sample, aggregate GTEx tracks show all data. The y-axis range is expected to differ between a single patient sample and normalized or aggregate GTEx data."
+                        size="small"
+                        position="top center"
+                      />
+                    </b>
                     <CheckboxGroup
                       groupLabel="GTEx Tracks"
                       value={rnaReferences}
