@@ -380,7 +380,6 @@ export const MAPPABILITY_TRACK_OPTIONS = MAPPABILITY_TRACKS.map((track, i) => {
       url: track.url,
       name: track.value,
       order: 400 + i,
-      ...TRACK_OPTIONS[track.type],
       ...track.options,
       ...idx,
     },
