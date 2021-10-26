@@ -64,7 +64,7 @@ const BaseVariantSearchResultsContent = React.memo(({
       <Grid.Column width={5}>
         {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
         <b>{totalVariantsCount}</b>
-        variants
+        &nbsp; variants
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}
