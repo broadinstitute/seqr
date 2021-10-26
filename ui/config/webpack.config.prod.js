@@ -10,6 +10,7 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
+const TerserPlugin = require("terser-webpack-plugin");
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const paths = require('./paths');
@@ -222,6 +223,14 @@ module.exports = {
   optimization: {
     minimize: true,
     minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          format: {
+            comments: false,
+          },
+        },
+        extractComments: false,
+      }),
       new CssMinimizerPlugin({
         minimizerOptions: {
           preset: [
