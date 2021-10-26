@@ -18,7 +18,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     nano \
     xterm \
-    postgresql \
     postgresql-client \
     procps \
     redis-tools \
