@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Segment, Icon } from 'semantic-ui-react'
+import { Segment, Icon, Popup } from 'semantic-ui-react'
 
 import {
   getIndividualsByGuid,
@@ -13,7 +13,7 @@ import {
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
 import IGV from '../../graph/IGV'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED } from '../../../utils/constants'
@@ -319,7 +319,15 @@ class FamilyReads extends React.PureComponent {
                 />
                 {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
                   <div>
-                    <b>RNA-seq Reference Tracks</b>
+                    <b>
+                      RNA-seq Reference Tracks
+                      <Popup
+                        trigger={<HelpIcon />}
+                        content="Normalized GTEx tracks are more comparable to patient RNA-seq data. If you want to explore if a splice junction is seen in any sample, aggregate GTEx tracks show all data. The y-axis range is expected to differ between a single patient sample and normalized or aggregate GTEx data."
+                        size="small"
+                        position="top center"
+                      />
+                    </b>
                     <CheckboxGroup
                       groupLabel="GTEx Tracks"
                       value={rnaReferences}
