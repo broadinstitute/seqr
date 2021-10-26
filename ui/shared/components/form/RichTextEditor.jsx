@@ -1,147 +1,66 @@
 import React from 'react'
 import styled from 'styled-components'
 import PropTypes from 'prop-types'
-import { Button, Segment } from 'semantic-ui-react'
-import { Editor, EditorState, RichUtils, convertToRaw, convertFromRaw } from 'draft-js'
-import { draftToMarkdown, markdownToDraft } from 'markdown-draft-js'
+import { Editor } from '@toast-ui/react-editor'
 
-import 'draft-js/dist/Draft.css'
+import '@toast-ui/editor/dist/toastui-editor.css'
 
-const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
-
-const ButtonContainer = styled(Segment)`
-  padding: 0 !important;
+const EditorContainer = styled.div`
+  .tui-editor-contents {
+    font-family: 'Lato';
+    font-size: inherit;
+  }
+  
+  .tui-editor-defaultUI-toolbar {
+    background-color: #e0e1e2;
+     
+    button {
+      background-color: #e0e1e2;
+      border: none;
+        
+      &:hover, &.active {
+        background-color: #cacbcd;
+      }
+    }
+    
+    .tui-toolbar-divider {
+      background-color: ##999999;
+    }
+  }
 `
 
-const EditorContainer = styled(Segment)`
-  min-width: 590px;
-`
+const TOOLBAR = ['bold', 'italic', 'divider', 'ul', 'ol']
 
-const INLINE_STYLES = [
-  { label: 'Bold', type: 'BOLD', icon: 'bold' },
-  { label: 'Italic', type: 'ITALIC', icon: 'italic' },
-]
-
-const BLOCK_TYPES = [
-  { label: 'Bullet List', type: 'unordered-list-item', icon: 'unordered list' },
-  { label: 'Numbered List', type: 'ordered-list-item', icon: 'ordered list' },
-]
-
-/*
- Draft.js-based rich text editor.
- It uses draftjs-md-converter to convert Draft.js content representation to/from Markdown.
-
- Style menu bar is based on this example:
- https://github.com/facebook/draft-js/blob/master/examples/draft-0-10-0/rich/rich.html
- */
 class RichTextEditor extends React.PureComponent {
 
-  static propTypes = {
+  propTypes = {
     value: PropTypes.string,
     onChange: PropTypes.func,
   }
 
-  static defaultProps = {
-    onChange: () => {},
-  }
-
-  constructor(props) {
-    super(props)
-
-    const { value } = this.props
-    let editorState
-    if (value) {
-      const rawData = markdownToDraft(value, { preserveNewlines: true })
-      const contentState = convertFromRaw(rawData)
-      editorState = EditorState.createWithContent(contentState)
-    } else {
-      editorState = EditorState.createEmpty()
-    }
-
-    this.state = { editorState } // eslint-disable-line react/state-in-constructor
-  }
-
-  componentDidMount() {
-    this.editor.focus()
-  }
-
-  setEditorRef = (ref) => { this.editor = ref }
-
-  getMarkdown() {
-    const { editorState } = this.state
-    const content = editorState.getCurrentContent()
-    const markdown = draftToMarkdown(convertToRaw(content), { preserveNewlines: true })
-    // Support for tabs. Required for RGP datstat imported notes
-    return markdown ? markdown.replace(/' '{5}/g, TAB).replace(/\u00A0{5}/g, TAB) : markdown
-  }
-
-  updateEditorState = (editorState) => {
+  handleChange = () => {
     const { onChange } = this.props
-    this.setState({ editorState }, () => onChange(this.getMarkdown()))
+    onChange(this.editorRef.getInstance().getMarkdown())
   }
 
-  handleKeyCommand = (command, editorState) => {
-    const newState = RichUtils.handleKeyCommand(editorState, command)
-    if (newState) {
-      this.setState({ editorState: newState })
-      return true
-    }
-    return false
-  }
-
-  toggleInlineStyle = (e, data) => {
-    const { editorState } = this.state
-    e.preventDefault()
-    this.updateEditorState(RichUtils.toggleInlineStyle(editorState, data.id))
-  }
-
-  toggleBlockStyle = (e, data) => {
-    const { editorState } = this.state
-    e.preventDefault()
-    this.updateEditorState(RichUtils.toggleBlockType(editorState, data.id))
+  setEditorRef = (element) => {
+    this.editorRef = element
   }
 
   render() {
-    const { editorState: es } = this.state
-    const currentInlineStyle = es.getCurrentInlineStyle()
-    const currentBlockType = es.getCurrentContent().getBlockForKey(es.getSelection().getStartKey()).getType()
+    const { value } = this.props
     return (
-      <div>
-        <ButtonContainer basic textAlign="right">
-          {INLINE_STYLES.map(type => (
-            <Button
-              id={type.type}
-              key={type.label}
-              size="tiny"
-              icon={type.icon}
-              active={currentInlineStyle.has(type.type)}
-              onClick={this.toggleInlineStyle}
-              toggle
-            />
-          ))}
-          &nbsp; &nbsp;
-          {BLOCK_TYPES.map(type => (
-            <Button
-              id={type.type}
-              key={type.label}
-              size="tiny"
-              icon={type.icon}
-              active={type.type === currentBlockType}
-              onClick={this.toggleBlockStyle}
-              toggle
-            />
-          ))}
-        </ButtonContainer>
-        <EditorContainer>
-          <Editor
-            editorState={es}
-            handleKeyCommand={this.handleKeyCommand}
-            placeholder=""
-            ref={this.setEditorRef}
-            onChange={this.updateEditorState}
-          />
-        </EditorContainer>
-      </div>
+      <EditorContainer>
+        <Editor
+          initialValue={value}
+          onChange={this.handleChange}
+          initialEditType="wysiwyg"
+          hideModeSwitch
+          usageStatistics={false}
+          toolbarItems={TOOLBAR}
+          ref={this.setEditorRef}
+        />
+      </EditorContainer>
     )
   }
 
