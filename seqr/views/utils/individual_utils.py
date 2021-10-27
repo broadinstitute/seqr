@@ -81,6 +81,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
                 individual = create_model_from_json(
                     Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
                 updated_families.add(family)
+                individual_lookup[individual_id][family] = individual
 
         record['family'] = family
         record.pop('familyId', None)
