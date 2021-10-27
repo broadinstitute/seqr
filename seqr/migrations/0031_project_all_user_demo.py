@@ -10,9 +10,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='project',
-            name='all_user_demo',
-            field=models.BooleanField(default=False),
-        ),
+        # migrations.AddField(
+        #     model_name='project',
+        #     name='all_user_demo',
+        #     field=models.BooleanField(default=False),
+        # ),
     ]
