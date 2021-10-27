@@ -59,6 +59,7 @@ export const helpLabel = (label, labelHelp) => (
   labelHelp ? (
     <label>
       {label}
+      &nbsp;
       <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" />
     </label>
   ) : label
