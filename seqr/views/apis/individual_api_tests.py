@@ -286,7 +286,9 @@ class IndividualAPITest(AuthenticationTestCase):
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
 "1"	"NA19675"	"NA19675_1"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
-"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family"'
+"1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
+"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""\n\
+"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	""'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
 
