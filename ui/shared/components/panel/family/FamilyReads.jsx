@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Segment, Icon, Popup } from 'semantic-ui-react'
+import { Segment, Icon, Popup, Divider } from 'semantic-ui-react'
 
 import {
   getIndividualsByGuid,
@@ -319,17 +319,19 @@ class FamilyReads extends React.PureComponent {
                 />
                 {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
                   <div>
-                    <b>
-                      RNA-seq Reference Tracks
-                      <Popup
-                        trigger={<HelpIcon />}
-                        content="Normalized GTEx tracks are more comparable to patient RNA-seq data. If you want to explore if a splice junction is seen in any sample, aggregate GTEx tracks show all data. The y-axis range is expected to differ between a single patient sample and normalized or aggregate GTEx data."
-                        size="small"
-                        position="top center"
-                      />
-                    </b>
+                    <Divider horizontal>RNA Reference Tracks</Divider>
                     <CheckboxGroup
-                      groupLabel="GTEx Tracks"
+                      groupLabel={
+                        <label>
+                          GTEx Tracks
+                          <Popup
+                            trigger={<HelpIcon />}
+                            content="Normalized GTEx tracks are more comparable to patient RNA-seq data. If you want to explore if a splice junction is seen in any sample, aggregate GTEx tracks show all data. The y-axis range is expected to differ between a single patient sample and normalized or aggregate GTEx data."
+                            size="small"
+                            position="top center"
+                          />
+                        </label>
+                      }
                       value={rnaReferences}
                       options={GTEX_TRACK_OPTIONS}
                       onChange={this.updateRnaReferences}
@@ -340,8 +342,8 @@ class FamilyReads extends React.PureComponent {
                       options={MAPPABILITY_TRACK_OPTIONS}
                       onChange={this.updateRnaReferences}
                     />
+                    <Divider horizontal>Junction Track Filters</Divider>
                     <RadioGroup
-                      label="Junctions Tracks Show:"
                       value={minJunctionEndsVisible}
                       options={JUNCTION_VISIBILITY_OPTIONS}
                       onChange={this.junctionsOptionChange}

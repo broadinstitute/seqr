@@ -389,7 +389,7 @@ export const MAPPABILITY_TRACK_OPTIONS = MAPPABILITY_TRACKS.map((track, i) => {
 })
 
 export const JUNCTION_VISIBILITY_OPTIONS = [
-  { value: 2, text: 'only local junctions' },
-  { value: 1, text: 'semi-local junctions' },
-  { value: 0, text: 'all junctions' },
+  { value: 2, text: 'Show only local junctions' },
+  { value: 1, text: 'Show semi-local junctions' },
+  { value: 0, text: 'Show all junctions' },
 ]
