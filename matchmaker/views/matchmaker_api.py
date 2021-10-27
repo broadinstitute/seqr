@@ -99,7 +99,7 @@ def search_individual_mme_matches(request, submission_guid):
             }, user)
             new_results.append(result)
         else:
-            update_model_from_json(saved_result, {'result_data': result}, user)
+            update_model_from_json(saved_result, {'result_data': result, 'match_removed': False}, user)
         saved_results[result['patient']['id']] = saved_result
 
     if new_results:
