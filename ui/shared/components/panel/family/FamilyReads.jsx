@@ -283,7 +283,7 @@ class FamilyReads extends React.PureComponent {
           <label>
             {`${typeLabel} GTEx Tracks`}
             <Popup
-              trigger={<HelpIcon />}
+              trigger={<HelpIcon color="black" />}
               content="Normalized GTEx tracks are more comparable to patient RNA-seq data. If you want to explore if a splice junction is seen in any sample, aggregate GTEx tracks show all data. The y-axis range is expected to differ between a single patient sample and normalized or aggregate GTEx data."
               size="small"
               position="top center"
