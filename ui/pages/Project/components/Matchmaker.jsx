@@ -286,7 +286,7 @@ const DISPLAY_FIELDS = [
           trigger={
             <MatchContainer>
               {displayName}
-              &npbsp;
+              &nbsp;
               <Icon link name="info circle" />
             </MatchContainer>
           }

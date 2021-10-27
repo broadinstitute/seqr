@@ -209,9 +209,9 @@ class EsSearch(object):
             prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
 
             prediction_value = in_silico_filters[in_silico_filter]
-            if prediction_value.isnumeric():
+            try:
                 q &= Q('range', **{prediction_key: {'gte': float(prediction_value)}})
-            else:
+            except ValueError:
                 q &= Q('prefix', **{prediction_key: prediction_value})
 
         self.filter(q)

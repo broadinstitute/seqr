@@ -116,6 +116,9 @@ NEW_MATCH_JSON = {
     }
 }
 
+REMOVED_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+REMOVED_MATCH_JSON['patient']['id'] = '10509'
+
 PARSED_NEW_MATCH_JSON = {
     'id': '33845',
     'score': 0.92,
@@ -523,14 +526,19 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'comments': 'Some additional data about this institution',
             }})
 
-        # users should see originating query for results if the have correct project permissions
+        results.append(REMOVED_MATCH_JSON)
+        responses.replace(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
         self.login_manager()
         response = self.client.get(url)
-        self.assertDictEqual(response.json()['mmeResultsByGuid'][new_internal_match_guid]['originatingSubmission'], {
+        result_response = response.json()['mmeResultsByGuid']
+        # users should see originating query for results if the have correct project permissions
+        self.assertDictEqual(result_response[new_internal_match_guid]['originatingSubmission'], {
             'originatingSubmissionGuid': 'MS000018_P0004517',
             'familyGuid': 'F000014_14',
             'projectGuid': 'R0004_non_analyst_project',
         })
+        # if previously removed matches have been re-matched, they should no longer be marked as removed
+        self.assertFalse(result_response['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
 
     @mock.patch('matchmaker.views.matchmaker_api.logger')
     def test_update_mme_submission(self, mock_logger):
