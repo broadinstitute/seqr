@@ -159,7 +159,7 @@ module.exports = {
           },
           {
             test: /\.(png|woff|woff2|eot|ttf|svg)$/,
-            type: 'asset/inline',
+            type: 'asset',
           },
         ],
       },
