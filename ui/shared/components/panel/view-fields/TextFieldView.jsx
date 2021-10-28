@@ -1,19 +1,25 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import ReactMarkdown from 'react-markdown'
+import { Loader } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import RichTextEditor from '../../form/RichTextEditor'
 import { validators } from '../../form/ReduxFormWrapper'
 import { HorizontalSpacer } from '../../Spacers'
 import BaseFieldView from './BaseFieldView'
+
+const RichTextEditor = React.lazy(() => import('../../form/RichTextEditor'))
 
 const MarkdownContainer = styled.div`
   display: ${props => (props.inline ? 'inline-block' : 'block')}; 
   white-space: pre-wrap;
 `
 
-const RICH_TEXT_FIELD = { component: RichTextEditor }
+// RichTextEditor utilizes several large libraries that are only needed if a user is editing a rich text note
+// Lazily loading this component allows us to leave these libraries out of our bundle and only load them when needed
+const LazyRichTextEditor = props => <React.Suspense fallback={<Loader />}><RichTextEditor {...props} /></React.Suspense>
+
+const RICH_TEXT_FIELD = { component: LazyRichTextEditor }
 const REQUIRED_RICH_TEXT_FIELD = { ...RICH_TEXT_FIELD, validate: validators.required }
 
 const markdownDisplay = (textPopup, textAnnotation) => (initialText) => {
