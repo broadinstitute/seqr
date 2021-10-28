@@ -213,8 +213,8 @@ module.exports = {
       d3: require.resolve('./d3-bundle'),
     }),
     new BundleAnalyzerPlugin({
-      analyzerMode: 'server',
-      // analyzerMode: 'disabled',
+      // Opens a browser tab with detailed breakdown of bundle size. Set analyzerMode to 'server' to enable
+      analyzerMode: 'disabled', // 'server'
     }),
   ],
   optimization: {
