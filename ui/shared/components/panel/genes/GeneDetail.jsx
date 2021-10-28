@@ -4,15 +4,16 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid, Popup } from 'semantic-ui-react'
+import { Grid, Popup, Loader } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
-import Gtex from '../../graph/Gtex'
 import { SectionHeader } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
+
+const Gtex = React.lazy(() => import('../../graph/Gtex'))
 
 const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
 
@@ -279,7 +280,9 @@ const GeneDetail = React.memo((
       <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} user={user} />
     </DataLoader>
     <SectionHeader>Tissue-Specific Expression</SectionHeader>
-    <Gtex geneId={geneId} />
+    <React.Suspense fallback={<Loader />}>
+      <Gtex geneId={geneId} />
+    </React.Suspense>
   </div>
 ))
 
