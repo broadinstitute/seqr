@@ -10,12 +10,12 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='WarningMessage',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('message', models.TextField()),
-                ('header', models.TextField(blank=True, null=True)),
-            ],
-        ),
+        # migrations.CreateModel(
+        #     name='WarningMessage',
+        #     fields=[
+        #         ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+        #         ('message', models.TextField()),
+        #         ('header', models.TextField(blank=True, null=True)),
+        #     ],
+        # ),
     ]
