@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Segment, Icon, Popup, Divider } from 'semantic-ui-react'
+import { Segment, Icon, Popup, Divider, Loader } from 'semantic-ui-react'
 
 import {
   getIndividualsByGuid,
@@ -12,7 +12,6 @@ import {
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
-import IGV from '../../graph/IGV'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
@@ -23,6 +22,8 @@ import {
   DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
   JUNCTION_VISIBILITY_OPTIONS, NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS,
 } from './constants'
+
+const IGV = React.lazy(() => import('../../graph/IGV'))
 
 const MIN_LOCUS_RANGE_SIZE = 100
 
@@ -203,7 +204,9 @@ const IgvPanel = React.memo((
   )
 
   return (
-    <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
+    <React.Suspense fallback={<Loader />}>
+      <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
+    </React.Suspense>
   )
 })
 
