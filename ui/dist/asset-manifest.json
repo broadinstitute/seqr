@@ -1,8 +1,21 @@
 {
-  "app.css": "/static/app.c4fb445d.css",
-  "app.js": "/static/app-6a7b86ec.js",
+  "app.css": "/static/app.ad33281c.css",
+  "app.js": "/static/app-d2d78e2c.js",
+  "brand-icons.svg": "/static/6729d29753e000c17489.svg",
+  "icons.svg": "/static/62d9dae4e0040e81c980.svg",
+  "outline-icons.svg": "/static/9c4845b4b41ef40a22fa.svg",
+  "icons.eot": "/static/a01e3f2d6c83dc3aee17.eot",
+  "icons.ttf": "/static/c656b8caa454ed19b9a2.ttf",
+  "brand-icons.eot": "/static/d68fa3e67dbb653a13ce.eot",
+  "brand-icons.ttf": "/static/65a2fb6d9aaa164b41a0.ttf",
+  "brand-icons.woff": "/static/cac87dc00c87a5d74711.woff",
+  "brand-icons.woff2": "/static/278156e41e0ad908cf7f.woff2",
+  "icons.woff": "/static/425399f81e4ce7cbd967.woff",
+  "icons.woff2": "/static/38c6d8bab26db77d8c80.woff2",
+  "outline-icons.eot": "/static/752905fa5edf21fc52a1.eot",
+  "outline-icons.ttf": "/static/5367103510b27b784827.ttf",
   "flags.png": "/static/flags.99f63ae7.png",
-  "app.html": "/static/app.html",
-  "app.c4fb445d.css.map": "/static/app.c4fb445d.css.map",
-  "app-6a7b86ec.js.map": "/static/app-6a7b86ec.js.map"
+  "outline-icons.woff": "/static/ddae9b1ba9b0b42f5880.woff",
+  "outline-icons.woff2": "/static/687a4990ea22bb1a49d4.woff2",
+  "app.html": "/static/app.html"
 }

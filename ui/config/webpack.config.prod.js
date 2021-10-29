@@ -10,6 +10,8 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
+const TerserPlugin = require("terser-webpack-plugin");
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const paths = require('./paths');
 const getClientEnvironment = require('./env');
@@ -57,9 +59,6 @@ module.exports = {
   mode: 'production',
   // Don't attempt to continue if there are any errors.
   bail: true,
-  // We generate sourcemaps in production. This is slow but gives good results.
-  // You can exclude the *.map files from the build during deployment.
-  devtool: 'source-map',
 
   entry: {
     app: [
@@ -160,7 +159,7 @@ module.exports = {
           },
           {
             test: /\.(png|woff|woff2|eot|ttf|svg)$/,
-            type: 'asset/inline',
+            type: 'asset',
           },
         ],
       },
@@ -211,12 +210,24 @@ module.exports = {
     }),
     new webpack.ProvidePlugin({
       $: "jquery/dist/jquery.min",
-      d3: "d3",
-    })
+      d3: require.resolve('./d3-bundle'),
+    }),
+    new BundleAnalyzerPlugin({
+      // Opens a browser tab with detailed breakdown of bundle size. Set analyzerMode to 'server' to enable
+      analyzerMode: 'disabled', // 'server'
+    }),
   ],
   optimization: {
     minimize: true,
     minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          format: {
+            comments: false,
+          },
+        },
+        extractComments: false,
+      }),
       new CssMinimizerPlugin({
         minimizerOptions: {
           preset: [
