@@ -214,7 +214,7 @@ module.exports = {
     }),
     new BundleAnalyzerPlugin({
       // Opens a browser tab with detailed breakdown of bundle size. Set analyzerMode to 'server' to enable
-      analyzerMode: 'disabled', // 'server'
+      analyzerMode: 'server', //'disabled', // 'server'
     }),
   ],
   optimization: {
