@@ -112,7 +112,7 @@ const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) =
 const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
   (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
 )
-const IN_SILICO_GROUPS = ['Missense', 'Coding/Noncoding', 'Splicing', 'Structural']
+const IN_SILICO_GROUPS = ['Missense', 'Coding/Noncoding', 'Splicing', 'Structural'] // TODO conditional for structural
 
 const inSilicoFieldLayout = fieldComponents => (
   <Form.Field>

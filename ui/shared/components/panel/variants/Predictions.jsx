@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Icon, Transition, Popup } from 'semantic-ui-react'
 
 import { getGenesById } from 'redux/selectors'
-import { PREDICTION_INDICATOR_MAP, POLYPHEN_MAP, MUTTASTER_MAP, getVariantMainGeneId } from 'shared/utils/constants'
+import { PREDICTOR_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
@@ -40,8 +40,7 @@ const predictionFieldValue = (
     return { value, color, infoValue, infoTitle, dangerThreshold, warningThreshold }
   }
 
-  return indicatorMap ? { ...PREDICTION_INDICATOR_MAP[value[0]], ...indicatorMap[value[0]] } :
-    PREDICTION_INDICATOR_MAP[value[0]]
+  return indicatorMap[value[0]]
 }
 
 const Prediction = ({ field, value, color, infoValue, infoTitle, warningThreshold, dangerThreshold }) => {
@@ -84,24 +83,6 @@ Prediction.propTypes = {
   warningThreshold: PropTypes.number,
   dangerThreshold: PropTypes.number,
 }
-
-const PREDICTOR_FIELDS = [
-  { field: 'cadd', warningThreshold: 10, dangerThreshold: 20 },
-  { field: 'revel', warningThreshold: 0.5, dangerThreshold: 0.75 },
-  { field: 'primate_ai', warningThreshold: 0.5, dangerThreshold: 0.7 },
-  { field: 'mpc', warningThreshold: 1, dangerThreshold: 2 },
-  { field: 'splice_ai', warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
-  { field: 'eigen', warningThreshold: 1, dangerThreshold: 2 },
-  { field: 'dann', warningThreshold: 0.93, dangerThreshold: 0.96 },
-  { field: 'strvctvre', warningThreshold: 0.5, dangerThreshold: 0.75 },
-  { field: 'polyphen', indicatorMap: POLYPHEN_MAP },
-  { field: 'sift' },
-  { field: 'mut_taster', indicatorMap: MUTTASTER_MAP },
-  { field: 'fathmm' },
-  { field: 'metasvm' },
-  { field: 'gerp_rs', noSeverity: true },
-  { field: 'phastcons_100_vert', noSeverity: true },
-]
 
 class Predictions extends React.PureComponent {
 

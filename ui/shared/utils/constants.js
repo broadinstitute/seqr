@@ -1038,23 +1038,41 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   inline: true,
 }
 
-export const PREDICTION_INDICATOR_MAP = {
+const INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },
-  A: { color: 'red', value: 'disease causing' },
   T: { color: 'green', value: 'tolerated' },
-  N: { color: 'green', value: 'polymorphism' },
-  P: { color: 'green', value: 'polymorphism' },
+}
+
+const POLYPHEN_MAP = {
+  D: { color: 'red', value: 'probably damaging' },
+  P: { color: 'yellow', value: 'possibly damaging' },
   B: { color: 'green', value: 'benign' },
 }
 
-export const POLYPHEN_MAP = {
-  D: { value: 'probably damaging' },
-  P: { color: 'yellow', value: 'possibly damaging' },
+const MUTTASTER_MAP = {
+  D: { color: 'red', value: 'disease causing' },
+  A: { color: 'red', value: 'disease causing automatic' },
+  N: { color: 'green', value: 'polymorphism' },
+  P: { color: 'green', value: 'polymorphism automatic' },
 }
 
-export const MUTTASTER_MAP = {
-  D: { value: 'disease causing' },
-}
+export const PREDICTOR_FIELDS = [
+  { field: 'cadd', group: 'Coding/Noncoding', warningThreshold: 10, dangerThreshold: 20 },
+  { field: 'revel', group: 'Missense', warningThreshold: 0.5, dangerThreshold: 0.75 },
+  { field: 'primate_ai', group: 'Missense', warningThreshold: 0.5, dangerThreshold: 0.7 },
+  { field: 'mpc', group: 'Missense', warningThreshold: 1, dangerThreshold: 2 },
+  { field: 'splice_ai', group: 'Splicing', warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
+  { field: 'eigen', group: 'Coding/Noncoding', warningThreshold: 1, dangerThreshold: 2 },
+  { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },
+  { field: 'strvctvre', group: 'Structural', warningThreshold: 0.5, dangerThreshold: 0.75 },
+  { field: 'polyphen', group: 'Missense', indicatorMap: POLYPHEN_MAP },
+  { field: 'sift', group: 'Missense', indicatorMap: INDICATOR_MAP },
+  { field: 'mut_taster', group: 'Missense', indicatorMap: MUTTASTER_MAP },
+  { field: 'fathmm', group: 'Missense', indicatorMap: INDICATOR_MAP },
+  { field: 'metasvm', group: 'Missense', indicatorMap: INDICATOR_MAP },
+  { field: 'gerp_rs', group: 'Missense', noSeverity: true },
+  { field: 'phastcons_100_vert', group: 'Missense', noSeverity: true },
+]
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
   if (selectedMainTranscriptId || mainTranscriptId) {
@@ -1094,10 +1112,10 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'revel', getVal: variant => (variant.predictions || {}).revel },
   { header: 'eigen', getVal: variant => (variant.predictions || {}).eigen },
   { header: 'splice_ai', getVal: variant => (variant.predictions || {}).splice_ai },
-  { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).polyphen] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).polyphen] || {}).value },
-  { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value },
-  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).mut_taster] || {}).value },
-  { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value },
+  { header: 'polyphen', getVal: variant => (POLYPHEN_MAP[(variant.predictions || {}).polyphen] || {}).value },
+  { header: 'sift', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value },
+  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || {}).value },
+  { header: 'fathmm', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
