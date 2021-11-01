@@ -1,4 +1,4 @@
-const removeMd = require('remove-markdown')
+const removeMd = require('@tommoor/remove-markdown')
 
 export const snakecaseToTitlecase =
   s => (s ? s.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' ') : '')
