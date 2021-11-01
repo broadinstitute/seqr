@@ -11,4 +11,4 @@ export const toCamelcase = s => (s || '').split(' ').map(
   (word, i) => word && (i > 0 ? word[0].toUpperCase() : word[0].toLowerCase()) + word.slice(1),
 ).join('')
 
-export const stripMarkdown = s => removeMd(s || '').replaceAll('\n', ' ')
+export const stripMarkdown = s => removeMd((s || '').replace(/\n/g, ' '))
