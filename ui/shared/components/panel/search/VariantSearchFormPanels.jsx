@@ -109,15 +109,16 @@ export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 
+export const SV_IN_SILICO_GROUP = 'Structural'
+export const NO_SV_IN_SILICO_GROUPS = ['Missense', 'Coding/Noncoding', 'Splicing']
 const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
   (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
 )
-const IN_SILICO_GROUPS = ['Missense', 'Coding/Noncoding', 'Splicing', 'Structural'] // TODO conditional for structural
 
-const inSilicoFieldLayout = fieldComponents => (
+export const inSilicoFieldLayout = groups => fieldComponents => (
   <Form.Field>
     <Grid divided="vertically">
-      {IN_SILICO_GROUPS.map(group => (
+      {groups.map(group => (
         <Grid.Row key={group}>
           <Grid.Column width={2} verticalAlign="middle"><Header size="small" content={group} /></Grid.Column>
           <Grid.Column width={14}>
@@ -209,7 +210,7 @@ export const IN_SILICO_PANEL = {
   name: 'in_silico',
   headerProps: { title: 'In Silico Filters' },
   fields: IN_SILICO_FIELDS,
-  fieldLayout: inSilicoFieldLayout,
+  fieldLayout: inSilicoFieldLayout([...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP]),
   helpText: 'Filter by in-silico predictors. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned. For text filters, variants with exactly matching classifications will be returned',
 }
 
