@@ -1057,12 +1057,12 @@ const MUTTASTER_MAP = {
 }
 
 export const PREDICTOR_FIELDS = [
-  { field: 'cadd', group: 'Coding/Noncoding', warningThreshold: 10, dangerThreshold: 20 },
+  { field: 'cadd', group: 'Coding/Noncoding', warningThreshold: 10, dangerThreshold: 20, min: 1, max: 99 },
   { field: 'revel', group: 'Missense', warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'primate_ai', group: 'Missense', warningThreshold: 0.5, dangerThreshold: 0.7 },
-  { field: 'mpc', group: 'Missense', warningThreshold: 1, dangerThreshold: 2 },
+  { field: 'mpc', group: 'Missense', warningThreshold: 1, dangerThreshold: 2, max: 5 },
   { field: 'splice_ai', group: 'Splicing', warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
-  { field: 'eigen', group: 'Coding/Noncoding', warningThreshold: 1, dangerThreshold: 2 },
+  { field: 'eigen', group: 'Coding/Noncoding', warningThreshold: 1, dangerThreshold: 2, max: 99 },
   { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },
   { field: 'strvctvre', group: 'Structural', warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'polyphen', group: 'Missense', indicatorMap: POLYPHEN_MAP },
@@ -1070,7 +1070,7 @@ export const PREDICTOR_FIELDS = [
   { field: 'mut_taster', group: 'Missense', indicatorMap: MUTTASTER_MAP },
   { field: 'fathmm', group: 'Missense', indicatorMap: INDICATOR_MAP },
   { field: 'metasvm', group: 'Missense', indicatorMap: INDICATOR_MAP },
-  { field: 'gerp_rs', group: 'Missense', noSeverity: true },
+  { field: 'gerp_rs', group: 'Missense', noSeverity: true, min: -13, max: 7 },
   { field: 'phastcons_100_vert', group: 'Missense', noSeverity: true },
 ]
 

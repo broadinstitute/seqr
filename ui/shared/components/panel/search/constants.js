@@ -377,7 +377,7 @@ export const LOCATION_FIELDS = [
 ]
 
 export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-  ({ field, warningThreshold, dangerThreshold, indicatorMap, group }) => {
+  ({ field, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
     const label = snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
 
@@ -410,6 +410,9 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
       component: BaseSemanticInput,
       inputType: 'Input',
       type: 'number',
+      min: min || 0,
+      max: max || 1,
+      step: max ? 1 : 0.05,
       ...filterField,
     }
   },
