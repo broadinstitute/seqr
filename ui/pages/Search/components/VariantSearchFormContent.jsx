@@ -115,14 +115,6 @@ const INHERITANCE_PANEL = {
   ),
 }
 
-const IN_SILICO_PANEL_MAP = {
-  ...IN_SILICO_PANEL,
-  headerProps: {
-    title: 'In Silico Filters',
-    name: 'in_silico',
-  },
-}
-
 const LOCATION_PANEL_WITH_GENE_LIST = {
   ...LOCATION_PANEL,
   headerProps: {
@@ -215,7 +207,7 @@ const PANELS = [
     hasHgmdPermission: { [true]: HGMD_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
   ANNOTATION_PANEL_MAP,
-  IN_SILICO_PANEL_MAP,
+  IN_SILICO_PANEL,
   ANNOTATION_SECONDARY_PANEL_MAP,
   {
     ...FREQUENCY_PANEL,

@@ -104,37 +104,32 @@ export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
-const IN_SILICO_FILTER_ROW_CHUNK_SIZE = 5
 
-export const inSilicoFilterGridLayout = fieldComponentChunk => (
-  <Grid.Row>
-    { fieldComponentChunk.map(fieldComponent => (
-      <Grid.Column width={3}>
-        {fieldComponent}
-      </Grid.Column>
-    ))}
-  </Grid.Row>
+const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
+  (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
 )
+const IN_SILICO_GROUPS = ['Missense', 'Coding/Noncoding', 'Splicing', 'Structural']
 
-export const inSilicoFieldLayout = (fieldComponents) => {
-  const numberOfRows = Math.ceil(fieldComponents.length / IN_SILICO_FILTER_ROW_CHUNK_SIZE)
-  const fieldComponentsCopy = [...fieldComponents]
-  const fieldComponentChunks = []
-  // eslint-disable-next-line no-plusplus
-  for (let i = numberOfRows; i > 0; i--) {
-    const fieldComponentChunk = fieldComponentsCopy.splice(0, IN_SILICO_FILTER_ROW_CHUNK_SIZE)
-    fieldComponentChunks.push(fieldComponentChunk)
-  }
-  return (
-    <Form.Field>
-      <Grid>
-        { fieldComponentChunks.map((fieldComponentChunk, index) => (
-          inSilicoFilterGridLayout(fieldComponentChunk, index, fieldComponentChunks.length)
-        ))}
-      </Grid>
-    </Form.Field>
-  )
-}
+const inSilicoFieldLayout = fieldComponents => (
+  <Form.Field>
+    <Grid divided="vertically">
+      {IN_SILICO_GROUPS.map(group => (
+        <Grid.Row key={group}>
+          <Grid.Column width={2} verticalAlign="middle"><Header size="small" content={group} /></Grid.Column>
+          <Grid.Column width={14}>
+            <Grid>
+              <Grid.Row>
+                {IN_SILICO_GROUP_INDEX_MAP[group].map(
+                  i => <Grid.Column key={i} width={3}>{fieldComponents[i]}</Grid.Column>,
+                )}
+              </Grid.Row>
+            </Grid>
+          </Grid.Column>
+        </Grid.Row>
+      ))}
+    </Grid>
+  </Form.Field>
+)
 
 export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
   ...annotationGroups.map(groups => (

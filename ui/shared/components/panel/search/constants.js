@@ -382,6 +382,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Coding/Noncoding',
   },
   {
     name: 'revel',
@@ -390,6 +391,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Missense',
   },
   {
     name: 'primate_ai',
@@ -398,6 +400,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Missense',
   },
   {
     name: 'mpc',
@@ -406,6 +409,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Missense',
   },
   {
     name: 'splice_ai',
@@ -414,6 +418,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Splicing',
   },
   {
     name: 'eigen',
@@ -422,14 +427,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
-  },
-  {
-    name: 'dann',
-    label: 'Dann',
-    labelHelp: 'Enter a numeric value for Dann prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
+    group: 'Coding/Noncoding',
   },
   {
     name: 'strvctvre',
@@ -438,6 +436,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Structural', // TODO SV projects only
   },
   {
     name: 'gerp_rs',
@@ -446,6 +445,7 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Missense',
   },
   {
     name: 'phastcons_100_vert',
@@ -454,11 +454,13 @@ export const IN_SILICO_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'number',
+    group: 'Missense',
   },
   {
     name: 'polyphen',
     label: 'Polyphen',
     labelHelp: 'Enter a value for Polyphen prediction',
+    group: 'Missense',
     component: Select,
     options: [{
       text: '',
@@ -481,6 +483,7 @@ export const IN_SILICO_FIELDS = [
     name: 'sift',
     label: 'Sift',
     labelHelp: 'Enter a value for Sift prediction',
+    group: 'Missense',
     component: Select,
     options: [{
       text: '',
@@ -499,6 +502,7 @@ export const IN_SILICO_FIELDS = [
     name: 'mut_taster',
     label: 'Mut Taster',
     labelHelp: 'Enter value for Mutation Taster prediction',
+    group: 'Missense',
     component: Select,
     options: [{
       text: '',
@@ -521,6 +525,7 @@ export const IN_SILICO_FIELDS = [
     name: 'fathmm',
     label: 'FATHMM',
     labelHelp: 'Enter a value for FATHMM prediction',
+    group: 'Missense',
     component: Select,
     options: [{
       text: '',
@@ -539,6 +544,7 @@ export const IN_SILICO_FIELDS = [
     name: 'metasvm',
     label: 'METASVM',
     labelHelp: 'Enter a value for METASVM prediction',
+    group: 'Missense',
     component: Select,
     options: [{
       text: '',
