@@ -4,8 +4,6 @@ import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
-import Slider from 'react-rangeslider'
-import 'react-rangeslider/lib/index.css'
 
 import { helpLabel } from './ReduxFormWrapper'
 
@@ -491,61 +489,6 @@ const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, ...props })
 `
 // This notation required to fix a ref forwarding bug with styled components and seamntic ui: https://github.com/Semantic-Org/Semantic-UI-React/issues/3786#issuecomment-557560471
 export const InlineToggle = props => <BaseInlineToggle {...props} />
-
-export const LabeledSlider = styled(Slider).attrs(props => ({
-  handleLabel: `${props.valueLabel !== undefined ? props.valueLabel : (props.value || '')}`,
-  labels: { [props.min]: props.minLabel || props.min, [props.max]: props.maxLabel || props.max },
-  tooltip: false,
-}))`
-  width: 100%;
-
-  .rangeslider__fill {
-    background-color: grey !important;
-    ${props => props.value < 0 && 'width: 0 !important;'}
-  }
-
-  .rangeslider__handle {
-    z-index: 1;
-    
-    ${props => props.value < 0 && 'left: calc(100% - 1em) !important;'}
-    
-    .rangeslider__handle-label {
-      text-align: center;
-      margin-top: .3em;
-      font-size: .9em;
-    }
-    
-    &:after {
-      display: none;
-    }
-  }
-  
-  .rangeslider__labels .rangeslider__label-item {
-    top: -0.8em;
-  }
-`
-
-const selectStep = (onChange, steps) => val => onChange(steps[val])
-
-export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) => (
-  <LabeledSlider
-    {...props}
-    min={0}
-    minLabel={stepLabels[steps[0]] || steps[0]}
-    max={steps.length - 1}
-    maxLabel={stepLabels[steps.length - 1] || steps[steps.length - 1]}
-    value={steps.indexOf(value)}
-    valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
-    onChange={selectStep(onChange, steps)}
-  />
-))
-
-StepSlider.propTypes = {
-  value: PropTypes.number,
-  steps: PropTypes.arrayOf(PropTypes.number),
-  stepLabels: PropTypes.object,
-  onChange: PropTypes.func,
-}
 
 const onPageChange = onChange => (e, data) => onChange(data.activePage)
 

@@ -66,6 +66,7 @@
     "why-did-you-update": "^0.1.1"
   },
   "dependencies": {
+    "@tommoor/remove-markdown": "^0.3.2",
     "d3-drag": "^1.2.5",
     "d3-hierarchy": "^1.1.9",
     "d3-selection": "^1.4.2",

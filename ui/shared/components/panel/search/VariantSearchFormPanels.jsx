@@ -2,11 +2,11 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { FormSection } from 'redux-form'
-import { Form, Accordion, Header, Segment, Grid, Icon } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
+import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
 import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
 
@@ -30,6 +30,8 @@ import {
   HIGH_IMPACT_GROUPS_NO_SV,
   MODERATE_IMPACT_GROUPS,
 } from './constants'
+
+const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
 
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
   .dropdown.icon {
@@ -84,6 +86,8 @@ const ExpandCollapseCategoryContainer = styled.span`
   position: relative;
   top: -2em;
 `
+
+const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
 
 const JsonSelectPropsWithAll = (options, all) => ({
   component: Select,
@@ -218,7 +222,7 @@ export const QUALITY_PANEL = {
   name: 'qualityFilter',
   headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
-  fieldProps: { control: LabeledSlider, format: val => val || null },
+  fieldProps: { control: LazyLabeledSlider, format: val => val || null },
 }
 
 const stopPropagation = e => e.stopPropagation()
