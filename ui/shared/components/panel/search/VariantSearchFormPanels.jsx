@@ -8,7 +8,9 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
+import {
+  VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS,
+} from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
@@ -27,7 +29,7 @@ import {
   ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
   CODING_IMPACT_GROUPS,
-  HIGH_IMPACT_GROUPS_NO_SV,
+  HIGH_IMPACT_GROUPS_SPLICE,
   MODERATE_IMPACT_GROUPS,
 } from './constants'
 
@@ -87,6 +89,10 @@ const ExpandCollapseCategoryContainer = styled.span`
   top: -2em;
 `
 
+const LeftAligned = styled.div`
+ text-align: left;
+`
+
 const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
 
 const JsonSelectPropsWithAll = (options, all) => ({
@@ -107,13 +113,13 @@ const pathogenicityPanel = hasHgmdPermission => ({
 export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
-const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
-
-export const SV_IN_SILICO_GROUP = 'Structural'
-export const NO_SV_IN_SILICO_GROUPS = ['Missense', 'Coding/Noncoding', 'Splicing']
+const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
 const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
   (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
 )
+
+const ANNOTATION_GROUPS_SPLICE = [...ANNOTATION_GROUPS, IN_SILICO_SPLICING_FIELD]
+const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS_SPLICE.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 
 export const inSilicoFieldLayout = groups => fieldComponents => (
   <Form.Field>
@@ -140,10 +146,10 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
   ...annotationGroups.map(groups => (
     <Form.Field key={groups[0]} width={3}>
       {groups.map(group => (
-        <div key={group}>
+        <LeftAligned key={group}>
           {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
           <VerticalSpacer height={20} />
-        </div>
+        </LeftAligned>
       ))}
     </Form.Field>
   )),
@@ -176,10 +182,10 @@ const freqFieldLayout = fieldComponents => (
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
-  fields: ANNOTATION_GROUPS,
+  fields: ANNOTATION_GROUPS_SPLICE,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
-    [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
+    [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
   ]),
 }
 

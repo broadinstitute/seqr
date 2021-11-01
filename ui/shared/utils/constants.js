@@ -1056,22 +1056,29 @@ const MUTTASTER_MAP = {
   P: { color: 'green', value: 'polymorphism automatic' },
 }
 
+const MISSENSE_IN_SILICO_GROUP = 'Missense'
+const CODING_IN_SILICO_GROUP = 'Coding/Noncoding'
+const SPLICING_IN_SILICO_GROUP = 'Splicing'
+export const SV_IN_SILICO_GROUP = 'Structural'
+export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILICO_GROUP]
+export const SPLICE_AI_FIELD = 'splice_ai'
+
 export const PREDICTOR_FIELDS = [
-  { field: 'cadd', group: 'Coding/Noncoding', warningThreshold: 10, dangerThreshold: 20, min: 1, max: 99 },
-  { field: 'revel', group: 'Missense', warningThreshold: 0.5, dangerThreshold: 0.75 },
-  { field: 'primate_ai', group: 'Missense', warningThreshold: 0.5, dangerThreshold: 0.7 },
-  { field: 'mpc', group: 'Missense', warningThreshold: 1, dangerThreshold: 2, max: 5 },
-  { field: 'splice_ai', group: 'Splicing', warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
-  { field: 'eigen', group: 'Coding/Noncoding', warningThreshold: 1, dangerThreshold: 2, max: 99 },
+  { field: 'cadd', group: CODING_IN_SILICO_GROUP, warningThreshold: 10, dangerThreshold: 20, min: 1, max: 99 },
+  { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
+  { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.7 },
+  { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 5 },
+  { field: SPLICE_AI_FIELD, group: SPLICING_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
+  { field: 'eigen', group: CODING_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 99 },
   { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },
-  { field: 'strvctvre', group: 'Structural', warningThreshold: 0.5, dangerThreshold: 0.75 },
-  { field: 'polyphen', group: 'Missense', indicatorMap: POLYPHEN_MAP },
-  { field: 'sift', group: 'Missense', indicatorMap: INDICATOR_MAP },
-  { field: 'mut_taster', group: 'Missense', indicatorMap: MUTTASTER_MAP },
-  { field: 'fathmm', group: 'Missense', indicatorMap: INDICATOR_MAP },
-  { field: 'metasvm', group: 'Missense', indicatorMap: INDICATOR_MAP },
-  { field: 'gerp_rs', group: 'Missense', noSeverity: true, min: -13, max: 7 },
-  { field: 'phastcons_100_vert', group: 'Missense', noSeverity: true },
+  { field: 'strvctvre', group: SV_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
+  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: POLYPHEN_MAP },
+  { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
+  { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'metasvm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
+  { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
 ]
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Form } from 'semantic-ui-react'
 import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
@@ -17,6 +18,7 @@ import {
   AFFECTED,
   UNAFFECTED,
   PREDICTOR_FIELDS,
+  SPLICE_AI_FIELD,
 } from 'shared/utils/constants'
 
 export const getSelectedAnalysisGroups = (
@@ -245,15 +247,14 @@ export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_SV,
   VEP_GROUP_SV_CONSEQUENCES,
 ]
-export const HIGH_IMPACT_GROUPS_NO_SV = [
+const HIGH_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_FRAMESHIFT,
 ]
-export const HIGH_IMPACT_GROUPS = [
-  ...HIGH_IMPACT_GROUPS_NO_SV,
-  VEP_GROUP_SV,
-  VEP_GROUP_SV_CONSEQUENCES,
+export const HIGH_IMPACT_GROUPS_SPLICE = [
+  ...HIGH_IMPACT_GROUPS,
+  SPLICE_AI_FIELD,
 ]
 export const MODERATE_IMPACT_GROUPS = [
   VEP_GROUP_MISSENSE,
@@ -395,7 +396,7 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
 
     const labelHelp = (
       <div>
-        {`Enter a numeric value for ${label}`}
+        {`Enter a numeric cutoff for ${label}`}
         {dangerThreshold && (
           <div>
             Thresholds:
@@ -407,8 +408,7 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
     )
     return {
       labelHelp,
-      component: BaseSemanticInput,
-      inputType: 'Input',
+      control: Form.Input,
       type: 'number',
       min: min || 0,
       max: max || 1,

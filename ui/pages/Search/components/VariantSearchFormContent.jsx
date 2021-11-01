@@ -11,13 +11,16 @@ import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
   HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
-  IN_SILICO_PANEL, NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP, annotationFieldLayout, inSilicoFieldLayout,
+  IN_SILICO_PANEL, annotationFieldLayout, inSilicoFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
-  HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
+  HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
 } from 'shared/components/panel/search/constants'
 import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
-import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
+import {
+  ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES,
+  NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP,
+} from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
@@ -147,7 +150,7 @@ const ANNOTATION_PANEL_MAP = {
   },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
   },
 }
 
