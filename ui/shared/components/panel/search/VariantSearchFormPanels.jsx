@@ -217,7 +217,7 @@ export const IN_SILICO_PANEL = {
   headerProps: { title: 'In Silico Filters' },
   fields: IN_SILICO_FIELDS,
   fieldLayout: inSilicoFieldLayout([...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP]),
-  helpText: 'Filter by in-silico predictors. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned. For text filters, variants with exactly matching classifications will be returned',
+  helpText: 'Filter by in-silico predictors. Variants matching any of the applied filters will be returned. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned.',
 }
 
 export const QUALITY_PANEL = {
