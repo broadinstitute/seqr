@@ -18,7 +18,12 @@ const TableHeaderCell = styled(Table.HeaderCell)`
 `
 
 const SEQR_PAPER_URL = 'https://doi.org/10.1101/2021.10.27.21265326'
-export const SeqrPaperLink = () => <a target="_blank" rel="noreferrer" href={SEQR_PAPER_URL}>{SEQR_PAPER_URL}</a>
+export const SeqrPaperLink =
+  ({ content }) => <a target="_blank" rel="noreferrer" href={SEQR_PAPER_URL}>{content || SEQR_PAPER_URL}</a>
+
+SeqrPaperLink.propTypes = {
+  content: PropTypes.node,
+}
 
 const Footer = React.memo(({ version }) => (
   <Table>
