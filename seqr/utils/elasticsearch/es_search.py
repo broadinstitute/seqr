@@ -198,23 +198,8 @@ class EsSearch(object):
         return self
 
     def filter_by_in_silico(self, in_silico_filters):
-
-        q = Q()
-        for in_silico_filter_key in list(in_silico_filters.keys()):
-            if in_silico_filters[in_silico_filter_key] is None or len(in_silico_filters[in_silico_filter_key]) == 0:
-                del in_silico_filters[in_silico_filter_key]
-
-        for in_silico_filter in in_silico_filters:
-
-            prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
-
-            prediction_value = in_silico_filters[in_silico_filter]
-            try:
-                q &= Q('range', **{prediction_key: {'gte': float(prediction_value)}})
-            except ValueError:
-                q &= Q('prefix', **{prediction_key: prediction_value})
-
-        self.filter(q)
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
+        self.filter(_in_silico_filter(in_silico_filters))
 
     def filter_by_frequency(self, frequencies):
         q = Q()
@@ -1351,6 +1336,19 @@ def _dataset_type_for_annotations(annotations):
     elif not sv and non_sv:
         return Sample.DATASET_TYPE_VARIANT_CALLS
     return None
+
+
+def _in_silico_filter(in_silico_filters):
+    in_silico_q = Q()
+    for in_silico_filter, value in in_silico_filters.items():
+        prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
+        try:
+            score_q = Q('range', **{prediction_key: {'gte': float(value)}})
+        except ValueError:
+            score_q = Q('prefix', **{prediction_key: value})
+        in_silico_q &= score_q
+
+    return in_silico_q
 
 
 def _pop_freq_filter(filter_key, value):
