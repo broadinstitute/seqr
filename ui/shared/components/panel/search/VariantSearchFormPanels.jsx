@@ -8,9 +8,7 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import {
-  VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS,
-} from 'shared/utils/constants'
+import { VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
@@ -31,6 +29,7 @@ import {
   CODING_IMPACT_GROUPS,
   HIGH_IMPACT_GROUPS_SPLICE,
   MODERATE_IMPACT_GROUPS,
+  SV_GROUPS,
 } from './constants'
 
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
@@ -182,10 +181,10 @@ const freqFieldLayout = fieldComponents => (
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
-  fields: ANNOTATION_GROUPS_SPLICE, // TODO no splice in secondary search
+  fields: ANNOTATION_GROUPS_SPLICE,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
-    [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
+    SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
   ]),
 }
 
