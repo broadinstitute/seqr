@@ -1,11 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Table } from 'semantic-ui-react'
+import { Table, Modal, Header } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { getVersion } from 'redux/selectors'
+import { ButtonLink } from '../StyledComponents'
 
 const TableHeaderCell = styled(Table.HeaderCell)`
   border-radius: 0 !important;
@@ -16,12 +17,32 @@ const TableHeaderCell = styled(Table.HeaderCell)`
   }
 `
 
+const SEQR_PAPER_URL = 'https://doi.org/10.1101/2021.10.27.21265326'
+export const SeqrPaperLink = () => <a target="_blank" rel="noreferrer" href={SEQR_PAPER_URL}>{SEQR_PAPER_URL}</a>
+
 const Footer = React.memo(({ version }) => (
   <Table>
     <Table.Header>
       <Table.Row>
         <TableHeaderCell width={1} />
         <TableHeaderCell collapsing disabled>{`seqr ${version}`}</TableHeaderCell>
+        <TableHeaderCell collapsing>
+          <Modal
+            // eslint-disable-next-line react/jsx-one-expression-per-line
+            trigger={<ButtonLink content={<span>Cite <i>seqr</i></span>} />}
+            header={<Modal.Header content="For discoveries made using seqr, please cite:" as={Header} size="small" />}
+            content={
+              <Modal.Content>
+                Pais, L., Snow, H., Weisburd, B., Zhang, S., Baxter, S., DiTroia, S., O’Heir, E., England, E.,
+                Chao, K., Lemire, G., Osei-Owusu, I., VanNoy, G., Wilson, M., Nguyen, K., Arachchi, H., Phu, W.,
+                Solomson, M., Mano, S., O’Leary, M., … O’Donnell-Luria, A.
+                <br />
+                seqr: a web-based analysis and collaboration tool for rare disease genomics. medRxiv (2021). &nbsp;
+                <SeqrPaperLink />
+              </Modal.Content>
+            }
+          />
+        </TableHeaderCell>
         <TableHeaderCell collapsing><Link to="/privacy_policy">Privacy Policy</Link></TableHeaderCell>
         <TableHeaderCell collapsing><Link to="/terms_of_service">Terms of Service</Link></TableHeaderCell>
         <TableHeaderCell>
