@@ -1320,6 +1320,7 @@ class EsUtilsTest(TestCase):
             'annotations': {
                 'in_frame': ['inframe_insertion', 'inframe_deletion'],
                 'other': ['5_prime_UTR_variant', 'intergenic_variant'],
+                'splice_ai': '0.8',
             },
             'freqs': {
                 'callset': {'af': 0.1},
@@ -1468,6 +1469,7 @@ class EsUtilsTest(TestCase):
                             ]
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                        {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
                     ]
                 }
             },

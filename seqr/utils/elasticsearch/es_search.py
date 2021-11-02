@@ -218,20 +218,24 @@ class EsSearch(object):
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
         self.filter(q)
 
-    def _filter_by_annotations(self, annotations, pathogenicity_filter):
+    def _filter_by_annotations(self, annotations, additional_filters):
         dataset_type = None
+
+        additional_filters = [f for f in additional_filters if f]
+        annotation_filter = _or_filters(additional_filters) if additional_filters else None
+
         consequences_filter, allowed_consequences = _annotations_filter(annotations or {})
         if allowed_consequences:
-            if pathogenicity_filter:
+            if annotation_filter:
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
-                consequences_filter |= pathogenicity_filter
+                consequences_filter |= annotation_filter
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
             dataset_type = _dataset_type_for_annotations(annotations)
             if dataset_type:
                 self.update_dataset_type(dataset_type)
-        elif pathogenicity_filter:
-            self.filter(pathogenicity_filter)
+        elif annotation_filter:
+            self.filter(annotation_filter)
         return dataset_type
 
     def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
@@ -264,6 +268,9 @@ class EsSearch(object):
         if inheritance_filter.get('genotype'):
             inheritance_mode = None
 
+        splice_ai = (annotations or {}).pop('splice_ai', None)
+        splice_ai_filter = _in_silico_filter({'splice_ai': splice_ai}) if splice_ai else None
+
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
@@ -277,8 +284,8 @@ class EsSearch(object):
             secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
 
         pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
-        if annotations or pathogenicity_filter:
-            dataset_type = self._filter_by_annotations(annotations, pathogenicity_filter)
+        if annotations or pathogenicity_filter or splice_ai_filter:
+            dataset_type = self._filter_by_annotations(annotations, [pathogenicity_filter, splice_ai_filter])
             if dataset_type is None or dataset_type == secondary_dataset_type:
                 secondary_dataset_type = None
 

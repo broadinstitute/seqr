@@ -182,7 +182,7 @@ const freqFieldLayout = fieldComponents => (
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
-  fields: ANNOTATION_GROUPS_SPLICE,
+  fields: ANNOTATION_GROUPS_SPLICE, // TODO no splice in secondary search
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
     [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
