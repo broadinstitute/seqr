@@ -16,7 +16,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
-    PREDICTION_FIELD_LOOKUP
+    PREDICTION_FIELD_LOOKUP, get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -764,7 +764,7 @@ class EsSearch(object):
             'mainTranscriptId': main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
-                hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
+                hit, PREDICTION_FIELDS_CONFIG, format_response_key=get_prediction_response_key
             ),
             'transcripts': dict(transcripts),
         })
