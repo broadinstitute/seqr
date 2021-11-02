@@ -11,7 +11,7 @@ const UPLOADER_STYLES = { root: { border: '1px solid #CACACA', padding: 20, maxW
 
 const BulkUploadForm = React.memo(({
   url, actionDescription, details, project, name, requiredFields, optionalFields, uploadFormats, exportConfig,
-  blankExportConfig,
+  blankExportConfig, templateLinkContent = 'current individuals',
 }) => (
   <div>
     <NoBorderTable compact>
@@ -38,17 +38,12 @@ const BulkUploadForm = React.memo(({
             <Table.Cell>
               {ext && (
                 <span>
-                  download
-                  {blankExportConfig && (
-                    <span>
-                      &nbsp; template: &nbsp;
-                      <FileLink {...blankExportConfig} ext={ext} linkContent="blank" />
-                    </span>
-                  )}
+                  download &nbsp;
+                  <FileLink {...blankExportConfig} ext={ext} linkContent="blank template" />
                   {exportConfig && (
                     <span>
-                      {blankExportConfig && ' or '}
-                      <FileLink {...exportConfig} ext={ext} linkContent="current individuals" />
+                      &nbsp; or &nbsp;
+                      <FileLink {...exportConfig} ext={ext} linkContent={templateLinkContent} />
                     </span>
                   )}
                 </span>
@@ -111,6 +106,7 @@ BulkUploadForm.propTypes = {
   project: PropTypes.object,
   exportConfig: PropTypes.object,
   blankExportConfig: PropTypes.object,
+  templateLinkContent: PropTypes.string,
 }
 
 export default BulkUploadForm
