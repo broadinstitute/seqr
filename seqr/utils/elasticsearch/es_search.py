@@ -199,7 +199,8 @@ class EsSearch(object):
 
     def filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
-        self.filter(_in_silico_filter(in_silico_filters))
+        if in_silico_filters:
+            self.filter(_in_silico_filter(in_silico_filters))
 
     def filter_by_frequency(self, frequencies):
         q = Q()
@@ -269,7 +270,7 @@ class EsSearch(object):
             inheritance_mode = None
 
         splice_ai = (annotations or {}).pop('splice_ai', None)
-        splice_ai_filter = _in_silico_filter({'splice_ai': splice_ai}) if splice_ai else None
+        splice_ai_filter = _in_silico_filter({'splice_ai': splice_ai}, allow_missing=False) if splice_ai else None
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
@@ -1345,17 +1346,21 @@ def _dataset_type_for_annotations(annotations):
     return None
 
 
-def _in_silico_filter(in_silico_filters):
-    in_silico_q = Q()
+def _in_silico_filter(in_silico_filters, allow_missing=True):
+    in_silico_qs = []
     for in_silico_filter, value in in_silico_filters.items():
         prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
         try:
             score_q = Q('range', **{prediction_key: {'gte': float(value)}})
         except ValueError:
             score_q = Q('prefix', **{prediction_key: value})
-        in_silico_q &= score_q
 
-    return in_silico_q
+        if allow_missing:
+            score_q |= ~Q('exists', field=prediction_key)
+
+        in_silico_qs.append(score_q)
+
+    return _or_filters(in_silico_qs)
 
 
 def _pop_freq_filter(filter_key, value):

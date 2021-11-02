@@ -1450,7 +1450,12 @@ class EsUtilsTest(TestCase):
                     ]
                 }
             },
-            {'bool': {'must': [{'range': {'cadd_PHRED': {'gte': 11.5}}}, {'prefix': {'dbnsfp_SIFT_pred': 'D'}}]}},
+            {'bool': {'should': [
+                {'bool': {'must_not': [{'exists': {'field': 'cadd_PHRED'}}]}},
+                {'range': {'cadd_PHRED': {'gte': 11.5}}},
+                {'bool': {'must_not': [{'exists': {'field': 'dbnsfp_SIFT_pred'}}]}},
+                {'prefix': {'dbnsfp_SIFT_pred': 'D'}},
+            ]}},
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
             {'bool': {
                     'should': [
