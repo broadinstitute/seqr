@@ -187,16 +187,20 @@ const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
   } : {},
 }))
 
-const IgvPanel = React.memo((
-  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible },
-) => {
+const getVariantLocus = (variant, project) => {
   const size = variant.end && variant.end - variant.pos
-  const locus = variant && getLocus(
+  return getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
     size ? Math.max(Math.round(size / 3), MIN_LOCUS_RANGE_SIZE) : MIN_LOCUS_RANGE_SIZE,
     size,
   )
+}
+
+const IgvPanel = React.memo((
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible },
+) => {
+  const locus = variant && getVariantLocus(variant, project)
 
   const tracks = applyUserTrackSettings(
     rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)),
