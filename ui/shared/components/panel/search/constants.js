@@ -1,4 +1,4 @@
-import { RadioGroup, BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
+import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -17,10 +17,11 @@ import {
   UNAFFECTED,
 } from 'shared/utils/constants'
 
-export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) =>
-  Object.values(analysisGroupsByGuid).filter(
-    group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
-  )
+export const getSelectedAnalysisGroups = (
+  analysisGroupsByGuid, familyGuids,
+) => Object.values(analysisGroupsByGuid).filter(
+  group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
+)
 
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
@@ -120,14 +121,13 @@ export const INHERITANCE_LOOKUP = {
   },
 }
 
-export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) =>
-  ({ ...acc, [JSON.stringify(filter)]: mode }), {},
-)
+export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) => (
+  { ...acc, [JSON.stringify(filter)]: mode }), {})
 
 export const INHERITANCE_FILTER_OPTIONS = [
-  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER, ANY_AFFECTED,
+  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER,
+  DE_NOVO_FILTER, ANY_AFFECTED,
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
-
 
 const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
@@ -293,7 +293,6 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
     ), {}),
   }))[0]
 
-
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
 export const FREQUENCIES = [
@@ -372,6 +371,187 @@ export const LOCATION_FIELDS = [
     label: 'Exclude locations',
     labelHelp: 'Search for variants not in the specified genes/ intervals',
     width: 3,
+  },
+]
+
+export const IN_SILICO_FIELDS = [
+  {
+    name: 'cadd',
+    label: 'CADD',
+    labelHelp: 'Enter a numeric value for CADD prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'revel',
+    label: 'Revel',
+    labelHelp: 'Enter a numeric value for Revel prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'primate_ai',
+    label: 'Primate AI',
+    labelHelp: 'Enter a numeric value for Primate AI prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'mpc',
+    label: 'MPC',
+    labelHelp: 'Enter a numeric value for MPC prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'splice_ai',
+    label: 'Splice AI',
+    labelHelp: 'Enter a numeric value for Splice AI prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'eigen',
+    label: 'Eigen',
+    labelHelp: 'Enter a numeric value for Eigen prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'dann',
+    label: 'Dann',
+    labelHelp: 'Enter a numeric value for Dann prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'strvctvre',
+    label: 'STRVCTVRE',
+    labelHelp: 'Enter a numeric value for STRVCTVRE prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'gerp_rs',
+    label: 'GERP RS',
+    labelHelp: 'Enter a value for GERP RS prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'phastcons_100_vert',
+    label: 'Phastcons 100 Vert',
+    labelHelp: 'Enter a value for Phastcons 100 Vert prediction',
+    component: BaseSemanticInput,
+    inputType: 'Input',
+    type: 'number',
+  },
+  {
+    name: 'polyphen',
+    label: 'Polyphen',
+    labelHelp: 'Enter a value for Polyphen prediction',
+    component: Select,
+    options: [{
+      text: '',
+      value: null,
+    },
+    {
+      text: 'benign',
+      value: 'B',
+    },
+    {
+      text: 'possibly damaging',
+      value: 'P',
+    },
+    {
+      text: 'probably damaging',
+      value: 'D',
+    }],
+  },
+  {
+    name: 'sift',
+    label: 'Sift',
+    labelHelp: 'Enter a value for Sift prediction',
+    component: Select,
+    options: [{
+      text: '',
+      value: null,
+    },
+    {
+      text: 'tolerated',
+      value: 'T',
+    },
+    {
+      text: 'damaging',
+      value: 'D',
+    }],
+  },
+  {
+    name: 'mut_taster',
+    label: 'Mut Taster',
+    labelHelp: 'Enter value for Mutation Taster prediction',
+    component: Select,
+    options: [{
+      text: '',
+      value: null,
+    },
+    {
+      text: 'polymorphism (N)',
+      value: 'N',
+    },
+    {
+      text: 'polymorphism (P)',
+      value: 'P',
+    },
+    {
+      text: 'disease causing',
+      value: 'D',
+    }],
+  },
+  {
+    name: 'fathmm',
+    label: 'FATHMM',
+    labelHelp: 'Enter a value for FATHMM prediction',
+    component: Select,
+    options: [{
+      text: '',
+      value: null,
+    },
+    {
+      text: 'tolerated',
+      value: 'T',
+    },
+    {
+      text: 'damaging',
+      value: 'D',
+    }],
+  },
+  {
+    name: 'metasvm',
+    label: 'METASVM',
+    labelHelp: 'Enter a value for METASVM prediction',
+    component: Select,
+    options: [{
+      text: '',
+      value: null,
+    },
+    {
+      text: 'tolerated',
+      value: 'T',
+    },
+    {
+      text: 'damaging',
+      value: 'D',
+    }],
   },
 ]
 

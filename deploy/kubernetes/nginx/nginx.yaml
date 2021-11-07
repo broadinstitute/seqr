@@ -6,10 +6,10 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    helm.sh/chart: ingress-nginx-3.10.1
+    helm.sh/chart: ingress-nginx-4.0.4
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 0.41.2
+    app.kubernetes.io/version: 1.0.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: ingress-nginx-controller
@@ -23,10 +23,12 @@ spec:
       port: 80
       protocol: TCP
       targetPort: http
+      appProtocol: http
     - name: https
       port: 443
       protocol: TCP
       targetPort: https
+      appProtocol: https
   selector:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
@@ -39,10 +41,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    helm.sh/chart: ingress-nginx-3.10.1
+    helm.sh/chart: ingress-nginx-4.0.4
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 0.41.2
+    app.kubernetes.io/version: 1.0.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: ingress-nginx-controller
@@ -68,7 +70,7 @@ spec:
       dnsPolicy: ClusterFirst
       containers:
         - name: controller
-          image: k8s.gcr.io/ingress-nginx/controller:v0.41.2@sha256:1f4f402b9c14f3ae92b11ada1dfe9893a88f0faeb0b2f4b903e2c67a0c3bf0de
+          image: k8s.gcr.io/ingress-nginx/controller:v1.0.3@sha256:4ade87838eb8256b094fbb5272d7dda9b6c7fa8b759e6af5383c1300996a7452
           imagePullPolicy: IfNotPresent
           lifecycle:
             preStop:
@@ -79,7 +81,7 @@ spec:
             - /nginx-ingress-controller
             - --publish-service=$(POD_NAMESPACE)/ingress-nginx-controller
             - --election-id=ingress-controller-leader
-            - --ingress-class=nginx
+            - --controller-class=k8s.io/ingress-nginx
             - --configmap=$(POD_NAMESPACE)/ingress-nginx-controller
             - --validating-webhook=:8443
             - --validating-webhook-certificate=/usr/local/certificates/cert
@@ -158,15 +160,16 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    helm.sh/chart: ingress-nginx-3.10.1
+    helm.sh/chart: ingress-nginx-4.0.4
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    app.kubernetes.io/version: 0.41.2
+    app.kubernetes.io/version: 1.0.3
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: controller
   name: ingress-nginx-controller
   namespace: ingress-nginx
 data:
+  allow-snippet-annotations: 'true'
   enable-modsecurity: "true"
   modsecurity-snippet: |
     SecAuditLogType Serial
@@ -186,7 +189,7 @@ data:
 ---
 # docs @ https://kubernetes.github.io/ingress-nginx/user-guide/basic-usage/
 kind: Ingress
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 metadata:
   name: ingress-nginx
   namespace: {{ NAMESPACE }}
@@ -199,6 +202,7 @@ metadata:
     nginx.ingress.kubernetes.io/modsecurity-snippet: |
       SecRuleEngine On
 spec:
+  ingressClassName: nginx
   tls:
     - hosts:
       - {{ CLUSTER_HOSTNAME }}
@@ -207,7 +211,10 @@ spec:
     - host: {{ CLUSTER_HOSTNAME }}
       http:
         paths:
-        - path: /
-          backend:
-            serviceName: seqr
-            servicePort: {{ SEQR_SERVICE_PORT }}
+        - backend:
+            service:
+              name: seqr
+              port:
+                number: {{ SEQR_SERVICE_PORT }}
+          path: /
+          pathType: ImplementationSpecific

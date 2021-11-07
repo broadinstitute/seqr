@@ -67,7 +67,7 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         )
 
     if request.get_host() == 'localhost:3000':
-        html = re.sub(r'static/app(-.*)js', 'app.js', html)
+        html = re.sub(r'static/app(-[^\.]*).js', 'app.js', html)
         html = re.sub(r'<link\s+href="/static/app.*css"[^>]*>', '', html)
 
     return HttpResponse(html, content_type="text/html", status=status)

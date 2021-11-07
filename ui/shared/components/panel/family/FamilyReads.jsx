@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOMServer from 'react-dom/server'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Segment, Icon } from 'semantic-ui-react'
+import { Segment, Icon, Popup } from 'semantic-ui-react'
 
 import {
   getIndividualsByGuid,
@@ -11,20 +11,26 @@ import {
   getProjectsByGuid,
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
-import { CheckboxGroup } from '../../form/Inputs'
+import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
 import IGV from '../../graph/IGV'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
-import { getLocus } from '../variants/Annotations'
+import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED } from '../../../utils/constants'
-import { ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
+import {
+  ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   GTEX_TRACK_OPTIONS, MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
-  DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP } from './constants'
+  DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
+  JUNCTION_VISIBILITY_OPTIONS,
+} from './constants'
+
+const MIN_LOCUS_RANGE_SIZE = 100
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
     <span id={`${individual.displayName}-${type}`}>
-      <PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.displayName}
+      <PedigreeIcon sex={individual.sex} affected={individual.affected} />
+      {individual.displayName}
     </span>,
   )
 
@@ -41,10 +47,11 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
       }
       acc[filePath][individualGuid] = sampleId
       return acc
-    }, {})
+    }, {},
+  )
 
-  const getIndivSampleType = (type, individualGuid) =>
-    sampleTypes.includes(type) && (igvSampleIndividuals[type] || {})[individualGuid]
+  const getIndivSampleType =
+    (type, individualGuid) => sampleTypes.includes(type) && (igvSampleIndividuals[type] || {})[individualGuid]
 
   return Object.entries(igvSampleIndividuals).reduce((acc, [type, samplesByIndividual]) => (
     sampleTypes.includes(type) ? [
@@ -94,7 +101,8 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
               ...higlightAcc,
             }), {}),
             name: individualGuids.length === 1 ? track.name : individualGuids.map(
-              iGuid => individualsByGuid[iGuid].displayName).join(', '),
+              iGuid => individualsByGuid[iGuid].displayName,
+            ).join(', '),
           } : null
         }
 
@@ -104,14 +112,14 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
   ), []).filter(track => track)
 }
 
-const ShowIgvButton = ({ type, showReads, ...props }) => (BUTTON_PROPS[type] ?
+const ShowIgvButton = ({ type, showReads, ...props }) => (BUTTON_PROPS[type] ? (
   <ButtonLink
     padding="0 0 0 1em"
     onClick={showReads && showReads(type === JUNCTION_TYPE ? [JUNCTION_TYPE, COVERAGE_TYPE] : [type])}
     {...BUTTON_PROPS[type]}
     {...props}
-  /> : null
-)
+  />
+) : null)
 
 ShowIgvButton.propTypes = {
   type: PropTypes.string,
@@ -119,7 +127,9 @@ ShowIgvButton.propTypes = {
   showReads: PropTypes.func,
 }
 
-const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads }) => {
+const ReadButtons = React.memo((
+  { variant, familyGuid, igvSamplesByFamilySampleIndividual, familiesByGuid, buttonProps, showReads },
+) => {
   const familyGuids = variant ? variant.familyGuids : [familyGuid]
 
   const sampleTypeFamilies = familyGuids.reduce(
@@ -131,22 +141,23 @@ const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleI
         acc[type].push(fGuid)
       })
       return acc
-    }, {})
+    }, {},
+  )
 
   if (!Object.keys(sampleTypeFamilies).length) {
     return null
   }
 
   if (familyGuids.length === 1) {
-    return Object.keys(sampleTypeFamilies).map(type =>
-      <ShowIgvButton key={type} type={type} {...buttonProps} showReads={showReads(familyGuids[0])} />,
+    return Object.keys(sampleTypeFamilies).map(
+      type => <ShowIgvButton key={type} type={type} {...buttonProps} showReads={showReads(familyGuids[0])} />,
     )
   }
 
   return Object.entries(sampleTypeFamilies).reduce((acc, [type, fGuids]) => ([
     ...acc,
     <ShowIgvButton key={type} type={type} {...buttonProps} />,
-    ...fGuids.map(fGuid =>
+    ...fGuids.map(fGuid => (
       <ShowIgvButton
         key={`${fGuid}-${type}`}
         content={`| ${familiesByGuid[fGuid].familyId}`}
@@ -154,10 +165,9 @@ const ReadButtons = React.memo(({ variant, familyGuid, igvSamplesByFamilySampleI
         type={type}
         showReads={showReads(fGuid)}
         padding="0"
-      />,
-    ),
+      />
+    )),
   ]), [])
-
 })
 
 ReadButtons.propTypes = {
@@ -169,16 +179,28 @@ ReadButtons.propTypes = {
   showReads: PropTypes.func,
 }
 
+const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
+  ...options[track.type] ? { ...track, ...options[track.type] } : track,
+  ...(track.type === 'merged') ? {
+    tracks: track.tracks.map(tr => (options[tr.type] ? { ...tr, ...options[tr.type] } : tr)),
+  } : {},
+}))
 
-const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences }) => {
+const IgvPanel = React.memo((
+  { variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible },
+) => {
+  const size = variant.end && variant.end - variant.pos
   const locus = variant && getLocus(
     variant.chrom,
     (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
-    100,
-    variant.end && variant.end - variant.pos,
+    size ? Math.max(Math.round(size / 3), MIN_LOCUS_RANGE_SIZE) : MIN_LOCUS_RANGE_SIZE,
+    size,
   )
 
-  const tracks = rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes))
+  const tracks = applyUserTrackSettings(
+    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)),
+    { [JUNCTION_TYPE]: { minJunctionEndsVisible } },
+  )
 
   return (
     <IGV tracks={tracks} reference={REFERENCE_LOOKUP[project.genomeVersion]} locus={locus} {...IGV_OPTIONS} />
@@ -187,19 +209,19 @@ const IgvPanel = React.memo(({ variant, igvSampleIndividuals, individualsByGuid,
 
 IgvPanel.propTypes = {
   variant: PropTypes.object,
-  sampleTypes: PropTypes.array,
-  rnaReferences: PropTypes.array,
+  sampleTypes: PropTypes.arrayOf(PropTypes.string),
+  rnaReferences: PropTypes.arrayOf(PropTypes.object),
+  minJunctionEndsVisible: PropTypes.number,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
 }
 
-
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
     variant: PropTypes.object,
-    layout: PropTypes.any,
+    layout: PropTypes.elementType,
     familyGuid: PropTypes.string,
     buttonProps: PropTypes.object,
     projectsByGuid: PropTypes.object,
@@ -208,13 +230,11 @@ class FamilyReads extends React.PureComponent {
     igvSamplesByFamilySampleIndividual: PropTypes.object,
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
-      openFamily: null,
-      sampleTypes: [],
-      rnaReferences: [],
-    }
+  state = {
+    openFamily: null,
+    sampleTypes: [],
+    rnaReferences: [],
+    minJunctionEndsVisible: 0,
   }
 
   showReads = familyGuid => sampleTypes => () => {
@@ -251,80 +271,106 @@ class FamilyReads extends React.PureComponent {
     })
   }
 
+  junctionsOptionChange = (minJunctionEndsVisible) => {
+    this.setState({ minJunctionEndsVisible })
+  }
+
   render() {
     const {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
       projectsByGuid, ...props
     } = this.props
+    const { openFamily, sampleTypes, rnaReferences, minJunctionEndsVisible } = this.state
 
-    const showReads = <ReadButtons
-      variant={variant}
-      familyGuid={familyGuid}
-      buttonProps={buttonProps}
-      igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
-      familiesByGuid={familiesByGuid}
-      showReads={this.showReads}
-    />
+    const showReads = (
+      <ReadButtons
+        variant={variant}
+        familyGuid={familyGuid}
+        buttonProps={buttonProps}
+        igvSamplesByFamilySampleIndividual={igvSamplesByFamilySampleIndividual}
+        familiesByGuid={familiesByGuid}
+        showReads={this.showReads}
+      />
+    )
 
-    const igvSampleIndividuals = (this.state.openFamily && (igvSamplesByFamilySampleIndividual || {})[this.state.openFamily]) || {}
+    const igvSampleIndividuals = (
+      openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
-    const reads = Object.keys(igvSampleIndividuals).length > 0 ?
+    const reads = Object.keys(igvSampleIndividuals).length > 0 ? (
       <Segment.Group horizontal>
-        {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) &&
-        <Segment>
-          { dnaTrackOptions.length > 0 &&
-            <CheckboxGroup
-              groupLabel="DNA Tracks"
-              value={this.state.sampleTypes}
-              options={dnaTrackOptions}
-              onChange={this.updateSampleTypes}
-            />
-          }
-          { rnaTrackOptions.length > 0 &&
-            <div>
+        {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) && (
+          <Segment>
+            {dnaTrackOptions.length > 0 && (
               <CheckboxGroup
-                groupLabel="RNA Tracks"
-                value={this.state.sampleTypes}
-                options={rnaTrackOptions}
+                groupLabel="DNA Tracks"
+                value={sampleTypes}
+                options={dnaTrackOptions}
                 onChange={this.updateSampleTypes}
               />
-              { this.state.sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) &&
-                <div>
-                  <b>RNA-seq Reference Tracks</b>
-                  <CheckboxGroup
-                    groupLabel="GTEx Tracks"
-                    value={this.state.rnaReferences}
-                    options={GTEX_TRACK_OPTIONS}
-                    onChange={this.updateRnaReferences}
-                  />
-                  <CheckboxGroup
-                    groupLabel="Mappability Tracks"
-                    value={this.state.rnaReferences}
-                    options={MAPPABILITY_TRACK_OPTIONS}
-                    onChange={this.updateRnaReferences}
-                  />
-                </div>
-              }
-            </div>
-          }
-        </Segment>}
+            )}
+            {rnaTrackOptions.length > 0 && (
+              <div>
+                <CheckboxGroup
+                  groupLabel="RNA Tracks"
+                  value={sampleTypes}
+                  options={rnaTrackOptions}
+                  onChange={this.updateSampleTypes}
+                />
+                {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
+                  <div>
+                    <b>
+                      RNA-seq Reference Tracks
+                      <Popup
+                        trigger={<HelpIcon />}
+                        content="Normalized GTEx tracks are more comparable to patient RNA-seq data. If you want to explore if a splice junction is seen in any sample, aggregate GTEx tracks show all data. The y-axis range is expected to differ between a single patient sample and normalized or aggregate GTEx data."
+                        size="small"
+                        position="top center"
+                      />
+                    </b>
+                    <CheckboxGroup
+                      groupLabel="GTEx Tracks"
+                      value={rnaReferences}
+                      options={GTEX_TRACK_OPTIONS}
+                      onChange={this.updateRnaReferences}
+                    />
+                    <CheckboxGroup
+                      groupLabel="Mappability Tracks"
+                      value={rnaReferences}
+                      options={MAPPABILITY_TRACK_OPTIONS}
+                      onChange={this.updateRnaReferences}
+                    />
+                    <RadioGroup
+                      label="Junctions Tracks Show:"
+                      value={minJunctionEndsVisible}
+                      options={JUNCTION_VISIBILITY_OPTIONS}
+                      onChange={this.junctionsOptionChange}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </Segment>
+        )}
         <Segment>
           <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
           <VerticalSpacer height={20} />
           <IgvPanel
             variant={variant}
             igvSampleIndividuals={igvSampleIndividuals}
-            sampleTypes={this.state.sampleTypes}
-            rnaReferences={this.state.rnaReferences}
+            sampleTypes={sampleTypes}
+            rnaReferences={rnaReferences}
+            minJunctionEndsVisible={minJunctionEndsVisible}
             individualsByGuid={individualsByGuid}
-            project={projectsByGuid[familiesByGuid[this.state.openFamily].projectGuid]}
+            project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
           />
         </Segment>
-      </Segment.Group> : null
+      </Segment.Group>
+    ) : null
 
     return React.createElement(layout, { variant, reads, showReads, ...props })
   }
+
 }
 
 const mapStateToProps = state => ({

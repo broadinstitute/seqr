@@ -348,8 +348,14 @@ def _add_locus_lists(projects, genes, include_all_lists=False):
     for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
         locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
 
-    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list'):
-        genes[locus_list_gene.gene_id]['locusListGuids'].append(locus_list_gene.locus_list.guid)
+    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list', 'palocuslistgene'):
+        gene_json = genes[locus_list_gene.gene_id]
+        locus_list_guid = locus_list_gene.locus_list.guid
+        gene_json['locusListGuids'].append(locus_list_guid)
+        if hasattr(locus_list_gene, 'palocuslistgene'):
+            if not gene_json.get('locusListConfidence'):
+                gene_json['locusListConfidence'] = {}
+            gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
 
     return locus_lists_by_guid
 

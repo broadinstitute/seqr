@@ -6,7 +6,7 @@ from pprint import pformat
 import time
 
 from deploy.servctl_utils.other_command_utils import get_disk_names
-from deploy.servctl_utils.kubectl_utils import is_pod_running, get_node_name, \
+from deploy.servctl_utils.kubectl_utils import is_pod_running, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
 from deploy.servctl_utils.yaml_settings_utils import process_jinja_template, load_settings
@@ -20,17 +20,14 @@ logger.setLevel(logging.INFO)
 DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
 
 DEPLOYMENT_TARGETS = [
-    "init-cluster",
     "settings",
     "secrets",
     "linkerd",
     "nginx",
-    "postgres",
     "elasticsearch",
     "kibana",
     "redis",
     "seqr",
-    "elasticsearch-snapshot-infra",
     "elasticsearch-snapshot-config",
 ]
 
@@ -52,42 +49,6 @@ SECRETS = {
         '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret', '{deploy_to}/ga_token_id',
     ],
 }
-
-
-def deploy_init_cluster(settings):
-    """Provisions a GKE cluster, persistent disks, and any other prerequisites for deployment."""
-
-    print_separator("init-cluster")
-
-    # initialize the VM
-    _init_cluster_gcloud(settings)
-
-    node_name = get_node_name()
-    if not node_name:
-        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
-
-    run('deploy/kubectl_helpers/set_env.sh {}'.format(settings['DEPLOYMENT_TYPE']))
-
-    create_namespace(settings)
-
-    # create priority classes - " Priority affects scheduling order of Pods and out-of-resource eviction ordering
-    # on the Node.... A PriorityClass is a non-namespaced object .. The higher the value, the higher the priority."
-    # (from https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass)
-    run("kubectl create priorityclass medium-priority --value=1000" % settings, errors_to_ignore=["already exists"])
-    run("kubectl create priorityclass high-priority --value=10000" % settings, errors_to_ignore=["already exists"])
-
-    # print cluster info
-    run("kubectl cluster-info", verbose=True)
-
-    # wait for the cluster to initialize
-    for retry_i in range(1, 5):
-        try:
-            deploy_settings(settings)
-            break
-        except RuntimeError as e:
-            logger.error(("Error when deploying config maps: %(e)s. This sometimes happens when cluster is "
-                          "initializing. Retrying...") % locals())
-            time.sleep(5)
 
 
 def deploy_settings(settings):
@@ -191,25 +152,6 @@ def _set_elasticsearch_kubernetes_resources():
         run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
 
 
-def deploy_elasticsearch_snapshot_infra(settings):
-    print_separator('elasticsearch snapshot infra')
-
-    if settings['ES_CONFIGURE_SNAPSHOTS']:
-        # create the bucket
-        run("gsutil mb -p seqr-project -c STANDARD -l US-CENTRAL1 gs://%(ES_SNAPSHOTS_BUCKET)s" % settings,
-            errors_to_ignore=["already exists"])
-        # create the IAM user
-        run(" ".join([
-            "gcloud iam service-accounts create %(ES_SNAPSHOTS_ACCOUNT_NAME)s",
-            "--display-name %(ES_SNAPSHOTS_ACCOUNT_NAME)s"]) % settings,
-            errors_to_ignore="already exists within project projects/seqr-project")
-        # grant storage admin permissions on the snapshot bucket
-        run(" ".join([
-            "gsutil iam ch",
-            "serviceAccount:%(ES_SNAPSHOTS_ACCOUNT_NAME)s@seqr-project.iam.gserviceaccount.com:roles/storage.admin",
-            "gs://%(ES_SNAPSHOTS_BUCKET)s"]) % settings)
-
-
 def deploy_elasticsearch_snapshot_config(settings):
     print_separator('elasticsearch snapshot configuration')
 
@@ -244,57 +186,6 @@ def deploy_linkerd(settings):
         run('linkerd install | kubectl apply -f -')
 
         run('linkerd check')
-
-
-def deploy_postgres(settings):
-    print_separator("postgres")
-
-    with open('deploy/secrets/gcloud/postgres/{}/password'.format(settings['DEPLOY_TO'])) as f:
-        password = f.read()
-
-    sql_instance_name = 'postgres-{}'.format(settings['DEPLOYMENT_TYPE'])
-    run(' '.join([
-        'gcloud beta sql instances create', sql_instance_name,
-        '--database-version=POSTGRES_{}'.format(settings['POSTGRES_VERSION']),
-        '--root-password={}'.format(password),
-        '--project={}'.format(settings['GCLOUD_PROJECT']),
-        '--zone={}'.format(settings['GCLOUD_ZONE']),
-        '--availability-type={}'.format(settings['CLOUDSQL_AVAILABILITY_TYPE']),
-        '--cpu=2', '--memory=4',
-        '--assign-ip',
-        '--backup',
-        '--maintenance-release-channel=production', '--maintenance-window-day=SUN', '--maintenance-window-hour=5',
-        '--require-ssl',
-        '--retained-backups-count=30',
-        '--storage-auto-increase',
-    ]), errors_to_ignore=['already exists'])
-
-    seqr_db_backup = settings.get('RESTORE_SEQR_DB_FROM_BACKUP')
-    reference_data_db_backup = settings.get('RESTORE_REFERENCE_DB_FROM_BACKUP')
-    reset_db = settings.get('RESET_DB')
-
-    if reset_db or seqr_db_backup:
-        run('gcloud sql databases delete seqrdb --instance={} --quiet'.format(sql_instance_name),
-            errors_to_ignore=['does not exist'])
-    if reset_db or reference_data_db_backup:
-        run('gcloud sql databases delete reference_data_db --instance={} --quiet'.format(sql_instance_name),
-            errors_to_ignore=['does not exist'])
-
-    run('gcloud sql databases create seqrdb --instance={}'.format(sql_instance_name),
-        errors_to_ignore=['already exists'])
-    run('gcloud sql databases create reference_data_db --instance={}'.format(sql_instance_name),
-        errors_to_ignore=['already exists'])
-
-    if seqr_db_backup:
-        run(' '.join([
-            'gcloud sql import sql', sql_instance_name, seqr_db_backup, '--database=seqrdb', '--user=postgres',
-            ' --quiet',
-        ]))
-    if reference_data_db_backup:
-        run(' '.join([
-            'gcloud sql import sql', sql_instance_name, reference_data_db_backup, '--database=reference_data_db',
-            '--user=postgres', ' --quiet',
-        ]))
 
 
 def deploy_redis(settings):
@@ -349,7 +240,7 @@ def deploy_nginx(settings):
         return
 
     print_separator("nginx")
-    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.41.2/deploy/static/provider/cloud/deploy.yaml" % locals())
+    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.3/deploy/static/provider/cloud/deploy.yaml" % locals())
     if settings["DELETE_BEFORE_DEPLOY"]:
         run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
@@ -377,13 +268,13 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     if not components:
         raise ValueError("components list is empty")
 
-    if components and "init-cluster" not in components:
+    if components:
         run('deploy/kubectl_helpers/utils/check_context.sh {}'.format(deployment_target.replace('gcloud-', '')))
 
     settings = prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings)
 
     # make sure namespace exists
-    if "init-cluster" not in components and not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
+    if not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
         create_namespace(settings)
 
     if components[0] == 'secrets':
@@ -459,98 +350,6 @@ def create_namespace(settings):
     run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
-def _init_cluster_gcloud(settings):
-    """Starts and configures a kubernetes cluster on Google Container Engine based on parameters in settings"""
-
-    run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
-
-    # create private network so that dataproc jobs can connect to GKE cluster nodes
-    # based on: https://medium.com/@DazWilkin/gkes-cluster-ipv4-cidr-flag-69d25884a558
-    create_vpc(gcloud_project="%(GCLOUD_PROJECT)s" % settings, network_name="%(GCLOUD_PROJECT)s-auto-vpc" % settings)
-
-    # create cluster
-    run(" ".join([
-        "gcloud beta container clusters create %(CLUSTER_NAME)s",
-        "--enable-autorepair",
-        "--enable-autoupgrade",
-        "--maintenance-window 7:00",
-        "--enable-stackdriver-kubernetes",
-        "--cluster-version %(KUBERNETES_VERSION)s",  # to get available versions, run: gcloud container get-server-config
-        "--project %(GCLOUD_PROJECT)s",
-        "--zone %(GCLOUD_ZONE)s",
-        "--machine-type %(DEFAULT_POOL_MACHINE_TYPE)s",
-        "--num-nodes %(DEFAULT_POOL_NUM_NODES)s",
-        "--no-enable-legacy-authorization",
-        "--metadata disable-legacy-endpoints=true",
-        "--no-enable-basic-auth",
-        "--no-enable-legacy-authorization",
-        "--no-issue-client-certificate",
-        "--enable-master-authorized-networks",
-        "--master-authorized-networks %(MASTER_AUTHORIZED_NETWORKS)s",
-        #"--network %(GCLOUD_PROJECT)s-auto-vpc",
-        #"--local-ssd-count 1",
-        "--scopes", "https://www.googleapis.com/auth/devstorage.read_write",
-    ]) % settings, verbose=False, errors_to_ignore=["Already exists"])
-
-    # create cluster nodes - breaking them up into node pools of several machines each.
-    # This way, the cluster can be scaled up and down when needed using the technique in
-    #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
-    #
-
-    for pool_name, pool_settings in settings['NODE_POOLS'].items():
-        command = [
-            "gcloud container node-pools create %(CLUSTER_NAME)s-"+str(pool_name),
-            "--cluster %(CLUSTER_NAME)s",
-            "--project %(GCLOUD_PROJECT)s",
-            "--zone %(GCLOUD_ZONE)s",
-            "--machine-type %s" % pool_settings.get('machine_type', settings['DEFAULT_POOL_MACHINE_TYPE']),
-            "--node-version %(KUBERNETES_VERSION)s",
-            #"--no-enable-legacy-authorization",
-            "--enable-autorepair",
-            "--enable-autoupgrade",
-            "--num-nodes %s" % pool_settings.get('num_nodes', settings['DEFAULT_POOL_NUM_NODES']),
-            #"--network %(GCLOUD_PROJECT)s-auto-vpc",
-            #"--local-ssd-count 1",
-            "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
-        ]
-        if pool_settings.get('labels'):
-            command += ['--node-labels', pool_settings['labels']]
-        run(" ".join(command) % settings, verbose=False, errors_to_ignore=["lready exists"])
-
-    run(" ".join([
-        "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
-        "--project %(GCLOUD_PROJECT)s",
-        "--zone %(GCLOUD_ZONE)s",
-    ]) % settings)
-
-    _init_gcloud_disks(settings)
-
-def _init_gcloud_disks(settings):
-    for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
-        setting_prefix = disk_label.upper().replace('-', '_')
-
-        disk_names = get_disk_names(disk_label, settings)
-
-        snapshots = [d.strip() for d in settings.get('{}_SNAPSHOTS'.format(setting_prefix), '').split(',') if d]
-        if snapshots and len(snapshots) != len(disk_names):
-            raise Exception('Invalid configuration for {}: {} disks to create and {} snapshots'.format(
-                disk_label, len(disk_names), len(snapshots)
-            ))
-
-        for i, disk_name in enumerate(disk_names):
-            command = [
-                'gcloud compute disks create', disk_name, '--zone', settings['GCLOUD_ZONE'],
-            ]
-            if settings.get('{}_DISK_TYPE'.format(setting_prefix)):
-                command += ['--type', settings['{}_DISK_TYPE'.format(setting_prefix)]]
-            if snapshots:
-                command += ['--source-snapshot', snapshots[i]]
-            else:
-                command += ['--size', str(settings['{}_DISK_SIZE'.format(setting_prefix)])]
-
-            run(' '.join(command), verbose=True, errors_to_ignore=['lready exists'])
-
-
 def docker_build(component_label, settings, custom_build_args=()):
     params = dict(settings)   # make a copy before modifying
     params["COMPONENT_LABEL"] = component_label
@@ -624,29 +423,3 @@ def delete_pod(component_label, settings, custom_yaml_filename=None):
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
     while is_pod_running(component_label, deployment_target):
         time.sleep(5)
-
-
-def create_vpc(gcloud_project, network_name):
-    run(" ".join([
-        #"gcloud compute networks create seqr-project-custom-vpc --project=%(GCLOUD_PROJECT)s --mode=custom"
-        "gcloud compute networks create %(network_name)s",
-        "--project=%(gcloud_project)s",
-        "--subnet-mode=auto"
-    ]) % locals(), errors_to_ignore=["already exists"])
-
-    # add recommended firewall rules to enable ssh, etc.
-    run(" ".join([
-        "gcloud compute firewall-rules create custom-vpc-allow-tcp-udp-icmp",
-        "--project %(gcloud_project)s",
-        "--network %(network_name)s",
-        "--allow tcp,udp,icmp",
-        "--source-ranges 10.0.0.0/8",
-    ]) % locals(), errors_to_ignore=["already exists"])
-
-    run(" ".join([
-        "gcloud compute firewall-rules create custom-vpc-allow-ports",
-        "--project %(gcloud_project)s",
-        "--network %(network_name)s",
-        "--allow tcp:22,tcp:3389,icmp",
-        "--source-ranges 10.0.0.0/8",
-    ]) % locals(), errors_to_ignore=["already exists"])

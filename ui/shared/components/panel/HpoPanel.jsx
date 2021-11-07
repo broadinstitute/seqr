@@ -45,7 +45,7 @@ export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
   const hpoTermsByCategory = (features || []).reduce((acc, hpoTerm) => {
     const category = CATEGORY_NAMES[hpoTerm.category] || UNKNOWN_CATEGORY
     if (!acc[category]) {
-      acc[category] = [] //init array of features
+      acc[category] = [] // init array of features
     }
     acc[category].push(hpoTerm)
     return acc
@@ -53,11 +53,11 @@ export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
 
   if (nonstandardFeatures) {
     nonstandardFeatures.reduce((acc, term) => {
-      const category = (term.categories || ['']).map(categoryTerm =>
-        CATEGORY_NAMES[categoryTerm.id] || categoryTerm.label || UNKNOWN_CATEGORY,
+      const category = (term.categories || ['']).map(
+        categoryTerm => CATEGORY_NAMES[categoryTerm.id] || categoryTerm.label || UNKNOWN_CATEGORY,
       ).sort().join(', ')
       if (!acc[category]) {
-        acc[category] = [] //init array of features
+        acc[category] = [] // init array of features
       }
 
       acc[category].push(term)
@@ -65,9 +65,9 @@ export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
     }, hpoTermsByCategory)
   }
 
-  return Object.entries(hpoTermsByCategory).map(
-    ([categoryName, terms]) => ({ categoryName, terms })).sort((a, b) =>
-    a.categoryName.localeCompare(b.categoryName))
+  return Object.entries(hpoTermsByCategory).map(([categoryName, terms]) => ({ categoryName, terms })).sort(
+    (a, b) => a.categoryName.localeCompare(b.categoryName),
+  )
 }
 
 const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color }) => {
@@ -82,21 +82,35 @@ const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color
       <VerticalSpacer height={5} />
       <IndentedContainer>
         {
-          termsByCategory.map(category =>
+          termsByCategory.map(category => (
             <div key={category.categoryName}>
-              <b>{category.categoryName}</b>: {
+              <b>{`${category.categoryName}: `}</b>
+              {
                 (category.terms || []).map(
                   (hpoTerm, i) => {
-                    const qualifiers = (hpoTerm.qualifiers || []).map(({ type, label }) =>
-                      <span key={type}> - <b>{snakecaseToTitlecase(type)}:</b> {label}</span>,
+                    const qualifiers = (hpoTerm.qualifiers || []).map(
+                      ({ type, label }) => (
+                        <span key={type}>
+                          &nbsp; -
+                          <b>{` ${snakecaseToTitlecase(type)}: `}</b>
+                          {label}
+                        </span>
+                      ),
                     )
-                    const notes = hpoTerm.notes ? <small> ({hpoTerm.notes})</small> : null
-                    return <span key={hpoTerm.id}>{hpoTerm.label || hpoTerm.id}{qualifiers}{notes}{i < category.terms.length - 1 ? ', ' : ''}</span>
+                    const notes = hpoTerm.notes ? <small>{` (${hpoTerm.notes})`}</small> : null
+                    return (
+                      <span key={hpoTerm.id}>
+                        {hpoTerm.label || hpoTerm.id}
+                        {qualifiers}
+                        {notes}
+                        {i < category.terms.length - 1 ? ', ' : ''}
+                      </span>
+                    )
                   },
                 )
               }
-            </div>,
-          )
+            </div>
+          ))
         }
       </IndentedContainer>
     </div>
@@ -104,8 +118,8 @@ const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color
 })
 
 FeatureSection.propTypes = {
-  features: PropTypes.array,
-  nonstandardFeatures: PropTypes.array,
+  features: PropTypes.arrayOf(PropTypes.object),
+  nonstandardFeatures: PropTypes.arrayOf(PropTypes.object),
   title: PropTypes.string,
   color: PropTypes.string,
 }

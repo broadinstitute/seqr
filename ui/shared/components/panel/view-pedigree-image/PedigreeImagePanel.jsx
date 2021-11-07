@@ -2,9 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { ErrorBoundary } from 'react-error-boundary'
-import $ from 'jquery'
-import 'jquery-ui/ui/widgets/dialog'
-import 'jquery-ui/themes/base/all.css'
 import { Icon, Segment, Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
@@ -99,108 +96,55 @@ class BasePedigreeImage extends React.PureComponent {
     family: PropTypes.object,
     disablePedigreeZoom: PropTypes.bool,
     isEditable: PropTypes.bool,
-    individuals: PropTypes.array,
+    individuals: PropTypes.arrayOf(PropTypes.object),
     openIndividualModal: PropTypes.func,
     modalId: PropTypes.string,
   }
 
+  state = {}
+
   constructor(props) {
     super(props)
     this.containerId = `pedigreeJS-${props.family.familyGuid}`
-    this.state = {}
-  }
-
-  setContainerElement = (element) => {
-    this.container = element
-  }
-
-  render() {
-    const { family, modalId, ...props } = this.props
-    const { editIndividual = {} } = this.state
-    const pedImgSrc = this.props.family.pedigreeImage || this.state.imgSrc
-    return pedImgSrc ? <PedigreeImg src={pedImgSrc} {...props} /> : (
-      <PedigreeJsContainer {...props}>
-        <NoBorderTable basic="very" compact="very">
-          <Table.Body>
-            <Table.Row>
-              <Table.Cell>
-                <div id={`${this.containerId}-buttons`} />
-              </Table.Cell>
-              <Table.Cell collapsing>
-                <SavePedigreeDatasetButton
-                  modalId={modalId}
-                  familyGuid={family.familyGuid}
-                  getPedigreeDataset={this.getPedigreeDataset}
-                />
-              </Table.Cell>
-            </Table.Row>
-          </Table.Body>
-        </NoBorderTable>
-        <div ref={this.setContainerElement} id={this.containerId} />
-        <Modal title={(editIndividual.data || {}).label} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
-          <ReduxFormWrapper
-            onSubmit={editIndividual.save}
-            form={EDIT_INDIVIDUAL_MODAL_ID}
-            initialValues={editIndividual.data}
-            fields={EDIT_INDIVIDUAL_FIELDS}
-            submitButtonText="Update"
-            confirmCloseIfNotSaved
-          />
-        </Modal>
-      </PedigreeJsContainer>)
   }
 
   componentDidMount() {
-    if (!this.props.family.pedigreeImage) {
+    const { family } = this.props
+    if (!family.pedigreeImage) {
       this.drawPedigree()
     }
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (!this.props.family.pedigreeImage) { // If has an uploaded pedigree image, that is displayed so no need to draw
-      if (prevProps.family.pedigreeImage || // If uploaded pedigree image was deleted, draw
-        (prevProps.family.pedigreeDataset !== this.props.family.pedigreeDataset) || // If saved dataset was updated, redraw
-        (prevProps.individuals !== this.props.individuals && !this.props.family.pedigreeDataset) || // If individual data changed, redraw
-        (prevState.imgSrc && !this.state.imgSrc)) // If computed image src was cleared, redraw
-      {
-        if (this.state.imgSrc) {
+    const { family, individuals } = this.props
+    const { imgSrc, pedigreeOpts } = this.state
+    if (!family.pedigreeImage) { // If has an uploaded pedigree image, that is displayed so no need to draw
+      // If uploaded pedigree image was deleted, draw
+      if (prevProps.family.pedigreeImage ||
+        // If saved dataset was updated, redraw
+        (prevProps.family.pedigreeDataset !== family.pedigreeDataset) ||
+        // If individual data changed, redraw
+        (prevProps.individuals !== individuals && !family.pedigreeDataset) ||
+        // If computed image src was cleared, redraw
+        (prevState.imgSrc && !imgSrc)) {
+        if (imgSrc) {
           this.unsetPedigreeImage() // Cannot redraw pedigree if not rendering the svg container, so unset image first
         } else {
-          const pedigreeOpts = this.redrawPedigree(this.state.pedigreeOpts, this.getFamilyDataset())
+          const updatedPedigreeOpts = this.redrawPedigree(pedigreeOpts, this.getFamilyDataset())
           if (!this.isEditablePedigree()) {
-            this.setPedigreeImage(pedigreeOpts)
+            this.setPedigreeImage(updatedPedigreeOpts)
           }
         }
       }
     }
   }
 
-  drawPedigree() {
-    const dataset = this.getFamilyDataset()
-    const opts = {
-      dataset: this.getFamilyDataset(),
-      targetDiv: this.containerId,
-      btn_target: `${this.containerId}-buttons`,
-      edit: this.editIndividual,
-      font_size: dataset.length < 6 ? '1.3em' : '.8em',
-      symbol_size: dataset.length < 6 ? 60 : 40,
-      ...PEDIGREE_JS_OPTS,
-    }
-    const pedigreeOpts = buildPedigeeJs(opts)
-
-    if (this.isEditablePedigree()) {
-      // The refresh behavior is confusing - rather than resetting the pedigree to the initial state,
-      // it resets it to a generic trio pedigree with arbitrary labels. This will never be useful, so remove the button
-      $('.fa-refresh').remove()
-      this.setState({ pedigreeOpts })
-    } else {
-      // For un-editable pedigrees, display as an img
-      this.setPedigreeImage(pedigreeOpts)
-    }
+  setContainerElement = (element) => {
+    this.container = element
   }
 
   redrawPedigree = (opts, dataset) => {
-    opts.dataset = copyPedigreeDataset(this.yobToAge(dataset || opts.dataset))
+    opts.dataset = copyPedigreeDataset(this.yobToAge(dataset || opts.dataset)) // eslint-disable-line no-param-reassign
     try {
       validatePedigree(opts)
     } catch (err) {
@@ -212,7 +156,7 @@ class BasePedigreeImage extends React.PureComponent {
   }
 
   setPedigreeImage = (pedigreeOpts) => {
-    const svg = $(this.container.children[0])
+    const svg = $(this.container.children[0]) // eslint-disable-line no-undef
     svg2img(svg, 'pedigree', { resolution: 10 }).done(({ img }) => {
       this.setState({ pedigreeOpts, imgSrc: img })
     })
@@ -222,7 +166,10 @@ class BasePedigreeImage extends React.PureComponent {
     this.setState({ imgSrc: null })
   }
 
-  isEditablePedigree = () => this.props.disablePedigreeZoom && this.props.isEditable
+  isEditablePedigree = () => {
+    const { disablePedigreeZoom, isEditable } = this.props
+    return disablePedigreeZoom && isEditable
+  }
 
   getFamilyDataset = () => {
     const { family, individuals } = this.props
@@ -255,9 +202,9 @@ class BasePedigreeImage extends React.PureComponent {
         }
       }
       if (indiv.mother) {
-        indiv.father = placeholderId
+        indiv.father = placeholderId // eslint-disable-line no-param-reassign
       } else {
-        indiv.mother = placeholderId
+        indiv.mother = placeholderId // eslint-disable-line no-param-reassign
       }
     })
 
@@ -267,6 +214,7 @@ class BasePedigreeImage extends React.PureComponent {
   yobToAge = dataset => dataset.map(o => ({ ...o, age: o.yob && new Date().getFullYear() - o.yob }))
 
   editIndividual = (opts, { data }) => {
+    const { openIndividualModal } = this.props
     this.setState({
       editIndividual: {
         data,
@@ -274,13 +222,77 @@ class BasePedigreeImage extends React.PureComponent {
           Object.assign(data, newData)
           this.redrawPedigree(opts)
         },
-      } })
-    this.props.openIndividualModal()
+      },
+    })
+    openIndividualModal()
   }
 
   getPedigreeDataset = () => {
-    return currentDataset(this.state.pedigreeOpts)
+    const { pedigreeOpts } = this.state
+    return currentDataset(pedigreeOpts)
   }
+
+  drawPedigree() {
+    const dataset = this.getFamilyDataset()
+    const opts = {
+      dataset: this.getFamilyDataset(),
+      targetDiv: this.containerId,
+      btn_target: `${this.containerId}-buttons`,
+      edit: this.editIndividual,
+      font_size: dataset.length < 6 ? '1.3em' : '.8em',
+      symbol_size: dataset.length < 6 ? 60 : 40,
+      ...PEDIGREE_JS_OPTS,
+    }
+    const pedigreeOpts = buildPedigeeJs(opts)
+
+    if (this.isEditablePedigree()) {
+      // The refresh behavior is confusing - rather than resetting the pedigree to the initial state,
+      // it resets it to a generic trio pedigree with arbitrary labels. This will never be useful, so remove the button
+      $('.fa-refresh').remove() // eslint-disable-line no-undef
+      this.setState({ pedigreeOpts })
+    } else {
+      // For un-editable pedigrees, display as an img
+      this.setPedigreeImage(pedigreeOpts)
+    }
+  }
+
+  render() {
+    const { family, modalId, ...props } = this.props
+    const { imgSrc, editIndividual = {} } = this.state
+    const pedImgSrc = family.pedigreeImage || imgSrc
+    return pedImgSrc ? <PedigreeImg src={pedImgSrc} {...props} /> : (
+      <PedigreeJsContainer {...props}>
+        <NoBorderTable basic="very" compact="very">
+          <Table.Body>
+            <Table.Row>
+              <Table.Cell>
+                <div id={`${this.containerId}-buttons`} />
+              </Table.Cell>
+              <Table.Cell collapsing>
+                <SavePedigreeDatasetButton
+                  modalId={modalId}
+                  familyGuid={family.familyGuid}
+                  getPedigreeDataset={this.getPedigreeDataset}
+                />
+              </Table.Cell>
+            </Table.Row>
+          </Table.Body>
+        </NoBorderTable>
+        <div ref={this.setContainerElement} id={this.containerId} />
+        <Modal title={(editIndividual.data || {}).label} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
+          <ReduxFormWrapper
+            onSubmit={editIndividual.save}
+            form={EDIT_INDIVIDUAL_MODAL_ID}
+            initialValues={editIndividual.data}
+            fields={EDIT_INDIVIDUAL_FIELDS}
+            submitButtonText="Update"
+            confirmCloseIfNotSaved
+          />
+        </Modal>
+      </PedigreeJsContainer>
+    )
+  }
+
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -297,8 +309,8 @@ const PedigreeImage = connect(mapStateToProps, mapDispatchToProps)(BasePedigreeI
 
 // Do not crash the entire page if pedigree js is breaking
 const PedigreeError = () => <Icon name="picture" />
-const SafePedigreeImage = props =>
-  <ErrorBoundary FallbackComponent={PedigreeError}><PedigreeImage {...props} /></ErrorBoundary>
+const SafePedigreeImage = props => (
+  <ErrorBoundary FallbackComponent={PedigreeError}><PedigreeImage {...props} /></ErrorBoundary>)
 
 const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
   const hasPedImage = family.pedigreeImage || family.pedigreeDataset || family.individualGuids.length > 1
@@ -306,11 +318,13 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
     return null
   }
 
-  const image = hasPedImage && <SafePedigreeImage
-    family={family}
-    disablePedigreeZoom={disablePedigreeZoom}
-    maxHeight={compact ? '35' : '150'}
-  />
+  const image = hasPedImage && (
+    <SafePedigreeImage
+      family={family}
+      disablePedigreeZoom={disablePedigreeZoom}
+      maxHeight={compact ? '35' : '150'}
+    />
+  )
   if (disablePedigreeZoom) {
     return image
   }
@@ -321,25 +335,33 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       modalName={modalId}
       title={`Family ${family.displayName}`}
       trigger={
-        image ? <span>{compact && `(${family.individualGuids.length}) `} {image}</span>
-          : <ButtonLink content="Edit Pedigree Image" icon="edit" />
+        image ? (
+          <span>
+            {compact && `(${family.individualGuids.length}) `}
+            {image}
+          </span>
+        ) : <ButtonLink content="Edit Pedigree Image" icon="edit" />
       }
     >
       <Segment basic textAlign="center">
-        <SafePedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} modalId={modalId} maxHeight="250" /><br />
+        <SafePedigreeImage family={family} disablePedigreeZoom isEditable={isEditable} modalId={modalId} maxHeight="250" />
+        <br />
       </Segment>
       <NoBorderTable basic="very" compact="very" collapsing>
         <Table.Body>
           <Table.Row>
-            {family.pedigreeImage &&
+            {family.pedigreeImage && (
               <Table.Cell>
-                <a key="zoom" href={family.pedigreeImage} target="_blank">Original Size <Icon name="zoom" /></a>
+                <a key="zoom" href={family.pedigreeImage} target="_blank" rel="noreferrer">
+                  Original Size
+                  <Icon name="zoom" />
+                </a>
               </Table.Cell>
-            }
+            )}
             {isEditable && <Table.Cell><EditPedigreeImageButton key="upload" family={family} /></Table.Cell>}
-            {isEditable && family.pedigreeImage &&
+            {isEditable && family.pedigreeImage && (
               <Table.Cell><DeletePedigreeImageButton familyGuid={family.familyGuid} modalId={modalId} /></Table.Cell>
-            }
+            )}
           </Table.Row>
         </Table.Body>
       </NoBorderTable>

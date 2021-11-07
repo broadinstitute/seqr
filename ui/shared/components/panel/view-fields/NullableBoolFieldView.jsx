@@ -19,31 +19,26 @@ export const NULLABLE_BOOL_FIELD = {
   format: val => (val === false ? val : (val || null)),
 }
 
-const getNullableBoolField = ({ field }) => [{
-  name: field,
-  ...NULLABLE_BOOL_FIELD,
-}]
-
 const nullableBoolDisplay = (value) => {
   if (value === true) {
     return <Label horizontal basic size="small" content="Yes" color="green" />
-  } else if (value === false) {
+  }
+  if (value === false) {
     return <Label horizontal basic size="small" content="No" color="red" />
   }
   return 'Unknown'
 }
 
-const NullableBoolFieldView = React.memo((props) => {
-  const fields = getNullableBoolField(props)
-  return <BaseFieldView
+const NullableBoolFieldView = React.memo(props => (
+  <BaseFieldView
     fieldDisplay={nullableBoolDisplay}
-    formFields={fields}
+    formFieldProps={NULLABLE_BOOL_FIELD}
     style={BLOCK_DISPLAY_STYLE}
     showEmptyValues
     compact
     {...props}
   />
-})
+))
 
 NullableBoolFieldView.propTypes = {
   field: PropTypes.string.isRequired,

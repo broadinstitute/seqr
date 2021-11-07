@@ -1,7 +1,8 @@
 {
-  "app.css": "/static/app.fd5e7ac0.css",
-  "app.js": "/static/app-23fd357d.js",
-  "app.js.map": "/static/app-23fd357d.js.map",
+  "app.css": "/static/app.c4fb445d.css",
+  "app.js": "/static/app-6a7b86ec.js",
+  "flags.png": "/static/flags.99f63ae7.png",
   "app.html": "/static/app.html",
-  "semantic.min.css": "/static/flags.9c74e172.png"
+  "app.c4fb445d.css.map": "/static/app.c4fb445d.css.map",
+  "app-6a7b86ec.js.map": "/static/app-6a7b86ec.js.map"
 }

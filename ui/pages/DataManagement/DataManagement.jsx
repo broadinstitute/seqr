@@ -14,7 +14,10 @@ const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
 export const DATA_MANAGEMENT_PAGES = [
   { path: 'elasticsearch_status', component: ElasticsearchStatus },
-  { path: 'kibana', component: () => <iframe width="100%" height="100%" style={IFRAME_STYLE} src="/app/kibana" /> },
+  {
+    path: 'kibana',
+    component: () => <iframe width="100%" height="100%" title="Kibana" style={IFRAME_STYLE} src="/app/kibana" />,
+  },
   { path: 'sample_qc', component: SampleQc },
   { path: 'users', component: Users },
 ]
@@ -22,11 +25,10 @@ export const DATA_MANAGEMENT_PAGES = [
 const DataManagement = ({ match, user }) => (
   user.isDataManager ? (
     <Switch>
-      {DATA_MANAGEMENT_PAGES.map(({ path, params, component }) =>
-        <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
-      )}
+      {DATA_MANAGEMENT_PAGES.map(({ path, params, component }) => (
+        <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />))}
       <Route path={match.url} component={null} />
-      <Route component={() => <Error404 />} />
+      <Route component={Error404} />
     </Switch>
   ) : <Error401 />
 )

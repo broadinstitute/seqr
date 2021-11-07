@@ -34,10 +34,14 @@ SearchLink.propTypes = {
 }
 
 const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(tag =>
-    (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol).filter(val => val)
+  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(
+    tag => (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol,
+  ).filter(val => val)
   return discoveryGenes.length > 0 ? (
-    <span> <b>Discovery Genes:</b> {[...new Set(discoveryGenes)].join(', ')}</span>
+    <span>
+      <b>Discovery Genes: </b>
+      {[...new Set(discoveryGenes)].join(', ')}
+    </span>
   ) : null
 })
 
@@ -47,32 +51,37 @@ DiscoveryGenes.propTypes = {
   genesById: PropTypes.object.isRequired,
 }
 
-const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById }) =>
+const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById }) => (
   <div>
     <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
     <HorizontalSpacer width={10} />
     <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
     <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
-    {!compact &&
+    {!compact && (
       <div>
         <VerticalSpacer height={20} />
-        <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /> Variant Search</SearchLink>
-        {!hasActiveVariantSample &&
+        <SearchLink family={family} disabled={!hasActiveVariantSample}>
+          <Icon name="search" />
+          &nbsp; Variant Search
+        </SearchLink>
+        {!hasActiveVariantSample && (
           <Popup
             trigger={<HelpIcon />}
             content={`Search is disabled until data is loaded${project.workspaceName ? '. Loading data from AnVIL to seqr is a slow process, and generally takes a week.' : ''}`}
-          />}
+          />
+        )}
         <VerticalSpacer height={10} />
         <CreateVariantButton family={family} />
         <VerticalSpacer height={10} />
-        {project.isMmeEnabled &&
+        {project.isMmeEnabled && (
           <Link to={`/project/${project.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}>
             MatchMaker Exchange
           </Link>
-        }
+        )}
       </div>
-    }
+    )}
   </div>
+)
 
 BaseVariantDetail.propTypes = {
   family: PropTypes.object,
@@ -90,7 +99,19 @@ const mapVariantDetailStateToProps = (state, ownProps) => ({
 
 const VariantDetail = connect(mapVariantDetailStateToProps)(BaseVariantDetail)
 
-const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, showVariantDetails, ...props }) =>
+const FamilyReadsLayout = ({ reads, showReads }) => (
+  <div>
+    {showReads}
+    {reads}
+  </div>
+)
+
+FamilyReadsLayout.propTypes = {
+  reads: PropTypes.object,
+  showReads: PropTypes.object,
+}
+
+const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, showVariantDetails, ...props }) => (
   <div>
     <Family
       family={family}
@@ -98,28 +119,22 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
       rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : null}
       {...props}
     />
-    {!compact && <FamilyReads
-      layout={({ reads, showReads }) =>
-        <div>
-          {showReads}
-          {reads}
-        </div>}
-      familyGuid={family.familyGuid}
-      buttonProps={READ_BUTTON_PROPS}
-    />}
+    {!compact && (
+      <FamilyReads layout={FamilyReadsLayout} familyGuid={family.familyGuid} buttonProps={READ_BUTTON_PROPS} />
+    )}
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}
         individual={individual}
         tableName={tableName}
-      />),
-    )}
-  </div>,
-)
+      />
+    ))}
+  </div>
+))
 
 BaseFamilyDetail.propTypes = {
   family: PropTypes.object.isRequired,
-  individuals: PropTypes.array,
+  individuals: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
   showVariantDetails: PropTypes.bool,
   tableName: PropTypes.string,
@@ -133,7 +148,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
 
-const FamilyPage = ({ match }) =>
+const FamilyPage = ({ match }) => (
   <FamilyDetail
     familyGuid={match.params.familyGuid}
     showVariantDetails
@@ -141,6 +156,7 @@ const FamilyPage = ({ match }) =>
     showIndividuals
     fields={FAMILY_DETAIL_FIELDS}
   />
+)
 
 FamilyPage.propTypes = {
   match: PropTypes.object,

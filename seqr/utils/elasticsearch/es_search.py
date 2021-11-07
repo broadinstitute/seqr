@@ -14,15 +14,15 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
-    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES
+    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
+    PREDICTION_FIELD_LOOKUP
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = SeqrLogger(__name__)
-
 
 class EsSearch(object):
 
@@ -197,6 +197,25 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
+    def filter_by_in_silico(self, in_silico_filters):
+
+        q = Q()
+        for in_silico_filter_key in list(in_silico_filters.keys()):
+            if in_silico_filters[in_silico_filter_key] is None or len(in_silico_filters[in_silico_filter_key]) == 0:
+                del in_silico_filters[in_silico_filter_key]
+
+        for in_silico_filter in in_silico_filters:
+
+            prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
+
+            prediction_value = in_silico_filters[in_silico_filter]
+            try:
+                q &= Q('range', **{prediction_key: {'gte': float(prediction_value)}})
+            except ValueError:
+                q &= Q('prefix', **{prediction_key: prediction_value})
+
+        self.filter(q)
+
     def filter_by_frequency(self, frequencies):
         q = Q()
         for pop, freqs in sorted(frequencies.items()):
@@ -363,6 +382,11 @@ class EsSearch(object):
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
             )
+
+            if not family_samples_q:
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException('Invalid custom inheritance')
+
 
             # For recessive search, should be hom recessive, x-linked recessive, or compound het
             if inheritance_mode == RECESSIVE:
@@ -605,6 +629,7 @@ class EsSearch(object):
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0), self._user)
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
+
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
@@ -635,20 +660,21 @@ class EsSearch(object):
                                    for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
+        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
                 sample = samples_by_id.get(genotype_hit['sample_id'])
                 if sample:
                     genotype_hit['sample_type'] = sample.sample_type
-                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
 
             if len(samples_by_id) != len(genotypes) and is_sv:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
                         genotypes[sample.individual.guid] = _get_field_values(
-                            {'sample_id': sample_id}, GENOTYPE_FIELDS_CONFIG)
+                            {'sample_id': sample_id}, genotype_fields_config)
                         genotypes[sample.individual.guid]['isRef'] = True
                         if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
                             genotypes[sample.individual.guid]['cn'] = 1
@@ -656,20 +682,22 @@ class EsSearch(object):
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
                 (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
-            start = min([gen.get('start') or hit['start'] for gen in genotypes.values() if not gen.get('isRef')])
-            end = max([gen.get('end') or hit['end'] for gen in genotypes.values() if not gen.get('isRef')])
-            num_exon = max([gen.get('numExon') or hit['num_exon'] for gen in genotypes.values() if not gen.get('isRef')])
-            if start != hit['start']:
-                hit['start'] = start
-                hit['xpos'] = get_xpos(hit['contig'], start)
-            if end != hit['end']:
-                hit['end'] = end
-            if num_exon != hit['num_exon']:
-                hit['num_exon'] = num_exon
+            for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                gen_field = conf.get('genotype_field', field)
+                val = conf['select_val']([
+                    gen.get(gen_field) or hit.get(field) for gen in genotypes.values() if not gen.get('isRef')
+                ])
+                if val != hit.get(field):
+                    hit[field] = val
+                    if field == 'start':
+                        hit['xpos'] = get_xpos(hit['contig'], val)
+
             for gen in genotypes.values():
-                if gen.get('start') == start and gen.get('end') == end:
-                    gen['start'] = None
-                    gen['end'] = None
+                for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                    gen_field = conf.get('genotype_field', field)
+                    compare_func = conf.get('equal') or (lambda a, b: a == b)
+                    if compare_func(gen.get(gen_field), hit[field]):
+                        gen[gen_field] = None
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -720,6 +748,9 @@ class EsSearch(object):
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)
+        if hit.get('geneIds'):
+            transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in hit['geneIds']}
+
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
@@ -1123,7 +1154,7 @@ def _get_family_affected_status(samples_by_id, inheritance_filter):
 
 def _quality_filters_by_family(quality_filter, samples_by_family_index, indices):
     quality_field_configs = {
-        'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_FIELDS.items()
+        'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
     }
     quality_filter = dict({field: 0 for field in quality_field_configs.keys()}, **(quality_filter or {}))
     for field, config in quality_field_configs.items():
@@ -1182,7 +1213,6 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
         affected = individual_affected_status[individual_guid]
 
         genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
-
         if genotype:
             if is_sv_comp_het and affected == Individual.AFFECTED_STATUS_UNAFFECTED:
                 # Unaffected individuals for SV compound het search can have any genotype so are not included
@@ -1295,7 +1325,14 @@ def _pathogenicity_filter(pathogenicity):
 
 
 def _annotations_filter(annotations):
-    vep_consequences = sorted([ann for anns in annotations.values() for ann in anns])
+    consequences = {ann for anns in annotations.values() for ann in anns}
+    #  TODO once all gCNV data has been reloaded, create explicit filters in the UI so users can set which type to use
+    # See https://github.com/broadinstitute/seqr/issues/2085
+    if 'DEL' in consequences:
+        consequences.add('gCNV_DEL')
+    if 'DUP' in consequences:
+        consequences.add('gCNV_DUP')
+    vep_consequences = sorted(consequences)
 
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
 

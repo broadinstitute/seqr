@@ -34,18 +34,19 @@ const BaseButtonLink = styled(({ color, padding, ...props }) => <Button {...prop
 // This notation required to fix a ref forwarding bug with styled components and seamntic ui: https://github.com/Semantic-Org/Semantic-UI-React/issues/3786#issuecomment-557560471
 export const ButtonLink = props => <BaseButtonLink {...props} />
 
-const BaseColoredComponent = styled.div`
+export const ColoredDiv = styled.div`
   color: ${props => props.color} !important;
 `
 
-const ColoredComponent = control => BaseColoredComponent.withComponent(({ color, ...props }) => React.createElement(control, props))
+const ColoredComponent = control => ColoredDiv.withComponent(
+  ({ color, ...props }) => React.createElement(control, props),
+)
 
 const BaseColoredIcon = ColoredComponent(Icon)
 export const ColoredIcon = props => <BaseColoredIcon {...props} />
 
 const BaseColoredLink = ColoredComponent(NavLink)
 export const ColoredLink = props => <BaseColoredLink {...props} />
-
 
 const BaseColoredLabel = styled(({ color, ...props }) => <Label {...props} />)`
   background-color: ${props => props.color} !important;
@@ -58,7 +59,6 @@ const BaseColoredOutlineLabel = styled(({ color, ...props }) => <Label {...props
   border-color: ${props => props.color} !important;
 `
 export const ColoredOutlineLabel = props => <BaseColoredOutlineLabel {...props} />
-
 
 const BaseHelpIcon = styled(Icon).attrs({ name: 'question circle outline', color: 'grey' })`
   cursor: pointer;
@@ -96,7 +96,6 @@ export const SectionHeader = styled.div`
   font-weight: 300;
   font-size: 18px; 
 `
-
 
 // Map font-awesome icons to semantic-ui icons
 export const FontAwesomeIconsContainer = styled.div`

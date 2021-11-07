@@ -82,7 +82,11 @@ def mme_match_proxy(request, originating_node_name):
     try:
         _generate_notification_for_incoming_match(results, incoming_query, originating_node_name, query_patient_data)
     except Exception as e:
-        logger.error('Unable to create notification for incoming MME match request: {}'.format(str(e)))
+        logger.error('Unable to create notification for incoming MME match request for {} matches{}: {}'.format(
+            len(results),
+            ' ({})'.format(', '.join([result.get('patient', {}).get('id') for result in results])) if results else '',
+            str(e)),
+        )
 
     return create_json_response({
         'results': sorted(results, key=lambda result: result['score']['patient'], reverse=True),
@@ -144,11 +148,10 @@ matchbox on {insertion_date}, with seqr link
             individual_id=individual.individual_id, project_guid=project.guid, project_name=project.name,
             family_guid=individual.family.guid, family_id=individual.family.family_id,
             insertion_date=submission.created_date.strftime('%b %d, %Y'), host=BASE_URL)
-        emails = [
-            email.strip() for email in submission.contact_href.replace('mailto:', '').split(',')
-            if email.strip() != MME_DEFAULT_CONTACT_EMAIL]
-        all_emails.update(emails)
-        match_results.append((result_text, emails))
+        emails = [email.strip() for email in submission.contact_href.replace('mailto:', '').split(',')]
+        send_emails = emails if len(emails) < 2 else [email for email in emails if email!= MME_DEFAULT_CONTACT_EMAIL]
+        all_emails.update(send_emails)
+        match_results.append((result_text, send_emails))
     match_results = sorted(match_results, key=lambda result_tuple: result_tuple[0])
 
     base_message = """Dear collaborators,
@@ -181,17 +184,23 @@ matchbox on {insertion_date}, with seqr link
         email_addresses_alert_sent_to=', '.join(sorted(all_emails)), footer=MME_EMAIL_FOOTER
     ))
 
+    email_errors = []
     for result_text, emails in match_results:
-        email_message = EmailMessage(
-            subject='Received new MME match',
-            body=message_template.format(
-                base_message=base_message, match_results=result_text,
-                email_addresses_alert_sent_to=', '.join(emails), footer=MME_EMAIL_FOOTER
-            ),
-            to=emails,
-            from_email=MME_DEFAULT_CONTACT_EMAIL,
-        )
-        email_message.send()
+        try:
+            email_message = EmailMessage(
+                subject='Received new MME match',
+                body=message_template.format(
+                    base_message=base_message, match_results=result_text,
+                    email_addresses_alert_sent_to=', '.join(emails), footer=MME_EMAIL_FOOTER
+                ),
+                to=emails,
+                from_email=MME_DEFAULT_CONTACT_EMAIL,
+            )
+            email_message.send()
+        except Exception as e:
+            email_errors.append(str(e))
+    if email_errors:
+        raise ValueError('\n'.join(email_errors))
 
 
 MME_EMAIL_FOOTER = """

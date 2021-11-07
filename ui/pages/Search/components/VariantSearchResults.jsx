@@ -19,7 +19,9 @@ const COMPOUND_HET_TOGGLE_FIELDS = [{
   labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
 }]
 
-const BaseVariantSearchResults = React.memo(({ inheritanceFilter, toggleUnpair, flattenCompoundHet, match, initialLoad, ...props }) => {
+const BaseVariantSearchResults = React.memo((
+  { inheritanceFilter, toggleUnpair, flattenCompoundHet, match, initialLoad, ...props },
+) => {
   const resultProps = {
     loadVariants: loadSearchedVariants,
     flattenCompoundHet,
@@ -34,7 +36,7 @@ const BaseVariantSearchResults = React.memo(({ inheritanceFilter, toggleUnpair, 
   }
 
   if (ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter)) {
-    const compoundHetDisplay = { flattenCompoundHet }
+    const compoundHetDisplay = { flattenCompoundHet } // eslint-disable-line react-perf/jsx-no-new-object-as-prop
     resultProps.additionalDisplayEdit = (
       <span>
         <ReduxFormWrapper
@@ -69,18 +71,15 @@ const mapStateToProps = (state, ownProps) => ({
   flattenCompoundHet: getFlattenCompoundHet(state),
 })
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    toggleUnpair: (updates) => {
-      dispatch(updateCompoundHetDisplay({
-        updates,
-      }))
-    },
-    initialLoad: (params) => {
-      dispatch(loadProjectFamiliesContext(params))
-    },
-  }
-}
-
+const mapDispatchToProps = dispatch => ({
+  toggleUnpair: (updates) => {
+    dispatch(updateCompoundHetDisplay({
+      updates,
+    }))
+  },
+  initialLoad: (params) => {
+    dispatch(loadProjectFamiliesContext(params))
+  },
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)

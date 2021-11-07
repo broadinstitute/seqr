@@ -9,21 +9,27 @@ import { compareObjects } from 'shared/utils/sortUtils'
 import { getProjectAnalysisGroupsByGuid, getCurrentProject } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
-
-const AnalysisGroups = React.memo(({ project, analysisGroupsByGuid }) =>
-  Object.values(analysisGroupsByGuid).sort(compareObjects('name')).map(ag =>
-    <div key={ag.name}>
-      <Link to={`/project/${project.projectGuid}/analysis_group/${ag.analysisGroupGuid}`}>{ag.name}</Link>
-      <Popup
-        position="right center"
-        trigger={<HelpIcon />}
-        content={<div><b>{ag.familyGuids.length} Families</b><br /><i>{ag.description}</i></div>}
-        size="tiny"
-      />
-      <UpdateAnalysisGroupButton analysisGroup={ag} iconOnly />
-      <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly size="tiny" />
-    </div>))
-
+const AnalysisGroups = React.memo(({ project, analysisGroupsByGuid }) => Object.values(analysisGroupsByGuid).sort(
+  compareObjects('name'),
+).map(ag => (
+  <div key={ag.name}>
+    <Link to={`/project/${project.projectGuid}/analysis_group/${ag.analysisGroupGuid}`}>{ag.name}</Link>
+    <Popup
+      position="right center"
+      trigger={<HelpIcon />}
+      content={
+        <div>
+          <b>{`${ag.familyGuids.length} Families`}</b>
+          <br />
+          <i>{ag.description}</i>
+        </div>
+      }
+      size="tiny"
+    />
+    <UpdateAnalysisGroupButton analysisGroup={ag} iconOnly />
+    <DeleteAnalysisGroupButton analysisGroup={ag} iconOnly size="tiny" />
+  </div>
+)))
 
 AnalysisGroups.propTypes = {
   project: PropTypes.object,
