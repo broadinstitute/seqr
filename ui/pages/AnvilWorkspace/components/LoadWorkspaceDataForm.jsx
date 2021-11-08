@@ -16,6 +16,7 @@ import {
   INDIVIDUAL_ID_EXPORT_DATA,
   SAMPLE_TYPE_OPTIONS,
 } from 'shared/utils/constants'
+import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
@@ -58,7 +59,7 @@ UploadPedigreeField.propTypes = {
 
 const UPLOAD_PEDIGREE_FIELD = {
   name: FILE_FIELD_NAME,
-  validate: validators.required,
+  validate: validateUploadedFile,
   component: UploadPedigreeField,
 }
 
