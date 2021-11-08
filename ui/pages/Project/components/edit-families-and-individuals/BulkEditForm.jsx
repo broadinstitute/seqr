@@ -38,7 +38,7 @@ const mapStateToProps = (state, ownProps) => {
       ),
       ...getEntityExportConfig({ project, fileName: ownProps.name, fields }),
     },
-    blankExportConfig: ownProps.blankDownload && {
+    blankExportConfig: {
       rawData: [],
       ...getEntityExportConfig({ project, fileName: 'template', fields }),
     },
@@ -89,8 +89,8 @@ const FamiliesBulkForm = React.memo(props => (
     requiredFields={FAMILY_ID_EXPORT_DATA}
     optionalFields={FAMILY_EXPORT_DATA}
     uploadFormats={FILE_FORMATS}
-    blankDownload
     getRawData={getProjectAnalysisGroupFamiliesByGuid}
+    templateLinkContent="current families"
     {...props}
   />
 ))
@@ -117,7 +117,6 @@ const IndividualsBulkForm = React.memo(({ user, ...props }) => (
     requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
     optionalFields={user.isAnalyst ? INDIVIDUAL_BULK_UPDATE_EXPORT_DATA : INDIVIDUAL_CORE_EXPORT_DATA}
     uploadFormats={FAM_UPLOAD_FORMATS}
-    blankDownload
     {...props}
   />
 ))
