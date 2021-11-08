@@ -102,9 +102,11 @@ export const getPairedFilteredSavedVariants = createSelector(
   getPairedSelectedSavedVariants,
   getSavedVariantTableState,
   getVariantTagsByGuid,
+  getVariantNotesByGuid,
   (state, props) => props.match.params,
-  (savedVariants, { categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter },
-    tagsByGuid, { tag, variantGuid }) => {
+  (savedVariants, {
+    categoryFilter = SHOW_ALL, hideExcluded, hideReviewOnly, hideKnownGeneForPhenotype, taggedAfter, savedBy,
+  }, tagsByGuid, notesByGuid, { tag, variantGuid }) => {
     if (variantGuid) {
       return savedVariants
     }
@@ -117,6 +119,12 @@ export const getPairedFilteredSavedVariants = createSelector(
     if (hideReviewOnly) {
       variantsToShow = variantsToShow.filter(variants => variants.every(
         variant => variant.tagGuids.length !== 1 || tagsByGuid[variant.tagGuids[0]].name !== REVIEW_TAG_NAME,
+      ))
+    }
+    if (savedBy) {
+      variantsToShow = variantsToShow.filter(variants => variants.some(
+        variant => variant.tagGuids.some(t => tagsByGuid[t].createdBy === savedBy) ||
+          variant.noteGuids.some(t => notesByGuid[t].createdBy === savedBy),
       ))
     }
     if (!tag) {
