@@ -224,6 +224,8 @@ const FamilyVariantTags = React.memo(({
               variantId={variantId}
               tagOptions={projectTagTypes}
               displayMetadata
+              linkTagType="seqr MME"
+              tagLinkUrl={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
