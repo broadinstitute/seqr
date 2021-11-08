@@ -7,6 +7,7 @@ import { Segment, Header, Grid, Button, List } from 'semantic-ui-react'
 
 import { getGoogleLoginEnabled } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { SeqrPaperLink } from 'shared/components/page/Footer'
 import { LOCAL_LOGIN_URL, GOOGLE_LOGIN_URL } from 'shared/utils/constants'
 
 const PageSegment = styled(Segment).attrs({ padded: 'very' })`
@@ -58,6 +59,10 @@ const LandingPage = ({ googleLoginEnabled }) => (
       proper tools, this data can be inaccessible to researchers. We have developed seqr as an open source web interface
       to make research productive, accessible, and user-friendly while leveraging resources and infrastructure at the
       Broad Institute.
+      <Header size="small">
+        {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
+        View the <SeqrPaperLink content={<span><i>seqr</i> preprint</span>} />
+      </Header>
     </PageSegment>
     <PageSegment size="large">
       <Header textAlign="center" size="large">
