@@ -29,8 +29,16 @@ const AcmgModal = (props) => {
   return (
     <div>
       <VerticalSpacer height={12} />
-      <Button color={buttonBackgroundColor} tabIndex={0} onClick={() => { setActive(true) }}>Classify {acmgClassification}</Button>
-      <Modal open={active} dimmer="blurring" size="fullscreen" >
+      <Button
+        color={buttonBackgroundColor}
+        tabIndex={0}
+        /* eslint-disable react-perf/jsx-no-new-function-as-prop */
+        onClick={() => { setActive(true) }}
+      >
+        {/* eslint-disable react/jsx-one-expression-per-line */}
+        Classify {acmgClassification}
+      </Button>
+      <Modal open={active} dimmer="blurring" size="fullscreen">
         <Icon name="close" onClick={() => { setActive(false) }} />
 
         <Modal.Header>ACMG Calculation</Modal.Header>

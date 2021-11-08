@@ -122,7 +122,10 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
       <Grid.Column width={12}>
         <Grid columns="equal">
           <Grid.Row>
-            <Grid.Column><Annotations variant={variant} /></Grid.Column>
+            <Grid.Column>
+              <Annotations variant={variant} />
+              { variant.variantGuid && <AcmgModal variant={variant} /> }
+            </Grid.Column>
             <Grid.Column><Predictions variant={variant} /></Grid.Column>
             <Grid.Column><Frequencies variant={variant} /></Grid.Column>
           </Grid.Row>

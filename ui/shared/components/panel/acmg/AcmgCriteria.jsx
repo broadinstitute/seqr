@@ -22,17 +22,23 @@ export const getNewScoreValue = (criteria) => {
   criteria.forEach((item) => {
     newScore += CATEGORY_CRITERIA_SCORE[item]
   })
+
   return newScore
 }
 
 class AcmgCriteria extends React.PureComponent {
-  constructor(props) {
-    super(props)
 
-    this.state = {
-      formWarning: '',
-    }
+  static propTypes = {
+    criteria: PropTypes.arrayOf(PropTypes.string).isRequired,
+    setCriteria: PropTypes.func.isRequired,
+    acmgClassification: PropTypes.string.isRequired,
+    setAcmgClassification: PropTypes.func.isRequired,
+    setActive: PropTypes.func.isRequired,
+    variant: PropTypes.object.isRequired,
+    dispatchUpdateVariantClassification: PropTypes.func,
   }
+
+  state = { formWarning: '' }
 
   setFormWarning(warning) {
     this.setState({
@@ -42,9 +48,10 @@ class AcmgCriteria extends React.PureComponent {
 
   getCriteriaUsed() {
     const criteriaUsed = {}
-    for (let i = 0; i < this.props.criteria.length; i++) {
-      criteriaUsed[this.props.criteria[i]] = true
-    }
+    const { criteria } = this.props
+    criteria.forEach((c) => {
+      criteriaUsed[c] = true
+    })
 
     return criteriaUsed
   }
@@ -56,43 +63,46 @@ class AcmgCriteria extends React.PureComponent {
     const answer = values[3]
 
     const fullCriteria = value
-    const criteriaCopy = [...this.props.criteria]
+    const { criteria, setCriteria } = this.props
+    const criteriaCopy = [...criteria]
 
     const criteriaUsed = this.getCriteriaUsed()
 
     if (answer === 'No' && criteriaUsed[fullCriteria] === true) {
       const filteredCriteria = criteriaCopy.filter(item => item !== fullCriteria)
-      this.props.setCriteria(filteredCriteria)
+      setCriteria(filteredCriteria)
     } else if (answer === 'Yes' && (criteriaUsed[fullCriteria] === false || criteriaUsed[fullCriteria] === undefined)) {
       criteriaCopy.push(fullCriteria)
-      this.props.setCriteria(criteriaCopy)
+      setCriteria(criteriaCopy)
     }
   }
 
   clearFields = () => {
-    this.props.setCriteria([])
-    this.props.setAcmgClassification('Unknown')
+    const { setCriteria, setAcmgClassification } = this.props
+    setCriteria([])
+    setAcmgClassification('Unknown')
   }
 
   submitForm = () => {
-    if (this.props.acmgClassification === 'Unknown') {
+    const { setActive, variant, acmgClassification, criteria, dispatchUpdateVariantClassification } = this.props
+    if (acmgClassification === 'Unknown') {
       this.setFormWarning('Please select at least one criteria from the table below.')
-    } else if (this.props.acmgClassification === 'Conflicting') {
+    } else if (acmgClassification === 'Conflicting') {
       this.setFormWarning('You have conflicting score. Please verify your selections.')
     } else {
       this.setFormWarning(false)
-      this.props.setActive(false)
-      this.props.variant.acmgClassification = {
-        score: getNewScoreValue(this.props.criteria),
-        classify: this.props.acmgClassification,
-        criteria: this.props.criteria,
+      setActive(false)
+      variant.acmgClassification = {
+        score: getNewScoreValue(criteria),
+        classify: acmgClassification,
+        criteria,
       }
-      this.props.dispatchUpdateVariantClassification()
+      dispatchUpdateVariantClassification()
     }
   }
 
   getTableRows = () => {
-    return ACMG_DROP_DOWN_OPTIONS.map((dropDownOption) => {
+    const dropDownRowns = ACMG_DROP_DOWN_OPTIONS.map((dropDownOption) => {
       let startArray = 0
       let endArray = TABLE_ROW_TOTAL_COLUMNS
       const rows = []
@@ -109,8 +119,13 @@ class AcmgCriteria extends React.PureComponent {
         const criteriaUsed = this.getCriteriaUsed()
         return (
           <Table.Row>
-            { rowIdx === 0 ? <Table.Cell rowSpan={dropDownOption.optionRowSpan}><span style={FONT_STYLE_WRITING_MODE}>{dropDownOption.optionTitle}</span></Table.Cell> : null }
-            { row.map((cell, cellIdx) => {
+            {rowIdx === 0 ?
+              (
+                <Table.Cell rowSpan={dropDownOption.optionRowSpan}>
+                  <span style={FONT_STYLE_WRITING_MODE}>{dropDownOption.optionTitle}</span>
+                </Table.Cell>
+              ) : null}
+            {row.map((cell, cellIdx) => {
               if (cell.length === 0) {
                 return <Table.Cell />
               }
@@ -138,39 +153,47 @@ class AcmgCriteria extends React.PureComponent {
                   </Table>
                 </Table.Cell>
               )
-          })}
+            })}
           </Table.Row>
         )
       })
 
       return elements
     })
+
+    return dropDownRowns
   }
 
   getNewScore = (criteria) => {
-    const newCategory = CATEGORY_CONFIGS.find(category => category.isThisClassification(getNewScoreValue(criteria)) === true)
+    const newCategory = CATEGORY_CONFIGS.find(
+      category => category.isThisClassification(getNewScoreValue(criteria)) === true,
+    )
     return newCategory ? newCategory.classification : 'Benign'
   }
 
   render() {
-    if (this.props.criteria.length > 0) {
-      this.props.setAcmgClassification(this.getNewScore(this.props.criteria))
+    const { criteria, setAcmgClassification } = this.props
+    const { formWarning } = this.state
+
+    if (criteria.length > 0) {
+      setAcmgClassification(this.getNewScore(criteria))
     }
 
     return (
       <div>
-        {this.state.formWarning !== '' &&
-          <Message warning>
-            <Message.Header>Warning</Message.Header>
-            <p>{this.state.formWarning}</p>
-          </Message>
-        }
+        {formWarning !== '' &&
+          (
+            <Message warning>
+              <Message.Header>Warning</Message.Header>
+              <p>{formWarning}</p>
+            </Message>
+          )}
         <Button primary onClick={this.submitForm}>Submit</Button>
         <Button onClick={this.clearFields} color="grey">Clear Form</Button>
         <Table celled structured textAlign="center">
           <Table.Header>
             <Table.Row key="table-row-headercell">
-              <Table.HeaderCell colSpan="1"></Table.HeaderCell>
+              <Table.HeaderCell colSpan="1" />
               <Table.HeaderCell colSpan="2">Benign</Table.HeaderCell>
               <Table.HeaderCell colSpan="4">Pathogenic</Table.HeaderCell>
             </Table.Row>
@@ -178,7 +201,7 @@ class AcmgCriteria extends React.PureComponent {
 
           <Table.Body>
             <Table.Row key="table-row-headers">
-              <Table.Cell></Table.Cell>
+              <Table.Cell />
               <Table.Cell width={2}>Strong</Table.Cell>
               <Table.Cell width={3}>Supporting</Table.Cell>
               <Table.Cell width={3}>Supporting</Table.Cell>
@@ -187,7 +210,7 @@ class AcmgCriteria extends React.PureComponent {
               <Table.Cell width={3}>Very Strong</Table.Cell>
             </Table.Row>
 
-            { this.getTableRows().map(rows => rows.map(row => row)) }
+            {this.getTableRows().map(rows => rows.map(row => row))}
           </Table.Body>
         </Table>
         <br />
@@ -195,18 +218,10 @@ class AcmgCriteria extends React.PureComponent {
       </div>
     )
   }
+
 }
 
-AcmgCriteria.propTypes = {
-  criteria: PropTypes.array.isRequired,
-  setCriteria: PropTypes.func.isRequired,
-  acmgClassification: PropTypes.string.isRequired,
-  setAcmgClassification: PropTypes.func.isRequired,
-  setActive: PropTypes.func.isRequired,
-  variant: PropTypes.object.isRequired,
-  dispatchUpdateVariantClassification: PropTypes.func,
-}
-
+/* eslint-disable arrow-body-style */
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     dispatchUpdateVariantClassification: (updates) => {

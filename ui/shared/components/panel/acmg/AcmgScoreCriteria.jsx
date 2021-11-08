@@ -5,14 +5,13 @@ import { getNewScoreValue } from './AcmgCriteria'
 
 const formatCriteria = (criteria) => {
   const formattedCriteria = []
+  criteria.forEach((c, criteriaIdx) => {
+    formattedCriteria.push(c)
 
-  for (let i = 0; i < criteria.length; i++) {
-    formattedCriteria.push(criteria[i])
-
-    if (i !== criteria.length - 1) {
-      formattedCriteria[i] += ', '
+    if (criteriaIdx !== criteria.length - 1) {
+      formattedCriteria[criteriaIdx] += ', '
     }
-  }
+  })
 
   return formattedCriteria
 }
@@ -44,7 +43,7 @@ const AcmgScoreCriteria = (props) => {
 }
 
 AcmgScoreCriteria.propTypes = {
-  criteria: PropTypes.array.isRequired,
+  criteria: PropTypes.arrayOf(PropTypes.string),
   classify: PropTypes.string.isRequired,
 }
 
