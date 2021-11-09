@@ -3,31 +3,26 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { loadSearchedVariants } from 'redux/rootReducer'
-import { HorizontalSpacer } from 'shared/components/Spacers'
 import { InlineToggle } from 'shared/components/form/Inputs'
-import StateChangeForm from 'shared/components/form/StateChangeForm'
+import { helpLabel, StyledForm } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchResults, { DisplayVariants } from 'shared/components/panel/search/VariantSearchResults'
 
 import { updateCompoundHetDisplay, loadSingleSearchedVariant, loadProjectFamiliesContext } from '../reducers'
 import { getFlattenCompoundHet, getSearchContextIsLoading, getInhertanceFilterMode } from '../selectors'
 import { ALL_RECESSIVE_INHERITANCE_FILTERS } from '../constants'
 
-const COMPOUND_HET_TOGGLE_FIELDS = [{
-  name: 'flattenCompoundHet',
-  component: InlineToggle,
-  label: 'Unpair',
-  labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
-}]
-// TODO field
+const compHetToggleLabel = helpLabel('Unpair', 'Display individual variants instead of pairs for compound heterozygous mutations')
+
 const compoundHetToggle = (flattenCompoundHet, toggleUnpair) => geneId => (
-  <span>
-    <StateChangeForm
-      updateField={toggleUnpair}
-      initialValues={flattenCompoundHet}
-      fields={[{ ...COMPOUND_HET_TOGGLE_FIELDS[0], name: geneId }]} // eslint-disable-line
+  <StyledForm inline hasSubmitButton={false}>
+    <InlineToggle
+      name={geneId}
+      value={flattenCompoundHet[geneId]}
+      label={compHetToggleLabel}
+      onChange={toggleUnpair(geneId)}
+      padded
     />
-    <HorizontalSpacer width={10} />
-  </span>
+  </StyledForm>
 )
 
 const BaseVariantSearchResults = React.memo((
