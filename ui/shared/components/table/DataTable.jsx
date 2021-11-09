@@ -69,6 +69,7 @@ class DataTable extends React.PureComponent {
 
   static defaultProps = {
     selectedRows: {},
+    data: [],
   }
 
   state = {
