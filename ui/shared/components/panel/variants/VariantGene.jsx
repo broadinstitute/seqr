@@ -313,7 +313,9 @@ GeneDetails.propTypes = {
   containerStyle: PropTypes.object,
 }
 
-const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInlineDetails, areCompoundHets }) => {
+const BaseVariantGene = React.memo((
+  { geneId, gene, variant, compact, showInlineDetails, areCompoundHets, compoundHetToggle },
+) => {
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 &&
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -373,6 +375,7 @@ const BaseVariantGene = React.memo(({ geneId, gene, variant, compact, showInline
       <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
       {summaryDetail}
+      {compoundHetToggle && compoundHetToggle(gene.geneId)}
     </div>
   )
 
@@ -401,6 +404,7 @@ BaseVariantGene.propTypes = {
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   areCompoundHets: PropTypes.bool,
+  compoundHetToggle: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({

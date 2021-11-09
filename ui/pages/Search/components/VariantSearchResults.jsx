@@ -67,9 +67,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = dispatch => ({
   toggleUnpair: geneId => (updates) => {
-    dispatch(updateCompoundHetDisplay({
-      [geneId]: updates,
-    }))
+    dispatch(updateCompoundHetDisplay({ [geneId]: updates }))
   },
   initialLoad: (params) => {
     dispatch(loadProjectFamiliesContext(params))
