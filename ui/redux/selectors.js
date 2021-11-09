@@ -282,7 +282,7 @@ export const getTotalVariantsCount = createSelector(
 export const getDisplayVariants = createSelector(
   (state, ownProps) => ownProps.flattenCompoundHet,
   getSearchedVariants,
-  (flattenCompoundHet, searchedVariants) => (flattenCompoundHet ? (uniqBy(searchedVariants.flat(), 'variantId') || []) : searchedVariants),
+  (flattenCompoundHet, searchedVariants) => (flattenCompoundHet && flattenCompoundHet.all ? (uniqBy(searchedVariants.flat(), 'variantId') || []) : searchedVariants),
 )
 
 export const getSearchedVariantExportConfig = createSelector(

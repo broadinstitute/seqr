@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { loadSearchedVariants } from 'redux/rootReducer'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { InlineToggle } from 'shared/components/form/Inputs'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import StateChangeForm from 'shared/components/form/StateChangeForm'
 import VariantSearchResults, { DisplayVariants } from 'shared/components/panel/search/VariantSearchResults'
 
 import { updateCompoundHetDisplay, loadSingleSearchedVariant, loadProjectFamiliesContext } from '../reducers'
@@ -18,6 +18,17 @@ const COMPOUND_HET_TOGGLE_FIELDS = [{
   label: 'Unpair',
   labelHelp: 'Display individual variants instead of pairs for compound heterozygous mutations.',
 }]
+// TODO field
+const compoundHetToggle = (flattenCompoundHet, toggleUnpair) => geneId => (
+  <span>
+    <StateChangeForm
+      updateField={toggleUnpair}
+      initialValues={flattenCompoundHet}
+      fields={[{ ...COMPOUND_HET_TOGGLE_FIELDS[0], name: geneId }]} // eslint-disable-line
+    />
+    <HorizontalSpacer width={10} />
+  </span>
+)
 
 const BaseVariantSearchResults = React.memo((
   { inheritanceFilter, toggleUnpair, flattenCompoundHet, match, initialLoad, ...props },
@@ -36,21 +47,9 @@ const BaseVariantSearchResults = React.memo((
   }
 
   if (ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritanceFilter)) {
-    const compoundHetDisplay = { flattenCompoundHet } // eslint-disable-line react-perf/jsx-no-new-object-as-prop
-    resultProps.additionalDisplayEdit = (
-      <span>
-        <ReduxFormWrapper
-          onSubmit={toggleUnpair}
-          form="toggleUnpairCompoundHet"
-          initialValues={compoundHetDisplay}
-          closeOnSuccess={false}
-          submitOnChange
-          inline
-          fields={COMPOUND_HET_TOGGLE_FIELDS}
-        />
-        <HorizontalSpacer width={10} />
-      </span>
-    )
+    const compoundHetToggleForm = compoundHetToggle(flattenCompoundHet, toggleUnpair)
+    resultProps.additionalDisplayEdit = compoundHetToggleForm('all')
+    resultProps.compoundHetToggle = compoundHetToggleForm
   }
 
   return <VariantSearchResults match={match} {...props} {...resultProps} />
@@ -72,9 +71,9 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 const mapDispatchToProps = dispatch => ({
-  toggleUnpair: (updates) => {
+  toggleUnpair: geneId => (updates) => {
     dispatch(updateCompoundHetDisplay({
-      updates,
+      [geneId]: updates,
     }))
   },
   initialLoad: (params) => {
