@@ -180,6 +180,8 @@ class Project(ModelWithGUID):
     mme_contact_institution = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_INSTITUTION)
 
     has_case_review = models.BooleanField(default=False)
+    enable_hgmd = models.BooleanField(default=False)
+    all_user_demo = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
