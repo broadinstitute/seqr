@@ -5,6 +5,7 @@ const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const PurgeCSSPlugin = require('purgecss-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const glob = require('glob');
 const paths = require('./paths');
@@ -184,8 +185,13 @@ module.exports = {
 
     new webpack.ProvidePlugin({
       $: "jquery/dist/jquery.min",
-      d3: "d3",
-    })
+      d3: require.resolve('./d3-bundle'),
+    }),
+
+    new BundleAnalyzerPlugin({
+      // Opens a browser tab with detailed breakdown of bundle size. Set analyzerMode to 'server' to enable
+      analyzerMode: 'disabled', // 'server'
+    }),
   ],
   // Turn off performance hints during development because we don't do any
   // splitting or minification in interest of speed. These warnings become

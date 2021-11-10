@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Message } from 'semantic-ui-react'
+import { Message, Loader } from 'semantic-ui-react'
 
 import { updateFamily } from 'redux/rootReducer'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
@@ -9,8 +9,9 @@ import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../../buttons/DeleteButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import Modal from '../../modal/Modal'
-import { XHRUploaderWithEvents } from '../../form/XHRUploaderField'
 import { ButtonLink } from '../../StyledComponents'
+
+const XHRUploaderWithEvents = React.lazy(() => import('../../form/XHRUploaderWithEvents'))
 
 class BaseEditPedigreeImageButton extends React.PureComponent {
 
@@ -41,14 +42,16 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
         modalName={this.modalId}
         trigger={<ButtonLink content="Upload New Image" icon="upload" labelPosition="right" />}
       >
-        <XHRUploaderWithEvents
-          onUploadFinished={this.onFinished}
-          url={`/api/family/${family.familyGuid}/update_pedigree_image`}
-          clearTimeOut={0}
-          auto
-          maxFiles={1}
-          dropzoneLabel="Drag and drop or click to upload pedigree image"
-        />
+        <React.Suspense fallback={<Loader />}>
+          <XHRUploaderWithEvents
+            onUploadFinished={this.onFinished}
+            url={`/api/family/${family.familyGuid}/update_pedigree_image`}
+            clearTimeOut={0}
+            auto
+            maxFiles={1}
+            dropzoneLabel="Drag and drop or click to upload pedigree image"
+          />
+        </React.Suspense>
         {error && <Message error content={error} />}
       </Modal>
     )

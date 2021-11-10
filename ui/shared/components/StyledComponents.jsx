@@ -60,7 +60,7 @@ const BaseColoredOutlineLabel = styled(({ color, ...props }) => <Label {...props
 `
 export const ColoredOutlineLabel = props => <BaseColoredOutlineLabel {...props} />
 
-const BaseHelpIcon = styled(Icon).attrs({ name: 'question circle outline', color: 'grey' })`
+const BaseHelpIcon = styled(Icon).attrs(({ color }) => ({ name: 'question circle outline', color: color || 'grey' }))`
   cursor: pointer;
   margin-left: 5px !important;
 `

@@ -1,4 +1,5 @@
 import React from 'react'
+import { NavLink } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup, Form } from 'semantic-ui-react'
@@ -74,7 +75,7 @@ MetadataField.propTypes = {
 }
 
 export const TagFieldDisplay = React.memo((
-  { displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata },
+  { displayFieldValues, tagAnnotation, popup, displayAnnotationFirst, displayMetadata, linkTagType, tagLinkUrl },
 ) => (
   <span>
     {displayFieldValues.map((tag) => {
@@ -82,7 +83,9 @@ export const TagFieldDisplay = React.memo((
       if (displayMetadata && tag.metadata) {
         content = `${content}: ${tag.metadata}`
       }
-      const label = <ColoredLabel size="small" color={tag.color} horizontal content={content} />
+      const baseLabel = <ColoredLabel size="small" color={tag.color} horizontal content={content} />
+      const label = (linkTagType && linkTagType === tag.name) ?
+        <NavLink to={tagLinkUrl}>{baseLabel}</NavLink> : baseLabel
       const annotation = tagAnnotation && tagAnnotation(tag)
       return (
         <span key={tag.tagGuid || tag.name}>
@@ -102,6 +105,8 @@ TagFieldDisplay.propTypes = {
   tagAnnotation: PropTypes.func,
   displayAnnotationFirst: PropTypes.bool,
   displayMetadata: PropTypes.bool,
+  linkTagType: PropTypes.string,
+  tagLinkUrl: PropTypes.string,
 }
 
 class TagFieldView extends React.PureComponent {
@@ -117,6 +122,8 @@ class TagFieldView extends React.PureComponent {
     tagAnnotation: PropTypes.func,
     simplifiedValue: PropTypes.bool,
     validate: PropTypes.func,
+    linkTagType: PropTypes.string,
+    tagLinkUrl: PropTypes.string,
   }
 
   getSimplifiedProps() {
@@ -168,13 +175,15 @@ class TagFieldView extends React.PureComponent {
   }
 
   fieldDisplay = (displayFieldValues) => {
-    const { popup, tagAnnotation, displayMetadata } = this.props
+    const { popup, tagAnnotation, displayMetadata, linkTagType, tagLinkUrl } = this.props
     return (
       <TagFieldDisplay
         displayFieldValues={displayFieldValues}
         popup={popup}
         tagAnnotation={tagAnnotation}
         displayMetadata={displayMetadata}
+        linkTagType={linkTagType}
+        tagLinkUrl={tagLinkUrl}
       />
     )
   }

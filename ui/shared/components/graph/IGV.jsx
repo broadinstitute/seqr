@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import igv from 'igv'
+import igv from 'igv/dist/igv.esm.min'
 
 import { FontAwesomeIconsContainer } from '../StyledComponents'
 
