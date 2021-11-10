@@ -28,7 +28,7 @@ jobs:
       - name: gcloud docker auth
         run: |
           gcloud auth configure-docker australia-southeast1-docker.pkg.dev
-      
+
       - name: set deployment type
         run: |
           if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
@@ -69,4 +69,5 @@ jobs:
           # Used for Cloud Scheduler tasks.
           gcloud run deploy \
             seqr-$DEPLOYMENT_TYPE-reference-updater \
+            --region australia-southeast1 \
             --image=$DOCKER_IMAGE:gcloud-$DEPLOYMENT_TYPE
