@@ -284,7 +284,7 @@ export const getDisplayVariants = createSelector(
   (state, ownProps) => ownProps.flattenCompoundHet,
   getSearchedVariants,
   (flattenCompoundHet, searchedVariants) => {
-    const shouldFlatten = Object.values(flattenCompoundHet || {}).some((_, val) => val)
+    const shouldFlatten = Object.values(flattenCompoundHet || {}).some(val => val)
     if (!shouldFlatten) {
       return searchedVariants || []
     }
