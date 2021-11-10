@@ -56,7 +56,6 @@ export const INHERITANCE_FILTER_LOOKUP = {
   [X_LINKED_RECESSIVE_FILTER]: {
     [AFFECTED]: ALT_ALT,
     [UNAFFECTED]: HAS_REF,
-    mother: REF_ALT,
     father: REF_REF,
   },
   [DE_NOVO_FILTER]: {

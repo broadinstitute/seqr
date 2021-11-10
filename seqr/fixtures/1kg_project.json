@@ -341,7 +341,7 @@
         "family_id": "12",
         "display_name": "12",
         "description": "",
-        "pedigree_image": "ped.png",
+        "pedigree_image": null,
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
@@ -1886,6 +1886,18 @@
     "last_modified_date": "2018-04-28T00:03:25.353Z",
     "locus_list": 1,
     "gene_id": "ENSG00000243485"
+  }
+},
+{
+  "model": "panelapp.palocuslistgene",
+  "pk": 1,
+  "fields": {
+    "seqr_locus_list_gene": 12,
+    "confidence_level": "3",
+    "biotype": null,
+    "penetrance": null,
+     "mode_of_pathogenicity": null,
+     "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal"
   }
 },
 {

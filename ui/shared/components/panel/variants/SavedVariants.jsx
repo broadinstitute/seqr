@@ -13,6 +13,7 @@ import {
 import ExportTableButton from '../../buttons/ExportTableButton'
 import StateChangeForm from '../../form/StateChangeForm'
 import { HorizontalSpacer } from '../../Spacers'
+import { ButtonLink } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import Variants from './Variants'
 import {
@@ -22,6 +23,7 @@ import {
 } from './selectors'
 
 const ALL_FILTER = 'ALL'
+const MAX_FILTERS = 4
 
 const ControlsRow = styled(Grid.Row)`
   font-size: 1.1em;
@@ -59,9 +61,15 @@ class SavedVariants extends React.PureComponent {
     tableSummaryComponent: PropTypes.elementType,
   }
 
+  state = { showAllFilters: false }
+
   navigateToTag = (e, data) => {
-    const { history, getUpdateTagUrl } = this.props
-    history.push(getUpdateTagUrl(data.value))
+    const { history, getUpdateTagUrl, match } = this.props
+    history.push(getUpdateTagUrl(data.value, match))
+  }
+
+  showAllFilters = () => {
+    this.setState({ showAllFilters: true })
   }
 
   render() {
@@ -70,14 +78,19 @@ class SavedVariants extends React.PureComponent {
       tableSummaryComponent, loading, filteredVariantsCount, tagOptions, additionalFilter, updateTableField,
       variantExportConfig, loadVariants, error,
     } = this.props
+    const { showAllFilters } = this.state
     const { familyGuid, variantGuid, tag } = match.params
 
     const appliedTagCategoryFilter = tag || (variantGuid ? null : (tableState.categoryFilter || ALL_FILTER))
 
-    let allFilters = (discoveryFilters && appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) ?
+    let shownFilters = (discoveryFilters && appliedTagCategoryFilter === DISCOVERY_CATEGORY_NAME) ?
       discoveryFilters : filters
+    const hasHiddenFilters = !showAllFilters && shownFilters.length > MAX_FILTERS
+    if (hasHiddenFilters) {
+      shownFilters = shownFilters.slice(0, MAX_FILTERS)
+    }
     if (totalPages > 1) {
-      allFilters = allFilters.concat({ ...VARIANT_PAGINATION_FIELD, totalPages })
+      shownFilters = shownFilters.concat({ ...VARIANT_PAGINATION_FIELD, totalPages })
     }
 
     const allShown = variantsToDisplay.length === totalVariantsCount
@@ -111,10 +124,12 @@ class SavedVariants extends React.PureComponent {
                 <StateChangeForm
                   updateField={updateTableField}
                   initialValues={tableState}
-                  fields={allFilters}
+                  fields={shownFilters}
                 />
               )}
               <HorizontalSpacer width={10} />
+              {hasHiddenFilters && <ButtonLink content="more" icon="sort amount down" onClick={this.showAllFilters} />}
+              {hasHiddenFilters && <HorizontalSpacer width={10} />}
               <ExportTableButton downloads={variantExportConfig} />
             </Grid.Column>
           </ControlsRow>

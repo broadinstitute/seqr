@@ -57,14 +57,14 @@ const BaseVariantSearchResultsContent = React.memo(({
   const variantDisplayPageOffset = (page - 1) * recordsPerPage
   const paginationFields = totalVariantsCount > recordsPerPage ?
     [{ ...VARIANT_PAGINATION_FIELD, totalPages: Math.ceil(totalVariantsCount / recordsPerPage) }] : []
-  const fields = [...FIELDS, ...paginationFields]
+  const fields = [...FIELDS, ...paginationFields] // eslint-disable-line react-perf/jsx-no-new-array-as-prop
 
   return [
     <LargeRow key="resultsSummary">
       <Grid.Column width={5}>
         {totalVariantsCount === displayVariants.length ? 'Found ' : `Showing ${variantDisplayPageOffset + 1}-${variantDisplayPageOffset + displayVariants.length} of `}
         <b>{totalVariantsCount}</b>
-        variants
+        &nbsp; variants
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}

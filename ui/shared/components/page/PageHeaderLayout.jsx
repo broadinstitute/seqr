@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { Grid, Breadcrumb, Popup, Icon, Header, Menu } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
-import { ButtonLink } from 'shared/components/StyledComponents'
+import { ButtonLink, InlineHeader } from 'shared/components/StyledComponents'
 import { snakecaseToTitlecase } from '../../utils/stringUtils'
 
 const PageHeaderRow = styled(Grid.Row)`
@@ -74,6 +74,7 @@ const PageHeaderLayout = React.memo(({
       return [...acc, section]
     }, [],
   )
+
   return (
     <PageHeaderRow>
       <DocumentTitle key="title" title={header || `${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`} />
@@ -84,11 +85,7 @@ const PageHeaderLayout = React.memo(({
             {breadcrumbs}
           </Breadcrumb>
         </BreadcrumbContainer>
-        {description && (
-          <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
-            {description}
-          </div>
-        )}
+        {description && <InlineHeader size="large" subheader={description} />}
         {button}
       </Grid.Column>
       <Grid.Column width={3}>

@@ -38,7 +38,7 @@ const mapStateToProps = (state, ownProps) => {
       ),
       ...getEntityExportConfig({ project, fileName: ownProps.name, fields }),
     },
-    blankExportConfig: ownProps.blankDownload && {
+    blankExportConfig: {
       rawData: [],
       ...getEntityExportConfig({ project, fileName: 'template', fields }),
     },
@@ -47,11 +47,13 @@ const mapStateToProps = (state, ownProps) => {
 
 const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 
+const submitForm = onSubmit => values => onSubmit(values[FILE_FIELD_NAME])
+
 const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) => (
   <ReduxFormWrapper
     form={`bulkUpload_${name}`}
     modalName={modalName}
-    onSubmit={values => onSubmit(values[FILE_FIELD_NAME])}
+    onSubmit={submitForm(onSubmit)}
     confirmCloseIfNotSaved
     closeOnSuccess
     showErrorPanel
@@ -87,8 +89,8 @@ const FamiliesBulkForm = React.memo(props => (
     requiredFields={FAMILY_ID_EXPORT_DATA}
     optionalFields={FAMILY_EXPORT_DATA}
     uploadFormats={FILE_FORMATS}
-    blankDownload
     getRawData={getProjectAnalysisGroupFamiliesByGuid}
+    templateLinkContent="current families"
     {...props}
   />
 ))
@@ -115,7 +117,6 @@ const IndividualsBulkForm = React.memo(({ user, ...props }) => (
     requiredFields={INDIVIDUAL_ID_EXPORT_DATA}
     optionalFields={user.isAnalyst ? INDIVIDUAL_BULK_UPDATE_EXPORT_DATA : INDIVIDUAL_CORE_EXPORT_DATA}
     uploadFormats={FAM_UPLOAD_FORMATS}
-    blankDownload
     {...props}
   />
 ))

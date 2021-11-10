@@ -22,7 +22,7 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
 
         category_guids = [PROJECT_CAT_GUID2, PROJECT_CAT_GUID4, NEW_PROJECT_CAT_NAME]
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'categories': category_guids
+            'projectCategoryGuids': category_guids
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -49,7 +49,7 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
             set(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']))
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'categories': []
+            'projectCategoryGuids': []
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()

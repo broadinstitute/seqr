@@ -132,6 +132,9 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     if search.get('freqs'):
         es_search.filter_by_frequency(search['freqs'])
 
+    if search.get('in_silico'):
+        es_search.filter_by_in_silico(search['in_silico'])
+
     es_search.filter_by_annotation_and_genotype(
         search.get('inheritance'), quality_filter=search.get('qualityFilter'),
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),

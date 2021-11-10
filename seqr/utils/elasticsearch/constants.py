@@ -253,6 +253,7 @@ NESTED_FIELDS = {
 }
 
 GRCH38_LOCUS_FIELD = 'rg37_locus'
+SPLICE_AI_FIELD = 'splice_ai'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
@@ -271,7 +272,8 @@ CORE_FIELDS_CONFIG = {
     'cpx_intervals': {
       'response_key': 'cpxIntervals',
       'format_value': lambda intervals:  [interval.to_dict() for interval in (intervals or [])],
-},
+    },
+    'algorithms': {'format_value': ', '.join}
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -285,11 +287,19 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
     'primate_ai_score': {'response_key': 'primate_ai'},
-    'splice_ai_delta_score': {'response_key': 'splice_ai'},
+    'splice_ai_delta_score': {'response_key': SPLICE_AI_FIELD},
     'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
+}
+
+def get_prediction_response_key(key):
+    return key.split('_')[1].lower()
+
+PREDICTION_FIELD_LOOKUP = {
+    field_config.get('response_key', get_prediction_response_key(field)): field
+    for field, field_config in PREDICTION_FIELDS_CONFIG.items()
 }
 
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}
@@ -305,6 +315,7 @@ BASE_GENOTYPE_FIELDS_CONFIG = {
     'sample_type': {},
     'num_alt': {'format_value': int, 'default_value': -1},
 }
+
 GENOTYPE_FIELDS_CONFIG = {
     'ad': {},
     'dp': {},

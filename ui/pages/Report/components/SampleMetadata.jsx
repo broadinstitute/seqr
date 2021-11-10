@@ -24,9 +24,9 @@ const FIELDS = [
   },
 ]
 
-const SampleMetadataFilters = React.memo(({ load, match }) => (
+const SampleMetadataFilters = React.memo(({ load }) => (
   <ReduxFormWrapper
-    onSubmit={values => load(match.params.projectGuid, values)}
+    onSubmit={load}
     form="sampleMetadataFilters"
     fields={FIELDS}
     noModal
@@ -36,7 +36,6 @@ const SampleMetadataFilters = React.memo(({ load, match }) => (
 ))
 
 SampleMetadataFilters.propTypes = {
-  match: PropTypes.object,
   load: PropTypes.func,
 }
 
@@ -64,8 +63,10 @@ const mapStateToProps = state => ({
   loadingError: getSampleMetadataLoadingError(state),
 })
 
-const mapDispatchToProps = {
-  load: loadSampleMetadata,
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  load: (values) => {
+    dispatch(loadSampleMetadata(ownProps.match.params.projectGuid, typeof values === 'object' ? values : {}))
+  },
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(SampleMetadata)

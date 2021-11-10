@@ -15,14 +15,14 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
+    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = SeqrLogger(__name__)
-
 
 class EsSearch(object):
 
@@ -197,6 +197,11 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
+    def filter_by_in_silico(self, in_silico_filters):
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
+        if in_silico_filters:
+            self.filter(_in_silico_filter(in_silico_filters))
+
     def filter_by_frequency(self, frequencies):
         q = Q()
         for pop, freqs in sorted(frequencies.items()):
@@ -214,20 +219,24 @@ class EsSearch(object):
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
         self.filter(q)
 
-    def _filter_by_annotations(self, annotations, pathogenicity_filter):
+    def _filter_by_annotations(self, annotations, additional_filters):
         dataset_type = None
+
+        additional_filters = [f for f in additional_filters if f]
+        annotation_filter = _or_filters(additional_filters) if additional_filters else None
+
         consequences_filter, allowed_consequences = _annotations_filter(annotations or {})
         if allowed_consequences:
-            if pathogenicity_filter:
+            if annotation_filter:
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
-                consequences_filter |= pathogenicity_filter
+                consequences_filter |= annotation_filter
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
             dataset_type = _dataset_type_for_annotations(annotations)
             if dataset_type:
                 self.update_dataset_type(dataset_type)
-        elif pathogenicity_filter:
-            self.filter(pathogenicity_filter)
+        elif annotation_filter:
+            self.filter(annotation_filter)
         return dataset_type
 
     def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
@@ -260,6 +269,9 @@ class EsSearch(object):
         if inheritance_filter.get('genotype'):
             inheritance_mode = None
 
+        splice_ai = (annotations or {}).pop(SPLICE_AI_FIELD, None)
+        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
+
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
@@ -273,8 +285,8 @@ class EsSearch(object):
             secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
 
         pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
-        if annotations or pathogenicity_filter:
-            dataset_type = self._filter_by_annotations(annotations, pathogenicity_filter)
+        if annotations or pathogenicity_filter or splice_ai_filter:
+            dataset_type = self._filter_by_annotations(annotations, [pathogenicity_filter, splice_ai_filter])
             if dataset_type is None or dataset_type == secondary_dataset_type:
                 secondary_dataset_type = None
 
@@ -610,6 +622,7 @@ class EsSearch(object):
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0), self._user)
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
+
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
@@ -744,7 +757,7 @@ class EsSearch(object):
             'mainTranscriptId': main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
-                hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
+                hit, PREDICTION_FIELDS_CONFIG, format_response_key=get_prediction_response_key
             ),
             'transcripts': dict(transcripts),
         })
@@ -1305,7 +1318,14 @@ def _pathogenicity_filter(pathogenicity):
 
 
 def _annotations_filter(annotations):
-    vep_consequences = sorted([ann for anns in annotations.values() for ann in anns])
+    consequences = {ann for anns in annotations.values() for ann in anns}
+    #  TODO once all gCNV data has been reloaded, create explicit filters in the UI so users can set which type to use
+    # See https://github.com/broadinstitute/seqr/issues/2085
+    if 'DEL' in consequences:
+        consequences.add('gCNV_DEL')
+    if 'DUP' in consequences:
+        consequences.add('gCNV_DUP')
+    vep_consequences = sorted(consequences)
 
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
 
@@ -1324,6 +1344,23 @@ def _dataset_type_for_annotations(annotations):
     elif not sv and non_sv:
         return Sample.DATASET_TYPE_VARIANT_CALLS
     return None
+
+
+def _in_silico_filter(in_silico_filters, allow_missing=True):
+    in_silico_qs = []
+    for in_silico_filter, value in in_silico_filters.items():
+        prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
+        try:
+            score_q = Q('range', **{prediction_key: {'gte': float(value)}})
+        except ValueError:
+            score_q = Q('prefix', **{prediction_key: value})
+
+        if allow_missing:
+            score_q |= ~Q('exists', field=prediction_key)
+
+        in_silico_qs.append(score_q)
+
+    return _or_filters(in_silico_qs)
 
 
 def _pop_freq_filter(filter_key, value):

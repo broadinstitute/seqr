@@ -62,6 +62,10 @@ const mapDispatchToProps = {
 
 export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(SaveSearch)
 
+const selectSearch = (onChange, savedSearchesByGuid) => val => onChange(
+  savedSearchesByGuid[val] ? savedSearchesByGuid[val].search : {},
+)
+
 const SavedSearches = React.memo((
   { options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange },
 ) => (
@@ -71,7 +75,7 @@ const SavedSearches = React.memo((
       loading={loading}
       placeholder="Select a Saved Search"
       value={(selectedSearch || {}).savedSearchGuid}
-      onChange={val => onChange(savedSearchesByGuid[val] ? savedSearchesByGuid[val].search : {})}
+      onChange={selectSearch(onChange, savedSearchesByGuid)}
       options={options}
     />
   </DataLoader>

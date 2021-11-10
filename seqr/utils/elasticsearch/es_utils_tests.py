@@ -424,6 +424,7 @@ ES_SV_WGS_VARIANT = {
       'svType': 'CPX',
       'xstop': 2049045898,
       'variantId': 'prefix_19107_CPX',
+      'algorithms': ['wham', 'manta'],
       'sc': 7,
       'contig': '2',
       'sortedTranscriptConsequences': [
@@ -715,7 +716,8 @@ SV_MAPPING_FIELDS = [
 ]
 
 SOURCE_FIELDS = {
-    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID',
+    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'gnomad_exomes_FAF_AF','sv_callset_Hemi',
+    'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
@@ -1318,6 +1320,7 @@ class EsUtilsTest(TestCase):
             'annotations': {
                 'in_frame': ['inframe_insertion', 'inframe_deletion'],
                 'other': ['5_prime_UTR_variant', 'intergenic_variant'],
+                'splice_ai': '0.8',
             },
             'freqs': {
                 'callset': {'af': 0.1},
@@ -1328,6 +1331,7 @@ class EsUtilsTest(TestCase):
                 'topmed': {'ac': 2, 'af': None},
             },
             'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
+            'in_silico': {'cadd': '11.5', 'sift': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
         })
@@ -1446,6 +1450,12 @@ class EsUtilsTest(TestCase):
                     ]
                 }
             },
+            {'bool': {'should': [
+                {'bool': {'must_not': [{'exists': {'field': 'cadd_PHRED'}}]}},
+                {'range': {'cadd_PHRED': {'gte': 11.5}}},
+                {'bool': {'must_not': [{'exists': {'field': 'dbnsfp_SIFT_pred'}}]}},
+                {'prefix': {'dbnsfp_SIFT_pred': 'D'}},
+            ]}},
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
             {'bool': {
                     'should': [
@@ -1464,6 +1474,7 @@ class EsUtilsTest(TestCase):
                             ]
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                        {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
                     ]
                 }
             },
@@ -1576,7 +1587,7 @@ class EsUtilsTest(TestCase):
     def test_sv_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DEL']},
+            'annotations': {'structural': ['DUP']},
             'freqs': {'sv_callset': {'af': 0.1}},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},
@@ -1594,7 +1605,7 @@ class EsUtilsTest(TestCase):
                     {'range': {'sf': {'lte': 0.1}}}
                 ]
             }},
-            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['DUP', 'gCNV_DUP']}},
             {'bool': {
                 'must': [
                     {'bool': {
@@ -1992,14 +2003,14 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, num_results=10)
 
         annotation_secondary_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
         ]}}
 
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+                    {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{
@@ -3011,7 +3022,7 @@ class EsUtilsTest(TestCase):
                 dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
             _set_cache(cache_key, None)
             annotations = {'frameshift': ['frameshift_variant']} if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS \
-                else {'structural': ['DEL']}
+                else {'structural': ['DEL', 'gCNV_DEL']}
             search_model.search = {
                 'inheritance': {'mode': mode, 'filter': inheritance_filter},
                 'annotations': annotations,
@@ -3020,7 +3031,7 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model, num_results=2)
 
             index = INDEX_NAME if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else SV_INDEX_NAME
-            annotation_query = {'terms': {'transcriptConsequenceTerms': [next(iter(annotations.values()))[0]]}}
+            annotation_query = {'terms': {'transcriptConsequenceTerms': next(iter(annotations.values()))}}
             if expected_comp_het_filter:
                 self.assertExecutedSearches([
                     dict(gene_aggs=True, start_index=0, size=1, index=index, filters=[

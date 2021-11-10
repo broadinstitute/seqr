@@ -34,11 +34,11 @@ const BaseButtonLink = styled(({ color, padding, ...props }) => <Button {...prop
 // This notation required to fix a ref forwarding bug with styled components and seamntic ui: https://github.com/Semantic-Org/Semantic-UI-React/issues/3786#issuecomment-557560471
 export const ButtonLink = props => <BaseButtonLink {...props} />
 
-const BaseColoredComponent = styled.div`
+export const ColoredDiv = styled.div`
   color: ${props => props.color} !important;
 `
 
-const ColoredComponent = control => BaseColoredComponent.withComponent(
+const ColoredComponent = control => ColoredDiv.withComponent(
   ({ color, ...props }) => React.createElement(control, props),
 )
 
@@ -60,7 +60,7 @@ const BaseColoredOutlineLabel = styled(({ color, ...props }) => <Label {...props
 `
 export const ColoredOutlineLabel = props => <BaseColoredOutlineLabel {...props} />
 
-const BaseHelpIcon = styled(Icon).attrs({ name: 'question circle outline', color: 'grey' })`
+const BaseHelpIcon = styled(Icon).attrs(({ color }) => ({ name: 'question circle outline', color: color || 'grey' }))`
   cursor: pointer;
   margin-left: 5px !important;
 `

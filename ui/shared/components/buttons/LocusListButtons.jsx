@@ -53,6 +53,8 @@ CreateLocusList.propTypes = {
   onSubmit: PropTypes.func,
 }
 
+const redirectGeneLists = history => () => history.push('/gene_lists')
+
 const DeleteLocusList = React.memo(({ locusList, onSubmit, size, iconOnly, history }) => (
   <DeleteButton
     initialValues={locusList}
@@ -65,7 +67,7 @@ const DeleteLocusList = React.memo(({ locusList, onSubmit, size, iconOnly, histo
     }
     buttonText={iconOnly ? null : 'Delete Gene List'}
     size={size}
-    onSuccess={() => history.push('/gene_lists')}
+    onSuccess={redirectGeneLists(history)}
   />
 ))
 

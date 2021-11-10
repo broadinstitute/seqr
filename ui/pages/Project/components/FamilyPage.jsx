@@ -98,6 +98,18 @@ const mapVariantDetailStateToProps = (state, ownProps) => ({
 
 const VariantDetail = connect(mapVariantDetailStateToProps)(BaseVariantDetail)
 
+const FamilyReadsLayout = ({ reads, showReads }) => (
+  <div>
+    {showReads}
+    {reads}
+  </div>
+)
+
+FamilyReadsLayout.propTypes = {
+  reads: PropTypes.object,
+  showReads: PropTypes.object,
+}
+
 const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, showVariantDetails, ...props }) => (
   <div>
     <Family
@@ -107,16 +119,7 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
       {...props}
     />
     {!compact && (
-      <FamilyReads
-        layout={({ reads, showReads }) => (
-          <div>
-            {showReads}
-            {reads}
-          </div>
-        )}
-        familyGuid={family.familyGuid}
-        buttonProps={READ_BUTTON_PROPS}
-      />
+      <FamilyReads layout={FamilyReadsLayout} familyGuid={family.familyGuid} buttonProps={READ_BUTTON_PROPS} />
     )}
     {individuals && individuals.map(individual => (
       <IndividualRow

@@ -19,7 +19,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily, getNotesByFamilyType,
-  getSamplesGroupedByProjectGuid,
+  getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants,
 } from 'redux/selectors'
 
 import {
@@ -219,6 +219,21 @@ export const getProjectTagTypeOptions = createSelector(
   (projectGuid, tagTypesByProject) => tagTypesByProject[projectGuid].map(
     ({ name, variantTagTypeGuid, ...tag }) => ({ value: name, text: name, ...tag }),
   ),
+)
+
+export const getProjectVariantSavedByOptions = createSelector(
+  getProjectFamiliesByGuid,
+  getVariantTagNotesByFamilyVariants,
+  (familiesByGuid, variantDetailByFamilyVariant) => [null, ...Object.keys(familiesByGuid).reduce(
+    (acc, familyGuid) => new Set([
+      ...acc,
+      ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
+        ...variantAcc,
+        ...(tags || []).map(({ createdBy }) => createdBy),
+        ...(notes || []).map(({ createdBy }) => createdBy),
+      ]), []),
+    ]), new Set(),
+  )].map(value => ({ value })),
 )
 
 // Family table selectors
@@ -524,7 +539,7 @@ export const getMmeDefaultContactEmail = createSelector(
 export const getUserOptions = createSelector(
   getUserOptionsByUsername,
   usersOptionsByUsername => Object.values(usersOptionsByUsername).map(
-    user => ({ key: user.username, value: user.username, text: user.email }),
+    user => ({ key: user.username, value: user, text: user.email }),
   ),
 )
 

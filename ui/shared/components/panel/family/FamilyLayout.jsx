@@ -26,11 +26,11 @@ const FamilyLayout = React.memo((
     <FamilyGrid annotation={annotation} offset={offset}>
       <Grid.Row>
         {(leftContent || !useFullWidth) && <Grid.Column width={3}>{leftContent}</Grid.Column>}
-        {compact ? fields.map(
+        {compact ? (fields || []).map(
           field => <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
         ) : (
           <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>
-            {fields.map(field => fieldDisplay(field))}
+            {(fields || []).map(field => fieldDisplay(field))}
           </Grid.Column>
         )}
         {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}

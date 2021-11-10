@@ -2,6 +2,15 @@
 
 ## dev
 
+## 11/10/21
+* Update in-silico score filtering behavior and add splice AI override
+
+## 10/25/21
+* Add search filtering by in-silico score
+
+## 10/21/21
+* Support updated WES SV loading pipeline format
+
 ## 9/30/21
 * Allow project-specific HGMD access (REQUIRES DB MIGRATION)
 * Demo project available to all users (REQUIRES DB MIGRATION)

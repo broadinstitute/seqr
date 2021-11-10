@@ -46,7 +46,8 @@ const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
     coords = value
   } else if (isRegion) {
     const posInt = parseInt(pos, 10)
-    coords = `${chrom}-${posInt - 100}-${posInt + 100}`
+    const endOffset = variant.end ? variant.end - variant.pos : 0
+    coords = `${chrom}-${posInt - 100}-${posInt + endOffset + 100}`
   } else {
     coords = `${chrom}-${pos}-${variant.ref}-${variant.alt}`
   }
@@ -176,8 +177,8 @@ const POPULATIONS = [
     field: 'gnomad_svs',
     fieldTitle: 'gnomAD SVs',
     precision: 3,
-    urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
-    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_sv_r2_1' },
+    urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_sv_r2_1' },
   },
 ]
 

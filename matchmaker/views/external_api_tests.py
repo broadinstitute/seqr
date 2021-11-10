@@ -52,9 +52,11 @@ class ExternalAPITest(TestCase):
             }
         })
 
+    @mock.patch('matchmaker.views.external_api.logger')
     @mock.patch('matchmaker.views.external_api.EmailMessage')
     @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
-    def test_mme_match_proxy(self, mock_post_to_slack, mock_email):
+    def test_mme_match_proxy(self, mock_post_to_slack, mock_email, mock_logger):
+        mock_email.return_value.send.side_effect = [Exception('Email error'), True, True]
         url = '/api/matchmaker/v1/match'
         request_body = {
             'patient': {
@@ -249,7 +251,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
             matches='\n'.join([match1, match2, match3]),
-            emails='UDNCC@hms.harvard.edu, matchmaker@phenomecentral.org, test_user@broadinstitute.org'
+            emails='UDNCC@hms.harvard.edu, matchmaker@broadinstitute.org, matchmaker@phenomecentral.org, test_user@broadinstitute.org'
         ))
 
         mock_email.assert_has_calls([
@@ -266,7 +268,18 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
                 to=['UDNCC@hms.harvard.edu', 'matchmaker@phenomecentral.org'],
                 from_email='matchmaker@broadinstitute.org',
             ),
-            mock.call().send()])
+            mock.call().send(),
+            mock.call(
+                subject='Received new MME match',
+                body=message_template.format(matches=match3, emails='matchmaker@broadinstitute.org'),
+                to=['matchmaker@broadinstitute.org'],
+                from_email='matchmaker@broadinstitute.org',
+            ),
+            mock.call().send(),
+        ])
+
+        mock_logger.error.assert_called_with(
+            'Unable to create notification for incoming MME match request for 3 matches (NA19675_1_01, P0004515, P0004517): Email error')
 
         # Test receive same request again
         mock_post_to_slack.reset_mock()
@@ -283,9 +296,10 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         )
         mock_email.assert_not_called()
 
+    @mock.patch('matchmaker.views.external_api.logger')
     @mock.patch('matchmaker.views.external_api.EmailMessage')
     @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
-    def test_mme_match_proxy_no_results(self, mock_post_to_slack, mock_email):
+    def test_mme_match_proxy_no_results(self, mock_post_to_slack, mock_email, mock_logger):
         url = '/api/matchmaker/v1/match'
         request_body = {
             'patient': {
@@ -322,5 +336,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(response.json()['results'], [])
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(institution='Test Institute').count(), 2)
+        mock_logger.error.assert_called_with(
+            'Unable to create notification for incoming MME match request for 0 matches: Slack connection error')
 
 

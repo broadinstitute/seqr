@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import { NavLink } from 'react-router-dom'
 
 import { updateProject } from 'redux/rootReducer'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -44,7 +45,9 @@ const ProjectEllipsisMenu = React.memo((props) => {
     menuItems.unshift(
       <Dropdown.Item
         key="caseReview"
-        onClick={() => { window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}
+        as={NavLink}
+        to={`/project/${props.project.projectGuid}/case_review`}
+        target="_blank"
       >
         Case Review Page
       </Dropdown.Item>,

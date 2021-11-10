@@ -2,17 +2,18 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { FormSection } from 'redux-form'
-import { Form, Accordion, Header, Segment, Grid, Icon } from 'semantic-ui-react'
+import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
+import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
+import { VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
   FREQUENCIES,
+  IN_SILICO_FIELDS,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
   HGMD_PATHOGENICITY_FIELDS,
@@ -26,9 +27,12 @@ import {
   ALL_QUALITY_FILTER,
   LOCATION_FIELDS,
   CODING_IMPACT_GROUPS,
-  HIGH_IMPACT_GROUPS_NO_SV,
+  HIGH_IMPACT_GROUPS_SPLICE,
   MODERATE_IMPACT_GROUPS,
+  SV_GROUPS,
 } from './constants'
+
+const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
 
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
   .dropdown.icon {
@@ -84,6 +88,12 @@ const ExpandCollapseCategoryContainer = styled.span`
   top: -2em;
 `
 
+const LeftAligned = styled.div`
+ text-align: left;
+`
+
+const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
+
 const JsonSelectPropsWithAll = (options, all) => ({
   component: Select,
   format: val => JSON.stringify(val) || JSON.stringify(all.value),
@@ -102,16 +112,43 @@ const pathogenicityPanel = hasHgmdPermission => ({
 export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
-const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
+const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
+const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
+  (acc, { group }, i) => ({ ...acc, [group]: [...(acc[group] || []), i] }), {},
+)
+
+const ANNOTATION_GROUPS_SPLICE = [...ANNOTATION_GROUPS, IN_SILICO_SPLICING_FIELD]
+const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS_SPLICE.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
+
+export const inSilicoFieldLayout = groups => fieldComponents => (
+  <Form.Field>
+    <Grid divided="vertically">
+      {groups.map(group => (
+        <Grid.Row key={group}>
+          <Grid.Column width={2} verticalAlign="middle"><Header size="small" content={group} /></Grid.Column>
+          <Grid.Column width={14}>
+            <Grid>
+              <Grid.Row>
+                {IN_SILICO_GROUP_INDEX_MAP[group].map(
+                  i => <Grid.Column key={i} width={3}>{fieldComponents[i]}</Grid.Column>,
+                )}
+              </Grid.Row>
+            </Grid>
+          </Grid.Column>
+        </Grid.Row>
+      ))}
+    </Grid>
+  </Form.Field>
+)
 
 export const annotationFieldLayout = (annotationGroups, hideOther) => fieldComponents => [
   ...annotationGroups.map(groups => (
     <Form.Field key={groups[0]} width={3}>
       {groups.map(group => (
-        <div key={group}>
+        <LeftAligned key={group}>
           {fieldComponents[ANNOTATION_GROUP_INDEX_MAP[group]]}
           <VerticalSpacer height={20} />
-        </div>
+        </LeftAligned>
       ))}
     </Form.Field>
   )),
@@ -144,10 +181,10 @@ const freqFieldLayout = fieldComponents => (
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
-  fields: ANNOTATION_GROUPS,
+  fields: ANNOTATION_GROUPS_SPLICE,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   fieldLayout: annotationFieldLayout([
-    [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
+    SV_GROUPS, HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
   ]),
 }
 
@@ -174,19 +211,29 @@ export const LOCATION_PANEL = {
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
 }
 
+export const IN_SILICO_PANEL = {
+  name: 'in_silico',
+  headerProps: { title: 'In Silico Filters' },
+  fields: IN_SILICO_FIELDS,
+  fieldLayout: inSilicoFieldLayout([...NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP]),
+  helpText: 'Filter by in-silico predictors. Variants matching any of the applied filters will be returned. For numeric filters, any variant with a score greater than or equal to the provided filter value will be returned.',
+}
+
 export const QUALITY_PANEL = {
   name: 'qualityFilter',
   headerProps: { title: 'Call Quality', inputProps: JsonSelectPropsWithAll(QUALITY_FILTER_OPTIONS, ALL_QUALITY_FILTER) },
   fields: QUALITY_FILTER_FIELDS,
-  fieldProps: { control: LabeledSlider, format: val => val || null },
+  fieldProps: { control: LazyLabeledSlider, format: val => val || null },
 }
+
+const stopPropagation = e => e.stopPropagation()
 
 const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps && (
-        <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={e => e.stopPropagation()}>
+        <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={stopPropagation}>
           {configuredField({ ...inputProps, name })}
         </ToggleHeaderFieldColumn>
       )}

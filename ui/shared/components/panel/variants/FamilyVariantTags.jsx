@@ -28,6 +28,10 @@ const TagTitle = styled.span`
   color: #999;
 `
 
+const RedItal = styled.i`
+  color: red;
+`
+
 const NO_DISPLAY = { display: 'none' }
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
@@ -37,7 +41,7 @@ const VARIANT_NOTE_FIELDS = [{
   label: (
     <label>
       Add to
-      <i style={{ color: 'red' }}>&nbsp; ClinVar &nbsp;</i>
+      <RedItal>&nbsp; ClinVar &nbsp;</RedItal>
       submission
     </label>
   ),
@@ -77,6 +81,8 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
     }
   />
 )
+
+const notePopup = note => note && taggedByPopup(note, 'Note By')
 
 const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
   const toggle = <InlineToggle color={tag && tag.color} divided {...props} value={tag} />
@@ -218,6 +224,8 @@ const FamilyVariantTags = React.memo(({
               variantId={variantId}
               tagOptions={projectTagTypes}
               displayMetadata
+              linkTagType="seqr MME"
+              tagLinkUrl={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
@@ -256,7 +264,7 @@ const FamilyVariantTags = React.memo(({
               isEditable
               showInLine
               compact
-              getTextPopup={note => note && taggedByPopup(note, 'Note By')}
+              getTextPopup={notePopup}
               onSubmit={dispatchUpdateVariantNote}
             />
           </Table.Cell>

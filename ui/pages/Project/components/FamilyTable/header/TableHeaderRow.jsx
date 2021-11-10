@@ -75,12 +75,14 @@ const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
+const familyFieldDisplay = field => FAMILY_FIELD_NAME_LOOKUP[field.id]
+
 export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) => (
   <FamilyLayout
     compact
     offset={offset}
     fields={fields}
-    fieldDisplay={field => FAMILY_FIELD_NAME_LOOKUP[field.id]}
+    fieldDisplay={familyFieldDisplay}
     rightContent={showVariantDetails ? 'Saved Variants' : null}
   />
 ))

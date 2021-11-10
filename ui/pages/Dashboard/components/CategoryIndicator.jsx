@@ -1,19 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import randomMC from 'random-material-color'
-import styled from 'styled-components'
-import { Icon } from 'semantic-ui-react'
+import { Loader } from 'semantic-ui-react'
 
 import { ButtonLink } from 'shared/components/StyledComponents'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
-const getColor = categoryNames => (
-  categoryNames.length === 0 ? '#ccc' : randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: categoryNames.sort().join(',') })
-)
-
-const ComputedColoredIcon = styled(({ categoryNames, ...props }) => <Icon {...props} />)`
-  color: ${props => getColor(props.categoryNames)} !important;
-`
+const ComputedColoredIcon = React.lazy(() => import('./ComputedColoredIcon'))
 
 const CategoryIndicator = React.memo(({ project }) => {
   const popup = project.projectCategories.length > 0 ? {
@@ -28,10 +20,12 @@ const CategoryIndicator = React.memo(({ project }) => {
       project={project}
       trigger={
         <ButtonLink>
-          <ComputedColoredIcon
-            name={`${project.projectCategories.length === 0 ? 'outline ' : ''}star`}
-            categoryNames={project.projectCategories}
-          />
+          <React.Suspense fallback={<Loader />}>
+            <ComputedColoredIcon
+              name={`${project.projectCategories.length === 0 ? 'outline ' : ''}star`}
+              categoryNames={project.projectCategories}
+            />
+          </React.Suspense>
         </ButtonLink>
       }
       popup={popup}

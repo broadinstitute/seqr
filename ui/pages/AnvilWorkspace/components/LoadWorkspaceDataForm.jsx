@@ -16,6 +16,7 @@ import {
   INDIVIDUAL_ID_EXPORT_DATA,
   SAMPLE_TYPE_OPTIONS,
 } from 'shared/utils/constants'
+import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
@@ -58,7 +59,7 @@ UploadPedigreeField.propTypes = {
 
 const UPLOAD_PEDIGREE_FIELD = {
   name: FILE_FIELD_NAME,
-  validate: validators.required,
+  validate: validateUploadedFile,
   component: UploadPedigreeField,
 }
 
@@ -91,7 +92,7 @@ const FORM_FIELDS = [
   DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX,
 ]
 
-const createProjectFromWorkspace = ({ uploadedFile, ...values }, namespace, name) => new HttpRequestHelper(
+const createProjectFromWorkspace = (namespace, name) => ({ uploadedFile, ...values }) => new HttpRequestHelper(
   `/api/create_project_from_workspace/submit/${namespace}/${name}`,
   (responseJson) => {
     window.location.href = `/project/${responseJson.projectGuid}/project_page`
@@ -121,7 +122,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
     <ReduxFormWrapper
       form="loadWorkspaceData"
       modalName="loadWorkspaceData"
-      onSubmit={values => createProjectFromWorkspace(values, namespace, name)}
+      onSubmit={createProjectFromWorkspace(namespace, name)}
       confirmCloseIfNotSaved
       closeOnSuccess
       showErrorPanel

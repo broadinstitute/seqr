@@ -11,13 +11,16 @@ import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
   HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
-  annotationFieldLayout,
+  IN_SILICO_PANEL, annotationFieldLayout, inSilicoFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
-  HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
+  HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
+  SV_GROUPS,
 } from 'shared/components/panel/search/constants'
 import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
-import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
+import {
+  ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP,
+} from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
@@ -115,6 +118,18 @@ const INHERITANCE_PANEL = {
   ),
 }
 
+const IN_SILICO_PANEL_MAP = {
+  ...IN_SILICO_PANEL,
+  [DATASET_TYPE_SV_CALLS]: {
+    ...IN_SILICO_PANEL,
+    fieldLayout: inSilicoFieldLayout([SV_IN_SILICO_GROUP]),
+  },
+  [DATASET_TYPE_VARIANT_CALLS]: {
+    ...IN_SILICO_PANEL,
+    fieldLayout: inSilicoFieldLayout(NO_SV_IN_SILICO_GROUPS),
+  },
+}
+
 const LOCATION_PANEL_WITH_GENE_LIST = {
   ...LOCATION_PANEL,
   headerProps: {
@@ -131,11 +146,11 @@ const ANNOTATION_PANEL_MAP = {
   ...ANNOTATION_PANEL,
   [DATASET_TYPE_SV_CALLS]: {
     ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]], true),
+    fieldLayout: annotationFieldLayout([SV_GROUPS], true),
   },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
   },
 }
 
@@ -156,15 +171,23 @@ const secondaryPanel = panel => ({
 })
 const ANNOTATION_SECONDARY_PANEL_MAP = {
   ...secondaryPanel(ANNOTATION_PANEL),
+  fieldLayout: annotationFieldLayout([SV_GROUPS, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
   [DATASET_TYPE_SV_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_SV_CALLS]),
-  [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
+  [DATASET_TYPE_VARIANT_CALLS]: {
+    ...secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
+    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  },
 }
+
+const svCallsetChange = (onChange, initialValues) => val => onChange(
+  { ...initialValues, [SV_CALLSET_FREQUENCY]: val },
+)
 
 const SVFrequecyHeaderFilter = ({ value, onChange }) => (
   <Form.Group inline>
     <AfFilter
       value={value[SV_CALLSET_FREQUENCY]}
-      onChange={val => onChange({ ...value, [SV_CALLSET_FREQUENCY]: val })}
+      onChange={svCallsetChange(onChange, value)}
       inline
       label="Callset"
       width={16}
@@ -190,7 +213,7 @@ const SV_QS_FILTER_FIELD = {
 const SV_GQ_FILTER_FIELD = {
   name: 'min_gq_sv',
   label: 'WGS SV Genotype Quality',
-  labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 50.',
+  labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 10.',
   min: 0,
   max: 1000,
   step: 10,
@@ -204,6 +227,7 @@ const PANELS = [
   },
   ANNOTATION_PANEL_MAP,
   ANNOTATION_SECONDARY_PANEL_MAP,
+  IN_SILICO_PANEL_MAP,
   {
     ...FREQUENCY_PANEL,
     [DATASET_TYPE_VARIANT_CALLS]: {
