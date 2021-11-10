@@ -106,7 +106,7 @@ const pathogenicityPanel = hasHgmdPermission => ({
   headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(hasHgmdPermission ? HGMD_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
   fields: hasHgmdPermission ? HGMD_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
+  helpText: 'Filter by reported pathogenicity. This overrides the annotation filter, so variants will be returned if they have either the specified transcript consequence OR pathogenicity. This also overrides the frequency filter, so variants will be returned if they have either the specified frequency OR pathogenicity and frequency up to 0.05',
 })
 
 export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)

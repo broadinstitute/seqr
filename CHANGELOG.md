@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Update pathogenicity search to override frequency filters
 
 ## 11/10/21
 * Update in-silico score filtering behavior and add splice AI override
