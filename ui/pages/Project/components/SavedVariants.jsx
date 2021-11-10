@@ -15,25 +15,16 @@ import {
   VARIANT_PER_PAGE_FIELD,
 } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { LargeMultiselect } from 'shared/components/form/Inputs'
+import { LargeMultiselect, Dropdown } from 'shared/components/form/Inputs'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 
 import { TAG_FORM_FIELD } from '../constants'
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
-import { getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily } from '../selectors'
+import {
+  getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily, getProjectVariantSavedByOptions,
+} from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
-
-const ALL_FILTER = 'ALL'
-
-const FILTER_FIELDS = [
-  VARIANT_SORT_FIELD,
-  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
-  VARIANT_HIDE_EXCLUDED_FIELD,
-  VARIANT_HIDE_REVIEW_FIELD,
-  VARIANT_PER_PAGE_FIELD,
-]
-const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
 
 const LabelLink = styled(Link)`
   color: black;
@@ -42,6 +33,30 @@ const LabelLink = styled(Link)`
     color: black;
   }
 `
+
+const ALL_FILTER = 'ALL'
+
+const mapSavedByInputStateToProps = state => ({
+  options: getProjectVariantSavedByOptions(state),
+})
+
+const FILTER_FIELDS = [
+  VARIANT_SORT_FIELD,
+  VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
+  VARIANT_HIDE_EXCLUDED_FIELD,
+  VARIANT_HIDE_REVIEW_FIELD,
+  VARIANT_PER_PAGE_FIELD,
+  {
+    name: 'savedBy',
+    component: connect(mapSavedByInputStateToProps)(Dropdown),
+    inline: true,
+    selection: false,
+    fluid: false,
+    label: 'Saved By:',
+    placeholder: 'Select a user',
+  },
+]
+const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
 
 const BASE_FORM_ID = '-linkVariants'
 

@@ -24,10 +24,9 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
 
   const parentGenotypes = {}
-  if (value.mother || value.father) {
+  if (value.father) {
     individuals.forEach((individual) => {
       if (individual.affected === AFFECTED) {
-        parentGenotypes[individual.maternalId] = value.mother
         parentGenotypes[individual.paternalId] = value.father
       }
     })
