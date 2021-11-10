@@ -71,7 +71,6 @@ class FamilyTableRow extends React.PureComponent {
             compact={!showFamilyDetails}
             disableEdit={!showFamilyDetails}
             annotation={detailFields && noDetailFields && <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
-            showIndividuals={showFamilyDetails}
           />
         </OverflowCell>
       </Table.Row>

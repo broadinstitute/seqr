@@ -110,17 +110,10 @@ FamilyReadsLayout.propTypes = {
   showReads: PropTypes.object,
 }
 
-const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, showVariantDetails, ...props }) => (
+// TODO add data loader
+const BaseExpandedFamily = React.memo(({ family, individuals, tableName }) => (
   <div>
-    <Family
-      family={family}
-      compact={compact}
-      rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : null}
-      {...props}
-    />
-    {!compact && (
-      <FamilyReads layout={FamilyReadsLayout} familyGuid={family.familyGuid} buttonProps={READ_BUTTON_PROPS} />
-    )}
+    <FamilyReads layout={FamilyReadsLayout} familyGuid={family.familyGuid} buttonProps={READ_BUTTON_PROPS} />
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}
@@ -128,6 +121,30 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
         tableName={tableName}
       />
     ))}
+  </div>
+))
+
+BaseExpandedFamily.propTypes = {
+  family: PropTypes.object.isRequired,
+  individuals: PropTypes.arrayOf(PropTypes.object),
+  tableName: PropTypes.string,
+}
+
+const mapExpandedStateToProps = (state, ownProps) => ({
+  individuals: getSortedIndividualsByFamily(state)[ownProps.family.familyGuid],
+})
+
+const ExpandedFamily = connect(mapExpandedStateToProps)(BaseExpandedFamily)
+
+const BaseFamilyDetail = React.memo(({ family, compact, tableName, showVariantDetails, ...props }) => (
+  <div>
+    <Family
+      family={family}
+      compact={compact}
+      rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : null}
+      {...props}
+    />
+    {!compact && <ExpandedFamily family={family} tableName={tableName} />}
   </div>
 ))
 
@@ -142,7 +159,6 @@ BaseFamilyDetail.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getCurrentProject(state),
-  individuals: ownProps.showIndividuals ? getSortedIndividualsByFamily(state)[ownProps.familyGuid] : null,
 })
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
@@ -151,8 +167,6 @@ const FamilyPage = ({ match }) => (
   <FamilyDetail
     familyGuid={match.params.familyGuid}
     showVariantDetails
-    showDetails
-    showIndividuals
     fields={FAMILY_DETAIL_FIELDS}
   />
 )
