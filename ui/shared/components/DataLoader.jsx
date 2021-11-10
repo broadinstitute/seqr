@@ -30,10 +30,10 @@ class DataLoader extends React.PureComponent {
     }
   }
 
-  componentWillUpdate(nextProps) {
-    const { contentId } = this.props
-    if (nextProps.reloadOnIdUpdate && nextProps.contentId !== contentId) {
-      nextProps.load(nextProps.contentId)
+  componentDidUpdate(prevProps) {
+    const { reloadOnIdUpdate, load, contentId } = this.props
+    if (reloadOnIdUpdate && prevProps.contentId !== contentId) {
+      load(contentId)
     }
   }
 
