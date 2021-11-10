@@ -18,7 +18,7 @@ import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily, getNotesByFamilyType,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants,
 } from 'redux/selectors'
 
@@ -49,6 +49,7 @@ export const getProjectOverviewIsLoading = state => state.projectOverviewLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
+export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 
@@ -125,35 +126,29 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
   }, {}),
 )
 
-const getProjectAnalysisGroupMmeSubmissions = createSelector(
+export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
   getMmeSubmissionsByGuid,
   getProjectAnalysisGroupFamiliesByGuid,
-  getIndividualsByFamily,
-  (submissionsByGuid, familiesByGuid, individualsByFamily) => Object.keys(familiesByGuid).reduce((acc, familyGuid) => ([
-    ...acc,
-    ...(individualsByFamily[familyGuid] || []).map(individual => (
-      individual.mmeSubmissionGuid && submissionsByGuid[individual.mmeSubmissionGuid]
-    )).filter(submission => submission),
-  ]), []),
-)
-
-export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
-  getProjectAnalysisGroupMmeSubmissions,
-  getProjectAnalysisGroupFamiliesByGuid,
-  getIndividualsByGuid,
   getGenesById,
   getNotesByFamilyType,
-  (submissions, familiesByGuid, individualsByGuid, genesById, notesByFamilyType) => submissions.map((submission) => {
-    const individual = individualsByGuid[submission.individualGuid]
-    return {
-      mmeNotes: (notesByFamilyType[individual.familyGuid] || {}).M,
-      familyName: familiesByGuid[individual.familyGuid].displayName,
-      familyGuid: individual.familyGuid,
-      projectGuid: individual.projectGuid,
-      geneSymbols: (submission.geneIds || []).map(geneId => (genesById[geneId] || {}).geneSymbol || geneId),
-      ...submission,
-    }
-  }),
+  (submissionsByGuid, familiesByGuid, genesById, notesByFamilyType) => {
+    const individualFamilies = Object.values(familiesByGuid).reduce((acc, family) => ({
+      ...acc,
+      ...family.individualGuids.reduce((acc2, individualGuid) => ({ ...acc2, [individualGuid]: family }), {}),
+    }), {})
+
+    return Object.values(submissionsByGuid).reduce((acc, submission) => {
+      const family = individualFamilies[submission.individualGuid]
+      return family ? [...acc, {
+        mmeNotes: (notesByFamilyType[family.familyGuid] || {}).M,
+        familyName: family.displayName,
+        familyGuid: family.familyGuid,
+        projectGuid: family.projectGuid,
+        geneSymbols: (submission.geneIds || []).map(geneId => (genesById[geneId] || {}).geneSymbol || geneId),
+        ...submission,
+      }] : acc
+    }, [])
+  },
 )
 
 export const getTaggedVariantsByFamily = createSelector(

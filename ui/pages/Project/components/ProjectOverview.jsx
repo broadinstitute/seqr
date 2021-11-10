@@ -7,6 +7,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
+import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
@@ -18,12 +19,14 @@ import {
   DATASET_TYPE_SV_CALLS,
   ANVIL_URL,
 } from 'shared/utils/constants'
+import { loadMmeSubmissions } from '../reducers'
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsCount,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissionDetails,
+  getMmeSubmissionsLoading,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
@@ -81,26 +84,38 @@ const MME_COLUMNS = [
   { name: 'mmeNotes', content: 'Notes', width: 6, format: ({ mmeNotes }) => (mmeNotes || []).map(({ note }) => note).join('; ') },
 ]
 
-const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => (
-  <DataTable
-    basic="very"
-    fixed
-    data={Object.values(mmeSubmissions)}
-    idField="submissionGuid"
-    defaultSortColumn="familyName"
-    columns={MME_COLUMNS}
-  />
+const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions, load, loading }) => (
+  <DataLoader load={load} loading={false} content>
+    <DataTable
+      basic="very"
+      fixed
+      loading={loading}
+      data={Object.values(mmeSubmissions)}
+      idField="submissionGuid"
+      defaultSortColumn="familyName"
+      columns={MME_COLUMNS}
+    />
+  </DataLoader>
 ))
 
 BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
+  loading: PropTypes.bool,
+  load: PropTypes.func,
 }
 
 const mapMatchmakerSubmissionsStateToProps = (state, ownProps) => ({
   mmeSubmissions: getProjectAnalysisGroupMmeSubmissionDetails(state, ownProps),
+  loading: getMmeSubmissionsLoading(state),
 })
 
-const MatchmakerSubmissionOverview = connect(mapMatchmakerSubmissionsStateToProps)(BaseMatchmakerSubmissionOverview)
+const mapDispatchToProps = {
+  load: loadMmeSubmissions,
+}
+
+const MatchmakerSubmissionOverview = connect(
+  mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
+)(BaseMatchmakerSubmissionOverview)
 
 const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)

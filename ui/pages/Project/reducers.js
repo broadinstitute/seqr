@@ -7,6 +7,7 @@ import {
 import { REQUEST_SAVED_VARIANTS, updateEntity } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -20,6 +21,7 @@ const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
+const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
 
 // Data actions
 
@@ -40,13 +42,13 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
 
 const loadProjectChildEntities = (entityType, dispatchType) => (dispatch, getState) => {
   const state = getState()
-  const entities = state[`${entityType}ByGuid`]
+  const entities = state[`${toCamelcase(entityType)}ByGuid`]
   const loadedProjectFamilies = Object.values(entities).some(
     ({ projectGuid }) => projectGuid === state.currentProjectGuid,
   )
   if (!loadedProjectFamilies) {
     dispatch({ type: dispatchType })
-    new HttpRequestHelper(`/api/project/${state.currentProjectGuid}/get_${entityType}`,
+    new HttpRequestHelper(`/api/project/${state.currentProjectGuid}/get_${toSnakecase(entityType)}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -57,6 +59,8 @@ const loadProjectChildEntities = (entityType, dispatchType) => (dispatch, getSta
 }
 
 export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES)
+
+export const loadMmeSubmissions = () => loadProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
 
 export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
@@ -302,6 +306,7 @@ export const reducers = {
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
+  mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
