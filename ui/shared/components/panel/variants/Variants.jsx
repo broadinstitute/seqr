@@ -13,6 +13,7 @@ import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
+import { compHetGene } from './VariantUtils'
 import { VerticalSpacer } from '../../Spacers'
 
 const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) => <Grid.Row {...props} />)`  
@@ -179,16 +180,7 @@ const nestedVariantPanes = (variants, mainGeneId, props) => ([
 })))
 
 const CompoundHets = React.memo(({ variants, compoundHetToggle, ...props }) => {
-  const sharedGeneIds = variants.slice(1).reduce(
-    (acc, v) => acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}),
-  )
-  let mainGeneId = sharedGeneIds[0]
-  if (sharedGeneIds.length > 1) {
-    const mainSharedGene = variants.map(v => getVariantMainGeneId(v)).find(geneId => sharedGeneIds.includes(geneId))
-    if (mainSharedGene) {
-      mainGeneId = mainSharedGene
-    }
-  }
+  const mainGeneId = compHetGene(variants)
 
   // If linked variants are complex and not comp-het (more than 2 variants) and the first variant is a manual variant,
   // display associated variants nested under the manual variant
