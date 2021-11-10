@@ -23,7 +23,6 @@ import {
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsCount,
   getProjectAnalysisGroupSamplesByTypes,
-  getProjectAnalysisGroupMmeSubmissions,
   getProjectAnalysisGroupMmeSubmissionDetails,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
@@ -145,41 +144,29 @@ const mapFamiliesStateToProps = (state, ownProps) => ({
 
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
 
-const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
-  const mmeSubmissionCount = mmeSubmissions.length
-  const deletedSubmissionCount = mmeSubmissions.filter(({ deletedDate }) => deletedDate).length
+const MatchmakerOverview = React.memo(({ project }) => (
+  <DetailSection
+    title="Matchmaker Submissions"
+    content={project.mmeSubmissionCount ? (
+      <div>
+        {`${project.mmeSubmissionCount} submissions `}
+        <Modal
+          trigger={<ButtonLink icon="external" size="tiny" />}
+          title={`Matchmaker Submissions for ${project.name}`}
+          modalName="mmeSubmissions"
+          size="large"
+        >
+          <MatchmakerSubmissionOverview />
+        </Modal>
+        {project.mmeDeletedSubmissionCount > 0 && <div>{`${project.mmeDeletedSubmissionCount} removed submissions`}</div>}
+      </div>
+    ) : 'No Submissions'}
+  />
+))
 
-  return (
-    <DetailSection
-      title="Matchmaker Submissions"
-      content={mmeSubmissionCount ? (
-        <div>
-          {`${mmeSubmissionCount - deletedSubmissionCount} submissions `}
-          <Modal
-            trigger={<ButtonLink icon="external" size="tiny" />}
-            title={`Matchmaker Submissions for ${project.name}`}
-            modalName="mmeSubmissions"
-            size="large"
-          >
-            <MatchmakerSubmissionOverview />
-          </Modal>
-          {deletedSubmissionCount > 0 && <div>{`${deletedSubmissionCount} removed submissions`}</div>}
-        </div>
-      ) : 'No Submissions'}
-    />
-  )
-})
-
-Matchmaker.propTypes = {
+MatchmakerOverview.propTypes = {
   project: PropTypes.object.isRequired,
-  mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
 }
-
-const mapMatchmakerStateToProps = (state, ownProps) => ({
-  mmeSubmissions: getProjectAnalysisGroupMmeSubmissions(state, ownProps),
-})
-
-const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
 
 class DatasetSection extends React.PureComponent {
 

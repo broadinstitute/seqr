@@ -125,7 +125,7 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
   }, {}),
 )
 
-export const getProjectAnalysisGroupMmeSubmissions = createSelector(
+const getProjectAnalysisGroupMmeSubmissions = createSelector(
   getMmeSubmissionsByGuid,
   getProjectAnalysisGroupFamiliesByGuid,
   getIndividualsByFamily,

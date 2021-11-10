@@ -61,7 +61,7 @@ export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_F
 export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
   const project = projectsByGuid[currentProjectGuid]
-  if (!project.variantTagTypes) {
+  if (!project.variantTagTypes) { // TODO make sure nothing else loads tag types
     dispatch({ type: REQUEST_PROJECT_OVERVIEW })
     new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_overview`,
       (responseJson) => {

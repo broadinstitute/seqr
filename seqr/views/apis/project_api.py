@@ -194,11 +194,17 @@ def project_overview(request, project_guid):
     is_analyst = user_is_analyst(request.user)
     response = get_projects_child_entities([project], request.user, is_analyst=is_analyst, include_family_entities=False)
 
+    project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
+
     project_json = response['projectsByGuid'][project_guid]
-    project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
+    project_json.update({
+        'collaborators': get_json_for_project_collaborator_list(request.user, project),
+        'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
+        'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
+    })
+
     _add_tag_type_counts(project, project_json['variantTagTypes'])
     project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
-    # TODO summary data only for matchmaker
 
     return create_json_response(response)
 
