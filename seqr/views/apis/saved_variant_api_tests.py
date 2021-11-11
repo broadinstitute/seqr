@@ -801,10 +801,10 @@ class SavedVariantAPITest(object):
             'criteria': ['PM2_P'],
             'score': 1
         }
-        # self.check_manager_login(update_variant_acmg_classification_url, request_data={'acmgClassification': acmg_classification})
+        self.check_collaborator_login(update_variant_acmg_classification_url)
 
-        response = self.client.post(update_variant_acmg_classification_url)
-        # self.assertEqual(response.status_code, 200)
+        response = self.client.post(update_variant_acmg_classification_url, content_type='application/json', data=json.dumps(acmg_classification))
+        self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'savedVariantByGuid': {VARIANT_GUID: {'acmgClassification': acmg_classification}}})
 
 

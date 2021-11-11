@@ -221,13 +221,10 @@ class AcmgCriteria extends React.PureComponent {
 
 }
 
-/* eslint-disable arrow-body-style */
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    dispatchUpdateVariantClassification: (updates) => {
-      dispatch(updateVariantClassification({ ...updates, variant: ownProps.variant }))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  dispatchUpdateVariantClassification: (updates) => {
+    dispatch(updateVariantClassification({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
+  },
+})
 
 export default connect(null, mapDispatchToProps)(AcmgCriteria)

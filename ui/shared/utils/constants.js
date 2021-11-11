@@ -1131,7 +1131,6 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: (variant, tagsByGuid) => variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid].name).join('|') },
-  { header: 'tags', getVal: (variant, tagsByGuid) => (tagsByGuid[variant.variantGuid] || []).map(tag => tag.name).join('|') },
   { header: 'classification', getVal: variant => (variant.acmgClassification ? `${variant.acmgClassification.score}, ${variant.acmgClassification.classify}, ${variant.acmgClassification.criteria}` : '') },
   {
     header: 'notes',
