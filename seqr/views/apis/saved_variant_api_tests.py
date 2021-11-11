@@ -37,6 +37,7 @@ COMPOUND_HET_3_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1'],
     'variantId': '15-62456358-A-C',
+    'acmgClassification': None,
 }
 
 COMPOUND_HET_4_JSON = {
@@ -55,6 +56,7 @@ COMPOUND_HET_4_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1'],
     'variantId': '15-62456406-G-A',
+    'acmgClassification': None,
 }
 
 COMPOUND_HET_5_JSON = {
@@ -73,6 +75,7 @@ COMPOUND_HET_5_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1'],
     'variantId': '16-31096164-G-C',
+    'acmgClassification': None,
 }
 
 CREATE_VARIANT_JSON = {
@@ -90,6 +93,7 @@ CREATE_VARIANT_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1', 'F000002_2'],
     'variantId': '2-61413835-AAAG-A',
+    'acmgClassification': None,
 }
 
 CREATE_VARIANT_REQUEST_BODY = {
@@ -130,7 +134,7 @@ class SavedVariantAPITest(object):
         fields = {
             'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
             'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'mainTranscriptId', 'genotypes', 'hgmd',
-            'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',
+            'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
         }
         fields.update(SAVED_VARIANT_FIELDS)
         self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
@@ -275,6 +279,7 @@ class SavedVariantAPITest(object):
             'familyGuids': ['F000001_1', 'F000002_2'],
             'svType': 'DUP',
             'variantId': 'batch_123_DUP',
+            'acmgClassification': None,
         }
 
         request_body = {
