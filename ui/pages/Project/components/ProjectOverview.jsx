@@ -181,17 +181,48 @@ const mapMatchmakerStateToProps = (state, ownProps) => ({
 
 const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
 
+class DatasetSection extends React.PureComponent {
+
+  static propTypes = {
+    loadedSampleCounts: PropTypes.object.isRequired,
+  }
+
+  state = { showAll: false }
+
+  show = () => {
+    this.setState({ showAll: true })
+  }
+
+  render() {
+    const { loadedSampleCounts } = this.props
+    const { showAll } = this.state
+    const allLoads = Object.keys(loadedSampleCounts).sort().map(loadedDate => (
+      <div key={loadedDate}>
+        {`${new Date(loadedDate).toLocaleDateString()} - ${loadedSampleCounts[loadedDate]} samples`}
+      </div>
+    ))
+
+    const total = allLoads.length
+    if (total < 6 || showAll) {
+      return allLoads
+    }
+
+    return [
+      ...allLoads.slice(0, 2),
+      <ButtonLink key="show" padding="5px 0" onClick={this.show}>{`Show ${total - 5} additional datasets`}</ButtonLink>,
+      ...allLoads.slice(total - 3),
+    ]
+  }
+
+}
+
 const Dataset = React.memo(({ project, samplesByType, user }) => {
   const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
       key: sampleTypeKey,
       title: `${SAMPLE_TYPE_LOOKUP[sampleType].text}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
-      content: Object.keys(loadedSampleCounts).sort().map(loadedDate => (
-        <div key={loadedDate}>
-          {`${new Date(loadedDate).toLocaleDateString()} - ${loadedSampleCounts[loadedDate]} samples`}
-        </div>
-      )),
+      content: <DatasetSection loadedSampleCounts={loadedSampleCounts} />,
     }
   }).sort((a, b) => a.title.localeCompare(b.title))
 

@@ -1,6 +1,5 @@
 import { combineReducers } from 'redux'
 import { reducer as formReducer, SubmissionError } from 'redux-form'
-import hash from 'object-hash'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
@@ -178,9 +177,12 @@ export const updateGeneNote = values => updateEntity(
 )
 
 export const navigateSavedHashedSearch = (search, navigateSearch, resultsPath) => (dispatch) => {
-  const searchHash = hash.MD5(search)
-  dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
-  navigateSearch(`${resultsPath || '/variant_search/results'}/${searchHash}`)
+  // lazy load object-hash library as it is not used anywhere else
+  import('object-hash').then((hash) => {
+    const searchHash = hash.default.MD5(search)
+    dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: search } } })
+    navigateSearch(`${resultsPath || '/variant_search/results'}/${searchHash}`)
+  })
 }
 
 export const loadSearchedVariants = (

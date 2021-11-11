@@ -1,3 +1,5 @@
+import React from 'react'
+import { Form } from 'semantic-ui-react'
 import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
@@ -15,6 +17,8 @@ import {
   LOCUS_LIST_ITEMS_FIELD,
   AFFECTED,
   UNAFFECTED,
+  PREDICTOR_FIELDS,
+  SPLICE_AI_FIELD,
 } from 'shared/utils/constants'
 
 export const getSelectedAnalysisGroups = (
@@ -243,15 +247,14 @@ export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_SV,
   VEP_GROUP_SV_CONSEQUENCES,
 ]
-export const HIGH_IMPACT_GROUPS_NO_SV = [
+export const HIGH_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_FRAMESHIFT,
 ]
-export const HIGH_IMPACT_GROUPS = [
-  ...HIGH_IMPACT_GROUPS_NO_SV,
-  VEP_GROUP_SV,
-  VEP_GROUP_SV_CONSEQUENCES,
+export const HIGH_IMPACT_GROUPS_SPLICE = [
+  ...HIGH_IMPACT_GROUPS,
+  SPLICE_AI_FIELD,
 ]
 export const MODERATE_IMPACT_GROUPS = [
   VEP_GROUP_MISSENSE,
@@ -265,6 +268,7 @@ export const ALL_ANNOTATION_FILTER = {
   text: 'All',
   vepGroups: ALL_IMPACT_GROUPS,
 }
+export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]
 export const ANNOTATION_FILTER_OPTIONS = [
   ALL_ANNOTATION_FILTER,
   {
@@ -374,186 +378,46 @@ export const LOCATION_FIELDS = [
   },
 ]
 
-export const IN_SILICO_FIELDS = [
-  {
-    name: 'cadd',
-    label: 'CADD',
-    labelHelp: 'Enter a numeric value for CADD prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
+export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+  ({ field, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
+    const label = snakecaseToTitlecase(field)
+    const filterField = { name: field, label, group }
+
+    if (indicatorMap) {
+      return {
+        labelHelp: `Select a value for ${label}`,
+        component: Select,
+        options: [
+          { text: '', value: null },
+          ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
+        ],
+        ...filterField,
+      }
+    }
+
+    const labelHelp = (
+      <div>
+        {`Enter a numeric cutoff for ${label}`}
+        {dangerThreshold && (
+          <div>
+            Thresholds:
+            <div>{`Red > ${dangerThreshold}`}</div>
+            <div>{`Yellow > ${warningThreshold}`}</div>
+          </div>
+        )}
+      </div>
+    )
+    return {
+      labelHelp,
+      control: Form.Input,
+      type: 'number',
+      min: min || 0,
+      max: max || 1,
+      step: max ? 1 : 0.05,
+      ...filterField,
+    }
   },
-  {
-    name: 'revel',
-    label: 'Revel',
-    labelHelp: 'Enter a numeric value for Revel prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'primate_ai',
-    label: 'Primate AI',
-    labelHelp: 'Enter a numeric value for Primate AI prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'mpc',
-    label: 'MPC',
-    labelHelp: 'Enter a numeric value for MPC prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'splice_ai',
-    label: 'Splice AI',
-    labelHelp: 'Enter a numeric value for Splice AI prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'eigen',
-    label: 'Eigen',
-    labelHelp: 'Enter a numeric value for Eigen prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'dann',
-    label: 'Dann',
-    labelHelp: 'Enter a numeric value for Dann prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'strvctvre',
-    label: 'STRVCTVRE',
-    labelHelp: 'Enter a numeric value for STRVCTVRE prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'gerp_rs',
-    label: 'GERP RS',
-    labelHelp: 'Enter a value for GERP RS prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'phastcons_100_vert',
-    label: 'Phastcons 100 Vert',
-    labelHelp: 'Enter a value for Phastcons 100 Vert prediction',
-    component: BaseSemanticInput,
-    inputType: 'Input',
-    type: 'number',
-  },
-  {
-    name: 'polyphen',
-    label: 'Polyphen',
-    labelHelp: 'Enter a value for Polyphen prediction',
-    component: Select,
-    options: [{
-      text: '',
-      value: null,
-    },
-    {
-      text: 'benign',
-      value: 'B',
-    },
-    {
-      text: 'possibly damaging',
-      value: 'P',
-    },
-    {
-      text: 'probably damaging',
-      value: 'D',
-    }],
-  },
-  {
-    name: 'sift',
-    label: 'Sift',
-    labelHelp: 'Enter a value for Sift prediction',
-    component: Select,
-    options: [{
-      text: '',
-      value: null,
-    },
-    {
-      text: 'tolerated',
-      value: 'T',
-    },
-    {
-      text: 'damaging',
-      value: 'D',
-    }],
-  },
-  {
-    name: 'mut_taster',
-    label: 'Mut Taster',
-    labelHelp: 'Enter value for Mutation Taster prediction',
-    component: Select,
-    options: [{
-      text: '',
-      value: null,
-    },
-    {
-      text: 'polymorphism (N)',
-      value: 'N',
-    },
-    {
-      text: 'polymorphism (P)',
-      value: 'P',
-    },
-    {
-      text: 'disease causing',
-      value: 'D',
-    }],
-  },
-  {
-    name: 'fathmm',
-    label: 'FATHMM',
-    labelHelp: 'Enter a value for FATHMM prediction',
-    component: Select,
-    options: [{
-      text: '',
-      value: null,
-    },
-    {
-      text: 'tolerated',
-      value: 'T',
-    },
-    {
-      text: 'damaging',
-      value: 'D',
-    }],
-  },
-  {
-    name: 'metasvm',
-    label: 'METASVM',
-    labelHelp: 'Enter a value for METASVM prediction',
-    component: Select,
-    options: [{
-      text: '',
-      value: null,
-    },
-    {
-      text: 'tolerated',
-      value: 'T',
-    },
-    {
-      text: 'damaging',
-      value: 'D',
-    }],
-  },
-]
+)
 
 export const QUALITY_FILTER_FIELDS = [
   {

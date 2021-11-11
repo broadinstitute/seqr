@@ -253,6 +253,7 @@ NESTED_FIELDS = {
 }
 
 GRCH38_LOCUS_FIELD = 'rg37_locus'
+SPLICE_AI_FIELD = 'splice_ai'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
@@ -286,30 +287,19 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
     'primate_ai_score': {'response_key': 'primate_ai'},
-    'splice_ai_delta_score': {'response_key': 'splice_ai'},
+    'splice_ai_delta_score': {'response_key': SPLICE_AI_FIELD},
     'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},
     'dbnsfp_REVEL_score': {},
     'dbnsfp_SIFT_pred': {},
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 
+def get_prediction_response_key(key):
+    return key.split('_')[1].lower()
+
 PREDICTION_FIELD_LOOKUP = {
-    'cadd': 'cadd_PHRED',
-    'dann': 'dbnsfp_DANN_score',
-    'eigen': 'eigen_Eigen_phred',
-    'fathmm': 'dbnsfp_FATHMM_pred',
-    'gerp_rs': 'dbnsfp_GERP_RS',
-    'mpc': 'mpc_MPC',
-    'metasvm': 'dbnsfp_MetaSVM_pred',
-    'mut_taster': 'dbnsfp_MutationTaster_pred',
-    'phastcons_100_vert': 'dbnsfp_phastCons100way_vertebrate',
-    'polyphen': 'dbnsfp_Polyphen2_HVAR_pred',
-    'primate_ai': 'primate_ai_score',
-    'splice_ai': 'splice_ai_delta_score',
-    'splice_ai_consequence': 'splice_ai_splice_consequence',
-    'revel': 'dbnsfp_REVEL_score',
-    'sift': 'dbnsfp_SIFT_pred',
-    'strvctvre': 'StrVCTVRE_score',
+    field_config.get('response_key', get_prediction_response_key(field)): field
+    for field, field_config in PREDICTION_FIELDS_CONFIG.items()
 }
 
 QUALITY_QUERY_FIELDS = {'gq_sv': 10}

@@ -1320,6 +1320,7 @@ class EsUtilsTest(TestCase):
             'annotations': {
                 'in_frame': ['inframe_insertion', 'inframe_deletion'],
                 'other': ['5_prime_UTR_variant', 'intergenic_variant'],
+                'splice_ai': '0.8',
             },
             'freqs': {
                 'callset': {'af': 0.1},
@@ -1449,7 +1450,12 @@ class EsUtilsTest(TestCase):
                     ]
                 }
             },
-            {'bool': {'must': [{'range': {'cadd_PHRED': {'gte': 11.5}}}, {'prefix': {'dbnsfp_SIFT_pred': 'D'}}]}},
+            {'bool': {'should': [
+                {'bool': {'must_not': [{'exists': {'field': 'cadd_PHRED'}}]}},
+                {'range': {'cadd_PHRED': {'gte': 11.5}}},
+                {'bool': {'must_not': [{'exists': {'field': 'dbnsfp_SIFT_pred'}}]}},
+                {'prefix': {'dbnsfp_SIFT_pred': 'D'}},
+            ]}},
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
             {'bool': {
                     'should': [
@@ -1468,6 +1474,7 @@ class EsUtilsTest(TestCase):
                             ]
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                        {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
                     ]
                 }
             },
