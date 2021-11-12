@@ -13,6 +13,7 @@ import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
+import { compHetGene } from './VariantUtils'
 import { VerticalSpacer } from '../../Spacers'
 
 const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) => <Grid.Row {...props} />)`  
@@ -178,17 +179,8 @@ const nestedVariantPanes = (variants, mainGeneId, props) => ([
   pane: { key: `pane${i}`, attached: false, basic: true, content },
 })))
 
-const CompoundHets = React.memo(({ variants, ...props }) => {
-  const sharedGeneIds = variants.slice(1).reduce(
-    (acc, v) => acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}),
-  )
-  let mainGeneId = sharedGeneIds[0]
-  if (sharedGeneIds.length > 1) {
-    const mainSharedGene = variants.map(v => getVariantMainGeneId(v)).find(geneId => sharedGeneIds.includes(geneId))
-    if (mainSharedGene) {
-      mainGeneId = mainSharedGene
-    }
-  }
+const CompoundHets = React.memo(({ variants, compoundHetToggle, ...props }) => {
+  const mainGeneId = compHetGene(variants)
 
   // If linked variants are complex and not comp-het (more than 2 variants) and the first variant is a manual variant,
   // display associated variants nested under the manual variant
@@ -204,7 +196,14 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
         </Grid.Column>
       ))}
       <Grid.Column width={16}>
-        {mainGeneId && <VariantGene geneId={mainGeneId} variant={allVariants[0]} areCompoundHets />}
+        {mainGeneId && (
+          <VariantGene
+            geneId={mainGeneId}
+            variant={allVariants[0]}
+            areCompoundHets
+            compoundHetToggle={compoundHetToggle}
+          />
+        )}
       </Grid.Column>
       <StyledCompoundHetRows stackable columns="equal">
         {compHetRows(mainVariants || variants, mainGeneId, props)}
@@ -220,12 +219,13 @@ const CompoundHets = React.memo(({ variants, ...props }) => {
 
 CompoundHets.propTypes = {
   variants: PropTypes.arrayOf(PropTypes.object),
+  compoundHetToggle: PropTypes.func,
 }
 
-const Variants = React.memo(({ variants, ...props }) => (
+const Variants = React.memo(({ variants, compoundHetToggle, ...props }) => (
   <Grid stackable divided="vertically">
     {variants.map(variant => (Array.isArray(variant) ?
-      <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} {...props} /> :
+      <CompoundHets variants={variant} key={`${variant.map(v => v.variantId).join()}-${variant[0].familyGuids.join('-')}`} compoundHetToggle={compoundHetToggle} {...props} /> :
       <VariantWithReads variant={variant} key={`${variant.variantId}-${variant.familyGuids.join('-')}`} {...props} />
     ))}
   </Grid>
@@ -233,6 +233,7 @@ const Variants = React.memo(({ variants, ...props }) => (
 
 Variants.propTypes = {
   variants: PropTypes.arrayOf(PropTypes.object),
+  compoundHetToggle: PropTypes.func,
 }
 
 export default Variants
