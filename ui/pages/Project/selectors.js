@@ -49,6 +49,7 @@ export const getProjectOverviewIsLoading = state => state.projectOverviewLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
+export const getFamilyDetailsLoading = state => state.familyDetailsLoading.isLoading
 export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading

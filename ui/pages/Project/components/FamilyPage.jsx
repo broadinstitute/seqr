@@ -13,10 +13,12 @@ import {
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
 import Family from 'shared/components/panel/family/Family'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
+import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 
-import { getCurrentProject } from '../selectors'
+import { loadFamilyDetails } from '../reducers'
+import { getCurrentProject, getFamilyDetailsLoading } from '../selectors'
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
@@ -110,9 +112,9 @@ FamilyReadsLayout.propTypes = {
   showReads: PropTypes.object,
 }
 
-// TODO add data loader
-const BaseExpandedFamily = React.memo(({ family, individuals, tableName }) => (
-  <div>
+const BaseExpandedFamily = React.memo(({ familyDetail, family, individuals, tableName, loading, load }) => (
+  <DataLoader load={load} contentId={family.familyGuid} content={individuals} loading={loading}>
+    {familyDetail}
     <FamilyReads layout={FamilyReadsLayout} familyGuid={family.familyGuid} buttonProps={READ_BUTTON_PROPS} />
     {individuals && individuals.map(individual => (
       <IndividualRow
@@ -121,32 +123,43 @@ const BaseExpandedFamily = React.memo(({ family, individuals, tableName }) => (
         tableName={tableName}
       />
     ))}
-  </div>
+  </DataLoader>
 ))
 
 BaseExpandedFamily.propTypes = {
   family: PropTypes.object.isRequired,
+  familyDetail: PropTypes.node,
   individuals: PropTypes.arrayOf(PropTypes.object),
   tableName: PropTypes.string,
+  loading: PropTypes.bool,
+  load: PropTypes.func,
 }
 
 const mapExpandedStateToProps = (state, ownProps) => ({
+  loading: getFamilyDetailsLoading(state),
   individuals: getSortedIndividualsByFamily(state)[ownProps.family.familyGuid],
 })
 
-const ExpandedFamily = connect(mapExpandedStateToProps)(BaseExpandedFamily)
+const mapDispatchToProps = {
+  load: loadFamilyDetails,
+}
 
-const BaseFamilyDetail = React.memo(({ family, compact, tableName, showVariantDetails, ...props }) => (
-  <div>
+const ExpandedFamily = connect(mapExpandedStateToProps, mapDispatchToProps)(BaseExpandedFamily)
+
+const BaseFamilyDetail = React.memo(({ family, compact, tableName, showVariantDetails, ...props }) => {
+  const familyDetail = (
     <Family
       family={family}
       compact={compact}
       rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : null}
       {...props}
     />
-    {!compact && <ExpandedFamily family={family} tableName={tableName} />}
-  </div>
-))
+  )
+  if (compact) {
+    return familyDetail
+  }
+  return <ExpandedFamily family={family} familyDetail={familyDetail} tableName={tableName} />
+})
 
 BaseFamilyDetail.propTypes = {
   family: PropTypes.object.isRequired,

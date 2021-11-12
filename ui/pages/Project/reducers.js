@@ -21,6 +21,7 @@ const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
+const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
 
 // Data actions
@@ -68,6 +69,24 @@ export const loadProjectOverview = () => (dispatch, getState) => {
   if (!project.variantTagTypes) { // TODO make sure nothing else loads tag types
     dispatch({ type: REQUEST_PROJECT_OVERVIEW })
     new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_overview`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
+
+export const loadFamilyDetails = familyGuid => (dispatch, getState) => {
+  const { familiesByGuid, individualsByGuid } = getState()
+  const family = familiesByGuid[familyGuid]
+  // TODO make sure nothing else loads individuals
+  if (!family || !family.individualGuids || family.individualGuids.some(
+    individualGuid => !individualsByGuid[individualGuid],
+  )) {
+    dispatch({ type: REQUEST_FAMILY_DETAILS })
+    new HttpRequestHelper(`/api/family/${familyGuid}/details`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -306,6 +325,7 @@ export const reducers = {
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
+  familyDetailsLoading: loadingReducer(REQUEST_FAMILY_DETAILS, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
