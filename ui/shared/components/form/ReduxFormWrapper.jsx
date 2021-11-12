@@ -235,19 +235,20 @@ class ReduxFormWrapper extends React.Component {
     return nextState !== this.state
   }
 
-  componentWillUpdate(nextProps) {
+  componentDidUpdate(prevProps) {
     const {
-      onSubmitSucceeded, handleClose, confirmCloseIfNotSaved, dirty, setModalConfirm: dispatchSetModalConfirm,
+      onSubmitSucceeded, submitSucceeded, handleClose, confirmCloseIfNotSaved, closeOnSuccess, noModal, dirty,
+      setModalConfirm: dispatchSetModalConfirm,
     } = this.props
-    if (onSubmitSucceeded && nextProps.submitSucceeded) {
+    if (onSubmitSucceeded && submitSucceeded) {
       onSubmitSucceeded()
     }
-    if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
+    if (submitSucceeded && closeOnSuccess && !noModal) {
       handleClose(true)
     } else if (confirmCloseIfNotSaved) {
-      if (nextProps.dirty && !dirty) {
+      if (dirty && !prevProps.dirty) {
         dispatchSetModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
-      } else if (!nextProps.dirty && dirty) {
+      } else if (!dirty && prevProps.dirty) {
         dispatchSetModalConfirm(null)
       }
     }

@@ -44,7 +44,7 @@ class AwesomeBar extends React.PureComponent {
 
   state = {}
 
-  componentWillMount() {
+  componentDidMount() {
     this.resetComponent()
   }
 
