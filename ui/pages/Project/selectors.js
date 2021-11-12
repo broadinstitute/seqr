@@ -48,6 +48,7 @@ export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.i
 export const getProjectOverviewIsLoading = state => state.projectOverviewLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
+export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
 export const getFamilyDetailsLoading = state => state.familyDetailsLoading.isLoading
 export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
@@ -149,6 +150,43 @@ export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
         ...submission,
       }] : acc
     }, [])
+  },
+)
+
+export const getTagTypeData = createSelector(
+  getProjectGuid,
+  getTagTypesByProject,
+  getCurrentAnalysisGroup,
+  getFamilyTagTypeCounts,
+  (projectGuid, tagTypesByProject, analysisGroup, familyTagTypeCounts) => {
+    let tagTypeCounts
+    if (analysisGroup) {
+      tagTypeCounts = analysisGroup.familyGuids.reduce((acc, familyGuid) => Object.entries(
+        familyTagTypeCounts[familyGuid] || {},
+      ).reduce((acc2, [tagTypeGuid, count]) => ({ ...acc2, [tagTypeGuid]: count + (acc2[tagTypeGuid] || 0) }), acc), {})
+    }
+
+    return (tagTypesByProject[projectGuid] || []).map(vtt => ({
+      count: tagTypeCounts ? tagTypeCounts[vtt.variantTagTypeGuid] || 0 : vtt.numTags,
+      ...vtt,
+    }))
+  },
+)
+
+export const getTagTypeDataByFamily = createSelector(
+  getProjectGuid,
+  getTagTypesByProject,
+  getFamilyTagTypeCounts,
+  (projectGuid, tagTypesByProject, familyTagTypeCounts) => {
+    const tagTypesByGuid = (tagTypesByProject[projectGuid] || []).reduce(
+      (acc, vtt) => ({ ...acc, [vtt.variantTagTypeGuid]: vtt }), {},
+    )
+    return Object.entries(familyTagTypeCounts).reduce((acc, [familyGuid, tagTypeCounts]) => ({
+      ...acc,
+      [familyGuid]: Object.entries(tagTypeCounts).map(
+        ([tagTypeGuid, count]) => ({ ...tagTypesByGuid[tagTypeGuid], ...count }),
+      ).sort((a, b) => a.order - b.order),
+    }), {})
   },
 )
 
@@ -334,6 +372,7 @@ export const getEntityExportConfig = ({ project, tableName, fileName, fields }) 
   }),
 })
 
+// TODO project page downloads no longer have all data
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSamplesByFamily,

@@ -1,13 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
-import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME, NOTE_TAG_NAME } from 'shared/utils/constants'
-
-export const getVariantTagTypeCount = (vtt, familyGuids) => (
-  familyGuids ? familyGuids.reduce((count, familyGuid) => count + (vtt.numTagsPerFamily[familyGuid] || 0), 0) :
-    vtt.numTags
-)
+import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
+import { getTagTypeData, getTagTypeDataByFamily } from '../selectors'
 
 export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, tag }) => {
   let path = tag ? `/${tag}` : ''
@@ -21,7 +18,7 @@ export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, t
 }
 
 const VariantTagTypeBar = React.memo((
-  { project, familyGuid, analysisGroup, sectionLinks = true, hideExcluded, hideReviewOnly, ...props },
+  { data, project, familyGuid, analysisGroup, sectionLinks = true, hideExcluded, hideReviewOnly, ...props },
 ) => (
   <HorizontalStackedBar
     {...props}
@@ -32,25 +29,25 @@ const VariantTagTypeBar = React.memo((
     noDataMessage="No Saved Variants"
     linkPath={getSavedVariantsLinkPath({ project, analysisGroup, familyGuid })}
     sectionLinks={sectionLinks}
-    data={(project.variantTagTypes || []).filter(
-      vtt => vtt.name !== NOTE_TAG_NAME && !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) &&
-        !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
-    ).map(vtt => ({
-      count: getVariantTagTypeCount(vtt,
-        familyGuid ? [familyGuid] : (analysisGroup || {}).familyGuids),
-      ...vtt,
-    }
-    ))}
+    data={(hideExcluded || hideReviewOnly) ? data.filter(
+      vtt => !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
+    ) : data}
   />
 ))
 
 VariantTagTypeBar.propTypes = {
   project: PropTypes.object.isRequired,
+  data: PropTypes.arrayOf(PropTypes.object).isRequired,
   familyGuid: PropTypes.string,
-  analysisGroup: PropTypes.object,
+  analysisGroup: PropTypes.object, // TODO clean up, can probably just ge the guid
   sectionLinks: PropTypes.bool,
   hideExcluded: PropTypes.bool,
   hideReviewOnly: PropTypes.bool,
 }
 
-export default VariantTagTypeBar
+const mapStateToProps = (state, ownProps) => ({
+  data: ownProps.familyGuid ?
+    getTagTypeDataByFamily(state)[ownProps.familyGuid] || [] : getTagTypeData(state, ownProps),
+})
+
+export default connect(mapStateToProps)(VariantTagTypeBar)

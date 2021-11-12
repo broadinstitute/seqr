@@ -3,6 +3,7 @@ APIs for updating project metadata, as well as creating or deleting projects
 """
 
 import json
+from collections import defaultdict
 from django.db.models import Count
 from django.utils import timezone
 
@@ -194,7 +195,7 @@ def project_overview(request, project_guid):
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
     })
 
-    _add_tag_type_counts(project, project_json['variantTagTypes'])
+    response['familyTagTypeCounts'] = _add_tag_type_counts(project, project_json['variantTagTypes'])
     project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
 
     return create_json_response(response)
@@ -223,6 +224,7 @@ def project_mme_submisssions(request, project_guid):
 
 
 def _add_tag_type_counts(project, project_variant_tags):
+    family_tag_type_counts = defaultdict(dict)
     note_counts_by_family = VariantNote.objects.filter(saved_variants__family__project=project)\
         .values('saved_variants__family__guid').annotate(count=Count('*'))
     num_tags = sum(count['count'] for count in note_counts_by_family)
@@ -234,7 +236,6 @@ def _add_tag_type_counts(project, project_variant_tags):
         'color': 'grey',
         'order': 100,
         'numTags': num_tags,
-        'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in note_counts_by_family},
     }
 
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
@@ -245,11 +246,13 @@ def _add_tag_type_counts(project, project_variant_tags):
         num_tags = sum(count['count'] for count in current_tag_type_counts)
         tag_type.update({
             'numTags': num_tags,
-            'numTagsPerFamily': {count['saved_variants__family__guid']: count['count'] for count in
-                                 current_tag_type_counts},
         })
+        for count in current_tag_type_counts:
+            family_tag_type_counts[count['saved_variants__family__guid']].update(
+                {tag_type['variantTagTypeGuid']: {'count': count['count']}})
 
     project_variant_tags.append(note_tag_type)
+    return family_tag_type_counts
 
 
 def _delete_project(project_guid, user):

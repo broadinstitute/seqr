@@ -2,8 +2,9 @@
 APIs used to retrieve and modify Individual fields
 """
 import json
-
 from django.contrib.auth.models import User
+from django.db.models import Count
+
 from matchmaker.models import MatchmakerSubmission
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
@@ -11,10 +12,10 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
     get_or_create_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
-from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_individuals, \
+from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_individuals, _get_json_for_models, \
     get_json_for_family_note, get_json_for_family_notes, get_json_for_samples, get_json_for_matchmaker_submissions
 from seqr.views.utils.project_context_utils import add_child_ids, families_discovery_tags
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, IgvSample
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, IgvSample, VariantTag, VariantTagType
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 
@@ -55,12 +56,20 @@ def family_page_data(request, family_guid):
     for individual in individuals:
         individual['mmeSubmissionGuid'] = individual_mme_submission_guids.get(individual['individualGuid'])
 
+    family_tag_type_counts = VariantTag.objects.filter(saved_variants__family=family).values(
+        'variant_tag_type__guid').annotate(count=Count('*'))
+    tag_type_counts_by_guid = {c['variant_tag_type__guid']: {'count': c['count']} for c in family_tag_type_counts}
+    variant_tag_types = _get_json_for_models(VariantTagType.objects.filter(guid__in=tag_type_counts_by_guid.keys()))
+    for vtt in variant_tag_types:
+        tag_type_counts_by_guid[vtt['variantTagTypeGuid']].update(vtt)
+
     response.update({
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
         'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in submissions},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
+        'familyTagTypeCounts': {family_guid: tag_type_counts_by_guid},
     })
     add_child_ids(response, include_family_entities=True)
 

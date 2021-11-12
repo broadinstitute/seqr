@@ -1,11 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 import { Popup, Table } from 'semantic-ui-react'
 
 import { ColoredIcon, HelpIcon, NoBorderTable } from 'shared/components/StyledComponents'
-import { getVariantTagTypeCount, getSavedVariantsLinkPath } from './VariantTagTypeBar'
+import { NOTE_TAG_NAME } from 'shared/utils/constants'
+import { getSavedVariantsLinkPath } from './VariantTagTypeBar'
+import { getTagTypeData } from '../selectors'
 
 const TableRow = styled(Table.Row)`
   padding: 0px !important;`
@@ -13,13 +16,18 @@ const TableRow = styled(Table.Row)`
 const TableCell = styled(Table.Cell)`
   padding: 0 0 0 10px !important;`
 
-const VariantTags = React.memo(({ project, analysisGroup }) => (
+const getNoteTagType = (project) => {
+  const noteType = (project.variantTagTypes || []).find(vtt => vtt.name === NOTE_TAG_NAME)
+  return noteType && { ...noteType, count: noteType.numTags }
+}
+
+const VariantTags = React.memo(({ project, analysisGroup, data }) => (
   <NoBorderTable basic="very" compact="very">
     <Table.Body>
       {
-        project.variantTagTypes && project.variantTagTypes.map(variantTagType => (
-          { count: getVariantTagTypeCount(variantTagType, (analysisGroup || {}).familyGuids), ...variantTagType }
-        )).filter(variantTagType => variantTagType.count > 0).map(variantTagType => (
+        [...data, analysisGroup ? null : getNoteTagType(project)].filter(
+          variantTagType => variantTagType && variantTagType.count > 0,
+        ).map(variantTagType => (
           <TableRow key={variantTagType.variantTagTypeGuid}>
             <TableCell collapsing>
               <ColoredIcon name="square" size="small" color={variantTagType.color} />
@@ -47,7 +55,12 @@ const VariantTags = React.memo(({ project, analysisGroup }) => (
 
 VariantTags.propTypes = {
   project: PropTypes.object.isRequired,
+  data: PropTypes.arrayOf(PropTypes.object).isRequired,
   analysisGroup: PropTypes.object,
 }
 
-export default VariantTags
+const mapStateToProps = (state, ownProps) => ({
+  data: getTagTypeData(state, ownProps),
+})
+
+export default connect(mapStateToProps)(VariantTags)
