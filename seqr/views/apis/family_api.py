@@ -33,6 +33,7 @@ def family_page_data(request, family_guid):
 
     family_json = _get_json_for_family(
         family, request.user, project_guid=project.guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+    family_json['detailsLoaded'] = True
     response = families_discovery_tags([family_json])
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family=family), is_analyst=is_analyst)

@@ -172,6 +172,8 @@ def project_families(request, project_guid):
     families = _get_json_for_families(
         Family.objects.filter(project=project), request.user, project_guid=project_guid, add_individual_guids_field=True
     )
+    response = families_discovery_tags(families)
+    response['projectsByGuid'] = {project_guid: {'familiesLoaded': True}}
     return create_json_response(families_discovery_tags(families))
 
 
@@ -186,6 +188,7 @@ def project_overview(request, project_guid):
 
     project_json = response['projectsByGuid'][project_guid]
     project_json.update({
+        'detailsLoaded': True,
         'collaborators': get_json_for_project_collaborator_list(request.user, project),
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
@@ -213,6 +216,7 @@ def project_mme_submisssions(request, project_guid):
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project))
 
     return create_json_response({
+        'projectsByGuid': {project_guid: {'mmeSubmissionsLoaded': True}},
         'mmeSubmissionsByGuid': submissions_by_guid,
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
     })

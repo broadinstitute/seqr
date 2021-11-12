@@ -42,14 +42,12 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
 }
 
 const loadProjectChildEntities = (entityType, dispatchType) => (dispatch, getState) => {
-  const state = getState()
-  const entities = state[`${toCamelcase(entityType)}ByGuid`]
-  const loadedProjectFamilies = Object.values(entities).some(
-    ({ projectGuid }) => projectGuid === state.currentProjectGuid,
-  )
-  if (!loadedProjectFamilies) {
+  const { currentProjectGuid, projectsByGuid } = getState()
+  const project = projectsByGuid[currentProjectGuid]
+
+  if (!project[`${toCamelcase(entityType)}Loaded`]) {
     dispatch({ type: dispatchType })
-    new HttpRequestHelper(`/api/project/${state.currentProjectGuid}/get_${toSnakecase(entityType)}`,
+    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_${toSnakecase(entityType)}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -66,7 +64,7 @@ export const loadMmeSubmissions = () => loadProjectChildEntities('mme submission
 export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
   const project = projectsByGuid[currentProjectGuid]
-  if (!project.variantTagTypes) { // TODO make sure nothing else loads tag types
+  if (!project.detailsLoaded) {
     dispatch({ type: REQUEST_PROJECT_OVERVIEW })
     new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_overview`,
       (responseJson) => {
@@ -79,12 +77,9 @@ export const loadProjectOverview = () => (dispatch, getState) => {
 }
 
 export const loadFamilyDetails = familyGuid => (dispatch, getState) => {
-  const { familiesByGuid, individualsByGuid } = getState()
+  const { familiesByGuid } = getState()
   const family = familiesByGuid[familyGuid]
-  // TODO make sure nothing else loads individuals
-  if (!family || !family.individualGuids || family.individualGuids.some(
-    individualGuid => !individualsByGuid[individualGuid],
-  )) {
+  if (!family || !family.detailsLoaded) {
     dispatch({ type: REQUEST_FAMILY_DETAILS })
     new HttpRequestHelper(`/api/family/${familyGuid}/details`,
       (responseJson) => {
