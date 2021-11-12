@@ -585,7 +585,7 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
     }
     if (breadcrumb === 'family_page') {
       const breadcrumbIdSections = [{
-        content: `Family: ${family.displayName}`,
+        content: `Family: ${family.displayName || ''}`,
         link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
       }]
       if (match.params.breadcrumbIdSection) {

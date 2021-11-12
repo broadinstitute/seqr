@@ -13,7 +13,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_individuals, \
     get_json_for_family_note, get_json_for_family_notes, get_json_for_samples, get_json_for_matchmaker_submissions
-from seqr.views.utils.project_context_utils import add_child_ids
+from seqr.views.utils.project_context_utils import add_child_ids, families_discovery_tags
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, IgvSample
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
@@ -33,6 +33,7 @@ def family_page_data(request, family_guid):
 
     family_json = _get_json_for_family(
         family, request.user, project_guid=project.guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+    response = families_discovery_tags([family_json])
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family=family), is_analyst=is_analyst)
 
@@ -53,14 +54,13 @@ def family_page_data(request, family_guid):
     for individual in individuals:
         individual['mmeSubmissionGuid'] = individual_mme_submission_guids.get(individual['individualGuid'])
 
-    response = {
-        'familiesByGuid': {family_guid: family_json},
+    response.update({
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
         'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
         'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in submissions},
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
-    }
+    })
     add_child_ids(response, include_family_entities=True)
 
     return create_json_response(response)

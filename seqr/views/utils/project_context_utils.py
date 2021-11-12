@@ -2,10 +2,11 @@ from collections import defaultdict
 from django.db.models import Q, prefetch_related_objects
 
 from seqr.models import Family, Individual, Sample, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
-    VariantFunctionalData, FamilyNote
+    VariantFunctionalData, FamilyNote, SavedVariant
+from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
     get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects, \
-    get_json_for_family_notes
+    get_json_for_family_notes, get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 
 
@@ -129,6 +130,25 @@ def add_child_ids(response, include_family_entities):
 
     for family in response['familiesByGuid'].values():
         family['individualGuids'] = individual_guids_by_family[family['familyGuid']]
+
+
+def families_discovery_tags(families):
+    families_by_guid = {f['familyGuid']: dict(discoveryTags=[], **f) for f in families}
+
+    discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
+        family__guid__in=families_by_guid.keys(), varianttag__variant_tag_type__category='CMG Discovery Tags',
+    ), add_details=True)
+
+    gene_ids = set()
+    for tag in discovery_tags:
+        gene_ids.update(list(tag.get('transcripts', {}).keys()))
+        for family_guid in tag['familyGuids']:
+            families_by_guid[family_guid]['discoveryTags'].append(tag)
+
+    return {
+        'familiesByGuid': families_by_guid,
+        'genesById': get_genes(gene_ids),
+    }
 
 
 def _add_tag_types(projects_by_guid, project_guid):

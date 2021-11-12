@@ -9,7 +9,6 @@ from django.utils import timezone
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, SavedVariant, \
     ProjectCategory, FamilyNote
-from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_saved_variants, \
@@ -17,7 +16,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_family_notes
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
-from seqr.views.utils.project_context_utils import get_projects_child_entities, _add_tag_types
+from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags
 from settings import ANALYST_PROJECT_CATEGORY
 
 
@@ -173,18 +172,7 @@ def project_families(request, project_guid):
     families = _get_json_for_families(
         Family.objects.filter(project=project), request.user, project_guid=project_guid, add_individual_guids_field=True
     )
-    families_by_guid = {f['familyGuid']: dict(discoveryTags=[], **f) for f in families}
-
-    gene_ids = set()
-    for tag in _get_discovery_tags(project):
-        gene_ids.update(list(tag.get('transcripts', {}).keys()))
-        for family_guid in tag['familyGuids']:
-            families_by_guid[family_guid]['discoveryTags'].append(tag)
-
-    return create_json_response({
-        'familiesByGuid': families_by_guid,
-        'genesById': get_genes(gene_ids),
-    })
+    return create_json_response(families_discovery_tags(families))
 
 
 @login_and_policies_required
@@ -258,14 +246,6 @@ def _add_tag_type_counts(project, project_variant_tags):
         })
 
     project_variant_tags.append(note_tag_type)
-
-
-def _get_discovery_tags(project):
-    discovery_tags = get_json_for_saved_variants(SavedVariant.objects.filter(
-        family__project=project, varianttag__variant_tag_type__category='CMG Discovery Tags',
-    ), add_details=True)
-
-    return discovery_tags
 
 
 def _delete_project(project_guid, user):

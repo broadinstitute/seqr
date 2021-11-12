@@ -112,10 +112,10 @@ FamilyReadsLayout.propTypes = {
   showReads: PropTypes.object,
 }
 
-const BaseExpandedFamily = React.memo(({ familyDetail, family, individuals, tableName, loading, load }) => (
-  <DataLoader load={load} contentId={family.familyGuid} content={individuals} loading={loading}>
+const BaseExpandedFamily = React.memo(({ familyDetail, familyGuid, individuals, tableName, loading, load }) => (
+  <DataLoader load={load} contentId={familyGuid} content={individuals} loading={loading}>
     {familyDetail}
-    <FamilyReads layout={FamilyReadsLayout} familyGuid={family.familyGuid} buttonProps={READ_BUTTON_PROPS} />
+    <FamilyReads layout={FamilyReadsLayout} familyGuid={familyGuid} buttonProps={READ_BUTTON_PROPS} />
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}
@@ -127,7 +127,7 @@ const BaseExpandedFamily = React.memo(({ familyDetail, family, individuals, tabl
 ))
 
 BaseExpandedFamily.propTypes = {
-  family: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string.isRequired,
   familyDetail: PropTypes.node,
   individuals: PropTypes.arrayOf(PropTypes.object),
   tableName: PropTypes.string,
@@ -137,7 +137,7 @@ BaseExpandedFamily.propTypes = {
 
 const mapExpandedStateToProps = (state, ownProps) => ({
   loading: getFamilyDetailsLoading(state),
-  individuals: getSortedIndividualsByFamily(state)[ownProps.family.familyGuid],
+  individuals: getSortedIndividualsByFamily(state)[ownProps.familyGuid],
 })
 
 const mapDispatchToProps = {
@@ -146,7 +146,7 @@ const mapDispatchToProps = {
 
 const ExpandedFamily = connect(mapExpandedStateToProps, mapDispatchToProps)(BaseExpandedFamily)
 
-const BaseFamilyDetail = React.memo(({ family, compact, tableName, showVariantDetails, ...props }) => {
+const BaseFamilyDetail = React.memo(({ familyGuid, family, compact, tableName, showVariantDetails, ...props }) => {
   const familyDetail = (
     <Family
       family={family}
@@ -158,11 +158,12 @@ const BaseFamilyDetail = React.memo(({ family, compact, tableName, showVariantDe
   if (compact) {
     return familyDetail
   }
-  return <ExpandedFamily family={family} familyDetail={familyDetail} tableName={tableName} />
+  return <ExpandedFamily familyGuid={familyGuid} familyDetail={familyDetail} tableName={tableName} />
 })
 
 BaseFamilyDetail.propTypes = {
-  family: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string.isRequired,
+  family: PropTypes.object,
   individuals: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
   showVariantDetails: PropTypes.bool,
