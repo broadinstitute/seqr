@@ -70,7 +70,7 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
     else:
         _add_parent_ids(response, projects, family_models, individual_models, locus_lists_models)
 
-    _add_child_ids(response, include_family_entities)
+    add_child_ids(response, include_family_entities)
 
     return response
 
@@ -109,7 +109,7 @@ def _add_parent_ids(response, projects, family_models, individual_models, locus_
             if project.guid in response['projectsByGuid']:
                 response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
 
-def _add_child_ids(response, include_family_entities):
+def add_child_ids(response, include_family_entities):
     sample_guids_by_individual = defaultdict(list)
     for sample in response['samplesByGuid'].values():
         sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
