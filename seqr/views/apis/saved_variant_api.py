@@ -215,11 +215,10 @@ def update_variant_acmg_classification_handler(request, variant_guid):
     return _update_variant_acmg_classification(request, variant_guid)
 
 def _update_variant_acmg_classification(request, variant_guid):
-    request_json = json.loads(request.body)
-
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_project_permissions(saved_variant.family.project, request.user)
 
+    request_json = json.loads(request.body)
     variant = request_json.get('variant')
     update_model_from_json(saved_variant, {'acmg_classification': variant['acmgClassification']}, request.user)
 

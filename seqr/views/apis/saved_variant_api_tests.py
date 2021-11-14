@@ -801,16 +801,21 @@ class SavedVariantAPITest(object):
 
     def test_update_variant_acmg_classification(self):
         update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])
-        acmg_classification = {
-            'classify': 'Uncertain',
-            'criteria': ['PM2_P'],
-            'score': 1
-        }
         self.check_collaborator_login(update_variant_acmg_classification_url)
 
-        response = self.client.post(update_variant_acmg_classification_url, content_type='application/json', data=json.dumps(acmg_classification))
+        variant = {
+            'variant': {
+                'acmgClassification': {
+                    'classify': 'Uncertain',
+                    'criteria': ['PM2_P'],
+                    'score': 1
+                },
+            }
+        }
+
+        response = self.client.post(update_variant_acmg_classification_url, content_type='application/json', data=json.dumps(variant))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'savedVariantByGuid': {VARIANT_GUID: {'acmgClassification': acmg_classification}}})
+        self.assertDictEqual(response.json(), {'savedVariantByGuid': {VARIANT_GUID: {'acmgClassification': variant['variant']['acmgClassification']}}})
 
 
 # Tests for AnVIL access disabled
@@ -884,7 +889,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_update_variant_acmg_classification(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
-        assert_no_list_ws_has_al(self, 1)
+        assert_no_list_ws_has_al(self, 2)
 
 
 # Test for permissions from AnVIL and local

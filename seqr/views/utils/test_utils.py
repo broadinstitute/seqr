@@ -465,7 +465,7 @@ IGV_SAMPLE_FIELDS = {
     'projectGuid', 'individualGuid', 'sampleGuid', 'filePath', 'sampleId', 'sampleType',
 }
 
-SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId'}
+SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
 
 TAG_FIELDS = {
     'tagGuid', 'name', 'category', 'color', 'searchHash', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
