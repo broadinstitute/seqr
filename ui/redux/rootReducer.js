@@ -262,6 +262,8 @@ export const updateVariantTags = (values, tagType = 'tags') => {
   return updateSavedVariant(values, urlPath)
 }
 
+export const updateVariantClassification = values => updateSavedVariant(values, `${values.variant.variantGuid}/update_acmg_classification`)
+
 export const updateVariantMainTranscript = (variantGuid, transcriptId) => dispatch => new HttpRequestHelper(
   `/api/saved_variant/${variantGuid}/update_transcript/${transcriptId}`,
   (responseJson) => {

@@ -15,6 +15,7 @@ import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { compHetGene } from './VariantUtils'
 import { VerticalSpacer } from '../../Spacers'
+import AcmgModal from '../acmg/AcmgModal'
 
 const StyledVariantRow = styled(({ isCompoundHet, isSV, severity, ...props }) => <Grid.Row {...props} />)`  
   .column {
@@ -122,7 +123,10 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
       <Grid.Column width={12}>
         <Grid columns="equal">
           <Grid.Row>
-            <Grid.Column><Annotations variant={variant} /></Grid.Column>
+            <Grid.Column>
+              <Annotations variant={variant} />
+              { variant.variantGuid && <AcmgModal variant={variant} /> }
+            </Grid.Column>
             <Grid.Column><Predictions variant={variant} /></Grid.Column>
             <Grid.Column><Frequencies variant={variant} /></Grid.Column>
           </Grid.Row>

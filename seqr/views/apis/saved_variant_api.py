@@ -210,6 +210,25 @@ def update_variant_tags_handler(request, variant_guids):
         get_tag_create_data=_get_tag_type_create_data, get_tags_json=get_json_for_variant_tags,
         delete_variants_if_empty=True)
 
+@login_and_policies_required
+def update_variant_acmg_classification_handler(request, variant_guid):
+    return _update_variant_acmg_classification(request, variant_guid)
+
+def _update_variant_acmg_classification(request, variant_guid):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_project_permissions(saved_variant.family.project, request.user)
+
+    request_json = json.loads(request.body)
+    variant = request_json.get('variant')
+    update_model_from_json(saved_variant, {'acmg_classification': variant['acmgClassification']}, request.user)
+
+    return create_json_response({
+        'savedVariantByGuid': {
+            variant_guid: {
+                'acmgClassification': variant['acmgClassification'],
+            }
+        },
+    })
 
 @login_and_policies_required
 def update_variant_functional_data_handler(request, variant_guids):
