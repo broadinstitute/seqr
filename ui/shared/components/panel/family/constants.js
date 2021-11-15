@@ -150,6 +150,13 @@ export const REFERENCE_LOOKUP = ['37', '38'].reduce((acc, genome) => ({
   },
 }), {})
 
+export const VARIANT_RANGE = 'Variant'
+export const GENE_RANGE = 'Gene'
+export const RANGE_OPTIONS = [
+  { value: VARIANT_RANGE, text: 'Variant' },
+  { value: GENE_RANGE, text: 'Gene' },
+]
+
 const NORM_GTEX_TRACKS = [
   {
     data: [
