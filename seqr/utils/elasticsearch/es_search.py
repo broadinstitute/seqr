@@ -16,7 +16,8 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
-    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, get_prediction_response_key
+    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
+    PATH_FREQ_OVERRIDE_CUTOFF, get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -202,8 +203,16 @@ class EsSearch(object):
         if in_silico_filters:
             self.filter(_in_silico_filter(in_silico_filters))
 
-    def filter_by_frequency(self, frequencies):
+    def filter_by_frequency(self, frequencies, pathogenicity=None):
+        clinvar_path_filters = [
+            f for f in (pathogenicity or {}).get('clinvar', [])
+            if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
+        ]
+        path_override = bool(clinvar_path_filters) and any(
+            freqs.get('af', 1) < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
+
         q = Q()
+        path_q = Q()
         for pop, freqs in sorted(frequencies.items()):
             if freqs.get('af') is not None:
                 filter_field = next(
@@ -211,12 +220,18 @@ class EsSearch(object):
                      if any(field_key in index_metadata['fields'] for index_metadata in self.index_metadata.values())),
                     POPULATIONS[pop]['AF'])
                 q &= _pop_freq_filter(filter_field, freqs['af'])
+                if path_override:
+                    path_q &= _pop_freq_filter(filter_field, max(freqs['af'], PATH_FREQ_OVERRIDE_CUTOFF))
             elif freqs.get('ac') is not None:
                 q &= _pop_freq_filter(POPULATIONS[pop]['AC'], freqs['ac'])
 
             if freqs.get('hh') is not None:
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hom'], freqs['hh'])
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
+
+        if path_override:
+            q |= (_pathogenicity_filter({'clinvar': clinvar_path_filters}) & path_q)
+
         self.filter(q)
 
     def _filter_by_annotations(self, annotations, additional_filters):

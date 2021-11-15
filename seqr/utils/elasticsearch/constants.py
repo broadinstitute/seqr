@@ -49,6 +49,11 @@ INHERITANCE_FILTERS = {
     },
 }
 
+PATH_FREQ_OVERRIDE_CUTOFF = 0.05
+
+CLINVAR_PATH_FILTER = 'pathogenic'
+CLINVAR_LIKELY_PATH_FILTER = 'likely_pathogenic'
+
 CLINVAR_SIGNFICANCE_MAP = {
     'pathogenic': ['Pathogenic', 'Pathogenic/Likely_pathogenic'],
     'likely_pathogenic': ['Likely_pathogenic', 'Pathogenic/Likely_pathogenic'],

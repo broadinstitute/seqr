@@ -130,7 +130,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
             search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
 
     if search.get('freqs'):
-        es_search.filter_by_frequency(search['freqs'])
+        es_search.filter_by_frequency(search['freqs'], pathogenicity=search.get('pathogenicity'))
 
     if search.get('in_silico'):
         es_search.filter_by_in_silico(search['in_silico'])

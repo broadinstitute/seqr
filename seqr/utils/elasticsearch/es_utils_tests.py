@@ -1314,7 +1314,7 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'pathogenicity': {
-                'clinvar': ['pathogenic', 'likely_pathogenic'],
+                'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting'],
                 'hgmd': ['disease_causing', 'likely_disease_causing'],
             },
             'annotations': {
@@ -1376,8 +1376,8 @@ class EsUtilsTest(TestCase):
                     ]
                 }
             },
-            {
-                'bool': {
+            {'bool': {'should': [
+                {'bool': {
                     'minimum_should_match': 1,
                     'should': [
                         {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
@@ -1448,8 +1448,44 @@ class EsUtilsTest(TestCase):
                             ]}
                         }
                     ]
-                }
-            },
+                }},
+                {'bool': {
+                    'minimum_should_match': 1,
+                    'should': [
+                        {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
+                        {'range': {'AF': {'lte': 0.1}}}
+                    ],
+                    'must': [
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
+                                {'range': {'g1k_POPMAX_AF': {'lte': 0.05}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.05}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_FAF_AF'}}]}},
+                                {'range': {'gnomad_genomes_FAF_AF': {'lte': 0.05}}}
+                            ]
+                        }},
+                        {'terms': {
+                            'clinvar_clinical_significance': [
+                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic',
+                            ]
+                        }}
+                    ]
+                }},
+
+            ]}},
             {'bool': {'should': [
                 {'bool': {'must_not': [{'exists': {'field': 'cadd_PHRED'}}]}},
                 {'range': {'cadd_PHRED': {'gte': 11.5}}},
@@ -1470,7 +1506,8 @@ class EsUtilsTest(TestCase):
                         }},
                         {'terms': {
                             'clinvar_clinical_significance': [
-                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic'
+                                'Conflicting_interpretations_of_pathogenicity', 'Likely_pathogenic', 'Pathogenic',
+                                'Pathogenic/Likely_pathogenic', 'Uncertain_significance', 'not_provided', 'other',
                             ]
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
