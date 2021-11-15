@@ -163,7 +163,9 @@ export const getTagTypeData = createSelector(
     if (analysisGroup) {
       tagTypeCounts = analysisGroup.familyGuids.reduce((acc, familyGuid) => Object.entries(
         familyTagTypeCounts[familyGuid] || {},
-      ).reduce((acc2, [tagTypeGuid, count]) => ({ ...acc2, [tagTypeGuid]: count + (acc2[tagTypeGuid] || 0) }), acc), {})
+      ).reduce((acc2, [tagTypeGuid, { count }]) => (
+        { ...acc2, [tagTypeGuid]: count + (acc2[tagTypeGuid] || 0) }
+      ), acc), {})
     }
 
     return (tagTypesByProject[projectGuid] || []).map(vtt => ({
@@ -316,7 +318,7 @@ const getFamiliesBySearchString = createSelector(
       { ...acc, [getFamilySearchFields(family, individualsByGuid).join(';').toLowerCase()]: family }), {})
   },
 )
-
+// TODO some filters and sort may not work now
 export const getVisibleFamilies = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getFamiliesBySearchString,

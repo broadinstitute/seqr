@@ -18,8 +18,8 @@ import {
   getCurrentProject,
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
-  getProjectAnalysisGroupsByGuid,
   getProjectOverviewIsLoading,
+  getFamiliesLoading,
 } from '../selectors'
 import { loadProjectOverview } from '../reducers'
 import ProjectOverview from './ProjectOverview'
@@ -101,12 +101,12 @@ const ProjectPageUI = React.memo(props => (
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar
               project={props.project}
-              analysisGroup={props.analysisGroup}
+              analysisGroupGuid={props.match.params.analysisGroupGuid}
               height={20}
               showAllPopupCategorie
             />
             <VerticalSpacer height={10} />
-            <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
+            <VariantTags project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
@@ -131,17 +131,15 @@ const ProjectPageUI = React.memo(props => (
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
-  analysisGroup: PropTypes.object,
   match: PropTypes.object,
-  load: PropTypes.bool,
-  loading: PropTypes.func,
+  load: PropTypes.func,
+  loading: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
-  analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
-  loading: getProjectOverviewIsLoading(state),
+  loading: getProjectOverviewIsLoading(state) || getFamiliesLoading(state),
 })
 
 const mapDispatchToProps = {

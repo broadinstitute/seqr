@@ -21,11 +21,11 @@ const getNoteTagType = (project) => {
   return noteType && { ...noteType, count: noteType.numTags }
 }
 
-const VariantTags = React.memo(({ project, analysisGroup, data }) => (
+const VariantTags = React.memo(({ project, analysisGroupGuid, data }) => (
   <NoBorderTable basic="very" compact="very">
     <Table.Body>
       {
-        [...data, analysisGroup ? null : getNoteTagType(project)].filter(
+        [...data, analysisGroupGuid ? null : getNoteTagType(project)].filter(
           variantTagType => variantTagType && variantTagType.count > 0,
         ).map(variantTagType => (
           <TableRow key={variantTagType.variantTagTypeGuid}>
@@ -34,7 +34,7 @@ const VariantTags = React.memo(({ project, analysisGroup, data }) => (
               <b>{variantTagType.count}</b>
             </TableCell>
             <TableCell>
-              <Link to={getSavedVariantsLinkPath({ project, analysisGroup, tag: variantTagType.name })}>
+              <Link to={getSavedVariantsLinkPath({ project, analysisGroupGuid, tag: variantTagType.name })}>
                 {variantTagType.name}
               </Link>
               {variantTagType.description && (
@@ -56,7 +56,7 @@ const VariantTags = React.memo(({ project, analysisGroup, data }) => (
 VariantTags.propTypes = {
   project: PropTypes.object.isRequired,
   data: PropTypes.arrayOf(PropTypes.object).isRequired,
-  analysisGroup: PropTypes.object,
+  analysisGroupGuid: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({

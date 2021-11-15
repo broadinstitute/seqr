@@ -6,19 +6,19 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
 import { getTagTypeData, getTagTypeDataByFamily } from '../selectors'
 
-export const getSavedVariantsLinkPath = ({ project, analysisGroup, familyGuid, tag }) => {
+export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGuid, tag }) => {
   let path = tag ? `/${tag}` : ''
   if (familyGuid) {
     path = `/family/${familyGuid}${path}`
-  } else if (analysisGroup) {
-    path = `/analysis_group/${analysisGroup.analysisGroupGuid}${path}`
+  } else if (analysisGroupGuid) {
+    path = `/analysis_group/${analysisGroupGuid}${path}`
   }
 
   return `/project/${project.projectGuid}/saved_variants${path}`
 }
 
 const VariantTagTypeBar = React.memo((
-  { data, project, familyGuid, analysisGroup, sectionLinks = true, hideExcluded, hideReviewOnly, ...props },
+  { data, project, familyGuid, analysisGroupGuid, sectionLinks = true, hideExcluded, hideReviewOnly, ...props },
 ) => (
   <HorizontalStackedBar
     {...props}
@@ -27,7 +27,7 @@ const VariantTagTypeBar = React.memo((
     showTotal={false}
     title="Saved Variants"
     noDataMessage="No Saved Variants"
-    linkPath={getSavedVariantsLinkPath({ project, analysisGroup, familyGuid })}
+    linkPath={getSavedVariantsLinkPath({ project, analysisGroupGuid, familyGuid })}
     sectionLinks={sectionLinks}
     data={(hideExcluded || hideReviewOnly) ? data.filter(
       vtt => !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
@@ -39,7 +39,7 @@ VariantTagTypeBar.propTypes = {
   project: PropTypes.object.isRequired,
   data: PropTypes.arrayOf(PropTypes.object).isRequired,
   familyGuid: PropTypes.string,
-  analysisGroup: PropTypes.object, // TODO clean up, can probably just ge the guid
+  analysisGroupGuid: PropTypes.string,
   sectionLinks: PropTypes.bool,
   hideExcluded: PropTypes.bool,
   hideReviewOnly: PropTypes.bool,

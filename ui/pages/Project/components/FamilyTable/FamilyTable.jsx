@@ -11,7 +11,9 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import { getVisibleFamiliesInSortedOrder, getFamiliesLoading, getProjectExportUrls } from '../../selectors'
+import {
+  getVisibleFamiliesInSortedOrder, getFamiliesLoading, getProjectOverviewIsLoading, getProjectExportUrls,
+} from '../../selectors'
 import { loadFamilies } from '../../reducers'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
@@ -142,7 +144,7 @@ FamilyTable.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
-  loading: getFamiliesLoading(state),
+  loading: getFamiliesLoading(state) || getProjectOverviewIsLoading(state),
   exportUrls: getProjectExportUrls(state, ownProps),
 })
 

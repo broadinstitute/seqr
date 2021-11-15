@@ -132,7 +132,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
   }
 
   getUpdateTagUrl = (newTag) => {
-    const { project, analysisGroup, match, updateTableField } = this.props
+    const { project, match, updateTableField } = this.props
     const categoryOptions = [...new Set(
       project.variantTagTypes.map(type => type.category).filter(category => category),
     )]
@@ -141,7 +141,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     updateTableField('categoryFilter')(isCategory ? newTag : null)
     return getSavedVariantsLinkPath({
       project,
-      analysisGroup,
+      analysisGroupGuid: match.params.analysisGroupGuid,
       tag: !isCategory && newTag !== ALL_FILTER && newTag,
       familyGuid: match.params.familyGuid,
     })
@@ -165,7 +165,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
   }
 
   tagOptions = () => {
-    const { project, analysisGroup, match } = this.props
+    const { project, match } = this.props
     let currCategory = null
     return project.variantTagTypes.reduce((acc, vtt) => {
       if (vtt.category !== currCategory) {
@@ -189,7 +189,11 @@ class BaseProjectSavedVariants extends React.PureComponent {
       value: ALL_FILTER,
       text: 'All Saved',
       content: (
-        <LabelLink to={getSavedVariantsLinkPath({ project, analysisGroup, familyGuid: match.params.familyGuid })}>
+        <LabelLink
+          to={getSavedVariantsLinkPath({
+            project, analysisGroupGuid: match.params.analysisGroupGuid, familyGuid: match.params.familyGuid,
+          })}
+        >
           All Saved
         </LabelLink>
       ),
@@ -198,14 +202,14 @@ class BaseProjectSavedVariants extends React.PureComponent {
   }
 
   tableSummary = (summaryProps) => {
-    const { project, analysisGroup } = this.props
+    const { project, match } = this.props
     return (
       <Grid.Row>
         <Grid.Column width={16}>
           <VariantTagTypeBar
             height={30}
             project={project}
-            analysisGroup={analysisGroup}
+            analysisGroupGuid={match.params.analysisGroupGuid}
             {...summaryProps}
           />
         </Grid.Column>
