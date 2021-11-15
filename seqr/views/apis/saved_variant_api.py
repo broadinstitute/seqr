@@ -223,7 +223,7 @@ def _update_variant_acmg_classification(request, variant_guid):
     update_model_from_json(saved_variant, {'acmg_classification': variant['acmgClassification']}, request.user)
 
     return create_json_response({
-        'savedVariantByGuid': {
+        'savedVariantsByGuid': {
             variant_guid: {
                 'acmgClassification': variant['acmgClassification'],
             }
