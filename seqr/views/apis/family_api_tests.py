@@ -34,6 +34,13 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, "'families' not specified")
 
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'families': [
+            {'familyGuid': FAMILY_GUID, 'familyId': '2', 'description': 'Test description 1'}
+        ]}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()['error'], 'Cannot update the following family ID(s) as they are already in use: 1 -> 2')
+
         # send request with a "families" attribute
         req_values = {
             'families': [
