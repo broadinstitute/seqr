@@ -375,6 +375,12 @@ class SavedVariantAPITest(object):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
         self.check_collaborator_login(create_variant_note_url, request_data={'familyGuid': 'F000001_1'})
 
+        response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
+            {'familyGuid': 'F000001_1'}
+        ))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Note is required')
+
         # send valid request to create variant_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
             {'note': 'new_variant_note', 'submitToClinvar': True, 'familyGuid': 'F000001_1'}
@@ -853,7 +859,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_update_and_delete_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 6)
+        assert_no_list_ws_has_al(self, 7)
 
     def test_create_partially_saved_compound_het_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
