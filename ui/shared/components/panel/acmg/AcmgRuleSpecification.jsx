@@ -2,10 +2,11 @@ import React from 'react'
 import { Header, Table, List, Label } from 'semantic-ui-react'
 import { ACMG_RULE_SPECIFICATION_CATEGORY_CRITERIA, ACMG_RULE_SPECIFICATION_COMP_HET, ACMG_RULE_SPECIFICATION_DISEASE_BASED_CRITERIA, ACMG_RULE_SPECIFICATION_GENERAL_RECOMMENDATIONS, ACMG_RULE_SPECIFICATION_IN_TRANS, ACMG_RULE_SPECIFICATION_LEVELS_TABLE, ACMG_RULE_SPECIFICATION_PM3, ACMG_RULE_SPECIFICATION_PROBAND } from '../../../utils/constants'
 
-const tableCellsWithSingleValue = (values, alignment = 'center') => {
+const tableCellsWithSingleValue = (values, key, alignment = 'center') => {
   const row = (
-    <Table.Row textAlign={alignment}>
-      {values.map(value => <Table.Cell>{value}</Table.Cell>)}
+    <Table.Row key={key} textAlign={alignment}>
+      {/* eslint-disable-next-line react/no-array-index-key */}
+      {values.map((value, i) => <Table.Cell key={i}>{value}</Table.Cell>)}
     </Table.Row>
   )
 
@@ -19,7 +20,7 @@ const tableCellsWithListItemLink = (items) => {
         <List.Item
           key={item.key}
         >
-          {/* eslint-disable react/jsx-one-expression-per-line */}
+          {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
           {item.value}: <a href={item.href} target="_blank" rel="noreferrer">{item.href}</a>
         </List.Item>
       ))}
@@ -29,14 +30,15 @@ const tableCellsWithListItemLink = (items) => {
   return list
 }
 
-const tableCellsWithOptionalListItems = (items, labelColor = null) => {
+const tableCellsWithOptionalListItems = (items, key, labelColor = null) => {
   const row = (
-    <Table.Row textAlign="center">
-      {items.map((item) => {
+    <Table.Row textAlign="center" key={key}>
+      {items.map((item, i) => {
         const cell = (
-          !item.isList ? <Table.Cell color={labelColor}>{item.value}</Table.Cell> : (
-            <Table.Cell textAlign="left">
-              {item.description}:
+          !item.isList ? <Table.Cell key={item.value} color={labelColor}>{item.value}</Table.Cell> : (
+            // eslint-disable-next-line react/no-array-index-key
+            <Table.Cell key={i} textAlign="left">
+              {item.description ? `${item.description}:` : ''}
               <List bulleted>
                 {item.listItems.map(listItem => <List.Item key={listItem.key}>{listItem.value}</List.Item>)}
               </List>
@@ -54,19 +56,22 @@ const tableCellsWithOptionalListItems = (items, labelColor = null) => {
 
 const tableCellsWithLabelAndOptionalListItems = (items, labelColor = null) => {
   const cell = (
-    <Table.Cell>
-      {items.map((item) => {
-        const labelOrListItem = (
-          !item.isList ? <Label color={labelColor}>{item.value}</Label> : (
-            <List bulleted>
-              {item.listItems.map(listItem => <List.Item key={listItem.key}>{listItem.value}</List.Item>)}
-            </List>
+    <Table.Row>
+      <Table.Cell>
+        {items.map((item, i) => {
+          const labelOrListItem = (
+            !item.isList ? <Label key={item.value} color={labelColor}>{item.value}</Label> : (
+              // eslint-disable-next-line react/no-array-index-key
+              <List bulleted key={i}>
+                {item.listItems.map(listItem => <List.Item key={listItem.key}>{listItem.value}</List.Item>)}
+              </List>
+            )
           )
-        )
 
-        return labelOrListItem
-      })}
-    </Table.Cell>
+          return labelOrListItem
+        })}
+      </Table.Cell>
+    </Table.Row>
   )
 
   return cell
@@ -74,7 +79,7 @@ const tableCellsWithLabelAndOptionalListItems = (items, labelColor = null) => {
 
 const tableListItemsForCriteria = (items, criteria) => {
   const row = (
-    <Table.Row>
+    <Table.Row key={criteria}>
       <Table.Cell textAlign="center">{criteria}</Table.Cell>
       <Table.Cell colSpan="2">
         <List bulleted>
@@ -89,16 +94,17 @@ const tableListItemsForCriteria = (items, criteria) => {
 
 const tableRowWithTableCells = (items, description, cellsWithList = false, color = 'blue') => {
   const row = (
-    <Table.Row>
+    <Table.Row key={description}>
       <Table.Cell textAlign="center">{description}</Table.Cell>
-      {items.map((item) => {
+      {items.map((item, key) => {
         const cell = (
-          <Table.Cell>
+          // eslint-disable-next-line react/no-array-index-key
+          <Table.Cell key={key}>
             <Table>
               <Table.Body>
                 {cellsWithList ?
                   tableCellsWithLabelAndOptionalListItems(item, color) :
-                  item.map(rule => tableCellsWithSingleValue(rule, null))}
+                  item.map((rule, i) => tableCellsWithSingleValue(rule, i, null))}
               </Table.Body>
             </Table>
           </Table.Cell>
@@ -127,7 +133,13 @@ const AcmgRuleSpecification = () => {
 
           <Table.Row>
             <Table.Cell textAlign="center">BP7</Table.Cell>
-            <Table.Cell colSpan="2">Nonconserved splice is for variants at positions: -4, +7 to +15<br />AND<br />{'-5 to -15 positions with changes >T or >C'}</Table.Cell>
+            <Table.Cell colSpan="2">
+              Nonconserved splice is for variants at positions: -4, +7 to +15
+              <br />
+              AND
+              <br />
+              -5 to -15 positions with changes &gt;T or &gt;C
+            </Table.Cell>
           </Table.Row>
 
           <Table.Row>
@@ -142,7 +154,7 @@ const AcmgRuleSpecification = () => {
                 </Table.Header>
 
                 <Table.Body>
-                  {ACMG_RULE_SPECIFICATION_LEVELS_TABLE.map(row => tableCellsWithSingleValue(row))}
+                  {ACMG_RULE_SPECIFICATION_LEVELS_TABLE.map((row, i) => tableCellsWithSingleValue(row, i))}
                 </Table.Body>
               </Table>
             </Table.Cell>
@@ -165,11 +177,11 @@ const AcmgRuleSpecification = () => {
                 <Table.Body>
                   <Table.Row textAlign="center">
                     <Table.Cell />
-                    {(Array.from(Array(11).keys())).map(number => <Table.Cell>{number}</Table.Cell>)}
+                    {(Array.from(Array(11).keys())).map(number => <Table.Cell key={number}>{number}</Table.Cell>)}
                   </Table.Row>
 
                   {
-                    ACMG_RULE_SPECIFICATION_GENERAL_RECOMMENDATIONS.map(row => tableCellsWithSingleValue(row))
+                    ACMG_RULE_SPECIFICATION_GENERAL_RECOMMENDATIONS.map((row, i) => tableCellsWithSingleValue(row, i))
                   }
                 </Table.Body>
               </Table>
@@ -189,7 +201,7 @@ const AcmgRuleSpecification = () => {
                 </Table.Header>
 
                 <Table.Body>
-                  {ACMG_RULE_SPECIFICATION_PM3.map(row => tableCellsWithSingleValue(row))}
+                  {ACMG_RULE_SPECIFICATION_PM3.map((row, i) => tableCellsWithSingleValue(row, i))}
                 </Table.Body>
               </Table>
             </Table.Cell>
@@ -208,7 +220,8 @@ const AcmgRuleSpecification = () => {
 
                   <Table.Row>
                     <Table.Cell>
-                      ClinGen Registry: <a href="https://cspec.genome.network/cspec/ui/svi/" target="_blank" rel="noreferrer">https://cspec.genome.network/cspec/ui/svi/</a>
+                      ClinGen Registry: &nbsp;
+                      <a href="https://cspec.genome.network/cspec/ui/svi/" target="_blank" rel="noreferrer">https://cspec.genome.network/cspec/ui/svi/</a>
                     </Table.Cell>
                   </Table.Row>
                 </Table.Body>
@@ -220,13 +233,16 @@ const AcmgRuleSpecification = () => {
             <Table.Cell colSpan="3">
               <Table color="blue">
                 <Table.Header>
-                  <Table.HeaderCell textAlign="center" />
-                  <Table.HeaderCell textAlign="center">Comp Het Only</Table.HeaderCell>
-                  <Table.HeaderCell textAlign="center">Hom only</Table.HeaderCell>
-                  <Table.HeaderCell textAlign="center">Comp Het + Hom</Table.HeaderCell>
+                  <Table.Row>
+                    <Table.HeaderCell textAlign="center" />
+                    <Table.HeaderCell textAlign="center">Comp Het Only</Table.HeaderCell>
+                    <Table.HeaderCell textAlign="center">Hom only</Table.HeaderCell>
+                    <Table.HeaderCell textAlign="center">Comp Het + Hom</Table.HeaderCell>
+                  </Table.Row>
                 </Table.Header>
-
-                {ACMG_RULE_SPECIFICATION_COMP_HET.map(row => tableCellsWithOptionalListItems(row))}
+                <Table.Body>
+                  {ACMG_RULE_SPECIFICATION_COMP_HET.map((row, i) => tableCellsWithOptionalListItems(row, i))}
+                </Table.Body>
               </Table>
             </Table.Cell>
           </Table.Row>

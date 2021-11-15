@@ -93,7 +93,6 @@ CREATE_VARIANT_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1', 'F000002_2'],
     'variantId': '2-61413835-AAAG-A',
-    'acmgClassification': None,
 }
 
 CREATE_VARIANT_REQUEST_BODY = {
@@ -240,6 +239,7 @@ class SavedVariantAPITest(object):
         variant_json.update({
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
+            'acmgClassification': None,
             'selectedMainTranscriptId': None,
             'noteGuids': [],
             'functionalDataGuids': [],
