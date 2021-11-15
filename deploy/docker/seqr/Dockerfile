@@ -45,10 +45,7 @@ WORKDIR /seqr
 # install seqr dependencies
 RUN pip install --no-cache-dir wheel && pip install --no-cache-dir -r requirements.txt
 
-ARG SEQR_SERVICE_PORT
-ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
-
-EXPOSE $SEQR_SERVICE_PORT
+EXPOSE 8000
 
 ENV TERM=xterm
 
