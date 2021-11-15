@@ -24,7 +24,8 @@ from seqr.views.apis.family_api import \
     create_family_note, \
     update_family_note, \
     delete_family_note, \
-    family_page_data
+    family_page_data, \
+    family_variant_tag_summary
 
 from seqr.views.apis.individual_api import \
     get_hpo_terms, \
@@ -160,6 +161,7 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
 
     'family/(?P<family_guid>[\w.|-]+)/details': family_page_data,
+    'family/(?P<family_guid>[\w.|-]+)/variant_tag_summary': family_variant_tag_summary,
     'family/(?P<family_guid>[\w.|-]+)/update_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/update_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,

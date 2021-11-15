@@ -17,8 +17,8 @@ import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 
-import { loadFamilyDetails } from '../reducers'
-import { getCurrentProject, getFamilyDetailsLoading } from '../selectors'
+import { loadFamilyDetails, loadFamilyVariantSummary } from '../reducers'
+import { getCurrentProject, getFamilyDetailsLoading, getFamilyVariantSummaryLoading } from '../selectors'
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
@@ -52,8 +52,8 @@ DiscoveryGenes.propTypes = {
   genesById: PropTypes.object.isRequired,
 }
 
-const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById }) => (
-  <div>
+const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById, load, loading }) => (
+  <DataLoader load={load} contentId={family.familyGuid} content={family.discoveryTags} loading={loading}>
     <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
     <HorizontalSpacer width={10} />
     <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
@@ -81,7 +81,7 @@ const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, g
         )}
       </div>
     )}
-  </div>
+  </DataLoader>
 )
 
 BaseVariantDetail.propTypes = {
@@ -90,15 +90,22 @@ BaseVariantDetail.propTypes = {
   genesById: PropTypes.object,
   compact: PropTypes.bool,
   hasActiveVariantSample: PropTypes.bool,
+  loading: PropTypes.bool,
+  load: PropTypes.func,
 }
 
 const mapVariantDetailStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   genesById: getGenesById(state),
   hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.family.familyGuid],
+  loading: getFamilyVariantSummaryLoading(state),
 })
 
-const VariantDetail = connect(mapVariantDetailStateToProps)(BaseVariantDetail)
+const mapVariantDetailDispatchToProps = {
+  load: loadFamilyVariantSummary,
+}
+
+const VariantDetail = connect(mapVariantDetailStateToProps, mapVariantDetailDispatchToProps)(BaseVariantDetail)
 
 const FamilyReadsLayout = ({ reads, showReads }) => (
   <div>
@@ -112,8 +119,8 @@ FamilyReadsLayout.propTypes = {
   showReads: PropTypes.object,
 }
 
-const BaseExpandedFamily = React.memo(({ familyDetail, familyGuid, individuals, tableName, loading, load }) => (
-  <DataLoader load={load} contentId={familyGuid} content={individuals} loading={loading}>
+const BaseExpandedFamily = React.memo(({ familyDetail, familyGuid, family, individuals, tableName, loading, load }) => (
+  <DataLoader load={load} contentId={familyGuid} content={family && family.detailsLoaded} loading={loading}>
     {familyDetail}
     <FamilyReads layout={FamilyReadsLayout} familyGuid={familyGuid} buttonProps={READ_BUTTON_PROPS} />
     {individuals && individuals.map(individual => (
@@ -129,6 +136,7 @@ const BaseExpandedFamily = React.memo(({ familyDetail, familyGuid, individuals, 
 BaseExpandedFamily.propTypes = {
   familyGuid: PropTypes.string.isRequired,
   familyDetail: PropTypes.node,
+  family: PropTypes.object,
   individuals: PropTypes.arrayOf(PropTypes.object),
   tableName: PropTypes.string,
   loading: PropTypes.bool,
@@ -158,7 +166,7 @@ const BaseFamilyDetail = React.memo(({ familyGuid, family, compact, tableName, s
   if (compact) {
     return familyDetail
   }
-  return <ExpandedFamily familyGuid={familyGuid} familyDetail={familyDetail} tableName={tableName} />
+  return <ExpandedFamily familyGuid={familyGuid} family={family} familyDetail={familyDetail} tableName={tableName} />
 })
 
 BaseFamilyDetail.propTypes = {

@@ -35,7 +35,6 @@ def family_page_data(request, family_guid):
     family_json = _get_json_for_family(
         family, request.user, project_guid=project.guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
     family_json['detailsLoaded'] = True
-    response = families_discovery_tags([family_json])
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family=family), is_analyst=is_analyst)
 
@@ -56,6 +55,26 @@ def family_page_data(request, family_guid):
     for individual in individuals:
         individual['mmeSubmissionGuid'] = individual_mme_submission_guids.get(individual['individualGuid'])
 
+    response = {
+        'familiesByGuid': {family_guid: family_json},
+        'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
+        'individualsByGuid': {i['individualGuid']: i for i in individuals},
+        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
+        'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in submissions},
+        'samplesByGuid': {s['sampleGuid']: s for s in samples},
+    }
+    add_child_ids(response, include_family_entities=True)
+
+    return create_json_response(response)
+
+@login_and_policies_required
+def family_variant_tag_summary(request, family_guid):
+    family = Family.objects.get(guid=family_guid)
+    project = family.project
+    check_project_permissions(project, request.user)
+
+    response = families_discovery_tags([{'familyGuid': family_guid}])
+
     family_tag_type_counts = VariantTag.objects.filter(saved_variants__family=family).values(
         'variant_tag_type__guid').annotate(count=Count('*'))
     tag_type_counts_by_guid = {c['variant_tag_type__guid']: {'count': c['count']} for c in family_tag_type_counts}
@@ -64,16 +83,11 @@ def family_page_data(request, family_guid):
         tag_type_counts_by_guid[vtt['variantTagTypeGuid']].update(vtt)
 
     response.update({
-        'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
-        'individualsByGuid': {i['individualGuid']: i for i in individuals},
-        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
-        'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in submissions},
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
         'familyTagTypeCounts': {family_guid: tag_type_counts_by_guid},
     })
-    add_child_ids(response, include_family_entities=True)
 
     return create_json_response(response)
+
 
 @login_and_policies_required
 def edit_families_handler(request, project_guid):

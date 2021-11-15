@@ -22,6 +22,7 @@ const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
+const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
 
 // Data actions
@@ -76,12 +77,12 @@ export const loadProjectOverview = () => (dispatch, getState) => {
   }
 }
 
-export const loadFamilyDetails = familyGuid => (dispatch, getState) => {
+const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType) => (dispatch, getState) => {
   const { familiesByGuid } = getState()
   const family = familiesByGuid[familyGuid]
-  if (!family || !family.detailsLoaded) {
-    dispatch({ type: REQUEST_FAMILY_DETAILS })
-    new HttpRequestHelper(`/api/family/${familyGuid}/details`,
+  if (!family || !family[detailField]) {
+    dispatch({ type: dispatchType })
+    new HttpRequestHelper(`/api/family/${familyGuid}/${urlPath}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
@@ -90,6 +91,14 @@ export const loadFamilyDetails = familyGuid => (dispatch, getState) => {
       }).get()
   }
 }
+
+export const loadFamilyDetails = familyGuid => loadFamilyData(
+  familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS,
+)
+
+export const loadFamilyVariantSummary = familyGuid => loadFamilyData(
+  familyGuid, 'discoveryTags', 'variant_tag_summary', REQUEST_FAMILY_VARIANT_SUMMARY,
+)
 
 export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatch, getState) => {
   const state = getState()
@@ -322,6 +331,7 @@ export const reducers = {
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
   familyDetailsLoading: loadingReducer(REQUEST_FAMILY_DETAILS, RECEIVE_DATA),
+  familyVariantSummaryLoading: loadingReducer(REQUEST_FAMILY_VARIANT_SUMMARY, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
