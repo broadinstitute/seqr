@@ -10,6 +10,7 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from seqr.utils.search_backend.hail_search import HailSearch
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.apis.saved_variant_api import _add_locus_lists
 from seqr.views.utils.export_utils import export_table
@@ -56,7 +57,7 @@ def query_variants_handler(request, search_hash):
     _check_results_permission(results_model, request.user)
     is_all_project_search = _is_all_project_family_search(search_context)
 
-    variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page,
+    variants, total_results = get_es_variants(results_model, es_search_cls=HailSearch, sort=sort, page=page, num_results=per_page,
                                               skip_genotype_filter=is_all_project_search, user=request.user)
 
     response_context = {}
