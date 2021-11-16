@@ -120,6 +120,9 @@ def create_variant_note_handler(request, variant_guids):
             ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
         return create_json_response({'error': error}, status=400, reason=error)
 
+    if not request_json.get('note'):
+        return create_json_response({'error': 'Note is required'}, status=400)
+
     # update saved_variants
     note = _create_variant_note(saved_variants, request_json, request.user)
     note_json = get_json_for_variant_note(note, add_variant_guids=False)
