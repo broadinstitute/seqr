@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React from 'react'
 import PropTypes from 'prop-types'
-import { Button, Icon, Modal } from 'semantic-ui-react'
-import AcmgScoreCriteria from './AcmgScoreCriteria'
-import AcmgCriteria from './AcmgCriteria'
+import { Button, Loader } from 'semantic-ui-react'
+import Modal from '../../modal/Modal'
 import { VerticalSpacer } from '../../Spacers'
+
+const AcmgCriteria = React.lazy(() => import('./AcmgCriteria'))
 
 const getButtonBackgroundColor = (classification) => {
   const categoryColors = {
@@ -14,47 +15,30 @@ const getButtonBackgroundColor = (classification) => {
     'Likely Pathogenic': 'orange',
     Uncertain: 'yellow',
   }
-  return categoryColors[classification]
+  return categoryColors[classification] || 'grey'
 }
 
 const AcmgModal = (props) => {
   const { variant } = props
+  const modalName = `acmg-${variant.variantGuid}`
 
-  const [acmgClassification, setAcmgClassification] = useState(variant.acmgClassification ? variant.acmgClassification.classify : 'Unknown')
-  const [active, setActive] = useState(false)
-  const [criteria, setCriteria] = useState(variant.acmgClassification ? variant.acmgClassification.criteria : [])
-
-  const buttonBackgroundColor = getButtonBackgroundColor(acmgClassification)
+  const { classify } = variant.acmgClassification || {}
+  const buttonBackgroundColor = getButtonBackgroundColor(classify)
 
   return (
     <div>
       <VerticalSpacer height={12} />
-      <Button
-        color={buttonBackgroundColor}
-        tabIndex={0}
-        /* eslint-disable react-perf/jsx-no-new-function-as-prop */
-        onClick={() => { setActive(true) }}
+      <Modal
+        title="ACMG Calculation"
+        size="fullscreen"
+        modalName={modalName}
+        trigger={
+          <Button color={buttonBackgroundColor} content={`Classify ${classify || ''}`} compact size="mini" />
+        }
       >
-        {/* eslint-disable react/jsx-one-expression-per-line */}
-        Classify {acmgClassification}
-      </Button>
-      <Modal open={active} dimmer="blurring" size="fullscreen">
-        <Icon name="close" onClick={() => { setActive(false) }} />
-
-        <Modal.Header>ACMG Calculation</Modal.Header>
-
-        <Modal.Content>
-          <AcmgScoreCriteria classify={acmgClassification} criteria={criteria} />
-          <br />
-          <AcmgCriteria
-            criteria={criteria}
-            setCriteria={setCriteria}
-            acmgClassification={acmgClassification}
-            setAcmgClassification={setAcmgClassification}
-            setActive={setActive}
-            variant={variant}
-          />
-        </Modal.Content>
+        <React.Suspense fallback={<Loader />}>
+          <AcmgCriteria modalName={modalName} variant={variant} />
+        </React.Suspense>
       </Modal>
     </div>
   )

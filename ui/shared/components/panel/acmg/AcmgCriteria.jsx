@@ -2,10 +2,12 @@ import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { Table, Dropdown, Button, Message } from 'semantic-ui-react'
+
+import { updateVariantClassification } from 'redux/rootReducer'
+import { closeModal } from 'redux/utils/modalReducer'
 import AcmgRuleSpecification from './AcmgRuleSpecification'
 import ACMG_DROP_DOWN_OPTIONS from './AcmgCriteriaDropDownOptions'
 import CATEGORY_CRITERIA_SCORE from './AcmgCategoryCriteriaScore'
-import { updateVariantClassification } from '../../../../redux/rootReducer'
 
 const FONT_STYLE_WRITING_MODE = { writingMode: 'sideways-lr', marginLeft: '-10px' }
 const TABLE_ROW_TOTAL_COLUMNS = 6
@@ -16,6 +18,19 @@ const CATEGORY_CONFIGS = [
   { classification: 'Uncertain', isThisClassification: value => value >= 0 && value <= 5 },
   { classification: 'Likely Benign', isThisClassification: value => value >= -6 && value <= -1 },
 ]
+
+const formatCriteria = (criteria) => {
+  const formattedCriteria = []
+  criteria.forEach((c, criteriaIdx) => {
+    formattedCriteria.push(c)
+
+    if (criteriaIdx !== criteria.length - 1) {
+      formattedCriteria[criteriaIdx] += ', '
+    }
+  })
+
+  return formattedCriteria
+}
 
 export const getNewScoreValue = (criteria) => {
   let newScore = 0
@@ -29,16 +44,31 @@ export const getNewScoreValue = (criteria) => {
 class AcmgCriteria extends React.PureComponent {
 
   static propTypes = {
-    criteria: PropTypes.arrayOf(PropTypes.string).isRequired,
-    setCriteria: PropTypes.func.isRequired,
-    acmgClassification: PropTypes.string.isRequired,
-    setAcmgClassification: PropTypes.func.isRequired,
-    setActive: PropTypes.func.isRequired,
+    setInactive: PropTypes.func.isRequired,
     variant: PropTypes.object.isRequired,
     dispatchUpdateVariantClassification: PropTypes.func,
   }
 
-  state = { formWarning: '' }
+  constructor(props) {
+    super(props)
+
+    const { variant } = this.props
+    const { classify = 'Unknown', criteria = [] } = variant.acmgClassification || {}
+    // eslint-disable-next-line react/state-in-constructor
+    this.state = { formWarning: '', criteria, classify, score: getNewScoreValue(criteria) }
+  }
+
+  setCriteria(criteria) {
+    const newState = { criteria }
+    if (criteria.length > 0) {
+      newState.score = getNewScoreValue(criteria)
+      const newCategory = CATEGORY_CONFIGS.find(
+        category => category.isThisClassification(newState.score) === true,
+      )
+      newState.classify = newCategory ? newCategory.classification : 'Benign'
+    }
+    this.setState(newState)
+  }
 
   setFormWarning(warning) {
     this.setState({
@@ -48,7 +78,7 @@ class AcmgCriteria extends React.PureComponent {
 
   getCriteriaUsed() {
     const criteriaUsed = {}
-    const { criteria } = this.props
+    const { criteria } = this.state
     criteria.forEach((c) => {
       criteriaUsed[c] = true
     })
@@ -63,41 +93,37 @@ class AcmgCriteria extends React.PureComponent {
     const answer = values[3]
 
     const fullCriteria = value
-    const { criteria, setCriteria } = this.props
-    const criteriaCopy = [...criteria]
+    const { criteria } = this.state
 
     const criteriaUsed = this.getCriteriaUsed()
 
     if (answer === 'No' && criteriaUsed[fullCriteria] === true) {
-      const filteredCriteria = criteriaCopy.filter(item => item !== fullCriteria)
-      setCriteria(filteredCriteria)
+      const filteredCriteria = criteria.filter(item => item !== fullCriteria)
+      this.setCriteria(filteredCriteria)
     } else if (answer === 'Yes' && (criteriaUsed[fullCriteria] === false || criteriaUsed[fullCriteria] === undefined)) {
-      criteriaCopy.push(fullCriteria)
-      setCriteria(criteriaCopy)
+      this.setCriteria([...criteria, fullCriteria])
     }
   }
 
   clearFields = () => {
-    const { setCriteria, setAcmgClassification } = this.props
-    setCriteria([])
-    setAcmgClassification('Unknown')
+    this.setState({
+      criteria: [],
+      score: 0,
+      classify: 'Unknown',
+    })
   }
 
   submitForm = () => {
-    const { setActive, variant, acmgClassification, criteria, dispatchUpdateVariantClassification } = this.props
-    if (acmgClassification === 'Unknown') {
+    const { setInactive, dispatchUpdateVariantClassification } = this.props
+    const { classify, criteria, score } = this.state
+    if (!classify || classify === 'Unknown') {
       this.setFormWarning('Please select at least one criteria from the table below.')
-    } else if (acmgClassification === 'Conflicting') {
+    } else if (classify === 'Conflicting') {
       this.setFormWarning('You have conflicting score. Please verify your selections.')
     } else {
       this.setFormWarning(false)
-      setActive(false)
-      variant.acmgClassification = {
-        score: getNewScoreValue(criteria),
-        classify: acmgClassification,
-        criteria,
-      }
-      dispatchUpdateVariantClassification()
+      setInactive()
+      dispatchUpdateVariantClassification({ score, classify, criteria })
     }
   }
 
@@ -118,7 +144,8 @@ class AcmgCriteria extends React.PureComponent {
       const elements = rows.map((row, rowIdx) => {
         const criteriaUsed = this.getCriteriaUsed()
         return (
-          <Table.Row>
+          // eslint-disable-next-line react/no-array-index-key
+          <Table.Row key={rowIdx}>
             {rowIdx === 0 ?
               (
                 <Table.Cell rowSpan={dropDownOption.optionRowSpan}>
@@ -127,13 +154,14 @@ class AcmgCriteria extends React.PureComponent {
               ) : null}
             {row.map((cell, cellIdx) => {
               if (cell.length === 0) {
-                return <Table.Cell />
+                // eslint-disable-next-line react/no-array-index-key
+                return <Table.Cell key={cellIdx} />
               }
               const color = TABLE_COLUMN_COLOR[cellIdx % TABLE_ROW_TOTAL_COLUMNS]
               const option = cell[0]
 
               return (
-                <Table.Cell>
+                <Table.Cell key={option.key}>
                   <Table size="small" color={color}>
                     <Table.Body>
                       <Table.Row textAlign="center" key={`table-row-${option.description}`}>
@@ -164,23 +192,29 @@ class AcmgCriteria extends React.PureComponent {
     return dropDownRowns
   }
 
-  getNewScore = (criteria) => {
-    const newCategory = CATEGORY_CONFIGS.find(
-      category => category.isThisClassification(getNewScoreValue(criteria)) === true,
-    )
-    return newCategory ? newCategory.classification : 'Benign'
-  }
-
   render() {
-    const { criteria, setAcmgClassification } = this.props
+    const { score, criteria, classify } = this.state
     const { formWarning } = this.state
-
-    if (criteria.length > 0) {
-      setAcmgClassification(this.getNewScore(criteria))
-    }
 
     return (
       <div>
+        <Table celled padded>
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell singleLine>Score</Table.HeaderCell>
+              <Table.HeaderCell singleLine>Classification</Table.HeaderCell>
+              <Table.HeaderCell>Criteria Applied</Table.HeaderCell>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            <Table.Row>
+              <Table.Cell width="1">{score}</Table.Cell>
+              <Table.Cell width="3">{classify}</Table.Cell>
+              <Table.Cell>{criteria.length === 0 ? 'No criteria applied' : formatCriteria(criteria)}</Table.Cell>
+            </Table.Row>
+          </Table.Body>
+        </Table>
+        <br />
         {formWarning !== '' &&
           (
             <Message warning>
@@ -222,8 +256,11 @@ class AcmgCriteria extends React.PureComponent {
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  dispatchUpdateVariantClassification: (updates) => {
-    dispatch(updateVariantClassification({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
+  setInactive: () => dispatch(closeModal(ownProps.modalName)),
+  dispatchUpdateVariantClassification: (acmgClassification) => {
+    dispatch(updateVariantClassification(
+      { variant: { ...ownProps.variant, acmgClassification }, familyGuid: ownProps.familyGuid },
+    ))
   },
 })
 
