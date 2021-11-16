@@ -101,10 +101,10 @@ POPULATIONS = {
         'Hemi': 'exac_AC_Hemi',
     },
     'gnomad_exomes': {
-        'filter_AF': ['gnomad_exomes_FAF_AF', 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'],
+        'filter_AF': ['gnomad_exomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_genomes': {
-        'filter_AF': ['gnomad_genomes_FAF_AF', 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
+        'filter_AF': ['gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_svs': {},
 }
