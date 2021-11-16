@@ -5,13 +5,21 @@ name: Dockerfile Linting
 on:
   push:
     branches:
-      - docker-cleanup-part-1
+      - dev
+      - master
     paths:
       - deploy/docker/seqr/Dockerfile
       - .hadolint.yaml
       - .github/workflows/docker-lint.yaml
-  # pull_request:
-  #   types: [opened, synchronize, reopened]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - dev
+      - master
+    paths:
+      - deploy/docker/seqr/Dockerfile
+      - .hadolint.yaml
+      - .github/workflows/docker-lint.yaml
 
 jobs:
   hadolint:
