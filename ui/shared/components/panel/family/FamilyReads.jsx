@@ -16,13 +16,12 @@ import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
-import { AFFECTED, GENOME_VERSION_38 } from '../../../utils/constants'
+import { AFFECTED, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 import {
   ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
   DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
   JUNCTION_VISIBILITY_OPTIONS, NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS,
-  RANGE_OPTIONS, VARIANT_RANGE,
 } from './constants'
 
 const IGV = React.lazy(() => import('../../graph/IGV'))
@@ -200,40 +199,20 @@ const getVariantLocus = (variant, project) => {
 }
 
 const getGeneLocus = (variant, genesById, project) => {
-  if (variant.transcripts) {
-    const geneIds = Object.keys(variant.transcripts)
-    const geneId = geneIds.length > 0 ? geneIds[0] : ''
-    const gene = genesById[geneId]
-    if (gene) {
-      const genomeVersion = (project.genomeVersion === GENOME_VERSION_38) ? 'Grch38' : 'Grch37'
-      const size = gene[`codingRegionSize${genomeVersion}`]
-      return getLocus(
-        gene[`chrom${genomeVersion}`],
-        gene[`start${genomeVersion}`],
-        size ? Math.max(Math.round(size / 3), MIN_LOCUS_RANGE_SIZE) : MIN_LOCUS_RANGE_SIZE,
-        size,
-      )
-    }
+  const gene = genesById[getVariantMainGeneId(variant)]
+  if (gene) {
+    const genomeVersion = (project.genomeVersion === GENOME_VERSION_38) ? 'Grch38' : 'Grch37'
+    const size = gene[`codingRegionSize${genomeVersion}`]
+    return getLocus(gene[`chrom${genomeVersion}`], gene[`start${genomeVersion}`],
+      size ? Math.max(Math.round(size / 3), MIN_LOCUS_RANGE_SIZE) : MIN_LOCUS_RANGE_SIZE,
+      size)
   }
-  // If gene locus is not available, return the variant locus
-  const size = variant.end && variant.end - variant.pos
-  return getLocus(
-    variant.chrom,
-    (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
-    size ? Math.max(Math.round(size / 3), MIN_LOCUS_RANGE_SIZE) : MIN_LOCUS_RANGE_SIZE,
-    size,
-  )
+  return null
 }
 
-const BaseIgvPanel = React.memo((
-  {
-    variant, igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible,
-    rangeType, genesById,
-  },
+const IgvPanel = React.memo((
+  { igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible, locus },
 ) => {
-  const locus = (rangeType === VARIANT_RANGE) ? variant && getVariantLocus(variant, project) :
-    getGeneLocus(variant, genesById, project)
-
   const tracks = applyUserTrackSettings(
     rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)),
     { [JUNCTION_TYPE]: { minJunctionEndsVisible } },
@@ -246,23 +225,15 @@ const BaseIgvPanel = React.memo((
   )
 })
 
-BaseIgvPanel.propTypes = {
-  variant: PropTypes.object,
+IgvPanel.propTypes = {
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
   minJunctionEndsVisible: PropTypes.number,
   individualsByGuid: PropTypes.object,
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
-  rangeType: PropTypes.string,
-  genesById: PropTypes.object,
+  locus: PropTypes.string,
 }
-
-const mapGeneStateToProps = state => ({
-  genesById: getGenesById(state),
-})
-
-const IgvPanel = connect(mapGeneStateToProps)(BaseIgvPanel)
 
 class FamilyReads extends React.PureComponent {
 
@@ -275,6 +246,7 @@ class FamilyReads extends React.PureComponent {
     familiesByGuid: PropTypes.object,
     individualsByGuid: PropTypes.object,
     igvSamplesByFamilySampleIndividual: PropTypes.object,
+    genesById: PropTypes.object,
   }
 
   state = {
@@ -282,13 +254,15 @@ class FamilyReads extends React.PureComponent {
     sampleTypes: [],
     rnaReferences: [],
     minJunctionEndsVisible: 0,
-    rangeType: VARIANT_RANGE,
+    locus: null,
   }
 
   showReads = familyGuid => sampleTypes => () => {
+    const { variant, projectsByGuid, familiesByGuid } = this.props
     this.setState({
       openFamily: familyGuid,
       sampleTypes,
+      locus: variant && getVariantLocus(variant, projectsByGuid[familiesByGuid[familyGuid].projectGuid]),
     })
   }
 
@@ -323,8 +297,8 @@ class FamilyReads extends React.PureComponent {
     this.setState({ minJunctionEndsVisible })
   }
 
-  rangeChange = (rangeType) => {
-    this.setState({ rangeType })
+  locusChange = (locus) => {
+    this.setState({ locus })
   }
 
   gtexSelector = (typeLabel, options) => {
@@ -352,9 +326,9 @@ class FamilyReads extends React.PureComponent {
   render() {
     const {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
-      projectsByGuid, ...props
+      projectsByGuid, genesById, ...props
     } = this.props
-    const { openFamily, sampleTypes, rnaReferences, minJunctionEndsVisible, rangeType } = this.state
+    const { openFamily, sampleTypes, rnaReferences, minJunctionEndsVisible, locus } = this.state
 
     const showReads = (
       <ReadButtons
@@ -371,6 +345,10 @@ class FamilyReads extends React.PureComponent {
       openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
+    const project = openFamily && projectsByGuid[familiesByGuid[openFamily].projectGuid]
+    const geneLocus = project && variant && getGeneLocus(variant, genesById, project)
+    const locusOptions = geneLocus ? [{ value: variant && getVariantLocus(variant, project), text: 'Variant' },
+      { value: geneLocus, text: 'Gene' }] : null
     const reads = Object.keys(igvSampleIndividuals).length > 0 ? (
       <Segment.Group horizontal>
         {(dnaTrackOptions.length > 1 || rnaTrackOptions.length > 0) && (
@@ -393,12 +371,6 @@ class FamilyReads extends React.PureComponent {
                 />
                 {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
                   <div>
-                    <Divider horizontal>Range</Divider>
-                    <RadioGroup
-                      value={rangeType}
-                      options={RANGE_OPTIONS}
-                      onChange={this.rangeChange}
-                    />
                     <Divider horizontal>Reference Tracks</Divider>
                     {this.gtexSelector('Normalized', NORM_GTEX_TRACK_OPTIONS)}
                     {this.gtexSelector('Aggregate', AGG_GTEX_TRACK_OPTIONS)}
@@ -418,20 +390,29 @@ class FamilyReads extends React.PureComponent {
                 )}
               </div>
             )}
+            { locusOptions && (
+              <div>
+                <Divider horizontal>Range</Divider>
+                <RadioGroup
+                  value={locus}
+                  options={locusOptions}
+                  onChange={this.locusChange}
+                />
+              </div>
+            )}
           </Segment>
         )}
         <Segment>
           <ButtonLink onClick={this.hideReads} icon={<Icon name="remove" color="grey" />} floated="right" size="large" />
           <VerticalSpacer height={20} />
           <IgvPanel
-            variant={variant}
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
             minJunctionEndsVisible={minJunctionEndsVisible}
             individualsByGuid={individualsByGuid}
-            project={projectsByGuid[familiesByGuid[openFamily].projectGuid]}
-            rangeType={rangeType}
+            project={project}
+            locus={locus}
           />
         </Segment>
       </Segment.Group>
@@ -447,6 +428,7 @@ const mapStateToProps = state => ({
   individualsByGuid: getIndividualsByGuid(state),
   familiesByGuid: getFamiliesByGuid(state),
   projectsByGuid: getProjectsByGuid(state),
+  genesById: getGenesById(state),
 })
 
 export default connect(mapStateToProps)(FamilyReads)

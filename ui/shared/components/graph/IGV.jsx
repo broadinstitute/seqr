@@ -45,12 +45,7 @@ class IGV extends React.PureComponent {
   componentDidUpdate(prevProps) {
     const { tracks, locus } = this.props
     if (this.browser && locus !== prevProps.locus) {
-      if (this.container) {
-        igv.removeBrowser(this.browser)
-        igv.createBrowser(this.container, { ...this.props }).then((browser) => {
-          this.browser = browser
-        })
-      }
+      this.browser.search(locus)
     }
     if (this.browser && prevProps.tracks !== tracks) {
       const prevTracksById = prevProps.tracks.reduce((acc, track) => ({ ...acc, [getTrackId(track)]: track }), {})
