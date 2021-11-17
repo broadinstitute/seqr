@@ -4,6 +4,7 @@ from seqr.models import Individual
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 4000
+MAX_SEARCH_CLAUSES = 1024
 
 XPOS_SORT_KEY = 'xpos'
 
@@ -82,6 +83,7 @@ POPULATIONS = {
     },
     'topmed': {
         'filter_AF': [],
+        'Het': None,
     },
     'g1k': {
         'filter_AF': ['g1k_POPMAX_AF'],
@@ -159,24 +161,25 @@ SORT_FIELDS = {
     'in_omim': [{
         '_script': {
             'type': 'number',
-            'order': 'desc',
             'script': {
                 'params': {
                     'omim_gene_ids': lambda *args: [omim.gene.gene_id for omim in Omim.objects.filter(
                         phenotype_mim_number__isnull=False).only('gene__gene_id')]
                 },
+                'source': "(doc.containsKey('mainTranscript_gene_id') && !doc['mainTranscript_gene_id'].empty && params.omim_gene_ids.contains(doc['mainTranscript_gene_id'].value)) ? 0 : 1",
+            }
+        }
+    }, {
+        '_script': {
+            'type': 'number',
+            'script': {
                 'source': """
-                    int total = 0; 
                     for (int i = 0; i < doc['geneIds'].length; ++i) {
                         if (params.omim_gene_ids.contains(doc['geneIds'][i])) {
-                            total += 1;
-                            if (doc.containsKey('mainTranscript_gene_id') && 
-                                doc['geneIds'][i] == doc['mainTranscript_gene_id'].value) {
-                                total += 1
-                            }
+                            return 0;
                         }
                     } 
-                    return total
+                    return 1
                 """
             }
         }
@@ -222,7 +225,7 @@ POPULATION_SORTS = {
                 'source': "doc.containsKey(params.field) ? (doc[params.field].empty ? 0 : doc[params.field].value) : 1"
             }
         }
-    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'exac': 'exac', '1kg': 'g1k'}.items()}
+    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', '1kg': 'g1k', 'callset_af': 'callset'}.items()}
 SORT_FIELDS.update(POPULATION_SORTS)
 PREDICTOR_SORT_FIELDS = {
     'cadd': 'cadd_PHRED',
@@ -313,5 +316,5 @@ for pop_config in POPULATIONS.values():
     for pop_field in pop_config.values():
         if isinstance(pop_field, list):
             QUERY_FIELD_NAMES += pop_field
-        else:
+        elif pop_field is not None:
             QUERY_FIELD_NAMES.append(pop_field)

@@ -7,7 +7,7 @@ import { Field } from 'redux-form'
 import { Label, Popup, Form, Input, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { Select, SearchInput, RadioGroup } from 'shared/components/form/Inputs'
+import { SearchInput, RadioGroup, YearSelector } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
@@ -18,7 +18,7 @@ import NullableBoolFieldView, { NULLABLE_BOOL_FIELD } from 'shared/components/pa
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import HpoPanel, { getHpoTermsForCategory, CATEGORY_NAMES } from 'shared/components/panel/HpoPanel'
 import Sample from 'shared/components/panel/sample'
-import { FamilyLayout } from 'shared/components/panel/family'
+import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import DataLoader from 'shared/components/DataLoader'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -478,12 +478,9 @@ class HpoTermsEditor extends React.PureComponent {
   }
 }
 
-const YEAR_OPTIONS = [{ value: 0, text: 'Unknown' }, ...[...Array(130).keys()].map(i => ({ value: i + 1900 }))]
 const YEAR_SELECTOR_PROPS = {
-  component: Select,
-  options: YEAR_OPTIONS,
-  search: true,
-  inline: true,
+  component: YearSelector,
+  includeUnknown: true,
   width: 8,
 }
 
@@ -523,7 +520,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       deathYear: {
         format: val => (val === 0 ? 0 : (val || -1)),
         normalize: val => (val < 0 ? null : val),
-        options: [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS],
+        includeAlive: true,
       },
     },
     fieldDisplay: AgeDetails,
@@ -710,9 +707,9 @@ const NON_CASE_REVIEW_FIELDS = [
 ]
 
 const IndividualRow = React.memo((
-  { project, family, individual, mmeSubmission, samplesByGuid, dispatchUpdateIndividual, tableName },
+  { project, individual, mmeSubmission, samplesByGuid, dispatchUpdateIndividual, tableName },
 ) => {
-  const { displayName, paternalId, maternalId, sex, affected, createdDate, sampleGuids } = individual
+  const { displayName, sex, affected, createdDate, sampleGuids } = individual
 
   let loadedSamples = sampleGuids.map(
     sampleGuid => samplesByGuid[sampleGuid],
@@ -727,15 +724,6 @@ const IndividualRow = React.memo((
         <PedigreeIcon sex={sex} affected={affected} /> {displayName}
       </div>
       <div>
-        {
-          (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
-            <Detail>
-              child of &nbsp;
-              <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
-              <br />
-            </Detail>
-          ) : null
-        }
         <Detail>
           ADDED {new Date(createdDate).toLocaleDateString().toUpperCase()}
         </Detail>
@@ -772,7 +760,6 @@ const IndividualRow = React.memo((
 
 IndividualRow.propTypes = {
   project: PropTypes.object.isRequired,
-  family: PropTypes.object.isRequired,
   individual: PropTypes.object.isRequired,
   mmeSubmission: PropTypes.object,
   samplesByGuid: PropTypes.object.isRequired,

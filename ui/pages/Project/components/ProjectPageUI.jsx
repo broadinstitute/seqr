@@ -17,9 +17,6 @@ import {
   getCurrentProject,
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
-  getFamiliesExportConfig,
-  getIndividualsExportConfig,
-  getSamplesExportConfig,
   getProjectAnalysisGroupsByGuid,
 } from '../selectors'
 import ProjectOverview from './ProjectOverview'
@@ -79,69 +76,57 @@ const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
-const ProjectPageUI = React.memo((props) => {
-  const exportUrls = [
-    { name: 'Families', data: props.familyExportConfig },
-    { name: 'Individuals', data: props.individualsExportConfig },
-    { name: 'Samples', data: props.samplesExportConfig },
-  ]
-
-  return (
-    <Grid stackable>
-      <Grid.Row>
-        <Grid.Column width={4}>
-          {props.match.params.analysisGroupGuid ? null :
-          <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
-            <AnalysisGroups />
-          </ProjectSection>}
-          <VerticalSpacer height={10} />
-          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
-            <GeneLists project={props.project} />
-          </ProjectSection>
-        </Grid.Column>
-        <Grid.Column width={8}>
-          <ProjectSection label="Overview">
-            <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
-          </ProjectSection>
-          <VerticalSpacer height={10} />
-          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
-            <VariantTagTypeBar
-              project={props.project}
-              analysisGroup={props.analysisGroup}
-              height={20}
-              showAllPopupCategorie
-            />
-            <VerticalSpacer height={10} />
-            <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
-          </ProjectSection>
-        </Grid.Column>
-        <Grid.Column width={4}>
-          <ProjectSection label="Collaborators">
-            <ProjectCollaborators />
-          </ProjectSection>
-        </Grid.Column>
-      </Grid.Row>
-      <Grid.Row>
-        <Grid.Column width={16}>
-          <SectionHeader>Families</SectionHeader>
-          <FamilyTable
-            exportUrls={exportUrls}
-            showVariantDetails
-            detailFields={FAMILY_DETAIL_FIELDS}
-            noDetailFields={NO_DETAIL_FIELDS}
+const ProjectPageUI = React.memo(props => (
+  <Grid stackable>
+    <Grid.Row>
+      <Grid.Column width={4}>
+        {props.match.params.analysisGroupGuid ? null :
+        <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+          <AnalysisGroups />
+        </ProjectSection>}
+        <VerticalSpacer height={10} />
+        <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
+          <GeneLists project={props.project} />
+        </ProjectSection>
+      </Grid.Column>
+      <Grid.Column width={8}>
+        <ProjectSection label="Overview">
+          <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
+        </ProjectSection>
+        <VerticalSpacer height={10} />
+        <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
+          <VariantTagTypeBar
+            project={props.project}
+            analysisGroup={props.analysisGroup}
+            height={20}
+            showAllPopupCategorie
           />
-        </Grid.Column>
-      </Grid.Row>
-    </Grid>
-  )
-})
+          <VerticalSpacer height={10} />
+          <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
+        </ProjectSection>
+      </Grid.Column>
+      <Grid.Column width={4}>
+        <ProjectSection label="Collaborators">
+          <ProjectCollaborators />
+        </ProjectSection>
+      </Grid.Column>
+    </Grid.Row>
+    <Grid.Row>
+      <Grid.Column width={16}>
+        <SectionHeader>Families</SectionHeader>
+        <FamilyTable
+          showVariantDetails
+          detailFields={FAMILY_DETAIL_FIELDS}
+          noDetailFields={NO_DETAIL_FIELDS}
+        />
+      </Grid.Column>
+    </Grid.Row>
+  </Grid>
+))
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisGroup: PropTypes.object,
-  familyExportConfig: PropTypes.object,
-  individualsExportConfig: PropTypes.object,
-  samplesExportConfig: PropTypes.object,
   match: PropTypes.object,
 }
 
@@ -149,9 +134,6 @@ const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
-  familyExportConfig: getFamiliesExportConfig(state, ownProps),
-  individualsExportConfig: getIndividualsExportConfig(state, ownProps),
-  samplesExportConfig: getSamplesExportConfig(state, ownProps),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }

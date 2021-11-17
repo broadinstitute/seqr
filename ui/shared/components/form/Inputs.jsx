@@ -239,6 +239,25 @@ export class SearchInput extends React.PureComponent {
   }
 }
 
+const YEAR_OPTIONS = [...Array(130).keys()].map(i => ({ value: i + 1900 }))
+const YEAR_OPTIONS_UNKNOWN = [{ value: 0, text: 'Unknown' }, ...YEAR_OPTIONS]
+const YEAR_OPTIONS_ALIVE = [{ value: -1, text: 'Alive' }, ...YEAR_OPTIONS_UNKNOWN]
+const yearOptions = (includeAlive, includeUnknown) => {
+  if (includeAlive) {
+    return YEAR_OPTIONS_ALIVE
+  } else if (includeUnknown) {
+    return YEAR_OPTIONS_UNKNOWN
+  }
+  return YEAR_OPTIONS
+}
+
+export const YearSelector = ({ includeAlive, includeUnknown, ...props }) =>
+  <Select search inline options={yearOptions(includeAlive, includeUnknown)} {...props} />
+
+YearSelector.propTypes = {
+  includeAlive: PropTypes.bool,
+  includeUnknown: PropTypes.bool,
+}
 
 const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
   flex-wrap: ${props => (props.widths ? 'inherit' : 'wrap')};
@@ -246,7 +265,9 @@ const InlineFormGroup = styled(Form.Group).attrs({ inline: true })`
 `
 
 export const CheckboxGroup = React.memo((props) => {
-  const { value, options, label, groupLabel, onChange, ...baseProps } = props
+  const { value, label, groupLabel, onChange, ...baseProps } = props
+  const options = props.options.map(styledOption)
+  const numSelected = options.filter(opt => value.includes(opt.value)).length
   return (
     <List>
       <List.Item>
@@ -254,21 +275,22 @@ export const CheckboxGroup = React.memo((props) => {
           <BaseSemanticInput
             {...baseProps}
             inputType="Checkbox"
-            checked={value.length === options.length}
-            indeterminate={value.length > 0 && value.length < options.length}
+            checked={numSelected === options.length}
+            indeterminate={numSelected > 0 && numSelected < options.length}
             label={groupLabel || label}
             onChange={({ checked }) => {
+              const remainValue = value.filter(val => !options.find(opt => opt.value === val))
               if (checked) {
-                onChange(options.map(option => option.value))
+                onChange(options.map(option => option.value).concat(remainValue))
               } else {
-                onChange([])
+                onChange(remainValue)
               }
             }}
           />
         </List.Header>
         <List.List>
           {options.map(option =>
-            <List.Item key={option.value}>
+            <List.Item key={option.key}>
               <BaseSemanticInput
                 {...baseProps}
                 inputType="Checkbox"
@@ -399,8 +421,12 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-const BaseInlineToggle = styled(({ divided, fullHeight, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
-  margin-bottom: 0 !important;
+const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+  ${props => (props.asFormInput ?
+    `label {
+      font-weight: 700;
+    }` : 'margin-bottom: 0 !important;')}
+  
   &:last-child {
     padding-right: 0 !important;
   }

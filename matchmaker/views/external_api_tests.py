@@ -105,6 +105,24 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': '"features" or "genomicFeatures" are required'})
 
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
+            'patient': {'id': 123, 'contact': {'href': 'test@test.com'}, 'features': [{}]}
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'all "features" require an id'})
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
+            'patient': {'id': 123, 'contact': {'href': 'test@test.com'}, 'genomicFeatures': [{'variant': {}}]}
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'all "genomicFeatures" require a gene id'})
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps({
+            'patient': {'id': 123, 'contact': {'href': 'test@test.com'}, 'genomicFeatures': [{'gene': {}}]}
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'all "genomicFeatures" require a gene id'})
+
         # Test valid request
         response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)

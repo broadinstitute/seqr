@@ -14,9 +14,6 @@ import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButt
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import Modal from 'shared/components/modal/Modal'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
-import {
-  LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD,
-} from 'shared/utils/constants'
 import { updateLocusLists } from '../reducers'
 
 const ItemContainer = styled.div`
@@ -24,9 +21,6 @@ const ItemContainer = styled.div`
   white-space: nowrap;
 `
 
-const FIELDS = [
-  LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_DESCRIPTION_FIELD,
-]
 
 const LocusListItem = React.memo(({ project, locusList, updateLocusLists: onSubmit }) => {
   const submitValues = { locusListGuids: [locusList.locusListGuid] }
@@ -138,7 +132,7 @@ class AddGeneLists extends React.PureComponent {
         <LocusListsLoader>
           Add an existing Gene List to {this.props.project.name} or <CreateLocusListButton />
           <LocusListTables
-            fields={FIELDS}
+            basicFields
             omitLocusLists={this.props.project.locusListGuids}
             selectRows={this.selectList}
             selectedRows={this.state.selected}

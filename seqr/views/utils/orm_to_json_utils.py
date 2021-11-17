@@ -5,13 +5,14 @@ Utility functions for converting Django ORM object to JSON
 import json
 import os
 from collections import defaultdict
-from copy import copy, deepcopy
+from copy import deepcopy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
 from django.contrib.auth.models import User
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW, \
+    get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
@@ -36,16 +37,20 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
         return []
 
     model_class = type(models[0])
-    fields = copy(model_class._meta.json_fields)
+    fields = set(model_class._meta.json_fields)
     if is_analyst is None:
         is_analyst = user and user_is_analyst(user)
     if is_analyst:
-        fields += getattr(model_class._meta, 'internal_json_fields', [])
+        fields.update(getattr(model_class._meta, 'internal_json_fields', []))
     if additional_model_fields:
-        fields += additional_model_fields
+        fields.update(additional_model_fields)
+    audit_fields = [field for field in getattr(model_class._meta, 'audit_fields', set()) if field in fields]
+    for audit_field in audit_fields:
+        fields.update(get_audit_field_names(audit_field))
 
-    if 'created_by' in fields:
-        prefetch_related_objects(models, 'created_by')
+    user_fields = [field for field in fields if field.endswith('last_modified_by') or field == 'created_by']
+    for field in user_fields:
+        prefetch_related_objects(models, field)
     for nested_field in nested_fields or []:
         if not nested_field.get('value'):
             prefetch_related_objects(models, '__'.join(nested_field['fields'][:-1]))
@@ -65,8 +70,10 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
         if result.get('guid'):
             guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
             result[guid_key] = result.pop('guid')
-        if result.get('createdBy'):
-            result['createdBy'] = result['createdBy'].get_full_name() or result['createdBy'].email
+        for field in user_fields:
+            result_field = _to_camel_case(field)
+            if result.get(result_field):
+                result[result_field] = result[result_field].get_full_name() or result[result_field].email
         if process_result:
             process_result(result, model)
         results.append(result)
@@ -249,6 +256,14 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
+def get_json_for_family_notes(notes, **kwargs):
+    return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}], **kwargs)
+
+
+def get_json_for_family_note(note):
+    return _get_json_for_model(note, get_json_for_models=get_json_for_family_notes)
+
+
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
                               family_fields=None, skip_nested=False, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation for the given list of Individuals.
@@ -266,15 +281,11 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if not individuals:
         return []
 
-    def _get_case_review_status_modified_by(modified_by):
-        return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
-
     def _process_result(result, individual):
         mother = result.pop('mother', None)
         father = result.pop('father', None)
 
         result.update({
-            'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
             'maternalGuid': mother.guid if mother else None,
             'paternalGuid': father.guid if father else None,
             'maternalId': mother.individual_id if mother else None,
@@ -308,8 +319,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
     prefetch_related_objects(individuals, 'mother')
     prefetch_related_objects(individuals, 'father')
-    if 'case_review_status_last_modified_by' in kwargs['additional_model_fields']:
-        prefetch_related_objects(individuals, 'case_review_status_last_modified_by')
     if add_sample_guids_field:
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')
@@ -346,7 +355,7 @@ def _get_json_for_individual(individual, user=None, **kwargs):
     return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
-def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_nested=False):
+def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_nested=False, **kwargs):
     """Returns a JSON representation of the given list of Samples.
 
     Args:
@@ -356,14 +365,14 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     """
 
     if project_guid or not skip_nested:
-        kwargs = {'nested_fields': [
+        additional_kwargs = {'nested_fields': [
             {'fields': ('individual', 'guid'), 'value': individual_guid},
             {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
         ]}
     else:
-        kwargs = {'additional_model_fields': ['individual_id']}
+        additional_kwargs = {'additional_model_fields': ['individual_id']}
 
-    return _get_json_for_models(samples, guid_key='sampleGuid', **kwargs)
+    return _get_json_for_models(samples, guid_key='sampleGuid', **additional_kwargs, **kwargs)
 
 
 def get_json_for_sample(sample, **kwargs):
@@ -378,7 +387,7 @@ def get_json_for_sample(sample, **kwargs):
     return _get_json_for_model(sample, get_json_for_models=get_json_for_samples, **kwargs)
 
 
-def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False):
+def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, **kwargs):
     """Returns a JSON representation of the given list of AnalysisGroups.
 
     Args:
@@ -396,11 +405,11 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
     prefetch_related_objects(analysis_groups, 'families')
 
     if project_guid or not skip_nested:
-        kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
+        additional_kwargs = {'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]}
     else:
-        kwargs = {'additional_model_fields': ['project_id']}
+        additional_kwargs = {'additional_model_fields': ['project_id']}
 
-    return _get_json_for_models(analysis_groups, process_result=_process_result, **kwargs)
+    return _get_json_for_models(analysis_groups, process_result=_process_result, **additional_kwargs, **kwargs)
 
 
 def get_json_for_analysis_group(analysis_group, **kwargs):
@@ -674,12 +683,7 @@ def get_json_for_gene_notes(notes, user):
         dict: json object
     """
 
-    def _process_result(result, note):
-        result.update({
-            'editable': user == note.created_by,
-        })
-
-    return _get_json_for_models(notes, user=user, guid_key='noteGuid', process_result=_process_result)
+    return _get_json_for_models(notes, user=user, guid_key='noteGuid')
 
 
 def get_json_for_gene_notes_by_gene_id(gene_ids, user):
@@ -696,7 +700,7 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_project_count=False, is_analyst=None):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False, is_analyst=None):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -711,10 +715,23 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pro
         if include_genes:
             intervals = _get_json_for_models(interval_set.all())
             genome_versions = {interval['genomeVersion'] for interval in intervals}
+
+            if include_pagenes:
+                result.update({
+                    'items': [{
+                        'geneId': gene.gene_id,
+                        'pagene': _get_json_for_model(gene.palocuslistgene, user=user, is_analyst=is_analyst)
+                        if hasattr(gene, 'palocuslistgene') else None
+                    } for gene in gene_set.all()] + intervals,
+                })
+            else:
+                result.update({
+                    'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
+                })
             result.update({
-                'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
                 'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
             })
+
         if include_project_count:
             result['numProjects'] = locus_list.num_projects
         result.update({
@@ -722,9 +739,19 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pro
             'canEdit': user == locus_list.created_by,
         })
 
+        if hasattr(locus_list, 'palocuslist'):
+            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user, is_analyst=is_analyst)
+            result.update({
+                'paLocusList': pa_locus_list_json,
+            })
+
     prefetch_related_objects(locus_lists, 'created_by')
     prefetch_related_objects(locus_lists, 'locuslistgene_set')
     prefetch_related_objects(locus_lists, 'locuslistinterval_set')
+    prefetch_related_objects(locus_lists, 'palocuslist')
+
+    if include_pagenes:
+        prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
 
     return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
 
@@ -737,7 +764,8 @@ def get_json_for_locus_list(locus_list, user):
     Returns:
         dict: json object
     """
-    return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True)
+    return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True,
+                               include_pagenes=True)
 
 
 def get_json_for_project_collaborator_list(user, project):

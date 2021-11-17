@@ -18,10 +18,10 @@ import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
 import FamilyLink from '../../buttons/FamilyLink'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import { StyledForm } from '../../form/ReduxFormWrapper'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
+import NoteListFieldView from '../view-fields/NoteListFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
-import TextFieldView from '../view-fields/TextFieldView'
 
 const TagTitle = styled.span`
   font-weight: bolder;
@@ -72,46 +72,26 @@ ShortcutTagToggle.propTypes = {
   tag: PropTypes.object,
 }
 
-const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags, familyGuid, variantId }) => {
-  const appliedShortcutTags = SHORTCUT_TAGS.reduce((acc, tagName) => {
-    const appliedTag = ((variantTagNotes || {}).tags || []).find(tag => tag.name === tagName)
-    return appliedTag ? { ...acc, [tagName]: appliedTag } : acc
-  }, {})
-  const shortcutTagFields = SHORTCUT_TAGS.map(tagName => ({
-    name: tagName,
-    label: tagName,
-    component: ShortcutTagToggle,
-    tag: appliedShortcutTags[tagName],
-  }))
-
-  const onSubmit = (values) => {
-    const updatedTags = Object.keys(values).reduce((allTags, tagName) => {
-      const applied = values[tagName]
-      if (applied) {
-        return [...allTags, { name: tagName }]
-      }
-      return allTags.filter(tag => tag.name !== tagName)
-    }, (variantTagNotes || {}).tags || [])
-    return dispatchUpdateFamilyVariantTags({ ...variantTagNotes, tags: updatedTags })
+const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags }) => {
+  const { tags = [], ...variantMeta } = variantTagNotes || {}
+  const onSubmit = tagName => (value) => {
+    return dispatchUpdateFamilyVariantTags({
+      ...variantMeta,
+      tags: value ? [...tags, { name: tagName }] : tags.filter(tag => tag.name !== tagName),
+    })
   }
 
   return (
-    <ReduxFormWrapper
-      onSubmit={onSubmit}
-      form={`editShorcutTags-${variantId}-${familyGuid}`}
-      initialValues={appliedShortcutTags}
-      closeOnSuccess={false}
-      submitOnChange
-      fields={shortcutTagFields}
-    />
+    <StyledForm inline hasSubmitButton={false}>
+      {SHORTCUT_TAGS.map(tagName =>
+        <ShortcutTagToggle key={tagName} label={tagName} tag={tags.find(tag => tag.name === tagName)} onChange={onSubmit(tagName)} />)}
+    </StyledForm>
   )
 })
 
 ShortcutTags.propTypes = {
   variantTagNotes: PropTypes.object,
   dispatchUpdateFamilyVariantTags: PropTypes.func,
-  familyGuid: PropTypes.string.isRequired,
-  variantId: PropTypes.string.isRequired,
 }
 
 
@@ -144,38 +124,6 @@ VariantTagField.propTypes = {
   variantTagNotes: PropTypes.object,
   fieldName: PropTypes.string,
   variantId: PropTypes.string.isRequired,
-  family: PropTypes.object.isRequired,
-}
-
-const noteRequired = value => (value ? undefined : 'Note is required')
-
-const VariantNoteField = React.memo(({ action, note, variantTagNotes, family, ...props }) => {
-  const values = { ...variantTagNotes, ...note }
-  return (
-    <div>
-      <TextFieldView
-        noModal
-        showInLine
-        isEditable
-        field="note"
-        modalId={family.familyGuid}
-        modalTitle={`${action} Variant Note for Family ${family.displayName}`}
-        additionalEditFields={VARIANT_NOTE_FIELDS}
-        fieldValidator={noteRequired}
-        initialValues={values}
-        idField={note ? 'noteGuid' : 'variantGuids'}
-        deleteConfirm="Are you sure you want to delete this note?"
-        textPopup={note && taggedByPopup(note, 'Note By')}
-        {...props}
-      />
-    </div>
-  )
-})
-
-VariantNoteField.propTypes = {
-  note: PropTypes.object,
-  variantTagNotes: PropTypes.object,
-  action: PropTypes.string,
   family: PropTypes.object.isRequired,
 }
 
@@ -242,8 +190,6 @@ const FamilyVariantTags = React.memo((
           <Table.Cell collapsing>
             <ShortcutTags
               variantTagNotes={variantTagNotes}
-              variantId={variantId}
-              familyGuid={family.familyGuid}
               dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags}
             />
           </Table.Cell>}
@@ -285,25 +231,17 @@ const FamilyVariantTags = React.memo((
             <TagTitle>Notes:</TagTitle>
           </Table.Cell>
           <Table.Cell colSpan={isCompoundHet ? 2 : 3}>
-            {((variantTagNotes || {}).notes || []).map(note =>
-              <VariantNoteField
-                key={note.noteGuid}
-                note={note}
-                variantTagNotes={variantTagNotes}
-                family={family}
-                isDeletable
-                compact
-                action="Edit"
-                onSubmit={dispatchUpdateVariantNote}
-              />,
-            )}
-            <VariantNoteField
-              variantTagNotes={variantTagNotes}
+            <NoteListFieldView
+              initialValues={variantTagNotes}
+              modalId={family.familyGuid}
+              modalTitle={`Variant Note for Family ${family.displayName}`}
+              additionalEditFields={VARIANT_NOTE_FIELDS}
               defaultId={variantId}
-              family={family}
-              editIconName="plus"
-              editLabel="Add Note"
-              action="Add"
+              idField="variantGuids"
+              isEditable
+              showInLine
+              compact
+              getTextPopup={note => note && taggedByPopup(note, 'Note By')}
               onSubmit={dispatchUpdateVariantNote}
             />
           </Table.Cell>

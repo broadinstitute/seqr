@@ -3,7 +3,7 @@ import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import configureStore from 'redux-mock-store'
 import FamilyReads from './FamilyReads'
-import { STATE1 } from './fixtures'
+import { STATE1 } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 

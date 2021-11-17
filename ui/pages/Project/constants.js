@@ -21,12 +21,13 @@ import {
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
   FAMILY_FIELD_ANALYSIS_NOTES,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_CASE_NOTES,
   FAMILY_FIELD_INTERNAL_NOTES,
   FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_NAME_LOOKUP,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
   INDIVIDUAL_FIELD_MATERNAL_ID,
@@ -37,10 +38,10 @@ import {
   FAMILY_ANALYSIS_STATUS_OPTIONS,
   INDIVIDUAL_FIELD_CONFIGS,
   SHOW_ALL,
-  familyVariantSamples,
   exportConfigForField,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HPO_EXPORT_DATA,
+  FAMILY_NOTES_FIELDS,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -146,7 +147,7 @@ const ACCEPTED_FILTER = {
 const ASSIGNED_TO_ME_FILTER = {
   value: SHOW_ASSIGNED_TO_ME,
   name: 'Assigned To Me',
-  createFilter: (individualsByGuid, samplesByGuid, user) => family => familyIsAssignedToMe(family, user),
+  createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
 
 export const FAMILY_FILTER_OPTIONS = [
@@ -155,8 +156,8 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_DATA_LOADED,
     category: 'Data Status:',
     name: 'Data Loaded',
-    createFilter: (individualsByGuid, samplesByGuid) => family =>
-      familyVariantSamples(family, individualsByGuid, samplesByGuid).filter(sample => sample.isActive).length > 0,
+    createFilter: (individualsByGuid, user, samplesByFamily) => family =>
+      (samplesByFamily[family.familyGuid] || []).filter(sample => sample.isActive).length > 0,
   },
   {
     value: SHOW_PHENOTYPES_ENTERED,
@@ -177,14 +178,14 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Analysed By Me',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
+    createFilter: (individualsByGuid, user) => family =>
       family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Not Analysed By Me',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
+    createFilter: (individualsByGuid, user) => family =>
       !family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email),
   },
   {
@@ -255,7 +256,7 @@ export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_ASSIGNED_TO_ME_IN_REVIEW,
     name: 'Assigned To Me - In Review',
-    createFilter: (individualsByGuid, samplesByGuid, user) => family =>
+    createFilter: (individualsByGuid, user) => family =>
       familyIsAssignedToMe(family, user) && familyIsInReview(family, individualsByGuid),
   },
   { ...ASSIGNED_TO_ME_FILTER, name: 'Assigned To Me - All' },
@@ -287,6 +288,9 @@ const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
 const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 const SORT_BY_ANALYSED_DATE = 'SORT_BY_ANALYSED_DATE'
 
+const FAMILY_ANALYSIS_STATUS_SORT_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+  (acc, { value }, i) => ({ ...acc, [value]: i.toString(36) }), {})
+
 export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_FAMILY_NAME,
@@ -308,24 +312,23 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
-      const loadedSamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
+    createSortKeyGetter: (individualsByGuid, samplesByFamily) => (family) => {
+      const loadedSamples = samplesByFamily[family.familyGuid] || []
       return loadedSamples.length ? loadedSamples[loadedSamples.length - 1].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
   {
     value: SORT_BY_DATA_FIRST_LOADED_DATE,
     name: 'Date First Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByGuid) => (family) => {
-      const loadedSamples = familyVariantSamples(family, individualsByGuid, samplesByGuid)
+    createSortKeyGetter: (individualsByGuid, samplesByFamily) => (family) => {
+      const loadedSamples = samplesByFamily[family.familyGuid] || []
       return loadedSamples.length ? loadedSamples[0].loadedDate : '2000-01-01T01:00:00.000Z'
     },
   },
   {
     value: SORT_BY_ANALYSIS_STATUS,
     name: 'Analysis Status',
-    createSortKeyGetter: () => family =>
-      FAMILY_ANALYSIS_STATUS_OPTIONS.map(status => status.value).indexOf(family.analysisStatus),
+    createSortKeyGetter: () => family => FAMILY_ANALYSIS_STATUS_SORT_LOOKUP[family.analysisStatus] || '',
   },
   {
     value: SORT_BY_ANALYSED_DATE,
@@ -354,22 +357,22 @@ const tableConfigForField = fieldConfigs => (field) => {
   return { name: field,  content: label, width, formFieldProps }
 }
 
-const FAMILY_FIELD_CONFIGS = {
+const formatNotes = notes => (notes || []).map(({ note }) => stripMarkdown(note)).join(';')
+
+const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_FIELD_ID]: { label: 'Family ID', width: 2 },
   [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3, description: 'The human-readable family name to show in place of the family ID' },
   [FAMILY_FIELD_CREATED_DATE]: { label: 'Created Date' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
   [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
-    label: 'Analysis Status',
     format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
   },
-  [FAMILY_FIELD_ASSIGNED_ANALYST]: { label: 'Assigned Analyst' },
-  [FAMILY_FIELD_ANALYSED_BY]: { label: 'Analysed By', format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
-  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { label: 'Analysis Summary', format: stripMarkdown },
-  [FAMILY_FIELD_ANALYSIS_NOTES]: { label: 'Analysis Notes', format: stripMarkdown },
+  [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
+  [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
-}
+  ...FAMILY_NOTES_FIELDS.reduce((acc, { id }) => ({ ...acc, [id]: { format: formatNotes } }), {}),
+}).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})
 
 export const FAMILY_FIELDS = [
   FAMILY_FIELD_ID, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_CODED_PHENOTYPE,
@@ -384,8 +387,8 @@ export const FAMILY_EXPORT_DATA = [
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
-  FAMILY_FIELD_ANALYSIS_SUMMARY,
   FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_CASE_NOTES,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const FAMILY_BULK_EDIT_EXPORT_DATA = [

@@ -127,6 +127,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: google_client_secret
+        - name: GA_TOKEN_ID
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: ga_token_id
         - name: KIBANA_ES_PASSWORD
           valueFrom:
             secretKeyRef:
