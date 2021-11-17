@@ -127,6 +127,5 @@
       "error",
       "static public field"
     ],
-//     "react/jsx-one-expression-per-line": "off",
   }
 }
