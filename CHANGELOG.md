@@ -2,7 +2,7 @@
 
 ## dev
 * Update pathogenicity search to override frequency filters
-* Add ACMG classifier to variants
+* Add ACMG classifier to variants (REQUIRES DB MIGRATION)
 
 ## 11/10/21
 * Update in-silico score filtering behavior and add splice AI override
