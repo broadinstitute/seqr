@@ -93,7 +93,6 @@ CREATE_VARIANT_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1', 'F000002_2'],
     'variantId': '2-61413835-AAAG-A',
-    'acmgClassification': None,
 }
 
 CREATE_VARIANT_REQUEST_BODY = {
@@ -240,6 +239,7 @@ class SavedVariantAPITest(object):
         variant_json.update({
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
+            'acmgClassification': None,
             'selectedMainTranscriptId': None,
             'noteGuids': [],
             'functionalDataGuids': [],
@@ -374,6 +374,12 @@ class SavedVariantAPITest(object):
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
         self.check_collaborator_login(create_variant_note_url, request_data={'familyGuid': 'F000001_1'})
+
+        response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
+            {'familyGuid': 'F000001_1'}
+        ))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Note is required')
 
         # send valid request to create variant_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
@@ -815,7 +821,7 @@ class SavedVariantAPITest(object):
 
         response = self.client.post(update_variant_acmg_classification_url, content_type='application/json', data=json.dumps(variant))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'savedVariantByGuid': {VARIANT_GUID: {'acmgClassification': variant['variant']['acmgClassification']}}})
+        self.assertDictEqual(response.json(), {'savedVariantsByGuid': {VARIANT_GUID: {'acmgClassification': variant['variant']['acmgClassification']}}})
 
 
 # Tests for AnVIL access disabled
@@ -853,7 +859,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_update_and_delete_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 6)
+        assert_no_list_ws_has_al(self, 7)
 
     def test_create_partially_saved_compound_het_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
