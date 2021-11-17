@@ -1142,6 +1142,7 @@ class EsUtilsTest(TestCase):
             get_single_es_variant(self.families, '10-10334333-A-G')
         self.assertEqual(str(cm.exception), 'Variant 10-10334333-A-G not found')
 
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
     @mock.patch('seqr.utils.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
     @mock.patch('seqr.utils.elasticsearch.es_search.logger')
@@ -1156,7 +1157,7 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'No es index found for families no_individuals')
 
-        search_model.search = {'inheritance': {'mode': 'recessive'}}
+        search_model.search = {'inheritance': {'mode': 'recessive'}, 'locus': {'rawItems': 'DDX11L1'}}
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
         with self.assertRaises(InvalidSearchException) as cm:
@@ -1195,6 +1196,14 @@ class EsUtilsTest(TestCase):
         self.assertEqual(str(cm.exception), 'Unable to load more than 10000 variants (20000 requested)')
 
         search_model.search = {'inheritance': {'mode': 'compound_het'}}
+        search_model.save()
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'Location must be specified to search for compound heterozygous variants across many families')
+
+        search_model.search['locus'] = {'rawItems': 'DDX11L1'}
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
