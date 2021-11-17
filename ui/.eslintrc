@@ -58,7 +58,6 @@
       "logical": "parens-new-line",
       "prop": "ignore"
     }],
-    "react/no-deprecated": "off", // TODO re-enable with https://github.com/broadinstitute/seqr-private/issues/1057
     "react/require-default-props": "off",
     "react/require-optimization": "error",
     "react/state-in-constructor": ["error", "never"],

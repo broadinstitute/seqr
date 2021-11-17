@@ -36,21 +36,22 @@ const FIELDS = [
   VARIANT_SEARCH_SORT_FIELD,
 ]
 
-export const DisplayVariants = React.memo(({ displayVariants }) => (
+export const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle }) => (
   <Grid.Row>
     <Grid.Column width={16}>
-      <Variants variants={displayVariants} linkToSavedVariants />
+      <Variants variants={displayVariants} compoundHetToggle={compoundHetToggle} linkToSavedVariants />
     </Grid.Column>
   </Grid.Row>
 ))
 
 DisplayVariants.propTypes = {
   displayVariants: PropTypes.arrayOf(PropTypes.object),
+  compoundHetToggle: PropTypes.func,
 }
 
 const BaseVariantSearchResultsContent = React.memo(({
   match, variantSearchDisplay, searchedVariantExportConfig, onSubmit, totalVariantsCount, additionalDisplayEdit,
-  displayVariants,
+  displayVariants, compoundHetToggle,
 }) => {
   const { searchHash } = match.params
   const { page = 1, recordsPerPage } = variantSearchDisplay
@@ -83,7 +84,7 @@ const BaseVariantSearchResultsContent = React.memo(({
         <GeneBreakdown searchHash={searchHash} />
       </Grid.Column>
     </LargeRow>,
-    <DisplayVariants key="variants" displayVariants={displayVariants} />,
+    <DisplayVariants key="variants" displayVariants={displayVariants} compoundHetToggle={compoundHetToggle} />,
     <LargeRow key="bottomPagination">
       <Grid.Column width={11} floated="right" textAlign="right">
         <ReduxFormWrapper
@@ -111,6 +112,7 @@ BaseVariantSearchResultsContent.propTypes = {
   totalVariantsCount: PropTypes.number,
   displayVariants: PropTypes.arrayOf(PropTypes.object),
   additionalDisplayEdit: PropTypes.node,
+  compoundHetToggle: PropTypes.func,
 }
 
 const mapContentStateToProps = (state, ownProps) => ({
@@ -187,15 +189,22 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
 
 const VariantSearchResults = connect(mapStateToProps, mapDispatchToProps)(BaseVariantSearchResults)
 
-const LoadedVariantSearchResults = React.memo(({ contentComponent, flattenCompoundHet, ...props }) => (
+const LoadedVariantSearchResults = React.memo((
+  { contentComponent, flattenCompoundHet, compoundHetToggle, ...props },
+) => (
   <QueryParamsEditor {...props}>
-    <VariantSearchResults contentComponent={contentComponent} flattenCompoundHet={flattenCompoundHet} />
+    <VariantSearchResults
+      contentComponent={contentComponent}
+      flattenCompoundHet={flattenCompoundHet}
+      compoundHetToggle={compoundHetToggle}
+    />
   </QueryParamsEditor>
 ))
 
 LoadedVariantSearchResults.propTypes = {
   contentComponent: PropTypes.node,
   flattenCompoundHet: PropTypes.bool,
+  compoundHetToggle: PropTypes.func,
 }
 
 export default LoadedVariantSearchResults

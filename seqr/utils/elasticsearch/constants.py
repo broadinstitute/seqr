@@ -49,6 +49,11 @@ INHERITANCE_FILTERS = {
     },
 }
 
+PATH_FREQ_OVERRIDE_CUTOFF = 0.05
+
+CLINVAR_PATH_FILTER = 'pathogenic'
+CLINVAR_LIKELY_PATH_FILTER = 'likely_pathogenic'
+
 CLINVAR_SIGNFICANCE_MAP = {
     'pathogenic': ['Pathogenic', 'Pathogenic/Likely_pathogenic'],
     'likely_pathogenic': ['Likely_pathogenic', 'Pathogenic/Likely_pathogenic'],
@@ -96,10 +101,10 @@ POPULATIONS = {
         'Hemi': 'exac_AC_Hemi',
     },
     'gnomad_exomes': {
-        'filter_AF': ['gnomad_exomes_FAF_AF', 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'],
+        'filter_AF': ['gnomad_exomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_genomes': {
-        'filter_AF': ['gnomad_genomes_FAF_AF', 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
+        'filter_AF': ['gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_svs': {},
 }

@@ -96,7 +96,7 @@ class EditRecordsForm extends React.PureComponent {
 
   submitRecords = (values) => {
     const { records, onSubmit, idField, columns } = this.props
-    onSubmit(this.getFilteredRecords(values, record => columns.map(field => field.name).some(
+    return onSubmit(this.getFilteredRecords(values, record => columns.map(field => field.name).some(
       field => record[field] !== records[record[idField]][field],
     )))
   }
