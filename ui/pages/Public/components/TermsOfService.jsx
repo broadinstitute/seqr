@@ -115,8 +115,9 @@ export default () => (
       </List.Item>
       <List.Item>
         <b>Do not rely on information on this Site. </b>
-        This Site is provided on an &quot;as is&quot; and &quot;as available&quot; basis, and we make no representations or
-        warranties, express or implied, regarding the operation or availability of the Site. <br />
+        This Site is provided on an &quot;as is&quot; and &quot;as available&quot; basis,
+        and we make no representations or warranties, express or implied, regarding the
+        operation or availability of the Site. <br />
 
         You expressly understand and agree that your use of our Site, or any material available through it,
         is at your own risk. Neither the Garvan nor its employees warrant that our Site will be uninterrupted,
@@ -181,14 +182,16 @@ export default () => (
         judgments, awards, losses, costs, expenses or fees (including reasonable attorneys&apos; fees)
         arising out of or relating to your violation of these terms or your use of the Site, including,
         but not limited to, your user contributions, your use of any information obtained from the Site
-        and any use of the Site&apos;s content, services and products other than as expressly authorised in these terms. <br />
+        and any use of the Site&apos;s content, services and products other than as expressly authorised
+        in these terms. <br />
       </List.Item>
       <List.Item>
         <b>We are not responsible for viruses. </b>
         We do not guarantee that our Site will be secure or free from bugs or viruses or any other type of
         malicious code or software. <br />
 
-        You are responsible for configuring your technology to access our Site. You should use your own antivirus software. <br />
+        You are responsible for configuring your technology to access our Site.
+        You should use your own antivirus software. <br />
       </List.Item>
       <List.Item>
         <b>Australian law applies to disputes. </b>
@@ -240,14 +243,16 @@ export default () => (
             To give the impression that they emanate from or are endorsed by us or any other person or
             entity, if this is not the case; or;
           </List.Item>
-          <List.Item as="li">To post any material that infringes or violates the academic/intellectual rights of others;</List.Item> <br />
+          <List.Item as="li">
+            To post any material that infringes or violates the academic/intellectual rights of others;
+          </List.Item>
         </List>
         Additionally, you agree not to:
         <List as="ul">
           <List.Item as="li">
             Use the Site in any manner that could disable, overburden, damage, or impair the Site or
-            interfere with any other party&apos;s use of the Site, including their ability to engage in real time activities
-            through the Site;
+            interfere with any other party&apos;s use of the Site, including their ability to engage
+            in real time activities through the Site;
           </List.Item>
           <List.Item as="li">
             Browse, search or reveal any protected data by the Centre for Population Genomics except in

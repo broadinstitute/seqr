@@ -1,3 +1,5 @@
+/* eslint-disable react/destructuring-assignment */
+
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -129,9 +131,8 @@ export const inSilicoFieldLayout = groups => fieldComponents => (
           <Grid.Column width={14}>
             <Grid>
               <Grid.Row>
-                {IN_SILICO_GROUP_INDEX_MAP[group].map(
-                  i => <Grid.Column key={i} width={3}>{fieldComponents[i]}</Grid.Column>,
-                )}
+                {IN_SILICO_GROUP_INDEX_MAP[group]
+                  .map(i => <Grid.Column key={i} width={3}>{fieldComponents[i]}</Grid.Column>)}
               </Grid.Row>
             </Grid>
           </Grid.Column>
@@ -328,7 +329,8 @@ class VariantSearchFormPanels extends React.PureComponent {
               } else if (i === panels.length - 1 && !isActive) {
                 attachedTitle = 'bottom'
               }
-              return [...acc,
+              return [
+                ...acc,
                 <Accordion.Title
                   key={`${name}-title`}
                   active={isActive}

@@ -18,7 +18,7 @@ const HeaderMenu = styled(Menu)`
   padding-right: 100px;
 `
 
-const PageHeader = React.memo(({ user, onSubmit }) =>
+const PageHeader = React.memo(({ user, onSubmit }) => (
   <HeaderMenu borderless inverted attached>
     <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
     {Object.keys(user).length ? [
@@ -50,8 +50,8 @@ const PageHeader = React.memo(({ user, onSubmit }) =>
       </Dropdown>,
       <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
     ] : <Menu.Item as="a" href={GOOGLE_LOGIN_URL} position="right">Log in</Menu.Item>}
-  </HeaderMenu >,
-)
+  </HeaderMenu>
+))
 
 PageHeader.propTypes = {
   user: PropTypes.object,

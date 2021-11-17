@@ -19,7 +19,7 @@ const LOGIN_BUTTON_PROPS = {
   label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
 }
 
-const LandingPage = ({ }) => (
+const LandingPage = () => (
   <Segment.Group>
     <PageSegment textAlign="center" size="massive" secondary>
       <Header size="huge" content={<i>seqr</i>} />
@@ -65,8 +65,9 @@ const LandingPage = ({ }) => (
         content={
           <span>
             <i>seqr</i>
-             &nbsp; is available through four methods:
-          </span>}
+            &nbsp; is available through four methods:
+          </span>
+        }
       />
       <Grid>
         <Grid.Column width={3} />
@@ -118,6 +119,5 @@ const LandingPage = ({ }) => (
     </PageSegment>
   </Segment.Group>
 )
-
 
 export default LandingPage

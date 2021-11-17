@@ -1,7 +1,7 @@
 import React from 'react'
 import { Header, Segment, List } from 'semantic-ui-react'
 
-export default () =>
+export default () => (
   <Segment basic padded="very">
     <Header dividing content="CPG seqr Privacy Policy" subheader="Last Updated 13-MAY-2021" size="huge" />
     Please read these terms and conditions carefully before using this site. <br />
@@ -22,7 +22,8 @@ export default () =>
         traditional scientific disciplines to find solutions to disease. Garvan’s researchers have
         made significant advances in genome, epigenome, protein and cell analysis technology.
         We have revealed causes and treatments for diseases including diabetes, osteoporosis, cancer,
-        immune deficiency and autoimmunity. We will refer to Garvan in this Policy as &quot;we,&quot; &quot;us&quot; or &quot;our.&quot; <br />
+        immune deficiency and autoimmunity. We will refer to Garvan in this Policy as
+        &quot;we,&quot; &quot;us&quot; or &quot;our.&quot; <br />
 
         This Policy applies to the seqr platform, which is a web-based application developed and0
         hosted by Garvan (the &quot;Platform&quot;). This Platform is used by both Garvan employees and
@@ -170,7 +171,9 @@ export default () =>
         We use these tools to help us improve our Platform, performance, and user experiences. We may
         also use third-party tracking technologies, such as a web application firewall, to detect
         malicious code or attacks on our Platform. These entities may use cookies and other tracking
-        technologies to perform their services. We do not share your Personal Information with these third parties. <br />
+        technologies to perform their services. We do not share your Personal Information with these third parties.
+
+        <br />
       </List.Item>
       <List.Item>
         <b>How do we use your information? </b>
@@ -309,13 +312,17 @@ export default () =>
         Garvan does not disclose your personal information to overseas recipients. We may however
         store some personal information on servers owned by companies based in the United States of America.
         Our contractual arrangements comply with the requirements of the Privacy Act and we take reasonable
-        steps to ensure those companies do not breach Australian privacy laws in relation to your personal information. <br />
+        steps to ensure those companies do not breach Australian privacy laws in relation to your personal information.
+
+        <br />
       </List.Item>
       <List.Item>
         <b>What should you do if you have a complaint about the handling of your personal information? </b>
-        If you have any questions or concerns about this Privacy Policy or how your personal information has been handled by Garvan,
-        please contact us via <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a> or
-        <a href="mailto:privacy@garvan.org.au"> privacy@garvan.org.au </a> <br />
+        If you have any questions or concerns about this Privacy Policy or how your personal information has
+        been handled by Garvan, please contact us via &nbsp;
+        <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a> or
+        <a href="mailto:privacy@garvan.org.au"> privacy@garvan.org.au </a>
+        <br />
 
         We will consider and respond to your complaint within a reasonable period.  If you are not satisfied with
         our response, or you consider that we may have breached the Australian Privacy Principles or the Privacy Act,
@@ -325,14 +332,14 @@ export default () =>
       </List.Item>
       <List.Item>
         <b>Will you update or change this Policy? </b>
-        Yes, we may need to update or change this Policy for various reasons, such as to comply with changes in the law,
-        or to cover new features or services provided through the Platform. If we update or change this Policy we will
-        post the changes to the Policy on the Platform and in the App. To make sure you are aware of any updates or changes,
-        you should review this Policy periodically and make sure you have your most current email address in your seqr profile.
-        Any changes to our Policy will become effective upon our posting of the revised Policy on the Platform.
-        Use of the Platform following such changes constitutes your acceptance of the revised Policy then in effect.
-        You will be able to determine when this Privacy Policy was last revised by checking the &quot;Last Updated&quot; information
-        that appears at the top of this page. <br />
+        Yes, we may need to update or change this Policy for various reasons, such as to comply with changes
+        in the law, or to cover new features or services provided through the Platform. If we update or change
+        this Policy we will post the changes to the Policy on the Platform and in the App. To make sure you are
+        aware of any updates or changes, you should review this Policy periodically and make sure you have your
+        most current email address in your seqr profile. Any changes to our Policy will become effective upon our
+        posting of the revised Policy on the Platform. Use of the Platform following such changes constitutes your
+        acceptance of the revised Policy then in effect. You will be able to determine when this Privacy Policy was
+        last revised by checking the &quot;Last Updated&quot; information that appears at the top of this page. <br />
       </List.Item>
       <List.Item>
         <b>HIPAA, Protected Health Information and Clinical Compliance Features. </b>
@@ -348,8 +355,8 @@ export default () =>
         of the European Union as well as certain rights such data subjects have with respect to the processing
         of their Personal Information, pursuant to applicable local laws. Capitalized terms not otherwise defined
         in this Policy, shall have the meaning ascribed to them by the European Union General Data
-        Protection Regulation 2016/679 and its amendments (&quot;GDPR&quot;). With respect to User Supplied Data, we are
-        a data processor or subprocessor for our users, who are either data controllers or data processors.
+        Protection Regulation 2016/679 and its amendments (&quot;GDPR&quot;). With respect to User Supplied Data,
+        we are a data processor or subprocessor for our users, who are either data controllers or data processors.
         As such, we are not liable for the provisions of GDPR that pertain to the data controllers as it relates
         to User Supplied Data. Our obligations as a data processor for User Supplied Data shall include those
         specified in Article 28 of the GDPR. If you make a request for User Supplied Data, we will submit that
@@ -376,16 +383,23 @@ export default () =>
               </List.Item>
               <List.Item as="li">operating and administering of the Platform;</List.Item>
               <List.Item as="li">promoting the safety and security of the Platform;</List.Item>
-              <List.Item as="li">fulfilling your requests and communicating with you when you contact us; and</List.Item>
+              <List.Item as="li">
+                fulfilling your requests and communicating with you when you contact us; and
+              </List.Item>
               <List.Item as="li">marketing and promoting the Platform.</List.Item>
               <List.Item as="li">
                 Consent. In some cases, you will give us consent to use your Personal Information
                 for a specific purpose. For example, we may rely on your consent to use technical information
                 such as cookie data to the extent required by the GDPR. You can withdraw your consent at any
-                time by contacting <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>;
-                however, such withdrawal shall not affect the legality of any processing done before receipt of the withdrawal.
+                time by contacting &nbsp;
+                <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>;
+                however, such withdrawal shall not affect the legality of any processing done before
+                receipt of the withdrawal.
               </List.Item>
-              <List.Item as="li">Legal obligations. We may be required to process your Personal Information to comply with our legal obligations.</List.Item>
+              <List.Item as="li">
+                Legal obligations. We may be required to process your&nbsp;
+                Personal Information to comply with our legal obligations.
+              </List.Item>
               <List.Item as="li">
                 Data Retention. We retain Personal Information about you for the time necessary to
                 accomplish the purpose for which such information was collected, usually for the duration of
@@ -399,11 +413,15 @@ export default () =>
                   <List.Item as="li">
                     Access, Correction and Erasure Requests: You have the right to:
                     <List as="ul">
-                      <List.Item as="li">contact us to confirm whether we are processing your Personal Information;</List.Item>
+                      <List.Item as="li">
+                        contact us to confirm whether we are processing your Personal Information;
+                      </List.Item>
                       <List.Item as="li">receive information on how your Personal Information is processed;</List.Item>
                       <List.Item as="li">obtain a copy of your Personal Information;</List.Item>
                       <List.Item as="li">request that we update or correct your Personal Information; and</List.Item>
-                      <List.Item as="li">request that we delete Personal Information in certain circumstances.d</List.Item>
+                      <List.Item as="li">
+                        request that we delete Personal Information in certain circumstances.d
+                      </List.Item>
                       <List.Item as="li">
                         Right to Object to Processing: You have the right to request that we cease
                         processing of your Personal Information: for marketing activities, including profiling
@@ -415,9 +433,10 @@ export default () =>
                       <List.Item as="li">
                         Right to Restrict Processing: You have the right to request that we limit
                         the processing of your Personal Information:for marketing activities, including profiling
-                        for statistical purposes where such processing is based upon our legitimate business interests,
-                        unless we are able to demonstrate a compelling legitimate basis for such processing or we need to
-                        process your Personal Information for the establishment, exercise or defence of a legal claim.
+                        for statistical purposes where such processing is based upon our legitimate business
+                        interests, unless we are able to demonstrate a compelling legitimate basis for such
+                        processing or we need to process your Personal Information for the establishment,
+                        exercise or defence of a legal claim.
                       </List.Item>
                       <List.Item as="li">
                         Right to Restrict Processing: You have the right to request that we limit the processing of
@@ -425,8 +444,8 @@ export default () =>
                         <List as="ul">
                           <List.Item as="li">
                             while we are evaluating or in the process of responding to a request by you to update
-                            or correct your Personal Information where such processing is unlawful and you do not want us to
-                            delete your data;
+                            or correct your Personal Information where such processing is unlawful and you do not
+                            want us to delete your data;
                           </List.Item>
                           <List.Item as="li">
                             where we no longer require such data, but you want us to retain the data for the
@@ -438,10 +457,10 @@ export default () =>
                           </List.Item>
                           <List.Item as="li">
                             Data Portability Requests: You have the right to request that we provide you or a third
-                            party that you designate with certain of your Personal Information in a commonly used, machine
-                            readable format. Please note, however, that data portability rights apply only to Personal Information
-                            that we have obtained directly from you and only where our processing is based upon consent or the
-                            performance of a contract.
+                            party that you designate with certain of your Personal Information in a commonly used,
+                            machine readable format. Please note, however, that data portability rights apply only
+                            to Personal Informationthat we have obtained directly from you and only where our
+                            processing is based upon consent or the performance of a contract.
                           </List.Item>
                         </List>
                       </List.Item>
@@ -471,7 +490,9 @@ export default () =>
       to take longer than 30 days. Please note, however, that certain Personal Information may be exempt from such
       rights pursuant to applicable data protection laws. In addition, we will not respond to any request unless we
       are able to appropriately verify the requestor&apos;s identity. We may charge you a reasonable fee for subsequent
-      copies of Personal Information that you request. In addition, if we consider that a request is manifestly unfounded
-      or excessive, we may either request a reasonable fee to deal with the request or refuse to deal with the request.
+      copies of Personal Information that you request. In addition, if we consider that a request is manifestly
+      unfounded or excessive, we may either request a reasonable fee to deal with the request or refuse to deal with
+      the request.
     </p>
   </Segment>
+)
