@@ -4,15 +4,18 @@ import { Header, Segment, List } from 'semantic-ui-react'
 export default () => (
   <Segment basic padded="very">
     <Header dividing content="CPG seqr Privacy Policy" subheader="Last Updated 13-MAY-2021" size="huge" />
-    Please read these terms and conditions carefully before using this site. <br />
+    Please read these terms and conditions carefully before using this site.
+    <br />
 
     The Garvan Institute of Medical Research (Garvan) values your privacy. This Privacy Policy
     (&quot;Policy&quot;) provides important information about how Garvan collects and uses your Personal
-    Information (as defined in Section 5, 6 and 9 below) through the seqr platform. <br />
+    Information (as defined in Section 5, 6 and 9 below) through the seqr platform.
+    <br />
 
     Please make sure you review this Policy before using the seqr platform. If you have any
     questions about this Policy, please contact us at
-    <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a> <br />
+    <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>
+    <br />
 
     <List ordered>
       <List.Item>
@@ -23,19 +26,22 @@ export default () => (
         made significant advances in genome, epigenome, protein and cell analysis technology.
         We have revealed causes and treatments for diseases including diabetes, osteoporosis, cancer,
         immune deficiency and autoimmunity. We will refer to Garvan in this Policy as
-        &quot;we,&quot; &quot;us&quot; or &quot;our.&quot; <br />
+        &quot;we,&quot; &quot;us&quot; or &quot;our.&quot;
+        <br />
 
         This Policy applies to the seqr platform, which is a web-based application developed and0
         hosted by Garvan (the &quot;Platform&quot;). This Platform is used by both Garvan employees and
         external collaborators across the world to analyse genomic data. The genomic and other
         data hosted within the Platform (&quot;Genomic Data&quot;) remains owned and controlled by the
-        data contributor who consented to the sample and provided the data to be uploaded. <br />
+        data contributor who consented to the sample and provided the data to be uploaded.
+        <br />
 
         Please note that the Platform may link to other websites that are not affiliated with
         us (&quot;Third-Party Sites&quot;). We may offer those links as a convenience to you but we are not
         responsible for the privacy practice of those Third-Party Sites. You should make sure
         you review the privacy policies for those Third-Party Sites before providing them any
-        of your information. <br />
+        of your information.
+        <br />
       </List.Item>
       <List.Item>
         <b>What is the purpose and scope of this Policy? </b>
@@ -43,7 +49,8 @@ export default () => (
         the purposes for collecting that information, how we use that information, and with
         whom we share that information. Please note that this Policy only applies to
         information that we collect about users of the Platform, and does not apply to
-        Genomic Data about Research Participants that may be contributed by users to the Platform. <br />
+        Genomic Data about Research Participants that may be contributed by users to the Platform.
+        <br />
       </List.Item>
       <List.Item>
         <b>Does this Policy Apply to Genomic Data Uploaded to the Platform? </b>
@@ -57,14 +64,16 @@ export default () => (
         If you are an individual whose Genomic Data has been uploaded to the Platform
         (a &quot;Research Participant&quot;) and have questions about the privacy or use of your
         Genomic Data, please refer to the research consent for the study you participated
-        in for more information, including contact information. <br />
+        in for more information, including contact information.
+        <br />
       </List.Item>
       <List.Item>
         <b>If I use the Platform, am I agreeing to this Policy? </b>
         Yes. However, your use of the Platform is entirely voluntary and you have certain
         rights to control use of your information as described below. If you decide to
         use the Platform, you are agreeing that we can use your information as described
-        in this Policy. <br />
+        in this Policy.
+        <br />
       </List.Item>
       <List.Item>
         <b>How do we collect information from you? </b>
@@ -80,7 +89,8 @@ export default () => (
             use the Platform, such as comments, material or information you may
             post on or upload to the Platform (&quot;User Content&quot;); and;
           </List.Item>
-          <List.Item as="li">communicate with us (e.g., by email).</List.Item> <br />
+          <List.Item as="li">communicate with us (e.g., by email).</List.Item>
+          <br />
         </List>
         In all these cases, we only collect information that you have provided to us,
         except for information obtained through cookies and the tracking technologies
@@ -93,14 +103,17 @@ export default () => (
         your Device Information as described in Section 6 below; your Location Information
         as described in Section 6 below; and how you use our Site and App, such as the web
         pages you view, the links you click, the length of time you visit our Platform, and
-        the web page or web site that led you to our Platform. <br />
+        the web page or web site that led you to our Platform.
+        <br />
 
         Garvan uses physical security and other measures to ensure that personal information
         is protected from misuse, interference and loss; and from unauthorised access,
-        modification and disclosure. <br />
+        modification and disclosure.
+        <br />
 
         We maintain computer and network security by using firewalls, user identifiers
-        and passwords to control access to our computer system.  <br />
+        and passwords to control access to our computer system.
+        <br />
       </List.Item>
       <List.Item>
         <b>What kind of information do we collect? </b>
@@ -163,7 +176,8 @@ export default () => (
         on most browsers will tell you how to prevent your computer from accepting new cookies,
         how to have the browser notify you when you receive a new cookie, or how to disable
         cookies altogether. Visitors to our Site who disable cookies may not be able to browse
-        certain areas of the Site or use the Platform. <br />
+        certain areas of the Site or use the Platform.
+        <br />
 
         <b>Tracking Technologies. </b>
         We use automated devices and applications, such as Google Analytics,
@@ -269,7 +283,8 @@ export default () => (
         The Platform allows you to interact with other users. Therefore, any information that you post to
         the Platform, including your contact information, will be visible to other users. Although we
         expect users to only use such information in connection with the Platform, we cannot assure you
-        that such other users will not disclose or use your information outside of the Platform. <br />
+        that such other users will not disclose or use your information outside of the Platform.
+        <br />
       </List.Item>
       <List.Item>
         <b>What rights do I have with respect to my information? </b>
@@ -281,7 +296,8 @@ export default () => (
         manner required by law. We may request additional information from you to verify the request. We
         may not be able to accommodate all requests; for example, we may be unable to accommodate a deletion
         request if we are required to maintain information under law or a legal obligation or if information
-        is used as part of a published study. <br />
+        is used as part of a published study.
+        <br />
       </List.Item>
       <List.Item>
         <b>What kind of security does seqr use to protect my information? </b>
@@ -291,13 +307,15 @@ export default () => (
         we collect or any transmission of information over the Internet. For this reason, you should
         make sure that you keep your profile account on the Platform confidential, including any user
         identification or password. You should also notify us immediately if there has been any actual
-        or suspected unauthorized use of your account. <br />
+        or suspected unauthorized use of your account.
+        <br />
       </List.Item>
       <List.Item>
         <b>Do you collect information from children? </b>
         We do not collect information directly from children under the age of majority. If we discover
         that a child under the age of majority has provided us with Personal Information, we will delete
-        such information from our systems. <br />
+        such information from our systems.
+        <br />
       </List.Item>
       <List.Item>
         <b>Is there any transfer of Personal Information from one country to another? </b>
@@ -320,7 +338,8 @@ export default () => (
         <b>What should you do if you have a complaint about the handling of your personal information? </b>
         If you have any questions or concerns about this Privacy Policy or how your personal information has
         been handled by Garvan, please contact us via &nbsp;
-        <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a> or
+        <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>
+        or
         <a href="mailto:privacy@garvan.org.au"> privacy@garvan.org.au </a>
         <br />
 
@@ -328,7 +347,8 @@ export default () => (
         our response, or you consider that we may have breached the Australian Privacy Principles or the Privacy Act,
         you are entitled to make a complaint to the Office of the Australian Information Commissioner.  The Office of
         the Australia Privacy Commissioner can be contacted by telephone on 1300 363 992 or full contact details can
-        be found online at www.oaic.gov.au. <br />
+        be found online at www.oaic.gov.au.
+        <br />
       </List.Item>
       <List.Item>
         <b>Will you update or change this Policy? </b>
@@ -339,7 +359,8 @@ export default () => (
         most current email address in your seqr profile. Any changes to our Policy will become effective upon our
         posting of the revised Policy on the Platform. Use of the Platform following such changes constitutes your
         acceptance of the revised Policy then in effect. You will be able to determine when this Privacy Policy was
-        last revised by checking the &quot;Last Updated&quot; information that appears at the top of this page. <br />
+        last revised by checking the &quot;Last Updated&quot; information that appears at the top of this page.
+        <br />
       </List.Item>
       <List.Item>
         <b>HIPAA, Protected Health Information and Clinical Compliance Features. </b>
@@ -347,7 +368,8 @@ export default () => (
         Health Insurance Portability and Accountability Act of 1996, as amended, and its related regulations
         (collectively, &quot;HIPAA&quot;) and, therefore, are not generally subject to the requirements of HIPAA with
         respect to Personal Information we process through the Platform. seqr is not intended to store protected
-        health information subject to HIPAA (&quot;PHI&quot;). <br />
+        health information subject to HIPAA (&quot;PHI&quot;).
+        <br />
       </List.Item>
       <List.Item>
         <b>Notice to Residents of the European Union. </b>
@@ -361,7 +383,8 @@ export default () => (
         to User Supplied Data. Our obligations as a data processor for User Supplied Data shall include those
         specified in Article 28 of the GDPR. If you make a request for User Supplied Data, we will submit that
         request to the provider of User Supplied Data for further instructions on such request, except to the
-        extent we are required to act upon that request under GDPR. <br />
+        extent we are required to act upon that request under GDPR.
+        <br />
 
         We do act as data controllers for Personal Information that we collect directly from users themselves.
         In such cases, we rely on the following legal bases for processing such information:
@@ -392,7 +415,8 @@ export default () => (
                 for a specific purpose. For example, we may rely on your consent to use technical information
                 such as cookie data to the extent required by the GDPR. You can withdraw your consent at any
                 time by contacting &nbsp;
-                <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>;
+                <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au </a>
+                ;
                 however, such withdrawal shall not affect the legality of any processing done before
                 receipt of the withdrawal.
               </List.Item>
@@ -478,13 +502,15 @@ export default () => (
     right to lodge a complaint with a supervisory authority responsible for data protection. You may do so in
     the EU member state of your habitual residence, your place of work or the place of the alleged violation.
 
-    <br /><br />
+    <br />
+    <br />
 
     <b>Submitting Requests: </b>
     <br />
     <p>
       EU data subject can submit requests by contacting us at
-      <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au</a>.
+      <a href="mailto:seqr@populationgenomics.org.au"> seqr@populationgenomics.org.au</a>
+      .
       We will respond to all such requests within 30 days of our receipt of the request, unless there are extenuating
       circumstances, in which event we may take up to 60 days to respond. We will inform you if we expect our response
       to take longer than 30 days. Please note, however, that certain Personal Information may be exempt from such
