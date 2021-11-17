@@ -41,12 +41,44 @@ def edit_families_handler(request, project_guid):
         return create_json_response(
             {}, status=400, reason="'families' not specified")
 
+    family_guids = [f['familyGuid'] for f in modified_families if f.get('familyGuid')]
+    family_models = {}
+    if family_guids:
+        family_models.update({f.guid: f for f in Family.objects.filter(project=project, guid__in=family_guids)})
+        if len(family_models) != len(family_guids):
+            missing_guids = set(family_guids) - set(family_models.keys())
+            return create_json_response({'error': 'Invalid family guids: {}'.format(', '.join(missing_guids))}, status=400)
+
+        updated_family_ids = {
+            fields[FAMILY_ID_FIELD]: family_models[fields['familyGuid']].family_id for fields in modified_families
+            if fields.get('familyGuid') and fields.get(FAMILY_ID_FIELD) and \
+                fields[FAMILY_ID_FIELD] != family_models[fields['familyGuid']].family_id}
+        existing_families = {
+            f.family_id for f in Family.objects.filter(project=project, family_id__in=updated_family_ids.keys())
+        }
+        if existing_families:
+            return create_json_response({
+                'error': 'Cannot update the following family ID(s) as they are already in use: {}'.format(', '.join([
+                    '{} -> {}'.format(old_id, new_id) for new_id, old_id in updated_family_ids.items()
+                    if new_id in existing_families
+                ]))}, status=400)
+
+    no_guid_families = [f for f in modified_families if not f.get('familyGuid')]
+    if no_guid_families:
+        prev_ids = [f[PREVIOUS_FAMILY_ID_FIELD] for f in no_guid_families if f.get(PREVIOUS_FAMILY_ID_FIELD)]
+        prev_id_models = {f.family_id: f for f in Family.objects.filter(project=project, family_id__in=prev_ids)}
+        if len(prev_id_models) != len(prev_ids):
+            missing_ids = set(prev_ids) - set(prev_id_models.keys())
+            return create_json_response(
+                {'error': 'Invalid previous family ids: {}'.format(', '.join(missing_ids))}, status=400)
+        family_models.update(prev_id_models)
+
     updated_families = []
     for fields in modified_families:
         if fields.get('familyGuid'):
-            family = Family.objects.get(project=project, guid=fields['familyGuid'])
+            family = family_models[fields['familyGuid']]
         elif fields.get(PREVIOUS_FAMILY_ID_FIELD):
-            family = Family.objects.get(project=project, family_id=fields[PREVIOUS_FAMILY_ID_FIELD])
+            family = family_models[fields[PREVIOUS_FAMILY_ID_FIELD]]
         else:
             family, _ = get_or_create_model_from_json(
                 Family, {'project': project, 'family_id': fields[FAMILY_ID_FIELD]},

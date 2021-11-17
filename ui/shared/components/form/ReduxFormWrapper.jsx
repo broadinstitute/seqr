@@ -1,5 +1,3 @@
-/* eslint-disable jsx-a11y/label-has-for */
-
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
@@ -45,7 +43,9 @@ const renderField = (props) => {
     onChange(data)
     submitForm({ [props.input.name]: data })
   } : onChange
-  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, onChange: onChangeSubmit, ...additionalInput, ...additionalProps })
+  return createElement(fieldComponent, {
+    error: touched && invalid, meta: props.meta, onChange: onChangeSubmit, ...additionalInput, ...additionalProps,
+  })
 }
 
 renderField.propTypes = {
@@ -56,14 +56,52 @@ renderField.propTypes = {
 }
 
 export const helpLabel = (label, labelHelp) => (
-  labelHelp ?
-    <label> {label} <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" /></label>
-    : label
+  labelHelp ? (
+    <label>
+      {label}
+      &nbsp;
+      <Popup trigger={<Icon name="question circle outline" />} content={labelHelp} size="small" position="top center" />
+    </label>
+  ) : label
 )
 
+const removeField = (fields, i) => (e) => {
+  e.preventDefault()
+  fields.remove(i)
+}
+
+const ArrayFieldItem = ({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label, fields }) => (
+  <div className="field">
+    <label>{label}</label>
+    {fields.map((fieldPath, i) => (
+      <Field
+        key={fieldPath}
+        name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
+        removeField={removeField(fields, i)}
+        index={i}
+        {...singleFieldProps}
+      />
+    ))}
+    {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
+  </div>
+)
+
+ArrayFieldItem.propTypes = {
+  addArrayElement: PropTypes.func,
+  addArrayElementProps: PropTypes.object,
+  arrayFieldName: PropTypes.string,
+  singleFieldProps: PropTypes.object,
+  label: PropTypes.string,
+  fields: PropTypes.arrayOf(PropTypes.string),
+}
+
+const arrayFieldItem = fieldProps => arrayProps => <ArrayFieldItem {...fieldProps} {...arrayProps} />
+
 export const configuredField = (field, formProps = {}) => {
-  const { component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
-    ...fieldProps } = field
+  const {
+    component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
+    ...fieldProps
+  } = field
   const baseProps = {
     key: key || name,
     name,
@@ -75,22 +113,12 @@ export const configuredField = (field, formProps = {}) => {
     label: helpLabel(label, labelHelp),
     ...fieldProps,
   }
-  return isArrayField ?
-    <FieldArray {...baseProps} component={({ fields }) =>
-      <div className="field">
-        <label>{label}</label>
-        {fields.map((fieldPath, i) =>
-          <Field
-            key={fieldPath}
-            name={arrayFieldName ? `${fieldPath}.${arrayFieldName}` : fieldPath}
-            removeField={(e) => { e.preventDefault(); fields.remove(i) }}
-            index={i}
-            {...singleFieldProps}
-          />)}
-        {addArrayElement && createElement(addArrayElement, { addElement: fields.push, ...addArrayElementProps })}
-      </div>}
-    /> :
-    <Field {...baseProps} {...singleFieldProps} />
+  return isArrayField ? (
+    <FieldArray
+      {...baseProps}
+      component={arrayFieldItem({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label })}
+    />
+  ) : <Field {...baseProps} {...singleFieldProps} />
 }
 
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
@@ -99,14 +127,14 @@ class ReduxFormWrapper extends React.Component {
 
   static propTypes = {
     /* A unique string identifier for the form */
-    form: PropTypes.string.isRequired, //eslint-disable-line react/no-unused-prop-types
+    form: PropTypes.string.isRequired, // eslint-disable-line react/no-unused-prop-types
 
     /* A unique string identifier for the parent modal. Defaults to the "form" identifier */
-    modalName: PropTypes.string, //eslint-disable-line react/no-unused-prop-types
+    modalName: PropTypes.string, // eslint-disable-line react/no-unused-prop-types
 
     /* A callback when a valid form is submitted. Will be passed all the form data */
-    /* Note that this is different from handleSubmit, which is a redux-form supplied handler that should never be overridden */
-    onSubmit: PropTypes.func.isRequired, //eslint-disable-line react/no-unused-prop-types
+    /* Note that this differs from handleSubmit, which is a redux-form supplied handler that shouldn't be overridden */
+    onSubmit: PropTypes.func.isRequired, // eslint-disable-line react/no-unused-prop-types
 
     /* A callback for when the cancel button is selected */
     handleClose: PropTypes.func.isRequired,
@@ -142,7 +170,7 @@ class ReduxFormWrapper extends React.Component {
 
     /* Array of objects representing the fields to show in the form. */
     /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
-    fields: PropTypes.arrayOf(PropTypes.object), //eslint-disable-line react/no-unused-prop-types
+    fields: PropTypes.arrayOf(PropTypes.object), // eslint-disable-line react/no-unused-prop-types
 
     /* React child component class. Mutually exclusive with fields */
     children: PropTypes.node,
@@ -155,8 +183,8 @@ class ReduxFormWrapper extends React.Component {
     submitFailed: PropTypes.bool,
     submitSucceeded: PropTypes.bool,
     dirty: PropTypes.bool,
-    errorMessages: PropTypes.array,
-    warningMessages: PropTypes.array,
+    errorMessages: PropTypes.arrayOf(PropTypes.string),
+    warningMessages: PropTypes.arrayOf(PropTypes.string),
     handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
   }
@@ -167,73 +195,7 @@ class ReduxFormWrapper extends React.Component {
     submitButtonText: 'Submit',
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      confirming: false,
-    }
-  }
-
-  handleUnconfirmedClose = () => this.props.handleClose()
-
-  showConfirmDialog = () => this.setState({ confirming: true })
-
-  hideConfirmDialog = () => this.setState({ confirming: false })
-
-  render() {
-    let saveStatus = NONE
-    if (this.props.submitSucceeded) {
-      saveStatus = SUCCEEDED
-    } else if (this.props.submitFailed) {
-      saveStatus = ERROR
-    }
-
-    const saveErrorMessage =
-      (this.props.errorMessages && this.props.errorMessages.length > 0 && this.props.errorMessages.join('; ')) ||
-      (this.props.warningMessages && this.props.warningMessages.length > 0 && this.props.warningMessages.join('; ')) ||
-      (this.props.submitFailed ? 'Error' : null)
-
-    const fieldComponents = this.props.children || configuredFields(this.props)
-
-    return (
-      <StyledForm
-        onSubmit={this.props.confirmDialog ? this.showConfirmDialog : this.props.handleSubmit}
-        size={this.props.size}
-        loading={this.props.submitting || this.props.loading}
-        hasSubmitButton={!this.props.submitOnChange}
-        inline={this.props.inline}
-      >
-        {fieldComponents}
-        {this.props.showErrorPanel && ['warning', 'error'].map(key => (
-          this.props[`${key}Messages`] && this.props[`${key}Messages`].length > 0 ?
-            <MessagePanel key={key} {...{ [key]: true }} visible list={this.props[`${key}Messages`]} /> : null
-        ))}
-        {this.props.submitSucceeded && this.props.successMessage &&
-          <MessagePanel success visible content={this.props.successMessage} />
-        }
-        {
-          !this.props.submitOnChange &&
-            <ButtonPanel
-              cancelButtonText={this.props.cancelButtonText}
-              submitButtonText={this.props.submitButtonText}
-              saveStatus={saveStatus}
-              saveErrorMessage={saveErrorMessage}
-              handleClose={this.props.onSubmitSucceeded || (this.props.noModal ? null : this.handleUnconfirmedClose)}
-            />
-        }
-        <Confirm
-          content={this.props.confirmDialog}
-          open={this.state.confirming}
-          onCancel={this.hideConfirmDialog}
-          onConfirm={() => {
-            this.hideConfirmDialog()
-            this.props.handleSubmit()
-          }}
-        />
-      </StyledForm>
-    )
-  }
+  state = { confirming: false }
 
   shouldComponentUpdate(nextProps, nextState) {
     const updateProps = [
@@ -259,38 +221,121 @@ class ReduxFormWrapper extends React.Component {
       'errorMessages',
       'warningMessages',
     ]
-    if (updateProps.some(k => nextProps[k] !== this.props[k])) {
+    if (updateProps.some(k => nextProps[k] !== this.props[k])) { // eslint-disable-line react/destructuring-assignment
       return true
     }
     if (listUpdateProps.some(k => (
-      (nextProps[k] && this.props[k] && nextProps[k].length === this.props[k].length) ? nextProps[k].some((val, i) => val !== this.props[k][i]) : nextProps[k] !== this.props[k]
+      // eslint-disable-next-line react/destructuring-assignment
+      (nextProps[k] && this.props[k] && nextProps[k].length === this.props[k].length) ?
+        // eslint-disable-next-line react/destructuring-assignment
+        nextProps[k].some((val, i) => val !== this.props[k][i]) : nextProps[k] !== this.props[k]
     ))) {
       return true
     }
     return nextState !== this.state
   }
 
-  componentWillUpdate(nextProps) {
-    if (this.props.onSubmitSucceeded && nextProps.submitSucceeded) {
-      this.props.onSubmitSucceeded()
+  componentDidUpdate(prevProps) {
+    const {
+      onSubmitSucceeded, submitSucceeded, handleClose, confirmCloseIfNotSaved, closeOnSuccess, noModal, dirty,
+      setModalConfirm: dispatchSetModalConfirm,
+    } = this.props
+    if (onSubmitSucceeded && submitSucceeded) {
+      onSubmitSucceeded()
     }
-    if (nextProps.submitSucceeded && nextProps.closeOnSuccess && !nextProps.noModal) {
-      this.props.handleClose(true)
-    } else if (this.props.confirmCloseIfNotSaved) {
-      if (nextProps.dirty && !this.props.dirty) {
-        this.props.setModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
-      } else if (!nextProps.dirty && this.props.dirty) {
-        this.props.setModalConfirm(null)
+    if (submitSucceeded && closeOnSuccess && !noModal) {
+      handleClose(true)
+    } else if (confirmCloseIfNotSaved) {
+      if (dirty && !prevProps.dirty) {
+        dispatchSetModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
+      } else if (!dirty && prevProps.dirty) {
+        dispatchSetModalConfirm(null)
       }
     }
   }
+
+  showConfirmDialog = () => this.setState({ confirming: true })
+
+  hideConfirmDialog = () => this.setState({ confirming: false })
+
+  handleUnconfirmedClose = () => {
+    const { handleClose } = this.props
+    handleClose()
+  }
+
+  handleConfirmedSubmit = () => {
+    const { handleSubmit } = this.props
+    this.hideConfirmDialog()
+    handleSubmit()
+  }
+
+  render() {
+    const {
+      submitSucceeded, submitFailed, errorMessages, warningMessages, children, confirmDialog, handleSubmit, size,
+      submitting, loading, submitOnChange, inline, showErrorPanel, successMessage, cancelButtonText, submitButtonText,
+      onSubmitSucceeded, noModal,
+    } = this.props
+    const { confirming } = this.state
+
+    let saveStatus = NONE
+    if (submitSucceeded) {
+      saveStatus = SUCCEEDED
+    } else if (submitFailed) {
+      saveStatus = ERROR
+    }
+
+    const populatedErrorMessages = (errorMessages || []).length > 0 && errorMessages
+    const populatedWarningMessages = (warningMessages || []).length > 0 && warningMessages
+
+    const saveErrorMessage =
+      (populatedErrorMessages && populatedErrorMessages.join('; ')) ||
+      (populatedWarningMessages && populatedWarningMessages.join('; ')) ||
+      (submitFailed ? 'Error' : null)
+
+    const errorPanel = showErrorPanel && [
+      populatedErrorMessages && <MessagePanel key="error" error visible list={populatedErrorMessages} />,
+      populatedWarningMessages && <MessagePanel key="warning" warning visible list={populatedWarningMessages} />,
+    ]
+
+    const fieldComponents = children || configuredFields(this.props)
+
+    return (
+      <StyledForm
+        onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
+        size={size}
+        loading={submitting || loading}
+        hasSubmitButton={!submitOnChange}
+        inline={inline}
+      >
+        {fieldComponents}
+        {errorPanel}
+        {submitSucceeded && successMessage && <MessagePanel success visible content={successMessage} />}
+        {!submitOnChange && (
+          <ButtonPanel
+            cancelButtonText={cancelButtonText}
+            submitButtonText={submitButtonText}
+            saveStatus={saveStatus}
+            saveErrorMessage={saveErrorMessage}
+            handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
+          />
+        )}
+        <Confirm
+          content={confirmDialog}
+          open={confirming}
+          onCancel={this.hideConfirmDialog}
+          onConfirm={this.handleConfirmedSubmit}
+        />
+      </StyledForm>
+    )
+  }
+
 }
 
 const nestedObjectValues = obj => (typeof obj === 'object' ? Object.values(obj).map(nestedObjectValues) : obj)
 
 const shouldShowValidationErrors = props => props.submitFailed || (props.liveValidate && props.dirty)
-const getValidationErrorList = validationErrors =>
-  (validationErrors ? flattenDeep(nestedObjectValues(validationErrors)).filter(err => err) : null)
+const getValidationErrorList =
+  validationErrors => (validationErrors ? flattenDeep(nestedObjectValues(validationErrors)).filter(err => err) : null)
 const getValidationErrors = createSelector(
   (state, props) => (shouldShowValidationErrors(props) ? getFormSyncErrors(props.form)(state) : null),
   getValidationErrorList,
@@ -301,11 +346,12 @@ const getValidationWarnings = createSelector(
 )
 
 // redux-form does not support throwing submission warnings so this is a work around
-const getSubmissionWarnings = (state, props) => props.warning || (props.error && props.error.map(error => error.warning).filter(warning => warning))
+const getSubmissionWarnings =
+  (state, props) => props.warning || (props.error && props.error.map(error => error.warning).filter(warning => warning))
 const getSubmissionErrors = (state, props) => props.error && props.error.filter(error => !error.warning)
 
-const getErrors = (submissionErrors, validationErrors) =>
-  ((submissionErrors && submissionErrors.length > 0) ? submissionErrors : validationErrors)
+const getErrors = (submissionErrors, validationErrors) => (
+  (submissionErrors && submissionErrors.length > 0) ? submissionErrors : validationErrors)
 
 const getErrorMessages = createSelector(
   getSubmissionErrors,
@@ -317,7 +363,6 @@ const getWarningMessages = createSelector(
   getValidationWarnings,
   getErrors,
 )
-
 
 const mapStateToProps = (state, ownProps) => ({
   errorMessages: getErrorMessages(state, ownProps),
@@ -332,6 +377,5 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
   },
 })
-
 
 export default reduxForm()(connect(mapStateToProps, mapDispatchToProps)(ReduxFormWrapper))

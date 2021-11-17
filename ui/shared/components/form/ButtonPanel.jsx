@@ -5,7 +5,6 @@ import styled from 'styled-components'
 import { Button } from 'semantic-ui-react'
 import RequestStatus from '../panel/RequestStatus'
 
-
 const ContainerDiv = styled.div`
   position: absolute;
   bottom: 0;
@@ -33,19 +32,22 @@ class ButtonPanel extends React.PureComponent {
   }
 
   render() {
+    const { handleClose, cancelButtonText, handleSave, submitButtonText, saveStatus, saveErrorMessage } = this.props
     return (
       <ContainerDiv>
-        {this.props.handleClose &&
-          <StyledButton tabIndex={0} onClick={this.props.handleClose} type="button">
-            {this.props.cancelButtonText || 'Cancel'}
+        {handleClose && (
+          <StyledButton tabIndex={0} onClick={handleClose} type="button">
+            {cancelButtonText || 'Cancel'}
           </StyledButton>
-        }
-        <StyledButton tabIndex={0} onClick={this.props.handleSave} type="submit" color="blue">
-          {this.props.submitButtonText || 'Submit'}
+        )}
+        <StyledButton tabIndex={0} onClick={handleSave} type="submit" color="blue">
+          {submitButtonText || 'Submit'}
         </StyledButton>
-        <StyledRequestStatus status={this.props.saveStatus} errorMessage={this.props.saveErrorMessage} />
-      </ContainerDiv>)
+        <StyledRequestStatus status={saveStatus} errorMessage={saveErrorMessage} />
+      </ContainerDiv>
+    )
   }
+
 }
 
 export default ButtonPanel

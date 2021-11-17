@@ -341,7 +341,7 @@
         "family_id": "12",
         "display_name": "12",
         "description": "",
-        "pedigree_image": "ped.png",
+        "pedigree_image": null,
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
@@ -1152,6 +1152,40 @@
     }
 },
 {
+    "model": "seqr.sample",
+    "pk": 147,
+    "fields": {
+        "guid": "S000147_na21234",
+        "created_date": "2018-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2018-03-13T09:07:49.937Z",
+        "elasticsearch_index": "test_index_sv_wgs",
+        "sample_id": "NA21234",
+        "sample_type": "WGS",
+        "is_active": true,
+        "individual": 18,
+        "dataset_type": "SV",
+        "loaded_date": "2018-02-05T06:42:55.397Z"
+    }
+},
+{
+    "model": "seqr.sample",
+    "pk": 148,
+    "fields": {
+        "guid": "S000148_hg00733",
+        "created_date": "2018-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2018-03-13T09:07:49.963Z",
+        "elasticsearch_index": "test_index_sv",
+        "sample_id": "HG00733",
+        "sample_type": "WES",
+        "is_active": true,
+        "individual": 6,
+        "dataset_type": "SV",
+        "loaded_date": "2018-02-05T06:42:55.397Z"
+    }
+},
+{
     "model": "seqr.igvsample",
     "pk": 145,
     "fields": {
@@ -1855,6 +1889,18 @@
   }
 },
 {
+  "model": "panelapp.palocuslistgene",
+  "pk": 1,
+  "fields": {
+    "seqr_locus_list_gene": 12,
+    "confidence_level": "3",
+    "biotype": null,
+    "penetrance": null,
+     "mode_of_pathogenicity": null,
+     "mode_of_inheritance": "BIALLELIC, autosomal or pseudoautosomal"
+  }
+},
+{
   "model": "seqr.locuslistinterval",
   "pk": 12,
   "fields": {
@@ -2033,12 +2079,12 @@
         "last_modified_date": "2019-02-05T06:42:55.397Z",
         "submission_id": "P0004517",
         "label": "P0004517",
-       "contact_name": "Sam Baxter",
+        "contact_name": "Sam Baxter",
         "contact_href": "mailto:matchmaker@populationgenomics.org.au",
         "genomic_features": [
             {
                 "gene": {
-                    "id": "ENSG00000233750"
+                    "id": "ENSG00000186092"
                 }
             }
         ]

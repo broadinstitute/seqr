@@ -25,29 +25,23 @@ const FIELDS = [
   { id: FAMILY_FIELD_INTERNAL_SUMMARY },
 ]
 
-const CaseReviewTable = React.memo((props) => {
-  const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }
-  return (
-    <div>
-      <FamilyTable
-        showDetails
-        tableName={CASE_REVIEW_TABLE_NAME}
-        headerStatus={headerStatus}
-        detailFields={FIELDS}
-      />
-    </div>
-  )
-})
-
-
-export { CaseReviewTable as CaseReviewTableComponent }
+const CaseReviewTable = React.memo(({ headerStatus }) => (
+  <div>
+    <FamilyTable
+      showDetails
+      tableName={CASE_REVIEW_TABLE_NAME}
+      headerStatus={headerStatus}
+      detailFields={FIELDS}
+    />
+  </div>
+))
 
 CaseReviewTable.propTypes = {
-  caseReviewStatusCounts: PropTypes.array,
+  headerStatus: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  caseReviewStatusCounts: getCaseReviewStatusCounts(state),
+  headerStatus: { title: 'Individual Statuses', data: getCaseReviewStatusCounts(state) },
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

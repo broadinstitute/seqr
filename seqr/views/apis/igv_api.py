@@ -11,11 +11,10 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
+from seqr.views.utils.orm_to_json_utils import get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, pm_or_data_manager_required
 
-EXPIRATION_TIME_IN_SECONDS = 3600 - 5
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 
 
@@ -161,13 +160,25 @@ def _get_gs_rest_api_headers(range_header, gs_path, user=None):
     return headers
 
 
+def _get_token_expiry(token):
+    response = requests.post('https://www.googleapis.com/oauth2/v1/tokeninfo',
+                             headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                             data='access_token={}'.format(token))
+    if response.status_code == 200:
+        result = json.loads(response.text)
+        return result['expires_in']
+    else:
+        return 0
+
+
 def _get_access_token(user):
     access_token = safe_redis_get_json(GS_STORAGE_ACCESS_CACHE_KEY)
     if not access_token:
         process = run_command('gcloud auth print-access-token', user=user)
         if process.wait() == 0:
             access_token = next(process.stdout).decode('utf-8').strip()
-            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=EXPIRATION_TIME_IN_SECONDS)
+            expires_in = _get_token_expiry(access_token)
+            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=expires_in-5)
     return access_token
 
 

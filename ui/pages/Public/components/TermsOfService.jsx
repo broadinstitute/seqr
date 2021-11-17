@@ -1,7 +1,9 @@
+/* eslint-disable react/jsx-one-expression-per-line */
+
 import React from 'react'
 import { Header, Segment, List } from 'semantic-ui-react'
 
-export default () =>
+export default () => (
   <Segment basic padded="very">
     <Header dividing content="CPG seqr Terms Of Service" subheader="Last Updated 13-MAY-2021" size="huge" />
 
@@ -287,3 +289,4 @@ export default () =>
       </List.Item>
     </List>
   </Segment>
+)

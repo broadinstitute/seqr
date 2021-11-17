@@ -28,10 +28,10 @@ const AwesomebarSearch = styled(({ asFormInput, ...props }) => <Search {...props
   }
 `
 
-class AwesomeBar extends React.PureComponent
-{
+class AwesomeBar extends React.PureComponent {
+
   static propTypes = {
-    categories: PropTypes.array,
+    categories: PropTypes.arrayOf(PropTypes.string),
     newWindow: PropTypes.bool,
     placeholder: PropTypes.string,
     history: PropTypes.object,
@@ -39,49 +39,24 @@ class AwesomeBar extends React.PureComponent
     getResultHref: PropTypes.func,
     onResultSelect: PropTypes.func,
     asFormInput: PropTypes.bool,
+    parseResultItem: PropTypes.func,
   }
 
-  constructor(props) {
-    super(props)
+  state = {}
 
-    this.state = {}
-
-    this.httpRequestHelper = new HttpRequestHelper(
-      '/api/awesomebar',
-      this.handleHttpSuccess,
-      this.handleHttpError,
-    )
-  }
-
-  componentWillMount() {
+  componentDidMount() {
     this.resetComponent()
   }
 
-  render() {
-    return <AwesomebarSearch
-      category
-      selectFirstResult
-      inputwidth={this.props.inputwidth}
-      loading={this.state.isLoading}
-      onResultSelect={this.handleResultSelect}
-      onSearchChange={this.handleSearchChange}
-      results={this.state.results}
-      value={this.state.value}
-      minCharacters={1}
-      placeholder={this.props.placeholder || 'Search project, family, gene name, etc.'}
-      asFormInput={this.props.asFormInput}
-    />
-  }
-
   handleHttpSuccess = (response, urlParams) => {
-    if (urlParams.q === this.state.value) {
+    const { value } = this.state
+    if (urlParams.q === value) {
       this.setState({ isLoading: false, results: response.matches })
     }
   }
 
-  handleHttpError = (response) => {
+  handleHttpError = () => {
     this.setState({ isLoading: false })
-    console.error(response)
   }
 
   resetComponent = () => {
@@ -89,39 +64,67 @@ class AwesomeBar extends React.PureComponent
   }
 
   handleSearchChange = (e, obj) => {
+    const { categories } = this.props
     this.setState({ isLoading: true, value: obj.value })
     const query = { q: obj.value }
-    if (this.props.categories) {
-      query.categories = this.props.categories
+    if (categories) {
+      query.categories = categories
     }
-    this.httpRequestHelper.get(query)
+    new HttpRequestHelper(
+      '/api/awesomebar',
+      this.handleHttpSuccess,
+      this.handleHttpError,
+    ).get(query)
   }
 
   handleResultSelect = (e, obj) => {
+    const { getResultHref, onResultSelect, parseResultItem, newWindow, history } = this.props
     e.preventDefault()
     this.setState({ value: obj.result.title })
-    const href = this.props.getResultHref ? this.props.getResultHref(obj.result) : obj.result.href
-    if (this.props.onResultSelect) {
-      this.props.onResultSelect(obj.result)
-    } else if (this.props.newWindow) {
+    const href = getResultHref ? getResultHref(obj.result) : obj.result.href
+    if (onResultSelect) {
+      const result = parseResultItem ? parseResultItem(obj.result) : obj.result
+      onResultSelect(result)
+    } else if (newWindow) {
       window.open(href, '_blank')
     } else {
-      this.props.history.push(href)
+      history.push(href)
     }
   }
+
+  render() {
+    const { inputwidth, placeholder, asFormInput } = this.props
+    const { isLoading, results, value } = this.state
+    return (
+      <AwesomebarSearch
+        category
+        selectFirstResult
+        inputwidth={inputwidth}
+        loading={isLoading}
+        onResultSelect={this.handleResultSelect}
+        onSearchChange={this.handleSearchChange}
+        results={results}
+        value={value}
+        minCharacters={1}
+        placeholder={placeholder || 'Search project, family, gene name, etc.'}
+        asFormInput={asFormInput}
+      />
+    )
+  }
+
 }
 
 export { AwesomeBar as AwesomeBarComponent }
 
-export const AwesomeBarFormInput = React.memo(({ onChange, parseResultItem = result => result.key, ...props }) =>
-  <AwesomeBar onResultSelect={result => onChange(parseResultItem(result))} asFormInput {...props} />,
-)
+const defaultParseResultItem = result => result.key
+
+export const AwesomeBarFormInput = React.memo(({ onChange, parseResultItem = defaultParseResultItem, ...props }) => (
+  <AwesomeBar onResultSelect={onChange} parseResultItem={parseResultItem} asFormInput {...props} />
+))
 
 AwesomeBarFormInput.propTypes = {
   onChange: PropTypes.func,
   parseResultItem: PropTypes.func,
 }
 
-
 export default withRouter(AwesomeBar)
-

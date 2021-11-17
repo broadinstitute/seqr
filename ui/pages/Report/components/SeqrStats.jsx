@@ -7,7 +7,7 @@ import DataLoader from 'shared/components/DataLoader'
 import { getSeqrStatsLoading, getSeqrStatsLoadingError, getSeqrStats } from '../selectors'
 import { loadSeqrStats } from '../reducers'
 
-const SeqrStats = React.memo(({ stats, error, loading, load }) =>
+const SeqrStats = React.memo(({ stats, error, loading, load }) => (
   <div>
     <Header size="medium" content="Seqr Stats:" subheader="NOTE: counts are based on the total number of unique family/individual/sample ids" />
     <DataLoader load={load} content={Object.keys(stats).length} loading={loading} errorMessage={error}>
@@ -20,16 +20,16 @@ const SeqrStats = React.memo(({ stats, error, loading, load }) =>
           <Table.Cell textAlign="right"><b>Individuals</b></Table.Cell>
           <Table.Cell>{stats.individualCount}</Table.Cell>
         </Table.Row>
-        {Object.entries(stats.sampleCountByType || {}).map(([sampleType, count]) =>
+        {Object.entries(stats.sampleCountByType || {}).map(([sampleType, count]) => (
           <Table.Row key={sampleType}>
-            <Table.Cell textAlign="right"><b>{sampleType} samples</b></Table.Cell>
+            <Table.Cell textAlign="right"><b>{`${sampleType} samples`}</b></Table.Cell>
             <Table.Cell>{count}</Table.Cell>
-          </Table.Row>,
-        )}
+          </Table.Row>
+        ))}
       </Table>
     </DataLoader>
-  </div>,
-)
+  </div>
+))
 
 SeqrStats.propTypes = {
   stats: PropTypes.object,

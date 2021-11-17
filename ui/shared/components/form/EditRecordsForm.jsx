@@ -10,7 +10,6 @@ import ReduxFormWrapper from './ReduxFormWrapper'
 
 const ROWS_PER_PAGE = 12
 
-/* eslint-disable no-unused-expressions */
 const TableContainer = styled.div`
 
   padding: 0 1em;
@@ -46,18 +45,16 @@ const FormContentContainer = styled.div`
   marginBottom: ${props => (props.records && props.records.length > ROWS_PER_PAGE ? '50px' : '0px')};
 `
 
+class EditRecordsForm extends React.PureComponent {
 
-class EditRecordsForm extends React.PureComponent
-{
   static propTypes = {
     /* Object of records to be edited in this form */
     records: PropTypes.object.isRequired,
 
     /* The unique identifier key for the record objects */
-    idField: PropTypes.string,
+    idField: PropTypes.string.isRequired,
 
-    isActiveRow: PropTypes.func,
-    entityKey: PropTypes.string,
+    entityKey: PropTypes.string.isRequired,
 
     /* Array of fields to show for a given record row */
     columns: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -72,32 +69,50 @@ class EditRecordsForm extends React.PureComponent
     filterColumn: PropTypes.string,
 
     onSubmit: PropTypes.func.isRequired,
-    closeParentModal: PropTypes.func,
+    closeParentModal: PropTypes.func.isRequired,
   }
 
-  constructor(props) {
-    super(props)
-    this.state = {
-      data: props.records,
-    }
+  static defaultProps = {
+    modalName: null,
+    filterColumn: null,
   }
 
+  state = { data: null }
+
+  checkboxHandler = (newValues) => {
+    const { data } = this.state
+    const { records } = this.props
+    this.setState({
+      data: Object.entries(data || records).reduce((acc, [recordId, record]) => (
+        { ...acc, [recordId]: { ...record, toDelete: newValues[recordId] } }
+      ), {}),
+    })
+  }
+
+  getFilteredRecords = (values, filterFunc) => {
+    const { entityKey } = this.props
+    return { [entityKey]: Object.values(values).filter(filterFunc) }
+  }
+
+  submitRecords = (values) => {
+    const { records, onSubmit, idField, columns } = this.props
+    return onSubmit(this.getFilteredRecords(values, record => columns.map(field => field.name).some(
+      field => record[field] !== records[record[idField]][field],
+    )))
+  }
 
   render() {
-    const { formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps } = this.props
+    const {
+      formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps
+    } = this.props
+    const { data } = this.state
+    const recordData = data || records
 
-    const rowsToDelete = Object.entries(this.state.data).reduce((acc, [recordId, { toDelete }]) => (
+    const rowsToDelete = Object.entries(recordData).reduce((acc, [recordId, { toDelete }]) => (
       { ...acc, [recordId]: toDelete }
     ), {})
 
-    const getFilteredRecords = (values, filterFunc) => ({ [entityKey]: Object.values(values).filter(filterFunc) })
-
     const getRowFilterVal = filterColumn ? row => row[filterColumn] : null
-
-    const submitRecords = values =>
-      onSubmit(getFilteredRecords(values, record => columns.map(field => field.name).some(
-        field => record[field] !== records[record[idField]][field],
-      )))
 
     return (
       <FormContentContainer>
@@ -105,7 +120,7 @@ class EditRecordsForm extends React.PureComponent
           form={formName}
           modalName={modalName}
           submitButtonText="Apply"
-          onSubmit={submitRecords}
+          onSubmit={this.submitRecords}
           confirmCloseIfNotSaved
           closeOnSuccess
           showErrorPanel
@@ -117,7 +132,7 @@ class EditRecordsForm extends React.PureComponent
               compact="very"
               basic="very"
               fixed
-              data={Object.values(this.state.data)}
+              data={Object.values(recordData)}
               selectedRows={rowsToDelete}
               selectRows={this.checkboxHandler}
               columns={columns}
@@ -125,7 +140,7 @@ class EditRecordsForm extends React.PureComponent
               rowsPerPage={ROWS_PER_PAGE}
               footer={
                 <DeleteButton
-                  initialValues={getFilteredRecords(this.state.data, record => record.toDelete)}
+                  initialValues={this.getFilteredRecords(recordData, record => record.toDelete)}
                   onSubmit={onSubmit}
                   onSuccess={closeParentModal}
                   confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}
@@ -141,21 +156,12 @@ class EditRecordsForm extends React.PureComponent
     )
   }
 
-  checkboxHandler = (newValues) => {
-    this.setState({
-      data: Object.entries(this.state.data).reduce((acc, [recordId, record]) => (
-        { ...acc, [recordId]: { ...record, toDelete: newValues[recordId] } }
-      ), {}),
-    })
-  }
 }
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    closeParentModal: () => {
-      dispatch(closeModal(ownProps.modalName, true))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  closeParentModal: () => {
+    dispatch(closeModal(ownProps.modalName, true))
+  },
+})
 
 export default connect(null, mapDispatchToProps)(EditRecordsForm)

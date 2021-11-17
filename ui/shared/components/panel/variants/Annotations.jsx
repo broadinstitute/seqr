@@ -10,22 +10,14 @@ import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
-import Transcripts, { TranscriptLink } from './Transcripts'
+import Transcripts from './Transcripts'
 import { LocusListLabels } from './VariantGene'
+import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
 import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
-
-
-const SequenceContainer = styled.span`
-  word-break: break-all;
-  color: ${props => props.color || 'inherit'};
-`
 
 const LargeText = styled.div`
   font-size: 1.2em;
 `
-
-export const getLocus = (chrom, pos, rangeSize, endOffset = 0) =>
-  `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`
 
 const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
@@ -39,8 +31,8 @@ const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const position = getLocus(chrom, pos, 10, endOffset || 0)
 
   return (
-    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&${highlightQ}position=${position}`} target="_blank">
-      {chrom}:{pos}{includeEnd && endOffset && `-${pos + endOffset}`}
+    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&${highlightQ}position=${position}`} target="_blank" rel="noreferrer">
+      {`${chrom}:${pos}${(includeEnd && endOffset) ? `-${pos + endOffset}` : ''}`}
     </a>
   )
 }
@@ -49,32 +41,6 @@ UcscBrowserLink.propTypes = {
   variant: PropTypes.object,
   useLiftover: PropTypes.bool,
   includeEnd: PropTypes.bool,
-}
-
-const MAX_SEQUENCE_LENGTH = 30
-const SEQUENCE_POPUP_STYLE = { wordBreak: 'break-all' }
-
-const Sequence = React.memo(({ sequence, ...props }) =>
-  <SequenceContainer {...props}>
-    {sequence.length > MAX_SEQUENCE_LENGTH ?
-      <Popup trigger={<span>{`${sequence.substring(0, MAX_SEQUENCE_LENGTH)}...`}</span>} content={sequence} style={SEQUENCE_POPUP_STYLE} /> :
-      sequence
-    }
-  </SequenceContainer>,
-)
-
-Sequence.propTypes = {
-  sequence: PropTypes.string.isRequired,
-}
-
-const parseHgvs = hgvs => (hgvs || '').split(':').pop()
-
-export const ProteinSequence = React.memo(({ hgvs }) =>
-  <Sequence color="black" sequence={parseHgvs(hgvs)} />,
-)
-
-ProteinSequence.propTypes = {
-  hgvs: PropTypes.string.isRequired,
 }
 
 const LOF_FILTER_MAP = {
@@ -87,11 +53,13 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const addDividedLink = (links, name, href) =>
-  links.push(
-    <span key={`divider-${name}`}><HorizontalSpacer width={5} />|<HorizontalSpacer width={5} /></span>,
-    <a key={name} href={href} target="_blank">{name}</a>,
-  )
+const addDividedLink = (links, name, href) => links.push((
+  <span key={`divider-${name}`}>
+    <HorizontalSpacer width={5} />
+    |
+    <HorizontalSpacer width={5} />
+  </span>
+), <a key={name} href={href} target="_blank" rel="noreferrer">{name}</a>)
 
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = []
@@ -104,9 +72,9 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
 
     if (variant.ref) {
       variations.unshift(
-        `${variant.pos}${variant.ref}/${variant.alt}`, //179432185A/G
-        `${variant.pos}${variant.ref}>${variant.alt}`, //179432185A>G
-        `g.${variant.pos}${variant.ref}>${variant.alt}`, //g.179432185A>G
+        `${variant.pos}${variant.ref}/${variant.alt}`, // 179432185A/G
+        `${variant.pos}${variant.ref}>${variant.alt}`, // 179432185A>G
+        `g.${variant.pos}${variant.ref}>${variant.alt}`, // g.179432185A>G
       )
     }
 
@@ -121,10 +89,10 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     if (mainTranscript.hgvsc) {
       const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
-        `c.${hgvsc}`, //c.1282C>T
-        hgvsc, //1282C>T
-        (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
-        hgvsc.replace('>', '/'), //1282C/T
+        `c.${hgvsc}`, // c.1282C>T
+        hgvsc, // 1282C>T
+        (`c.${hgvsc}`).replace('>', '/'), // c.1282C/T
+        hgvsc.replace('>', '/'), // 1282C/T
       )
     }
   } else {
@@ -190,8 +158,8 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
     return null
   }
   const { pos, end, genomeVersion, liftedOverPos, familyGuids = [] } = variant
-  const locusListIntervals = familyGuids.reduce((acc, familyGuid) =>
-    [...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]], [])
+  const locusListIntervals = familyGuids.reduce((acc, familyGuid) => ([
+    ...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]]), [])
   if (locusListIntervals.length < 1) {
     return null
   }
@@ -229,7 +197,8 @@ const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocu
 const svSizeDisplay = (size) => {
   if (size < 1000) {
     return `${size}bp`
-  } else if (size < 1000000) {
+  }
+  if (size < 1000000) {
     // dividing by 1 removes trailing 0s
     return `${((size) / 1000).toPrecision(3) / 1}kb`
   }
@@ -237,17 +206,27 @@ const svSizeDisplay = (size) => {
 }
 
 const Annotations = React.memo(({ variant }) => {
-  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals } = variant
+  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
     ...(mainTranscript.lofFilter ? [...new Set(mainTranscript.lofFilter.split(/&|,/g))] : []).map((lofFilterKey) => {
       const lofFilter = LOF_FILTER_MAP[lofFilterKey] || { message: lofFilterKey }
-      return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</div>
+      return (
+        <div key={lofFilterKey}>
+          <b>{`LOFTEE: ${lofFilter.title}`}</b>
+          <br />
+          {lofFilter.message}
+        </div>
+      )
     }),
-    mainTranscript.lofFlags === 'NAGNAG_SITE' ?
-      <div key="NAGNAG_SITE"><b>LOFTEE: NAGNAG site</b><br />This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
-      : null,
+    mainTranscript.lofFlags === 'NAGNAG_SITE' ? (
+      <div key="NAGNAG_SITE">
+        <b>LOFTEE: NAGNAG site</b>
+        <br />
+        This acceptor site is rescued by another adjacent in-frame acceptor site.
+      </div>
+    ) : null,
   ] : null
 
   const transcriptPopupProps = mainTranscript.transcriptId && {
@@ -258,7 +237,7 @@ const Annotations = React.memo(({ variant }) => {
 
   return (
     <div>
-      { (mainTranscript.majorConsequence || svType) &&
+      {(mainTranscript.majorConsequence || svType) && (
         <Modal
           modalName={`${variant.variantId}-annotations`}
           title="Transcripts"
@@ -266,28 +245,46 @@ const Annotations = React.memo(({ variant }) => {
           trigger={
             <ButtonLink size={svType && 'big'}>
               {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && svTypeDetail &&
-              <Popup trigger={<Icon name="info circle" size="small" corner="top right" />}
-                content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
-                position="top center"
-              />}
+              {svType && svTypeDetail && (
+                <Popup
+                  trigger={<Icon name="info circle" size="small" corner="top right" />}
+                  content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
+                  position="top center"
+                />
+              )}
             </ButtonLink>
           }
           popup={transcriptPopupProps}
         >
           <Transcripts variant={variant} />
         </Modal>
-      }
-      {svType && end && <b><HorizontalSpacer width={5} />{svSizeDisplay(end - pos)}</b>}
-      {Number.isInteger(numExon) &&
-        <b>, {numExon} exons
+      )}
+      {svType && end && (
+        <b>
+          <HorizontalSpacer width={5} />
+          {svSizeDisplay(end - pos)}
+        </b>
+      )}
+      {algorithms && (
+        <b>
+          <HorizontalSpacer width={5} />
+          <Popup
+            trigger={<Icon name="help circle" />}
+            content={`Algorithms: ${algorithms}`}
+            position="top center"
+          />
+        </b>
+      )}
+      {Number.isInteger(numExon) && (
+        <b>
+          {`, ${numExon} exons`}
           <Popup
             trigger={<HelpIcon />}
             content="CNV size and exon number are estimated from exome data and should be confirmed by an alternative method"
           />
         </b>
-      }
-      { lofDetails &&
+      )}
+      {lofDetails && (
         <span>
           <HorizontalSpacer width={12} />
           <Popup
@@ -295,47 +292,52 @@ const Annotations = React.memo(({ variant }) => {
             content={lofDetails}
           />
         </span>
-      }
-      { mainTranscript.hgvsc &&
+      )}
+      {mainTranscript.hgvsc && (
         <div>
-          <b>HGVS.C</b><HorizontalSpacer width={5} /><ProteinSequence hgvs={mainTranscript.hgvsc} />
+          <b>HGVS.C</b>
+          <HorizontalSpacer width={5} />
+          <ProteinSequence hgvs={mainTranscript.hgvsc} />
         </div>
-      }
-      { mainTranscript.hgvsp &&
+      )}
+      {mainTranscript.hgvsp && (
         <div>
-          <b>HGVS.P</b><HorizontalSpacer width={5} /><ProteinSequence hgvs={mainTranscript.hgvsp} />
+          <b>HGVS.P</b>
+          <HorizontalSpacer width={5} />
+          <ProteinSequence hgvs={mainTranscript.hgvsp} />
         </div>
-      }
+      )}
       { (svType || Object.keys(mainTranscript).length > 0) && <VerticalSpacer height={10} />}
       <LargeText>
         <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
         <HorizontalSpacer width={10} />
-        {variant.ref &&
+        {variant.ref && (
           <span>
             <Sequence sequence={variant.ref} />
             <Icon name="angle right" />
             <Sequence sequence={variant.alt} />
           </span>
-        }
+        )}
       </LargeText>
-      {rsid &&
+      {rsid && (
         <div>
-          <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank">
+          <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${rsid}`} target="_blank" rel="noreferrer">
             {rsid}
           </a>
         </div>
-      }
+      )}
       {variant.liftedOverGenomeVersion === GENOME_VERSION_37 && (
-        variant.liftedOverPos ?
+        variant.liftedOverPos ? (
           <div>
-            hg19: <UcscBrowserLink variant={variant} useLiftover includeEnd={!!variant.svType || !variant.ref} />
+            hg19:
+            <UcscBrowserLink variant={variant} useLiftover includeEnd={!!variant.svType || !variant.ref} />
           </div>
-          : <div>hg19: liftover failed</div>
-        )
-      }
+        ) : <div>hg19: liftover failed</div>
+      )}
       {cpxIntervals && cpxIntervals.length > 0 &&
-      [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(e =>
-        <div key={`${e.type}${e.chrom}-${e.start}-${e.end}`}> {e.type} {e.chrom}:{e.start}-{e.end} </div>)]}
+      [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(
+        e => `${e.type}${e.chrom}-${e.start}-${e.end}`,
+      ).map(e => <div key={e}>{e}</div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
       <VerticalSpacer height={5} />

@@ -4,7 +4,8 @@ APIs for retrieving, updating, creating, and deleting Individual records
 from collections import defaultdict
 
 from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json, \
+    update_model_from_json
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
 
@@ -80,6 +81,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
                 individual = create_model_from_json(
                     Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
                 updated_families.add(family)
+                individual_lookup[individual_id][family] = individual
 
         record['family'] = family
         record.pop('familyId', None)
@@ -110,12 +112,18 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
         if is_updated:
             updated_individuals.add(individual)
+            if family.pedigree_image:
+                updated_families.add(family)
 
     for update in parent_updates:
         individual = update.pop('individual')
         is_updated = update_individual_from_json(individual, update, user=user)
         if is_updated:
             updated_individuals.add(individual)
+            if family.pedigree_image:
+                updated_families.add(family)
+
+    _remove_pedigree_images(updated_families, user)
 
     return list(updated_individuals), list(updated_families), updated_notes
 
@@ -141,9 +149,15 @@ def delete_individuals(project, individual_guids, user):
 
     Individual.bulk_delete(user, queryset=individuals_to_delete)
 
+    _remove_pedigree_images(families, user)
     families_with_deleted_individuals = list(families)
 
     return families_with_deleted_individuals
+
+
+def _remove_pedigree_images(families, user):
+    for family in families:
+        update_model_from_json(family, {'pedigree_image': None}, user)
 
 
 def get_parsed_feature(feature):

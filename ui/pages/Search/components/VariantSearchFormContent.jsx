@@ -11,13 +11,16 @@ import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
   HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
-  annotationFieldLayout,
+  IN_SILICO_PANEL, annotationFieldLayout, inSilicoFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
-  HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
+  HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
+  SV_GROUPS,
 } from 'shared/components/panel/search/constants'
 import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
-import { ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
+import {
+  ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP,
+} from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
 import CustomInheritanceFilter from './filters/CustomInheritanceFilter'
@@ -72,8 +75,11 @@ const INHERITANCE_PANEL = {
         const { affected, genotype, ...coreFilter } = val.filter
         return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
-      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null :
-        { mode: val, filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] }, annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val) }),
+      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null : {
+        mode: val,
+        filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] },
+        annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val),
+      }),
     },
   },
   fields: [
@@ -89,10 +95,11 @@ const INHERITANCE_PANEL = {
     <span>
       Filter by the mode of inheritance. Choose from the built-in search methods (described
       <Modal trigger={<DetailLink>here</DetailLink>} title="Inheritance Searching" modalName="inheritanceModes">
-        <i>seqr</i> implements the following set of standard Mendelian inheritance methods to identify variants that
+        <i>seqr</i>
+        implements the following set of standard Mendelian inheritance methods to identify variants that
         segregate with a phenotype in a family
-        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(({ value, text, detail }) =>
-          <Header key={value} content={text} subheader={detail} />,
+        {INHERITANCE_FILTER_JSON_OPTIONS.filter(({ value }) => value !== ALL_INHERITANCE_FILTER).map(
+          ({ value, text, detail }) => <Header key={value} content={text} subheader={detail} />,
         )}
 
         <Header size="small" content="Notes on inheritance searching:" />
@@ -104,10 +111,23 @@ const INHERITANCE_PANEL = {
           <List.Item>All methods assume complete penetrance</List.Item>
           <List.Item>seqr assumes unphased genotypes</List.Item>
         </List>
-      </Modal>) or specify custom alternate allele counts. You can also specify the affected status for an individual
+      </Modal>
+      ) or specify custom alternate allele counts. You can also specify the affected status for an individual
       that differs from the status in the pedigree.
     </span>
   ),
+}
+
+const IN_SILICO_PANEL_MAP = {
+  ...IN_SILICO_PANEL,
+  [DATASET_TYPE_SV_CALLS]: {
+    ...IN_SILICO_PANEL,
+    fieldLayout: inSilicoFieldLayout([SV_IN_SILICO_GROUP]),
+  },
+  [DATASET_TYPE_VARIANT_CALLS]: {
+    ...IN_SILICO_PANEL,
+    fieldLayout: inSilicoFieldLayout(NO_SV_IN_SILICO_GROUPS),
+  },
 }
 
 const LOCATION_PANEL_WITH_GENE_LIST = {
@@ -126,11 +146,11 @@ const ANNOTATION_PANEL_MAP = {
   ...ANNOTATION_PANEL,
   [DATASET_TYPE_SV_CALLS]: {
     ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]], true),
+    fieldLayout: annotationFieldLayout([SV_GROUPS], true),
   },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
   },
 }
 
@@ -151,38 +171,52 @@ const secondaryPanel = panel => ({
 })
 const ANNOTATION_SECONDARY_PANEL_MAP = {
   ...secondaryPanel(ANNOTATION_PANEL),
+  fieldLayout: annotationFieldLayout([SV_GROUPS, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
   [DATASET_TYPE_SV_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_SV_CALLS]),
-  [DATASET_TYPE_VARIANT_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
+  [DATASET_TYPE_VARIANT_CALLS]: {
+    ...secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
+    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  },
 }
 
-const SVFrequecyHeaderFilter = ({ value, onChange }) =>
+const svCallsetChange = (onChange, initialValues) => val => onChange(
+  { ...initialValues, [SV_CALLSET_FREQUENCY]: val },
+)
+
+const SVFrequecyHeaderFilter = ({ value, onChange }) => (
   <Form.Group inline>
     <AfFilter
       value={value[SV_CALLSET_FREQUENCY]}
-      onChange={val => onChange({ ...value, [SV_CALLSET_FREQUENCY]: val })}
+      onChange={svCallsetChange(onChange, value)}
       inline
       label="Callset"
       width={16}
     />
   </Form.Group>
+)
 
 SVFrequecyHeaderFilter.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 
-const QS_FILTER_FIELD = {
+const SV_QS_FILTER_FIELD = {
   name: 'min_qs',
-  label: 'SV Quality Score',
-  labelHelp: (
-    <span>The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering:<br />
-      WGS: &gt; 10; <br />
-      WES: duplication &gt;= 50, deletion &gt;= 100, homozygous deletion &gt;= 400.
-    </span>),
+  label: 'WES SV Quality Score',
+  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplication >= 50, deletion >= 100, homozygous deletion >= 400.',
   min: 0,
   max: 1000,
   step: 10,
   component: DividedFormField,
+}
+
+const SV_GQ_FILTER_FIELD = {
+  name: 'min_gq_sv',
+  label: 'WGS SV Genotype Quality',
+  labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 10.',
+  min: 0,
+  max: 1000,
+  step: 10,
 }
 
 const PANELS = [
@@ -193,6 +227,7 @@ const PANELS = [
   },
   ANNOTATION_PANEL_MAP,
   ANNOTATION_SECONDARY_PANEL_MAP,
+  IN_SILICO_PANEL_MAP,
   {
     ...FREQUENCY_PANEL,
     [DATASET_TYPE_VARIANT_CALLS]: {
@@ -214,11 +249,11 @@ const PANELS = [
     ...QUALITY_PANEL,
     [ALL_DATASET_TYPE]: {
       ...QUALITY_PANEL,
-      fields: [...QUALITY_PANEL.fields, QS_FILTER_FIELD],
+      fields: [...QUALITY_PANEL.fields, SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
     },
     [DATASET_TYPE_SV_CALLS]: {
       ...QUALITY_PANEL,
-      fields: [QS_FILTER_FIELD],
+      fields: [SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
     },
   },
 ]
@@ -228,14 +263,18 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   return {
     ...typeAcc,
     [type]: [true, false].reduce((analystAcc, hasHgmdBool) => {
-      const analystPanels = typePanels.map(({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]))
+      const analystPanels = typePanels.map(
+        ({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]),
+      )
       return {
         ...analystAcc,
         [hasHgmdBool]: [true, false].reduce((acc, annSecondaryBool) => ({
           ...acc,
-          [annSecondaryBool]: annSecondaryBool ? analystPanels : analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
+          [annSecondaryBool]: annSecondaryBool ? analystPanels :
+            analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
-      } }, {}),
+      }
+    }, {}),
   }
 }, {})
 

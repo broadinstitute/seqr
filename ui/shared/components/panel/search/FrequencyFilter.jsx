@@ -1,10 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Form } from 'semantic-ui-react'
+import { Form, Loader } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { StepSlider, IntegerInput, Select } from 'shared/components/form/Inputs'
+import { IntegerInput, Select } from 'shared/components/form/Inputs'
 import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from './constants'
+
+const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
 
 const AF_STEPS = [
   0,
@@ -30,22 +32,48 @@ const AF_STEP_LABELS = {
 
 const AF_OPTIONS = AF_STEPS.map(value => ({ value }))
 
-const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inlineAF, onChange }) =>
+const selectStep = (onChange, steps) => val => onChange(steps[val])
+
+export const StepSlider = React.memo(({ steps, stepLabels, value, onChange, ...props }) => (
+  <React.Suspense fallback={<Loader />}>
+    <LabeledSlider
+      {...props}
+      min={0}
+      minLabel={stepLabels[steps[0]] || steps[0]}
+      max={steps.length - 1}
+      maxLabel={stepLabels[steps.length - 1] || steps[steps.length - 1]}
+      value={steps.indexOf(value)}
+      valueLabel={steps.indexOf(value) >= 0 ? (stepLabels[value] || value) : ''}
+      onChange={selectStep(onChange, steps)}
+    />
+  </React.Suspense>
+))
+
+StepSlider.propTypes = {
+  value: PropTypes.number,
+  steps: PropTypes.arrayOf(PropTypes.number),
+  stepLabels: PropTypes.object,
+  onChange: PropTypes.func,
+}
+
+const updateFrequency = ({ onChange, field, initialValue, nullField }) => (val) => {
+  const updateFields = { [field]: val }
+  if (nullField) {
+    updateFields[nullField] = null
+  }
+  onChange({ ...initialValue, ...updateFields })
+}
+
+const FrequencyIntegerInput = React.memo(({ label, value, field, nullField, inlineAF, onChange }) => (
   <IntegerInput
     label={label}
     value={(value || {})[field]}
     min={0}
     max={100}
     width={inlineAF ? 3 : 8}
-    onChange={(val) => {
-      const updateFields = { [field]: val }
-      if (nullField) {
-        updateFields[nullField] = null
-      }
-      onChange({ ...value, ...updateFields })
-    }}
-  />,
-)
+    onChange={updateFrequency({ onChange, field, initialValue: value, nullField })}
+  />
+))
 
 FrequencyIntegerInput.propTypes = {
   value: PropTypes.object,
@@ -59,7 +87,7 @@ FrequencyIntegerInput.propTypes = {
 export const AfFilter = ({ value, onChange, inline, label, width }) => {
   const afProps = {
     value: (value || {}).af,
-    onChange: val => onChange({ ...value, af: val, ac: null }),
+    onChange: updateFrequency({ onChange, initialValue: value, field: 'af', nullField: 'ac' }),
   }
   return inline ?
     <Select options={AF_OPTIONS} width={width || 5} label={label || 'AF'} {...afProps} /> :
@@ -76,16 +104,14 @@ AfFilter.propTypes = {
 
 export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }) => (
   <span>
-    {!inlineAF &&
+    {!inlineAF && (
       <div>
         <AfFilter value={value} onChange={onChange} />
         <VerticalSpacer height={15} />
       </div>
-    }
+    )}
     <Form.Group inline>
-      {inlineAF &&
-        <AfFilter value={value} onChange={onChange} inline />
-      }
+      {inlineAF && <AfFilter value={value} onChange={onChange} inline />}
       <FrequencyIntegerInput
         label="AC"
         field="ac"
@@ -95,8 +121,7 @@ export const FrequencyFilter = ({ value, onChange, homHemi, inlineAF, children }
         onChange={onChange}
       />
       {homHemi &&
-        <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />
-      }
+        <FrequencyIntegerInput label="H/H" field="hh" value={value} inlineAF={inlineAF} onChange={onChange} />}
       {children}
     </Form.Group>
   </span>
@@ -110,23 +135,27 @@ FrequencyFilter.propTypes = {
   children: PropTypes.node,
 }
 
-const formatHeaderValue = values =>
-  Object.values(values).reduce((acc, value) => ({
-    af: value.af === acc.af ? value.af : null,
-    ac: value.ac === acc.ac ? value.ac : null,
-    hh: value.hh === acc.hh ? value.hh : null,
-  }), Object.values(values)[0])
+const formatHeaderValue = values => Object.values(values).reduce((acc, value) => ({
+  af: value.af === acc.af ? value.af : null,
+  ac: value.ac === acc.ac ? value.ac : null,
+  hh: value.hh === acc.hh ? value.hh : null,
+}), Object.values(values)[0])
+
+const callsetChange = (onChange, initialValues) => val => onChange(
+  { ...initialValues, [THIS_CALLSET_FREQUENCY]: val, [SV_CALLSET_FREQUENCY]: val },
+)
+
+const freqChange = (onChange, initialValues) => val => onChange(FREQUENCIES.filter(
+  ({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY,
+).reduce((acc, { name }) => ({ ...acc, [name]: val }), initialValues || {}))
 
 export const HeaderFrequencyFilter = ({ value, onChange, ...props }) => {
   const { callset, sv_callset: svCallset, ...freqValues } = value || {}
   const headerValue = freqValues ? formatHeaderValue(freqValues) : {}
 
-  const onCallsetChange = val =>
-    onChange({ ...freqValues, [THIS_CALLSET_FREQUENCY]: val, [SV_CALLSET_FREQUENCY]: val })
+  const onCallsetChange = callsetChange(onChange, freqValues)
 
-  const onFreqChange = val =>
-    onChange(FREQUENCIES.filter(({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY).reduce(
-      (acc, { name }) => ({ ...acc, [name]: val }), value || {}))
+  const onFreqChange = freqChange(onChange, value)
 
   return (
     <FrequencyFilter {...props} value={headerValue} onChange={onFreqChange} homHemi inlineAF>
@@ -147,4 +176,3 @@ HeaderFrequencyFilter.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
 }
-

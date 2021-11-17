@@ -30,9 +30,9 @@ class DashboardPageTest(AuthenticationTestCase):
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
-        self.assertRegex(content, r'static/app(-.*)js')
+        self.assertRegex(content, r'src="/static/app(-.*)js"')
         self.assertRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
-        self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 4)
+        self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 5)
 
     @mock.patch('seqr.views.react_app.GA_TOKEN_ID', MOCK_GA_TOKEN)
     @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
@@ -55,8 +55,8 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
         content = response.content.decode('utf-8')
-        self.assertNotRegex(content, r'static/app(-.*)js')
-        self.assertContains(response, 'app.js')
+        self.assertNotRegex(content, r'src="/static/app(-.*)js"')
+        self.assertContains(response, 'src="/app.js"')
         self.assertNotRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
 
     def test_no_login_react_page(self):

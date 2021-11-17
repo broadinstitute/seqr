@@ -1,8 +1,9 @@
 import Cookies from 'js-cookie'
 import delay from 'timeout-as-promise'
 
-export const getUrlQueryString = urlParams =>
-  Object.entries(urlParams).map(([key, value]) => [key, value].map(encodeURIComponent).join('=')).join('&')
+export const getUrlQueryString = urlParams => Object.entries(urlParams).map(
+  ([key, value]) => [key, value].map(encodeURIComponent).join('='),
+).join('&')
 
 /**
  * Encapsulates the cycle of:
@@ -21,14 +22,13 @@ export class HttpRequestHelper {
    * @param onClear {function} optional handler called some time after the onSuccess or onError handler is called
    * @param delayBeforeClearing {number} milliseconds delay before calling the onClear handler
    */
-  constructor(url, onSuccess = null, onError = null, onClear = null, delayBeforeClearing = 3000, debug = false) {
+  constructor(url, onSuccess = null, onError = null, onClear = null, delayBeforeClearing = 3000) {
     this.url = url
     this.httpPostId = 0
     this.onSuccess = onSuccess
     this.onError = onError
     this.onClear = onClear
     this.delayBeforeClearing = delayBeforeClearing
-    this.debug = debug
   }
 
   /**
@@ -52,9 +52,6 @@ export class HttpRequestHelper {
    * @param jsonBody The request body.
    */
   post = (jsonBody = {}) => {
-    if (this.debug) {
-      console.log(`${this.url} httpHelder - request: `, jsonBody)
-    }
     const csrfToken = Cookies.get('csrf_token')
     const promise = fetch(this.url, {
       method: 'POST',
@@ -71,57 +68,50 @@ export class HttpRequestHelper {
    * @param promise
    * @param onSuccessArg
    */
-  handlePromise = (promise, onSuccessArg) => {
-    return promise.then((response) => {
-      if (response.status === 401 && !window.location.href.includes('login')) {
-        response.json().then((errorJson) => {
-          const { error } = errorJson
-          window.location.href = `${window.location.origin}${error}?next=${window.location.href.replace(window.location.origin, '')}`
-        })
+  handlePromise = (promise, onSuccessArg) => promise.then((response) => {
+    if (response.status === 401 && !window.location.href.includes('login')) {
+      response.json().then((errorJson) => {
+        const { error } = errorJson
+        window.location.href = `${window.location.origin}${error}?next=${window.location.href.replace(window.location.origin, '')}`
+      })
+    }
+    if (!response.ok) {
+      const throwJsonError = (responseJson) => {
+        const message = responseJson.error || responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
+        const err = new Error(message)
+        err.body = responseJson
+        throw err
       }
-      if (!response.ok) {
-        console.log('ERROR: ', response.statusText, response.status, response)
-        const throwJsonError = (responseJson) => {
-          const message = responseJson.error || responseJson.message || `${response.statusText.toLowerCase()} (${response.status})`
-          const err = new Error(message)
-          err.body = responseJson
-          throw err
-        }
-        return response.json().then(throwJsonError, () => throwJsonError({}))
+      return response.json().then(throwJsonError, () => throwJsonError({}))
+    }
+    try {
+      return response.json()
+    } catch (exception) {
+      throw response.body
+    }
+  })
+    .then((responseJson) => {
+      if (this.onSuccess) {
+        this.onSuccess(responseJson, onSuccessArg)
       }
-      try {
-        return response.json()
-      } catch (exception) {
-        throw response.body
+
+      if (this.onClear) {
+        this.httpPostId += 1
+        return delay(this.delayBeforeClearing, this.httpPostId)
+      }
+      return -1
+    })
+    .catch((exception) => {
+      if (this.onError) {
+        this.onError(exception)
+      }
+
+      return -1 // don't ever hide the error message
+    })
+    .then((httpPostId) => {
+      if (this.onClear && httpPostId === this.httpPostId) {
+        this.onClear(httpPostId)
       }
     })
-      .then((responseJson) => {
-        if (this.debug) {
-          console.log(`${this.url} httpHelder - response: `, responseJson)
-        }
-        if (this.onSuccess) {
-          this.onSuccess(responseJson, onSuccessArg)
-        }
 
-        if (this.onClear) {
-          this.httpPostId++
-          return delay(this.delayBeforeClearing, this.httpPostId)
-        }
-        return -1
-      })
-      .catch((exception) => {
-        console.log(exception)
-        if (this.onError) {
-          this.onError(exception)
-        }
-
-        //this.httpPostId++
-        return -1 // don't ever hide the error message
-      })
-      .then((httpPostId) => {
-        if (this.onClear && httpPostId === this.httpPostId) {
-          this.onClear(httpPostId)
-        }
-      })
-  }
 }
