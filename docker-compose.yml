@@ -30,8 +30,6 @@ services:
     volumes:
       - ./data/elasticsearch:/usr/share/elasticsearch/data
     container_name: elasticsearch
-#    command: sysctl -w vm.max_map_count=262144
-#    privileged: true
     environment:
       - http.host=0.0.0.0
       - discovery.type=single-node
