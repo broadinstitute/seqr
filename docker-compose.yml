@@ -30,6 +30,8 @@ services:
     volumes:
       - ./data/elasticsearch:/usr/share/elasticsearch/data
     container_name: elasticsearch
+#    command: sysctl -w vm.max_map_count=262144
+#    privileged: true
     environment:
       - http.host=0.0.0.0
       - discovery.type=single-node
@@ -44,7 +46,7 @@ services:
 
 
   kibana:
-    image: gcr.io/seqr-project/kibana:gcloud-prod
+    image: docker.elastic.co/kibana/kibana:7.15.2
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
