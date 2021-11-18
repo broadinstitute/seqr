@@ -1201,6 +1201,14 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(
             str(cm.exception),
+            'Annotations must be specified to search for compound heterozygous variants')
+
+        search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
+        search_model.save()
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
 
         search_model.search['locus'] = {'rawItems': 'DDX11L1'}
@@ -1893,6 +1901,7 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'inheritance': {'mode': 'recessive'},
+            'annotations': {'frameshift': ['frameshift_variant'], 'structural': ['DEL']}
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1905,9 +1914,11 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[2][1], PARSED_COMPOUND_HET_VARIANTS[1])
         self.assertDictEqual(variants[3], PARSED_VARIANTS[1])
 
+        annotations_q = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant', 'gCNV_DEL']}}
         self.assertExecutedSearches([
             dict(
                 filters=[
+                    annotations_q,
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{
@@ -1948,7 +1959,9 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=10, index=SV_INDEX_NAME,
             ),
             dict(
-                filters=[{'bool': {
+                filters=[
+                    annotations_q,
+                    {'bool': {
                     '_name': 'F000002_2',
                     'must': [
                         {'bool': {
@@ -1975,6 +1988,7 @@ class EsUtilsTest(TestCase):
             ),
             dict(
                 filters=[
+                    annotations_q,
                     {'bool': {'_name': 'F000003_3', 'must': [{'term': {'samples_num_alt_1': 'NA20870'}}]}},
                 ],
                 gene_aggs=True,
@@ -1983,6 +1997,7 @@ class EsUtilsTest(TestCase):
             ),
             dict(
                 filters=[
+                    annotations_q,
                     {
                         'bool': {
                             'should': [

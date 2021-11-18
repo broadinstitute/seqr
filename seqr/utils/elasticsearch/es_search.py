@@ -409,6 +409,10 @@ class EsSearch(object):
         return _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
 
     def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search, has_location_filter):
+        if not self._allowed_consequences:
+            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
+
         indices = set(self._indices)
 
         paired_index_families = defaultdict(dict)
