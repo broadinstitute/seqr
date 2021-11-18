@@ -257,12 +257,17 @@ class FamilyReads extends React.PureComponent {
     locus: null,
   }
 
+  getProjectForFamily = (familyGuid) => {
+    const { projectsByGuid, familiesByGuid } = this.props
+    return projectsByGuid[familiesByGuid[familyGuid].projectGuid]
+  }
+
   showReads = familyGuid => sampleTypes => () => {
-    const { variant, projectsByGuid, familiesByGuid } = this.props
+    const { variant } = this.props
     this.setState({
       openFamily: familyGuid,
       sampleTypes,
-      locus: variant && getVariantLocus(variant, projectsByGuid[familiesByGuid[familyGuid].projectGuid]),
+      locus: variant && getVariantLocus(variant, this.getProjectForFamily(familyGuid)),
     })
   }
 
@@ -345,9 +350,9 @@ class FamilyReads extends React.PureComponent {
       openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
-    const project = openFamily && projectsByGuid[familiesByGuid[openFamily].projectGuid]
+    const project = openFamily && this.getProjectForFamily(openFamily)
     const geneLocus = project && variant && getGeneLocus(variant, genesById, project)
-    const locusOptions = geneLocus ? [{ value: variant && getVariantLocus(variant, project), text: 'Variant' },
+    const locusOptions = geneLocus ? [{ value: getVariantLocus(variant, project), text: 'Variant' },
       { value: geneLocus, text: 'Gene' }] : null
     const reads = Object.keys(igvSampleIndividuals).length > 0 ? (
       <Segment.Group horizontal>
@@ -362,13 +367,25 @@ class FamilyReads extends React.PureComponent {
               />
             )}
             {rnaTrackOptions.length > 0 && (
+              <CheckboxGroup
+                groupLabel="RNA Tracks"
+                value={sampleTypes}
+                options={rnaTrackOptions}
+                onChange={this.updateSampleTypes}
+              />
+            )}
+            { locusOptions && (
               <div>
-                <CheckboxGroup
-                  groupLabel="RNA Tracks"
-                  value={sampleTypes}
-                  options={rnaTrackOptions}
-                  onChange={this.updateSampleTypes}
+                <Divider horizontal>Range</Divider>
+                <RadioGroup
+                  value={locus}
+                  options={locusOptions}
+                  onChange={this.locusChange}
                 />
+              </div>
+            )}
+            {rnaTrackOptions.length > 0 && (
+              <div>
                 {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
                   <div>
                     <Divider horizontal>Reference Tracks</Divider>
@@ -388,16 +405,6 @@ class FamilyReads extends React.PureComponent {
                     />
                   </div>
                 )}
-              </div>
-            )}
-            { locusOptions && (
-              <div>
-                <Divider horizontal>Range</Divider>
-                <RadioGroup
-                  value={locus}
-                  options={locusOptions}
-                  onChange={this.locusChange}
-                />
               </div>
             )}
           </Segment>
