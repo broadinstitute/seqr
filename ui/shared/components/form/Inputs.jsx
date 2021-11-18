@@ -340,7 +340,7 @@ CheckboxGroup.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func,
   label: PropTypes.node,
-  groupLabel: PropTypes.string,
+  groupLabel: PropTypes.node,
   horizontalGrouped: PropTypes.bool,
 }
 
