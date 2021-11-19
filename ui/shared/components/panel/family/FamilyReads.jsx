@@ -13,7 +13,7 @@ import {
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
-import { ButtonLink, HelpIcon, ColoredSpan } from '../../StyledComponents'
+import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
@@ -347,11 +347,11 @@ class FamilyReads extends React.PureComponent {
     return Object.entries(sampleColors).map(
       ([iGuid, sampleColor]) => (
         <div key={iGuid}>
-          <ColoredSpan color="black">
+          <Icon name="square full" color={sampleColor} />
+          <label>
             {individualsByGuid[iGuid].displayName}
             &nbsp;
-          </ColoredSpan>
-          <ColoredSpan backgroundColor={sampleColor}>&nbsp;</ColoredSpan>
+          </label>
         </div>
       ),
     )
@@ -403,7 +403,12 @@ class FamilyReads extends React.PureComponent {
                 onChange={this.updateSampleTypes}
               />
             )}
-            {sampleTypes.includes(GCNV_TYPE) && this.getSampleColorPanel()}
+            {sampleTypes.includes(GCNV_TYPE) && (
+              <div>
+                <Divider horizontal>Sample Color</Divider>
+                {this.getSampleColorPanel()}
+              </div>
+            )}
             { locusOptions && (
               <div>
                 <Divider horizontal>Range</Divider>
