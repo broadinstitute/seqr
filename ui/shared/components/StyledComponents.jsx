@@ -38,11 +38,6 @@ export const ColoredDiv = styled.div`
   color: ${props => props.color} !important;
 `
 
-export const ColoredSpan = styled.span`
-  background-color: ${props => props.backgroundColor} !important;
-  color: ${props => props.color} !important;
-`
-
 const ColoredComponent = control => ColoredDiv.withComponent(
   ({ color, ...props }) => React.createElement(control, props),
 )
