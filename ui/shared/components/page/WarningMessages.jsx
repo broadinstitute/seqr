@@ -15,7 +15,7 @@ class WarningMessages extends React.PureComponent {
   state = { hiddenMessages: {} }
 
   hide = message => () => {
-    this.setState(prevState => ({ ...prevState.hiddenMessages, [message]: true }))
+    this.setState(prevState => ({ hiddenMessages: { ...prevState.hiddenMessages, [message]: true } }))
   }
 
   render() {
