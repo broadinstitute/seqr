@@ -405,7 +405,7 @@ class FamilyReads extends React.PureComponent {
             )}
             {sampleTypes.includes(GCNV_TYPE) && (
               <div>
-                <Divider horizontal>Sample Color</Divider>
+                <Divider horizontal>gCNV Samples</Divider>
                 {this.getSampleColorPanel()}
               </div>
             )}
