@@ -13,7 +13,7 @@ import {
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
-import { ButtonLink, HelpIcon } from '../../StyledComponents'
+import { ButtonLink, HelpIcon, ColoredSpan } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
@@ -328,6 +328,35 @@ class FamilyReads extends React.PureComponent {
     )
   }
 
+  getSampleColors = () => {
+    const { openFamily } = this.state
+    const { igvSamplesByFamilySampleIndividual, individualsByGuid } = this.props
+    const igvSampleIndividuals = (
+      openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
+    return Object.keys(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
+      (acc, iGuid) => ({
+        ...acc,
+        [iGuid]: individualsByGuid[iGuid].affected === AFFECTED ? 'red' : 'blue',
+      }), {},
+    )
+  }
+
+  getSampleColorPanel = () => {
+    const { individualsByGuid } = this.props
+    const sampleColors = this.getSampleColors()
+    return Object.entries(sampleColors).map(
+      ([iGuid, sampleColor]) => (
+        <div key={iGuid}>
+          <ColoredSpan color="black">
+            {individualsByGuid[iGuid].displayName}
+            &nbsp;
+          </ColoredSpan>
+          <ColoredSpan backgroundColor={sampleColor}>&nbsp;</ColoredSpan>
+        </div>
+      ),
+    )
+  }
+
   render() {
     const {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
@@ -374,6 +403,7 @@ class FamilyReads extends React.PureComponent {
                 onChange={this.updateSampleTypes}
               />
             )}
+            {sampleTypes.includes(GCNV_TYPE) && this.getSampleColorPanel()}
             { locusOptions && (
               <div>
                 <Divider horizontal>Range</Divider>
