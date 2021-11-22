@@ -41,6 +41,8 @@ const getTrackOptions = (type, sample, individual) => {
   return { url, name, type, ...TRACK_OPTIONS[type] }
 }
 
+const getSampleColor = individual => (individual.affected === AFFECTED ? 'red' : 'blue')
+
 const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
   const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { filePath, sampleId }]) => {
@@ -98,8 +100,7 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
             ...track,
             indexURL: `${track.url}.tbi`,
             highlightSamples: Object.entries(batch).reduce((higlightAcc, [iGuid, sampleId]) => ({
-              [sampleId || individualsByGuid[iGuid].individualId]:
-                individualsByGuid[iGuid].affected === AFFECTED ? 'red' : 'blue',
+              [sampleId || individualsByGuid[iGuid].individualId]: getSampleColor(individualsByGuid[iGuid]),
               ...higlightAcc,
             }), {}),
             name: individualGuids.length === 1 ? track.name : individualGuids.map(
@@ -328,30 +329,16 @@ class FamilyReads extends React.PureComponent {
     )
   }
 
-  getSampleColors = () => {
+  getSampleColorPanel = () => {
     const { openFamily } = this.state
     const { igvSamplesByFamilySampleIndividual, individualsByGuid } = this.props
     const igvSampleIndividuals = (
       openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
-    return Object.keys(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
-      (acc, iGuid) => ({
-        ...acc,
-        [iGuid]: individualsByGuid[iGuid].affected === AFFECTED ? 'red' : 'blue',
-      }), {},
-    )
-  }
-
-  getSampleColorPanel = () => {
-    const { individualsByGuid } = this.props
-    const sampleColors = this.getSampleColors()
-    return Object.entries(sampleColors).map(
-      ([iGuid, sampleColor]) => (
+    return Object.keys(igvSampleIndividuals[GCNV_TYPE] || {}).map(
+      iGuid => (
         <div key={iGuid}>
-          <Icon name="square full" color={sampleColor} />
-          <label>
-            {individualsByGuid[iGuid].displayName}
-            &nbsp;
-          </label>
+          <Icon name="square full" color={getSampleColor(individualsByGuid[iGuid])} />
+          <label>{individualsByGuid[iGuid].displayName}</label>
         </div>
       ),
     )
