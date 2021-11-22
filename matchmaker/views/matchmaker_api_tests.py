@@ -339,7 +339,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'genomicFeatures': [{'gene': {'id': 'ENSG00000186092'}}],
                 'features': None,
                 'contact': {
-                    'href': 'mailto:matchmaker@broadinstitute.org',
+                    'href': 'mailto:matchmaker@populationgenomics.org.au',
                     'name': 'Sam Baxter',
                     'institution': 'Broad Center for Mendelian Genomics'
                 },
