@@ -417,7 +417,10 @@ We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bi
             'datasetType': 'VARIANTS',
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Must contain 2 columns: NA19678_1, NA19678, metadata']})
+        self.assertDictEqual(
+            response.json(),
+            {'errors': ['Must contain 2 columns. Received 3 columns on line #1: NA19678_1, NA19678, metadata']}
+        )
 
         MOCK_FILE_ITER.side_effect = Exception('Unhandled base exception')
         response = self.client.post(url, content_type='application/json', data=json.dumps({
