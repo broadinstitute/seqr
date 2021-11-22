@@ -209,7 +209,7 @@ class EsSearch(object):
             if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
         ]
         path_override = bool(clinvar_path_filters) and any(
-            freqs.get('af', 1) < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
+            freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
         q = Q()
         path_q = Q()
