@@ -16,6 +16,11 @@ case ${DEPLOYMENT_TARGET} in
     CLUSTER_NAME=seqr-cluster-prod
     NAMESPACE=default
     ;;
+  prototype)
+    GCLOUD_PROJECT=hail-seqr-development
+    CLUSTER_NAME=seqr-cluster
+    NAMESPACE=default
+    ;;
   *)
     echo "Invalid deployment target '${DEPLOYMENT_TARGET}'"
     exit 1

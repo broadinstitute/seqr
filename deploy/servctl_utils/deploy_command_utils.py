@@ -17,7 +17,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
+DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev', 'prototype']
 
 DEPLOYMENT_TARGETS = [
     "settings",

@@ -1,0 +1,22 @@
+GCLOUD_PROJECT: 'hail-seqr-development'
+
+SEQR_GIT_BRANCH: 'hail-backend'
+
+CLUSTER_NAME: 'seqr-cluster'
+
+CLUSTER_EXTERNAL_IP: '104.198.135.79'
+CLUSTER_HOSTNAME: 'seqr-hail.broadinstitute.org'
+
+GUNICORN_WORKER_THREADS: 4
+
+SEQR_POD_MEMORY_LIMIT: 5Gi
+REDIS_POD_MEMORY_LIMIT: 2Gi
+
+TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
+
+CLOUDSQL_AVAILABILITY_TYPE: 'zonal'
+
+NAMESPACE: seqr-prototype
+
+DEPLOY_TO: 'prototype'
+DEPLOYMENT_TYPE: 'prototype'
