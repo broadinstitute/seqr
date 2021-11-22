@@ -272,8 +272,8 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
             mock.call(
                 subject='Received new MME match',
                 body=message_template.format(matches=match3, emails='matchmaker@broadinstitute.org'),
-                to=['matchmaker@broadinstitute.org'],
-                from_email='matchmaker@broadinstitute.org',
+                to=['matchmaker@populationgenomics.org.au'],
+                from_email='matchmaker@populationgenomics.org.au',
             ),
             mock.call().send(),
         ])
