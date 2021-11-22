@@ -1344,7 +1344,7 @@ class EsUtilsTest(TestCase):
             },
             'freqs': {
                 'callset': {'af': 0.1},
-                'exac': {'ac': 2},
+                'exac': {'ac': 2, 'af': None},
                 'g1k': {'ac': None, 'af': 0.001},
                 'gnomad_exomes': {'af': 0.01, 'ac': 3, 'hh': 3},
                 'gnomad_genomes': {'af': 0.01, 'hh': 3},
