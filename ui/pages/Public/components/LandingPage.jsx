@@ -75,22 +75,29 @@ const LandingPage = () => (
           <List ordered>
             <List.Item>
               This instance is available for collaborators of the &nbsp;
-              <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor> with data pre-loaded into projects.
+              <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor>
+              with data pre-loaded into projects.
               If you are interested in collaborating with our group, please &nbsp;
-              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>.
+              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>
+              .
             </List.Item>
             <List.Item>
-              The Broad <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor> is available for all collaborators within the &nbsp;
-              <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor> or
-              Mendelian Genomics Research Center with data pre-loaded into projects
+              The Broad
+              <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor>
+              is available for all collaborators within the &nbsp;
+              <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor>
+              or Mendelian Genomics Research Center with data pre-loaded into projects
             </List.Item>
             <List.Item>
-              Available for use on the <Anchor href="https://anvilproject.org">AnVIL platform</Anchor> where requests
+              Available for use on the
+              <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
+              where requests
               can be placed for loading a joint called vcf into seqr
             </List.Item>
             <List.Item>
               Available on GitHub as an &nbsp;
-              <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor> for download and local
+              <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor>
+              for download and local
               installation
             </List.Item>
           </List>
