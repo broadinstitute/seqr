@@ -38,6 +38,9 @@ GCLOUD_ZONE: 'us-central1-b'
 DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 IMAGE_PULL_POLICY: 'Always'
 
+SEQR_PRIORITY_CLASS: 'high-priority'
+SECRETS_ENABLED: true
+
 DEPLOYMENT_TEMP_DIR: '/tmp'
 STATIC_MEDIA_DIR: '/seqr_static_files'
 MME_CONFIG_DIR: '/mme'

@@ -35,14 +35,18 @@ spec:
         name: seqr
         deployment: {{ DEPLOY_TO }}
     spec:
-      priorityClassName: high-priority
+      {% if SEQR_PRIORITY_CLASS %}
+      priorityClassName: {{ SEQR_PRIORITY_CLASS }}
+      {% endif %}
       volumes:
       - name: gcloud-client-secrets-volume
         secret:
           secretName: gcloud-client-secrets
+      {% if MME_CONFIG_DIR %}
       - name: matchbox-secrets-volume
         secret:
           secretName: matchbox-secrets
+      {% endif %}
       - name: seqr-static-files
         gcePersistentDisk:
           # This disk must already exist.
@@ -62,8 +66,10 @@ spec:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
+        {% if MME_CONFIG_DIR %}
         - name: matchbox-secrets-volume
           mountPath: {{ MME_CONFIG_DIR }}
+        {% endif %}
         - name: seqr-static-files
           mountPath: {{ STATIC_MEDIA_DIR }}
         # - name: elasticsearch-es-http-certs-public
@@ -87,6 +93,7 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: password
+        {% if SECRETS_ENABLED %}
         - name: OMIM_KEY
           valueFrom:
             secretKeyRef:
@@ -137,6 +144,7 @@ spec:
             secretKeyRef:
               name: kibana-secrets
               key: elasticsearch.password
+        {% endif %}
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE

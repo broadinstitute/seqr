@@ -1,4 +1,5 @@
 GCLOUD_PROJECT: 'hail-seqr-development'
+SEQR_PRIORITY_CLASS: null
 
 SEQR_GIT_BRANCH: 'hail-backend'
 
@@ -20,3 +21,6 @@ NAMESPACE: seqr-prototype
 
 DEPLOY_TO: 'prototype'
 DEPLOYMENT_TYPE: 'prototype'
+
+MME_CONFIG_DIR: ''
+SECRETS_ENABLED: ''
