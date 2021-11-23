@@ -1,4 +1,6 @@
 GCLOUD_PROJECT: 'hail-seqr-development'
+
+SEQR_SERVICE_TYPE: LoadBalancer
 SEQR_PRIORITY_CLASS: null
 
 SEQR_GIT_BRANCH: 'hail-backend'

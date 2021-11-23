@@ -39,6 +39,7 @@ DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 IMAGE_PULL_POLICY: 'Always'
 
 SEQR_PRIORITY_CLASS: 'high-priority'
+SEQR_SERVICE_TYPE: NodePort
 SECRETS_ENABLED: true
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
