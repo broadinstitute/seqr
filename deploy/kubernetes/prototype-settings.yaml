@@ -1,6 +1,7 @@
 GCLOUD_PROJECT: 'hail-seqr-development'
 
 SEQR_SERVICE_TYPE: LoadBalancer
+SEQR_SERVICE_IP: 35.202.215.217
 SEQR_PRIORITY_CLASS: null
 
 SEQR_GIT_BRANCH: 'hail-backend'

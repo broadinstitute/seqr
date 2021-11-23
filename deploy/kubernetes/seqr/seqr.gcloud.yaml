@@ -8,8 +8,16 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   type: {{ SEQR_SERVICE_TYPE }}
+  {% if SEQR_SERVICE_IP %}
+  loadBalancerIP: {{ SEQR_SERVICE_IP }}
+  {% endif %}
   ports:
+  {% if SEQR_SERVICE_IP %}
+  - port: 80
+    targetPort: {{ SEQR_SERVICE_PORT }}
+  {% else %}
   - port: {{ SEQR_SERVICE_PORT }}
+  {% endif %}
   selector:
     name: seqr
 ---
@@ -124,16 +132,6 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: seqr_es_password
-        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: google_client_id
-        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: google_client_secret
         - name: GA_TOKEN_ID
           valueFrom:
             secretKeyRef:
@@ -145,6 +143,16 @@ spec:
               name: kibana-secrets
               key: elasticsearch.password
         {% endif %}
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_id
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_secret
         - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
