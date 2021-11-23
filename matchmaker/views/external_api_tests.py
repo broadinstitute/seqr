@@ -52,9 +52,11 @@ class ExternalAPITest(TestCase):
             }
         })
 
+    @mock.patch('matchmaker.views.external_api.logger')
     @mock.patch('matchmaker.views.external_api.EmailMessage')
     @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
-    def test_mme_match_proxy(self, mock_post_to_slack, mock_email):
+    def test_mme_match_proxy(self, mock_post_to_slack, mock_email, mock_logger):
+        mock_email.return_value.send.side_effect = [Exception('Email error'), True, True]
         url = '/api/matchmaker/v1/match'
         request_body = {
             'patient': {
@@ -128,7 +130,7 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         results = response.json()['results']
 
-        self.assertEqual(len(results), 2)
+        self.assertEqual(len(results), 3)
         self.assertDictEqual(results[0], {
             'patient': {
                 'id': 'NA19675_1_01',
@@ -226,7 +228,7 @@ class ExternalAPITest(TestCase):
 
         message_template = """Dear collaborators,
 
-    matchbox found a match between a patient from Test Institute and the following 2 case(s) 
+    matchbox found a match between a patient from Test Institute and the following 3 case(s) 
     in matchbox. The following information was included with the query,
 
     genes: FAM138A, OR4F29, OR4F5
@@ -245,10 +247,11 @@ Our website can be found at https://seqr.populationgenomics.org.au/matchmaker/ma
 be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."""
         match1 = 'seqr ID NA19675_1 from project 1kg project n\u00e5me with uni\u00e7\u00f8de in family 1 inserted into matchbox on May 23, 2018, with seqr link /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange'
         match2 = 'seqr ID NA20888 from project Test Reprocessed Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange'
+        match3 = 'seqr ID NA21234 from project Non-Analyst Project in family 14 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0004_non_analyst_project/family_page/F000014_14/matchmaker_exchange'
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message_template.format(
-            matches='{}\n{}'.format(match1, match2),
-            emails='matchmaker+phenomecentral@populationgenomics.org.au, seqr+test_user@populationgenomics.org.au, seqr+udncc@populationgenomics.org.au'
+            matches='\n'.join([match1, match2, match3]),
+            emails='matchmaker+phenomecentral@populationgenomics.org.au, matchmaker@populationgenomics.org.au, seqr+test_user@populationgenomics.org.au, seqr+udncc@populationgenomics.org.au'
         ))
 
         mock_email.assert_has_calls([
@@ -265,7 +268,18 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
                 to=['seqr+udncc@populationgenomics.org.au', 'matchmaker+phenomecentral@populationgenomics.org.au'],
                 from_email='matchmaker@populationgenomics.org.au',
             ),
-            mock.call().send()])
+            mock.call().send(),
+            mock.call(
+                subject='Received new MME match',
+                body=message_template.format(matches=match3, emails='matchmaker@populationgenomics.org.au'),
+                to=['matchmaker@populationgenomics.org.au'],
+                from_email='matchmaker@populationgenomics.org.au',
+            ),
+            mock.call().send(),
+        ])
+
+        mock_logger.error.assert_called_with(
+            'Unable to create notification for incoming MME match request for 3 matches (NA19675_1_01, P0004515, P0004517): Email error')
 
         # Test receive same request again
         mock_post_to_slack.reset_mock()
@@ -278,13 +292,14 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
             'matchmaker_matches',
             """A match request for 12345 came in from Test Institute today.
         The contact information given was: test@test.com.
-        We found 2 existing matching individuals but no new ones, *so no results were sent back*."""
+        We found 3 existing matching individuals but no new ones, *so no results were sent back*."""
         )
         mock_email.assert_not_called()
 
+    @mock.patch('matchmaker.views.external_api.logger')
     @mock.patch('matchmaker.views.external_api.EmailMessage')
     @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
-    def test_mme_match_proxy_no_results(self, mock_post_to_slack, mock_email):
+    def test_mme_match_proxy_no_results(self, mock_post_to_slack, mock_email, mock_logger):
         url = '/api/matchmaker/v1/match'
         request_body = {
             'patient': {
@@ -321,5 +336,7 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(response.json()['results'], [])
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(institution='Test Institute').count(), 2)
+        mock_logger.error.assert_called_with(
+            'Unable to create notification for incoming MME match request for 0 matches: Slack connection error')
 
 

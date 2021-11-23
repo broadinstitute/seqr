@@ -18,7 +18,7 @@ import { Alleles } from 'shared/components/panel/variants/VariantIndividuals'
 import Family from 'shared/components/panel/family/Family'
 import DataTable, { SelectableTableFormInput } from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink, ColoredLabel } from 'shared/components/StyledComponents'
 import {
   AFFECTED, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD, FAMILY_FIELD_MME_NOTES,
@@ -57,12 +57,8 @@ const MATCH_STATUS_EDIT_FIELDS = [
   { name: 'comments', label: 'Comments', component: BaseSemanticInput, inputType: 'TextArea', rows: 5 },
 ]
 
-const variantSummary = variant => (
-  <span>
-    {variant.chrom}:{variant.pos}
-    {variant.alt ? <span> {variant.ref} <Icon fitted name="angle right" /> {variant.alt}</span> : `-${variant.end}`}
-  </span>
-)
+const variantSummary =
+  variant => `${variant.chrom}:${variant.pos}${variant.alt ? ` ${variant.ref} > ${variant.alt}` : `-${variant.end}`}`
 
 const GENOTYPE_FIELDS = [
   { name: 'geneSymbol', content: 'Gene', width: 2 },
@@ -72,8 +68,8 @@ const GENOTYPE_FIELDS = [
     name: 'tags',
     content: 'Tags',
     width: 8,
-    format: val => val.tags.map(tag =>
-      <ColoredLabel key={tag.tagGuid}size="small" color={tag.color} horizontal content={tag.name} />,
+    format: val => val.tags.map(
+      tag => <ColoredLabel key={tag.tagGuid} size="small" color={tag.color} horizontal content={tag.name} />,
     ),
   },
 ]
@@ -96,18 +92,20 @@ const PHENOTYPE_FIELDS = [
 
 const EMPTY_LIST = []
 
-const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) =>
+const updateIndividualFeatures = (onChange, individual) => newValue => onChange(
+  individual.features.filter(feature => newValue[feature.id]).map(feature => ({ observed: 'yes', ...feature })),
+)
+
+const BaseEditPhenotypesTable = React.memo(({ individual, value, onChange }) => (
   <SelectableTableFormInput
     idField="id"
     defaultSortColumn="label"
     columns={PHENOTYPE_FIELDS}
     data={individual.features || EMPTY_LIST}
     value={value}
-    onChange={newValue => onChange(
-      individual.features.filter(feature => newValue[feature.id]).map(feature => ({ observed: 'yes', ...feature })),
-    )}
-  />,
-)
+    onChange={updateIndividualFeatures(onChange, individual)}
+  />
+))
 
 BaseEditPhenotypesTable.propTypes = {
   individual: PropTypes.object,
@@ -132,8 +130,9 @@ const SUBMISSION_EDIT_FIELDS = [
     columns: GENOTYPE_FIELDS,
     includeSelectedRowData: true,
     normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : Object.values(val || {}).filter(v => v)),
-    format: value => (value || []).reduce((acc, variant) =>
-      ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {}),
+    format: value => (value || []).reduce(
+      (acc, variant) => ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {},
+    ),
   },
   {
     name: 'phenotypes',
@@ -154,7 +153,7 @@ const CONTACT_FIELDS = [
   { name: 'body', component: BaseSemanticInput, inputType: 'TextArea', rows: 12 },
 ]
 
-const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) =>
+const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) => (
   <UpdateButton
     onSubmit={onSubmit}
     initialValues={defaultContactEmail}
@@ -166,8 +165,8 @@ const BaseContactHostButton = React.memo(({ defaultContactEmail, onSubmit }) =>
     showErrorPanel
     submitButtonText="Send"
     buttonFloated="right"
-  />,
-)
+  />
+))
 
 BaseContactHostButton.propTypes = {
   defaultContactEmail: PropTypes.object,
@@ -191,7 +190,17 @@ const contactedLabel = (val) => {
   return val.weContacted ? 'We Contacted Host' : 'Not Contacted'
 }
 
-const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) =>
+const displayMatchStatus = val => (
+  <div>
+    <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
+    {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
+    {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
+    <p>{val.comments}</p>
+    <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
+  </div>
+)
+
+const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) => (
   <BaseFieldView
     initialValues={initialValues}
     field="matchStatus"
@@ -202,16 +211,9 @@ const BaseMatchStatus = React.memo(({ initialValues, onSubmit }) =>
     modalTitle="Edit MME Submission Status"
     formFields={MATCH_STATUS_EDIT_FIELDS}
     onSubmit={onSubmit}
-    fieldDisplay={val =>
-      <div>
-        <Label horizontal content={contactedLabel(val)} color={val.hostContacted || val.weContacted ? 'green' : 'orange'} />
-        {val.flagForAnalysis && <Label horizontal content="Flag for Analysis" color="purple" />}
-        {val.deemedIrrelevant && <Label horizontal content="Deemed Irrelevant" color="red" />}
-        <p>{val.comments}</p>
-        <ContactHostButton matchmakerResultGuid={val.matchmakerResultGuid} />
-      </div>}
-  />,
-)
+    fieldDisplay={displayMatchStatus}
+  />
+))
 
 BaseMatchStatus.propTypes = {
   initialValues: PropTypes.object,
@@ -224,7 +226,7 @@ const mapStatusDispatchToProps = {
 
 const MatchStatus = connect(null, mapStatusDispatchToProps)(BaseMatchStatus)
 
-const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...props }) =>
+const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...props }) => (
   <TextFieldView
     isVisible={user.isAnalyst}
     fieldName="Contact Notes"
@@ -235,8 +237,8 @@ const BaseContactNotes = React.memo(({ contact, user, contactNote, onSubmit, ...
     modalTitle={`Edit Shared Notes for "${contact.institution}"`}
     onSubmit={onSubmit}
     {...props}
-  />,
-)
+  />
+))
 
 BaseContactNotes.propTypes = {
   contact: PropTypes.object,
@@ -278,15 +280,24 @@ const DISPLAY_FIELDS = [
         const href = `/project/${val.originatingSubmission.projectGuid}/family_page/${val.originatingSubmission.familyGuid}/matchmaker_exchange`
         displayName = <Link to={href} target="_blank">{displayName}</Link>
       }
-      return patientFields.length ? <Popup
-        header="Patient Details"
-        trigger={<MatchContainer>{displayName} <Icon link name="info circle" /></MatchContainer>}
-        content={patientFields.map(k =>
-          <div key={k}>
-            <b>{camelcaseToTitlecase(k)}:</b> {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
-          </div>,
-        )}
-      /> : <MatchContainer>{displayName}</MatchContainer>
+      return patientFields.length ? (
+        <Popup
+          header="Patient Details"
+          trigger={
+            <MatchContainer>
+              {displayName}
+              &nbsp;
+              <Icon link name="info circle" />
+            </MatchContainer>
+          }
+          content={patientFields.map(k => (
+            <div key={k}>
+              <b>{`${camelcaseToTitlecase(k)}: `}</b>
+              {k === 'disorders' ? val.patient[k].map(({ id }) => id).join(', ') : val.patient[k]}
+            </div>
+          ))}
+        />
+      ) : <MatchContainer>{displayName}</MatchContainer>
     },
   },
   {
@@ -302,20 +313,20 @@ const DISPLAY_FIELDS = [
     content: 'Contact',
     verticalAlign: 'top',
     format: ({ patient }, isDownload) => patient.contact && (isDownload ?
-      patient.contact.institution || patient.contact.name :
-      <div>
-        <div><b>{patient.contact.institution}</b></div>
-        <div>{patient.contact.name}</div>
-        {patient.contact.email &&
-          <div>
-            <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
-          </div>
-        }
-        <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
-        <VerticalSpacer height={10} />
-        <ContactNotes contact={patient.contact} modalId={patient.id} />
-      </div>
-    ),
+      patient.contact.institution || patient.contact.name : (
+        <div>
+          <div><b>{patient.contact.institution}</b></div>
+          <div>{patient.contact.name}</div>
+          {patient.contact.email && (
+            <div>
+              <BreakWordLink href={patient.contact.email}>{patient.contact.email.replace('mailto:', '')}</BreakWordLink>
+            </div>
+          )}
+          <BreakWordLink href={patient.contact.href}>{patient.contact.href.replace('mailto:', '')}</BreakWordLink>
+          <VerticalSpacer height={10} />
+          <ContactNotes contact={patient.contact} modalId={patient.id} />
+        </div>
+      )),
   },
   {
     name: 'geneVariants',
@@ -350,21 +361,24 @@ const DISPLAY_FIELDS = [
   },
 ]
 
-const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission }) =>
+const BaseMatchmakerIndividual = React.memo((
+  { loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission },
+) => (
   <div>
     <VerticalSpacer height={10} />
     <Header size="medium" content={individual.displayName} dividing />
-    {mmeSubmission && !mmeSubmission.deletedDate ?
+    {mmeSubmission && !mmeSubmission.deletedDate ? (
       <Grid padded>
         <Grid.Row>
           <Grid.Column width={2}><b>Submitted Genotypes:</b></Grid.Column>
           <Grid.Column width={14}>
-            {mmeSubmission.geneVariants && mmeSubmission.geneVariants.length ?
+            {mmeSubmission.geneVariants && mmeSubmission.geneVariants.length ? (
               <SubmissionGeneVariants
                 geneVariants={mmeSubmission.geneVariants}
                 modalId="submission"
                 horizontal
-              /> : <i>None</i>}
+              />
+            ) : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
         <Grid.Row>
@@ -374,7 +388,8 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
               <Phenotypes phenotypes={mmeSubmission.phenotypes} horizontal /> : <i>None</i>}
           </Grid.Column>
         </Grid.Row>
-      </Grid> :
+      </Grid>
+    ) : (
       <div>
         <Header
           size="small"
@@ -394,12 +409,13 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
                 onSubmit={onSubmit}
                 showErrorPanel
               />
-            </div>}
+            </div>
+          }
         />
       </div>
-    }
+    )}
     <DataLoader content load={load} loading={false}>
-      {mmeSubmission && !mmeSubmission.deletedDate &&
+      {mmeSubmission && !mmeSubmission.deletedDate && (
         <div>
           <ButtonLink
             disabled={loading}
@@ -407,7 +423,8 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
             icon="search"
             labelPosition="right"
             content="Search for New Matches"
-          />|<HorizontalSpacer width={10} />
+          />
+          | &nbsp; &nbsp;
           <UpdateButton
             disabled={loading}
             buttonText="Update Submission"
@@ -419,7 +436,8 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
             formFields={SUBMISSION_EDIT_FIELDS}
             onSubmit={onSubmit}
             showErrorPanel
-          />|<HorizontalSpacer width={10} />
+          />
+          | &nbsp; &nbsp;
           <DeleteButton
             disabled={loading}
             onSubmit={onSubmit}
@@ -439,8 +457,9 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
             downloadFileName={`MME_matches_${individual.displayName}`}
             downloadAlign="none"
           />
-        </div>}
-      {mmeResults && mmeResults.removed && mmeResults.removed.length > 0 &&
+        </div>
+      )}
+      {mmeResults && mmeResults.removed && mmeResults.removed.length > 0 && (
         <div>
           <VerticalSpacer height={10} />
           <Header dividing disabled size="medium" content="Previous Matches" />
@@ -454,10 +473,11 @@ const BaseMatchmakerIndividual = React.memo(({ loading, load, searchMme, individ
             data={mmeResults.removed}
             loading={loading}
           />
-        </div>}
+        </div>
+      )}
     </DataLoader>
-  </div>,
-)
+  </div>
+))
 
 BaseMatchmakerIndividual.propTypes = {
   individual: PropTypes.object.isRequired,
@@ -477,41 +497,33 @@ const mapStateToProps = (state, ownProps) => ({
   mmeResults: getMmeResultsBySubmission(state, ownProps)[ownProps.individual.mmeSubmissionGuid],
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    load: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, false))
-    },
-    searchMme: () => {
-      return dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true))
-    },
-    onSubmit: (values) => {
-      return dispatch(updateMmeSubmission({
-        ...values,
-        submissionGuid: ownProps.individual.mmeSubmissionGuid,
-        individualGuid: ownProps.individual.individualGuid,
-      }))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, false)),
+  searchMme: () => dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true)),
+  onSubmit: values => dispatch(updateMmeSubmission({
+    ...values,
+    submissionGuid: ownProps.individual.mmeSubmissionGuid,
+    individualGuid: ownProps.individual.individualGuid,
+  })),
+})
 
 const MatchmakerIndividual = connect(mapStateToProps, mapDispatchToProps)(BaseMatchmakerIndividual)
 
 const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, colWidth: 16 }]
 
-const Matchmaker = React.memo(({ individuals, family }) =>
+const Matchmaker = React.memo(({ individuals, family }) => (
   <div>
     <Header dividing size="medium" content="Notes" />
     <Family family={family} compact useFullWidth hidePedigree fields={MME_FAMILY_FIELDS} />
-    {(individuals || []).filter(individual => individual.affected === AFFECTED).map(individual =>
-      <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
+    {(individuals || []).filter(individual => individual.affected === AFFECTED).map(
+      individual => <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
     )}
-  </div>,
-)
+  </div>
+))
 
 Matchmaker.propTypes = {
   family: PropTypes.object,
-  individuals: PropTypes.array,
+  individuals: PropTypes.arrayOf(PropTypes.object),
 }
 
 const mapIndividualsStateToProps = (state, ownProps) => ({

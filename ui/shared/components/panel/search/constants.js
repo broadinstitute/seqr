@@ -1,4 +1,6 @@
-import { RadioGroup, BooleanCheckbox, BaseSemanticInput } from 'shared/components/form/Inputs'
+import React from 'react'
+import { Form } from 'semantic-ui-react'
+import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -15,12 +17,15 @@ import {
   LOCUS_LIST_ITEMS_FIELD,
   AFFECTED,
   UNAFFECTED,
+  PREDICTOR_FIELDS,
+  SPLICE_AI_FIELD,
 } from 'shared/utils/constants'
 
-export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) =>
-  Object.values(analysisGroupsByGuid).filter(
-    group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
-  )
+export const getSelectedAnalysisGroups = (
+  analysisGroupsByGuid, familyGuids,
+) => Object.values(analysisGroupsByGuid).filter(
+  group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)),
+)
 
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
@@ -120,14 +125,13 @@ export const INHERITANCE_LOOKUP = {
   },
 }
 
-export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) =>
-  ({ ...acc, [JSON.stringify(filter)]: mode }), {},
-)
+export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_LOOKUP).reduce((acc, [mode, { filter }]) => (
+  { ...acc, [JSON.stringify(filter)]: mode }), {})
 
 export const INHERITANCE_FILTER_OPTIONS = [
-  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER, DE_NOVO_FILTER, ANY_AFFECTED,
+  ALL_INHERITANCE_FILTER, RECESSIVE_FILTER, HOM_RECESSIVE_FILTER, X_LINKED_RECESSIVE_FILTER, COMPOUND_HET_FILTER,
+  DE_NOVO_FILTER, ANY_AFFECTED,
 ].map(value => ({ value, ...INHERITANCE_LOOKUP[value] }))
-
 
 const CLINVAR_NAME = 'clinvar'
 const CLIVAR_PATH = 'pathogenic'
@@ -243,15 +247,14 @@ export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_SV,
   VEP_GROUP_SV_CONSEQUENCES,
 ]
-export const HIGH_IMPACT_GROUPS_NO_SV = [
+export const HIGH_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_FRAMESHIFT,
 ]
-export const HIGH_IMPACT_GROUPS = [
-  ...HIGH_IMPACT_GROUPS_NO_SV,
-  VEP_GROUP_SV,
-  VEP_GROUP_SV_CONSEQUENCES,
+export const HIGH_IMPACT_GROUPS_SPLICE = [
+  ...HIGH_IMPACT_GROUPS,
+  SPLICE_AI_FIELD,
 ]
 export const MODERATE_IMPACT_GROUPS = [
   VEP_GROUP_MISSENSE,
@@ -265,6 +268,7 @@ export const ALL_ANNOTATION_FILTER = {
   text: 'All',
   vepGroups: ALL_IMPACT_GROUPS,
 }
+export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]
 export const ANNOTATION_FILTER_OPTIONS = [
   ALL_ANNOTATION_FILTER,
   {
@@ -292,7 +296,6 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
       { ...acc, [group]: GROUPED_VEP_CONSEQUENCES[group].map(({ value }) => value) }
     ), {}),
   }))[0]
-
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
@@ -374,6 +377,47 @@ export const LOCATION_FIELDS = [
     width: 3,
   },
 ]
+
+export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+  ({ field, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
+    const label = snakecaseToTitlecase(field)
+    const filterField = { name: field, label, group }
+
+    if (indicatorMap) {
+      return {
+        labelHelp: `Select a value for ${label}`,
+        component: Select,
+        options: [
+          { text: '', value: null },
+          ...Object.entries(indicatorMap).map(([val, { value, ...opt }]) => ({ value: val, text: value, ...opt })),
+        ],
+        ...filterField,
+      }
+    }
+
+    const labelHelp = (
+      <div>
+        {`Enter a numeric cutoff for ${label}`}
+        {dangerThreshold && (
+          <div>
+            Thresholds:
+            <div>{`Red > ${dangerThreshold}`}</div>
+            <div>{`Yellow > ${warningThreshold}`}</div>
+          </div>
+        )}
+      </div>
+    )
+    return {
+      labelHelp,
+      control: Form.Input,
+      type: 'number',
+      min: min || 0,
+      max: max || 1,
+      step: max ? 1 : 0.05,
+      ...filterField,
+    }
+  },
+)
 
 export const QUALITY_FILTER_FIELDS = [
   {

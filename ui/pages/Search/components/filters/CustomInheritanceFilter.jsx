@@ -11,7 +11,6 @@ import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
 import { getSingleInputFamily } from '../../selectors'
 
-
 const CUSTOM_FILTERS = [
   { filterField: 'affected', options: AFFECTED_OPTIONS },
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
@@ -25,10 +24,9 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
   const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
 
   const parentGenotypes = {}
-  if (value.mother || value.father) {
+  if (value.father) {
     individuals.forEach((individual) => {
       if (individual.affected === AFFECTED) {
-        parentGenotypes[individual.maternalId] = value.mother
         parentGenotypes[individual.paternalId] = value.father
       }
     })
@@ -73,25 +71,26 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
                   />
                 </Table.Cell>
               ))}
-              {i === 0 ?
+              {i === 0 ? (
                 <Table.Cell collapsing rowSpan={individuals.length}>
                   <PedigreeImagePanel key="pedigree" family={family} />
-                </Table.Cell> : <Table.Cell collapsing />
-              }
+                </Table.Cell>
+
+              ) : <Table.Cell collapsing />}
             </Table.Row>
           )
-          return individual.sampleGuids.length ? row : <Popup
-            key={individual.individualGuid}
-            trigger={row}
-            content="Inheritance search is disabled for individuals with no loaded data"
-          />
-        },
-      )}
+          return individual.sampleGuids.length ? row : (
+            <Popup
+              key={individual.individualGuid}
+              trigger={row}
+              content="Inheritance search is disabled for individuals with no loaded data"
+            />
+          )
+        })}
       </Table.Body>
     </Table>
   )
 })
-
 
 const mapStateToProps = state => ({
   family: getSingleInputFamily(state),

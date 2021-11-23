@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom'
 import { BrowserRouter, Route, Switch } from 'react-router-dom'
 import { connect, Provider } from 'react-redux'
 import PropTypes from 'prop-types'
+import { Loader } from 'semantic-ui-react'
 
 import BaseLayout from 'shared/components/page/BaseLayout'
 import Dashboard from 'pages/Dashboard/Dashboard'
@@ -14,14 +15,12 @@ import Report from 'pages/Report/Report'
 import SummaryData from 'pages/SummaryData/SummaryData'
 import Login from 'pages/Login/Login'
 import AcceptPolicies from 'pages/Login/components/AcceptPolicies'
-import LandingPage from 'pages/Public/LandingPage'
-import MatchmakerDisclaimer from 'pages/Public/MatchmakerDisclaimer'
-import MatchmakerInfo from 'pages/Public/MatchmakerInfo'
-import PrivacyPolicy from 'pages/Public/PrivacyPolicy'
-import TermsOfService from 'pages/Public/TermsOfService'
+import PUBLIC_ROUTES from 'pages/Public/PublicRoutes'
+import LandingPage from 'pages/Public/components/LandingPage'
 import rootReducer from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
-import { configureStore } from 'redux/utils/configureStore'
+import configureStore from 'redux/utils/configureStore'
+import { Error404 } from 'shared/components/page/Errors'
 
 import 'semantic-ui-css/semantic.min.css'
 import 'shared/global.css'
@@ -40,7 +39,6 @@ const mapStateToProps = state => ({
 
 const Home = connect(mapStateToProps)(BaseHome)
 
-
 ReactDOM.render(
   <Provider store={configureStore(rootReducer, window.initialJSON)}>
     <BrowserRouter>
@@ -56,12 +54,11 @@ ReactDOM.render(
           <Route path="/report" component={Report} />
           <Route path="/summary_data" component={SummaryData} />
           <Route path="/login" component={Login} />
-          <Route path="/matchmaker/matchbox" component={MatchmakerInfo} />
-          <Route path="/matchmaker/disclaimer" component={MatchmakerDisclaimer} />
-          <Route path="/privacy_policy" component={PrivacyPolicy} />
-          <Route path="/terms_of_service" component={TermsOfService} />
           <Route path="/accept_policies" component={AcceptPolicies} />
-          <Route component={() => <div>Invalid URL</div>} />
+          <React.Suspense fallback={<Loader />}>
+            {PUBLIC_ROUTES.map(props => <Route {...props} />)}
+          </React.Suspense>
+          <Route component={Error404} />
         </Switch>
       </BaseLayout>
     </BrowserRouter>

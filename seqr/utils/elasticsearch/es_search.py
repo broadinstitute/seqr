@@ -14,15 +14,16 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
-    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES
+    SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
+    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
+    PATH_FREQ_OVERRIDE_CUTOFF, get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = SeqrLogger(__name__)
-
 
 class EsSearch(object):
 
@@ -197,8 +198,21 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
-    def filter_by_frequency(self, frequencies):
+    def filter_by_in_silico(self, in_silico_filters):
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
+        if in_silico_filters:
+            self.filter(_in_silico_filter(in_silico_filters))
+
+    def filter_by_frequency(self, frequencies, pathogenicity=None):
+        clinvar_path_filters = [
+            f for f in (pathogenicity or {}).get('clinvar', [])
+            if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
+        ]
+        path_override = bool(clinvar_path_filters) and any(
+            freqs.get('af', 1) < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
+
         q = Q()
+        path_q = Q()
         for pop, freqs in sorted(frequencies.items()):
             if freqs.get('af') is not None:
                 filter_field = next(
@@ -206,28 +220,38 @@ class EsSearch(object):
                      if any(field_key in index_metadata['fields'] for index_metadata in self.index_metadata.values())),
                     POPULATIONS[pop]['AF'])
                 q &= _pop_freq_filter(filter_field, freqs['af'])
+                if path_override:
+                    path_q &= _pop_freq_filter(filter_field, max(freqs['af'], PATH_FREQ_OVERRIDE_CUTOFF))
             elif freqs.get('ac') is not None:
                 q &= _pop_freq_filter(POPULATIONS[pop]['AC'], freqs['ac'])
 
             if freqs.get('hh') is not None:
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hom'], freqs['hh'])
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
+
+        if path_override:
+            q |= (_pathogenicity_filter({'clinvar': clinvar_path_filters}) & path_q)
+
         self.filter(q)
 
-    def _filter_by_annotations(self, annotations, pathogenicity_filter):
+    def _filter_by_annotations(self, annotations, additional_filters):
         dataset_type = None
+
+        additional_filters = [f for f in additional_filters if f]
+        annotation_filter = _or_filters(additional_filters) if additional_filters else None
+
         consequences_filter, allowed_consequences = _annotations_filter(annotations or {})
         if allowed_consequences:
-            if pathogenicity_filter:
+            if annotation_filter:
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
-                consequences_filter |= pathogenicity_filter
+                consequences_filter |= annotation_filter
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
             dataset_type = _dataset_type_for_annotations(annotations)
             if dataset_type:
                 self.update_dataset_type(dataset_type)
-        elif pathogenicity_filter:
-            self.filter(pathogenicity_filter)
+        elif annotation_filter:
+            self.filter(annotation_filter)
         return dataset_type
 
     def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
@@ -260,6 +284,9 @@ class EsSearch(object):
         if inheritance_filter.get('genotype'):
             inheritance_mode = None
 
+        splice_ai = (annotations or {}).pop(SPLICE_AI_FIELD, None)
+        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
+
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
@@ -273,8 +300,8 @@ class EsSearch(object):
             secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
 
         pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
-        if annotations or pathogenicity_filter:
-            dataset_type = self._filter_by_annotations(annotations, pathogenicity_filter)
+        if annotations or pathogenicity_filter or splice_ai_filter:
+            dataset_type = self._filter_by_annotations(annotations, [pathogenicity_filter, splice_ai_filter])
             if dataset_type is None or dataset_type == secondary_dataset_type:
                 secondary_dataset_type = None
 
@@ -363,6 +390,11 @@ class EsSearch(object):
             family_samples_q = _family_genotype_inheritance_filter(
                 inheritance_mode, inheritance_filter, samples_by_id, affected_status, index_fields,
             )
+
+            if not family_samples_q:
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException('Invalid custom inheritance')
+
 
             # For recessive search, should be hom recessive, x-linked recessive, or compound het
             if inheritance_mode == RECESSIVE:
@@ -605,6 +637,7 @@ class EsSearch(object):
         logger.info('Total hits: {} ({} seconds)'.format(response_total, response.took / 1000.0), self._user)
         return [self._parse_hit(hit) for hit in response], response_total, False, index_name
 
+
     def _parse_hit(self, raw_hit):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
@@ -635,20 +668,21 @@ class EsSearch(object):
                                    for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
+        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
                 sample = samples_by_id.get(genotype_hit['sample_id'])
                 if sample:
                     genotype_hit['sample_type'] = sample.sample_type
-                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, GENOTYPE_FIELDS_CONFIG)
+                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
 
             if len(samples_by_id) != len(genotypes) and is_sv:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
                         genotypes[sample.individual.guid] = _get_field_values(
-                            {'sample_id': sample_id}, GENOTYPE_FIELDS_CONFIG)
+                            {'sample_id': sample_id}, genotype_fields_config)
                         genotypes[sample.individual.guid]['isRef'] = True
                         if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
                             genotypes[sample.individual.guid]['cn'] = 1
@@ -656,20 +690,22 @@ class EsSearch(object):
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
                 (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
-            start = min([gen.get('start') or hit['start'] for gen in genotypes.values() if not gen.get('isRef')])
-            end = max([gen.get('end') or hit['end'] for gen in genotypes.values() if not gen.get('isRef')])
-            num_exon = max([gen.get('numExon') or hit['num_exon'] for gen in genotypes.values() if not gen.get('isRef')])
-            if start != hit['start']:
-                hit['start'] = start
-                hit['xpos'] = get_xpos(hit['contig'], start)
-            if end != hit['end']:
-                hit['end'] = end
-            if num_exon != hit['num_exon']:
-                hit['num_exon'] = num_exon
+            for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                gen_field = conf.get('genotype_field', field)
+                val = conf['select_val']([
+                    gen.get(gen_field) or hit.get(field) for gen in genotypes.values() if not gen.get('isRef')
+                ])
+                if val != hit.get(field):
+                    hit[field] = val
+                    if field == 'start':
+                        hit['xpos'] = get_xpos(hit['contig'], val)
+
             for gen in genotypes.values():
-                if gen.get('start') == start and gen.get('end') == end:
-                    gen['start'] = None
-                    gen['end'] = None
+                for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                    gen_field = conf.get('genotype_field', field)
+                    compare_func = conf.get('equal') or (lambda a, b: a == b)
+                    if compare_func(gen.get(gen_field), hit[field]):
+                        gen[gen_field] = None
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -720,6 +756,9 @@ class EsSearch(object):
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)
+        if hit.get('geneIds'):
+            transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in hit['geneIds']}
+
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
 
@@ -733,7 +772,7 @@ class EsSearch(object):
             'mainTranscriptId': main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
-                hit, PREDICTION_FIELDS_CONFIG, format_response_key=lambda key: key.split('_')[1].lower()
+                hit, PREDICTION_FIELDS_CONFIG, format_response_key=get_prediction_response_key
             ),
             'transcripts': dict(transcripts),
         })
@@ -1123,7 +1162,7 @@ def _get_family_affected_status(samples_by_id, inheritance_filter):
 
 def _quality_filters_by_family(quality_filter, samples_by_family_index, indices):
     quality_field_configs = {
-        'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_FIELDS.items()
+        'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
     }
     quality_filter = dict({field: 0 for field in quality_field_configs.keys()}, **(quality_filter or {}))
     for field, config in quality_field_configs.items():
@@ -1182,7 +1221,6 @@ def _family_genotype_inheritance_filter(inheritance_mode, inheritance_filter, sa
         affected = individual_affected_status[individual_guid]
 
         genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
-
         if genotype:
             if is_sv_comp_het and affected == Individual.AFFECTED_STATUS_UNAFFECTED:
                 # Unaffected individuals for SV compound het search can have any genotype so are not included
@@ -1295,7 +1333,14 @@ def _pathogenicity_filter(pathogenicity):
 
 
 def _annotations_filter(annotations):
-    vep_consequences = sorted([ann for anns in annotations.values() for ann in anns])
+    consequences = {ann for anns in annotations.values() for ann in anns}
+    #  TODO once all gCNV data has been reloaded, create explicit filters in the UI so users can set which type to use
+    # See https://github.com/broadinstitute/seqr/issues/2085
+    if 'DEL' in consequences:
+        consequences.add('gCNV_DEL')
+    if 'DUP' in consequences:
+        consequences.add('gCNV_DUP')
+    vep_consequences = sorted(consequences)
 
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
 
@@ -1314,6 +1359,23 @@ def _dataset_type_for_annotations(annotations):
     elif not sv and non_sv:
         return Sample.DATASET_TYPE_VARIANT_CALLS
     return None
+
+
+def _in_silico_filter(in_silico_filters, allow_missing=True):
+    in_silico_qs = []
+    for in_silico_filter, value in in_silico_filters.items():
+        prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
+        try:
+            score_q = Q('range', **{prediction_key: {'gte': float(value)}})
+        except ValueError:
+            score_q = Q('prefix', **{prediction_key: value})
+
+        if allow_missing:
+            score_q |= ~Q('exists', field=prediction_key)
+
+        in_silico_qs.append(score_q)
+
+    return _or_filters(in_silico_qs)
 
 
 def _pop_freq_filter(filter_key, value):

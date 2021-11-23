@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 
 import { updateProject } from 'redux/rootReducer'
-import UpdateButton from '../buttons/UpdateButton'
+import UpdateButton from './UpdateButton'
 import { EDITABLE_PROJECT_FIELDS, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD } from '../../utils/constants'
 
 const MATCHMAKER_PROJECT_FIELDS = [
@@ -17,7 +17,7 @@ const MATCHMAKER_PROJECT_FIELDS = [
 const EDITABLE_FIELD_KEYS = ['projectGuid', ...MATCHMAKER_PROJECT_FIELDS.map(({ name }) => name)]
 
 const EditProjectButton = React.memo(props => (
-  props.project && props.project.canEdit ?
+  props.project && props.project.canEdit ? (
     <UpdateButton
       buttonText="Edit Project"
       modalTitle="Edit Project"
@@ -27,7 +27,8 @@ const EditProjectButton = React.memo(props => (
       initialValues={props.project}
       trigger={props.trigger}
       submitButtonText="Save"
-    /> : null
+    />
+  ) : null
 ))
 
 EditProjectButton.propTypes = {

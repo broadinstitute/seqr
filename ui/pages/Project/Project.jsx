@@ -13,8 +13,8 @@ import FamilyPage from './components/FamilyPage'
 import Matchmaker from './components/Matchmaker'
 import SavedVariants from './components/SavedVariants'
 
-class Project extends React.PureComponent
-{
+class Project extends React.PureComponent {
+
   static propTypes = {
     project: PropTypes.object,
     match: PropTypes.object,
@@ -30,27 +30,31 @@ class Project extends React.PureComponent
   }
 
   componentWillUnmount() {
-    this.props.unloadProject()
+    const { unloadProject: dispatchUnloadProject } = this.props
+    dispatchUnloadProject()
   }
 
   render() {
-    if (this.props.project && this.props.project.detailsLoaded) {
+    const { project, match, loading } = this.props
+    if (project && project.detailsLoaded) {
       return (
         <Switch>
-          <Route path={`${this.props.match.url}/project_page`} component={ProjectPageUI} />
-          {this.props.project.hasCaseReview && <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />}
-          <Route path={`${this.props.match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
-          <Route path={`${this.props.match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
-          <Route path={`${this.props.match.url}/family_page/:familyGuid`} component={FamilyPage} />
-          <Route path={`${this.props.match.url}/saved_variants`} component={SavedVariants} />
-          <Route component={() => <Error404 />} />
+          <Route path={`${match.url}/project_page`} component={ProjectPageUI} />
+          {project.hasCaseReview && <Route path={`${match.url}/case_review`} component={CaseReview} />}
+          <Route path={`${match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
+          <Route path={`${match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
+          <Route path={`${match.url}/family_page/:familyGuid`} component={FamilyPage} />
+          <Route path={`${match.url}/saved_variants`} component={SavedVariants} />
+          <Route component={Error404} />
         </Switch>
       )
-    } else if (this.props.loading) {
+    }
+    if (loading) {
       return <Loader inline="centered" active />
     }
     return <Error404 />
   }
+
 }
 
 const mapDispatchToProps = {

@@ -21,39 +21,76 @@
       "babel-module": {}
     }
   },
+  "reportUnusedDisableDirectives": true,
   "rules": {
-    "semi": [
-      2,
-      "never"
+    "arrow-parens": [
+      "error",
+      "as-needed",
+      {
+        "requireForBlockBody": true
+      }
     ],
-    "no-shadow": [
+    "jsx-a11y/label-has-associated-control": "off",
+    "max-len": [
+      "error",
+      120,
+      2,
+      {
+        "ignoreUrls": true,
+        "ignoreComments": false,
+        "ignoreRegExpLiterals": true,
+        "ignoreStrings": true,
+        "ignoreTemplateLiterals": true,
+      }
+    ],
+    "object-curly-newline": [
       "error",
       {
-        "allow": [
-          "error"
+        "ObjectExpression": {
+          "multiline": true,
+          "consistent": true
+        },
+        "ObjectPattern": {
+          "multiline": true,
+          "consistent": true
+        },
+        "ImportDeclaration": {
+          "multiline": true,
+          "consistent": true
+        },
+        "ExportDeclaration": {
+          "multiline": true,
+          "consistent": true
+        }
+      }
+    ],
+    "operator-linebreak": [
+      "error",
+      "after"
+    ],
+    "padded-blocks": [
+      "error",
+      {
+        "blocks": "never",
+        "classes": "always",
+        "switches": "never"
+      }
+    ],
+    "semi": [
+      "error",
+      "never"
+    ],
+    "react/forbid-prop-types": [
+      "error",
+      {
+        "forbid": [
+          "any",
+          "array"
         ]
       }
     ],
-    "arrow-body-style": 0,
-    "func-names": 0,
-    "function-paren-newline": 0,
-    "max-len": 0, //["warn", 80, 2],
-    "no-console": 0,
-    "no-multi-str": 0,
-    "no-param-reassign": 0,
-    "no-plusplus": 0,
-    "brace-style": 0,
-    "object-curly-newline": 0,
-    "padded-blocks": 0,
-    "react/jsx-first-prop-new-line": 0,
-    "react/jsx-wrap-multilines": 0,
-    "react/prefer-stateless-function": 0,
-    "react/sort-comp": 0, // more freedom in arranging class functions
-    "import/prefer-default-export": 0,
-    "react/forbid-prop-types": 0,
-    "no-class-assign": 0,
     "react/jsx-filename-extension": [
-      1,
+      "error",
       {
         "extensions": [
           ".js",
@@ -61,15 +98,34 @@
         ]
       }
     ],
-    "react/require-default-props": 0,
-    "react/require-optimization": 2,
-    "react/jsx-max-props-per-line": 0,
-    "react/jsx-no-target-blank": 0,
-    "spaced-comment": 0,
-    "no-empty-pattern": 0,
-    "jsx-a11y/iframe-has-title": 0,
-    "jsx-a11y/tabindex-no-positive": 0,
-    "jsx-a11y/click-events-have-key-events": 0,
-    "jsx-a11y/anchor-is-valid": 0
+    "react/jsx-props-no-spreading": [
+      "error",
+      {
+        "html": "enforce",
+        "custom": "ignore",
+      }
+    ],
+    "react/jsx-wrap-multilines": [
+      "error",
+      {
+        "declaration": "parens-new-line",
+        "assignment": "parens-new-line",
+        "return": "parens-new-line",
+        "arrow": "parens-new-line",
+        "condition": "parens-new-line",
+        "logical": "parens-new-line",
+        "prop": "ignore"
+      }
+    ],
+    "react/require-default-props": "off",
+    "react/require-optimization": "error",
+    "react/state-in-constructor": [
+      "error",
+      "never"
+    ],
+    "react/static-property-placement": [
+      "error",
+      "static public field"
+    ],
   }
 }

@@ -116,6 +116,9 @@ NEW_MATCH_JSON = {
     }
 }
 
+REMOVED_MATCH_JSON = deepcopy(NEW_MATCH_JSON)
+REMOVED_MATCH_JSON['patient']['id'] = '10509'
+
 PARSED_NEW_MATCH_JSON = {
     'id': '33845',
     'score': 0.92,
@@ -276,6 +279,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
     @responses.activate
     def test_search_individual_mme_matches(self, mock_nodes, mock_email, mock_logger, mock_slacker, mock_communication_logger):
         mock_slacker.return_value.chat.post_message.side_effect = ValueError('Unable to connect to slack')
+        mock_email.return_value.send.side_effect = Exception('Email error')
 
         url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
@@ -314,15 +318,54 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
         })
 
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 3)
-        self.assertTrue(RESULT_STATUS_GUID in response_json['mmeResultsByGuid'])
-        self.assertTrue('MR0004688_RGP_105_3' in response_json['mmeResultsByGuid'])
-        new_result_guid = next(k for k in response_json['mmeResultsByGuid'].keys()
-                               if k not in {'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
+        self.assertEqual(len(response_json['mmeResultsByGuid']), 4)
+        existing_result_guids = {'MR0004688_RGP_105_3', RESULT_STATUS_GUID}
+        for guid in existing_result_guids:
+            self.assertTrue(guid in response_json['mmeResultsByGuid'])
+        new_result_guid = next(
+            k for k, v in response_json['mmeResultsByGuid'].items()
+            if k not in existing_result_guids and v['id'] == '33845')
+        new_internal_match_guid  = next(
+            k for k, v in response_json['mmeResultsByGuid'].items()
+            if k not in existing_result_guids and v['id'] == 'P0004517')
 
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_result_guid], PARSED_NEW_MATCH_JSON)
         self.assertTrue(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
         self.assertFalse(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['matchStatus']['matchRemoved'])
+        self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid], {
+            'id': 'P0004517',
+            'score': 0.35,
+            'patient': {
+                'genomicFeatures': [{'gene': {'id': 'ENSG00000186092'}}],
+                'features': None,
+                'contact': {
+                    'href': 'mailto:matchmaker@populationgenomics.org.au',
+                    'name': 'Sam Baxter',
+                    'institution': 'Broad Center for Mendelian Genomics'
+                },
+                'id': 'P0004517',
+                'label': 'P0004517',
+                'species': 'NCBITaxon:9606',
+                'sex': 'FEMALE',
+            },
+            'submissionGuid': SUBMISSION_GUID,
+            'phenotypes': [],
+            'geneVariants': [
+                {
+                    'geneId': 'ENSG00000186092',
+                }
+            ],
+            'matchStatus': {
+                'matchmakerResultGuid': new_internal_match_guid,
+                'comments': None,
+                'weContacted': False,
+                'hostContacted': False,
+                'deemedIrrelevant': False,
+                'flagForAnalysis': False,
+                'matchRemoved': False,
+                'createdDate': mock.ANY,
+            },
+        })
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
             'mmeResultGuids': mock.ANY,
             'individualGuid': INDIVIDUAL_GUID,
@@ -409,7 +452,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
         message = """
     A search from a seqr user from project 1kg project n\xe5me with uni\xe7\xf8de individual NA19675_1 had the following new match(es):
     
-     - From Reza Maroofian at institution St Georges, University of London with genes OR4F29 with phenotypes HP:0012469 (Infantile spasms).
+     - From Sam Baxter at institution Broad Center for Mendelian Genomics with genes OR4F5.
+
+ - From Reza Maroofian at institution St Georges, University of London with genes OR4F29 with phenotypes HP:0012469 (Infantile spasms).
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
@@ -446,7 +491,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
             from_email='matchmaker@populationgenomics.org.au')
         mock_email.return_value.send.assert_called()
 
-        mock_logger.error.assert_not_called()
+        mock_logger.error.assert_called_with(
+            'Unable to create notification for new MME match: Email error', self.collaborator_user)
         mock_logger.warning.assert_has_calls([
             mock.call('Error searching in Node A: Failed request (400)', self.collaborator_user, detail=expected_patient_body),
             mock.call('Error searching in Node B: Received invalid results for NA19675_1', self.collaborator_user, detail=invalid_results),
@@ -454,13 +500,20 @@ class MatchmakerAPITest(AuthenticationTestCase):
         ])
         mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [
             'Found 5 matches from Node B',
-            'Found 2 matches for NA19675_1_01 (1 new)',
+            'Found 3 matches for NA19675_1_01 (2 new)',
             'Removed 2 old matches for NA19675_1_01',
         ]])
 
         # Test new result model created
         result_model = MatchmakerResult.objects.get(guid=new_result_guid)
         self.assertDictEqual(result_model.result_data, NEW_MATCH_JSON)
+
+        # The results for internal submissions should link to one another
+        internal_result = MatchmakerResult.objects.get(guid=new_internal_match_guid)
+        self.assertEqual(internal_result.submission.guid, SUBMISSION_GUID)
+        self.assertEqual(internal_result.originating_submission.guid, 'MS000018_P0004517')
+        matched_result = MatchmakerResult.objects.get(submission__guid='MS000018_P0004517')
+        self.assertEqual(matched_result.originating_submission.guid, SUBMISSION_GUID)
 
         # analyst users should see contact notes
         self.login_analyst_user()
@@ -473,22 +526,29 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'comments': 'Some additional data about this institution',
             }})
 
-    @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
-    @mock.patch('matchmaker.views.matchmaker_api.logger')
-    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
-    @responses.activate
-    def test_update_mme_submission(self, mock_mme_nodes, mock_logger, mock_email):
-        responses.add(responses.POST, 'http://node_a.com/match', status=200, json={'results': [NEW_MATCH_JSON]})
-        mock_mme_nodes.values.return_value = [{'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'}]
-        mock_email.side_effect = Exception('Email error')
+        results.append(REMOVED_MATCH_JSON)
+        responses.replace(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
+        self.login_manager()
+        response = self.client.get(url)
+        result_response = response.json()['mmeResultsByGuid']
+        # users should see originating query for results if the have correct project permissions
+        self.assertDictEqual(result_response[new_internal_match_guid]['originatingSubmission'], {
+            'originatingSubmissionGuid': 'MS000018_P0004517',
+            'familyGuid': 'F000014_14',
+            'projectGuid': 'R0004_non_analyst_project',
+        })
+        # if previously removed matches have been re-matched, they should no longer be marked as removed
+        self.assertFalse(result_response['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
 
+    @mock.patch('matchmaker.views.matchmaker_api.logger')
+    def test_update_mme_submission(self, mock_logger):
         url = reverse(update_mme_submission)
         self.check_collaborator_login(url, request_data=SUBMISSION_DATA)
 
         # Test invalid inputs
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Genotypes or phentoypes are required')
+        self.assertEqual(response.reason_phrase, 'Genotypes or phenotypes are required')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'geneVariants': [{'pos': 123345}],
@@ -506,14 +566,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(SUBMISSION_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
-        })
+        self.assertSetEqual(set(response_json.keys()), {'mmeSubmissionsByGuid', 'individualsByGuid'})
 
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
         new_submission_guid = next(iter(response_json['mmeSubmissionsByGuid']))
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
-            'mmeResultGuids': list(response_json['mmeResultsByGuid'].keys()),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
@@ -531,8 +588,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'ref': 'CCACT',
                 'chrom': '14',
                 'pos': 77027549,
-                'end': None,
-                'genomeVersion': 'GRCh38',
+                'genomeVersion': '38',
+                'numAlt': 2,
             }, {
                 'geneId': 'ENSG00000235249',
                 'alt': None,
@@ -540,7 +597,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'chrom': '14',
                 'pos': 77027623,
                 'end': 77028137,
-                'genomeVersion': 'GRCh38',
+                'genomeVersion': '38',
+                'numAlt': -1,
+                'cn': 3,
             }],
         }})
         self.assertEqual(
@@ -551,64 +610,10 @@ class MatchmakerAPITest(AuthenticationTestCase):
             response_json['mmeSubmissionsByGuid'][new_submission_guid]['lastModifiedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
+
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': new_submission_guid,
         }})
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
-        new_match_result_guid = next(iter(response_json['mmeResultsByGuid']))
-        self.assertDictEqual(response_json['mmeResultsByGuid'][new_match_result_guid], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
-        self.assertEqual(next(iter(response_json['mmeResultsByGuid'].values()))['submissionGuid'], new_submission_guid)
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000235249'})
-        self.assertListEqual(list(response_json['mmeContactNotes'].keys()), ['st georges, university of london'])
-
-        # Test proxy calls
-        expected_body = {
-            'patient': {
-                'id': NO_SUBMISSION_INDIVIDUAL_GUID,
-                'label': 'HG00733',
-                'contact': {'href': 'mailto:seqr+test@populationgenomics.org.au', 'name': 'PI',
-                            'institution': 'Broad Center for Mendelian Genomics'},
-                'sex': 'FEMALE',
-                'species': 'NCBITaxon:9606',
-                'features': [
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-                ],
-                'genomicFeatures': [{
-                    'gene': {'id': 'ENSG00000235249'},
-                    'variant': {
-                        'start': 77027549,
-                        'assembly': 'GRCh38',
-                        'referenceName': '14',
-                        'alternateBases': 'C',
-                        'referenceBases': 'CCACT'
-                    },
-                    'zygosity': 2
-                }, {
-                    'gene': {'id': 'ENSG00000235249'},
-                    'variant': {
-                        'start': 77027623,
-                        'end': 77028137,
-                        'assembly': 'GRCh38',
-                        'referenceName': '14',
-                    },
-                }],
-            },
-            '_disclaimer': MME_DISCLAIMER,
-        }
-        self.assertEqual(len(responses.calls), 1)
-        self.assertEqual(responses.calls[0].request.url, 'http://node_a.com/match')
-        self.assertEqual(responses.calls[0].request.headers['X-Auth-Token'], 'abc')
-        self.assertEqual(responses.calls[0].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[0].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertDictEqual(json.loads(responses.calls[0].request.body), expected_body)
-
-        mock_logger.error.assert_called_with(
-            'Unable to create notification for new MME match: Email error', self.collaborator_user)
-        mock_logger.warning.assert_not_called()
-        mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [
-            'Found 1 matches from Node A',
-            'Found 1 matches for I000006_hg00733 (1 new)',
-        ]])
 
         # Test successful update
         url = reverse(update_mme_submission, args=[new_submission_guid])
@@ -625,98 +630,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
-        })
-
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 2)
-        self.assertDictEqual(response_json['mmeResultsByGuid'][new_match_result_guid], PARSED_NEW_MATCH_NEW_SUBMISSION_JSON)
-        new_internal_match_guid = next(k for k in response_json['mmeResultsByGuid'].keys() if k != new_match_result_guid)
-        self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid], {
-            'id': 'NA20885',
-            'score': 0,
-            'patient': {
-                'genomicFeatures': [
-                    {
-                        'gene': {
-                            'id': 'ENSG00000227232'
-                        },
-                        'variant': {
-                            'end': 38739601,
-                            'start': 38739601,
-                            'assembly': 'GRCh38',
-                            'referenceName': '17',
-                            'alternateBases': 'A',
-                            'referenceBases': 'G'
-                        },
-                        'zygosity': 1
-                    }
-                ],
-                'features': [
-                    {
-                        'id': 'HP:0001252',
-                        'label': 'Muscular hypotonia',
-                        'observed': 'yes'
-                    },
-                    {
-                        'id': 'HP:0002017',
-                        'label': 'Nausea and vomiting',
-                        'observed': 'yes'
-                    }
-                ],
-                'contact': {
-                    'href': 'mailto:matchmaker@populationgenomics.org.au',
-                    'name': 'Sam Baxter',
-                    'institution': 'Broad Center for Mendelian Genomics'
-                },
-                'id': 'NA20885',
-                'label': 'NA20885',
-                'species': 'NCBITaxon:9606',
-                'sex': 'MALE',
-            },
-            'submissionGuid': new_submission_guid,
-            'phenotypes': [
-                {
-                    "id": "HP:0001252",
-                    "label": "Muscular hypotonia",
-                    "observed": "yes"
-                },
-                {
-                    "id": "HP:0002017",
-                    "label": "Nausea and vomiting",
-                    "observed": "yes"
-                }
-            ],
-            'geneVariants': [
-                {
-                    'geneId': 'ENSG00000227232',
-                    'chrom': '17',
-                    'genomeVersion': 'GRCh38',
-                    'pos': 38739601,
-                    'end': 38739601,
-                    'alt': 'A',
-                    'ref': 'G',
-                }
-            ],
-            'matchStatus': {
-                'matchmakerResultGuid': new_internal_match_guid,
-                'comments': None,
-                'weContacted': False,
-                'hostContacted': False,
-                'deemedIrrelevant': False,
-                'flagForAnalysis': False,
-                'matchRemoved': False,
-                'createdDate': mock.ANY,
-            },
-            'originatingSubmission': {
-                'originatingSubmissionGuid': 'MS000015_na20885',
-                'familyGuid': 'F000011_11',
-                'projectGuid': 'R0003_test',
-            }
-        })
-
+        self.assertSetEqual(set(response_json.keys()), {'mmeSubmissionsByGuid'})
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {new_submission_guid: {
-            'mmeResultGuids': sorted(list(response_json['mmeResultsByGuid'].keys()), reverse = True),
             'individualGuid': NO_SUBMISSION_INDIVIDUAL_GUID,
             'submissionGuid': new_submission_guid,
             'createdDate': mock.ANY,
@@ -743,46 +658,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
             response_json['mmeSubmissionsByGuid'][new_submission_guid]['createdDate'],
             response_json['mmeSubmissionsByGuid'][new_submission_guid]['lastModifiedDate']
         )
-        self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
-            'mmeSubmissionGuid': new_submission_guid,
-        }})
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000186092', 'ENSG00000235249', 'ENSG00000227232'})
-        self.assertListEqual(list(response_json['mmeContactNotes'].keys()), ['st georges, university of london'])
 
-        # Test proxy calls
-        self.assertEqual(len(responses.calls), 2)
-        expected_body = {
-            'patient': {
-                'id': NO_SUBMISSION_INDIVIDUAL_GUID,
-                'label': 'HG00733',
-                'contact': {'href': 'mailto:matchmaker@populationgenomics.org.au', 'name': 'Test Name',
-                            'institution': 'Broad Center for Mendelian Genomics'},
-                'species': 'NCBITaxon:9606',
-                'sex': 'FEMALE',
-                'features': [
-                    {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'no'},
-                    {'id': 'HP:0002017', 'label': 'Nausea and vomiting', 'observed': 'yes'},
-                ],
-                'genomicFeatures': [],
-            },
-            '_disclaimer': MME_DISCLAIMER,
-        }
-        self.assertEqual(responses.calls[1].request.url, 'http://node_a.com/match')
-        self.assertEqual(responses.calls[1].request.headers['X-Auth-Token'], 'abc')
-        self.assertEqual(responses.calls[1].request.headers['Accept'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertEqual(responses.calls[1].request.headers['Content-Type'], 'application/vnd.ga4gh.matchmaker.v1.0+json')
-        self.assertDictEqual(json.loads(responses.calls[1].request.body), expected_body)
-
-        # The results for each submission should link to one another
-        result = MatchmakerResult.objects.get(guid=new_internal_match_guid)
-        self.assertEqual(result.submission.guid, new_submission_guid)
-        self.assertEqual(result.originating_submission.guid, 'MS000015_na20885')
-        matched_result = MatchmakerResult.objects.get(originating_submission__guid=new_submission_guid)
-        self.assertEqual(matched_result.submission.guid, 'MS000015_na20885')
-
-    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
-    @responses.activate
-    def test_delete_mme_submission(self, mock_mme_nodes):
+    def test_delete_mme_submission(self):
         url = reverse(delete_mme_submission, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
 
@@ -801,19 +678,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 402)
         self.assertEqual(response.reason_phrase, 'Matchmaker submission has already been deleted for NA19675_1')
 
-        # Test submission un-deletes when updated
-        responses.add(responses.POST, 'http://node_a.com/match', status=200, json={'results': []})
-        mock_mme_nodes.values.return_value = [{'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'}]
-
         update_url = reverse(update_mme_submission, args=[SUBMISSION_GUID])
         response = self.client.post(update_url, content_type='application/json',  data=json.dumps({
-            'geneVariants': [{'geneId': 'ENSG00000235249', 'genomeVersion': '38'}]
+            'geneVariants': [{'geneId': 'ENSG00000235249'}]
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
-            'mmeResultGuids': mock.ANY,
             'individualGuid': INDIVIDUAL_GUID,
             'submissionGuid': SUBMISSION_GUID,
             'createdDate': '2018-05-23T09:07:49.719Z',

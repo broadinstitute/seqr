@@ -27,7 +27,7 @@ MAPPING_JSON = {
             '_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data.vds',
+                'sourceFilePath': 'test_data.vcf',
             },
             "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1
         }}}
@@ -84,7 +84,7 @@ class DatasetAPITest(object):
         self.assertEqual(response.status_code, 200)
         MOCK_OPEN.assert_called_with('mapping.csv', 'r')
         MOCK_REDIS.get.assert_called_with('index_metadata__test_index')
-        MOCK_REDIS.set.assert_called_with('index_metadata__test_index', '{"test_index": {"sampleType": "WES", "genomeVersion": "37", "sourceFilePath": "test_data.vds", "fields": {"samples_num_alt_1": "keyword"}}}')
+        MOCK_REDIS.set.assert_called_with('index_metadata__test_index', '{"test_index": {"sampleType": "WES", "genomeVersion": "37", "sourceFilePath": "test_data.vcf", "fields": {"samples_num_alt_1": "keyword"}}}')
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'samplesByGuid', 'individualsByGuid', 'familiesByGuid'})
@@ -202,12 +202,12 @@ class DatasetAPITest(object):
             'sub_index_1': {'mappings': {'_meta': {
                 'sampleType': 'WGS',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data_1.vds',
+                'sourceFilePath': 'test_data_1.vcf',
             }, "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}},
             'sub_index_2': {'mappings': {'_meta': {
                 'sampleType': 'WGS',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data_2.vds',
+                'sourceFilePath': 'test_data_2.vcf',
             }, "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}},
         })
         urllib3_responses.add_json('/{}/_search?size=0'.format(NEW_SAMPLE_TYPE_INDEX_NAME), {
@@ -324,13 +324,13 @@ We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bi
             }, "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vds or .vcf.gz or .bgz or .bed']})
+        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf or .vcf.gz or .bgz or .bed']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
             INDEX_NAME: {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data.vds',
+                'sourceFilePath': 'test_data.vcf',
                 'datasetType': 'SV',
             }, "properties": MAPPING_PROPS_WITH_SAMPLES}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
@@ -341,12 +341,12 @@ We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bi
             'sub_index_1': {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data.vds',
+                'sourceFilePath': 'test_data.vcf',
             }, "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}},
             'sub_index_2': {'mappings': {'_meta': {
                 'sampleType': 'WGS',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data.vds',
+                'sourceFilePath': 'test_data.vcf',
             }, "properties": MAPPING_PROPS_WITH_SAMPLES}},
         })
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
@@ -357,12 +357,12 @@ We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bi
             'sub_index_1': {'mappings': {'_meta': {
                 'sampleType': 'WES',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data.vds',
+                'sourceFilePath': 'test_data.vcf',
             }, "properties": MAPPING_PROPS_WITH_SAMPLES}},
             'sub_index_2': {'mappings': {'_meta': {
                 'sampleType': 'WGS',
                 'genomeVersion': '37',
-                'sourceFilePath': 'test_data.vds',
+                'sourceFilePath': 'test_data.vcf',
             }, "properties": MAPPING_PROPS_WITH_SAMPLES}},
         })
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)

@@ -159,7 +159,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(REQUEST_BODY_BAD_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Invalid VCF file format - file path must end with .vcf, .vcf.gz, or .vcf.bgz')
+        self.assertEqual(response.json()['error'], 'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
 
         mock_file_exist.return_value = True
         mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL']  # incomplete header line

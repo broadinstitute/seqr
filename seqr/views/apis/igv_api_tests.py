@@ -7,7 +7,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
     igv_genomes_proxy
-from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY, EXPIRATION_TIME_IN_SECONDS
+from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
@@ -43,17 +43,19 @@ class IgvAPITest(AuthenticationTestCase):
         responses.add(responses.GET, 'https://storage.googleapis.com/fc-secure-project_A/sample_1.bai',
                       stream=True,
                       body=b'\n'.join(STREAMING_READS_CONTENT), status=206)
+        responses.add(responses.POST, 'https://www.googleapis.com/oauth2/v1/tokeninfo',
+                      body=b'{"expires_in": 3599}', status=200)
 
         url = reverse(fetch_igv_track, args=[PROJECT_GUID, 'gs://fc-secure-project_A/sample_1.bam.bai'])
         self.check_collaborator_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
         self.assertEqual(next(response.streaming_content), b'\n'.join(STREAMING_READS_CONTENT))
-        self.assertEqual(responses.calls[0].request.headers.get('Range'), 'bytes=100-200')
-        self.assertEqual(responses.calls[0].request.headers.get('Authorization'), 'Bearer token1')
-        self.assertEqual(responses.calls[0].request.headers.get('x-goog-user-project'), 'anvil-datastorage')
+        self.assertEqual(responses.calls[1].request.headers.get('Range'), 'bytes=100-200')
+        self.assertEqual(responses.calls[1].request.headers.get('Authorization'), 'Bearer token1')
+        self.assertEqual(responses.calls[1].request.headers.get('x-goog-user-project'), 'anvil-datastorage')
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
-        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=EXPIRATION_TIME_IN_SECONDS)
+        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=3594)
         mock_subprocess.assert_has_calls([
             mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai',
                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
@@ -63,7 +65,8 @@ class IgvAPITest(AuthenticationTestCase):
         ])
 
         mock_get_redis.reset_mock()
-        mock_get_redis.return_value = None
+        mock_get_redis.return_value = 'token3'
+        mock_set_redis.reset_mock()
         mock_subprocess.reset_mock()
         responses.add(responses.GET, 'https://storage.googleapis.com/project_A/sample_1.bed.gz',
                       stream=True,
@@ -71,13 +74,12 @@ class IgvAPITest(AuthenticationTestCase):
         url = reverse(fetch_igv_track, args=[PROJECT_GUID, 'gs://project_A/sample_1.bed.gz'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertIsNone(responses.calls[1].request.headers.get('Range'))
-        self.assertEqual(responses.calls[1].request.headers.get('Authorization'), 'Bearer token2')
-        self.assertIsNone(responses.calls[1].request.headers.get('x-goog-user-project'))
+        self.assertIsNone(responses.calls[2].request.headers.get('Range'))
+        self.assertEqual(responses.calls[2].request.headers.get('Authorization'), 'Bearer token3')
+        self.assertIsNone(responses.calls[2].request.headers.get('x-goog-user-project'))
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
-        mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token2', expire=EXPIRATION_TIME_IN_SECONDS)
-        mock_subprocess.assert_called_with('gcloud auth print-access-token', stdout=subprocess.PIPE,
-                                           stderr=subprocess.STDOUT, shell=True)
+        # mock_subprocess.assert_called_with('gcloud auth print-access-token', stdout=subprocess.PIPE,
+        #                                    stderr=subprocess.STDOUT, shell=True)
 
     @mock.patch('seqr.views.apis.igv_api.file_iter')
     def test_proxy_local_to_igv(self, mock_file_iter):

@@ -9,7 +9,6 @@ import { setPassword } from '../reducers'
 import { getNewUser } from '../selectors'
 import UserFormLayout from './UserFormLayout'
 
-
 const minLengthValidate = value => ((value && value.length > 7) ? undefined : 'Password must be at least 8 characters')
 const maxLengthValidate = value => ((value && value.length < 128) ? undefined : 'Password must be no longer than 128 characters')
 
@@ -59,12 +58,8 @@ const mapStateToProps = state => ({
   newUser: getNewUser(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    onSubmit: (updates) => {
-      return dispatch(setPassword({ ...updates, ...ownProps.match.params }))
-    },
-  }
-}
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: updates => dispatch(setPassword({ ...updates, ...ownProps.match.params })),
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(SetPassword)

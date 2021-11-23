@@ -25,27 +25,28 @@ const getFieldProps = ({ isEditable, width, fieldDisplay, additionalFormFields, 
 const FIELDS = LOCUS_LIST_FIELDS.map(getFieldProps)
 const ITEMS_FIELD = getFieldProps(LOCUS_LIST_ITEMS_FIELD)
 
+const ITEM_EXPORT_DOWNLOADS = [
+  {
+    name: 'Genes',
+    headers: ['Gene ID', 'Symbol'],
+    getFilename: (state, { downloadData }) => `${toSnakecase(downloadData.name)}_genes`,
+    getRawData: (state, { downloadData }) => downloadData.items.filter(item => item.geneId),
+    processRow: item => ([item.geneId, item.display]),
+  },
+  {
+    name: 'Intervals',
+    headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
+    getFilename: (state, { downloadData }) => `${toSnakecase(downloadData.name)}_intervals`,
+    getRawData: (state, { downloadData }) => downloadData.items.filter(item => item.chrom),
+    processRow: item => ([item.chrom, item.start, item.end, item.genomeVersion]),
+  },
+]
+
 const CompactColumn = styled(Grid.Column)`
   padding-bottom: 0 !important;
 `
 
 const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
-  const itemExportDownloads = [
-    {
-      name: 'Genes',
-      headers: ['Gene ID', 'Symbol'],
-      filename: `${toSnakecase(locusList.name)}_genes`,
-      rawData: locusList.items.filter(item => item.geneId),
-      processRow: item => ([item.geneId, item.display]),
-    },
-    {
-      name: 'Intervals',
-      headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
-      filename: `${toSnakecase(locusList.name)}_intervals`,
-      rawData: locusList.items.filter(item => item.chrom),
-      processRow: item => ([item.chrom, item.start, item.end, item.genomeVersion]),
-    },
-  ]
   const { items, ...itemsValues } = locusList
   const { rawItems, ...locusListMetadata } = itemsValues
   const sharedFieldProps = {
@@ -57,7 +58,7 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
   return (
     <div>
       <Grid>
-        {FIELDS.map(({ isEditable, width, ...fieldProps }) =>
+        {FIELDS.map(({ isEditable, width, ...fieldProps }) => (
           <CompactColumn key={fieldProps.field} width={Math.max(width, 2)}>
             <BaseFieldView
               {...fieldProps}
@@ -66,13 +67,13 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
               isEditable={locusList.canEdit && isEditable}
               modalTitle={`Edit ${fieldProps.fieldName} for "${locusList.name}"`}
             />
-          </CompactColumn>,
-        )}
-        {locusList.canEdit &&
+          </CompactColumn>
+        ))}
+        {locusList.canEdit && (
           <CompactColumn key="delete" width={2}>
             <DeleteLocusListButton locusList={locusList} />
           </CompactColumn>
-        }
+        )}
       </Grid>
       <Header size="medium" dividing>
         <BaseFieldView
@@ -83,16 +84,15 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
           compact
           showErrorPanel
         />
-        <ExportTableButton downloads={itemExportDownloads} buttonText="Download" floated="right" fontWeight="300" />
+        <ExportTableButton downloadData={locusList} downloads={ITEM_EXPORT_DOWNLOADS} buttonText="Download" floated="right" fontWeight="300" />
       </Header>
       <Grid columns={8}>
         {items.length ?
-          items.map(({ display, gene, pagene }) =>
+          items.map(({ display, gene, pagene }) => (
             <Grid.Column key={display}>
               {gene ? <ShowGeneModal gene={gene} pagene={pagene} /> : display}
-            </Grid.Column>,
-          ) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>
-        }
+            </Grid.Column>
+          )) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>}
       </Grid>
     </div>
   )
@@ -104,12 +104,11 @@ LocusListDetail.propTypes = {
   locusListGuid: PropTypes.string,
 }
 
-
-const LoadedLocusListDetail = React.memo(({ locusListGuid, onSubmit }) =>
+const LoadedLocusListDetail = React.memo(({ locusListGuid, onSubmit }) => (
   <LocusListItemsLoader locusListGuid={locusListGuid}>
     <LocusListDetail onSubmit={onSubmit} />
-  </LocusListItemsLoader>,
-)
+  </LocusListItemsLoader>
+))
 
 LoadedLocusListDetail.propTypes = {
   locusListGuid: PropTypes.string.isRequired,
