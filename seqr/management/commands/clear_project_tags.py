@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from seqr.models import Project, SavedVariant, VariantTag, VariantNote, VariantFunctionalData
+from settings import DEMO_PROJECT_CATEGORY
 
 import logging
 logger = logging.getLogger(__name__)
@@ -11,7 +12,7 @@ class Command(BaseCommand):
         parser.add_argument('project_prefix')
 
     def handle(self, *args, **options):
-        projects = Project.objects.filter(name__startswith=options['project_prefix'], projectcategory__name='Demo')
+        projects = Project.objects.filter(name__startswith=options['project_prefix'], projectcategory__name=DEMO_PROJECT_CATEGORY)
         if input('Are you sure you want to clear the tags for the following {} projects (y/n): {}\n'.format(
                 projects.count(), ', '.join([p.name for p in projects]))) != 'y':
             raise CommandError('User aborted')

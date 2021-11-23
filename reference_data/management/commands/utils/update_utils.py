@@ -2,6 +2,7 @@ import logging
 import os
 import gzip
 from tqdm import tqdm
+import traceback
 from django.core.management.base import BaseCommand, CommandError
 from reference_data.management.commands.utils.download_utils import download_file
 from reference_data.management.commands.utils.gene_utils import get_genes_by_symbol_and_id
@@ -74,41 +75,44 @@ def update_records(reference_data_handler, file_path=None):
     model_name = model_cls.__name__
     model_objects = getattr(model_cls, 'objects')
 
-    if not reference_data_handler.keep_existing_records:
-        logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
-        model_objects.all().delete()
-
     models = []
     skip_counter = 0
     logger.info('Parsing file')
     open_file = gzip.open if file_path.endswith('.gz') else open
     open_mode = 'rt' if file_path.endswith('.gz') else 'r'
-    with open_file(file_path, open_mode) as f:
-        header_fields = reference_data_handler.get_file_header(f)
+    try:
+        with open_file(file_path, open_mode) as f:
+            header_fields = reference_data_handler.get_file_header(f)
 
-        for line in tqdm(f, unit=" records"):
-            record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
-            for record in reference_data_handler.parse_record(record):
-                if record is None:
-                    continue
+            for line in tqdm(f, unit=" records"):
+                record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
+                for record in reference_data_handler.parse_record(record):
+                    if record is None:
+                        continue
 
-                try:
-                    record['gene'] = reference_data_handler.get_gene_for_record(record)
-                except ValueError as e:
-                    skip_counter += 1
-                    logger.debug(e)
-                    continue
+                    try:
+                        record['gene'] = reference_data_handler.get_gene_for_record(record)
+                    except ValueError as e:
+                        skip_counter += 1
+                        logger.debug(e)
+                        continue
 
-                models.append(model_cls(**record))
+                    models.append(model_cls(**record))
 
-    if reference_data_handler.post_process_models:
-        reference_data_handler.post_process_models(models)
+        if reference_data_handler.post_process_models:
+            reference_data_handler.post_process_models(models)
 
-    logger.info("Creating {} {} records".format(len(models), model_name))
-    model_objects.bulk_create(models)
+        if not reference_data_handler.keep_existing_records:
+            logger.info("Deleting {} existing {} records".format(model_objects.count(), model_name))
+            model_objects.all().delete()
 
-    logger.info("Done")
-    logger.info("Loaded {} {} records from {}. Skipped {} records with unrecognized genes.".format(
-        model_objects.count(), model_name, file_path, skip_counter))
-    if skip_counter > 0:
-        logger.info('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
+        logger.info("Creating {} {} records".format(len(models), model_name))
+        model_objects.bulk_create(models)
+
+        logger.info("Done")
+        logger.info("Loaded {} {} records from {}. Skipped {} records with unrecognized genes.".format(
+            model_objects.count(), model_name, file_path, skip_counter))
+        if skip_counter > 0:
+            logger.info('Running ./manage.py update_gencode to update the gencode version might fix missing genes')
+    except Exception as e:
+        logger.error(str(e), extra={'traceback': traceback.format_exc()})

@@ -12,13 +12,8 @@ from django.test import TestCase
 PROJECT_NAME = '1kg project n\u00e5me with uni\u00e7\u00f8de'
 PROJECT_GUID = 'R0001_1kg'
 ELASTICSEARCH_INDEX = 'test_index'
-INDEX_METADATA = {
-    "gencodeVersion": "25",
-    "hail_version": "0.2.24",
-    "genomeVersion": "38",
-    "sampleType": "WES",
-    "sourceFilePath": "test_index_alias_1_path.vcf.gz",
-}
+SAMPLE_TYPE = 'WES'
+GENOME_VERSION = '38'
 SAMPLE_IDS = ["NA19679", "NA19675_1", "NA19678", "HG00731", "HG00732", "HG00733"]
 
 liftover_to_38 = LiftOver('hg19', 'hg38')
@@ -37,7 +32,7 @@ def mock_convert_coordinate(chrom, pos):
 
 
 @mock.patch('seqr.management.commands.lift_project_to_hg38.logger')
-@mock.patch('seqr.management.commands.lift_project_to_hg38.get_elasticsearch_index_samples')
+@mock.patch('seqr.management.commands.lift_project_to_hg38.validate_index_metadata_and_get_elasticsearch_index_samples')
 class LiftProjectToHg38Test(TestCase):
     fixtures = ['users', '1kg_project']
 
@@ -45,7 +40,7 @@ class LiftProjectToHg38Test(TestCase):
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
     def test_command(self, mock_liftover, mock_get_es_variants, mock_input, mock_get_es_samples, mock_logger):
-        mock_get_es_samples.return_value = SAMPLE_IDS, INDEX_METADATA
+        mock_get_es_samples.return_value = SAMPLE_IDS, SAMPLE_TYPE
         mock_get_es_variants.return_value = VARIANTS
         mock_liftover_to_38 = mock_liftover.return_value
         mock_liftover_to_38.convert_coordinate.side_effect = mock_convert_coordinate
@@ -64,7 +59,7 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
 
         calls = [
             mock.call('chr21', 3343353),
@@ -95,9 +90,9 @@ class LiftProjectToHg38Test(TestCase):
         mock_logger.info.assert_has_calls(calls)
 
     def test_command_error_unmatched_sample(self, mock_get_es_samples, mock_logger):
-        mock_get_es_samples.return_value = ['ID_NOT_EXIST'], INDEX_METADATA
+        mock_get_es_samples.return_value = ['ID_NOT_EXIST'], SAMPLE_TYPE
 
-        with self.assertRaises(CommandError) as ce:
+        with self.assertRaises(ValueError) as ce:
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
@@ -109,12 +104,12 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
 
     def test_command_error_missing_indvididuals(self, mock_get_es_samples, mock_logger):
-        mock_get_es_samples.return_value = ['NA19675_1'], INDEX_METADATA
+        mock_get_es_samples.return_value = ['NA19675_1'], SAMPLE_TYPE
 
-        with self.assertRaises(CommandError) as ce:
+        with self.assertRaises(ValueError) as ce:
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
@@ -127,10 +122,10 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
 
     def test_command_error_missing_families(self, mock_get_es_samples, mock_logger):
-        mock_get_es_samples.return_value = ['HG00731', 'HG00732', 'HG00733'], INDEX_METADATA
+        mock_get_es_samples.return_value = ['HG00731', 'HG00732', 'HG00733'], SAMPLE_TYPE
 
         with self.assertRaises(CommandError) as ce:
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
@@ -145,7 +140,7 @@ class LiftProjectToHg38Test(TestCase):
         ]
         mock_logger.info.assert_has_calls(calls)
 
-        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX)
+        mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
 
     @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
@@ -153,7 +148,7 @@ class LiftProjectToHg38Test(TestCase):
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
     def test_command_other_exceptions(self, mock_liftover, mock_single_es_variants,
             mock_get_es_variants, mock_input, mock_get_es_samples, mock_logger):
-        mock_get_es_samples.return_value = SAMPLE_IDS, INDEX_METADATA
+        mock_get_es_samples.return_value = SAMPLE_IDS, SAMPLE_TYPE
 
         # Test discontinue on a failed lift
         mock_liftover_to_38 = mock_liftover.return_value

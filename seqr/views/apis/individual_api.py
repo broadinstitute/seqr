@@ -11,8 +11,9 @@ from seqr.models import Individual, Family
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family, _get_json_for_families
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family,\
+    _get_json_for_families, get_json_for_family_notes
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
@@ -23,13 +24,6 @@ _SEX_TO_EXPORTED_VALUE['U'] = ''
 
 __AFFECTED_TO_EXPORTED_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
 __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
-
-
-class ErrorsWarningsException(Exception):
-    def __init__(self, errors, warnings=None):
-        Exception.__init__(self, str(errors))
-        self.errors = errors
-        self.warnings = warnings
 
 
 @login_and_policies_required
@@ -148,26 +142,11 @@ def edit_individuals_handler(request, project_guid):
     related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
     individuals_list = modified_individuals_list + related_individuals_json
 
-    errors, warnings = validate_fam_file_records(individuals_list, fail_on_warnings=True)
-    if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings}, status=400, reason='Invalid updates')
+    validate_fam_file_records(individuals_list, fail_on_warnings=True)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
+    return _update_and_parse_individuals_and_families(
         project, modified_individuals_list, user=request.user
     )
-
-    individuals_by_guid = {
-        individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
-    }
-    families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)
-        for family in updated_families
-    }
-
-    return create_json_response({
-        'individualsByGuid': individuals_by_guid,
-        'familiesByGuid': families_by_guid,
-    })
 
 
 @login_and_policies_required
@@ -246,18 +225,14 @@ def receive_individuals_table_handler(request, project_guid):
 
     warnings = []
     def process_records(json_records, filename='ped_file'):
-        pedigree_records, errors, ped_warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
-        if errors:
-            raise ErrorsWarningsException(errors, ped_warnings)
+        pedigree_records, ped_warnings = parse_pedigree_table(json_records, filename, user=request.user, project=project)
         nonlocal warnings
         warnings += ped_warnings
         return pedigree_records
 
     try:
         uploaded_file_id, filename, json_records = save_uploaded_file(request, process_records=process_records)
-    except ErrorsWarningsException as e:
-        return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
-    except Exception as e:
+    except ValueError as e:
         return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
 
     if warnings:
@@ -271,9 +246,7 @@ def receive_individuals_table_handler(request, project_guid):
         related_individuals_json = _get_json_for_individuals(
             related_individuals, project_guid=project_guid, family_fields=['family_id'])
 
-        errors, _ = validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True)
-        if errors:
-            return create_json_response({'errors': errors, 'warnings': []}, status=400, reason=errors)
+        validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True)
 
     # send back some stats
     individual_ids_by_family = defaultdict(list)
@@ -338,23 +311,32 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
     project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     json_records = load_uploaded_file(upload_file_id)
+    return _update_and_parse_individuals_and_families(project, individual_records=json_records, user=request.user)
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, individual_records=json_records, user=request.user
+
+def _update_and_parse_individuals_and_families(project, individual_records, user):
+    updated_individuals, updated_families, updated_notes = add_or_update_individuals_and_families(
+        project, individual_records, user
     )
 
-    # edit individuals
-    individuals = _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
-    individuals_by_guid = {individual['individualGuid']: individual for individual in individuals}
-    families = _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
-    families_by_guid = {family['familyGuid']: family for family in families}
+    individuals_by_guid = {
+        individual['individualGuid']: individual for individual in
+        _get_json_for_individuals(updated_individuals, user, add_sample_guids_field=True)
+    }
+    families_by_guid = {
+        family['familyGuid']: family for family in
+        _get_json_for_families(updated_families, user, add_individual_guids_field=True)
+    }
 
-    updated_families_and_individuals_by_guid = {
+    response = {
         'individualsByGuid': individuals_by_guid,
         'familiesByGuid': families_by_guid,
     }
+    if updated_notes:
+        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(updated_notes)}
+        response['familyNotesByGuid'] = family_notes_by_guid
 
-    return create_json_response(updated_families_and_individuals_by_guid)
+    return create_json_response(response)
 
 
 FAMILY_ID_COL = 'family_id'
@@ -514,9 +496,7 @@ def receive_individuals_metadata_handler(request, project_guid):
 
     try:
         uploaded_file_id, _, (json_records, warnings) = save_uploaded_file(request, process_records=process_records)
-    except ErrorsWarningsException as e:
-        return create_json_response({'errors': e.errors, 'warnings': e.warnings}, status=400, reason=e.errors)
-    except Exception as e:
+    except ValueError as e:
         return create_json_response({'errors': [str(e)], 'warnings': []}, status=400, reason=str(e))
 
     response = {

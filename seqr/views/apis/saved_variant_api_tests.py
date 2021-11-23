@@ -15,6 +15,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FI
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
 GENE_GUID = 'ENSG00000135953'
 VARIANT_GUID_2 = 'SV0000002_1248367227_r0390_100'
+NO_TAG_VARIANT_GUID = 'SV0059957_11562437_f019313_1'
 
 COMPOUND_HET_1_GUID = 'SV0059956_11560662_f019313_1'
 COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
@@ -167,6 +168,11 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {VARIANT_GUID})
+
+        response = self.client.get('{}{}'.format(url, NO_TAG_VARIANT_GUID))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {NO_TAG_VARIANT_GUID})
 
         # filter by invalid variant guid
         response = self.client.get('{}foo'.format(url))
@@ -743,6 +749,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
+    @mock.patch('seqr.views.utils.variant_utils.MAX_VARIANTS_FETCH', 3)
     @mock.patch('seqr.views.apis.saved_variant_api.logger')
     @mock.patch('seqr.views.utils.variant_utils.get_es_variants_for_variant_ids')
     def test_update_saved_variant_json(self, mock_get_variants, mock_logger):
@@ -762,10 +769,11 @@ class SavedVariantAPITest(object):
             'SV0059957_11562437_f019313_1': None, 'SV0059956_11560662_f019313_1': None}
         )
 
-        mock_get_variants.assert_called_with(
-            [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')],
-            ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'], user=self.manager_user,
-        )
+        families = [Family.objects.get(guid='F000001_1'), Family.objects.get(guid='F000002_2')]
+        mock_get_variants.assert_has_calls([
+            mock.call(families, ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T'], user=self.manager_user),
+            mock.call(families, ['21-3343353-GAGA-G'], user=self.manager_user),
+        ])
         mock_logger.error.assert_not_called()
 
         # Test handles update error
@@ -806,7 +814,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 7)
+        assert_no_list_ws_has_al(self, 8)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()

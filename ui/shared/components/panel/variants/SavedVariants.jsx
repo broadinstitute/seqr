@@ -11,7 +11,7 @@ import {
 } from 'shared/utils/constants'
 
 import ExportTableButton from '../../buttons/ExportTableButton'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import StateChangeForm from '../../form/StateChangeForm'
 import { HorizontalSpacer } from '../../Spacers'
 import DataLoader from '../../DataLoader'
 import Variants from './Variants'
@@ -50,7 +50,7 @@ class SavedVariants extends React.PureComponent {
     tableState: PropTypes.object,
     firstRecordIndex: PropTypes.number,
     totalPages: PropTypes.number,
-    updateTable: PropTypes.func,
+    updateTableField: PropTypes.func,
     getUpdateTagUrl: PropTypes.func,
     loadVariants: PropTypes.func,
     additionalFilter: PropTypes.node,
@@ -105,13 +105,9 @@ class SavedVariants extends React.PureComponent {
             <Grid.Column width={12} floated="right" textAlign="right">
               {this.props.additionalFilter}
               {!variantGuid &&
-                <ReduxFormWrapper
-                  onSubmit={this.props.updateTable}
-                  form="editSavedVariantTable"
+                <StateChangeForm
+                  updateField={this.props.updateTableField}
                   initialValues={this.props.tableState}
-                  closeOnSuccess={false}
-                  submitOnChange
-                  inline
                   fields={filters}
                 />
               }

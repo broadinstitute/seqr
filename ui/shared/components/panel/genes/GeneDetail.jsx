@@ -11,11 +11,9 @@ import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
 import Gtex from '../../graph/Gtex'
 import { SectionHeader } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
-import TextFieldView from '../view-fields/TextFieldView'
+import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
 
-
-const NOTE_STYLE = { display: 'block' }
 
 const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
 
@@ -108,7 +106,7 @@ ScoreDetails.propTypes = {
 }
 
 const STAT_DETAILS = [
-  { title: 'Coding Size', content: gene => ((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2) },
+  { title: 'Coding Size', content: gene => `${((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2)}kb` },
   {
     title: 'Missense Constraint',
     scoreField: 'constraints',
@@ -239,30 +237,12 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
         Information saved here will be shared across seqr. Please consider using this space to share gene-specific
         information you learn while researching candidates.
       </p>
-      {gene.notes && gene.notes.map(geneNote =>
-        <TextFieldView
-          key={geneNote.noteGuid}
-          initialValues={geneNote}
-          field="note"
-          idField="noteGuid"
-          textAnnotation={<i style={{ color: 'gray' }}>By {geneNote.createdBy || 'unknown user'} {geneNote.lastModifiedDate && `(${new Date(geneNote.lastModifiedDate).toLocaleDateString()})`}</i>}
-          isEditable={geneNote.editable}
-          onSubmit={dispatchUpdateGeneNote}
-          modalTitle="Edit Gene Note"
-          isDeletable={geneNote.editable}
-          deleteConfirm="Are you sure you want to delete this note?"
-          style={NOTE_STYLE}
-        />,
-      )}
-      <TextFieldView
+      <NoteListFieldView
         isEditable
-        editLabel="Add Note"
-        field="note"
         idField="geneId"
-        modalTitle="Add Gene Note"
+        modalTitle="Gene Note"
         initialValues={gene}
         onSubmit={dispatchUpdateGeneNote}
-        style={NOTE_STYLE}
       />
     </div>
   )

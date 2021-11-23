@@ -6,7 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches, \
-    MME_DISCLAIMER
+    validate_patient_data, MME_DISCLAIMER
 
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.views.utils.json_utils import create_json_response
@@ -69,7 +69,7 @@ def mme_match_proxy(request, originating_node_name):
 
     try:
         query_patient_data = json.loads(request.body)
-        _validate_patient_data(query_patient_data)
+        validate_patient_data(query_patient_data)
     except json.JSONDecodeError:
         return create_json_response({'error': 'No JSON object could be decoded'}, status = 400)
     except Exception as e:
@@ -88,18 +88,6 @@ def mme_match_proxy(request, originating_node_name):
         'results': sorted(results, key=lambda result: result['score']['patient'], reverse=True),
         '_disclaimer': MME_DISCLAIMER,
     })
-
-
-def _validate_patient_data(query_patient_data):
-    patient_data = query_patient_data.get('patient')
-    if not isinstance(patient_data, dict):
-        raise ValueError('"patient" object is required')
-    if not patient_data.get('id'):
-        raise ValueError('"id" is required')
-    if not patient_data.get('contact'):
-        raise ValueError('"contact" is required')
-    if not (patient_data.get('features') or patient_data.get('genomicFeatures')):
-        raise ValueError('"features" or "genomicFeatures" are required')
 
 
 def _generate_notification_for_incoming_match(results, incoming_query, incoming_request_node, incoming_patient):

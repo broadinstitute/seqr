@@ -12,6 +12,7 @@ import AcceptCookies from './AcceptCookies'
 import Header from './Header'
 import PageHeader from './PageHeader'
 import Footer from './Footer'
+import WarningMessages from './WarningMessages'
 
 const LayoutContainer = styled.div`
   height: calc(100% - 32px);
@@ -29,6 +30,7 @@ const BaseLayout = ({ children }) =>
     <ContentGrid>
       <AcceptCookies />
       <PageHeader />
+      <WarningMessages />
       <Grid.Row>
         <Grid.Column width={1} />
         <Grid.Column width={14}>

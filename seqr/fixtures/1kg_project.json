@@ -64,12 +64,14 @@
     "fields": {
         "guid": "R0004_non_analyst_project",
         "created_date": "2017-03-12T19:27:08.156Z",
-        "created_by": null,
+        "created_by": 11,
         "last_modified_date": "2017-03-13T09:07:49.582Z",
         "name": "Non-Analyst Project",
 	    "can_edit_group": 2,
 	    "can_view_group": 2,
-	    "last_accessed_date": "2017-09-15T18:15:50.827Z"
+	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
+    "workspace_name": "anvil-non-analyst-project 1000 Genomes Demo",
+    "workspace_namespace": "my-seqr-billing"
     }
 },
 {
@@ -142,8 +144,6 @@
         "description": "test descripti\u00f8n",
         "post_discovery_omim_number": "615120,615123",
         "pedigree_image": "ped_1.png",
-        "analysis_notes": "<b>\r\n                        F\u00e5mily analysis n\u00f8tes\r\n                    </b>",
-        "analysis_summary": "<b>\r\n                        F\u00e5mily analysis summ\u00e5ry.\r\n                    </b>",
         "analysis_status": "Q",
         "case_review_notes": "<div>initial notes with uni&ccedil;&oslash;de</div>\n<div>test</div>",
         "case_review_summary": "<div>internal case review summary with uni&ccedil;&oslash;de</div>"
@@ -162,8 +162,6 @@
         "display_name": "2",
         "description": "",
         "pedigree_image": "ped_2.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "<div>internal notes 2</div>\n<div>&nbsp;</div>",
         "case_review_summary": "<div>internal case review summary 2</div>\n<div>&nbsp;</div>"
@@ -182,8 +180,6 @@
         "display_name": "3",
         "description": "",
         "pedigree_image": "ped_3.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -202,8 +198,6 @@
         "display_name": "4",
         "description": "",
         "pedigree_image": "ped_4.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -222,8 +216,6 @@
         "display_name": "5",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -242,8 +234,6 @@
         "display_name": "6",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -262,8 +252,6 @@
         "display_name": "7",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -282,8 +270,6 @@
         "display_name": "8",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -302,8 +288,6 @@
         "display_name": "9",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -322,8 +306,6 @@
         "display_name": "10",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
@@ -342,8 +324,6 @@
         "display_name": "11",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "case_review_notes": "",
         "case_review_summary": ""
@@ -362,8 +342,6 @@
         "display_name": "12",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "success_story": "Published with Gleeson and Reza (PMID 31668703)",
         "success_story_types": ["C", "D"],
@@ -384,8 +362,6 @@
         "display_name": "family without individuals and samples",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_notes": "",
-        "analysis_summary": "",
         "analysis_status": "Q",
         "success_story": "Treatment is now available on compassionate use protocol (nucleoside replacement protocol)",
         "success_story_types": ["A"],
@@ -405,6 +381,45 @@
         "family_id": "14",
         "success_story": "Differential treatement",
         "success_story_types": ["A", "D"]
+    }
+},
+{
+    "model": "seqr.familynote",
+    "pk": 1,
+    "fields": {
+        "guid": "FAN000001_1",
+        "created_date": "2017-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "family": 1,
+        "note": "*\r\n                        F\u00e5mily analysis n\u00f8tes\r\n*",
+        "note_type": "C"
+    }
+},
+{
+    "model": "seqr.familynote",
+    "pk": 2,
+    "fields": {
+        "guid": "FAN000001_2",
+        "created_date": "2017-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-12T19:27:08.563Z",
+        "family": 1,
+        "note": "*\r\nF\u00e5mily analysis summ\u00e5ry.\r\n*",
+        "note_type": "A"
+    }
+},
+{
+    "model": "seqr.familynote",
+    "pk": 3,
+    "fields": {
+        "guid": "FAN000001_3",
+        "created_date": "2019-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": "2019-03-12T19:27:08.563Z",
+        "family": 1,
+        "note": "Some additional follow up",
+        "note_type": "A"
     }
 },
 {
@@ -1026,24 +1041,6 @@
         "sample_type": "WES",
         "is_active": false,
     	"individual": 12,
-        "dataset_type": "VARIANTS",
-        "elasticsearch_index": "1kg.vcf.gz",
-        "loaded_date": "2017-02-05T06:42:55.397Z"
-    }
-},
-{
-    "model": "seqr.sample",
-    "pk": 141,
-    "fields": {
-        "guid": "S000141_na20878",
-        "created_date": "2017-02-05T06:42:55.397Z",
-        "created_by": null,
-        "last_modified_date": "2017-03-13T09:07:50.193Z",
-
-        "sample_id": "NA20878",
-        "sample_type": "WES",
-        "is_active": false,
-    	"individual": 13,
         "dataset_type": "VARIANTS",
         "elasticsearch_index": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"

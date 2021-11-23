@@ -33,21 +33,17 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
   const itemExportDownloads = [
     {
       name: 'Genes',
-      data: {
-        headers: ['Gene ID', 'Symbol'],
-        filename: `${toSnakecase(locusList.name)}_genes`,
-        rawData: locusList.items.filter(item => item.geneId),
-        processRow: item => ([item.geneId, item.display]),
-      },
+      headers: ['Gene ID', 'Symbol'],
+      filename: `${toSnakecase(locusList.name)}_genes`,
+      rawData: locusList.items.filter(item => item.geneId),
+      processRow: item => ([item.geneId, item.display]),
     },
     {
       name: 'Intervals',
-      data: {
-        headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
-        filename: `${toSnakecase(locusList.name)}_intervals`,
-        rawData: locusList.items.filter(item => item.chrom),
-        processRow: item => ([item.chrom, item.start, item.end, item.genomeVersion]),
-      },
+      headers: ['Chromosome', 'Start', 'End', 'Genome Version'],
+      filename: `${toSnakecase(locusList.name)}_intervals`,
+      rawData: locusList.items.filter(item => item.chrom),
+      processRow: item => ([item.chrom, item.start, item.end, item.genomeVersion]),
     },
   ]
   const { items, ...itemsValues } = locusList
@@ -91,9 +87,9 @@ const LocusListDetail = React.memo(({ locusList, onSubmit }) => {
       </Header>
       <Grid columns={8}>
         {items.length ?
-          items.map(({ display, gene }) =>
+          items.map(({ display, gene, pagene }) =>
             <Grid.Column key={display}>
-              {gene ? <ShowGeneModal gene={gene} /> : display}
+              {gene ? <ShowGeneModal gene={gene} pagene={pagene} /> : display}
             </Grid.Column>,
           ) : <Grid.Column width={16}><i>This list has no entries</i></Grid.Column>
         }

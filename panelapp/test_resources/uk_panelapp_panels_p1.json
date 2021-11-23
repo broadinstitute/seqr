@@ -1,0 +1,33 @@
+{
+  "count": 1,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 260,
+      "hash_id": "55b20bdf22c1fc7dd6b9bbb7",
+      "name": "Auditory Neuropathy Spectrum Disorde",
+      "disease_group": "Hearing and ear disorders",
+      "disease_sub_group": "Non-syndromic hearing loss",
+      "status": "public",
+      "version": "1.8",
+      "version_created": "2019-02-17T23:29:21.469051Z",
+      "relevant_disorders": [
+        "Auditory Neuropathy Spectrum Disorder",
+        "Auditory Neuropathy Spectrum Disorde"
+      ],
+      "stats": {
+        "number_of_genes": 5,
+        "number_of_strs": 0,
+        "number_of_regions": 0
+      },
+      "types": [
+        {
+          "name": "Rare Disease 100K",
+          "slug": "rare-disease-100k",
+          "description": "Rare Disease 100K"
+        }
+      ]
+    }
+  ]
+}

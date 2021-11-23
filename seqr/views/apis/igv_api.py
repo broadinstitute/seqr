@@ -2,16 +2,21 @@ from collections import defaultdict
 import json
 import re
 import requests
+
 from django.http import StreamingHttpResponse, HttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import  get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required, pm_or_data_manager_required
+
+EXPIRATION_TIME_IN_SECONDS = 3600 - 5
+GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 
 
 @pm_or_data_manager_required
@@ -72,13 +77,14 @@ def receive_igv_table_handler(request, project_guid):
     return create_json_response(response)
 
 
-SAMPLE_TYPE_MAP = {
-    'bam': IgvSample.SAMPLE_TYPE_ALIGNMENT,
-    'cram': IgvSample.SAMPLE_TYPE_ALIGNMENT,
-    'bigWig': IgvSample.SAMPLE_TYPE_COVERAGE,
-    'junctions.bed.gz': IgvSample.SAMPLE_TYPE_JUNCTION,
-    'dcr.bed.gz': IgvSample.SAMPLE_TYPE_GCNV,
-}
+SAMPLE_TYPE_MAP = [
+    ('bam', IgvSample.SAMPLE_TYPE_ALIGNMENT),
+    ('cram', IgvSample.SAMPLE_TYPE_ALIGNMENT),
+    ('bigWig', IgvSample.SAMPLE_TYPE_COVERAGE),
+    ('junctions.bed.gz', IgvSample.SAMPLE_TYPE_JUNCTION),
+    ('bed.gz', IgvSample.SAMPLE_TYPE_GCNV),
+]
+
 
 @pm_or_data_manager_required
 def update_individual_igv_sample(request, individual_guid):
@@ -93,10 +99,10 @@ def update_individual_igv_sample(request, individual_guid):
         if not file_path:
             raise ValueError('request must contain fields: filePath')
 
-        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP.items() if file_path.endswith(suffix)), None)
+        sample_type = next((st for suffix, st in SAMPLE_TYPE_MAP if file_path.endswith(suffix)), None)
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
-                file_path, ', '.join(SAMPLE_TYPE_MAP.keys())))
+                file_path, ', '.join([suffix for suffix, _ in SAMPLE_TYPE_MAP])))
         if not does_file_exist(file_path, user=request.user):
             raise Exception('Error accessing "{}"'.format(file_path))
 
@@ -126,7 +132,43 @@ def fetch_igv_track(request, project_guid, igv_track_path):
     if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path, user=request.user):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
 
+    if is_google_bucket_file_path(igv_track_path):
+        return _stream_gs(request, igv_track_path)
+
     return _stream_file(request, igv_track_path)
+
+
+def _stream_gs(request, gs_path):
+    headers = _get_gs_rest_api_headers(request.META.get('HTTP_RANGE'), gs_path, user=request.user)
+
+    response = requests.get(
+        'https://storage.googleapis.com/{}'.format(gs_path.replace('gs://', '', 1)),
+        headers=headers,
+        stream=True)
+
+    return StreamingHttpResponse(response.iter_content(chunk_size=65536), status=response.status_code,
+                                 content_type='application/octet-stream')
+
+
+def _get_gs_rest_api_headers(range_header, gs_path, user=None):
+    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
+    if range_header:
+        headers['Range'] = range_header
+    google_project = get_google_project(gs_path)
+    if google_project:
+        headers['x-goog-user-project'] = get_google_project(gs_path)
+
+    return headers
+
+
+def _get_access_token(user):
+    access_token = safe_redis_get_json(GS_STORAGE_ACCESS_CACHE_KEY)
+    if not access_token:
+        process = run_command('gcloud auth print-access-token', user=user)
+        if process.wait() == 0:
+            access_token = next(process.stdout).decode('utf-8').strip()
+            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=EXPIRATION_TIME_IN_SECONDS)
+    return access_token
 
 
 def _stream_file(request, path):
@@ -147,6 +189,7 @@ def _stream_file(request, path):
         resp = StreamingHttpResponse(file_iter(path, raw_content=True, user=request.user), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp
+
 
 def igv_genomes_proxy(request, file_path):
     # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without

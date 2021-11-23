@@ -8,11 +8,11 @@ import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
-import { ButtonLink } from '../../StyledComponents'
+import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts, { TranscriptLink } from './Transcripts'
 import { LocusListLabels } from './VariantGene'
-import { GENOME_VERSION_37, getVariantMainTranscript } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
 
 
 const SequenceContainer = styled.span`
@@ -162,7 +162,12 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     seqrLinkProps.variantId = variant.variantId
   }
   links.unshift(
-    <SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />,
+    <Popup
+      key="seqr-search"
+      trigger={<SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />}
+      content="Search for this variant across all your seqr projects"
+      size="tiny"
+    />,
   )
 
   return links
@@ -221,6 +226,16 @@ const mapLocusListStateToProps = (state, ownProps) => ({
 
 const VariantLocusListLabels = connect(mapLocusListStateToProps)(BaseVariantLocusListLabels)
 
+const svSizeDisplay = (size) => {
+  if (size < 1000) {
+    return `${size}bp`
+  } else if (size < 1000000) {
+    // dividing by 1 removes trailing 0s
+    return `${((size) / 1000).toPrecision(3) / 1}kb`
+  }
+  return `${(size / 1000000).toFixed(2) / 1}Mb`
+}
+
 const Annotations = React.memo(({ variant }) => {
   const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals } = variant
   const mainTranscript = getVariantMainTranscript(variant)
@@ -250,8 +265,12 @@ const Annotations = React.memo(({ variant }) => {
           size="large"
           trigger={
             <ButtonLink size={svType && 'big'}>
-              {svType || mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && svTypeDetail && `:${svTypeDetail}`}
+              {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
+              {svType && svTypeDetail &&
+              <Popup trigger={<Icon name="info circle" size="small" corner="top right" />}
+                content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
+                position="top center"
+              />}
             </ButtonLink>
           }
           popup={transcriptPopupProps}
@@ -259,8 +278,15 @@ const Annotations = React.memo(({ variant }) => {
           <Transcripts variant={variant} />
         </Modal>
       }
-      {svType && end && <b><HorizontalSpacer width={5} />{((end - pos) / 1000).toPrecision(3)}kb</b>}
-      {numExon && <b>, {numExon} exons</b>}
+      {svType && end && <b><HorizontalSpacer width={5} />{svSizeDisplay(end - pos)}</b>}
+      {Number.isInteger(numExon) &&
+        <b>, {numExon} exons
+          <Popup
+            trigger={<HelpIcon />}
+            content="CNV size and exon number are estimated from exome data and should be confirmed by an alternative method"
+          />
+        </b>
+      }
       { lofDetails &&
         <span>
           <HorizontalSpacer width={12} />

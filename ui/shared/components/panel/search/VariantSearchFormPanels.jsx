@@ -8,15 +8,15 @@ import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, LabeledSlider, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
 import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
-import { VEP_GROUP_OTHER, VEP_GROUP_SV } from 'shared/utils/constants'
+import { VEP_GROUP_OTHER, VEP_GROUP_SV, VEP_GROUP_SV_CONSEQUENCES } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
   FREQUENCIES,
   PATHOGENICITY_FIELDS,
   PATHOGENICITY_FILTER_OPTIONS,
-  ANALYST_PATHOGENICITY_FIELDS,
-  ANALYST_PATHOGENICITY_FILTER_OPTIONS,
+  HGMD_PATHOGENICITY_FIELDS,
+  HGMD_PATHOGENICITY_FILTER_OPTIONS,
   ANY_PATHOGENICITY_FILTER,
   ANNOTATION_GROUPS,
   ANNOTATION_FILTER_OPTIONS,
@@ -81,7 +81,7 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
 const ExpandCollapseCategoryContainer = styled.span`
   float: right;
   position: relative;
-  top: -1em;
+  top: -2em;
 `
 
 const JsonSelectPropsWithAll = (options, all) => ({
@@ -91,15 +91,15 @@ const JsonSelectPropsWithAll = (options, all) => ({
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
-const pathogenicityPanel = isAnalyst => ({
+const pathogenicityPanel = hasHgmdPermission => ({
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(isAnalyst ? ANALYST_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
-  fields: isAnalyst ? ANALYST_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(hasHgmdPermission ? HGMD_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
+  fields: hasHgmdPermission ? HGMD_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. Note this filter will override any annotations filter (i.e variants will be returned if they have either the specified pathogenicity OR transcript consequence)',
 })
 
-export const ANALYST_PATHOGENICITY_PANEL = pathogenicityPanel(true)
+export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)
 export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
 
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
@@ -144,7 +144,7 @@ export const ANNOTATION_PANEL = {
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
   fields: ANNOTATION_GROUPS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
-  fieldLayout: annotationFieldLayout([[VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+  fieldLayout: annotationFieldLayout([[VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV], HIGH_IMPACT_GROUPS_NO_SV, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
 }
 
 export const FREQUENCY_PANEL = {
@@ -246,7 +246,7 @@ class VariantSearchFormPanels extends React.PureComponent {
           <b>| &nbsp;&nbsp;</b>
           <ButtonLink onClick={this.collapseAll}>Collapse All &nbsp;<Icon name="minus" /></ButtonLink>
         </ExpandCollapseCategoryContainer>
-        <VerticalSpacer height={25} />
+        <VerticalSpacer height={10} />
         <FormSection name="search">
           <Accordion fluid exclusive={false}>
             {this.props.panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {

@@ -10,7 +10,8 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL, \
+    DEMO_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -41,7 +42,8 @@ def _require_permission(user_permission_test_func, error='User has insufficient 
     return test_user
 
 _active_required = user_passes_test(_require_permission(lambda user: user.is_active, error='User is no longer active'))
-_current_policies_required = user_passes_test(_has_current_policies, login_url=API_POLICY_REQUIRED_URL)
+def _current_policies_required(view_func, policy_url=API_POLICY_REQUIRED_URL):
+    return user_passes_test(_has_current_policies, login_url=policy_url)(view_func)
 
 def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
     def decorator(view_func):
@@ -50,8 +52,8 @@ def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
         return decorator(wrapped_func)
     return decorator
 
-def login_and_policies_required(view_func):
-    return login_active_required(_current_policies_required(view_func))
+def login_and_policies_required(view_func, login_url=API_LOGIN_REQUIRED_URL, policy_url=API_POLICY_REQUIRED_URL):
+    return login_active_required(_current_policies_required(view_func, policy_url=policy_url), login_url=login_url)
 
 def _user_has_policies_and_passes_test(user_permission_test_func):
     def decorator(view_func):
@@ -66,7 +68,7 @@ pm_or_data_manager_required = _user_has_policies_and_passes_test(
 superuser_required = _user_has_policies_and_passes_test(lambda user: user.is_superuser)
 
 
-def _has_analyst_access(project):
+def project_has_analyst_access(project):
     return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -154,7 +156,8 @@ def has_project_permissions(project, user, can_edit=False):
         permission_level = CAN_EDIT
 
     return user_is_data_manager(user) or \
-           (user_is_analyst(user) and _has_analyst_access(project)) or \
+           (not can_edit and project.all_user_demo and project.projectcategory_set.filter(name=DEMO_PROJECT_CATEGORY).exists()) or \
+           (user_is_analyst(user) and project_has_analyst_access(project)) or \
            user.has_perm(permission_level, project) or \
            anvil_has_perm(user, permission_level, project)
 
@@ -198,6 +201,7 @@ def get_project_guids_user_can_view(user):
         projects = Project.objects.all()
     else:
         projects = get_local_access_projects(user)
+        projects = (projects | Project.objects.filter(all_user_demo=True, projectcategory__name=DEMO_PROJECT_CATEGORY)).distinct()
 
     project_guids = [p.guid for p in projects.only('guid')]
     if is_anvil_authenticated(user) and not is_data_manager:
@@ -208,7 +212,7 @@ def get_project_guids_user_can_view(user):
             workspace=Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
             workspace__in=workspaces).only('guid')]
 
-    safe_redis_set_json(cache_key, project_guids, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+    safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
     return project_guids
 

@@ -22,6 +22,8 @@ NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
 SV_INDEX_NAME = 'test_index_sv'
 INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
 ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
+SUB_INDICES = ['sub_index_1', 'sub_index_2']
+SECOND_SUB_INDICES = ['sub_index_a', 'sub_index_b']
 
 ES_VARIANTS = [
     {
@@ -430,6 +432,7 @@ INDEX_ES_VARIANTS = {
     SV_INDEX_NAME: [ES_SV_VARIANT],
     NO_LIFT_38_INDEX_NAME: [BUILD_38_NO_LIFTOVER_ES_VARIANT],
 }
+INDEX_ES_VARIANTS.update({k: ES_VARIANTS for k in SUB_INDICES + SECOND_SUB_INDICES})
 
 PARSED_ANY_AFFECTED_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_ANY_AFFECTED_VARIANTS[1]['familyGuids'] = ['F000003_3']
@@ -540,6 +543,11 @@ PARSED_MULTI_SAMPLE_VARIANT = deepcopy(PARSED_VARIANTS[1])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT['genotypes'].items():
     PARSED_MULTI_SAMPLE_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
 
+PARSED_MULTI_SAMPLE_VARIANT_0 = deepcopy(PARSED_VARIANTS[0])
+for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
+    PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+
+
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
     'familyGuids': ['F000003_3', 'F000011_11'],
@@ -629,9 +637,9 @@ MAPPING_FIELDS = [
     'topmed_AC',
     'topmed_Hom',
     'topmed_Hemi',
+    'topmed_Het',
     'topmed_AF',
     'topmed_AN',
-    'topmed_Het',
     'topmed_ID',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
@@ -673,7 +681,7 @@ SOURCE_FIELDS = {
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
-SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4'}
+SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het'}
 
 FIELD_TYPE_MAP = {
     'cadd_PHRED': {'type': 'keyword'},
@@ -682,7 +690,7 @@ FIELD_TYPE_MAP = {
 }
 MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
 
-INDEX_METADATA = {
+CORE_INDEX_METADATA = {
     INDEX_NAME: {
         '_meta': {'genomeVersion': '37'},
         'properties': MAPPING_PROPERTIES,
@@ -696,6 +704,7 @@ INDEX_METADATA = {
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
     },
 }
+INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
 
 ALL_INHERITANCE_QUERY = {
@@ -952,7 +961,10 @@ def get_msearch_callback(request):
     }
     return 200, {}, json.dumps(response)
 
-def setup_search_response():
+def setup_search_responses():
+    urllib3_responses.add_callback(
+        urllib3_responses.POST, '/_msearch', callback=get_msearch_callback,
+        content_type='application/json', match_querystring=True)
     urllib3_responses.add_callback(
         urllib3_responses.POST, re.compile('^/[,\w]+/_search$'), callback=get_search_callback,
         content_type='application/json', match_querystring=True)
@@ -961,10 +973,7 @@ def setup_responses():
     urllib3_responses.add_callback(
         urllib3_responses.GET, re.compile('^/[,\w]+/_mapping$'), callback=get_metadata_callback,
         content_type='application/json', match_querystring=True)
-    urllib3_responses.add_callback(
-        urllib3_responses.POST, re.compile('^/[,\w]+/_msearch$'), callback=get_msearch_callback,
-        content_type='application/json', match_querystring=True)
-    setup_search_response()
+    setup_search_responses()
 
 
 @mock.patch('seqr.utils.redis_utils.redis.StrictRedis', lambda **kwargs: MOCK_REDIS)
@@ -1092,8 +1101,9 @@ class EsUtilsTest(TestCase):
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_COMPOUND_HET_GENES', 1)
     @mock.patch('seqr.utils.elasticsearch.es_gene_agg_search.MAX_COMPOUND_HET_GENES', 1)
+    @mock.patch('seqr.utils.elasticsearch.es_search.logger')
     @urllib3_responses.activate
-    def test_invalid_get_es_variants(self):
+    def test_invalid_get_es_variants(self, mock_logger):
         setup_responses()
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
@@ -1157,35 +1167,30 @@ class EsUtilsTest(TestCase):
         search_model.save()
         urllib3_responses.reset()
         urllib3_responses.add(
-            urllib3_responses.POST, '/test_index_sv,test_index/_msearch', body=ReadTimeoutError('', '', 'timeout'))
+            urllib3_responses.POST, '/_msearch', body=ReadTimeoutError('', '', 'timeout'))
         urllib3_responses.add_json('/_tasks?actions=*search&group_by=parents', {'tasks': {
             123: {'running_time_in_nanos': 10},
             456: {'running_time_in_nanos': 10 ** 12},
         }})
-        urllib3_responses.add_json('/_tasks/_cancel?parent_task_id=456', {}, method=urllib3_responses.POST)
         with self.assertRaises(ConnectionTimeout):
             get_es_variants(results_model)
         self.assertListEqual(
             [call.request.url for call in urllib3_responses.calls],
-            ['/test_index_sv,test_index/_msearch', '/_tasks?actions=%2Asearch&group_by=parents',
-             '/_tasks/_cancel?parent_task_id=456']
-        )
+            ['/_msearch', '/_tasks?actions=%2Asearch&group_by=parents'])
+        mock_logger.error.assert_called_with('ES Query Timeout: Found 1 long running searches', None, detail=[
+            {'task': {'running_time_in_nanos': 10 ** 12}, 'parent_task_id': '456'},
+        ])
 
         urllib3_responses.reset()
-        urllib3_responses.add_json('/test_index_sv,test_index/_msearch', {'responses': [
-            {'error': {'type': 'search_phase_execution_exception'}}]}, method=urllib3_responses.POST)
-        with self.assertRaises(TransportError):
-            get_es_variants(results_model)
-
-        urllib3_responses.replace_json('/test_index_sv,test_index/_msearch', {'responses': [
+        urllib3_responses.add_json('/_msearch', {'responses': [
             {'error': {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]}}
         ]}, method=urllib3_responses.POST)
 
-        with self.assertRaises(InvalidSearchException) as cm:
+        with self.assertRaises(TransportError) as cm:
             get_es_variants(results_model)
-        self.assertEqual(
-            str(cm.exception),
-            'This search is not supported for large numbers of cases. Try removing family-based inheritance filters or sample-level quality filters')
+        self.assertDictEqual(
+            cm.exception.info,
+            {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]})
 
         _set_cache('index_metadata__test_index,test_index_sv', None)
         urllib3_responses.add(
@@ -1519,6 +1524,9 @@ class EsUtilsTest(TestCase):
                 ]
             }}
         ], sort=[{'cadd_PHRED': {'order': 'desc', 'unmapped_type': 'keyword'}}, 'xpos', 'variantId'])
+
+        # Test sort does not error on pagination
+        get_es_variants(results_model, sort='cadd', num_results=2, page=2)
 
     @urllib3_responses.activate
     def test_sv_get_es_variants(self):
@@ -2019,6 +2027,135 @@ class EsUtilsTest(TestCase):
             }}
         ])
 
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_SEARCH_CLAUSES', 1)
+    @urllib3_responses.activate
+    def test_many_family_inheitance_get_es_variants(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']}, 'inheritance': {'mode': 'recessive'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, total_results = get_es_variants(results_model, num_results=2)
+
+        self.assertEqual(len(variants), 2)
+        self.assertEqual(total_results, 9)
+        self.assertDictEqual(variants[0], PARSED_MULTI_SAMPLE_VARIANT_0)
+        self.assertListEqual(variants[1], PARSED_COMPOUND_HET_VARIANTS)
+
+        self.assertCachedResults(results_model, {
+            'compound_het_results': [],
+            'variant_results': [PARSED_MULTI_SAMPLE_VARIANT],
+            'grouped_results': [{'null': [PARSED_MULTI_SAMPLE_VARIANT_0]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
+            'duplicate_doc_count': 3,
+            'loaded_variant_counts': {'test_index_compound_het': {'total': 2, 'loaded': 2},
+                                      INDEX_NAME: {'loaded': 4, 'total': 10}},
+            'total_results': 9,
+        })
+
+        self.assertExecutedSearches([
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000002_2',
+                            'must': [
+                                {'bool': {
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                                }},
+                            ]
+                        },
+                    },
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000003_3',
+                            'must': [{'term': {'samples_num_alt_1': 'NA20870'}}],
+                        },
+                    },
+                ],
+                gene_aggs=True,
+                start_index=0,
+                size=1
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000002_2',
+                            'must': [
+                                {'bool': {
+                                    'should': [
+                                        {'bool': {
+                                            'must_not': [
+                                                {'term': {'samples_no_call': 'HG00732'}},
+                                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                {'term': {'samples_no_call': 'HG00733'}},
+                                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                                            ],
+                                            'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
+                                        }},
+                                        {'bool': {
+                                            'must_not': [
+                                                {'term': {'samples_no_call': 'HG00732'}},
+                                                {'term': {'samples_num_alt_1': 'HG00732'}},
+                                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                {'term': {'samples_no_call': 'HG00733'}},
+                                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                                            ],
+                                            'must': [{'match': {'contig': 'X'}},
+                                                     {'term': {'samples_num_alt_2': 'HG00731'}}]
+                                        }}
+                                    ]
+                                }},
+                            ]
+                        }
+                    },
+                ],
+                start_index=0,
+                size=2,
+            ),
+            dict(
+                filters=[
+                    ANNOTATION_QUERY,
+                    {
+                        'bool': {
+                            '_name': 'F000003_3',
+                            'must': [
+                                {'bool': {
+                                    'should': [
+                                        {'bool': {'must': [
+                                            {'match': {'contig': 'X'}},
+                                            {'term': {'samples_num_alt_2': 'NA20870'}}
+                                        ]}},
+                                        {'term': {'samples_num_alt_2': 'NA20870'}},
+                                    ]
+                                }},
+                            ]
+                        }
+                    },
+                ],
+                start_index=0,
+                size=2,
+            ),
+        ])
+
     @urllib3_responses.activate
     def test_multi_project_get_es_variants(self):
         setup_responses()
@@ -2385,14 +2522,14 @@ class EsUtilsTest(TestCase):
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
     @urllib3_responses.activate
-    def test_get_es_variants_index_alias(self):
+    def test_get_es_variants_create_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.all())
 
-        setup_search_response()
+        setup_search_responses()
         urllib3_responses.add_json(
-            '/{}/_mapping'.format(INDEX_ALIAS), {k: {'mappings': v} for k, v in INDEX_METADATA.items()})
+            '/{}/_mapping'.format(INDEX_ALIAS), {k: {'mappings': v} for k, v in CORE_INDEX_METADATA.items()})
         urllib3_responses.add_json('/_aliases', {'success': True}, method=urllib3_responses.POST)
 
         get_es_variants(results_model, num_results=2)
@@ -2400,6 +2537,87 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(index=INDEX_ALIAS, size=6)
         self.assertDictEqual(urllib3_responses.call_request_json(index=0), {
             'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
+
+    @urllib3_responses.activate
+    def test_get_es_variants_search_index_alias(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'inheritance': {'mode': 'de_novo'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid__in=['F000011_11']))
+
+        setup_search_responses()
+        urllib3_responses.add_json('/{}/_mapping'.format(SECOND_INDEX_NAME), {
+            k: {'mappings': INDEX_METADATA[SECOND_INDEX_NAME]} for k in SUB_INDICES})
+
+        get_es_variants(results_model, num_results=2)
+
+        expected_search = {
+            'start_index': 0, 'size': 2, 'filters': [ANNOTATION_QUERY, {
+                'bool': {'must': [
+                    {'bool': {'should': [
+                        {'term': {'samples_num_alt_1': 'NA20885'}},
+                        {'term': {'samples_num_alt_2': 'NA20885'}},
+                    ]}}
+                ],
+                '_name': 'F000011_11'
+            }}]
+        }
+        self.assertExecutedSearches([
+            dict(index=SUB_INDICES[1], **expected_search),
+            dict(index=SUB_INDICES[0], **expected_search),
+        ])
+        _set_cache('index_metadata__{}'.format(SECOND_INDEX_NAME), None)
+
+    @urllib3_responses.activate
+    def test_get_es_variants_search_multiple_index_alias(self):
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'inheritance': {'mode': 'de_novo'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid__in=['F000003_3', 'F000011_11']))
+
+        setup_search_responses()
+        mappings = {k: {'mappings': INDEX_METADATA[INDEX_NAME]} for k in SUB_INDICES}
+        mappings.update({k: {'mappings': INDEX_METADATA[SECOND_INDEX_NAME]} for k in SECOND_SUB_INDICES})
+        urllib3_responses.add_json('/{},{}/_mapping'.format(INDEX_NAME, SECOND_INDEX_NAME), mappings)
+        aliases = {k: {'aliases': {INDEX_NAME: {}}} for k in SUB_INDICES}
+        aliases.update({k: {'aliases': {SECOND_INDEX_NAME: {}, INDEX_ALIAS: {}}} for k in SECOND_SUB_INDICES})
+        urllib3_responses.add_json('/{},{}/_alias'.format(INDEX_NAME, SECOND_INDEX_NAME), aliases)
+
+        get_es_variants(results_model, num_results=2)
+
+        second_alias_expected_search = {
+            'start_index': 0, 'size': 2, 'filters': [ANNOTATION_QUERY, {
+                'bool': {'must': [
+                    {'bool': {'should': [
+                        {'term': {'samples_num_alt_1': 'NA20885'}},
+                        {'term': {'samples_num_alt_2': 'NA20885'}},
+                    ]}}
+                ],
+                    '_name': 'F000011_11'
+                }}]
+        }
+        first_alias_expected_search = {
+            'start_index': 0, 'size': 2, 'filters': [ANNOTATION_QUERY, {
+                'bool': {'must': [
+                    {'bool': {'should': [
+                        {'term': {'samples_num_alt_1': 'NA20870'}},
+                        {'term': {'samples_num_alt_2': 'NA20870'}},
+                    ]}}
+                ],
+                    '_name': 'F000003_3'
+                }}]
+        }
+        self.assertExecutedSearches([
+            dict(index=SECOND_SUB_INDICES[1], **second_alias_expected_search),
+            dict(index=SECOND_SUB_INDICES[0], **second_alias_expected_search),
+            dict(index=SUB_INDICES[1], **first_alias_expected_search),
+            dict(index=SUB_INDICES[0], **first_alias_expected_search),
+        ])
+        _set_cache('index_metadata__{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME), None)
 
     @urllib3_responses.activate
     def test_get_es_variant_gene_counts(self):
@@ -2656,7 +2874,16 @@ class EsUtilsTest(TestCase):
             {
                 '_script': {
                     'type': 'number',
-                    'order': 'desc',
+                    'script': {
+                        'params': {
+                            'omim_gene_ids': ['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020']
+                        },
+                        'source': mock.ANY,
+                    }
+                }
+            }, {
+                '_script': {
+                    'type': 'number',
                     'script': {
                         'params': {
                             'omim_gene_ids': ['ENSG00000223972', 'ENSG00000243485', 'ENSG00000268020']
