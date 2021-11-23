@@ -87,7 +87,7 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
                 yield data
             else:
                 # Using \n might be a bad assumption if nl is represented another way
-                lines = data.decode("utf-8").split("\n")
+                lines = data.decode("utf-8").strip("\n").split("\n")
                 if len(lines) == 1:
                     # one reaally long line (or to the end)
                     prev_line = prev_line + lines[0]

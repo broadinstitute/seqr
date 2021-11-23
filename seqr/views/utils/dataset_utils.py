@@ -82,9 +82,11 @@ def load_mapping_file(mapping_file_path, user):
 
 def _load_mapping_file(file_content):
     id_mapping = {}
-    for line in file_content:
+    for i, line in enumerate(file_content):
+        if not line:
+            continue
         if len(line) != 2:
-            raise ValueError("Must contain 2 columns: " + ', '.join(line))
+            raise ValueError(f"Must contain 2 columns. Received {len(line)} columns on line #{i+1}: " + ', '.join(line))
         id_mapping[line[0]] = line[1]
     return id_mapping
 
