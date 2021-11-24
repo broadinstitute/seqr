@@ -2,6 +2,10 @@
 
 ## dev
 
+## 11/23/21
+* Update the seqr Dockerfile base image from debian:stretch to python:3.7-slim-bullseye
+* Consolidation and cleanup of various RUN tasks in the seqr Dockerfile
+
 ## 11/17/21
 * Update pathogenicity search to override frequency filters
 * Add ACMG classifier to variants (REQUIRES DB MIGRATION)

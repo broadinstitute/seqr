@@ -309,7 +309,7 @@ kibana_urls = '^(?:{})'.format('|'.join([
     'app', '\d+/built_assets', '\d+/bundles', 'bundles', 'elasticsearch', 'es_admin', 'node_modules/@kbn', 'internal',
     'plugins', 'translations', 'ui', 'api/apm', 'api/console', 'api/core', 'api/index_management', 'api/index_patterns',
     'api/kibana', 'api/licensing', 'api/monitoring', 'api/reporting', 'api/saved_objects', 'api/telemetry',
-    'api/timelion', 'api/ui_metric', 'api/xpack',
+    'api/timelion', 'api/ui_metric', 'api/xpack', 'bootstrap',
 ]))
 
 urlpatterns += [
