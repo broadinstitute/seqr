@@ -1,0 +1,3 @@
+ignored:
+  - DL3008 # pinning apt versions. Deeming it reasonable to install the latest packages on builds
+  - DL3013 # pinning pip versions. Deeming it reasonable to install the latest versions of packages that we don't put in requirements.txt
