@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-# TODO import hail
+import hail as hl
 
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
@@ -54,6 +54,7 @@ class HailSearch(object):
         self._sample_table_queries = {}
 
         # TODO set up connection to MTs/ any external resources
+        self.mt = hl.load_dataset("1000_Genomes_HighCov_autosomes").head(200)
 
     def _sample_table(self, sample_id):
         # TODO should implement way to map sample id to table name
@@ -65,7 +66,8 @@ class HailSearch(object):
         return EsSearch.process_previous_results(*args, **kwargs)
 
     def sort(self, sort):
-        raise NotImplementedError
+        pass
+        # raise NotImplementedError
 
     def filter_by_location(self, genes=None, intervals=None, **kwargs):
         parsed_intervals = [
@@ -138,7 +140,7 @@ class HailSearch(object):
             # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
 
             # TODO remove rows where none of the remaining samples have alt alleles
-            raise NotImplementedError
+            # raise NotImplementedError
 
     def _filter_by_genotype_inheritance(self, inheritance_mode, inheritance_filter, quality_filter):
         if inheritance_mode:
@@ -201,12 +203,15 @@ class HailSearch(object):
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
         raise NotImplementedError
 
-    def search(self, page=1, num_results=100, **kwargs):
+    def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
+
+        hail_results = [{"chrom": s.locus.contig, "pos": s.locus.position, "ref": s.alleles[0], "alt": s.alleles[1], "variantId": str(idx)} for idx, s in enumerate(self.mt.rows().take(num_results))]
+
         # TODO actually get results back - result.collect() ?
 
         # TODO format return values into correct dicts, potentially post-process compound hets
 
-        # TODO get total number results beyond the currwnt page (currently computes up to 10000)
-        # self.previous_search_results['total_results'] = ...
+        # TODO get total number results beyond the current page (currently computes up to 10000)
+        self.previous_search_results['total_results'] = len(hail_results)
 
-        raise NotImplementedError
+        return hail_results
