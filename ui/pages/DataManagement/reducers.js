@@ -8,6 +8,7 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
+const RECEIVE_RNA_SEQ_UPLOAD_STATS = 'RECEIVE_RNA_SEQ_UPLOAD_STATS'
 const REQUEST_ALL_USERS = 'REQUEST_ALL_USERS'
 const RECEIVE_ALL_USERS = 'RECEIVE_ALL_USERS'
 
@@ -39,38 +40,35 @@ export const loadAllUsers = () => (dispatch, getState) => {
     }).get()
 }
 
-export const uploadQcPipelineOutput = values => dispatch => new HttpRequestHelper(
-  '/api/data_management/upload_qc_pipeline_output',
+const submitRequest = (urlPath, receiveDataAction, values) => dispatch => new HttpRequestHelper(
+  `/api/data_management/${urlPath}`,
   (responseJson) => {
-    dispatch({ type: RECEIVE_PIPELINE_UPLOAD_STATS, newValue: responseJson })
+    dispatch({ type: receiveDataAction, newValue: responseJson })
   },
   (e) => {
     if (e.body && e.body.errors) {
       throw new SubmissionError({ _error: e.body.errors })
+    } else if (e.body && e.body.error) {
+      throw new SubmissionError({ _error: [e.body.error] })
     } else {
       throw new SubmissionError({ _error: [e.message] })
     }
   },
 ).post(values)
 
-export const deleteEsIndex = index => dispatch => new HttpRequestHelper(
-  '/api/data_management/delete_index',
-  (responseJson) => {
-    dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, updates: responseJson })
-  },
-  (e) => {
-    if (e.body && e.body.error) {
-      throw new SubmissionError({ _error: [e.body.error] })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
-  },
-).post({ index })
+export const uploadQcPipelineOutput = values => submitRequest(
+  'upload_qc_pipeline_output', RECEIVE_PIPELINE_UPLOAD_STATS, values,
+)
+
+export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
+
+export const uploadRnaSeq = values => submitRequest('upload_rna_seq', RECEIVE_RNA_SEQ_UPLOAD_STATS, values)
 
 export const reducers = {
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
   elasticsearchStatus: createSingleObjectReducer(RECEIVE_ELASTICSEARCH_STATUS),
   qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),
+  rnaSeqUploadStats: createSingleValueReducer(RECEIVE_RNA_SEQ_UPLOAD_STATS, {}),
   allUsers: createSingleValueReducer(RECEIVE_ALL_USERS, [], 'users'),
   allUsersLoading: loadingReducer(REQUEST_ALL_USERS, RECEIVE_ALL_USERS),
 }
