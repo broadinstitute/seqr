@@ -56,6 +56,9 @@ def parse_file(filename, stream):
     elif filename.endswith('.json'):
         return json.loads(stream.read())
 
+    elif filename.endswith('.tsv.gz'):
+        return stream.read()
+
     raise ValueError("Unexpected file type: {}".format(filename))
 
 
@@ -86,7 +89,7 @@ def save_uploaded_file(request, process_records=None):
     stream = next(iter(request.FILES.values()))
     filename = stream._name
 
-    if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
+    if not filename.endswith('.xls') and not filename.endswith('.xlsx') and not filename.endswith('.tsv.gz'):
         stream = TextIOWrapper(stream.file, encoding = 'utf-8')
 
     json_records = parse_file(filename, stream)
@@ -96,8 +99,12 @@ def save_uploaded_file(request, process_records=None):
     # save json to temporary file
     uploaded_file_id = hashlib.md5(str(json_records).encode('utf-8')).hexdigest()
     serialized_file_path = _compute_serialized_file_path(uploaded_file_id)
-    with gzip.open(serialized_file_path, "wt") as f:
-        json.dump(json_records, f)
+    mode = 'wb' if filename.endswith('.tsv.gz') else 'wt'
+    with gzip.open(serialized_file_path, mode) as f:
+        if filename.endswith('.tsv.gz'):
+            f.write(json_records)
+        else:
+            json.dump(json_records, f)
 
     return uploaded_file_id, filename, json_records
 

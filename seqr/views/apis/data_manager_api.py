@@ -322,6 +322,10 @@ EXCLUDE_PROJECTS = [
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 
+@data_manager_required
+def update_rna_seq(request, upload_file_id):
+    pass
+
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
 EXCLUDE_HTTP_RESPONSE_HEADERS = {
