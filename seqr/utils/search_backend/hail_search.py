@@ -210,7 +210,10 @@ class HailSearch(object):
         "ref": s.alleles[0],
         "alt": s.alleles[1],
         "variantId": str(idx),
-        "familyGuids": ["foo"]
+        "familyGuids": ["foo"],
+        "liftedOverGenomeVersion": None,
+        "liftedOverChrom": None,
+        "liftedOverPos": None
         } for idx, s in enumerate(self.mt.rows().take(num_results))]
 
         # TODO actually get results back - result.collect() ?
