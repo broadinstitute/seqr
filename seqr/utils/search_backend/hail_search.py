@@ -205,7 +205,13 @@ class HailSearch(object):
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
 
-        hail_results = [{"chrom": s.locus.contig, "pos": s.locus.position, "ref": s.alleles[0], "alt": s.alleles[1], "variantId": str(idx)} for idx, s in enumerate(self.mt.rows().take(num_results))]
+        hail_results = [{"chrom": s.locus.contig,
+        "pos": s.locus.position,
+        "ref": s.alleles[0],
+        "alt": s.alleles[1],
+        "variantId": str(idx),
+        "familyGuids": ["foo"]
+        } for idx, s in enumerate(self.mt.rows().take(num_results))]
 
         # TODO actually get results back - result.collect() ?
 
