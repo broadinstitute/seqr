@@ -334,7 +334,7 @@ export const FREQUENCIES = [
     name: 'gnomad_svs',
     label: 'gnomAD genome SVs',
     homHemi: false,
-    labelHelp: 'Filter by site frequency (AF) among gnomad SVs',
+    labelHelp: 'Filter by locus frequency (AF) among gnomAD SVs. The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp',
   },
   {
     name: THIS_CALLSET_FREQUENCY,
