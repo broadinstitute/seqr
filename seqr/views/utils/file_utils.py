@@ -56,9 +56,6 @@ def parse_file(filename, stream):
     elif filename.endswith('.json'):
         return json.loads(stream.read())
 
-    elif filename.endswith('.tsv.gz'):
-        return stream.read()
-
     raise ValueError("Unexpected file type: {}".format(filename))
 
 
@@ -68,14 +65,17 @@ def _parse_excel_string_cell(cell):
         cell_value = '{:.0f}'.format(cell_value)
     return cell_value or ''
 
-
-def _compute_serialized_file_path(uploaded_file_id):
-    """Compute local file path, and make sure the directory exists"""
-
+def get_temp_upload_directory():
     upload_directory = os.path.join(tempfile.gettempdir(), 'temp_uploads')
     if not os.path.isdir(upload_directory):
         logger.info("Creating directory: " + upload_directory)
         os.makedirs(upload_directory)
+    return upload_directory
+
+def _compute_serialized_file_path(uploaded_file_id):
+    """Compute local file path, and make sure the directory exists"""
+
+    upload_directory = get_temp_upload_directory()
 
     return os.path.join(upload_directory, "temp_upload_{}.json.gz".format(uploaded_file_id))
 
@@ -89,7 +89,7 @@ def save_uploaded_file(request, process_records=None):
     stream = next(iter(request.FILES.values()))
     filename = stream._name
 
-    if not filename.endswith('.xls') and not filename.endswith('.xlsx') and not filename.endswith('.tsv.gz'):
+    if not filename.endswith('.xls') and not filename.endswith('.xlsx'):
         stream = TextIOWrapper(stream.file, encoding = 'utf-8')
 
     json_records = parse_file(filename, stream)
@@ -99,12 +99,8 @@ def save_uploaded_file(request, process_records=None):
     # save json to temporary file
     uploaded_file_id = hashlib.md5(str(json_records).encode('utf-8')).hexdigest()
     serialized_file_path = _compute_serialized_file_path(uploaded_file_id)
-    mode = 'wb' if filename.endswith('.tsv.gz') else 'wt'
-    with gzip.open(serialized_file_path, mode) as f:
-        if filename.endswith('.tsv.gz'):
-            f.write(json_records)
-        else:
-            json.dump(json_records, f)
+    with gzip.open(serialized_file_path, 'wt') as f:
+        json.dump(json_records, f)
 
     return uploaded_file_id, filename, json_records
 

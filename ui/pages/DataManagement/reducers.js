@@ -62,7 +62,7 @@ export const uploadQcPipelineOutput = values => submitRequest(
 
 export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
 
-export const uploadRnaSeq = ({ file }) => submitRequest(`save_rna_seq/${file.uploadedFileId}`, RECEIVE_RNA_SEQ_UPLOAD_STATS)
+export const uploadRnaSeq = ({ file }) => submitRequest(`update_rna_seq/${file.uploadedFileId}`, RECEIVE_RNA_SEQ_UPLOAD_STATS)
 
 export const reducers = {
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),

@@ -14,6 +14,7 @@ const mapStateToProps = state => ({
       component: FileUploadField,
       dropzoneLabel: 'Drag-drop or click here to upload RNA-Seq Outlier Data',
       validate: validateUploadedFile,
+      url: '/api/data_management/upload_rna_seq',
     },
   ],
   uploadStats: getRnaSeqUploadStats(state),

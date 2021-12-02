@@ -1,6 +1,9 @@
 import base64
 from collections import defaultdict
+from datetime import datetime
+import gzip
 import json
+import os
 import re
 import requests
 import urllib3
@@ -15,7 +18,7 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.file_utils import parse_file
+from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
@@ -323,8 +326,43 @@ EXCLUDE_PROJECTS = [
 ]
 
 @data_manager_required
+def receive_rna_seq_table(request):
+    if len(request.FILES) != 1:
+        return create_json_response({'errors': [f'Received {len(request.FILES)} files instead of 1']}, status=400)
+
+    stream = next(iter(request.FILES.values()))
+    filename = stream._name
+    if not filename.endswith('.tsv.gz'):
+        return create_json_response({'errors': [f'Invalid file extension for {filename}: expected ".tsv.gz"']}, status=400)
+
+    # save gzipped data to temporary file
+    uploaded_file_id = f'tmp__{datetime.now().isoformat()}__{request.user}__{filename}'
+    serialized_file_path = _get_upload_file_path(uploaded_file_id)
+    with open(serialized_file_path, 'wb') as f:
+        f.write(stream.read())
+
+    return create_json_response({
+        'uploadedFileId': uploaded_file_id,
+        'info': [f'Loaded gzipped file {filename}'],
+    })
+
+@data_manager_required
 def update_rna_seq(request, upload_file_id):
-    pass
+    serialized_file_path = _get_upload_file_path(upload_file_id)
+    with gzip.open(serialized_file_path, 'rb') as f:
+        header = next(f)
+        row_1 = next(f)
+        import pdb; pdb.set_trace()
+        print(header)
+        print(row_1)
+
+    # os.remove(serialized_file_path)
+    raise NotImplementedError
+
+def _get_upload_file_path(uploaded_file_id):
+    upload_directory = get_temp_upload_directory()
+    return os.path.join(upload_directory, uploaded_file_id)
+
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1

@@ -104,7 +104,7 @@ from seqr.views.apis.users_api import \
     forgot_password
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, proxy_to_kibana
+    update_rna_seq, receive_rna_seq_table, proxy_to_kibana
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
@@ -272,6 +272,7 @@ api_endpoints = {
     'data_management/delete_index': delete_index,
     'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
     'data_management/get_all_users': get_all_users,
+    'data_management/upload_rna_seq': receive_rna_seq_table,
     'data_management/update_rna_seq/(?P<upload_file_id>[^/]+)': update_rna_seq,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
