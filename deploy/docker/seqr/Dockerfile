@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libc6-dev \
     libpq-dev \
     nano \
+    nodejs \
+    npm \
     xterm \
     postgresql-client \
     procps \
@@ -44,7 +46,13 @@ RUN git clone -q --branch $SEQR_GIT_BRANCH $SEQR_REPO
 WORKDIR /seqr
 
 # install seqr dependencies
-RUN pip install --no-cache-dir wheel && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
+    cd ui && \
+    npm ci && \
+    npm run build && \
+    cd .. && \
+    ./manage.py collectstatic --no-input
 
 EXPOSE 8000
 
