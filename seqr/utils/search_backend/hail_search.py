@@ -135,6 +135,7 @@ class HailSearch(object):
             for samples_by_id in self.samples_by_family.values():
                 all_samples.update(samples_by_id.keys())
             # TODO filter result to desired samples - result.filter_cols(hl.array(all_samples).contains(result.sample_id))
+            self.mt = self.mt.filter_cols(hl.array(all_samples).contains(self.mt.sample_id))
 
             # TODO remove all samples in families where any sample is not passing the quality filters
             # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
@@ -204,7 +205,6 @@ class HailSearch(object):
         raise NotImplementedError
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
-
         localized = self.mt.localize_entries()
         localized = localized.transmute(GT=localized.ent.GT)
         collected = localized.take(num_results)
@@ -236,7 +236,7 @@ class HailSearch(object):
                 "pos": pos,
                 "ref": ref,
                 "alt": alt,
-                "genotypes": ...,
+                "genotypes": genotypes,
                 "variantId": str(idx),
                 "familyGuids": family_guids,
                 "liftedOverGenomeVersion": None,
