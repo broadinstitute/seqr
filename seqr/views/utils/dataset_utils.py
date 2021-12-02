@@ -89,7 +89,7 @@ def _load_mapping_file(file_content):
     return id_mapping
 
 def match_sample_ids_to_sample_records(
-        project,
+        projects,
         user,
         sample_ids,
         elasticsearch_index,
@@ -106,7 +106,7 @@ def match_sample_ids_to_sample_records(
     the list or is contained in the optional sample_id_to_individual_id_mapping and creates new Sample records for these
 
     Args:
-        project (object): Django ORM project model
+        projects (object array): List of Django ORM project models
         user (object): Django ORM User model
         sample_ids (list): a list of sample ids for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
@@ -125,7 +125,7 @@ def match_sample_ids_to_sample_records(
     """
 
     samples = _find_matching_sample_records(
-        project, sample_ids, sample_type, dataset_type, elasticsearch_index
+        projects, sample_ids, sample_type, dataset_type, elasticsearch_index
     )
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
@@ -134,7 +134,7 @@ def match_sample_ids_to_sample_records(
     if len(remaining_sample_ids) > 0:
         remaining_individuals_dict = {
             i.individual_id: i for i in
-            Individual.objects.filter(family__project=project).exclude(id__in=matched_individual_ids)
+            Individual.objects.filter(family__project__in=projects).exclude(id__in=matched_individual_ids)
         }
 
         # find Individual records with exactly-matching individual_ids
@@ -180,7 +180,7 @@ def match_sample_ids_to_sample_records(
     return samples, included_families, matched_individual_ids
 
 
-def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type, elasticsearch_index):
+def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index):
     """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
     If elasticsearch_index is provided, will only match samples with the same index or with no index set
 
@@ -196,7 +196,7 @@ def _find_matching_sample_records(project, sample_ids, sample_type, dataset_type
     """
 
     return list(Sample.objects.select_related('individual').filter(
-        individual__family__project=project,
+        individual__family__project__in=projects,
         sample_type=sample_type,
         dataset_type=dataset_type,
         sample_id__in=sample_ids,

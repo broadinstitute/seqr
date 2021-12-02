@@ -18,13 +18,15 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
+from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, update_variant_samples
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual
+from seqr.models import Sample, Individual, Family, Project
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY, \
+    ANALYST_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -336,7 +338,7 @@ def receive_rna_seq_table(request):
         return create_json_response({'errors': [f'Invalid file extension for {filename}: expected ".tsv.gz"']}, status=400)
 
     # save gzipped data to temporary file
-    uploaded_file_id = f'tmp__{datetime.now().isoformat()}__{request.user}__{filename}'
+    uploaded_file_id = f'tmp_-_{datetime.now().isoformat()}_-_{request.user}_-_{filename}'
     serialized_file_path = _get_upload_file_path(uploaded_file_id)
     with open(serialized_file_path, 'wb') as f:
         f.write(stream.read())
@@ -346,18 +348,68 @@ def receive_rna_seq_table(request):
         'info': [f'Loaded gzipped file {filename}'],
     })
 
+RNA_COLUMNS = ['geneID', 'pValue', 'padjust', 'zScore']
+
 @data_manager_required
 def update_rna_seq(request, upload_file_id):
     serialized_file_path = _get_upload_file_path(upload_file_id)
-    with gzip.open(serialized_file_path, 'rb') as f:
-        header = next(f)
-        row_1 = next(f)
-        import pdb; pdb.set_trace()
-        print(header)
-        print(row_1)
+    samples_by_id = defaultdict(list)
+    with gzip.open(serialized_file_path, 'rt') as f:
+        header =  _parse_tsv_row(next(f))
+        header_index_map = {key: i for i, key in enumerate(header)}
+        missing_cols = ', '.join([col for col in ['sampleID'] + RNA_COLUMNS if col not in header_index_map])
+        if missing_cols:
+            return create_json_response({'errors': [f'Invalid file: missing column(s) {missing_cols}']}, status=400)
+
+        for line in f:
+            row = _parse_tsv_row(line)
+            samples_by_id[row[header_index_map['sampleID']]].append({key: row[header_index_map[key]] for key in RNA_COLUMNS})
+
+    message = f'Parsed {len(samples_by_id)} RNA-seq samples'
+    info = [message]
+    logger.info(message, request.user)
+
+    file_id = upload_file_id.split('_-_')[:-1]
+    try:
+        samples, included_families, matched_individual_ids = match_sample_ids_to_sample_records(
+            projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
+            user=request.user,
+            sample_ids=samples_by_id.keys(),
+            elasticsearch_index=file_id,
+            sample_type=Sample.SAMPLE_TYPE_RNA,
+            # sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+            raise_unmatched_error_template='Unable to find matches for the following samples: {sample_ids}'
+            # raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+        )
+    except ValueError as e:
+        return create_json_response({'errors': [str(e)]}, status=400)
+
+    activated_sample_guids, inactivated_sample_guids = update_variant_samples(
+        samples, request.user, elasticsearch_index=file_id, sample_type=Sample.SAMPLE_TYPE_RNA)
+
+    # TODO actually create data for the scores/genes for all the samples
+
+    # TODO move inside update_variant_samples
+    family_guids_to_update = [
+        family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
+    ]
+    if family_guids_to_update:
+        Family.bulk_update(
+            request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
+
+    warnings = []
+    # if missing:
+    #     missing_samples = ', '.join(sorted(missing))
+    #     warnings.append(f'Unable to find matches for the following {len(missing)} samples: {missing_samples}')
 
     # os.remove(serialized_file_path)
-    raise NotImplementedError
+    return create_json_response({
+        'info': info,
+        'warnings': warnings,
+    })
+
+def _parse_tsv_row(row):
+    return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
 
 def _get_upload_file_path(uploaded_file_id):
     upload_directory = get_temp_upload_directory()

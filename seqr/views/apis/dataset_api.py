@@ -60,7 +60,7 @@ def add_variants_dataset_handler(request, project_guid):
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     try:
         samples, included_families, matched_individual_ids = match_sample_ids_to_sample_records(
-            project=project,
+            projects=[project],
             user=request.user,
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
