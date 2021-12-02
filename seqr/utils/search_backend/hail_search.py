@@ -71,7 +71,7 @@ class HailSearch(object):
 
     def filter_by_location(self, genes=None, intervals=None, **kwargs):
         parsed_intervals = [
-            hl.parse_locus_interval(interval) for interval in
+            hl.parse_locus_interval(interval, reference_genome="GRCh38") for interval in
             ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
                 # long-term we should check project to get correct genome version
                 '{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
