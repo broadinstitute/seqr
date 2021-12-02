@@ -205,16 +205,40 @@ class HailSearch(object):
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
 
-        hail_results = [{"chrom": s.locus.contig,
-        "pos": s.locus.position,
-        "ref": s.alleles[0],
-        "alt": s.alleles[1],
-        "variantId": str(idx),
-        "familyGuids": list(self.samples_by_family.keys()),
-        "liftedOverGenomeVersion": None,
-        "liftedOverChrom": None,
-        "liftedOverPos": None
-        } for idx, s in enumerate(self.mt.rows().take(num_results))]
+        localized = self.mt.localize_entries()
+        localized = localized.transmute(GT=localized.ent.GT)
+        collected = localized.take(num_results)
+        sample_info = hl.eval(localized.globals.s)
+        sample_ids = [sample.s for sample in sample_info]
+
+        hail_results = []
+        for idx, s in enumerate(collected):
+            chrom = s.locus.contig
+            pos = s.locus.position
+            ref = s.alleles[0]
+            alt = s.alleles[1]
+
+            genotypes = [{
+                "sampleId": sample_id,
+                "numAlt": gt_call.n_alt_alleles(),
+                "gq": 0,
+                "ab": 0,
+                "dp": 0
+            } for sample_id, gt_call in zip(sample_ids, s.GT)]
+
+            hail_results.append({
+                "chrom": chrom,
+                "pos": pos,
+                "ref": ref,
+                "alt": alt,
+                "genotypes": ...,
+                "variantId": str(idx),
+                "familyGuids": list(self.samples_by_family.keys()),
+                "liftedOverGenomeVersion": None,
+                "liftedOverChrom": None,
+                "liftedOverPos": None
+            })
+
 
         # TODO actually get results back - result.collect() ?
 
