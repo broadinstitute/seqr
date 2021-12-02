@@ -217,14 +217,19 @@ class HailSearch(object):
             pos = s.locus.position
             ref = s.alleles[0]
             alt = s.alleles[1]
+            family_guids = list(self.samples_by_family.keys())
+            samples = []
+            for family_guid in family_guids:
+                samples += list(self.samples_by_family[family_guid].values())
+            sample_individuals = {s.sample_id: s.individual.guid for s in samples}
 
-            genotypes = [{
+            genotypes = {sample_individuals[sample_id]: {
                 "sampleId": sample_id,
                 "numAlt": gt_call.n_alt_alleles(),
                 "gq": 0,
                 "ab": 0,
                 "dp": 0
-            } for sample_id, gt_call in zip(sample_ids, s.GT)]
+            } for sample_id, gt_call in zip(sample_ids, s.GT)}
 
             hail_results.append({
                 "chrom": chrom,
@@ -233,7 +238,7 @@ class HailSearch(object):
                 "alt": alt,
                 "genotypes": ...,
                 "variantId": str(idx),
-                "familyGuids": list(self.samples_by_family.keys()),
+                "familyGuids": family_guids,
                 "liftedOverGenomeVersion": None,
                 "liftedOverChrom": None,
                 "liftedOverPos": None
