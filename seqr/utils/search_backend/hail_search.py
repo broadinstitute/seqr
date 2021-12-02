@@ -135,7 +135,7 @@ class HailSearch(object):
             for samples_by_id in self.samples_by_family.values():
                 all_samples.update(samples_by_id.keys())
             # TODO filter result to desired samples - result.filter_cols(hl.array(all_samples).contains(result.sample_id))
-            self.mt = self.mt.filter_cols(hl.array(all_samples).contains(self.mt.sample_id))
+            self.mt = self.mt.filter_cols(hl.array(all_samples).contains(self.mt.s))
 
             # TODO remove all samples in families where any sample is not passing the quality filters
             # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
