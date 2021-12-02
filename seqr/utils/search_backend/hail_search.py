@@ -77,8 +77,7 @@ class HailSearch(object):
                 '{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
         ]
 
-        # TODO actually apply filter - hl.filter_intervals(self._mt, parsed_intervals)
-        raise NotImplementedError
+        self.mt = hl.filter_intervals(self.mt, parsed_intervals)
 
     def filter_by_frequency(self, frequencies, **kwargs):
         freq_filters = {}
