@@ -210,7 +210,7 @@ class HailSearch(object):
         "ref": s.alleles[0],
         "alt": s.alleles[1],
         "variantId": str(idx),
-        "familyGuids": ["foo"],
+        "familyGuids": list(self.samples_by_family.keys()),
         "liftedOverGenomeVersion": None,
         "liftedOverChrom": None,
         "liftedOverPos": None
