@@ -205,7 +205,7 @@ class HailSearch(object):
         raise NotImplementedError
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
-        localized = self.mt.localize_entries()
+        localized = self.mt.localize_entries("ent", "s")
         localized = localized.transmute(GT=localized.ent.GT)
         collected = localized.take(num_results)
         sample_info = hl.eval(localized.globals.s)
