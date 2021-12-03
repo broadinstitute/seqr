@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, update_variant_samples
+from seqr.views.utils.dataset_utils import match_and_update_samples
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
@@ -371,7 +371,7 @@ def update_rna_seq(request, upload_file_id):
 
     file_id = upload_file_id.split('_-_')[:-1]
     try:
-        samples, included_families, matched_individual_ids = match_sample_ids_to_sample_records(
+        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_samples(
             projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
             user=request.user,
             sample_ids=samples_by_id.keys(),
@@ -384,18 +384,7 @@ def update_rna_seq(request, upload_file_id):
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
-    activated_sample_guids, inactivated_sample_guids = update_variant_samples(
-        samples, request.user, elasticsearch_index=file_id, sample_type=Sample.SAMPLE_TYPE_RNA)
-
     # TODO actually create data for the scores/genes for all the samples
-
-    # TODO move inside update_variant_samples
-    family_guids_to_update = [
-        family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
-    ]
-    if family_guids_to_update:
-        Family.bulk_update(
-            request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     warnings = []
     # if missing:

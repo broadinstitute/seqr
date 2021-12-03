@@ -4,7 +4,7 @@ from django.db.models import prefetch_related_objects
 from django.utils import timezone
 import random
 
-from seqr.models import Sample, Individual
+from seqr.models import Sample, Individual, Family
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
@@ -250,3 +250,34 @@ def update_variant_samples(samples, user, elasticsearch_index, loaded_date=None,
     inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
     return activated_sample_guids, inactivate_sample_guids
+
+
+def match_and_update_samples(
+        projects, user, sample_ids, elasticsearch_index, sample_type, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
+        raise_unmatched_error_template=None,
+):
+    loaded_date = timezone.now()
+    samples, included_families, matched_individual_ids = match_sample_ids_to_sample_records(
+        projects=projects,
+        user=user,
+        sample_ids=sample_ids,
+        elasticsearch_index=elasticsearch_index,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        loaded_date=loaded_date,
+        raise_no_match_error=raise_no_match_error,
+        raise_unmatched_error_template=raise_unmatched_error_template,
+    )
+
+    activated_sample_guids, inactivated_sample_guids = update_variant_samples(
+        samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type)
+
+    family_guids_to_update = [
+        family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
+    ]
+    Family.bulk_update(
+        user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
+
+    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update

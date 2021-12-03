@@ -38,7 +38,7 @@ class Command(BaseCommand):
             elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
         samples, included_families, _ = match_sample_ids_to_sample_records(
-            project=project,
+            projects=[project],
             user=None,
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
