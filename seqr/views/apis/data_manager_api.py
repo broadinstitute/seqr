@@ -385,7 +385,7 @@ def update_rna_seq(request, upload_file_id):
             projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
             user=request.user,
             sample_ids=samples_by_id.keys(),
-            elasticsearch_index=upload_file_id.split('_-_')[:-1],
+            elasticsearch_index=upload_file_id.split('_-_')[-1],
             sample_type=Sample.SAMPLE_TYPE_RNA,
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
             raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
