@@ -18,12 +18,12 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import match_and_update_samples
-from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory
+from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file_content
+from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, Family, Project
+from seqr.models import Sample, Individual, Project
 
 from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY, \
     ANALYST_PROJECT_CATEGORY
@@ -353,6 +353,16 @@ RNA_COLUMNS = ['geneID', 'pValue', 'padjust', 'zScore']
 @data_manager_required
 def update_rna_seq(request, upload_file_id):
     serialized_file_path = _get_upload_file_path(upload_file_id)
+
+    request_json = json.loads(request.body)
+    sample_id_to_individual_id_mapping = {}
+    try:
+        uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
+        if uploaded_mapping_file_id:
+            sample_id_to_individual_id_mapping = load_mapping_file_content(load_uploaded_file(uploaded_mapping_file_id))
+    except ValueError as e:
+        return create_json_response({'errors': [str(e)]}, status=400)
+
     samples_by_id = defaultdict(list)
     with gzip.open(serialized_file_path, 'rt') as f:
         header =  _parse_tsv_row(next(f))
@@ -369,15 +379,14 @@ def update_rna_seq(request, upload_file_id):
     info = [message]
     logger.info(message, request.user)
 
-    file_id = upload_file_id.split('_-_')[:-1]
     try:
         samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_samples(
             projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
             user=request.user,
             sample_ids=samples_by_id.keys(),
-            elasticsearch_index=file_id,
+            elasticsearch_index=upload_file_id.split('_-_')[:-1],
             sample_type=Sample.SAMPLE_TYPE_RNA,
-            # sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
             raise_unmatched_error_template='Unable to find matches for the following samples: {sample_ids}'
             # raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
         )

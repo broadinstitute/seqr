@@ -77,10 +77,10 @@ def validate_index_metadata(index_metadata, elasticsearch_index, project=None, g
 
 def load_mapping_file(mapping_file_path, user):
     file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
-    return _load_mapping_file(file_content)
+    return load_mapping_file_content(file_content)
 
 
-def _load_mapping_file(file_content):
+def load_mapping_file_content(file_content):
     id_mapping = {}
     for line in file_content:
         if len(line) != 2:

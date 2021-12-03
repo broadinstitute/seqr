@@ -16,6 +16,11 @@ const mapStateToProps = state => ({
       validate: validateUploadedFile,
       url: '/api/data_management/upload_rna_seq',
     },
+    {
+      name: 'mappingFile',
+      component: FileUploadField,
+      dropzoneLabel: 'Drag-drop or click here to upload an optional file that maps Sample Ids (column 1) to their corresponding Seqr Individual Ids (column 2)',
+    },
   ],
   uploadStats: getRnaSeqUploadStats(state),
 })

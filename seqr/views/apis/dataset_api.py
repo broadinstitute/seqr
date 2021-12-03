@@ -1,5 +1,4 @@
 import json
-from django.utils import timezone
 
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
