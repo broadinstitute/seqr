@@ -9,7 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max
+from django.db.models import Max,  prefetch_related_objects
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -356,6 +356,7 @@ def update_rna_seq(request, upload_file_id):
 
     request_json = json.loads(request.body)
     sample_id_to_individual_id_mapping = {}
+    ignore_extra_samples = request_json.get('ignoreExtraSamples')
     try:
         uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
         if uploaded_mapping_file_id:
@@ -380,27 +381,32 @@ def update_rna_seq(request, upload_file_id):
     logger.info(message, request.user)
 
     try:
-        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_samples(
+        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids, remaining_sample_ids = match_and_update_samples(
             projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
             user=request.user,
             sample_ids=samples_by_id.keys(),
             elasticsearch_index=upload_file_id.split('_-_')[:-1],
             sample_type=Sample.SAMPLE_TYPE_RNA,
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-            raise_unmatched_error_template='Unable to find matches for the following samples: {sample_ids}'
-            # raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
+            raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
         )
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
+
     # TODO actually create data for the scores/genes for all the samples
 
-    warnings = []
-    # if missing:
-    #     missing_samples = ', '.join(sorted(missing))
-    #     warnings.append(f'Unable to find matches for the following {len(missing)} samples: {missing_samples}')
+    prefetch_related_objects(samples, 'individual__family__project')
+    projects = {sample.individual.family.project.name for sample in samples}
+    project_names = ', '.join(sorted(projects))
+    info.append(f'Loaded data for {len(samples)} RNA-seq samples in the following {len(projects)} projects: {project_names}')
 
-    # os.remove(serialized_file_path)
+    warnings = []
+    if remaining_sample_ids:
+        skipped_samples = ', '.join(sorted(remaining_sample_ids))
+        warnings.append(f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}')
+
+    os.remove(serialized_file_path)
     return create_json_response({
         'info': info,
         'warnings': warnings,

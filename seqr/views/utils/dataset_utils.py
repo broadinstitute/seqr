@@ -177,7 +177,7 @@ def match_sample_ids_to_sample_records(
 
     included_families = _validate_samples_families(samples, sample_type, dataset_type)
 
-    return samples, included_families, matched_individual_ids
+    return samples, included_families, matched_individual_ids, remaining_sample_ids
 
 
 def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index):
@@ -258,7 +258,7 @@ def match_and_update_samples(
         raise_unmatched_error_template=None,
 ):
     loaded_date = timezone.now()
-    samples, included_families, matched_individual_ids = match_sample_ids_to_sample_records(
+    samples, included_families, matched_individual_ids, remaining_sample_ids = match_sample_ids_to_sample_records(
         projects=projects,
         user=user,
         sample_ids=sample_ids,
@@ -280,4 +280,4 @@ def match_and_update_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
-    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
+    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update, remaining_sample_ids
