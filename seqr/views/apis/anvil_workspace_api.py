@@ -193,7 +193,7 @@ def create_project_from_workspace(request, namespace, name):
             )
             send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[request.user.email])
         except Exception as e:
-            logger.error(e, request.user)
+            logger.error('AnVIL loading delay email error: {}'.format(e), request.user)
 
     return create_json_response({'projectGuid':  project.guid})
 
