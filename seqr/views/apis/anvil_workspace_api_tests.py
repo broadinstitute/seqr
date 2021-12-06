@@ -251,6 +251,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', 'We are unable to load your data at this time.')
     @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs', lambda *args, **kwargs: True)
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist', lambda *args, **kwargs: True)
     @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter', lambda *args, **kwargs: FILE_DATA)
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account', lambda *args, **kwargs: False)
