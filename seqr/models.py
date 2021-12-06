@@ -957,3 +957,20 @@ class VariantSearchResults(ModelWithGUID):
 
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
+
+
+class RnaSeqOutlier(ModelWithGUID):
+    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
+    p_value = models.FloatField()
+    p_adjust = models.FloatField()
+    z_score = models.FloatField()
+
+    def __unicode__(self):
+        return "%s:%s" % (self.sample.sample_id, self.gene_id)
+
+    def _compute_guid(self):
+        return 'RSO%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        json_fields = ['gene_id', 'p_value', 'p_adjust', 'z_score']

@@ -23,7 +23,7 @@ from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, l
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, Project
+from seqr.models import Sample, Individual, Project, RnaSeqOutlier
 
 from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY, \
     ANALYST_PROJECT_CATEGORY
@@ -348,7 +348,7 @@ def receive_rna_seq_table(request):
         'info': [f'Loaded gzipped file {filename}'],
     })
 
-RNA_COLUMNS = ['geneID', 'pValue', 'padjust', 'zScore']
+RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
 
 @data_manager_required
 def update_rna_seq(request, upload_file_id):
@@ -368,13 +368,13 @@ def update_rna_seq(request, upload_file_id):
     with gzip.open(serialized_file_path, 'rt') as f:
         header =  _parse_tsv_row(next(f))
         header_index_map = {key: i for i, key in enumerate(header)}
-        missing_cols = ', '.join([col for col in ['sampleID'] + RNA_COLUMNS if col not in header_index_map])
+        missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
         if missing_cols:
             return create_json_response({'errors': [f'Invalid file: missing column(s) {missing_cols}']}, status=400)
 
         for line in f:
             row = _parse_tsv_row(line)
-            samples_by_id[row[header_index_map['sampleID']]].append({key: row[header_index_map[key]] for key in RNA_COLUMNS})
+            samples_by_id[row[header_index_map['sampleID']]].append({mapped_key: row[header_index_map[key]] for key, mapped_key in RNA_COLUMNS.items()})
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
@@ -393,13 +393,21 @@ def update_rna_seq(request, upload_file_id):
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
+    RnaSeqOutlier.bulk_delete(request.user, sample__guid__in=inactivated_sample_guids)
 
-    # TODO actually create data for the scores/genes for all the samples
+    for sample in samples:
+        logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
+        RnaSeqOutlier.bulk_create(request.user, [
+            RnaSeqOutlier(sample=sample, guid=f'RSO{i}_{sample.sample_id}'[:Sample.MAX_GUID_SIZE], **data)
+            for i, data in enumerate(samples_by_id[sample.sample_id])
+        ])
 
     prefetch_related_objects(samples, 'individual__family__project')
     projects = {sample.individual.family.project.name for sample in samples}
     project_names = ', '.join(sorted(projects))
-    info.append(f'Loaded data for {len(samples)} RNA-seq samples in the following {len(projects)} projects: {project_names}')
+    message = f'Loaded data for {len(samples)} RNA-seq samples ({len(activated_sample_guids)} new) in the following {len(projects)} projects: {project_names}'
+    info.append(message)
+    logger.info(message, request.user)
 
     warnings = []
     if remaining_sample_ids:
