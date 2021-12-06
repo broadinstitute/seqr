@@ -76,7 +76,7 @@ def log_model_bulk_update(logger, models, user, update_type, update_fields=None)
     if not models:
         return []
     db_entity = type(models[0]).__name__
-    entity_ids = [o.guid for o in models]
+    entity_ids = [o.guid if hasattr(o, 'guid') else o.id for o in models]
     db_update = {
         'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_{}'.format(update_type),
     }

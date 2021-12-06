@@ -16,7 +16,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
-from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.logging_utils import SeqrLogger, log_model_bulk_update
 
 from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file_content
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
@@ -364,7 +364,7 @@ def update_rna_seq(request, upload_file_id):
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
-    samples_by_id = defaultdict(list)
+    samples_by_id = defaultdict(dict)
     with gzip.open(serialized_file_path, 'rt') as f:
         header =  _parse_tsv_row(next(f))
         header_index_map = {key: i for i, key in enumerate(header)}
@@ -374,7 +374,13 @@ def update_rna_seq(request, upload_file_id):
 
         for line in f:
             row = _parse_tsv_row(line)
-            samples_by_id[row[header_index_map['sampleID']]].append({mapped_key: row[header_index_map[key]] for key, mapped_key in RNA_COLUMNS.items()})
+            sample_id = row[header_index_map['sampleID']]
+            row_dict = {mapped_key: row[header_index_map[key]] for key, mapped_key in RNA_COLUMNS.items()}
+            gene_id = row_dict['gene_id']
+            existing_data = samples_by_id[sample_id].get(gene_id)
+            if existing_data and existing_data != row_dict:
+                return create_json_response({'errors': [f'Error in {sample_id} data for {gene_id}: mismatched entires {existing_data} and {row_dict}']}, status=400)
+            samples_by_id[sample_id][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
@@ -393,14 +399,19 @@ def update_rna_seq(request, upload_file_id):
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
+    # Delete old data
     RnaSeqOutlier.bulk_delete(request.user, sample__guid__in=inactivated_sample_guids)
+    to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
+    log_model_bulk_update(logger, to_delete, request.user, 'delete')
+    to_delete.delete()
 
+    # Create new models
     for sample in samples:
         logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
-        RnaSeqOutlier.bulk_create(request.user, [
-            RnaSeqOutlier(sample=sample, guid=f'RSO{i}_{sample.sample_id}'[:Sample.MAX_GUID_SIZE], **data)
-            for i, data in enumerate(samples_by_id[sample.sample_id])
+        models = RnaSeqOutlier.objects.bulk_create([
+            RnaSeqOutlier(sample=sample, **data) for data in samples_by_id[sample.sample_id].values()
         ])
+        log_model_bulk_update(logger, models, request.user, 'create')
 
     prefetch_related_objects(samples, 'individual__family__project')
     projects = {sample.individual.family.project.name for sample in samples}
