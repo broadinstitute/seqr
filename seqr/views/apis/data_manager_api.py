@@ -381,6 +381,7 @@ def update_rna_seq(request, upload_file_id):
             if existing_data and existing_data != row_dict:
                 return create_json_response({'errors': [f'Error in {sample_id} data for {gene_id}: mismatched entires {existing_data} and {row_dict}']}, status=400)
             samples_by_id[sample_id][gene_id] = row_dict
+    os.remove(serialized_file_path)
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
@@ -400,23 +401,26 @@ def update_rna_seq(request, upload_file_id):
         return create_json_response({'errors': [str(e)]}, status=400)
 
     # Delete old data
-    RnaSeqOutlier.bulk_delete(request.user, sample__guid__in=inactivated_sample_guids)
     to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
-    log_model_bulk_update(logger, to_delete, request.user, 'delete')
-    to_delete.delete()
+    if to_delete:
+        log_model_bulk_update(logger, to_delete, request.user, 'delete')
+        to_delete.delete()
 
-    # Create new models
-    for sample in samples:
+    loaded_sample_ids = set(RnaSeqOutlier.objects.values_list('sample_id', flat=True).distinct())
+    samples_to_load = [sample for sample in samples if sample.id not in loaded_sample_ids]
+
+    # Create new outlier data models
+    for sample in samples_to_load:
         logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
         models = RnaSeqOutlier.objects.bulk_create([
             RnaSeqOutlier(sample=sample, **data) for data in samples_by_id[sample.sample_id].values()
         ])
         log_model_bulk_update(logger, models, request.user, 'create')
 
-    prefetch_related_objects(samples, 'individual__family__project')
-    projects = {sample.individual.family.project.name for sample in samples}
+    prefetch_related_objects(samples_to_load, 'individual__family__project')
+    projects = {sample.individual.family.project.name for sample in samples_to_load}
     project_names = ', '.join(sorted(projects))
-    message = f'Loaded data for {len(samples)} RNA-seq samples ({len(activated_sample_guids)} new) in the following {len(projects)} projects: {project_names}'
+    message = f'Loaded data for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
     info.append(message)
     logger.info(message, request.user)
 
@@ -424,8 +428,9 @@ def update_rna_seq(request, upload_file_id):
     if remaining_sample_ids:
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
         warnings.append(f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}')
+    if loaded_sample_ids:
+        warnings.append(f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file')
 
-    os.remove(serialized_file_path)
     return create_json_response({
         'info': info,
         'warnings': warnings,
