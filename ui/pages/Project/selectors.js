@@ -47,6 +47,8 @@ export const getProjectGuid = state => state.currentProjectGuid
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
+export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading
+export const getRnaSeqDataByIndividual = state => state.rnaSeqDataByIndividual
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
