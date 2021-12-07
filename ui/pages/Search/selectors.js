@@ -134,8 +134,10 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
   getProjectsByGuid,
   getLocusListsByGuid,
   (projectGuids, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set((projectGuids || []).reduce((acc, projectGuid) => (
-      projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), []))]
+    const locusListGuids = [...new Set((projectGuids || []).reduce(
+      (acc, projectGuid) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
+        [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
+    ))]
     const locusListOptions = locusListGuids.map((locusListGuid) => {
       const { name, paLocusList } = locusListsByGuid[locusListGuid]
       return { text: name, value: locusListGuid, description: paLocusList && 'PanelApp' }

@@ -35,6 +35,8 @@ import {
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
 
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
+  margin-top: 0px !important;
+
   .dropdown.icon {
     vertical-align: middle !important;
   }
