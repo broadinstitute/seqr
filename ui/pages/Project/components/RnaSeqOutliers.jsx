@@ -13,7 +13,7 @@ import { getRnaSeqDataByIndividual, getRnaSeqDataLoading } from '../selectors'
 
 const GRAPH_HEIGHT = 400
 const GRAPH_WIDTH = 600
-const GRAPH_MARGIN = { top: 10, bottom: 30, right: 30, left: 50 }
+const GRAPH_MARGIN = { top: 10, bottom: 40, right: 30, left: 45 }
 
 class RnaSeqOutliersGraph extends React.PureComponent {
 
@@ -24,7 +24,6 @@ class RnaSeqOutliersGraph extends React.PureComponent {
   componentDidMount() {
     const { data } = this.props
     const dataArray = Object.values(data)
-    console.log(dataArray.filter(({ showDetail }) => showDetail))
 
     const svg = select(this.svg).append('g')
       .attr('transform', `translate(${GRAPH_MARGIN.left},${GRAPH_MARGIN.top})`)
@@ -32,14 +31,32 @@ class RnaSeqOutliersGraph extends React.PureComponent {
     const x = scaleLinear().domain(extent(dataArray.map(d => d.zScore))).range([0, GRAPH_WIDTH])
     const y = scaleLog().domain(extent(dataArray.map(d => d.pValue))).range([0, GRAPH_HEIGHT])
 
+    // x-axis
     svg.append('g')
       .attr('transform', `translate(0,${GRAPH_HEIGHT + 5})`)
       .call(axisBottom(x).tickSizeOuter(0))
 
+    // y-axis
     svg.append('g')
       .attr('transform', 'translate(-10,0)')
-      .call(axisLeft(y).tickSizeOuter(0))
+      .call(axisLeft(y).tickSizeOuter(0).tickFormat(val => -Math.log10(val)))
 
+    // x-axis label
+    svg.append('text')
+      .attr('text-anchor', 'end')
+      .attr('y', GRAPH_HEIGHT + GRAPH_MARGIN.bottom)
+      .attr('x', GRAPH_WIDTH / 2)
+      .text('Z-score')
+
+    // y-axis label
+    svg.append('text')
+      .attr('text-anchor', 'end')
+      .attr('transform', 'rotate(-90)')
+      .attr('y', 10 - GRAPH_MARGIN.left)
+      .attr('x', GRAPH_MARGIN.bottom - (GRAPH_HEIGHT / 2))
+      .text('-log(P-value)')
+
+    // scatterplot
     svg.append('g').selectAll('dot').data(dataArray).enter()
       .append('circle')
       .attr('cx', d => x(d.zScore))
