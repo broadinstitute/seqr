@@ -116,14 +116,14 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const ShowRnaSeqOutliers = ({ sample }) => (sample ? (
+const ShowRnaSeqOutliers = ({ sample, ...props }) => (sample ? (
   <Modal
     modalName={`OUTRIDER-${sample.sampleId}`}
     title={`RNA-Seq OUTRIDER: ${sample.sampleId}`}
     trigger={<ButtonLink padding="1em 0 0 0" content="Show RNA-Seq OUTRIDER" />}
   >
     <React.Suspense fallback={<Loader />}>
-      <RnaSeqOutliers sample={sample} />
+      <RnaSeqOutliers sample={sample} {...props} />
     </React.Suspense>
   </Modal>
 ) : null)
@@ -171,6 +171,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
     <ShowRnaSeqOutliers
+      familyGuid={individual.familyGuid}
       sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
     />
   </div>
