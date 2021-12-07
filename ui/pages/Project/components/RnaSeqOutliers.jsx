@@ -7,6 +7,7 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { select } from 'd3-selection'
 
+import { getGenesById } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { loadRnaSeqData } from '../reducers'
 import { getRnaSeqDataByIndividual, getRnaSeqDataLoading } from '../selectors'
@@ -19,10 +20,11 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
   static propTypes = {
     data: PropTypes.object,
+    genesById: PropTypes.object,
   }
 
   componentDidMount() {
-    const { data } = this.props
+    const { data, genesById } = this.props
     const dataArray = Object.values(data)
 
     const svg = select(this.svg).append('g')
@@ -57,12 +59,25 @@ class RnaSeqOutliersGraph extends React.PureComponent {
       .text('-log(P-value)')
 
     // scatterplot
-    svg.append('g').selectAll('dot').data(dataArray).enter()
-      .append('circle')
+    const dataPoints = svg.append('g').selectAll('dot').data(dataArray).enter()
+      .append('g')
+
+    dataPoints.append('circle')
       .attr('cx', d => x(d.zScore))
       .attr('cy', d => y(d.pValue))
       .attr('r', 3)
       .style('fill', d => (d.showDetail ? 'red' : 'lightgrey'))
+
+    dataPoints.append('text')
+      .text(d => (d.showDetail ? (genesById[d.geneId] || {}).geneSymbol : null))
+      .attr('text-anchor', d => (x(d.zScore) > GRAPH_WIDTH - 100 ? 'end' : 'start'))
+      .attr('x', (d) => {
+        const xPos = x(d.zScore)
+        return xPos + (5 * (xPos > GRAPH_WIDTH - 100 ? -1 : 1))
+      })
+      .attr('y', d => y(d.pValue))
+      .style('fill', 'red')
+      .style('font-weight', 'bold')
   }
 
   setSvgElement = (element) => {
@@ -81,21 +96,23 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
 }
 
-const BaseRnaSeqOutliers = React.memo(({ sample, rnaSeqData, loading, load }) => (
+const BaseRnaSeqOutliers = React.memo(({ sample, rnaSeqData, genesById, loading, load }) => (
   <DataLoader content={rnaSeqData} contentId={sample.individualGuid} load={load} loading={loading}>
-    <RnaSeqOutliersGraph data={rnaSeqData} />
+    <RnaSeqOutliersGraph data={rnaSeqData} genesById={genesById} />
   </DataLoader>
 ))
 
 BaseRnaSeqOutliers.propTypes = {
   sample: PropTypes.object,
   rnaSeqData: PropTypes.object,
+  genesById: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.sample.individualGuid],
+  genesById: getGenesById(state),
   loading: getRnaSeqDataLoading(state),
 })
 
