@@ -2,6 +2,9 @@
 
 ## dev
 
+## 12/07/21
+* Show delay warning on AnVIL loading requests
+
 ## 11/23/21
 * Update the seqr Dockerfile base image from debian:stretch to python:3.7-slim-bullseye
 * Consolidation and cleanup of various RUN tasks in the seqr Dockerfile
