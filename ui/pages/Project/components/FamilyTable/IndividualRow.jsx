@@ -154,9 +154,6 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
     {loadedSamples.map(
       sample => <div key={sample.sampleGuid}><Sample loadedSample={sample} isOutdated={!sample.isActive} /></div>,
     )}
-    <ShowRnaSeqOutliers
-      sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
-    />
     {mmeSubmission && (
       mmeSubmission.deletedDate ? (
         <Popup
@@ -173,6 +170,9 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
+    <ShowRnaSeqOutliers
+      sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
+    />
   </div>
 ))
 

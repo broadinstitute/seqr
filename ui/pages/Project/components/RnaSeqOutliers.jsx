@@ -41,7 +41,7 @@ class RnaSeqOutliersGraph extends React.PureComponent {
     // y-axis
     svg.append('g')
       .attr('transform', 'translate(-10,0)')
-      .call(axisLeft(y).tickSizeOuter(0).tickFormat(val => -Math.log10(val)))
+      .call(axisLeft(y).tickSizeOuter(0).ticks(5, val => -Math.log10(val)))
 
     // x-axis label
     svg.append('text')
