@@ -26,6 +26,7 @@ from seqr.views.apis.family_api import \
     delete_family_note
 
 from seqr.views.apis.individual_api import \
+    get_individual_rna_seq_data, \
     get_hpo_terms, \
     update_individual_hpo_terms, \
     update_individual_handler, \
@@ -159,6 +160,7 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_igv_sample': update_individual_igv_sample,
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
+    'individual/(?P<individual_guid>[\w.|-]+)/rna_seq_data': get_individual_rna_seq_data,
 
     'family/(?P<family_guid>[\w.|-]+)/update_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/update_case_review_summary': save_internal_case_review_summary,
