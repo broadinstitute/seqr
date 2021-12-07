@@ -36,7 +36,7 @@ class EsSearch(object):
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
-        samples = Sample.objects.filter(is_active=True, individual__family__in=families)
+        samples = Sample.objects.filter(is_active=True, individual__family__in=families).exclude(sample_type=Sample.SAMPLE_TYPE_RNA)
         for s in samples.select_related('individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
