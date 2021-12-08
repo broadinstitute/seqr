@@ -960,6 +960,8 @@ class VariantSearchResults(ModelWithGUID):
 
 
 class RnaSeqOutlier(models.Model):
+    SIGNIFICANCE_THRESHOLD = 0.05
+
     sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
     gene_id = models.CharField(max_length=20)  # ensembl ID
     p_value = models.FloatField()

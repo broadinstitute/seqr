@@ -68,10 +68,10 @@ class RnaSeqOutliersGraph extends React.PureComponent {
       .attr('cx', d => x(d.zScore))
       .attr('cy', d => y(d.pValue))
       .attr('r', 3)
-      .style('fill', d => (d.showDetail ? 'red' : 'lightgrey'))
+      .style('fill', d => (d.isSignificant ? 'red' : 'lightgrey'))
 
     dataPoints.append('text')
-      .text(d => (d.showDetail ? (genesById[d.geneId] || {}).geneSymbol : null))
+      .text(d => (d.isSignificant ? (genesById[d.geneId] || {}).geneSymbol : null))
       .attr('text-anchor', d => (x(d.zScore) > GRAPH_WIDTH - 100 ? 'end' : 'start'))
       .attr('x', (d) => {
         const xPos = x(d.zScore)
@@ -103,7 +103,7 @@ const BaseRnaSeqOutliers = React.memo(({ sample, rnaSeqData, genesById, familyGu
     <SearchResultsLink
       buttonText="Search for variants in outlier genes"
       icon="search"
-      location={Object.values(rnaSeqData || {}).filter(({ showDetail }) => showDetail).map(({ geneId }) => geneId).join(',')}
+      location={Object.values(rnaSeqData || {}).filter(({ isSignificant }) => isSignificant).map(({ geneId }) => geneId).join(',')}
       familyGuid={familyGuid}
       inheritanceMode={ANY_AFFECTED}
       floated="right"
