@@ -137,6 +137,16 @@ export const getSamplesByFamily = createSelector(
   }, {}),
 )
 
+export const getHasActiveNonSearchVariantSampleByFamily = createSelector(
+  getSamplesByFamily,
+  samplesByFamily => Object.entries(samplesByFamily).reduce(
+    (acc, [familyGuid, familySamples]) => ({
+      ...acc,
+      [familyGuid]: familySamples.some(({ isActive }) => isActive),
+    }), {},
+  ),
+)
+
 export const getHasActiveVariantSampleByFamily = createSelector(
   getSamplesByFamily,
   samplesByFamily => Object.entries(samplesByFamily).reduce(

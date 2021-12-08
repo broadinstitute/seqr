@@ -8,7 +8,7 @@ import { loadAnalystOptions } from 'redux/rootReducer'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
-  getHasActiveVariantSampleByFamily,
+  getHasActiveNonSearchVariantSampleByFamily,
 } from 'redux/selectors'
 
 import Sample from '../sample'
@@ -25,7 +25,7 @@ const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVaria
   <Sample
     loadedSample={firstFamilySample}
     hoverDetails={compact ? 'first loaded' : null}
-    isOutdated={!(firstFamilySample || {}).isActive && !hasActiveVariantSample}
+    isOutdated={!hasActiveVariantSample}
   />
 ))
 
@@ -37,7 +37,7 @@ BaseFirstSample.propTypes = {
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
   firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: getHasActiveNonSearchVariantSampleByFamily(state)[ownProps.familyGuid],
 })
 
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
