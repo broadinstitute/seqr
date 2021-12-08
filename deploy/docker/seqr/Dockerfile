@@ -1,4 +1,4 @@
-FROM python:3.7-slim-bullseye
+FROM python:3.7-slim-bullseye as build
 
 LABEL maintainer="Broad TGG"
 
@@ -27,6 +27,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /build
+
+COPY ./ui ./ui
+
+WORKDIR /build/ui
+RUN npm ci && \
+    npm run build
+
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+WORKDIR /opt
+
+COPY ./requirements.txt .
+
+# install seqr dependencies
+RUN pip install --no-cache-dir wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
+    ln -s python3 /opt/venv/bin/python3.7
+
+FROM python:3.7-slim-bullseye as runtime
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    gnupg \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # install gcloud tools
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
@@ -35,35 +66,26 @@ RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /e
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
-ARG DISABLE_CACHE=1
-ARG SEQR_REPO=https://github.com/broadinstitute/seqr
-ARG SEQR_GIT_BRANCH=master
-
-# update seqr repo
-RUN git clone -q --branch $SEQR_GIT_BRANCH $SEQR_REPO
-
 WORKDIR /seqr
+COPY . .
+COPY --from=build /build/ui/dist /seqr/ui/dist
+COPY --from=build /opt/venv /opt/venv
 
-# install seqr dependencies
-RUN pip install --no-cache-dir wheel && \
-    pip install --no-cache-dir -r requirements.txt && \
-    cd ui && \
-    npm ci && \
-    npm run build && \
-    cd .. && \
-    ./manage.py collectstatic --no-input
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN ./manage.py collectstatic --no-input
 
 EXPOSE 8000
 
 ENV TERM=xterm
 
-COPY readiness_probe /
-COPY bin/*.sh /usr/local/bin/
-COPY gitconfig /root/.gitconfig
-COPY config/*.py ./
-COPY bashrc /root/.bashrc
+COPY deploy/docker/seqr/readiness_probe /
+COPY deploy/docker/seqr/bin/*.sh /usr/local/bin/
+COPY deploy/docker/seqr/gitconfig /root/.gitconfig
+COPY deploy/docker/seqr/config/*.py ./
+COPY deploy/docker/seqr/bashrc /root/.bashrc
 
-COPY entrypoint.sh /
+COPY deploy/docker/seqr/entrypoint.sh /
 
 CMD [ "/entrypoint.sh" ]

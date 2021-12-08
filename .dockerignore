@@ -1,0 +1,9 @@
+ui/dist/*
+static/*
+!static/fonts/*
+!static/images/*
+deploy/*
+!deploy/docker/seqr/*
+.git
+.vscode
+.idea
