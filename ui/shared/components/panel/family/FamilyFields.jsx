@@ -25,7 +25,7 @@ const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVaria
   <Sample
     loadedSample={firstFamilySample}
     hoverDetails={compact ? 'first loaded' : null}
-    isOutdated={!hasActiveVariantSample}
+    isOutdated={!firstFamilySample.isActive && !hasActiveVariantSample}
   />
 ))
 

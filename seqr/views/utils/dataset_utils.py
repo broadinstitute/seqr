@@ -94,6 +94,7 @@ def match_sample_ids_to_sample_records(
         sample_ids,
         elasticsearch_index,
         sample_type,
+        data_source=None,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id_to_individual_id_mapping=None,
         loaded_date=None,
@@ -112,6 +113,7 @@ def match_sample_ids_to_sample_records(
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
+        data_source (string): an optional string specifying the a non-elasticsearch source for the dataset
         sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
         loaded_date (object): datetime object
         raise_no_match_error (bool): whether to raise an exception if no sample matches are found
@@ -125,7 +127,7 @@ def match_sample_ids_to_sample_records(
     """
 
     samples = _find_matching_sample_records(
-        projects, sample_ids, sample_type, dataset_type, elasticsearch_index
+        projects, sample_ids, sample_type, dataset_type, elasticsearch_index, data_source,
     )
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
@@ -168,6 +170,7 @@ def match_sample_ids_to_sample_records(
                 sample_type=sample_type,
                 dataset_type=dataset_type,
                 elasticsearch_index=elasticsearch_index,
+                data_source=data_source,
                 individual=individual,
                 created_date=timezone.now(),
                 loaded_date=loaded_date or timezone.now(),
@@ -180,7 +183,7 @@ def match_sample_ids_to_sample_records(
     return samples, included_families, matched_individual_ids, remaining_sample_ids
 
 
-def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index):
+def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index, data_source):
     """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
     If elasticsearch_index is provided, will only match samples with the same index or with no index set
 
@@ -190,6 +193,7 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
+        data_source (string): an optional string specifying the a non-elasticsearch source for the dataset
 
     Returns:
         dict: sample_id_to_sample_record containing the matching Sample records
@@ -201,6 +205,7 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
         dataset_type=dataset_type,
         sample_id__in=sample_ids,
         elasticsearch_index=elasticsearch_index,
+        data_source=data_source,
     ))
 
 
@@ -228,7 +233,7 @@ def _validate_samples_families(samples, sample_type, dataset_type):
     return included_families
 
 
-def update_variant_samples(samples, user, elasticsearch_index, loaded_date=None,
+def update_variant_samples(samples, user, elasticsearch_index, data_source=None, loaded_date=None,
                             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=Sample.SAMPLE_TYPE_WES):
     if not loaded_date:
         loaded_date = timezone.now()
@@ -236,6 +241,7 @@ def update_variant_samples(samples, user, elasticsearch_index, loaded_date=None,
 
     activated_sample_guids = Sample.bulk_update(user, {
         'elasticsearch_index': elasticsearch_index,
+        'data_source': data_source,
         'is_active': True,
         'loaded_date': loaded_date,
     }, id__in=updated_samples, is_active=False)
@@ -253,7 +259,7 @@ def update_variant_samples(samples, user, elasticsearch_index, loaded_date=None,
 
 
 def match_and_update_samples(
-        projects, user, sample_ids, elasticsearch_index, sample_type, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        projects, user, sample_ids, sample_type, elasticsearch_index=None, data_source=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
         raise_unmatched_error_template=None,
 ):
@@ -263,6 +269,7 @@ def match_and_update_samples(
         user=user,
         sample_ids=sample_ids,
         elasticsearch_index=elasticsearch_index,
+        data_source=data_source,
         sample_type=sample_type,
         dataset_type=dataset_type,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
@@ -272,7 +279,7 @@ def match_and_update_samples(
     )
 
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
-        samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type)
+        samples, user, elasticsearch_index, data_source, loaded_date, dataset_type, sample_type)
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA

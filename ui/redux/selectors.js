@@ -142,7 +142,7 @@ export const getHasActiveVariantSampleByFamily = createSelector(
   samplesByFamily => Object.entries(samplesByFamily).reduce(
     (acc, [familyGuid, familySamples]) => ({
       ...acc,
-      [familyGuid]: familySamples.some(({ isActive }) => isActive),
+      [familyGuid]: familySamples.some(({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex),
     }), {},
   ),
 )

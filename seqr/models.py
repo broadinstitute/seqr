@@ -604,7 +604,8 @@ class Sample(ModelWithGUID):
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
 
-    elasticsearch_index = models.TextField(db_index=True)
+    elasticsearch_index = models.TextField(db_index=True, null=True)
+    data_source = models.TextField(null=True)
 
     # sample status
     is_active = models.BooleanField(default=False)
@@ -619,6 +620,7 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
+           'elasticsearch_index',
        ]
 
 

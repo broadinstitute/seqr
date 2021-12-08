@@ -322,7 +322,7 @@ def _get_loaded_before_date_project_individual_samples(project, max_loaded_date)
         max_loaded_date = datetime.now() - timedelta(days=365)
 
     loaded_samples = Sample.objects.filter(
-        individual__family__project=project,
+        individual__family__project=project, elasticsearch_index__isnull=False,
     ).select_related('individual__family').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
