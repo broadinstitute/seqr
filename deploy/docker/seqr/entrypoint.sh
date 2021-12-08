@@ -33,7 +33,6 @@ if [ -e "/.config/service-account-key.json" ]; then
     cp /.config/boto /root/.boto
 fi
 
-# launch django dev server in background
 cd /seqr
 
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
