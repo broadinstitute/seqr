@@ -27,14 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /build
-
-COPY ./ui ./ui
-
-WORKDIR /build/ui
-RUN npm ci && \
-    npm run build
-
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
@@ -47,6 +39,14 @@ COPY ./requirements.txt .
 RUN pip install --no-cache-dir wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     ln -s python3 /opt/venv/bin/python3.7
+
+WORKDIR /build
+
+COPY ./ui ./ui
+
+WORKDIR /build/ui
+RUN npm ci && \
+    npm run build
 
 FROM python:3.7-slim-bullseye as runtime
 
@@ -68,8 +68,8 @@ RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /e
 
 WORKDIR /seqr
 COPY . .
-COPY --from=build /build/ui/dist /seqr/ui/dist
 COPY --from=build /opt/venv /opt/venv
+COPY --from=build /build/ui/dist /seqr/ui/dist
 
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
