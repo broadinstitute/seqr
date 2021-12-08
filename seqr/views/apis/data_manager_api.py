@@ -362,11 +362,12 @@ def update_rna_seq(request, upload_file_id):
         if uploaded_mapping_file_id:
             sample_id_to_individual_id_mapping = load_mapping_file_content(load_uploaded_file(uploaded_mapping_file_id))
     except ValueError as e:
-        return create_json_response({'errors': [str(e)]}, status=400)
+        return create_json_response({'error': str(e)}, status=400)
 
     samples_by_id = defaultdict(dict)
     with gzip.open(serialized_file_path, 'rt') as f:
         header =  _parse_tsv_row(next(f))
+
         header_index_map = {key: i for i, key in enumerate(header)}
         missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
         if missing_cols:
@@ -379,7 +380,7 @@ def update_rna_seq(request, upload_file_id):
             gene_id = row_dict['gene_id']
             existing_data = samples_by_id[sample_id].get(gene_id)
             if existing_data and existing_data != row_dict:
-                return create_json_response({'error': f'Error in {sample_id} data for {gene_id}: mismatched entires {existing_data} and {row_dict}'}, status=400)
+                return create_json_response({'error': f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}'}, status=400)
             samples_by_id[sample_id][gene_id] = row_dict
     os.remove(serialized_file_path)
 
@@ -445,7 +446,7 @@ def _get_upload_file_path(uploaded_file_id):
 
 def _get_sample_data_file_path(sample_guid):
     upload_directory = get_temp_upload_directory()
-    return os.path.join(upload_directory, 'rna_sample_data' f'{sample_guid}.json.gz')
+    return os.path.join(upload_directory, 'rna_sample_data', f'{sample_guid}.json.gz')
 
 @data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
