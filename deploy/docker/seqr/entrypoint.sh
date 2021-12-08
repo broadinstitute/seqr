@@ -49,7 +49,6 @@ if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -l | grep seqrdb; then
   python -u manage.py migrate
   python -u manage.py migrate --database=reference_data
   python -u manage.py check
-  python -u manage.py collectstatic --no-input
   python -u manage.py loaddata variant_tag_types
   python -u manage.py loaddata variant_searches
   python -u manage.py update_all_reference_data --use-cached-omim
