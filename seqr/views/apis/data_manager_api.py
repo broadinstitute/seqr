@@ -389,7 +389,7 @@ def update_rna_seq(request, upload_file_id):
     logger.info(message, request.user)
 
     try:
-        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids, remaining_sample_ids = match_and_update_samples(
+        samples, _, _, inactivated_sample_guids, _, remaining_sample_ids = match_and_update_samples(
             projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
             user=request.user,
             sample_ids=samples_by_id.keys(),
