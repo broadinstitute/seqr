@@ -16,7 +16,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
-from seqr.utils.logging_utils import SeqrLogger, log_model_bulk_update
+from seqr.utils.logging_utils import SeqrLogger
 
 from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file_content
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
@@ -403,7 +403,9 @@ def update_rna_seq(request, upload_file_id):
     # Delete old data
     to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
     if to_delete:
-        log_model_bulk_update(logger, to_delete, request.user, 'delete')
+        logger.info(f'delete {len(to_delete)} RnaSeqOutliers', request.user, db_update={
+            'dbEntity': 'RnaSeqOutlier', 'numEntities': len(to_delete), 'parentEntityIds': inactivated_sample_guids, 'updateType': 'bulk_delete',
+        })
         to_delete.delete()
 
     loaded_sample_ids = set(RnaSeqOutlier.objects.values_list('sample_id', flat=True).distinct())
@@ -456,7 +458,10 @@ def load_rna_seq_sample_data(request, sample_guid):
     os.remove(sample_file)
 
     models = RnaSeqOutlier.objects.bulk_create([RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
-    log_model_bulk_update(logger, models, request.user, 'create')
+    logger.info(f'create {len(models)} RnaSeqOutliers', request.user, db_update={
+        'dbEntity': 'RnaSeqOutlier', 'numEntities': len(models), 'parentEntityIds': [sample_guid], 'updateType': 'bulk_create',
+    })
+
     return create_json_response({'success': True})
 
 
