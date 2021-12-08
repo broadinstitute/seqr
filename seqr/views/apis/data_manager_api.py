@@ -370,7 +370,7 @@ def update_rna_seq(request, upload_file_id):
         header_index_map = {key: i for i, key in enumerate(header)}
         missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
         if missing_cols:
-            return create_json_response({'errors': [f'Invalid file: missing column(s) {missing_cols}']}, status=400)
+            return create_json_response({'error': f'Invalid file: missing column(s) {missing_cols}'}, status=400)
 
         for line in f:
             row = _parse_tsv_row(line)
@@ -379,7 +379,7 @@ def update_rna_seq(request, upload_file_id):
             gene_id = row_dict['gene_id']
             existing_data = samples_by_id[sample_id].get(gene_id)
             if existing_data and existing_data != row_dict:
-                return create_json_response({'errors': [f'Error in {sample_id} data for {gene_id}: mismatched entires {existing_data} and {row_dict}']}, status=400)
+                return create_json_response({'error': f'Error in {sample_id} data for {gene_id}: mismatched entires {existing_data} and {row_dict}'}, status=400)
             samples_by_id[sample_id][gene_id] = row_dict
     os.remove(serialized_file_path)
 
@@ -398,7 +398,7 @@ def update_rna_seq(request, upload_file_id):
             raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
         )
     except ValueError as e:
-        return create_json_response({'errors': [str(e)]}, status=400)
+        return create_json_response({'error': str(e)}, status=400)
 
     # Delete old data
     to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
@@ -409,18 +409,15 @@ def update_rna_seq(request, upload_file_id):
     loaded_sample_ids = set(RnaSeqOutlier.objects.values_list('sample_id', flat=True).distinct())
     samples_to_load = [sample for sample in samples if sample.id not in loaded_sample_ids]
 
-    # Create new outlier data models
+    # Save sample data for loading
     for sample in samples_to_load:
-        logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
-        models = RnaSeqOutlier.objects.bulk_create([
-            RnaSeqOutlier(sample=sample, **data) for data in samples_by_id[sample.sample_id].values()
-        ])
-        log_model_bulk_update(logger, models, request.user, 'create')
+        with gzip.open(_get_sample_data_file_path(sample.guid), 'wt') as f:
+            json.dump(samples_by_id[sample.sample_id], f)
 
     prefetch_related_objects(samples_to_load, 'individual__family__project')
     projects = {sample.individual.family.project.name for sample in samples_to_load}
     project_names = ', '.join(sorted(projects))
-    message = f'Loaded data for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
+    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
     info.append(message)
     logger.info(message, request.user)
 
@@ -434,6 +431,7 @@ def update_rna_seq(request, upload_file_id):
     return create_json_response({
         'info': info,
         'warnings': warnings,
+        'sampleGuids': [s.guid for s in samples_to_load],
     })
 
 def _parse_tsv_row(row):
@@ -442,6 +440,24 @@ def _parse_tsv_row(row):
 def _get_upload_file_path(uploaded_file_id):
     upload_directory = get_temp_upload_directory()
     return os.path.join(upload_directory, uploaded_file_id)
+
+def _get_sample_data_file_path(sample_guid):
+    upload_directory = get_temp_upload_directory()
+    return os.path.join(upload_directory, 'rna_sample_data' f'{sample_guid}.json.gz')
+
+@data_manager_required
+def load_rna_seq_sample_data(request, sample_guid):
+    sample = Sample.objects.get(guid=sample_guid)
+    logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
+
+    sample_file = _get_sample_data_file_path(sample_guid)
+    with gzip.open(sample_file, 'rt') as f:
+        data_by_gene = json.load(f)
+    os.remove(sample_file)
+
+    models = RnaSeqOutlier.objects.bulk_create([RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
+    log_model_bulk_update(logger, models, request.user, 'create')
+    return create_json_response({'success': True})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
