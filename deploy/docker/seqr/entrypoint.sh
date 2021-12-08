@@ -36,13 +36,6 @@ fi
 # launch django dev server in background
 cd /seqr
 
-if [ "$SEQR_GIT_BRANCH" ]; then
-  git pull
-  git checkout "$SEQR_GIT_BRANCH"
-fi
-
-pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
-
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
