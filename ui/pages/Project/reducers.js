@@ -221,7 +221,7 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
 
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   const data = getState().rnaSeqDataByIndividual[individualGuid]
-  if (!data) {
+  if (!data || Object.values(data).every(({ isSignificant }) => isSignificant)) {
     dispatch({ type: REQUEST_RNA_SEQ_DATA })
     new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
       (responseJson) => {
