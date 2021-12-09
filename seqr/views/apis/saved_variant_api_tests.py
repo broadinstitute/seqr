@@ -154,7 +154,10 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': mock.ANY}})
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': {
+            'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+            'isSignificant': True,
+        }}})
 
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
