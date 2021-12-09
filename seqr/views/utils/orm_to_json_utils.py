@@ -860,8 +860,8 @@ def get_json_for_matchmaker_submission(submission):
         additional_model_fields=['contact_name', 'contact_href', 'submission_id'])
 
 
-def get_json_for_rna_seq_outliers(models):
+def get_json_for_rna_seq_outliers(models, **kwargs):
     def _process_result(data, model):
         data['isSignificant'] = data['pAdjust'] < model.SIGNIFICANCE_THRESHOLD
 
-    return _get_json_for_models(models, process_result=_process_result)
+    return _get_json_for_models(models, process_result=_process_result, **kwargs)
