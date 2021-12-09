@@ -39,13 +39,14 @@ const StyledDataTable = styled(Table)`
 const ASCENDING = 'ascending'
 const DESCENDING = 'descending'
 
-const getRowColumnContent = (row, isExport) => col => ((col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
+const getRowColumnContent = (row, isExport) => col => (
+  (col.format && !(isExport && col.noFormatExport)) ? col.format(row, isExport) : row[col.name])
 
 class DataTable extends React.PureComponent {
 
   static propTypes = {
-    data: PropTypes.array,
-    columns: PropTypes.array,
+    data: PropTypes.arrayOf(PropTypes.object),
+    columns: PropTypes.arrayOf(PropTypes.object),
     idField: PropTypes.string.isRequired,
     defaultSortColumn: PropTypes.string,
     defaultSortDescending: PropTypes.bool,
@@ -68,17 +69,14 @@ class DataTable extends React.PureComponent {
 
   static defaultProps = {
     selectedRows: {},
+    data: [],
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      column: props.defaultSortColumn,
-      direction: props.defaultSortDescending ? DESCENDING : ASCENDING,
-      activePage: 1,
-      filter: null,
-    }
+  state = {
+    column: null,
+    direction: null,
+    activePage: 1,
+    filter: null,
   }
 
   handleSort = clickedColumn => () => {
@@ -100,67 +98,79 @@ class DataTable extends React.PureComponent {
     this.setState({ filter: data.value.toLowerCase() })
   }
 
-  allSelected = () => (
-    this.props.data.length > 0 &&
-    Object.keys(this.props.selectedRows).length === this.props.data.length &&
-    Object.values(this.props.selectedRows).every(isSelected => isSelected)
-  )
+  allSelected = () => {
+    const { data, selectedRows } = this.props
+    return data.length > 0 && Object.keys(selectedRows).length === data.length &&
+      Object.values(selectedRows).every(isSelected => isSelected)
+  }
 
-  someSelected = () =>
-    this.props.data.some(row => this.props.selectedRows[row[this.props.idField]]) &&
-    this.props.data.some(row => !this.props.selectedRows[row[this.props.idField]])
+  someSelected = () => {
+    const { data, selectedRows, idField } = this.props
+    return data.some(row => selectedRows[row[idField]]) && data.some(row => !selectedRows[row[idField]])
+  }
 
   selectAll = () => {
-    if (!this.props.selectRows) {
+    const { data, selectRows, includeSelectedRowData, idField } = this.props
+    if (!selectRows) {
       return
     }
 
     const allSelected = !this.allSelected()
-    this.props.selectRows(
-      this.props.data.reduce((acc, row) => (
-        { ...acc, [row[this.props.idField]]: (allSelected && this.props.includeSelectedRowData) ? row : allSelected }
-      ), {}))
+    selectRows(
+      data.reduce((acc, row) => (
+        { ...acc, [row[idField]]: (allSelected && includeSelectedRowData) ? row : allSelected }
+      ), {}),
+    )
   }
 
   handleSelect = rowId => () => {
-    if (!this.props.selectRows) {
+    const { data, selectRows, selectedRows, includeSelectedRowData, idField } = this.props
+    if (!selectRows) {
       return
     }
 
-    let newSelected = !this.props.selectedRows[rowId]
-    if (newSelected && this.props.includeSelectedRowData) {
-      newSelected = this.props.data.find(row => row[this.props.idField] === rowId)
+    let newSelected = !selectedRows[rowId]
+    if (newSelected && includeSelectedRowData) {
+      newSelected = data.find(row => row[idField] === rowId)
     }
 
-    this.props.selectRows({ ...this.props.selectedRows, [rowId]: newSelected })
+    selectRows({ ...selectedRows, [rowId]: newSelected })
+  }
+
+  handlePageChange = (e, d) => this.setState({ activePage: d.activePage })
+
+  exportConfig = (sortedData) => {
+    const { columns, downloadFileName, downloadTableType } = this.props
+    if (!downloadFileName) {
+      return null
+    }
+    return [
+      {
+        name: downloadTableType || 'All Data',
+        filename: downloadFileName,
+        rawData: sortedData,
+        headers: columns.map(config => config.downloadColumn || config.content),
+        processRow: row => columns.map(getRowColumnContent(row, true)),
+      },
+    ]
   }
 
   render() {
     const {
-      data, defaultSortColumn, defaultSortDescending, getRowFilterVal, idField, columns, selectRows, selectedRows = {},
+      data = [], defaultSortColumn, defaultSortDescending, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
-      fixedWidth, includeSelectedRowData, filterContainer, loadingProps = {}, ...tableProps
+      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
+    const sortedDirection = direction || (defaultSortDescending ? DESCENDING : ASCENDING)
 
     let totalRows = data.length
-    let sortedData = data.sort(compareObjects(column))
-    if (direction === DESCENDING) {
+    let sortedData = data.sort(compareObjects(column || defaultSortColumn))
+    if (sortedDirection === DESCENDING) {
       sortedData = sortedData.reverse()
     }
 
-    let exportConfig
-    if (downloadFileName) {
-      exportConfig = [
-        {
-          name: downloadTableType || 'All Data',
-          filename: downloadFileName,
-          rawData: sortedData,
-          headers: columns.map(config => config.downloadColumn || config.content),
-          processRow: row => columns.map(getRowColumnContent(row, true)),
-        },
-      ]
-    }
+    const exportConfig = this.exportConfig(sortedData)
 
     if (filter) {
       sortedData = sortedData.filter(row => getRowFilterVal(row).toLowerCase().includes(filter))
@@ -188,29 +198,27 @@ class DataTable extends React.PureComponent {
       tableContent = sortedData.map(row => (
         <Table.Row key={row[idField]} onClick={this.handleSelect(row[idField])} active={!!selectedRows[row[idField]]}>
           {selectRows && <Table.Cell content={<Checkbox checked={!!selectedRows[row[idField]]} />} />}
-          {processedColumns.map(({ name, format, textAlign, verticalAlign }) =>
+          {processedColumns.map(({ name, format, textAlign, verticalAlign }) => (
             <Table.Cell
               key={name}
               content={getRowColumnContent(row)({ format, name })}
               textAlign={textAlign}
               verticalAlign={verticalAlign}
-            />,
-          )}
+            />
+          ))}
         </Table.Row>
       ))
     }
 
     const hasFooter = footer || isPaginated
     const filterInput = getRowFilterVal && <Form.Input label="Filter: " inline onChange={this.handleFilter} />
+    const rowSummary = `${((activePage - 1) * rowsPerPage) + 1}-${Math.min(activePage * rowsPerPage, totalRows)}`
 
     return (
       <TableContainer horizontalScroll={horizontalScroll}>
         {!hasFooter && (filterContainer ? React.createElement(filterContainer, {}, filterInput) : filterInput)}
         {exportConfig &&
-          <RightAligned topAlign={downloadAlign}>
-            <ExportTableButton downloads={exportConfig} />
-          </RightAligned>
-        }
+          <RightAligned topAlign={downloadAlign}><ExportTableButton downloads={exportConfig} /></RightAligned>}
         <StyledDataTable
           sortable
           selectable={!!selectRows}
@@ -220,56 +228,65 @@ class DataTable extends React.PureComponent {
         >
           <Table.Header>
             <Table.Row>
-              {selectRows &&
-                <Table.HeaderCell width={1} content={<Checkbox checked={this.allSelected()} indeterminate={this.someSelected()} onClick={this.selectAll} />} />
-              }
-              {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) =>
+              {selectRows && (
+                <Table.HeaderCell
+                  width={1}
+                  content={
+                    <Checkbox
+                      checked={this.allSelected()}
+                      indeterminate={this.someSelected()}
+                      onClick={this.selectAll}
+                    />
+                  }
+                />
+              )}
+              {processedColumns.map(({ name, format, noFormatExport, ...columnProps }) => (
                 <Table.HeaderCell
                   key={name}
-                  sorted={column === name ? direction : null}
+                  sorted={(column || defaultSortColumn) === name ? sortedDirection : null}
                   onClick={this.handleSort(name)}
                   {...columnProps}
-                />,
-              )}
+                />
+              ))}
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {tableContent}
           </Table.Body>
         </StyledDataTable>
-        {hasFooter &&
+        {hasFooter && (
           <Table {...tableProps} fixed={false} attached="bottom">
             <Table.Footer>
               <Table.Row>
                 {footer && <Table.HeaderCell collapsing={rowsPerPage} content={footer} />}
                 {filterInput && <Table.HeaderCell collapsing>{filterInput}</Table.HeaderCell>}
                 <Table.HeaderCell collapsing={!rowsPerPage} textAlign="right">
-                  {isPaginated &&
+                  {isPaginated && (
                     <div>
-                      Showing rows {((activePage - 1) * rowsPerPage) + 1}-{Math.min(activePage * rowsPerPage, totalRows)}
-                      &nbsp; &nbsp;
+                      {`Showing rows ${rowSummary}  `}
                       <Pagination
                         activePage={activePage}
                         totalPages={Math.ceil(totalRows / rowsPerPage)}
-                        onPageChange={(e, d) => this.setState({ activePage: d.activePage })}
+                        onPageChange={this.handlePageChange}
                         size="mini"
                       />
                     </div>
-                  }
+                  )}
                 </Table.HeaderCell>
               </Table.Row>
             </Table.Footer>
           </Table>
-        }
+        )}
       </TableContainer>
     )
   }
+
 }
 
 export default DataTable
 
 const EMPTY_OBJECT = {}
-export const SelectableTableFormInput = React.memo(({ value, onChange, error, data = [], ...props }) =>
+export const SelectableTableFormInput = React.memo(({ value, onChange, error, data, ...props }) => (
   <DataTable
     basic="very"
     fixed
@@ -277,12 +294,12 @@ export const SelectableTableFormInput = React.memo(({ value, onChange, error, da
     selectedRows={value || EMPTY_OBJECT}
     data={data}
     {...props}
-  />,
-)
+  />
+))
 
 SelectableTableFormInput.propTypes = {
-  value: PropTypes.any,
+  value: PropTypes.object,
   onChange: PropTypes.func,
   error: PropTypes.bool,
-  data: PropTypes.array,
+  data: PropTypes.arrayOf(PropTypes.object),
 }

@@ -50,7 +50,10 @@ INDIVIDUAL_UPDATE_DATA = {
     'absentNonstandardFeatures': [{'id': 'Some new feature', 'notes': 'No term for this', 'details': 'extra detail'}]
 }
 
-PM_REQUIRED_INDIVIDUAL_UPDATE_DATA = {'individualGuid': 'I000017_na20889', 'individualId': 'NA20889', 'familyId': '12'}
+PM_REQUIRED_INDIVIDUAL_GUID = 'I000017_na20889'
+PM_REQUIRED_INDIVIDUAL_UPDATE_DATA = {
+    'individualGuid': PM_REQUIRED_INDIVIDUAL_GUID, 'individualId': 'NA20889', 'familyId': '12', 'displayName': 'NA20889_a'
+}
 
 FAMILY_UPDATE_GUID = "I000007_na20870"
 INDIVIDUAL_FAMILY_UPDATE_DATA = {
@@ -149,6 +152,8 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertSetEqual({ID_UPDATE_GUID, FAMILY_UPDATE_GUID, CHILD_UPDATE_GUID, "I000003_na19679"},
                             set(response_json['familiesByGuid']['F000001_1']['individualGuids']))
         self.assertListEqual(response_json['familiesByGuid']['F000003_3']['individualGuids'], [])
+        self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
+        self.assertIsNone(response_json['familiesByGuid']['F000003_3']['pedigreeImage'])
 
         self.assertSetEqual({ID_UPDATE_GUID, FAMILY_UPDATE_GUID, CHILD_UPDATE_GUID},
                             set(response_json['individualsByGuid']))
@@ -193,6 +198,10 @@ class IndividualAPITest(AuthenticationTestCase):
             'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
         }))
         self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'individualsByGuid': {PM_REQUIRED_INDIVIDUAL_GUID: mock.ANY},
+            'familiesByGuid': {}
+        })
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
@@ -217,6 +226,7 @@ class IndividualAPITest(AuthenticationTestCase):
             'familiesByGuid': {'F000001_1': mock.ANY}
         })
         self.assertFalse('I000002_na19678' in response_json['familiesByGuid']['F000001_1']['individualGuids'])
+        self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
 
         # Test PM permission
         pm_required_delete_individuals_url = reverse(delete_individuals_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -276,7 +286,9 @@ class IndividualAPITest(AuthenticationTestCase):
         data = 'Family ID	Individual ID	Previous Individual ID	Paternal ID	Maternal ID	Sex	Affected Status	Notes	familyNotes\n\
 "1"	"NA19675"	"NA19675_1"	"NA19678"	"NA19679"	"Female"	"Affected"	"A affected individual, test1-zsf"	""\n\
 "1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
-"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family"'
+"1"	"NA19678"	""	""	""	"Male"	"Unaffected"	"a individual note"	""\n\
+"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	"a new family""\n\
+"21"	"HG00735"	""	""	""	"Female"	"Unaffected"	""	""'
 
         f = SimpleUploadedFile("1000_genomes demo_individuals.tsv", data.encode('utf-8'))
 
@@ -299,10 +311,11 @@ class IndividualAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid'})
 
-        self.assertEqual(len(response_json['familiesByGuid']), 1)
-        new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys())
-        self.assertNotEqual(new_family_guid, 'F000001_1')
+        self.assertEqual(len(response_json['familiesByGuid']), 2)
+        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        new_family_guid = next(guid for guid in response_json['familiesByGuid'].keys() if guid != 'F000001_1')
         self.assertEqual(response_json['familiesByGuid'][new_family_guid]['familyId'], '21')
+        self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
 
         self.assertEqual(len(response_json['familyNotesByGuid']), 1)
         new_note = list(response_json['familyNotesByGuid'].values())[0]
@@ -338,6 +351,7 @@ class IndividualAPITest(AuthenticationTestCase):
             PM_REQUIRED_PROJECT_GUID, response.json()['uploadedFileId']])
         response = self.client.post(save_url)
         self.assertEqual(response.status_code, 200)
+
 
     def _is_expected_individuals_metadata_upload(self, response):
         self.assertEqual(response.status_code, 200)

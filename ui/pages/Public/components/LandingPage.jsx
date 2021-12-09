@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { Segment, Header, Grid, Button, List } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
+import { SeqrPaperLink } from 'shared/components/page/Footer'
 import { GOOGLE_LOGIN_URL } from 'shared/utils/constants'
 
 const PageSegment = styled(Segment).attrs({ padded: 'very' })`
@@ -18,7 +19,7 @@ const LOGIN_BUTTON_PROPS = {
   label: 'Already a seqr user?', content: 'Sign In', primary: true, size: 'big', labelPosition: 'left',
 }
 
-const LandingPage = ({ }) =>
+const LandingPage = () => (
   <Segment.Group>
     <PageSegment textAlign="center" size="massive" secondary>
       <Header size="huge" content={<i>seqr</i>} />
@@ -43,12 +44,19 @@ const LandingPage = ({ }) =>
       </Grid>
     </Segment>
     <PageSegment textAlign="center" size="big" secondary>
-      <Header size="medium">About <i>seqr</i></Header>
+      <Header size="medium">
+        About &nbsp;
+        <i>seqr</i>
+      </Header>
       <VerticalSpacer height={10} />
       Next Generation Sequencing (NGS) is a powerful diagnostic and research tool for Mendelian disease, but without
       proper tools, this data can be inaccessible to researchers. We have developed seqr as an open source web interface
       to make research productive, accessible, and user-friendly while leveraging resources and infrastructure at the
       Broad Institute.
+      <Header size="small">
+        {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
+        View the <SeqrPaperLink content={<span><i>seqr</i> preprint</span>} />
+      </Header>
     </PageSegment>
     <PageSegment size="large" padded="very">
       <Header
@@ -56,8 +64,10 @@ const LandingPage = ({ }) =>
         size="medium"
         content={
           <span>
-            <i>seqr</i> is available through four methods:
-          </span>}
+            <i>seqr</i>
+            &nbsp; is available through four methods:
+          </span>
+        }
       />
       <Grid>
         <Grid.Column width={3} />
@@ -65,22 +75,29 @@ const LandingPage = ({ }) =>
           <List ordered>
             <List.Item>
               This instance is available for collaborators of the &nbsp;
-              <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor> with data pre-loaded into projects.
+              <Anchor href="https://populationgenomics.org.au">Centre for Population Genomics</Anchor>
+              with data pre-loaded into projects.
               If you are interested in collaborating with our group, please &nbsp;
-              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>.
+              <a href="mailto:seqr@populationgenomics.org.au"><b>contact us</b></a>
+              .
             </List.Item>
             <List.Item>
-              The Broad <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor> is available for all collaborators within the &nbsp;
-              <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor> or
-              Mendelian Genomics Research Center with data pre-loaded into projects
+              The Broad
+              <Anchor href="https://seqr.broadinstitute.org">Institute&apos;s instance</Anchor>
+              is available for all collaborators within the &nbsp;
+              <Anchor href="https://cmg.broadinstitute.org">Broad Institute Center for Mendelian Genomics</Anchor>
+              or Mendelian Genomics Research Center with data pre-loaded into projects
             </List.Item>
             <List.Item>
-              Available for use on the <Anchor href="https://anvilproject.org">AnVIL platform</Anchor> where requests
+              Available for use on the
+              <Anchor href="https://anvilproject.org">AnVIL platform</Anchor>
+              where requests
               can be placed for loading a joint called vcf into seqr
             </List.Item>
             <List.Item>
               Available on GitHub as an &nbsp;
-              <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor> for download and local
+              <Anchor href="http://github.com/broadinstitute/seqr">open source project</Anchor>
+              for download and local
               installation
             </List.Item>
           </List>
@@ -95,8 +112,9 @@ const LandingPage = ({ }) =>
           <Anchor href="mailto:seqr@populationgenomics.org.au">contact us</Anchor>
         </List.Item>
         <List.Item>
-          Please use the <Anchor href="http://github.com/populationgenomics/seqr/issues">CPG&apos;s GitHub issues page</Anchor> to
-          submit bug reports or feature requests
+          Please use the &nbsp;
+          <Anchor href="http://github.com/populationgenomics/seqr/issues">CPG&apos;s GitHub issues page</Anchor>
+          &nbsp; to submit bug reports or feature requests
         </List.Item>
         <List.Item>
           Training videos for use of seqr are available on the &nbsp;
@@ -107,6 +125,6 @@ const LandingPage = ({ }) =>
       </List>
     </PageSegment>
   </Segment.Group>
-
+)
 
 export default LandingPage

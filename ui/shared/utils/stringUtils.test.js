@@ -16,6 +16,6 @@ test('toCamelcase', () => {
 })
 
 test('stripMarkdown', () => {
-  expect(stripMarkdown('# Header: *emphasized text*')).toEqual('Header: emphasized text')
+  expect(stripMarkdown('# Header:\n*emphasized\n\ntext*\n')).toEqual('Header: emphasized  text')
   expect(stripMarkdown(null)).toEqual('')
 })

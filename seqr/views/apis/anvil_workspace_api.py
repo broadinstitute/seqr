@@ -11,6 +11,7 @@ from django.shortcuts import redirect
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT
 from seqr.views.react_app import render_app_html
+from seqr.views.utils.dataset_utils import VCF_FILE_EXTENSIONS
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
@@ -122,8 +123,8 @@ def create_project_from_workspace(request, namespace, name):
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=request_json['dataPath'].lstrip('/'))
-    if not (data_path.endswith('.vcf') or data_path.endswith('.vcf.gz') or data_path.endswith('.vcf.bgz')):
-        error = 'Invalid VCF file format - file path must end with .vcf, .vcf.gz, or .vcf.bgz'
+    if not data_path.endswith(VCF_FILE_EXTENSIONS):
+        error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
         return create_json_response({'error': error}, status=400, reason=error)
     if not does_file_exist(data_path, user=request.user):
         error = 'Data file or path {} is not found.'.format(request_json['dataPath'])

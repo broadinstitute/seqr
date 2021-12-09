@@ -46,6 +46,7 @@ from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
     create_saved_variant_handler, \
     update_variant_tags_handler, \
+    update_variant_acmg_classification_handler, \
     update_variant_functional_data_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
@@ -102,8 +103,7 @@ from seqr.views.apis.users_api import \
     update_user, \
     forgot_password
 
-from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, proxy_to_kibana, \
-    delete_index
+from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, proxy_to_kibana
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
@@ -212,6 +212,7 @@ api_endpoints = {
 
     'saved_variant/create': create_saved_variant_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_tags': update_variant_tags_handler,
+    'saved_variant/(?P<variant_guid>[^/]+)/update_acmg_classification': update_variant_acmg_classification_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_functional_data': update_variant_functional_data_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/note/create': create_variant_note_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/note/(?P<note_guid>[^/]+)/update': update_variant_note_handler,

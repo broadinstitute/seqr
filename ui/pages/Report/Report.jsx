@@ -12,7 +12,6 @@ import DiscoverySheet from './components/DiscoverySheet'
 import SampleMetadata from './components/SampleMetadata'
 import SeqrStats from './components/SeqrStats'
 
-
 export const REPORT_PAGES = [
   { path: 'anvil', component: Anvil },
   { path: 'custom_search', params: '/:searchHash?', component: CustomSearch },
@@ -24,11 +23,11 @@ export const REPORT_PAGES = [
 const Report = ({ match, user }) => (
   user.isAnalyst ? (
     <Switch>
-      {REPORT_PAGES.map(({ path, params, component }) =>
-        <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
+      {REPORT_PAGES.map(
+        ({ path, params, component }) => <Route key={path} path={`${match.url}/${path}${params || ''}`} component={component} />,
       )}
       <Route path={match.url} component={null} />
-      <Route component={() => <Error404 />} />
+      <Route component={Error404} />
     </Switch>
   ) : <Error401 />
 )

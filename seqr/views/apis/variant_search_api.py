@@ -255,7 +255,7 @@ def export_variants_handler(request, search_hash):
     variants, _ = get_es_variants(results_model, page=1, load_all=True, user=request.user)
     variants = _flatten_variants(variants)
 
-    json, variants_to_saved_variants = _get_saved_variants(variants, families)
+    json_saved_variants, variants_to_saved_variants = _get_saved_variants(variants, families)
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
@@ -268,8 +268,8 @@ def export_variants_handler(request, search_hash):
             variant_guid = variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')
             family_tags = {
                 'family_id': family_ids_by_guid.get(family_guid),
-                'tags': [tag for tag in json['variantTagsByGuid'].values() if variant_guid in tag['variantGuids']],
-                'notes': [note for note in json['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
+                'tags': [tag for tag in json_saved_variants['variantTagsByGuid'].values() if variant_guid in tag['variantGuids']],
+                'notes': [note for note in json_saved_variants['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
             }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         genotypes = list(variant['genotypes'].values())

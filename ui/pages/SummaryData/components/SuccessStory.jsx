@@ -34,14 +34,22 @@ const formatInitialValue = (match) => {
   let queryToArr = []
   if (query === 'all') {
     queryToArr = Object.keys(FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP)
-  }
-  else if (query) {
+  } else if (query) {
     queryToArr = query.split(',')
   }
   return { successStoryTypes: queryToArr }
 }
 
-const SuccessStory = React.memo(({ match, data, loading, loadingError, load, history }) =>
+const redirectSuccessStoryTypes = history => value => history.push(`/summary_data/success_story/${value.successStoryTypes}`)
+
+const fieldDisplay = value => value.map(tag => (
+  <span>
+    {successStoryTypeDisplay(tag)}
+    <HorizontalSpacer width={4} />
+  </span>
+))
+
+const SuccessStory = React.memo(({ match, data, loading, loadingError, load, history }) => (
   <DataLoader contentId={match.params.successStoryTypes} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Types:" />
     <TagFieldView
@@ -51,16 +59,13 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
       idField="row_id"
       initialValues={formatInitialValue(match)}
       tagOptions={FAMILY_SUCCESS_STORY_TYPE_OPTIONS}
-      onSubmit={value => history.push(`/summary_data/success_story/${value.successStoryTypes}`)}
+      onSubmit={redirectSuccessStoryTypes(history)}
       showIconOnly
       simplifiedValue
-      fieldDisplay={value => value.map(tag =>
-        <span>
-          {successStoryTypeDisplay(tag)}
-          <HorizontalSpacer width={4} />
-        </span>)}
+      fieldDisplay={fieldDisplay}
     />
-    or <NavLink to="/summary_data/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
+    or &nbsp;
+    <NavLink to="/summary_data/success_story/all" activeStyle={ACTIVE_LINK_STYLE}>view all success stories</NavLink>
     <VerticalSpacer height={15} />
     <DataTable
       downloadFileName={getDownloadFilename(match.params.successStoryTypes, data)}
@@ -73,12 +78,12 @@ const SuccessStory = React.memo(({ match, data, loading, loadingError, load, his
       loadingProps={LOADING_PROPS}
       getRowFilterVal={getFamilyFilterVal}
     />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 SuccessStory.propTypes = {
   match: PropTypes.object,
-  data: PropTypes.array,
+  data: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   loadingError: PropTypes.string,
   load: PropTypes.func,

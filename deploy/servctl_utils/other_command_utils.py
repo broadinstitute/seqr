@@ -14,7 +14,7 @@ def delete_component(component, deployment_target=None):
     """Runs kubectl commands to delete any running deployment, service, or pod objects for the given component(s).
 
     Args:
-        component (string): component to delete (eg. 'postgres' or 'nginx').
+        component (string): component to delete (eg. 'nginx').
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
     pod_name = run(
@@ -33,8 +33,6 @@ def delete_component(component, deployment_target=None):
             pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
     elif component == 'kibana':
         run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
-    elif component == 'postgres':
-        run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
     elif component == "nginx":
         raise ValueError("TODO: implement deleting nginx")
 
@@ -68,15 +66,6 @@ def delete_all(deployment_target):
         "deploy/kubernetes/shared-settings.yaml",
         "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
     ], settings)
-
-    run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
-    run('gcloud sql instances delete postgres-{}'.format(deployment_target.replace('gcloud-', '')))
-
-    for disk_label in [d.strip() for d in settings['DISKS'].split(',') if d]:
-        for disk_name in  get_disk_names(disk_label, settings):
-            run('gcloud compute disks delete --zone {zone} {disk_name}'.format(
-                zone=settings['GCLOUD_ZONE'], disk_name=disk_name), is_interactive=True)
-
 
 def get_disk_names(disk, settings):
     num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1

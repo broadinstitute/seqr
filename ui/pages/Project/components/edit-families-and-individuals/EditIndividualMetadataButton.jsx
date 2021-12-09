@@ -10,10 +10,9 @@ export default React.memo(() => (
     modalName={MODAL_NAME}
     title="Bulk Edit Individual Metadata"
     size="large"
-    trigger={<ButtonLink>Edit Individuals</ButtonLink>}
+    trigger={<ButtonLink>Bulk Edit Metadata</ButtonLink>}
   >
     <EditIndividualMetadataBulkForm modalName={MODAL_NAME} />
   </Modal>
 
 ))
-

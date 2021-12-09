@@ -4,18 +4,20 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid, Popup } from 'semantic-ui-react'
+import { Grid, Popup, Loader } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
-import Gtex from '../../graph/Gtex'
 import { SectionHeader } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
 
+const Gtex = React.lazy(() => import('../../graph/Gtex'))
 
 const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
+
+const GRAY_STYLE = { color: 'gray' }
 
 const CompactGrid = styled(Grid)`
   padding: 10px !important;
@@ -25,22 +27,18 @@ const CompactGrid = styled(Grid)`
   }
 `
 
-const GeneSection = React.memo(({ details }) =>
+const geneSection = details => (
   <CompactGrid>
-    {details.map(row => row &&
+    {details.map(row => row && (
       <Grid.Row key={row.title}>
         <Grid.Column width={2} textAlign="right">
           <b>{row.title}</b>
         </Grid.Column>
         <Grid.Column width={14}>{row.content}</Grid.Column>
-      </Grid.Row>,
-    )}
-  </CompactGrid>,
+      </Grid.Row>
+    ))}
+  </CompactGrid>
 )
-
-GeneSection.propTypes = {
-  details: PropTypes.array,
-}
 
 const textWithLinks = (text) => {
   const linkMap = {
@@ -49,33 +47,41 @@ const textWithLinks = (text) => {
     MIM: 'http://www.omim.org/entry/',
   }
   const linkRegex = new RegExp(
-    Object.keys(linkMap).map(title => `(${title}:\\d+)`)
-      .concat(['(DISEASE:.*?=\\[MIM)', '(;)'])
-      .join('|'), 'g')
+    Object.keys(linkMap).map(title => `(${title}:\\d+)`).concat(['(DISEASE:.*?=\\[MIM)', '(;)']).join('|'), 'g',
+  )
   return (
     <span>
       {text && text.split(linkRegex).map((str, i) => {
-        for (const title of Object.keys(linkMap)) { // eslint-disable-line no-restricted-syntax
+        Object.keys(linkMap).forEach((title) => {
           if (str && str.startsWith(`${title}:`)) {
             const id = str.replace(`${title}:`, '')
-            return <span key={i}>{title}: <a href={`${linkMap[title]}${id}`} target="_blank">{id}</a></span>
+            return (
+              <span key={i}>
+                {`${title}: `}
+                <a href={`${linkMap[title]}${id}`} target="_blank" rel="noreferrer">{id}</a>
+              </span>
+            )
           }
-        }
+          return null
+        })
         if (str && str.startsWith('DISEASE:') && str.endsWith('[')) {
-          return <span key={i}><b>{str.replace('DISEASE:', '').replace('[', '')}</b> [</span>
+          return (
+            <span key={i}>
+              <b>{str.replace('DISEASE:', '').replace('[', '')}</b>
+              &nbsp; [
+            </span>
+          )
         }
         if (str === ';') {
           return <br key={i} />
         }
         return str
-      },
-      )}
+      })}
     </span>
   )
 }
 
-export const getOtherGeneNames = gene =>
-  (gene.geneNames || '').split(';').filter(name => name !== gene.geneSymbol)
+export const getOtherGeneNames = gene => (gene.geneNames || '').split(';').filter(name => name !== gene.geneSymbol)
 
 const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
   const fieldsToShow = fields.map(({ field, shouldShow, ...config }) => {
@@ -85,22 +91,26 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
     }
     return { value, ...config }
   }).filter(({ value }) => value)
-  return fieldsToShow.length ?
+  return fieldsToShow.length ? (
     <div>
-      {fieldsToShow.map(({ value, label, rankField }) => value &&
+      {fieldsToShow.map(({ value, label, rankField }) => value && (
         <span key={label}>
-          {label}: {value.toPrecision(4)}
-          {rankField && <span> (ranked {scores[rankField]} most {rankDescription} out of {scores.totalGenes} genes under study)</span>}
+          {`${label}: ${value.toPrecision(4)} ${rankField ?
+            `(ranked ${scores[rankField]} most ${rankDescription} out of ${scores.totalGenes} genes under study)` : ''}`}
           <br />
-        </span>,
-      )}
-      <i style={{ color: 'gray' }}>NOTE: {note}</i>
-    </div> : 'No score available'
+        </span>
+      ))}
+      <i style={GRAY_STYLE}>
+        NOTE: &nbsp;
+        {note}
+      </i>
+    </div>
+  ) : 'No score available'
 }
 
 ScoreDetails.propTypes = {
   scores: PropTypes.object,
-  fields: PropTypes.array,
+  fields: PropTypes.arrayOf(PropTypes.object),
   note: PropTypes.node,
   rankDescription: PropTypes.string,
 }
@@ -117,11 +127,13 @@ const STAT_DETAILS = [
         Missense contraint is a measure of the degree to which the number of missense variants found
         in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
         described in [
-        <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank">
+        <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank" rel="noreferrer">
           K. Samocha 2014
-        </a>]. In general this metric is most useful for genes that act via a dominant mechanism, and where
+        </a>
+        ]. In general this metric is most useful for genes that act via a dominant mechanism, and where
         a large proportion of the protein is heavily functionally constrained. For more details see
-        this <a href={EXAC_README_URL} target="_blank">README</a>.
+        this &nbsp;
+        <a href={EXAC_README_URL} target="_blank" rel="noreferrer">README</a>
       </span>
     ),
   },
@@ -180,19 +192,20 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
   const associationDetails = [
     {
       title: 'OMIM',
-      content: (gene.omimPhenotypes || []).length > 0 ?
+      content: (gene.omimPhenotypes || []).length > 0 ? (
         <div>
-          {gene.omimPhenotypes.map(phenotype =>
-            <span key={phenotype.phenotypeDescription}>{phenotype.phenotypeMimNumber ?
-              <a href={`http://www.omim.org/entry/${phenotype.phenotypeMimNumber}`} target="_blank">
-                {phenotype.phenotypeDescription}
-              </a>
-              : phenotype.phenotypeDescription}
+          {gene.omimPhenotypes.map(phenotype => (
+            <span key={phenotype.phenotypeDescription}>
+              {phenotype.phenotypeMimNumber ? (
+                <a href={`http://www.omim.org/entry/${phenotype.phenotypeMimNumber}`} target="_blank" rel="noreferrer">
+                  {phenotype.phenotypeDescription}
+                </a>
+              ) : phenotype.phenotypeDescription}
               <br />
-            </span>,
-          )}
+            </span>
+          ))}
         </div>
-        : <em>No disease associations</em>,
+      ) : <em>No disease associations</em>,
     },
   ]
   if (gene.diseaseDesc) {
@@ -219,19 +232,24 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
   ]
   return (
     <div>
-      {linkDetails.filter(linkConfig => linkConfig).map(linkConfig =>
+      {linkDetails.filter(linkConfig => linkConfig).map(linkConfig => (
         <Popup
           key={linkConfig.title}
-          trigger={<a href={linkConfig.link} target="_blank"><b>{linkConfig.title}</b><HorizontalSpacer width={20} /></a>}
+          trigger={
+            <a href={linkConfig.link} target="_blank" rel="noreferrer">
+              <b>{linkConfig.title}</b>
+              <HorizontalSpacer width={20} />
+            </a>
+          }
           content={linkConfig.description}
-        />,
-      )}
+        />
+      ))}
       <SectionHeader>Basics</SectionHeader>
-      <GeneSection details={basicDetails} />
+      {geneSection(basicDetails)}
       <SectionHeader>Stats</SectionHeader>
-      <GeneSection details={statDetails} />
+      {geneSection(statDetails)}
       <SectionHeader>Disease Associations</SectionHeader>
-      <GeneSection details={associationDetails} />
+      {geneSection(associationDetails)}
       <SectionHeader>Shared Notes</SectionHeader>
       <p>
         Information saved here will be shared across seqr. Please consider using this space to share gene-specific
@@ -254,15 +272,19 @@ GeneDetailContent.propTypes = {
   user: PropTypes.object,
 }
 
-const GeneDetail = React.memo(({ geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote }) =>
+const GeneDetail = React.memo((
+  { geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote },
+) => (
   <div>
     <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
       <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} user={user} />
     </DataLoader>
     <SectionHeader>Tissue-Specific Expression</SectionHeader>
-    <Gtex geneId={geneId} />
-  </div>,
-)
+    <React.Suspense fallback={<Loader />}>
+      <Gtex geneId={geneId} />
+    </React.Suspense>
+  </div>
+))
 
 GeneDetail.propTypes = {
   geneId: PropTypes.string.isRequired,

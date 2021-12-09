@@ -17,7 +17,6 @@ import {
 import { updateAnalysisGroup } from '../reducers'
 import { getProjectFamiliesByGuid, getCurrentProject } from '../selectors'
 
-
 const FAMILY_FIELDS = [
   { name: FAMILY_DISPLAY_NAME, width: 3, content: 'Family' },
   {
@@ -29,106 +28,143 @@ const FAMILY_FIELDS = [
   { name: FAMILY_FIELD_DESCRIPTION, width: 9, content: 'Description' },
 ]
 
+const parseFamilyGuids = (newValue, previousValue, allValues) => {
+  const parsed = {}
+  if (newValue.parsedData && newValue.uploadedFileId !== (previousValue || {}).uploadedFileId) {
+    parsed.familyIdMap = allValues.allFamilies.reduce(
+      (acc, family) => ({ ...acc, [family.familyId]: family.familyGuid }), {},
+    )
+    parsed.familyGuids = newValue.parsedData.map(row => parsed.familyIdMap[row[0]]).filter(familyGuid => familyGuid)
+  }
+  return parsed
+}
 
-const FamilySelectorField = React.memo(({ value, onChange, families }) =>
-  <div>
-    <FileUploadField
-      name="uploadedFamilyIds"
-      normalize={(newValue, previousValue) => {
-       if (newValue.errors) {
-          return { ...newValue, info: newValue.errors, errors: [] }
-        }
-        if (newValue.parsedData && newValue.uploadedFileId !== (previousValue || {}).uploadedFileId) {
-          const familyIdMap = families.reduce((acc, family) => ({ ...acc, [family.familyId]: family.familyGuid }), {})
-          const familyGuids = newValue.parsedData.map(row => familyIdMap[row[0]]).filter(familyGuid => familyGuid)
-          const info = [`Uploaded ${familyGuids.length} families`]
-          if (newValue.parsedData.length !== familyGuids.length) {
-            const missingFamilies = newValue.parsedData.filter(row => !familyIdMap[row[0]]).map(row => row[0])
-            info.push(`Unable to find families with the following IDs: ${missingFamilies.join(', ')}`)
-          }
-          return { ...newValue, familyGuids, info }
-        }
-        return newValue
-      }}
-      onChange={(e, newValue) => {
-        if (newValue.familyGuids) {
-          onChange([...new Set([...value, ...newValue.familyGuids])])
-        }
-      }}
-      clearTimeOut={0}
-      auto
-      returnParsedData
-      dropzoneLabel="Drag-drop or click here to upload a list of family IDs"
-    />
-    <SelectableTableFormInput
-      idField="familyGuid"
-      defaultSortColumn={FAMILY_DISPLAY_NAME}
-      columns={FAMILY_FIELDS}
-      data={families}
-      value={value.reduce((acc, key) => ({ ...acc, [key]: true }), {})}
-      onChange={newValue => onChange(Object.keys(newValue).filter(key => newValue[key]))}
-    />
-  </div>,
-)
+const normalizeFamilyUpload = (newValue, previousValue, allValues) => {
+  if (newValue.errors) {
+    return { ...newValue, info: newValue.errors, errors: [] }
+  }
 
-FamilySelectorField.propTypes = {
-  value: PropTypes.array,
-  families: PropTypes.array.isRequired,
+  const { familyGuids, familyIdMap } = parseFamilyGuids(newValue, previousValue, allValues)
+  if (familyGuids) {
+    const info = [`Uploaded ${familyGuids.length} families`]
+    if (newValue.parsedData.length !== familyGuids.length) {
+      const missingFamilies = newValue.parsedData.filter(row => !familyIdMap[row[0]]).map(row => row[0])
+      info.push(`Unable to find families with the following IDs: ${missingFamilies.join(', ')}`)
+    }
+    return { ...newValue, familyGuids, info }
+  }
+
+  return newValue
+}
+
+const FamilyFileUploadField = React.memo(({ onChange }) => (
+  <FileUploadField
+    name="uploadedFamilyIds"
+    normalize={normalizeFamilyUpload}
+    onChange={onChange}
+    clearTimeOut={0}
+    auto
+    returnParsedData
+    dropzoneLabel="Drag-drop or click here to upload a list of family IDs"
+  />
+))
+
+FamilyFileUploadField.propTypes = {
   onChange: PropTypes.func,
 }
 
+const mapTableInputStateToProps = state => ({
+  data: Object.values(getProjectFamiliesByGuid(state)),
+})
 
 const FORM_FIELDS = [
   { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') },
   { name: 'description', label: 'Description' },
   {
     name: 'familyGuids',
-    component: FamilySelectorField,
+    key: 'familyUpload',
+    component: FamilyFileUploadField,
+    normalize: (newValue, previousValue, allValues) => {
+      const { familyGuids } = parseFamilyGuids(newValue, previousValue, allValues)
+      return [...new Set([...(previousValue || []), ...(familyGuids || [])])]
+    },
+  },
+  {
+    name: 'familyGuids',
+    key: 'familyTable',
+    idField: 'familyGuid',
+    defaultSortColumn: FAMILY_DISPLAY_NAME,
+    columns: FAMILY_FIELDS,
+    component: connect(mapTableInputStateToProps)(SelectableTableFormInput),
     validate: value => ((value && value.length) ? undefined : 'Families are required'),
-    format: value => value || [],
+    format: value => (value || []).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
+    normalize: value => Object.keys(value).filter(key => value[key]),
   },
 ]
 
-export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, projectFamiliesByGuid, iconOnly }) => {
+export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, initialValues, onSubmit, iconOnly }) => {
   if (!project.canEdit) {
     return null
   }
   const title = `${analysisGroup ? 'Edit' : 'Create New'} Analysis Group`
-  const buttonProps = analysisGroup ?
-    { modalId: `editAnalysisGroup-${analysisGroup.analysisGroupGuid}`, initialValues: analysisGroup, sie: 'tiny' } :
-    { modalId: `createAnalysisGroup-${project.projectGuid}`, initialValues: { projectGuid: project.projectGuid }, editIconName: 'plus' }
-
-  const fields = [...FORM_FIELDS]
-  fields[2].families = Object.values(projectFamiliesByGuid)
-
-  return <UpdateButton
-    modalTitle={title}
-    buttonText={iconOnly ? null : title}
-    onSubmit={onSubmit}
-    formFields={fields}
-    showErrorPanel
-    {...buttonProps}
-  />
+  return (
+    <UpdateButton
+      modalTitle={title}
+      modalId={
+        analysisGroup ? `editAnalysisGroup-${analysisGroup.analysisGroupGuid}` :
+          `createAnalysisGroup-${project.projectGuid}`
+      }
+      editIconName={analysisGroup ? null : 'plus'}
+      buttonText={iconOnly ? null : title}
+      onSubmit={onSubmit}
+      formFields={FORM_FIELDS}
+      showErrorPanel
+      initialValues={initialValues}
+    />
+  )
 })
 
 UpdateAnalysisGroup.propTypes = {
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
   iconOnly: PropTypes.bool,
-  projectFamiliesByGuid: PropTypes.object,
+  initialValues: PropTypes.object,
   onSubmit: PropTypes.func,
 }
 
+const mapUpdateStateToProps = (state, ownProps) => {
+  const project = getCurrentProject(state)
+  const initialValues = ownProps.analysisGroup ? ownProps.analysisGroup : { projectGuid: project.projectGuid }
+  return {
+    initialValues: { ...initialValues, allFamilies: Object.values(getProjectFamiliesByGuid(state)) },
+    project,
+  }
+}
+
+const mapDispatchToProps = {
+  onSubmit: ({ allFamilies, ...values }) => updateAnalysisGroup(values),
+}
+
+export const UpdateAnalysisGroupButton = connect(mapUpdateStateToProps, mapDispatchToProps)(UpdateAnalysisGroup)
+
+const navigateProjectPage = (history, projectGuid) => () => history.push(`/project/${projectGuid}/project_page`)
 
 export const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
-  project.canEdit ? <DeleteButton
-    initialValues={analysisGroup}
-    onSubmit={onSubmit}
-    confirmDialog={<div className="content">Are you sure you want to delete <b>{analysisGroup.name}</b></div>}
-    buttonText={iconOnly ? null : 'Delete AnalysisGroup'}
-    size={size}
-    onSuccess={() => history.push(`/project/${analysisGroup.projectGuid}/project_page`)}
-  /> : null
+  project.canEdit ? (
+    <DeleteButton
+      initialValues={analysisGroup}
+      onSubmit={onSubmit}
+      confirmDialog={
+        <div className="content">
+          Are you sure you want to delete &nbsp;
+          <b>{analysisGroup.name}</b>
+        </div>
+      }
+      buttonText={iconOnly ? null : 'Delete Analysis Group'}
+      size={size}
+      onSuccess={navigateProjectPage(history, project.projectGuid)}
+    />
+  ) : null
 ))
 
 DeleteAnalysisGroup.propTypes = {
@@ -140,15 +176,10 @@ DeleteAnalysisGroup.propTypes = {
   history: PropTypes.object,
 }
 
-const mapStateToProps = state => ({
+const mapDeleteStateToProps = state => ({
   project: getCurrentProject(state),
-  projectFamiliesByGuid: getProjectFamiliesByGuid(state),
 })
 
-const mapDispatchToProps = {
-  onSubmit: updateAnalysisGroup,
-}
-
-export const UpdateAnalysisGroupButton = connect(mapStateToProps, mapDispatchToProps)(UpdateAnalysisGroup)
-export const DeleteAnalysisGroupButton = withRouter(connect(mapStateToProps, mapDispatchToProps)(DeleteAnalysisGroup))
-
+export const DeleteAnalysisGroupButton = withRouter(
+  connect(mapDeleteStateToProps, mapDispatchToProps)(DeleteAnalysisGroup),
+)

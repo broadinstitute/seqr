@@ -19,7 +19,10 @@ const LOADING_PROPS = { inline: true }
 
 const getResultHref = page => result => `/report/${page}/${result.key}`
 
-const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load, loadingError, filters, rowsPerPage }) =>
+const BaseReport = React.memo(({
+  page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load,
+  loadingError, filters, rowsPerPage,
+}) => (
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
     <InlineHeader size="medium" content="Project:" />
     <AwesomeBar
@@ -28,7 +31,8 @@ const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColu
       inputwidth="350px"
       getResultHref={getResultHref(page)}
     />
-    or <NavLink to={`/report/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>view all {viewAllCategory} projects</NavLink>
+    or
+    <NavLink to={`/report/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>{`view all ${viewAllCategory} projects`}</NavLink>
     <HorizontalSpacer width={20} />
     {filters}
     <DataTable
@@ -45,8 +49,8 @@ const BaseReport = React.memo(({ page, viewAllCategory, idField, defaultSortColu
       loadingProps={LOADING_PROPS}
       rowsPerPage={rowsPerPage}
     />
-  </DataLoader>,
-)
+  </DataLoader>
+))
 
 BaseReport.propTypes = {
   page: PropTypes.string,
@@ -55,8 +59,8 @@ BaseReport.propTypes = {
   defaultSortColumn: PropTypes.string,
   getDownloadFilename: PropTypes.func,
   match: PropTypes.object,
-  data: PropTypes.array,
-  columns: PropTypes.array,
+  data: PropTypes.arrayOf(PropTypes.object),
+  columns: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   loadingError: PropTypes.string,
   load: PropTypes.func,

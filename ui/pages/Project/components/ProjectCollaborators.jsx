@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUserOptionsByUsername, getUserOptionsIsLoading } from 'redux/selectors'
+import { getUserOptionsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -17,31 +17,22 @@ import { USER_NAME_FIELDS } from 'shared/utils/constants'
 import { updateCollaborator } from '../reducers'
 import { getUserOptions, getCurrentProject } from '../selectors'
 
-
-const CollaboratorEmailDropdown = React.memo(({ load, loading, usersByUsername, onChange, value, ...props }) =>
+const CollaboratorEmailDropdown = React.memo(({ load, ...props }) => (
   <DataLoader load={load} loading={false} content>
-    <AddableSelect
-      loading={loading}
-      additionLabel="New Collaborator: "
-      onChange={val => onChange(usersByUsername[val] || { email: val })}
-      value={value.username || value.email}
-      {...props}
-    />
-  </DataLoader>,
-)
+    <AddableSelect additionLabel="New Collaborator: " {...props} />
+  </DataLoader>
+))
 
 CollaboratorEmailDropdown.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
-  usersByUsername: PropTypes.object,
   onChange: PropTypes.func,
-  value: PropTypes.any,
+  value: PropTypes.object,
 }
 
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
   options: getUserOptions(state),
-  usersByUsername: getUserOptionsByUsername(state),
 })
 
 const mapDropdownDispatchToProps = {
@@ -53,6 +44,8 @@ const CREATE_FIELDS = [
     name: 'user',
     label: 'Email',
     component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(CollaboratorEmailDropdown),
+    format: value => value && (value.username ? value : value.email),
+    normalize: value => (typeof value === 'object' ? value : { email: value }),
     validate: value => (
       /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test((value || {}).email) ? undefined : 'Invalid email address'
     ),
@@ -71,12 +64,11 @@ const EDIT_FIELDS = [
   },
 ]
 
-
 const AddCollaboratorButton = React.memo(({ onSubmit }) => (
   <UpdateButton
     modalId="addCollaborator"
     modalTitle="Add Collaborator"
-    onSubmit={updates => onSubmit(updates.user)}
+    onSubmit={onSubmit}
     formFields={CREATE_FIELDS}
     editIconName="plus"
     buttonText="Add Collaborator"
@@ -92,9 +84,9 @@ const CollaboratorContainer = styled.div`
   white-space: nowrap;
 `
 
-const CollaboratorRow = React.memo(({ collaborator, update }) =>
+const CollaboratorRow = React.memo(({ collaborator, update }) => (
   <CollaboratorContainer>
-    {update &&
+    {update && (
       <span>
         <HorizontalSpacer width={10} />
         <UpdateButton
@@ -113,13 +105,15 @@ const CollaboratorRow = React.memo(({ collaborator, update }) =>
           hideNoRequestStatus
           confirmDialog={
             <div className="content">
-              Are you sure you want to delete <b>{collaborator.displayName || collaborator.email}</b>. They will still
+              Are you sure you want to delete &nbsp;
+              <b>{collaborator.displayName || collaborator.email}</b>
+              . They will still
               have their user account and be able to log in, but will not be able to access this project anymore.
             </div>
           }
         />
       </span>
-    }
+    )}
     <Popup
       position="top center"
       trigger={<Icon link size="small" name={collaborator.hasEditPermissions ? 'star' : ''} />}
@@ -128,8 +122,8 @@ const CollaboratorRow = React.memo(({ collaborator, update }) =>
     />
     {collaborator.displayName && `${collaborator.displayName} - `}
     <a href={`mailto:${collaborator.email}`}>{collaborator.email}</a>
-  </CollaboratorContainer>,
-)
+  </CollaboratorContainer>
+))
 
 CollaboratorRow.propTypes = {
   collaborator: PropTypes.object.isRequired,
@@ -137,27 +131,37 @@ CollaboratorRow.propTypes = {
 }
 
 const getSortedCollabs = (project, isAnvil) => orderBy(
-  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email], ['desc', 'asc'])
+  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
+  ['desc', 'asc'],
+)
 
-const ProjectCollaborators = React.memo(({ project, onSubmit }) => {
+const ProjectCollaborators = React.memo(({ project, onSubmit, addCollaborator }) => {
   const localCollabs = getSortedCollabs(project, false)
   const anvilCollabs = getSortedCollabs(project, true)
   return [
-    localCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />),
-    ((project.canEdit && !project.workspaceName) ?
-      <div key="addButton" >
+    localCollabs.map(
+      c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />,
+    ),
+    ((project.canEdit && !project.workspaceName) ? (
+      <div key="addButton">
         <br />
-        <AddCollaboratorButton onSubmit={onSubmit} />
-      </div> : null),
-    (localCollabs.length && anvilCollabs.length) ? <p key="subheader"><br />AnVIL Workspace Users</p> : null,
+        <AddCollaboratorButton onSubmit={addCollaborator} />
+      </div>
+    ) : null),
+    (localCollabs.length && anvilCollabs.length) ? (
+      <p key="subheader">
+        <br />
+        AnVIL Workspace Users
+      </p>
+    ) : null,
     anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
   ]
 })
 
-
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
+  addCollaborator: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
@@ -166,6 +170,7 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = {
   onSubmit: updateCollaborator,
+  addCollaborator: updates => updateCollaborator(updates.user),
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectCollaborators)
