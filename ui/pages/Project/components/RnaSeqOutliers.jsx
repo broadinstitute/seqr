@@ -7,12 +7,12 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { select } from 'd3-selection'
 
-import { getGenesById } from 'redux/selectors'
+import { getGenesById, getRnaSeqDataByIndividual } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import SearchResultsLink from 'shared/components/buttons/SearchResultsLink'
 import { ANY_AFFECTED } from 'shared/utils/constants'
 import { loadRnaSeqData } from '../reducers'
-import { getRnaSeqDataByIndividual, getRnaSeqDataLoading } from '../selectors'
+import { getRnaSeqDataLoading } from '../selectors'
 
 const GRAPH_HEIGHT = 400
 const GRAPH_WIDTH = 600
