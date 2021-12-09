@@ -579,7 +579,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'sampleGuids': [],
         })
         mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
-        self.assertEqual(RnaSeqOutlier.objects.count(), 2)
+        self.assertEqual(RnaSeqOutlier.objects.count(), 3)
 
         # Test loading new data
         url = reverse(update_rna_seq, args=[RNA_FILE_ID])
@@ -611,8 +611,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         })
         mock_logger.info.assert_has_calls(
             [mock.call(info_log, self.data_manager_user) for info_log in info] + [
-                mock.call('delete 2 RnaSeqOutliers', self.data_manager_user, db_update={
-                    'dbEntity': 'RnaSeqOutlier', 'numEntities': 2, 'parentEntityIds': [RNA_SAMPLE_GUID], 'updateType': 'bulk_delete',
+                mock.call('delete 3 RnaSeqOutliers', self.data_manager_user, db_update={
+                    'dbEntity': 'RnaSeqOutlier', 'numEntities': 3, 'parentEntityIds': [RNA_SAMPLE_GUID], 'updateType': 'bulk_delete',
                 }),
             ], any_order=True
         )
