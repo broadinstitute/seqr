@@ -50,7 +50,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     response['locusListsByGuid'] = _add_locus_lists([project], genes)
 
     sample_filter = {'sample__individual__family__guid__in': family_guids} if family_guids else {'sample__individual__family__project': project}
-    response['rnaSeqData':] = get_rna_seq_outliers(genes.keys(), **sample_filter)
+    response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), **sample_filter)
 
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)

@@ -21,6 +21,11 @@ COMPOUND_HET_1_GUID = 'SV0059956_11560662_f019313_1'
 COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
 GENE_GUID_2 = 'ENSG00000197530'
 
+SAVED_VARIANT_RESPONSE_KEYS = {
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+    'genesById', 'locusListsByGuid', 'rnaSeqData'
+}
+
 COMPOUND_HET_3_JSON = {
     'alt': 'C',
     'chrom': '15',
@@ -121,10 +126,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-            'genesById', 'locusListsByGuid',
-        })
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
 
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
@@ -152,6 +154,8 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': mock.ANY}})
+
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
         self.assertEqual(response.status_code, 200)
@@ -163,8 +167,9 @@ class SavedVariantAPITest(object):
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
         self.assertEqual(response.status_code, 200)
-
-        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000002_1248367227_r0390_100'})
+        response_json = response.json()
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000002_1248367227_r0390_100'})
+        self.assertDictEqual(response_json['rnaSeqData'], {})
 
         # filter by variant guid
         response = self.client.get('{}{}'.format(url, VARIANT_GUID))
@@ -190,10 +195,9 @@ class SavedVariantAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-            'genesById', 'locusListsByGuid', 'familiesByGuid',
-        })
+        response_keys = {'familiesByGuid'}
+        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
             set(variants.keys()),

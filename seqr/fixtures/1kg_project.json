@@ -1208,7 +1208,7 @@
     "pk": 1,
     "fields": {
         "sample": 150,
-        "gene_id": "ENSG00000240361",
+        "gene_id": "ENSG00000135953",
         "z_score": 7.31,
         "p_value": 0.00000000000948,
         "p_adjust": 0.00000000781
@@ -1219,10 +1219,21 @@
     "pk": 2,
     "fields": {
         "sample": 150,
-        "gene_id": "ENSG00000135953",
+        "gene_id": "ENSG00000240361",
         "z_score": -4.08,
         "p_value": 5.88,
         "p_adjust": 0.09
+    }
+},
+    {
+    "model": "seqr.rnaseqoutlier",
+    "pk": 3,
+    "fields": {
+        "sample": 150,
+        "gene_id": "ENSG00000268903",
+        "z_score": 7.08,
+        "p_value": 0.000000000588,
+        "p_adjust": 0.00000000139
     }
 },
 {
