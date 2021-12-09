@@ -521,6 +521,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         })
         mock_open.return_value.__enter__.return_value.write.assert_called_with(b'sample_content')
 
+    @mock.patch('seqr.views.apis.data_manager_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
