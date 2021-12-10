@@ -198,22 +198,6 @@ def deploy_redis(settings):
 def deploy_seqr(settings):
     print_separator("seqr")
 
-    if settings["BUILD_DOCKER_IMAGES"]:
-        seqr_git_hash = run("git log -1 --pretty=%h", errors_to_ignore=["Not a git repository"])
-        seqr_git_hash = (":" + seqr_git_hash.strip()) if seqr_git_hash is not None else ""
-
-        docker_build("seqr",
-                     settings,
-                     [
-                         "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
-                         "-f deploy/docker/seqr/Dockerfile",
-                         "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
-                         ]
-                     )
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
 
