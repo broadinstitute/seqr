@@ -44,7 +44,7 @@ SEARCH_CONTEXT_RESPONSE_KEYS = {
 
 SEARCH_RESPONSE_KEYS = {
     'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
-    'variantFunctionalDataByGuid', 'locusListsByGuid',
+    'variantFunctionalDataByGuid', 'locusListsByGuid', 'rnaSeqData',
 }
 
 ALL_RESPONSE_KEYS = set()
@@ -184,6 +184,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(
             set(intervals[0].keys()), {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000268903': mock.ANY}})
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
@@ -260,6 +261,7 @@ class VariantSearchAPITest(object):
             set(response_json['genesById'].keys()),
             {'ENSG00000233653'}
         )
+        self.assertDictEqual(response_json['rnaSeqData'], {})
         mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for analyst users
@@ -318,7 +320,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
-            'locusListsByGuid': {}, 'variantTagsByGuid': mock.ANY,
+            'locusListsByGuid': {}, 'rnaSeqData': {}, 'variantTagsByGuid': mock.ANY,
             'variantNotesByGuid': mock.ANY, 'variantFunctionalDataByGuid': {}, 'genesById': mock.ANY,
             'savedVariantsByGuid': mock.ANY, 'searchedVariants': VARIANTS, 'search': {
                 'search': SEARCH,
@@ -494,6 +496,7 @@ class VariantSearchAPITest(object):
         self.assertListEqual(response_json['searchedVariants'], VARIANTS[:1])
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000268903': mock.ANY}})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
 
         mock_get_variant.side_effect = InvalidSearchException('Variant not found')

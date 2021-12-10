@@ -505,14 +505,18 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
         self.assertDictEqual(response_json['rnaSeqData'], {
             INDIVIDUAL_GUID: {
-                'ENSG00000240361': {
-                    'geneId': 'ENSG00000240361', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
                 },
-                'ENSG00000135953': {
-                    'geneId': 'ENSG00000135953', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
+                'ENSG00000240361': {
+                    'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
+                },
+                'ENSG00000268903': {
+                    'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
+                    'isSignificant': True,
                 },
             }
         })
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000240361'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 

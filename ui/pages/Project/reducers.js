@@ -221,7 +221,8 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
 
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   const data = getState().rnaSeqDataByIndividual[individualGuid]
-  if (!data) {
+  // If variants were loaded for the individual, the significant gene data will be loaded but not all the needed data
+  if (!data || Object.values(data).every(({ isSignificant }) => isSignificant)) {
     dispatch({ type: REQUEST_RNA_SEQ_DATA })
     new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
       (responseJson) => {
@@ -275,7 +276,6 @@ export const reducers = {
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),
-  rnaSeqDataByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'rnaSeqData'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
