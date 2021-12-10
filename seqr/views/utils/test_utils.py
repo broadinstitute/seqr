@@ -458,7 +458,7 @@ INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
     'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-    'loadedDate', 'datasetType',
+    'loadedDate', 'datasetType', 'elasticsearchIndex',
 }
 
 IGV_SAMPLE_FIELDS = {

@@ -86,7 +86,6 @@ const UPLOAD_CALLSET_FIELDS = [
 
 const IGVFileUploadField = React.memo(({ projectGuid, ...props }) => (
   <FileUploadField
-    clearTimeOut={0}
     dropzoneLabel={
       <NoBorderTable basic="very" compact="very">
         <Table.Body>
@@ -120,7 +119,6 @@ const IGVFileUploadField = React.memo(({ projectGuid, ...props }) => (
       </NoBorderTable>
     }
     url={`/api/project/${projectGuid}/upload_igv_dataset`}
-    auto
     required
     styles={UPLOADER_STYLES}
     {...props}

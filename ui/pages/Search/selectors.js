@@ -151,9 +151,9 @@ export const getDatasetTypes = createSelector(
   getSamplesGroupedByProjectGuid,
   (projectGuids, samplesByProjectGuid) => {
     const datasetTypes = projectGuids.reduce((acc, projectGuid) => new Set([
-      ...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(({ isActive }) => isActive).map(
-        ({ datasetType }) => datasetType,
-      )]), new Set())
+      ...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
+      ).map(({ datasetType }) => datasetType)]), new Set())
     return [...datasetTypes].sort().join(',')
   },
 )
