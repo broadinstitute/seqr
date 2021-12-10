@@ -1,12 +1,15 @@
 import base64
 from collections import defaultdict
+from datetime import datetime
+import gzip
 import json
+import os
 import re
 import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max
+from django.db.models import Max, prefetch_related_objects
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -15,13 +18,15 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.file_utils import parse_file
+from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file_content
+from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual
+from seqr.models import Sample, Individual, Project, RnaSeqOutlier
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY, \
+    ANALYST_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -71,7 +76,7 @@ def _get_es_indices(client):
 
     index_metadata = get_index_metadata('_all', client, use_cache=False)
 
-    active_samples = Sample.objects.filter(is_active=True).select_related('individual__family__project')
+    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index__isnull=False).select_related('individual__family__project')
 
     seqr_index_projects = defaultdict(lambda: defaultdict(set))
     es_projects = set()
@@ -321,6 +326,145 @@ EXCLUDE_PROJECTS = [
     '[DISABLED_OLD_CMG_Walsh_WES]', 'Old Engle Lab All Samples 352S', 'Old MEEI Engle Samples',
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
+
+@data_manager_required
+def receive_rna_seq_table(request):
+    if len(request.FILES) != 1:
+        return create_json_response({'errors': [f'Received {len(request.FILES)} files instead of 1']}, status=400)
+
+    stream = next(iter(request.FILES.values()))
+    filename = stream._name
+    if not filename.endswith('.tsv.gz'):
+        return create_json_response({'errors': [f'Invalid file extension for {filename}: expected ".tsv.gz"']}, status=400)
+
+    # save gzipped data to temporary file
+    uploaded_file_id = f'tmp_-_{datetime.now().isoformat()}_-_{request.user}_-_{filename}'
+    serialized_file_path = _get_upload_file_path(uploaded_file_id)
+    with open(serialized_file_path, 'wb') as f:
+        f.write(stream.read())
+
+    return create_json_response({
+        'uploadedFileId': uploaded_file_id,
+        'info': [f'Loaded gzipped file {filename}'],
+    })
+
+RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
+
+@data_manager_required
+def update_rna_seq(request, upload_file_id):
+    serialized_file_path = _get_upload_file_path(upload_file_id)
+
+    request_json = json.loads(request.body)
+    sample_id_to_individual_id_mapping = {}
+    ignore_extra_samples = request_json.get('ignoreExtraSamples')
+    try:
+        uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
+        if uploaded_mapping_file_id:
+            sample_id_to_individual_id_mapping = load_mapping_file_content(load_uploaded_file(uploaded_mapping_file_id))
+    except ValueError as e:
+        return create_json_response({'error': str(e)}, status=400)
+
+    samples_by_id = defaultdict(dict)
+    with gzip.open(serialized_file_path, 'rt') as f:
+        header = _parse_tsv_row(next(f))
+
+        header_index_map = {key: i for i, key in enumerate(header)}
+        missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
+        if missing_cols:
+            return create_json_response({'error': f'Invalid file: missing column(s) {missing_cols}'}, status=400)
+
+        for line in f:
+            row = _parse_tsv_row(line)
+            sample_id = row[header_index_map['sampleID']]
+            row_dict = {mapped_key: row[header_index_map[key]] for key, mapped_key in RNA_COLUMNS.items()}
+            gene_id = row_dict['gene_id']
+            existing_data = samples_by_id[sample_id].get(gene_id)
+            if existing_data and existing_data != row_dict:
+                return create_json_response({'error': f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}'}, status=400)
+            samples_by_id[sample_id][gene_id] = row_dict
+    os.remove(serialized_file_path)
+
+    message = f'Parsed {len(samples_by_id)} RNA-seq samples'
+    info = [message]
+    logger.info(message, request.user)
+
+    try:
+        samples, _, _, inactivated_sample_guids, _, remaining_sample_ids = match_and_update_samples(
+            projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
+            user=request.user,
+            sample_ids=samples_by_id.keys(),
+            data_source=upload_file_id.split('_-_')[-1],
+            sample_type=Sample.SAMPLE_TYPE_RNA,
+            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+            raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
+        )
+    except ValueError as e:
+        return create_json_response({'error': str(e)}, status=400)
+
+    # Delete old data
+    to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
+    if to_delete:
+        logger.info(f'delete {len(to_delete)} RnaSeqOutliers', request.user, db_update={
+            'dbEntity': 'RnaSeqOutlier', 'numEntities': len(to_delete), 'parentEntityIds': inactivated_sample_guids, 'updateType': 'bulk_delete',
+        })
+        to_delete.delete()
+
+    loaded_sample_ids = set(RnaSeqOutlier.objects.values_list('sample_id', flat=True).distinct())
+    samples_to_load = [sample for sample in samples if sample.id not in loaded_sample_ids]
+
+    # Save sample data for loading
+    for sample in samples_to_load:
+        with gzip.open(_get_sample_data_file_path(sample.guid), 'wt') as f:
+            json.dump(samples_by_id[sample.sample_id], f)
+
+    prefetch_related_objects(samples_to_load, 'individual__family__project')
+    projects = {sample.individual.family.project.name for sample in samples_to_load}
+    project_names = ', '.join(sorted(projects))
+    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
+    info.append(message)
+    logger.info(message, request.user)
+
+    warnings = []
+    if remaining_sample_ids:
+        skipped_samples = ', '.join(sorted(remaining_sample_ids))
+        warnings.append(f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}')
+    if loaded_sample_ids:
+        warnings.append(f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file')
+
+    return create_json_response({
+        'info': info,
+        'warnings': warnings,
+        'sampleGuids': [s.guid for s in samples_to_load],
+    })
+
+def _parse_tsv_row(row):
+    return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
+
+def _get_upload_file_path(uploaded_file_id):
+    upload_directory = get_temp_upload_directory()
+    return os.path.join(upload_directory, uploaded_file_id)
+
+def _get_sample_data_file_path(sample_guid):
+    upload_directory = get_temp_upload_directory()
+    return os.path.join(upload_directory, 'rna_sample_data', f'{sample_guid}.json.gz')
+
+@data_manager_required
+def load_rna_seq_sample_data(request, sample_guid):
+    sample = Sample.objects.get(guid=sample_guid)
+    logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
+
+    sample_file = _get_sample_data_file_path(sample_guid)
+    with gzip.open(sample_file, 'rt') as f:
+        data_by_gene = json.load(f)
+    os.remove(sample_file)
+
+    models = RnaSeqOutlier.objects.bulk_create([RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
+    logger.info(f'create {len(models)} RnaSeqOutliers', request.user, db_update={
+        'dbEntity': 'RnaSeqOutlier', 'numEntities': len(models), 'parentEntityIds': [sample_guid], 'updateType': 'bulk_create',
+    })
+
+    return create_json_response({'success': True})
+
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1

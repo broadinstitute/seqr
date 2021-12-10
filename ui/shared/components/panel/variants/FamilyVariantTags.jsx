@@ -115,7 +115,7 @@ const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantT
 })
 
 ShortcutTags.propTypes = {
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
 }
 
@@ -145,7 +145,7 @@ const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, fam
 ))
 
 VariantTagField.propTypes = {
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   fieldName: PropTypes.string.isRequired,
   variantId: PropTypes.string.isRequired,
   family: PropTypes.object.isRequired,
@@ -170,7 +170,7 @@ const VariantLink = React.memo(({ variant, variantTagNotes, family }) => (
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   family: PropTypes.object.isRequired,
 }
 
@@ -276,7 +276,7 @@ const FamilyVariantTags = React.memo(({
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   variantId: PropTypes.string.isRequired,
   family: PropTypes.object.isRequired,
   projectTagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,

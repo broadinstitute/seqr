@@ -4,14 +4,14 @@ from collections import defaultdict
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusList, LocusListInterval, LocusListGene, Family, GeneNote
+    LocusList, LocusListInterval, LocusListGene, Family, GeneNote, RnaSeqOutlier
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
-    _get_json_for_models, get_json_for_discovery_tags
+    _get_json_for_models, get_json_for_discovery_tags, get_json_for_rna_seq_outliers
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     user_is_analyst, login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
@@ -48,6 +48,9 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     variants = list(response['savedVariantsByGuid'].values())
     genes = saved_variant_genes(variants)
     response['locusListsByGuid'] = _add_locus_lists([project], genes)
+
+    sample_filter = {'sample__individual__family__guid__in': family_guids} if family_guids else {'sample__individual__family__project': project}
+    response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), **sample_filter)
 
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
@@ -360,6 +363,18 @@ def _add_locus_lists(projects, genes, include_all_lists=False):
             gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
 
     return locus_lists_by_guid
+
+
+def get_rna_seq_outliers(gene_ids, **sample_filter):
+    outlier_data = get_json_for_rna_seq_outliers(
+        RnaSeqOutlier.objects.filter(gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, **sample_filter),
+        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
+    )
+    data_by_individual_gene = defaultdict(dict)
+    for data in outlier_data:
+        data_by_individual_gene[data.pop('individualGuid')][data['geneId']] = data
+
+    return data_by_individual_gene
 
 
 def _add_discovery_tags(variants, discovery_tags):

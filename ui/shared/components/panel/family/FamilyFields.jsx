@@ -8,7 +8,7 @@ import { loadAnalystOptions } from 'redux/rootReducer'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
-  getHasActiveVariantSampleByFamily,
+  getHasActiveSearchableSampleByFamily,
 } from 'redux/selectors'
 
 import Sample from '../sample'
@@ -37,7 +37,7 @@ BaseFirstSample.propTypes = {
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
   firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.familyGuid] || {}).isActive,
 })
 
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)

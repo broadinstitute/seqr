@@ -8,12 +8,14 @@ from django.urls.base import reverse
 from seqr.models import Individual
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
-    receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, get_hpo_terms
+    receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
+    get_hpo_terms, get_individual_rna_seq_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 PM_REQUIRED_PROJECT_GUID = 'R0003_test'
 
+INDIVIDUAL_GUID = "I000001_na19675"
 ID_UPDATE_GUID = "I000002_na19678"
 UPDATED_ID = "NA19678_1"
 UPDATED_MATERNAL_ID = "NA20870"
@@ -61,8 +63,6 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
     "familyId": "1",
     "individualId": UPDATED_MATERNAL_ID,
 }
-
-CHILD_UPDATE_GUID = "I000001_na19675"
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
 class IndividualAPITest(AuthenticationTestCase):
@@ -149,17 +149,17 @@ class IndividualAPITest(AuthenticationTestCase):
 
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
         self.assertSetEqual({'F000001_1', 'F000003_3'}, set(response_json['familiesByGuid']))
-        self.assertSetEqual({ID_UPDATE_GUID, FAMILY_UPDATE_GUID, CHILD_UPDATE_GUID, "I000003_na19679"},
+        self.assertSetEqual({ID_UPDATE_GUID, FAMILY_UPDATE_GUID, INDIVIDUAL_GUID, "I000003_na19679"},
                             set(response_json['familiesByGuid']['F000001_1']['individualGuids']))
         self.assertListEqual(response_json['familiesByGuid']['F000003_3']['individualGuids'], [])
         self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
         self.assertIsNone(response_json['familiesByGuid']['F000003_3']['pedigreeImage'])
 
-        self.assertSetEqual({ID_UPDATE_GUID, FAMILY_UPDATE_GUID, CHILD_UPDATE_GUID},
+        self.assertSetEqual({ID_UPDATE_GUID, FAMILY_UPDATE_GUID, INDIVIDUAL_GUID},
                             set(response_json['individualsByGuid']))
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['individualId'], UPDATED_ID)
         self.assertEqual(response_json['individualsByGuid'][ID_UPDATE_GUID]['maternalId'], UPDATED_MATERNAL_ID)
-        self.assertEqual(response_json['individualsByGuid'][CHILD_UPDATE_GUID]['paternalId'], UPDATED_ID)
+        self.assertEqual(response_json['individualsByGuid'][INDIVIDUAL_GUID]['paternalId'], UPDATED_ID)
 
         # test only updating parental IDs
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
@@ -494,4 +494,29 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {
             'HP:0002017': {}
         })
+        
+    def test_get_individual_rna_seq_data(self):
+        url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
+        self.assertDictEqual(response_json['rnaSeqData'], {
+            INDIVIDUAL_GUID: {
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+                    'isSignificant': True,
+                },
+                'ENSG00000240361': {
+                    'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
+                },
+                'ENSG00000268903': {
+                    'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
+                    'isSignificant': True,
+                },
+            }
+        })
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
