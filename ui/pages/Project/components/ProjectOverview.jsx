@@ -93,18 +93,21 @@ const MME_CONTACT_FIELDS = [
   },
 ]
 
-const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions, onSubmit }) => (
+const BaseMatchmakerSubmissionOverview = React.memo(({ project, mmeSubmissions, onSubmit }) => (
   <div>
-    <UpdateButton
-      onSubmit={onSubmit}
-      buttonText="Add Contact to MME Submissions"
-      editIconName="plus"
-      buttonFloated="right"
-      modalTitle="Add Contact to MME Submissions"
-      modalId="mmeContact"
-      formFields={MME_CONTACT_FIELDS}
-      confirmDialog="Are you sure you want to add this contact to all MME submissions in this project?"
-    />
+    {project.canEdit && (
+      <UpdateButton
+        onSubmit={onSubmit}
+        buttonText="Add Contact to MME Submissions"
+        editIconName="plus"
+        buttonFloated="right"
+        modalTitle="Add Contact to MME Submissions"
+        modalId="mmeContact"
+        formFields={MME_CONTACT_FIELDS}
+        confirmDialog="Are you sure you want to add this contact to all MME submissions in this project?"
+        showErrorPanel
+      />
+    )}
     <DataTable
       basic="very"
       fixed
@@ -118,6 +121,7 @@ const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions, onSubmit 
 
 BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
+  project: PropTypes.object,
   onSubmit: PropTypes.func,
 }
 
@@ -191,7 +195,7 @@ const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
             modalName="mmeSubmissions"
             size="large"
           >
-            <MatchmakerSubmissionOverview />
+            <MatchmakerSubmissionOverview project={project} />
           </Modal>
           {deletedSubmissionCount > 0 && <div>{`${deletedSubmissionCount} removed submissions`}</div>}
         </div>
