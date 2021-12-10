@@ -181,7 +181,7 @@ class DatasetAPITest(object):
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertListEqual(list(response_json['individualsByGuid']['I000001_na19675'].keys()), ['sampleGuids'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675']['sampleGuids']),
-                            set([sv_sample_guid, existing_index_sample_guid, existing_rna_seq_sample_guid]))
+                            {sv_sample_guid, existing_index_sample_guid, existing_rna_seq_sample_guid})
 
         # Regular variant sample should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')

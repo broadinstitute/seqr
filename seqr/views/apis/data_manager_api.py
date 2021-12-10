@@ -9,7 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max,  prefetch_related_objects
+from django.db.models import Max, prefetch_related_objects
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -366,7 +366,7 @@ def update_rna_seq(request, upload_file_id):
 
     samples_by_id = defaultdict(dict)
     with gzip.open(serialized_file_path, 'rt') as f:
-        header =  _parse_tsv_row(next(f))
+        header = _parse_tsv_row(next(f))
 
         header_index_map = {key: i for i, key in enumerate(header)}
         missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
