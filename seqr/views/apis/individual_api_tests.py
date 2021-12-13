@@ -494,7 +494,7 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {
             'HP:0002017': {}
         })
-        
+
     def test_get_individual_rna_seq_data(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
         self.check_collaborator_login(url)
