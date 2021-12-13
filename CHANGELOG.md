@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 12/24/21
 * Show RNA-seq outlier data (REQUIRES DB MIGRATION)
 
 ## 12/07/21
