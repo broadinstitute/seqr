@@ -15,7 +15,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
-    get_json_for_family_notes
+    get_json_for_family_notes, _get_json_for_individuals
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags
@@ -177,6 +177,17 @@ def project_overview(request, project_guid):
     project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
 
     return create_json_response(response)
+
+@login_and_policies_required
+def project_individuals(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    individuals = _get_json_for_individuals(
+        Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid, add_hpo_details=True)
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'individualsLoaded': True}},
+        'individualsByGuid': {i['individualGuid']: i for i in individuals},
+    })
 
 @login_and_policies_required
 def project_mme_submisssions(request, project_guid):

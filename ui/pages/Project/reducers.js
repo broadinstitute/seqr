@@ -25,6 +25,7 @@ const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
 const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
+const REQUEST_INDIVIDUALS = 'REQUEST_INDIVIDUALS'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
 
 // Data actions
@@ -67,6 +68,8 @@ const loadProjectChildEntities = (entityType, dispatchType, receiveDispatchType)
 }
 
 export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
+
+export const loadIndividuals = () => loadProjectChildEntities('individuals', REQUEST_INDIVIDUALS)
 
 export const loadMmeSubmissions = () => loadProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
 
@@ -366,6 +369,7 @@ export const reducers = {
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_FAMILIES),
   familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
   familyVariantSummaryLoading: loadingReducer(REQUEST_FAMILY_VARIANT_SUMMARY, RECEIVE_DATA),
+  individualsLoading: loadingReducer(REQUEST_INDIVIDUALS, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {

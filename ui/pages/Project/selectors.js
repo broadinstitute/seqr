@@ -53,6 +53,7 @@ export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
 export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getFamilyVariantSummaryLoading = state => state.familyVariantSummaryLoading.isLoading
+export const getIndivdualsLoading = state => state.individualsLoading.isLoading
 export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
