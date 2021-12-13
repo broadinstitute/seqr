@@ -95,7 +95,11 @@ const ProjectPageUI = React.memo(props => (
         </Grid.Column>
         <Grid.Column width={8}>
           <ProjectSection label="Overview">
-            <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
+            <ProjectOverview
+              project={props.project}
+              analysisGroupGuid={props.match.params.analysisGroupGuid}
+              familiesLoading={props.familiesLoading}
+            />
           </ProjectSection>
           <VerticalSpacer height={10} />
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
@@ -134,12 +138,14 @@ ProjectPageUI.propTypes = {
   match: PropTypes.object,
   load: PropTypes.func,
   loading: PropTypes.bool,
+  familiesLoading: PropTypes.bool,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
-  loading: getProjectOverviewIsLoading(state) || getFamiliesLoading(state),
+  loading: getProjectOverviewIsLoading(state),
+  familiesLoading: getFamiliesLoading(state),
 })
 
 const mapDispatchToProps = {

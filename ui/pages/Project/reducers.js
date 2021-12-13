@@ -22,6 +22,7 @@ const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
+const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
 const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
@@ -43,7 +44,7 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   }
 }
 
-const loadProjectChildEntities = (entityType, dispatchType) => (dispatch, getState) => {
+const loadProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
   const project = projectsByGuid[currentProjectGuid]
 
@@ -52,14 +53,20 @@ const loadProjectChildEntities = (entityType, dispatchType) => (dispatch, getSta
     new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_${toSnakecase(entityType)}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (receiveDispatchType) {
+          dispatch({ type: receiveDispatchType, updatesById: responseJson })
+        }
       },
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        if (receiveDispatchType) {
+          dispatch({ type: receiveDispatchType, updatesById: {} })
+        }
       }).get()
   }
 }
 
-export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES)
+export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
 
 export const loadMmeSubmissions = () => loadProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
 
@@ -348,7 +355,7 @@ export const reducers = {
   rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),
   familyTagTypeCounts: createObjectsByIdReducer(RECEIVE_DATA, 'familyTagTypeCounts'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
-  familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),
+  familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_FAMILIES),
   familyDetailsLoading: loadingReducer(REQUEST_FAMILY_DETAILS, RECEIVE_DATA),
   familyVariantSummaryLoading: loadingReducer(REQUEST_FAMILY_VARIANT_SUMMARY, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),

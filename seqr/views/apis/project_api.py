@@ -4,15 +4,16 @@ APIs for updating project metadata, as well as creating or deleting projects
 
 import json
 from collections import defaultdict
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, SavedVariant, \
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
     ProjectCategory, FamilyNote
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
-from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_saved_variants, \
+from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
     get_json_for_family_notes
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
@@ -118,15 +119,7 @@ def delete_project_handler(request, project_guid):
 
 @login_and_policies_required
 def project_page_data(request, project_guid):
-    """Returns a JSON object containing information used by the project page:
-    ::
-
-      json_response = {
-         'project': {..},
-         'familiesByGuid': {..},
-         'individualsByGuid': {..},
-         'samplesByGuid': {..},
-       }
+    """Returns a JSON object containing basic project information
 
     Args:
         project_guid (string): GUID of the Project to retrieve data for.
@@ -139,43 +132,23 @@ def project_page_data(request, project_guid):
         },
     })
 
-    # is_analyst = user_is_analyst(request.user)
-    # response = get_projects_child_entities([project], request.user, is_analyst=is_analyst)
-    #
-    # for i in response['individualsByGuid'].values():
-    #     i['mmeSubmissionGuid'] = None
-    # response['mmeSubmissionsByGuid'] = _retrieve_mme_submissions(project, response['individualsByGuid'])
-    #
-    # project_json = response['projectsByGuid'][project_guid]
-    # project_json['collaborators'] = get_json_for_project_collaborator_list(request.user, project)
-    # project_json['detailsLoaded'] = True
-    # project_json['discoveryTags'] = _get_discovery_tags(project)
-    #
-    # _add_tag_type_counts(project, project_json['variantTagTypes'])
-    # project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
-    #
-    # gene_ids = set()
-    # for tag in project_json['discoveryTags']:
-    #     gene_ids.update(list(tag.get('transcripts', {}).keys()))
-    # for submission in response['mmeSubmissionsByGuid'].values():
-    #     gene_ids.update(submission['geneIds'])
-    #
-    # response.update({
-    #     'genesById': get_genes(gene_ids),
-    # })
-    #
-    # return create_json_response(response)
-
 
 @login_and_policies_required
 def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
+    family_models = Family.objects.filter(project=project)
     families = _get_json_for_families(
-        Family.objects.filter(project=project), request.user, project_guid=project_guid, add_individual_guids_field=True
+        family_models, request.user, project_guid=project_guid, add_individual_guids_field=True
     )
     response = families_discovery_tags(families)
+    has_features_families = set(family_models.filter(individual__features__isnull=False).values_list('guid', flat=True))
+    for family in family_models.annotate(case_review_statuses=ArrayAgg('individual__case_review_status', distinct=True)):
+        response['familiesByGuid'][family.guid].update({
+            'caseReviewStatuses': family.case_review_statuses,
+            'hasFeatures': family.guid in has_features_families,
+        })
     response['projectsByGuid'] = {project_guid: {'familiesLoaded': True}}
-    return create_json_response(families_discovery_tags(families))
+    return create_json_response(response)
 
 
 @login_and_policies_required

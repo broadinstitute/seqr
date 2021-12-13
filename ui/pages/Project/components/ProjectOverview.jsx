@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import sortBy from 'lodash/sortBy'
 import styled from 'styled-components'
-import { Grid, Icon, Popup } from 'semantic-ui-react'
+import { Grid, Icon, Popup, Loader, Dimmer } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
@@ -319,10 +319,10 @@ const mapAnalysisStatusStateToProps = (state, ownProps) => ({
 
 const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
 
-const ProjectOverview = React.memo(props => (
+const ProjectOverview = React.memo(({ familiesLoading, ...props }) => (
   <Grid>
     <Grid.Column width={5}>
-      <FamiliesIndividualsOverview {...props} />
+      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <FamiliesIndividualsOverview {...props} />}
       <VerticalSpacer height={10} />
       <MatchmakerOverview {...props} />
     </Grid.Column>
@@ -332,13 +332,14 @@ const ProjectOverview = React.memo(props => (
     </Grid.Column>
     <Grid.Column width={6}>
       <AnvilOverview {...props} />
-      <AnalysisStatusOverview {...props} />
+      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <AnalysisStatusOverview {...props} />}
     </Grid.Column>
   </Grid>
 ))
 
 ProjectOverview.propTypes = {
   project: PropTypes.object.isRequired,
+  familiesLoading: PropTypes.bool,
 }
 
 export default ProjectOverview

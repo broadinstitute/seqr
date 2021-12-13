@@ -27,6 +27,7 @@ EditIndividualsForm.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
+  // TODO does not have all data loaded
   records: getProjectAnalysisGroupIndividualsByGuid(state, ownProps),
 })
 
