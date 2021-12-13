@@ -9,6 +9,8 @@ import { NavLink } from 'react-router-dom'
 import { getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import UpdateButton from 'shared/components/buttons/UpdateButton'
+import { validators } from 'shared/components/form/ReduxFormWrapper'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
@@ -19,7 +21,7 @@ import {
   DATASET_TYPE_SV_CALLS,
   ANVIL_URL,
 } from 'shared/utils/constants'
-import { loadMmeSubmissions } from '../reducers'
+import { updateProjectMmeContact, loadMmeSubmissions } from '../reducers'
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
@@ -84,8 +86,29 @@ const MME_COLUMNS = [
   { name: 'mmeNotes', content: 'Notes', width: 6, format: ({ mmeNotes }) => (mmeNotes || []).map(({ note }) => note).join('; ') },
 ]
 
-const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions, load, loading }) => (
+const MME_CONTACT_FIELDS = [
+  {
+    name: 'contact',
+    label: 'Contact Email',
+    validate: validators.requiredEmail,
+  },
+]
+
+const BaseMatchmakerSubmissionOverview = React.memo(({ project, mmeSubmissions, onSubmit, load, loading }) => (
   <DataLoader load={load} loading={false} content>
+    {project.canEdit && (
+      <UpdateButton
+        onSubmit={onSubmit}
+        buttonText="Add Contact to MME Submissions"
+        editIconName="plus"
+        buttonFloated="right"
+        modalTitle="Add Contact to MME Submissions"
+        modalId="mmeContact"
+        formFields={MME_CONTACT_FIELDS}
+        confirmDialog="Are you sure you want to add this contact to all MME submissions in this project?"
+        showErrorPanel
+      />
+    )}
     <DataTable
       basic="very"
       fixed
@@ -102,6 +125,8 @@ BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   load: PropTypes.func,
+  project: PropTypes.object,
+  onSubmit: PropTypes.func,
 }
 
 const mapMatchmakerSubmissionsStateToProps = (state, ownProps) => ({
@@ -111,6 +136,7 @@ const mapMatchmakerSubmissionsStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   load: loadMmeSubmissions,
+  onSubmit: updateProjectMmeContact,
 }
 
 const MatchmakerSubmissionOverview = connect(
@@ -171,7 +197,7 @@ const MatchmakerOverview = React.memo(({ project }) => (
           modalName="mmeSubmissions"
           size="large"
         >
-          <MatchmakerSubmissionOverview />
+          <MatchmakerSubmissionOverview project={project} />
         </Modal>
         {project.mmeDeletedSubmissionCount > 0 && <div>{`${project.mmeDeletedSubmissionCount} removed submissions`}</div>}
       </div>

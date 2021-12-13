@@ -349,6 +349,14 @@ export const sendMmeContactEmail = values => dispatch => new HttpRequestHelper(
   },
 ).post(values)
 
+export const updateProjectMmeContact = values => (dispatch, getState) => new HttpRequestHelper(
+  `/api/matchmaker/update_project_contact/${getState().currentProjectGuid}`,
+  (responseJson) => {
+    dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+  },
+  (e) => { throw new SubmissionError({ _error: [e.message] }) },
+).post(values)
+
 // Table actions
 export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
