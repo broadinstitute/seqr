@@ -85,23 +85,31 @@ export const loadProjectOverview = () => (dispatch, getState) => {
   }
 }
 
-const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType) => (dispatch, getState) => {
+const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, dispatchOnReceive) => (
+  dispatch, getState,
+) => {
   const { familiesByGuid } = getState()
   const family = familiesByGuid[familyGuid]
   if (!family || !family[detailField]) {
-    dispatch({ type: dispatchType })
+    dispatch({ type: dispatchType, updates: { [familyGuid]: true } })
     new HttpRequestHelper(`/api/family/${familyGuid}/${urlPath}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (dispatchOnReceive) {
+          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
+        }
       },
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        if (dispatchOnReceive) {
+          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
+        }
       }).get()
   }
 }
 
 export const loadFamilyDetails = familyGuid => loadFamilyData(
-  familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS,
+  familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
 )
 
 export const loadFamilyVariantSummary = familyGuid => loadFamilyData(
@@ -356,7 +364,7 @@ export const reducers = {
   familyTagTypeCounts: createObjectsByIdReducer(RECEIVE_DATA, 'familyTagTypeCounts'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_FAMILIES),
-  familyDetailsLoading: loadingReducer(REQUEST_FAMILY_DETAILS, RECEIVE_DATA),
+  familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
   familyVariantSummaryLoading: loadingReducer(REQUEST_FAMILY_VARIANT_SUMMARY, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),

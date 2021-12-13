@@ -105,7 +105,7 @@ const TableHeaderRow = React.memo(({
           visibleFamiliesCount !== totalFamiliesCount ? (
             <span>
               <b>{visibleFamiliesCount}</b>
-              out of
+              &nbsp; out of &nbsp;
               <b>{totalFamiliesCount}</b>
             </span>
           ) : (

@@ -144,7 +144,7 @@ BaseExpandedFamily.propTypes = {
 }
 
 const mapExpandedStateToProps = (state, ownProps) => ({
-  loading: getFamilyDetailsLoading(state),
+  loading: getFamilyDetailsLoading(state)[ownProps.familyGuid],
   individuals: getSortedIndividualsByFamily(state)[ownProps.familyGuid],
 })
 
