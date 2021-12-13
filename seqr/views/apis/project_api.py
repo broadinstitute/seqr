@@ -5,7 +5,7 @@ APIs for updating project metadata, as well as creating or deleting projects
 import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Count
+from django.db.models import Count, Max
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
@@ -142,9 +142,14 @@ def project_families(request, project_guid):
     )
     response = families_discovery_tags(families)
     has_features_families = set(family_models.filter(individual__features__isnull=False).values_list('guid', flat=True))
-    for family in family_models.annotate(case_review_statuses=ArrayAgg('individual__case_review_status', distinct=True)):
+    annotated_models = family_models.annotate(
+        case_review_statuses=ArrayAgg('individual__case_review_status', distinct=True),
+        case_review_status_last_modified=Max('individual__case_review_status_last_modified_date')
+    )
+    for family in annotated_models:
         response['familiesByGuid'][family.guid].update({
             'caseReviewStatuses': family.case_review_statuses,
+            'caseReviewStatusLastModified': family.case_review_status_last_modified,
             'hasFeatures': family.guid in has_features_families,
         })
     response['projectsByGuid'] = {project_guid: {'familiesLoaded': True}}

@@ -304,15 +304,7 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_FAMILY_ADDED_DATE,
     name: 'Date Added',
-    createSortKeyGetter: individualsByGuid => family => family.individualGuids.map(
-      individualGuid => individualsByGuid[individualGuid],
-    ).reduce(
-      (acc, individual) => {
-        const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
-        return indivCreatedDate > acc ? indivCreatedDate : acc
-      },
-      '2000-01-01T01:00:00.000Z',
-    ),
+    createSortKeyGetter: () => family => family.createdDate,
   },
   {
     value: SORT_BY_DATA_LOADED_DATE,
@@ -345,15 +337,14 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,
     name: 'Date Review Status Changed',
-    createSortKeyGetter: individualsByGuid => family => family.individualGuids.map(
-      individualGuid => individualsByGuid[individualGuid],
-    ).reduce(
-      (acc, individual) => {
-        const indivCaseReviewStatusLastModifiedDate = individual.caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'
-        return indivCaseReviewStatusLastModifiedDate > acc ? indivCaseReviewStatusLastModifiedDate : acc
-      },
-      '2000-01-01T01:00:00.000Z',
-    ),
+    createSortKeyGetter: individualsByGuid => (family) => {
+      const lastModified = family.individualGuids.map(
+        individualGuid => (individualsByGuid[individualGuid] || {}).caseReviewStatusLastModifiedDate,
+      ).filter(status => status)
+      return lastModified.length ? lastModified.reduce(
+        (acc, status) => (status > acc ? status : acc), '2000-01-01T01:00:00.000Z',
+      ) : family.caseReviewStatusLastModified || '2000-01-01T01:00:00.000Z'
+    },
   },
 ]
 
