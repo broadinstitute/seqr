@@ -7,7 +7,7 @@ from django.urls.base import reverse
 from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
-    update_variant_main_transcript, update_variant_functional_data_handler
+    update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS,\
     AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
@@ -20,6 +20,11 @@ NO_TAG_VARIANT_GUID = 'SV0059957_11562437_f019313_1'
 COMPOUND_HET_1_GUID = 'SV0059956_11560662_f019313_1'
 COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
 GENE_GUID_2 = 'ENSG00000197530'
+
+SAVED_VARIANT_RESPONSE_KEYS = {
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+    'genesById', 'locusListsByGuid', 'rnaSeqData'
+}
 
 COMPOUND_HET_3_JSON = {
     'alt': 'C',
@@ -37,6 +42,7 @@ COMPOUND_HET_3_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1'],
     'variantId': '15-62456358-A-C',
+    'acmgClassification': None,
 }
 
 COMPOUND_HET_4_JSON = {
@@ -55,6 +61,7 @@ COMPOUND_HET_4_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1'],
     'variantId': '15-62456406-G-A',
+    'acmgClassification': None,
 }
 
 COMPOUND_HET_5_JSON = {
@@ -73,6 +80,7 @@ COMPOUND_HET_5_JSON = {
     'projectGuid': 'R0001_1kg',
     'familyGuids': ['F000001_1'],
     'variantId': '16-31096164-G-C',
+    'acmgClassification': None,
 }
 
 CREATE_VARIANT_JSON = {
@@ -118,10 +126,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-            'genesById', 'locusListsByGuid',
-        })
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
 
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
@@ -130,7 +135,7 @@ class SavedVariantAPITest(object):
         fields = {
             'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
             'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'mainTranscriptId', 'genotypes', 'hgmd',
-            'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar',
+            'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
         }
         fields.update(SAVED_VARIANT_FIELDS)
         self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
@@ -149,6 +154,11 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': {
+            'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+            'isSignificant': True,
+        }}})
+
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
         self.assertEqual(response.status_code, 200)
@@ -160,8 +170,9 @@ class SavedVariantAPITest(object):
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
         self.assertEqual(response.status_code, 200)
-
-        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000002_1248367227_r0390_100'})
+        response_json = response.json()
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000002_1248367227_r0390_100'})
+        self.assertDictEqual(response_json['rnaSeqData'], {})
 
         # filter by variant guid
         response = self.client.get('{}{}'.format(url, VARIANT_GUID))
@@ -187,10 +198,9 @@ class SavedVariantAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-            'genesById', 'locusListsByGuid', 'familiesByGuid',
-        })
+        response_keys = {'familiesByGuid'}
+        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
             set(variants.keys()),
@@ -236,6 +246,7 @@ class SavedVariantAPITest(object):
         variant_json.update({
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
+            'acmgClassification': None,
             'selectedMainTranscriptId': None,
             'noteGuids': [],
             'functionalDataGuids': [],
@@ -275,6 +286,7 @@ class SavedVariantAPITest(object):
             'familyGuids': ['F000001_1', 'F000002_2'],
             'svType': 'DUP',
             'variantId': 'batch_123_DUP',
+            'acmgClassification': None,
         }
 
         request_body = {
@@ -369,6 +381,12 @@ class SavedVariantAPITest(object):
     def test_create_update_and_delete_variant_note(self):
         create_variant_note_url = reverse(create_variant_note_handler, args=[VARIANT_GUID])
         self.check_collaborator_login(create_variant_note_url, request_data={'familyGuid': 'F000001_1'})
+
+        response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
+            {'familyGuid': 'F000001_1'}
+        ))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Note is required')
 
         # send valid request to create variant_note
         response = self.client.post(create_variant_note_url, content_type='application/json', data=json.dumps(
@@ -794,6 +812,24 @@ class SavedVariantAPITest(object):
         saved_variant = SavedVariant.objects.get(guid=VARIANT_GUID)
         self.assertEqual(saved_variant.selected_main_transcript_id, transcript_id)
 
+    def test_update_variant_acmg_classification(self):
+        update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])
+        self.check_collaborator_login(update_variant_acmg_classification_url)
+
+        variant = {
+            'variant': {
+                'acmgClassification': {
+                    'classify': 'Uncertain',
+                    'criteria': ['PM2_P'],
+                    'score': 1
+                },
+            }
+        }
+
+        response = self.client.post(update_variant_acmg_classification_url, content_type='application/json', data=json.dumps(variant))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'savedVariantsByGuid': {VARIANT_GUID: {'acmgClassification': variant['variant']['acmgClassification']}}})
+
 
 # Tests for AnVIL access disabled
 class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
@@ -830,7 +866,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_update_and_delete_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 6)
+        assert_no_list_ws_has_al(self, 7)
 
     def test_create_partially_saved_compound_het_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
@@ -862,6 +898,10 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_update_variant_main_transcript(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
+        assert_no_list_ws_has_al(self, 2)
+
+    def test_update_variant_acmg_classification(self):
+        super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
         assert_no_list_ws_has_al(self, 2)
 
 
@@ -919,4 +959,8 @@ class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
 
     def test_update_variant_main_transcript(self):
         super(MixSavedVariantAPITest, self).test_update_variant_main_transcript()
+        assert_no_list_ws_has_al(self, 1)
+
+    def test_update_variant_acmg_classification(self):
+        super(MixSavedVariantAPITest, self).test_update_variant_acmg_classification()
         assert_no_list_ws_has_al(self, 1)

@@ -8,7 +8,7 @@ import {
   REQUEST_SEARCHED_VARIANTS,
   RECEIVE_SEARCHED_VARIANTS,
 } from 'redux/utils/reducerUtils'
-import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
+import { loadingReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper, getUrlQueryString } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -106,8 +106,8 @@ export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback)
 
 export const saveSearch = search => updateEntity(search, RECEIVE_SAVED_SEARCHES, '/api/saved_search', 'savedSearchGuid')
 
-export const updateCompoundHetDisplay = ({ updates }) => dispatch => dispatch(
-  { type: UPDATE_COMPOUND_HET_DISPLAY, newValue: updates.flattenCompoundHet },
+export const updateCompoundHetDisplay = updates => dispatch => dispatch(
+  { type: UPDATE_COMPOUND_HET_DISPLAY, updates },
 )
 
 export const loadSingleSearchedVariant = ({ variantId, familyGuid }) => (dispatch) => {
@@ -145,7 +145,7 @@ export const reducers = {
   multiProjectSearchContextLoading: loadingReducer(
     REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT,
   ),
-  flattenCompoundHet: createSingleValueReducer(UPDATE_COMPOUND_HET_DISPLAY, false),
+  flattenCompoundHet: createSingleObjectReducer(UPDATE_COMPOUND_HET_DISPLAY),
 }
 
 const rootReducer = combineReducers(reducers)

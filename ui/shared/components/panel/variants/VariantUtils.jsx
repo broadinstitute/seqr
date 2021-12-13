@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup } from 'semantic-ui-react'
 
-import { GENOME_VERSION_37 } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainGeneId } from '../../../utils/constants'
 
 const SequenceContainer = styled.span`
   word-break: break-all;
@@ -18,6 +18,19 @@ export const TranscriptLink = styled.a.attrs(({ variant, transcript }) => ({
   font-size: 1.3em;
   font-weight: normal;
 `
+
+export const compHetGene = (variants) => {
+  const sharedGeneIds = variants.slice(1).reduce(
+    (acc, v) => acc.filter(geneId => geneId in (v.transcripts || {})), Object.keys(variants[0].transcripts || {}),
+  )
+  if (sharedGeneIds.length > 1) {
+    const mainSharedGene = variants.map(v => getVariantMainGeneId(v)).find(geneId => sharedGeneIds.includes(geneId))
+    if (mainSharedGene) {
+      return mainSharedGene
+    }
+  }
+  return sharedGeneIds[0]
+}
 
 export const getLocus =
   (chrom, pos, rangeSize, endOffset = 0) => `chr${chrom}:${pos - rangeSize}-${pos + endOffset + rangeSize}`

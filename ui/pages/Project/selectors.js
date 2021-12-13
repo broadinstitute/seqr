@@ -17,7 +17,7 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants,
 } from 'redux/selectors'
@@ -48,6 +48,7 @@ export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.i
 export const getProjectOverviewIsLoading = state => state.projectOverviewLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
+export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
 export const getFamilyDetailsLoading = state => state.familyDetailsLoading.isLoading
@@ -680,8 +681,8 @@ export const getPageHeaderEntityLinks = createSelector(
   getPageHeaderAnalysisGroup,
   (state, props) => getSearchType(props.match.params),
   getProjectAnalysisGroupFamiliesByGuid,
-  getHasActiveVariantSampleByFamily,
-  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
+  getHasActiveSearchableSampleByFamily,
+  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveSearchableSampleByFamilyGuid) => {
     if (!project) {
       return null
     }
@@ -694,7 +695,9 @@ export const getPageHeaderEntityLinks = createSelector(
     }
 
     const familiesToConsider = searchType === 'family' ? [family.familyGuid] : Object.keys(familiesByGuid)
-    const disabled = familiesToConsider.every(familyGuid => !hasActiveVariantSampleByFamilyGuid[familyGuid])
+    const disabled = familiesToConsider.every(
+      familyGuid => !(hasActiveSearchableSampleByFamilyGuid[familyGuid] || {}).isSearchable,
+    )
     const entityLinks = [{
       to: `/variant_search/${searchType}/${searchId}`,
       content: `${snakecaseToTitlecase(searchType)} Variant Search`,

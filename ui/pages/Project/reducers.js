@@ -19,6 +19,7 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
+const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
@@ -288,6 +289,23 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
   }
 }
 
+export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
+  const data = getState().rnaSeqDataByIndividual[individualGuid]
+  // If variants were loaded for the individual, the significant gene data will be loaded but not all the needed data
+  if (!data || Object.values(data).every(({ isSignificant }) => isSignificant)) {
+    dispatch({ type: REQUEST_RNA_SEQ_DATA })
+    new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
+      (responseJson) => {
+        dispatch({
+          type: RECEIVE_DATA, updatesById: responseJson,
+        })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
+
 export const updateMmeSubmission = (values) => {
   const onSuccess = values.delete ? null : (responseJson, dispatch, getState) => (
     loadMmeMatches(Object.keys(responseJson.mmeSubmissionsByGuid)[0], true)(dispatch, getState)
@@ -327,6 +345,7 @@ export const reducers = {
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
+  rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),
   familyTagTypeCounts: createObjectsByIdReducer(RECEIVE_DATA, 'familyTagTypeCounts'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_DATA),

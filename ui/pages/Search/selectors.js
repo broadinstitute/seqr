@@ -134,8 +134,10 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
   getProjectsByGuid,
   getLocusListsByGuid,
   (projectGuids, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set((projectGuids || []).reduce((acc, projectGuid) => (
-      projectsByGuid[projectGuid] ? [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), []))]
+    const locusListGuids = [...new Set((projectGuids || []).reduce(
+      (acc, projectGuid) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
+        [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
+    ))]
     const locusListOptions = locusListGuids.map((locusListGuid) => {
       const { name, paLocusList } = locusListsByGuid[locusListGuid]
       return { text: name, value: locusListGuid, description: paLocusList && 'PanelApp' }
@@ -149,9 +151,9 @@ export const getDatasetTypes = createSelector(
   getSamplesGroupedByProjectGuid,
   (projectGuids, samplesByProjectGuid) => {
     const datasetTypes = projectGuids.reduce((acc, projectGuid) => new Set([
-      ...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(({ isActive }) => isActive).map(
-        ({ datasetType }) => datasetType,
-      )]), new Set())
+      ...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
+      ).map(({ datasetType }) => datasetType)]), new Set())
     return [...datasetTypes].sort().join(',')
   },
 )

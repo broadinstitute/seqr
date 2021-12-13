@@ -5,6 +5,7 @@ MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 4000
 MAX_SEARCH_CLAUSES = 1024
+MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 XPOS_SORT_KEY = 'xpos'
 
@@ -48,6 +49,11 @@ INHERITANCE_FILTERS = {
         UNAFFECTED: REF_REF,
     },
 }
+
+PATH_FREQ_OVERRIDE_CUTOFF = 0.05
+
+CLINVAR_PATH_FILTER = 'pathogenic'
+CLINVAR_LIKELY_PATH_FILTER = 'likely_pathogenic'
 
 CLINVAR_SIGNFICANCE_MAP = {
     'pathogenic': ['Pathogenic', 'Pathogenic/Likely_pathogenic'],
@@ -96,10 +102,10 @@ POPULATIONS = {
         'Hemi': 'exac_AC_Hemi',
     },
     'gnomad_exomes': {
-        'filter_AF': ['gnomad_exomes_FAF_AF', 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'],
+        'filter_AF': ['gnomad_exomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_genomes': {
-        'filter_AF': ['gnomad_genomes_FAF_AF', 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
+        'filter_AF': ['gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_svs': {},
 }

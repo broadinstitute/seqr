@@ -1,6 +1,7 @@
 import { createSelector } from 'reselect'
 import uniqBy from 'lodash/uniqBy'
 
+import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { NOTE_TAG_NAME } from 'shared/utils/constants'
 
@@ -27,6 +28,7 @@ export const getHpoTermsIsLoading = state => state.hpoTermsLoading.isLoading
 export const getLocusListsByGuid = state => state.locusListsByGuid
 export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
+export const getRnaSeqDataByIndividual = state => state.rnaSeqDataByIndividual
 export const getUser = state => state.user
 export const getUserOptionsByUsername = state => state.userOptionsByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
@@ -142,12 +144,15 @@ export const getSamplesByFamily = createSelector(
   },
 )
 
-export const getHasActiveVariantSampleByFamily = createSelector(
+export const getHasActiveSearchableSampleByFamily = createSelector(
   getSamplesByFamily,
   samplesByFamily => Object.entries(samplesByFamily).reduce(
     (acc, [familyGuid, familySamples]) => ({
       ...acc,
-      [familyGuid]: familySamples.some(({ isActive }) => isActive),
+      [familyGuid]: {
+        isActive: familySamples.some(({ isActive }) => isActive),
+        isSearchable: familySamples.some(({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex),
+      },
     }), {},
   ),
 )
@@ -166,6 +171,20 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
     acc[familyGuid][sample.sampleType][sample.individualGuid] = sample
     return acc
   }, {}),
+)
+
+export const getSignificantRnaSeqDataByFamilyGene = createSelector(
+  getIndividualsByGuid,
+  getRnaSeqDataByIndividual,
+  (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => {
+      const { familyGuid, displayName } = individualsByGuid[individualGuid]
+      acc[familyGuid] = Object.entries(rnaSeqData).reduce((acc2, [geneId, data]) => (data.isSignificant ?
+        { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
+      ), acc[familyGuid] || {})
+      return acc
+    }, {},
+  ),
 )
 
 // Saved variant selectors
@@ -288,7 +307,16 @@ export const getTotalVariantsCount = createSelector(
 export const getDisplayVariants = createSelector(
   (state, ownProps) => ownProps.flattenCompoundHet,
   getSearchedVariants,
-  (flattenCompoundHet, searchedVariants) => (flattenCompoundHet ? (uniqBy(searchedVariants.flat(), 'variantId') || []) : searchedVariants),
+  (flattenCompoundHet, searchedVariants) => {
+    const shouldFlatten = Object.values(flattenCompoundHet || {}).some(val => val)
+    if (!shouldFlatten) {
+      return searchedVariants || []
+    }
+    const flattened = flattenCompoundHet.all ? searchedVariants.flat() : searchedVariants.reduce((acc, variant) => (
+      (Array.isArray(variant) && flattenCompoundHet[compHetGene(variant)]) ? [...acc, ...variant] : [...acc, variant]
+    ), [])
+    return uniqBy(flattened, 'variantId')
+  },
 )
 
 export const getSearchedVariantExportConfig = createSelector(

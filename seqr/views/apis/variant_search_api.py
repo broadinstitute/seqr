@@ -11,7 +11,7 @@ from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.apis.saved_variant_api import _add_locus_lists
+from seqr.views.apis.saved_variant_api import _add_locus_lists, get_rna_seq_outliers
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
@@ -149,6 +149,7 @@ def _process_variants(variants, families, user):
         'searchedVariants': variants,
         'genesById': genes,
         'locusListsByGuid': locus_lists_by_guid,
+        'rnaSeqData': get_rna_seq_outliers(genes.keys(), sample__individual__family__in=families),
     })
     return response_json
 
@@ -255,7 +256,7 @@ def export_variants_handler(request, search_hash):
     variants, _ = get_es_variants(results_model, page=1, load_all=True, user=request.user)
     variants = _flatten_variants(variants)
 
-    json, variants_to_saved_variants = _get_saved_variants(variants, families)
+    json_saved_variants, variants_to_saved_variants = _get_saved_variants(variants, families)
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
@@ -268,8 +269,8 @@ def export_variants_handler(request, search_hash):
             variant_guid = variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')
             family_tags = {
                 'family_id': family_ids_by_guid.get(family_guid),
-                'tags': [tag for tag in json['variantTagsByGuid'].values() if variant_guid in tag['variantGuids']],
-                'notes': [note for note in json['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
+                'tags': [tag for tag in json_saved_variants['variantTagsByGuid'].values() if variant_guid in tag['variantGuids']],
+                'notes': [note for note in json_saved_variants['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
             }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
         genotypes = list(variant['genotypes'].values())

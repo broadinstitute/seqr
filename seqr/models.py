@@ -604,7 +604,8 @@ class Sample(ModelWithGUID):
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
 
-    elasticsearch_index = models.TextField(db_index=True)
+    elasticsearch_index = models.TextField(db_index=True, null=True)
+    data_source = models.TextField(null=True)
 
     # sample status
     is_active = models.BooleanField(default=False)
@@ -619,6 +620,7 @@ class Sample(ModelWithGUID):
     class Meta:
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
+           'elasticsearch_index',
        ]
 
 
@@ -666,6 +668,8 @@ class SavedVariant(ModelWithGUID):
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = JSONField(default=dict)
 
+    acmg_classification = JSONField(null=True) # ACMG based classification
+
     def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos)
         return "%s:%s-%s" % (chrom, pos, self.family.guid)
@@ -676,7 +680,7 @@ class SavedVariant(ModelWithGUID):
     class Meta:
         unique_together = ('xpos', 'xpos_end', 'variant_id', 'family')
 
-        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id']
+        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id', 'acmg_classification']
 
 
 class VariantTagType(ModelWithGUID):
@@ -956,3 +960,28 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
+
+class RnaSeqOutlier(models.Model):
+    SIGNIFICANCE_THRESHOLD = 0.05
+
+    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
+    p_value = models.FloatField()
+    p_adjust = models.FloatField()
+    z_score = models.FloatField()
+
+    @classmethod
+    def bulk_delete(cls, user, queryset=None, **filter_kwargs):
+        """Helper bulk delete method that logs the deletion"""
+        if queryset is None:
+            queryset = cls.objects.filter(**filter_kwargs)
+        log_model_bulk_update(logger, queryset, user, 'delete')
+        return queryset.delete()
+
+    def __unicode__(self):
+        return "%s:%s" % (self.sample.sample_id, self.gene_id)
+
+    class Meta:
+        unique_together = ('sample', 'gene_id')
+
+        json_fields = ['gene_id', 'p_value', 'p_adjust', 'z_score']

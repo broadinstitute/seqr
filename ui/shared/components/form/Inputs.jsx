@@ -340,7 +340,7 @@ CheckboxGroup.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func,
   label: PropTypes.node,
-  groupLabel: PropTypes.string,
+  groupLabel: PropTypes.node,
   horizontalGrouped: PropTypes.bool,
 }
 
@@ -449,14 +449,14 @@ BooleanCheckbox.propTypes = {
   onChange: PropTypes.func,
 }
 
-const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
+const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, padded, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   ${props => (props.asFormInput ?
     `label {
       font-weight: 700;
     }` : 'margin-bottom: 0 !important;')}
   
   &:last-child {
-    padding-right: 0 !important;
+    padding-right: ${props => (props.padded ? '1em' : '0')} !important;
   }
   
   ${props => (props.divided ?

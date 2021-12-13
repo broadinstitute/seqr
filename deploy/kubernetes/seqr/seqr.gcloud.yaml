@@ -54,7 +54,7 @@ spec:
       containers:
       - name: seqr-pod
         ports:
-        - containerPort: {{ SEQR_SERVICE_PORT }}
+        - containerPort: 8000
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
@@ -151,8 +151,6 @@ spec:
           value: "{{ KIBANA_SERVICE_HOSTNAME }}"
         - name: REDIS_SERVICE_HOSTNAME
           value: "{{ REDIS_SERVICE_HOSTNAME }}"
-        - name: SEQR_SERVICE_PORT
-          value: "{{ SEQR_SERVICE_PORT }}"
         - name: POSTGRES_SERVICE_PORT
           value: "{{ POSTGRES_SERVICE_PORT }}"
         - name: ELASTICSEARCH_SERVICE_PORT

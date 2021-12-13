@@ -8,7 +8,7 @@ import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
   buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType,
-  familyGuids, projectFamilies, inheritanceMode, ...props
+  familyGuids, familyGuid, projectFamilies, inheritanceMode, ...props
 }) => <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
 SearchResultsLink.propTypes = {
@@ -18,6 +18,7 @@ SearchResultsLink.propTypes = {
   variantId: PropTypes.string,
   genomeVersion: PropTypes.string,
   svType: PropTypes.string,
+  familyGuid: PropTypes.string,
   familyGuids: PropTypes.arrayOf(PropTypes.string),
   projectFamilies: PropTypes.arrayOf(PropTypes.object),
   openSearchResults: PropTypes.func,
@@ -38,7 +39,8 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     if (ownProps.inheritanceMode) {
       search.inheritance = { mode: ownProps.inheritanceMode }
     }
-    const projectFamilies = ownProps.familyGuids ? [{ familyGuids: ownProps.familyGuids }] : ownProps.projectFamilies
+    const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
+    const projectFamilies = familyGuids ? [{ familyGuids }] : ownProps.projectFamilies
     dispatch(navigateSavedHashedSearch(
       { allProjectFamilies: !projectFamilies, projectFamilies, search },
       resultsLink => window.open(resultsLink, '_blank'),
