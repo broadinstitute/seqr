@@ -320,7 +320,7 @@ const getFamiliesBySearchString = createSelector(
       { ...acc, [getFamilySearchFields(family, individualsByGuid).join(';').toLowerCase()]: family }), {})
   },
 )
-// TODO some filters and sort may not work now
+
 export const getVisibleFamilies = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getFamiliesBySearchString,

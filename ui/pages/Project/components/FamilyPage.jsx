@@ -164,7 +164,6 @@ const BaseFamilyDetail = React.memo(({ familyGuid, family, compact, tableName, s
     />
   )
   if (compact) {
-    // TODO pedigree js can not draw pedigree in compact mode
     return familyDetail
   }
   return <ExpandedFamily familyGuid={familyGuid} family={family} familyDetail={familyDetail} tableName={tableName} />
