@@ -27,6 +27,7 @@ import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
+  loadFamilyDetails,
 } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
@@ -35,7 +36,7 @@ import {
   getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
-  getVariantUniqueId,
+  getVariantUniqueId, getFamilyDetailsLoading,
 } from '../selectors'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 
@@ -511,24 +512,32 @@ const MatchmakerIndividual = connect(mapStateToProps, mapDispatchToProps)(BaseMa
 
 const MME_FAMILY_FIELDS = [{ id: FAMILY_FIELD_MME_NOTES, colWidth: 16 }]
 
-const Matchmaker = React.memo(({ individuals, family }) => (
-  <div>
+const Matchmaker = React.memo(({ individuals, family, load, loading, match }) => (
+  <DataLoader load={load} contentId={match.params.familyGuid} content={individuals} loading={loading}>
     <Header dividing size="medium" content="Notes" />
     <Family family={family} compact useFullWidth hidePedigree fields={MME_FAMILY_FIELDS} />
     {(individuals || []).filter(individual => individual.affected === AFFECTED).map(
       individual => <MatchmakerIndividual key={individual.individualGuid} individual={individual} />,
     )}
-  </div>
+  </DataLoader>
 ))
 
 Matchmaker.propTypes = {
   family: PropTypes.object,
   individuals: PropTypes.arrayOf(PropTypes.object),
+  match: PropTypes.object,
+  loading: PropTypes.bool,
+  load: PropTypes.func,
 }
 
 const mapIndividualsStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.match.params.familyGuid],
   individuals: getSortedIndividualsByFamily(state)[ownProps.match.params.familyGuid],
+  loading: !!getFamilyDetailsLoading(state)[ownProps.match.params.familyGuid],
 })
 
-export default connect(mapIndividualsStateToProps)(Matchmaker)
+const mapIndividualsDispatchToProps = {
+  load: loadFamilyDetails,
+}
+
+export default connect(mapIndividualsStateToProps, mapIndividualsDispatchToProps)(Matchmaker)
