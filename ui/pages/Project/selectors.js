@@ -377,7 +377,6 @@ export const getEntityExportConfig = ({ project, tableName, fileName, fields }) 
   }),
 })
 
-// TODO project page downloads no longer have all data
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSamplesByFamily,
@@ -390,15 +389,27 @@ const getFamiliesExportData = createSelector(
   }], []),
 )
 
+const getSamplesByIndividual = createSelector(
+  getSamplesByGuid,
+  samplesByGuid => Object.values(samplesByGuid).reduce((acc, sample) => {
+    if (!acc[sample.individualGuid]) {
+      acc[sample.individualGuid] = []
+    }
+    acc[sample.individualGuid].push(sample)
+    return acc
+  }, {}),
+)
+
 const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
-  getSamplesByGuid,
-  (families, individualsByFamily, samplesByGuid) => families.reduce((acc, family) => [
+  getSamplesByIndividual,
+  (families, individualsByFamily, samplesByIndividual) => families.reduce((acc, family) => [
     ...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid => samplesByGuid[sampleGuid].isActive),
+      [INDIVIDUAL_HAS_DATA_FIELD]: (
+        samplesByIndividual[individual.individualGuid] || []).some(({ isActive }) => isActive),
     }))], []),
 )
 
@@ -410,7 +421,7 @@ const getSamplesExportData = createSelector(
     ...acc, ...(samplesByFamily[family.familyGuid] || []).map(sample => ({
       ...sample,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid].individualId,
+      [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid]?.individualId,
     }))], []),
 )
 

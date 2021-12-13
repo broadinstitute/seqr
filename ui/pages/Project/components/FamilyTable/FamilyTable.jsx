@@ -1,20 +1,21 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Table, Icon } from 'semantic-ui-react'
+import { Table, Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
 import DataLoader from 'shared/components/DataLoader'
-import ExportTableButton from 'shared/components/buttons/ExportTableButton'
+import { ExportTableButtonContent, DownloadButton } from 'shared/components/buttons/ExportTableButton'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import TableLoading from 'shared/components/table/TableLoading'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import {
   getVisibleFamiliesInSortedOrder, getFamiliesLoading, getProjectOverviewIsLoading, getProjectExportUrls,
+  getIndivdualsLoading,
 } from '../../selectors'
-import { loadFamilies } from '../../reducers'
+import { loadFamilies, loadIndividuals } from '../../reducers'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
@@ -81,9 +82,10 @@ class FamilyTableRow extends React.PureComponent {
 
 }
 
-const FamilyTable = React.memo((
-  { visibleFamilies, load, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails, ...props },
-) => (
+const FamilyTable = React.memo(({
+  visibleFamilies, load, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails,
+  loadExportData, exportDataLoading, ...props
+}) => (
   <DataLoader load={load} loading={false} content>
     <ExportContainer>
       {headerStatus && (
@@ -98,7 +100,16 @@ const FamilyTable = React.memo((
           <HorizontalSpacer width={10} />
         </span>
       )}
-      <ExportTableButton downloads={exportUrls} />
+      <Popup
+        trigger={<DownloadButton />}
+        content={
+          <DataLoader load={loadExportData} loading={exportDataLoading} content>
+            <ExportTableButtonContent downloads={exportUrls} />
+          </DataLoader>
+        }
+        on="click"
+        position="bottom center"
+      />
       <HorizontalSpacer width={45} />
     </ExportContainer>
     <Table padded fixed attached="top">
@@ -134,6 +145,8 @@ FamilyTable.propTypes = {
   visibleFamilies: PropTypes.arrayOf(PropTypes.object).isRequired,
   loading: PropTypes.bool,
   load: PropTypes.func,
+  exportDataLoading: PropTypes.bool,
+  loadExportData: PropTypes.func,
   headerStatus: PropTypes.object,
   exportUrls: PropTypes.arrayOf(PropTypes.object),
   showVariantDetails: PropTypes.bool,
@@ -145,11 +158,13 @@ FamilyTable.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
   loading: getFamiliesLoading(state) || getProjectOverviewIsLoading(state),
+  exportDataLoading: getIndivdualsLoading(state),
   exportUrls: getProjectExportUrls(state, ownProps),
 })
 
 const mapDispatchToProps = {
   load: loadFamilies,
+  loadExportData: loadIndividuals,
 }
 
 export default withRouter(connect(mapStateToProps, mapDispatchToProps)(FamilyTable))
