@@ -40,7 +40,7 @@ data:
       2:
         action: delete_snapshots
         description: >-
-          Delete snapshots from the snapshot_storage older than 45 days
+          Delete snapshots older than 45 days from the snapshot_storage repository
           (based on creation_date), for 'snapshot-' prefixed snapshots.
         options:
           repository: snapshot_storage
