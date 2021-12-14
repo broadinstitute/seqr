@@ -45,6 +45,7 @@ data:
         options:
           repository: snapshot_storage
           disable_action: False
+          timeout_override: 3600
         filters:
         - filtertype: pattern
           kind: prefix
