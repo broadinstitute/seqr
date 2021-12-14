@@ -174,7 +174,6 @@ def project_overview(request, project_guid):
     })
 
     response['familyTagTypeCounts'] = _add_tag_type_counts(project, project_json['variantTagTypes'])
-    project_json['variantTagTypes'] = sorted(project_json['variantTagTypes'], key=lambda variant_tag_type: variant_tag_type['order'] or 0)
 
     return create_json_response(response)
 

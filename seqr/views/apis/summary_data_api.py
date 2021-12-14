@@ -87,7 +87,7 @@ def saved_variants_page(request, tag):
 
     prefetch_related_objects(saved_variant_models, 'family__project')
     response_json = get_json_for_saved_variants_with_tags(saved_variant_models, add_details=True, include_missing_variants=True)
-
+    # TODO probably needs less info/ can use shared utility
     project_models_by_guid = {variant.family.project.guid: variant.family.project for variant in saved_variant_models}
     families = {variant.family for variant in saved_variant_models}
     individuals = Individual.objects.filter(family__in=families)

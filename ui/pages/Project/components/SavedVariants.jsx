@@ -167,7 +167,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
   tagOptions = () => {
     const { project, match } = this.props
     let currCategory = null
-    return project.variantTagTypes.reduce((acc, vtt) => {
+    return (project.variantTagTypes || []).reduce((acc, vtt) => {
       if (vtt.category !== currCategory) {
         currCategory = vtt.category
         if (vtt.category) {

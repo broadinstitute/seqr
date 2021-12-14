@@ -18,7 +18,7 @@ def get_projects_child_entities(projects, user, is_analyst=None, include_family_
 
     response = _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm, include_family_entities)
 
-    _add_tag_types(response['projectsByGuid'], project_guid)
+    add_project_tag_types(response['projectsByGuid'], project_guid)
 
     return response
 
@@ -151,7 +151,7 @@ def families_discovery_tags(families):
     }
 
 
-def _add_tag_types(projects_by_guid, project_guid):
+def add_project_tag_types(projects_by_guid, project_guid):
     variant_tag_types_models = VariantTagType.objects.filter(Q(project__guid__in=projects_by_guid.keys()) | Q(project__isnull=True))
     variant_tag_types = _get_json_for_models(variant_tag_types_models)
 
@@ -167,6 +167,9 @@ def _add_tag_types(projects_by_guid, project_guid):
 
     for project_guid, project_json in projects_by_guid.items():
         project_json.update({
-            'variantTagTypes': project_tag_types[project_guid] + project_tag_types[None],
+            'variantTagTypes': sorted(
+                project_tag_types[project_guid] + project_tag_types[None],
+                key=lambda variant_tag_type: variant_tag_type['order'] or 0,
+            ),
             'variantFunctionalTagTypes': VariantFunctionalData.FUNCTIONAL_DATA_TAG_TYPES,
         })
