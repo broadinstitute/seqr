@@ -14,7 +14,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_models, \
     get_json_for_family_note, get_json_for_samples, get_json_for_matchmaker_submissions
-from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags
+from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, VariantTagType
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
@@ -58,15 +58,13 @@ def family_variant_tag_summary(request, family_guid):
     response = families_discovery_tags([{'familyGuid': family_guid}])
 
     family_tag_type_counts = VariantTag.objects.filter(saved_variants__family=family).values(
-        'variant_tag_type__guid').annotate(count=Count('*'))
-    tag_type_counts_by_guid = {c['variant_tag_type__guid']: {'count': c['count']} for c in family_tag_type_counts}
-    variant_tag_types = _get_json_for_models(VariantTagType.objects.filter(guid__in=tag_type_counts_by_guid.keys()))
-    for vtt in variant_tag_types:
-        tag_type_counts_by_guid[vtt['variantTagTypeGuid']].update(vtt)
+        'variant_tag_type__name').annotate(count=Count('*'))
+    response['familyTagTypeCounts'] = {
+        family_guid: {c['variant_tag_type__name']: c['count'] for c in family_tag_type_counts},
+    }
 
-    response.update({
-        'familyTagTypeCounts': {family_guid: tag_type_counts_by_guid},
-    })
+    response['projectsByGuid'] = {project.guid: {}}
+    add_project_tag_types(response['projectsByGuid'], project.guid)
 
     return create_json_response(response)
 

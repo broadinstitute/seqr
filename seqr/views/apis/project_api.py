@@ -236,8 +236,7 @@ def _add_tag_type_counts(project, project_variant_tags):
             'numTags': num_tags,
         })
         for count in current_tag_type_counts:
-            family_tag_type_counts[count['saved_variants__family__guid']].update(
-                {tag_type['variantTagTypeGuid']: {'count': count['count']}})
+            family_tag_type_counts[count['saved_variants__family__guid']].update({tag_type['name']: count['count']})
 
     project_variant_tags.append(note_tag_type)
     return family_tag_type_counts
