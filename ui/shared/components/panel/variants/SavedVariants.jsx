@@ -101,7 +101,7 @@ class SavedVariants extends React.PureComponent {
 
     return (
       <Grid stackable>
-        {tableSummaryComponent && React.createElement(tableSummaryComponent, {
+        {tableSummaryComponent && !loading && React.createElement(tableSummaryComponent, {
           familyGuid: variantGuid ? ((variantsToDisplay[0] || {}).familyGuids || [])[0] : familyGuid,
           ...tableState,
         })}
