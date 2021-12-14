@@ -12,10 +12,10 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
     get_or_create_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
-from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_individuals, _get_json_for_models, \
-    get_json_for_family_note, get_json_for_family_notes, get_json_for_samples, get_json_for_matchmaker_submissions
-from seqr.views.utils.project_context_utils import add_child_ids, families_discovery_tags
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, IgvSample, VariantTag, VariantTagType
+from seqr.views.utils.orm_to_json_utils import _get_json_for_family, _get_json_for_models, \
+    get_json_for_family_note, get_json_for_samples, get_json_for_matchmaker_submissions
+from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, VariantTagType
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 
@@ -32,38 +32,20 @@ def family_page_data(request, family_guid):
     is_analyst = user_is_analyst(request.user)
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
-    family_json = _get_json_for_family(
-        family, request.user, project_guid=project.guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
-    family_json['detailsLoaded'] = True
-
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family=family), is_analyst=is_analyst)
-
-    individual_models = Individual.objects.filter(family=family)
-    individuals = _get_json_for_individuals(
-        individual_models, project_guid=project.guid, add_hpo_details=True, skip_nested=True,
-        is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
-
-    sample_models = Sample.objects.filter(individual__in=individual_models)
+    sample_models = Sample.objects.filter(individual__family=family)
     samples = get_json_for_samples(sample_models, project_guid=project.guid, skip_nested=True, is_analyst=is_analyst)
+    response = {
+        'samplesByGuid': {s['sampleGuid']: s for s in samples},
+    }
 
-    igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-    igv_samples = get_json_for_samples(
-        igv_sample_models, project_guid=project.guid, skip_nested=True, is_analyst=is_analyst)
+    add_families_context(response, [family], project.guid, request.user, is_analyst, has_case_review_perm)
+    response['familiesByGuid'][family_guid]['detailsLoaded'] = True
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
-    for individual in individuals:
+    for individual in response['individualsByGuid'].values():
         individual['mmeSubmissionGuid'] = individual_mme_submission_guids.get(individual['individualGuid'])
-
-    response = {
-        'familiesByGuid': {family_guid: family_json},
-        'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
-        'individualsByGuid': {i['individualGuid']: i for i in individuals},
-        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
-        'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in submissions},
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
-    }
-    add_child_ids(response, include_family_entities=True)
+    response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     return create_json_response(response)
 

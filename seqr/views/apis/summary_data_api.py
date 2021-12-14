@@ -3,7 +3,7 @@ from django.db.models import prefetch_related_objects, Q
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
     parse_mme_gene_variants, get_mme_metrics
 from matchmaker.models import MatchmakerSubmission
-from seqr.views.apis.saved_variant_api import _add_locus_lists
+from seqr.views.apis.saved_variant_api import add_locus_lists
 from seqr.models import Family, LocusList, VariantTagType, SavedVariant, Individual,VariantFunctionalData
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants_with_tags, \
@@ -94,7 +94,7 @@ def saved_variants_page(request, tag):
 
     saved_variants = list(response_json['savedVariantsByGuid'].values())
     genes = saved_variant_genes(saved_variants)
-    locus_lists_by_guid = _add_locus_lists(list(project_models_by_guid.values()), genes, include_all_lists=True)
+    locus_lists_by_guid = add_locus_lists(list(project_models_by_guid.values()), genes, include_all_lists=True)
 
     projects_json = get_json_for_projects(list(project_models_by_guid.values()), user=request.user, add_project_category_guids_field=False)
 

@@ -649,7 +649,7 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
       return breadcrumbIdSections
     }
     if (breadcrumb === 'analysis_group') {
-      return [{ content: `Analysis Group: ${analysisGroup.name}`, link: match.url }]
+      return [{ content: `Analysis Group: ${analysisGroup.name || ''}`, link: match.url }]
     }
     if (breadcrumb === 'saved_variants') {
       const { variantPage, tag } = match.params
@@ -658,12 +658,12 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
       if (variantPage === 'variant') {
         breadcrumbIdSections.push({ content: 'Variant', link: match.url })
       } else if (variantPage === 'family') {
-        breadcrumbIdSections.push({ content: `Family: ${family.displayName}`, link: `${path}/family/${family.familyGuid}` })
+        breadcrumbIdSections.push({ content: `Family: ${family.displayName || ''}`, link: `${path}/family/${family.familyGuid}` })
         if (tag) {
           breadcrumbIdSections.push({ content: tag, link: `${path}/family/${family.familyGuid}/${tag}` })
         }
       } else if (variantPage === 'analysis_group') {
-        breadcrumbIdSections.push({ content: `Analysis Group: ${analysisGroup.name}`, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}` })
+        breadcrumbIdSections.push({ content: `Analysis Group: ${analysisGroup.name || ''}`, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}` })
         if (tag) {
           breadcrumbIdSections.push({ content: tag, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}/${tag}` })
         }
