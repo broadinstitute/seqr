@@ -136,12 +136,13 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
     url = `${url}/${variantGuid}`
   } else {
     expectedFamilyGuids = familyGuids
-    if (!expectedFamilyGuids) {
+    if (!expectedFamilyGuids && state.projectsByGuid[projectGuid].familiesLoaded) {
       expectedFamilyGuids = Object.values(state.familiesByGuid).filter(
         family => family.projectGuid === projectGuid,
       ).map(({ familyGuid }) => familyGuid)
     }
-    if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every((family) => {
+
+    if ((expectedFamilyGuids || []).length > 0 && expectedFamilyGuids.every((family) => {
       const { loaded, noteVariants } = state.savedVariantFamilies[family] || {}
       return loaded && (noteVariants || !loadNotes)
     })) {
@@ -150,7 +151,7 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
   }
 
   const params = {
-    loadFamilyContext: !expectedFamilyGuids || expectedFamilyGuids.some(
+    loadFamilyContext: !(expectedFamilyGuids || []).length || expectedFamilyGuids.some(
       familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
     ),
     loadProjectContext: !state.projectsByGuid[projectGuid].variantTagTypes,
@@ -164,10 +165,10 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
   dispatch({ type: REQUEST_SAVED_VARIANTS })
   new HttpRequestHelper(url,
     (responseJson) => {
-      if (expectedFamilyGuids) {
+      if (expectedFamilyGuids || responseJson.familiesByGuid) {
         dispatch({
           type: RECEIVE_SAVED_VARIANT_FAMILIES,
-          updates: expectedFamilyGuids.reduce(
+          updates: (expectedFamilyGuids || Object.keys(responseJson.familiesByGuid)).reduce(
             (acc, family) => ({ ...acc, [family]: { loaded: true, noteVariants: loadNotes } }), {},
           ),
         })
