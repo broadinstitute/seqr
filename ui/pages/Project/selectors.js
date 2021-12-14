@@ -156,42 +156,42 @@ export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
   },
 )
 
-export const getTagTypeData = createSelector(
+export const getProjectTagTypes = createSelector(
   getProjectGuid,
   getTagTypesByProject,
-  getCurrentAnalysisGroup,
-  getFamilyTagTypeCounts,
-  (projectGuid, tagTypesByProject, analysisGroup, familyTagTypeCounts) => {
-    let tagTypeCounts
-    if (analysisGroup) {
-      tagTypeCounts = analysisGroup.familyGuids.reduce((acc, familyGuid) => Object.entries(
-        familyTagTypeCounts[familyGuid] || {},
-      ).reduce((acc2, [tagTypeGuid, { count }]) => (
-        { ...acc2, [tagTypeGuid]: count + (acc2[tagTypeGuid] || 0) }
-      ), acc), {})
-    }
-
-    return (tagTypesByProject[projectGuid] || []).map(vtt => ({
-      count: tagTypeCounts ? tagTypeCounts[vtt.variantTagTypeGuid] || 0 : vtt.numTags,
-      ...vtt,
-    }))
-  },
+  (projectGuid, tagTypesByProject) => tagTypesByProject[projectGuid] || [],
 )
 
-export const getTagTypeDataByFamily = createSelector(
-  getProjectGuid,
-  getTagTypesByProject,
+export const getTagTypeCountsByFamily = createSelector(
+  getProjectTagTypes,
   getFamilyTagTypeCounts,
-  (projectGuid, tagTypesByProject, familyTagTypeCounts) => {
-    const tagTypesByGuid = (tagTypesByProject[projectGuid] || []).reduce(
-      (acc, vtt) => ({ ...acc, [vtt.variantTagTypeGuid]: vtt }), {},
+  (tagTypes, familyTagTypeCounts) => {
+    const tagTypeNamesByGuid = tagTypes.reduce(
+      (acc, { variantTagTypeGuid, name }) => ({ ...acc, [variantTagTypeGuid]: name }), {},
     )
     return Object.entries(familyTagTypeCounts).reduce((acc, [familyGuid, tagTypeCounts]) => ({
       ...acc,
-      [familyGuid]: Object.entries(tagTypeCounts).map(
-        ([tagTypeGuid, count]) => ({ ...tagTypesByGuid[tagTypeGuid], ...count }),
-      ).sort((a, b) => a.order - b.order),
+      [familyGuid]: Object.entries(tagTypeCounts).reduce(
+        (acc2, [tagTypeGuid, { count }]) => ({ ...acc2, [tagTypeNamesByGuid[tagTypeGuid]]: count }), {},
+      ),
     }), {})
+  },
+)
+
+export const getTagTypeCounts = createSelector(
+  getProjectTagTypes,
+  getCurrentAnalysisGroup,
+  getTagTypeCountsByFamily,
+  (tagTypes, analysisGroup, familyTagTypeCounts) => {
+    if (analysisGroup) {
+      return analysisGroup.familyGuids.reduce((acc, familyGuid) => Object.entries(
+        familyTagTypeCounts[familyGuid] || {},
+      ).reduce((acc2, [tagType, count]) => (
+        { ...acc2, [tagType]: count + (acc2[tagType] || 0) }
+      ), acc), {})
+    }
+
+    return tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {})
   },
 )
 

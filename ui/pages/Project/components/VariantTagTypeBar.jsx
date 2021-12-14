@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
-import { getTagTypeData, getTagTypeDataByFamily } from '../selectors'
+import { getProjectTagTypes, getTagTypeCounts, getTagTypeCountsByFamily } from '../selectors'
 
 export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGuid, tag }) => {
   let path = tag ? `/${tag}` : ''
@@ -17,9 +17,10 @@ export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGui
   return `/project/${project.projectGuid}/saved_variants${path}`
 }
 
-const VariantTagTypeBar = React.memo((
-  { data, project, familyGuid, analysisGroupGuid, sectionLinks = true, hideExcluded, hideReviewOnly, ...props },
-) => (
+const VariantTagTypeBar = React.memo(({
+  tagTypes, tagTypeCounts, project, familyGuid, analysisGroupGuid, sectionLinks = true, hideExcluded, hideReviewOnly,
+  ...props
+}) => (
   <HorizontalStackedBar
     {...props}
     minPercent={0.1}
@@ -29,15 +30,17 @@ const VariantTagTypeBar = React.memo((
     noDataMessage="No Saved Variants"
     linkPath={getSavedVariantsLinkPath({ project, analysisGroupGuid, familyGuid })}
     sectionLinks={sectionLinks}
-    data={(hideExcluded || hideReviewOnly) ? data.filter(
+    dataCounts={tagTypeCounts}
+    data={(hideExcluded || hideReviewOnly) ? tagTypes.filter(
       vtt => !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
-    ) : data}
+    ) : tagTypes}
   />
 ))
 
 VariantTagTypeBar.propTypes = {
   project: PropTypes.object.isRequired,
-  data: PropTypes.arrayOf(PropTypes.object).isRequired,
+  tagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  tagTypeCounts: PropTypes.object,
   familyGuid: PropTypes.string,
   analysisGroupGuid: PropTypes.string,
   sectionLinks: PropTypes.bool,
@@ -46,8 +49,9 @@ VariantTagTypeBar.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  data: ownProps.familyGuid ?
-    getTagTypeDataByFamily(state)[ownProps.familyGuid] || [] : getTagTypeData(state, ownProps),
+  tagTypes: getProjectTagTypes(state),
+  tagTypeCounts: ownProps.familyGuid ?
+    getTagTypeCountsByFamily(state)[ownProps.familyGuid] || {} : getTagTypeCounts(state, ownProps),
 })
 
 export default connect(mapStateToProps)(VariantTagTypeBar)
