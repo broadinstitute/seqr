@@ -22,6 +22,7 @@ import { TAG_FORM_FIELD } from '../constants'
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
 import {
   getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily, getProjectVariantSavedByOptions,
+  getSavedVariantTagTypeCounts, getSavedVariantTagTypeCountsByFamily,
 } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
@@ -127,6 +128,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     match: PropTypes.object,
     project: PropTypes.object,
     analysisGroup: PropTypes.object,
+    tagTypeCounts: PropTypes.object,
     updateTableField: PropTypes.func,
     loadProjectSavedVariants: PropTypes.func,
   }
@@ -202,7 +204,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
   }
 
   tableSummary = (summaryProps) => {
-    const { project, match } = this.props
+    const { project, tagTypeCounts, match } = this.props
     return (
       <Grid.Row>
         <Grid.Column width={16}>
@@ -210,6 +212,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
             height={30}
             project={project}
             analysisGroupGuid={match.params.analysisGroupGuid}
+            tagTypeCounts={tagTypeCounts}
             {...summaryProps}
           />
         </Grid.Column>
@@ -243,6 +246,9 @@ class BaseProjectSavedVariants extends React.PureComponent {
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
+  tagTypeCounts: ownProps.match.params.familyGuid ?
+    getSavedVariantTagTypeCountsByFamily(state)[ownProps.match.params.familyGuid] :
+    getSavedVariantTagTypeCounts(state, ownProps),
 })
 
 const mapDispatchToProps = dispatch => ({

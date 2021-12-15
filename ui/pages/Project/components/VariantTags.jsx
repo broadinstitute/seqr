@@ -8,7 +8,7 @@ import { Popup, Table } from 'semantic-ui-react'
 import { ColoredIcon, HelpIcon, NoBorderTable } from 'shared/components/StyledComponents'
 import { NOTE_TAG_NAME } from 'shared/utils/constants'
 import { getSavedVariantsLinkPath } from './VariantTagTypeBar'
-import { getProjectTagTypes, getTagTypeCounts } from '../selectors'
+import { getProjectTagTypes } from '../selectors'
 
 const TableRow = styled(Table.Row)`
   padding: 0px !important;`
@@ -78,9 +78,8 @@ VariantTags.propTypes = {
   analysisGroupGuid: PropTypes.string,
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   tagTypes: getProjectTagTypes(state),
-  tagTypeCounts: getTagTypeCounts(state, ownProps),
 })
 
 export default connect(mapStateToProps)(VariantTags)

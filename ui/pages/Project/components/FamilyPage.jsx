@@ -18,7 +18,9 @@ import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 
 import { loadFamilyDetails, loadFamilyVariantSummary } from '../reducers'
-import { getCurrentProject, getFamilyDetailsLoading, getFamilyVariantSummaryLoading } from '../selectors'
+import {
+  getCurrentProject, getFamilyDetailsLoading, getFamilyVariantSummaryLoading, getFamilyTagTypeCounts,
+} from '../selectors'
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
@@ -52,9 +54,18 @@ DiscoveryGenes.propTypes = {
   genesById: PropTypes.object.isRequired,
 }
 
-const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById, load, loading }) => (
+const BaseVariantDetail = (
+  { project, family, hasActiveVariantSample, compact, genesById, tagTypeCounts, load, loading },
+) => (
   <DataLoader load={load} contentId={family.familyGuid} content={family.discoveryTags} loading={loading}>
-    <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
+    <VariantTagTypeBar
+      height={15}
+      width="calc(100% - 2.5em)"
+      project={project}
+      familyGuid={family.familyGuid}
+      tagTypeCounts={tagTypeCounts}
+      sectionLinks={false}
+    />
     <HorizontalSpacer width={10} />
     <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
     <DiscoveryGenes family={family} genesById={genesById} />
@@ -90,6 +101,7 @@ BaseVariantDetail.propTypes = {
   genesById: PropTypes.object,
   compact: PropTypes.bool,
   hasActiveVariantSample: PropTypes.bool,
+  tagTypeCounts: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
 }
@@ -99,6 +111,7 @@ const mapVariantDetailStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
   hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.family.familyGuid] || {}).isSearchable,
   loading: getFamilyVariantSummaryLoading(state),
+  tagTypeCounts: getFamilyTagTypeCounts(state)[ownProps.family.familyGuid] || {},
 })
 
 const mapVariantDetailDispatchToProps = {

@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
-import { getProjectTagTypes, getTagTypeCounts, getTagTypeCountsByFamily } from '../selectors'
+import { getProjectTagTypes } from '../selectors'
 
 export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGuid, tag }) => {
   let path = tag ? `/${tag}` : ''
@@ -48,10 +48,8 @@ VariantTagTypeBar.propTypes = {
   hideReviewOnly: PropTypes.bool,
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   tagTypes: getProjectTagTypes(state),
-  tagTypeCounts: ownProps.familyGuid ?
-    getTagTypeCountsByFamily(state)[ownProps.familyGuid] || {} : getTagTypeCounts(state, ownProps),
 })
 
 export default connect(mapStateToProps)(VariantTagTypeBar)

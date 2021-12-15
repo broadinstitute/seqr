@@ -20,6 +20,7 @@ import {
   getAnalysisStatusCounts,
   getProjectOverviewIsLoading,
   getFamiliesLoading,
+  getTagTypeCounts,
 } from '../selectors'
 import { loadProjectOverview } from '../reducers'
 import ProjectOverview from './ProjectOverview'
@@ -106,11 +107,16 @@ const ProjectPageUI = React.memo(props => (
             <VariantTagTypeBar
               project={props.project}
               analysisGroupGuid={props.match.params.analysisGroupGuid}
+              tagTypeCounts={props.tagTypeCounts}
               height={20}
-              showAllPopupCategorie
+              showAllPopupCategories
             />
             <VerticalSpacer height={10} />
-            <VariantTags project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
+            <VariantTags
+              project={props.project}
+              analysisGroupGuid={props.match.params.analysisGroupGuid}
+              tagTypeCounts={props.tagTypeCounts}
+            />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
@@ -139,6 +145,7 @@ ProjectPageUI.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
   familiesLoading: PropTypes.bool,
+  tagTypeCounts: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -146,6 +153,7 @@ const mapStateToProps = (state, ownProps) => ({
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
   loading: getProjectOverviewIsLoading(state),
   familiesLoading: getFamiliesLoading(state),
+  tagTypeCounts: getTagTypeCounts(state, ownProps),
 })
 
 const mapDispatchToProps = {
