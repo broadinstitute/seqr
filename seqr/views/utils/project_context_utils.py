@@ -45,25 +45,28 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
     if include_family_entities:
         family_models = Family.objects.filter(project__in=projects)
         individual_models = add_families_context(
-            response, family_models, project_guid, user, is_analyst, has_case_review_perm)
+            response, family_models, project_guid, user, is_analyst, has_case_review_perm, skip_child_ids=True)
 
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
     else:
         _add_parent_ids(response, projects, family_models, individual_models, locus_lists_models)
 
+    _add_child_ids(response)
+
     return response
 
 
-def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True):
+def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True, skip_child_ids=False):
     families = _get_json_for_families(
-        family_models, user, project_guid=project_guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+        family_models, user, project_guid=project_guid, skip_nested=skip_child_ids,
+        is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__in=family_models), is_analyst=is_analyst)
 
     individual_models = Individual.objects.filter(family__in=family_models)
     individuals = _get_json_for_individuals(
-        individual_models, user=user, project_guid=project_guid, add_hpo_details=True,
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=skip_child_ids,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     response.update({
@@ -78,7 +81,8 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
                                        is_analyst=is_analyst)
         response['igvSamplesByGuid'] = {s['sampleGuid']: s for s in igv_samples}
 
-    _add_child_ids(response)
+    if not skip_child_ids:
+        _add_child_ids(response)
 
     return individual_models
 
