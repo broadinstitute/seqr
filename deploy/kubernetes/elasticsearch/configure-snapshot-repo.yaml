@@ -10,7 +10,7 @@ spec:
     spec:
       containers:
       - name: addrepo
-        image: {{ DOCKER_IMAGE_PREFIX }}/curl{{ DOCKER_IMAGE_TAG }}
+        image: curlimages/curl:7.75.0
         env:
         - name: ES_PASSWORD
           valueFrom:
