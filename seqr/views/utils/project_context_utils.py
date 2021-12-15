@@ -52,7 +52,8 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
     else:
         _add_parent_ids(response, projects, family_models, individual_models, locus_lists_models)
 
-    _add_child_ids(response)
+    if include_family_entities:
+        _add_child_ids(response)
 
     return response
 
