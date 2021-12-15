@@ -1,4 +1,5 @@
 from collections import defaultdict
+from seqr.views.utils.json_utils import _to_camel_case
 
 import hail as hl
 
@@ -234,7 +235,9 @@ class HailSearch(object):
 
             transcripts = defaultdict(lambda: list())
             for tc in s.vep.transcript_consequences:
-                transcripts[tc.gene_id].append(dict(tc.drop("domains")))
+                tc_dict = dict(tc.drop("domains"))
+                tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
+                transcripts[tc.gene_id].append(tc_dict)
 
             hail_results.append({
                 "chrom": chrom,
@@ -247,7 +250,8 @@ class HailSearch(object):
                 "liftedOverGenomeVersion": None,
                 "liftedOverChrom": None,
                 "liftedOverPos": None,
-                "transcripts": transcripts
+                "transcripts": transcripts,
+                "mainTranscriptId": transcripts[0].transcript_id
             })
 
 
