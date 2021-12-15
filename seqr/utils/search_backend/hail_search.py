@@ -234,7 +234,7 @@ class HailSearch(object):
 
             transcripts = defaultdict(lambda: list())
             for tc in s.vep.transcript_consequences:
-                transcripts[tc.gene_id].append(dict(tc))
+                transcripts[tc.gene_id].append(dict(tc.drop("domains")))
 
             hail_results.append({
                 "chrom": chrom,
