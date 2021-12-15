@@ -13,7 +13,7 @@ const TableRow = styled(Table.Row)`
 const TableCell = styled(Table.Cell)`
   padding: 0 0 0 10px !important;`
 
-const VariantTags = React.memo(({ project, analysisGroup }) =>
+const VariantTags = React.memo(({ project, analysisGroup }) => (
   <NoBorderTable basic="very" compact="very">
     <Table.Body>
       {
@@ -23,29 +23,27 @@ const VariantTags = React.memo(({ project, analysisGroup }) =>
           <TableRow key={variantTagType.variantTagTypeGuid}>
             <TableCell collapsing>
               <ColoredIcon name="square" size="small" color={variantTagType.color} />
-              <b>{variantTagType.count} </b>
+              <b>{variantTagType.count}</b>
             </TableCell>
             <TableCell>
               <Link to={getSavedVariantsLinkPath({ project, analysisGroup, tag: variantTagType.name })}>
                 {variantTagType.name}
               </Link>
-              {
-                variantTagType.description &&
+              {variantTagType.description && (
                 <Popup
                   position="right center"
                   trigger={<HelpIcon />}
                   content={variantTagType.description}
                   size="small"
                 />
-              }
+              )}
             </TableCell>
-          </TableRow>),
-        )
+          </TableRow>
+        ))
       }
     </Table.Body>
-  </NoBorderTable>,
-)
-
+  </NoBorderTable>
+))
 
 VariantTags.propTypes = {
   project: PropTypes.object.isRequired,

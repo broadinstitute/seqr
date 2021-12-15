@@ -29,3 +29,39 @@ On-prem installs can be created using docker-compose:
 For notes on how to update an older instance, see  	
 
 [Update/Migration Instructions](deploy/MIGRATE.md)
+
+## Development
+
+At the CPG, we don't include the web bundle in the repository anymore, this means you'll need to build the UI before you develop first.
+
+Build UI and link build files back to `static/`:
+
+```bash
+cd ui/
+npm install
+npm run build
+ln dist/app* ../static
+cd ..
+```
+
+Start Python server:
+
+```bash
+gunicorn -c deploy/docker/seqr/config/gunicorn_config.py wsgi:application
+```
+
+### Developing UI
+
+If you're developing UI, you can run a hot-reload UI server. You'll need to start the Python server first (using gunicorn), then run:
+
+```bash
+cd ui/
+npm run start
+```
+
+Then visit https://localhost:3000 in your browser to access the hot-reloadable version of seqr. All requests are proxied back to to Python backend.
+
+### Common errors
+
+- `Error occured while trying to proxy to: localhost:3000`: You didn't start the Python backend server.
+- `TemplateDoesNotExist at / app.html`: then it might say something like: `/Users/${USER}/source/seqr/ui/dist/app.html (Source does not exist)`, you'll need to make sure the `app.html` file is available in `ui/dist/`.

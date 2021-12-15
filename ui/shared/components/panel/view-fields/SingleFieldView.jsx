@@ -3,13 +3,9 @@ import PropTypes from 'prop-types'
 
 import BaseFieldView from './BaseFieldView'
 
-const SingleFieldView = React.memo((props) => {
-  const fields = [{ name: props.field }]
-  return <BaseFieldView
-    formFields={fields}
-    {...props}
-  />
-})
+const EMPTY_DICT = {}
+
+const SingleFieldView = React.memo(props => <BaseFieldView formFieldProps={EMPTY_DICT} {...props} />)
 
 SingleFieldView.propTypes = {
   field: PropTypes.string.isRequired,

@@ -1,24 +1,17 @@
-/* eslint-disable */
-
 const autoprefixer = require('autoprefixer');
 const path = require('path');
 const webpack = require('webpack');
+const ESLintPlugin = require('eslint-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
-const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
-const WebpackCleanupPlugin = require('webpack-cleanup-plugin');
-const Purify = require('purifycss-webpack');
+const PurgeCSSPlugin = require('purgecss-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const eslintFormatter = require('react-dev-utils/eslintFormatter');
 const glob = require('glob');
 const paths = require('./paths');
 
 
 // This is the development configuration.
-//how to optimize webpack builds:
-//   https://hashnode.com/post/how-can-i-properly-use-webpack-to-build-the-production-version-of-my-app-cipoc4dzq029vnq53bglp5atk
-//
-//summary of webpack2 changes: https://gist.github.com/sokra/27b24881210b56bbaff7
-//using react-line: https://www.npmjs.com/package/react-lite
 
 const commonEntryModules = [
   // Include an alternative client for WebpackDevServer. A client's job is to
@@ -41,11 +34,6 @@ const commonEntryModules = [
 // The production configuration is different and lives in a separate file.
 module.exports = {
 
-  /**
-   * To define a new single-page app:
-   * 1) add entry to webpack.dev.config.js and webpack.prod.config.js (this will be compiled into [name]-[hash].js)
-   * 2) add HtmlWebpackPlugin to generate html based on template.ejs
-   */
   mode: 'development',
 
   devtool: 'eval', //'cheap-module-eval-source-map', //'cheap-module-source-map', //'eval',
@@ -58,15 +46,10 @@ module.exports = {
   },
 
   output: {
-    path: path.resolve('./dist/'),
     filename: '[name].js',
     // This is the URL that app is served from. We use "/" in development.
     publicPath: '/',
-    // Add /* filename */ comments to generated require()s in the output.
     pathinfo: true,
-    // Point sourcemap entries to original disk location
-    //devtoolModuleFilenameTemplate: info =>
-    //  path.resolve(info.absoluteResourcePath).replace(/\\/g, '/'),
   },
   resolve: {
     // This allows you to set a fallback for where Webpack should look for modules.
@@ -86,41 +69,17 @@ module.exports = {
   module: {
     strictExportPresence: true,
     rules: [
-      // TODO: Disable require.ensure as it's not a standard language feature.
-      // We are waiting for https://github.com/facebookincubator/create-react-app/issues/2176.
-      // { parser: { requireEnsure: false } },
-
-      // First, run the linter.
-      // It's important to do this before Babel processes the JS.
-      {
-        test: /\.(js|jsx|mjs)$/,
-        enforce: 'pre',
-        use: [
-          {
-            options: {
-              formatter: eslintFormatter,
-              eslintPath: require.resolve('eslint'),
-
-            },
-            loader: require.resolve('eslint-loader'),
-          },
-        ],
-        include: paths.appSrc,
-      },
       {
         // "oneOf" will traverse all following loaders until one will
-        // match the requirements. When no loader matches it will fall
-        // back to the "file" loader at the end of the loader list.
+        // match the requirements
         oneOf: [
-          // "url" loader works like "file" loader except that it embeds assets
-          // smaller than specified limit in bytes as data URLs to avoid requests.
-          // A missing `test` is equivalent to a match.
+          // "asset" loader type automatically chooses between exporting a data URI and emitting a separate file
+          // depending on file size
           {
             test: [/\.bmp$/, /\.gif$/, /\.jpe?g$/, /\.png$/],
-            loader: require.resolve('url-loader'),
-            options: {
-              limit: 10000,
-              name: '[name].[hash:8].[ext]',
+            type: 'asset',
+            generator: {
+              filename: '[name].[contenthash:8][ext]'
             },
           },
           // Process JS with Babel.
@@ -161,56 +120,43 @@ module.exports = {
               {
                 loader: require.resolve('postcss-loader'),
                 options: {
-                  // Necessary for external CSS imports to work
-                  // https://github.com/facebookincubator/create-react-app/issues/2677
-                  ident: 'postcss',
-                  plugins: () => [
-                    require('postcss-flexbugs-fixes'),
-                    autoprefixer({
-                      browsers: [
-                        '>1%',
-                        'last 4 versions',
-                        'Firefox ESR',
-                        'not ie < 9', // React doesn't support IE8 anyway
-                      ],
-                      flexbox: 'no-2009',
-                    }),
-                  ],
+                  postcssOptions: {
+                    // Necessary for external CSS imports to work
+                    // https://github.com/facebookincubator/create-react-app/issues/2677
+                    ident: 'postcss',
+                    plugins: [
+                      require('postcss-flexbugs-fixes'),
+                      autoprefixer({
+                        browsers: [
+                          '>1%',
+                          'last 4 versions',
+                          'Firefox ESR',
+                          'not ie < 9', // React doesn't support IE8 anyway
+                        ],
+                        flexbox: 'no-2009',
+                      }),
+                    ],
+                  },
                 },
               },
             ],
           },
           {
             test: /\.(png|woff|woff2|eot|ttf|svg)$/,
-            use: ['url-loader'],
-          },
-          // "file" loader makes sure those assets get served by WebpackDevServer.
-          // When you `import` an asset, you get its (virtual) filename.
-          // In production, they would get copied to the `build` folder.
-          // This loader doesn't use a "test" so it will catch all modules
-          // that fall through the other loaders.
-          {
-            // Exclude `js` files to keep "css" loader working as it injects
-            // it's runtime that would otherwise processed through "file" loader.
-            // Also exclude `html` and `json` extensions so they get processed
-            // by webpacks internal loaders.
-            exclude: [/\.js$/, /\.html$/, /\.json$/],
-            loader: require.resolve('file-loader'),
-            options: {
-              name: '[name].[hash:8].[ext]',
-            },
+            type: 'asset/inline',
           },
         ],
       },
-      // ** STOP ** Are you adding a new loader?
-      // Make sure to add the new loader(s) before the "file" loader.
     ],
   },
   plugins: [
+    new ESLintPlugin({
+      formatter: eslintFormatter,
+      extensions: ['js', 'jsx'],
+    }),
     new webpack.LoaderOptionsPlugin({ options: {} }),
-    new WebpackCleanupPlugin(),
 
-    new Purify({
+    new PurgeCSSPlugin({
       paths: glob.sync(path.join(__dirname, 'pages/*.html')),
     }),
 
@@ -226,38 +172,27 @@ module.exports = {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify('development'),
     }),
-    // This is necessary to emit hot updates (currently CSS only):
-    //new webpack.HotModuleReplacementPlugin(),
-    // Watcher doesn't work well if you mistype casing in a path so we use
-    // a plugin that prints an error when you attempt to do this.
-    // See https://github.com/facebookincubator/create-react-app/issues/240
     new CaseSensitivePathsPlugin(),
-    // If you require a missing module and then `npm install` it, you still have
-    // to restart the development server for Webpack to discover it. This plugin
-    // makes the discovery automatic so you don't have to restart.
-    // See https://github.com/facebookincubator/create-react-app/issues/186
-    new WatchMissingNodeModulesPlugin(paths.appNodeModules),
     // Moment.js is an extremely popular library that bundles large locale files
     // by default due to how Webpack interprets its code. This is a practical
     // solution that requires the user to opt into importing specific locales.
     // https://github.com/jmblog/how-to-optimize-momentjs-with-webpack
     // You can remove this if you don't use Moment.js:
-    new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
+    new webpack.IgnorePlugin({
+      resourceRegExp: /^\.\/locale$/,
+      contextRegExp: /moment$/,
+    }),
 
     new webpack.ProvidePlugin({
-      $: "jquery",
-      d3: "d3",
-    })
+      $: "jquery/dist/jquery.min",
+      d3: require.resolve('./d3-bundle'),
+    }),
+
+    new BundleAnalyzerPlugin({
+      // Opens a browser tab with detailed breakdown of bundle size. Set analyzerMode to 'server' to enable
+      analyzerMode: 'disabled', // 'server'
+    }),
   ],
-  // Some libraries import Node modules but don't use them in the browser.
-  // Tell Webpack to provide empty mocks for them so importing them works.
-  node: {
-    dgram: 'empty',
-    fs: 'empty',
-    net: 'empty',
-    tls: 'empty',
-    child_process: 'empty',
-  },
   // Turn off performance hints during development because we don't do any
   // splitting or minification in interest of speed. These warnings become
   // cumbersome.

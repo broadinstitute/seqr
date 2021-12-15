@@ -120,6 +120,9 @@ def create_variant_note_handler(request, variant_guids):
             ', '.join([guid for guid in all_variant_guids if guid not in {sv.guid for sv in saved_variants}]))
         return create_json_response({'error': error}, status=400, reason=error)
 
+    if not request_json.get('note'):
+        return create_json_response({'error': 'Note is required'}, status=400)
+
     # update saved_variants
     note = _create_variant_note(saved_variants, request_json, request.user)
     note_json = get_json_for_variant_note(note, add_variant_guids=False)
@@ -210,6 +213,25 @@ def update_variant_tags_handler(request, variant_guids):
         get_tag_create_data=_get_tag_type_create_data, get_tags_json=get_json_for_variant_tags,
         delete_variants_if_empty=True)
 
+@login_and_policies_required
+def update_variant_acmg_classification_handler(request, variant_guid):
+    return _update_variant_acmg_classification(request, variant_guid)
+
+def _update_variant_acmg_classification(request, variant_guid):
+    saved_variant = SavedVariant.objects.get(guid=variant_guid)
+    check_project_permissions(saved_variant.family.project, request.user)
+
+    request_json = json.loads(request.body)
+    variant = request_json.get('variant')
+    update_model_from_json(saved_variant, {'acmg_classification': variant['acmgClassification']}, request.user)
+
+    return create_json_response({
+        'savedVariantsByGuid': {
+            variant_guid: {
+                'acmgClassification': variant['acmgClassification'],
+            }
+        },
+    })
 
 @login_and_policies_required
 def update_variant_functional_data_handler(request, variant_guids):
@@ -328,8 +350,14 @@ def _add_locus_lists(projects, genes, include_all_lists=False):
     for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
         locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
 
-    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list'):
-        genes[locus_list_gene.gene_id]['locusListGuids'].append(locus_list_gene.locus_list.guid)
+    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list', 'palocuslistgene'):
+        gene_json = genes[locus_list_gene.gene_id]
+        locus_list_guid = locus_list_gene.locus_list.guid
+        gene_json['locusListGuids'].append(locus_list_guid)
+        if hasattr(locus_list_gene, 'palocuslistgene'):
+            if not gene_json.get('locusListConfidence'):
+                gene_json['locusListConfidence'] = {}
+            gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
 
     return locus_lists_by_guid
 

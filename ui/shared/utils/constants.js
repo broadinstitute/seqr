@@ -26,15 +26,18 @@ export const GENOME_VERSION_OPTIONS = [
   { value: GENOME_VERSION_37, text: 'GRCh37' },
   { value: GENOME_VERSION_38, text: 'GRCh38' },
 ]
-export const GENOME_VERSION_LOOKUP = GENOME_VERSION_OPTIONS.reduce((acc, { value, text }) =>
-  ({ ...acc, [value]: text }), {})
+export const GENOME_VERSION_LOOKUP = GENOME_VERSION_OPTIONS.reduce(
+  (acc, { value, text }) => ({ ...acc, [value]: text }), {},
+)
 export const GENOME_VERSION_FIELD = {
   name: 'genomeVersion', label: 'Genome Version', component: RadioGroup, options: GENOME_VERSION_OPTIONS,
 }
 
 export const GENOME_VERSION_DISPLAY_LOOKUP = {
   GRCh37: 'hg19',
+  [GENOME_VERSION_37]: 'hg19',
   GRCh38: 'hg38',
+  [GENOME_VERSION_38]: 'hg38',
 }
 
 // PROJECT FIELDS
@@ -61,7 +64,8 @@ export const FILE_FORMATS = [
     formatLinks: [
       { href: 'https://en.wikipedia.org/wiki/Tab-separated_values', linkExt: 'tsv' },
       { href: 'https://en.wikipedia.org/wiki/Comma-separated_values', linkExt: 'csv' },
-    ] },
+    ],
+  },
 ]
 
 const MAILTO_CONTACT_URL_REGEX = /^mailto:[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}(,\s*[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{1,4})*$/i
@@ -127,9 +131,9 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
 ]
 
-export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce((acc, tag) => {
-  return { [tag.value]: tag, ...acc }
-}, {})
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+  (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
+)
 
 // SUCCESS STORY
 
@@ -149,15 +153,16 @@ export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS = [
   { value: FAMILY_SUCCESS_STORY_OTHER, color: '#5D5D5F', name: 'Other' },
 ]
 
-export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce((acc, tag) => {
-  return { [tag.value]: tag, ...acc }
-}, {})
+export const FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP = FAMILY_SUCCESS_STORY_TYPE_OPTIONS.reduce(
+  (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
+)
 
-export const successStoryTypeDisplay = tag =>
+export const successStoryTypeDisplay = tag => (
   <span>
     <ColoredIcon name="stop" color={FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].color} />
     {FAMILY_SUCCESS_STORY_TYPE_OPTIONS_LOOKUP[tag].name}
   </span>
+)
 
 // FAMILY FIELDS
 
@@ -317,7 +322,6 @@ export const INDIVIDUAL_FIELD_CONFIGS = {
   },
 }
 
-
 export const INDIVIDUAL_HPO_EXPORT_DATA = [
   {
     header: 'HPO Terms (present)',
@@ -362,7 +366,8 @@ export const INDIVIDUAL_BULK_UPDATE_EXPORT_DATA = [
 ]
 
 export const INDIVIDUAL_EXPORT_DATA = [].concat(
-  INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG], INDIVIDUAL_HPO_EXPORT_DATA,
+  INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, [INDIVIDUAL_HAS_DATA_EXPORT_CONFIG],
+  INDIVIDUAL_HPO_EXPORT_DATA,
 )
 
 // CLINVAR
@@ -388,7 +393,6 @@ export const CLINSIG_SEVERITY = {
   DFP: 0,
   DP: 0,
 }
-
 
 // LOCUS LISTS
 
@@ -475,7 +479,6 @@ export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
 export const VEP_GROUP_SV = 'structural'
 export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
-
 
 const VEP_SV_TYPES = [
   {
@@ -728,7 +731,7 @@ const ORDERED_VEP_CONSEQUENCES = [
     value: 'NMD_transcript_variant',
     so: 'SO:0001621',
   },
-  //2 kinds of 'non_coding_transcript_exon_variant' text due to value change in Ensembl v77
+  // 2 kinds of 'non_coding_transcript_exon_variant' text due to value change in Ensembl v77
   {
     description: 'A sequence variant that changes non-coding exon sequence',
     text: 'Non-coding exon variant',
@@ -816,9 +819,9 @@ export const GROUPED_VEP_CONSEQUENCES = ORDERED_VEP_CONSEQUENCES.reduce((acc, co
   return acc
 }, {})
 
-export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce((acc, consequence, i) =>
-  ({ ...acc, [consequence.value]: i }),
-{})
+export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce(
+  (acc, consequence, i) => ({ ...acc, [consequence.value]: i }), {},
+)
 
 export const SVTYPE_LOOKUP = VEP_SV_TYPES.reduce((acc, { value, text }) => ({ ...acc, [value]: text }), {})
 
@@ -854,7 +857,6 @@ export const REVIEW_TAG_NAME = 'Review'
 export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
 export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
 
-
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
@@ -873,9 +875,10 @@ const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
 
-export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) =>
-  (user.isAnalyst || variant.familyGuids.some(familyGuid =>
-    projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd)) && variant.hgmd && variant.hgmd.class
+export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
+  user.isAnalyst || variant.familyGuids.some(
+    familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
+  )) && variant.hgmd && variant.hgmd.class
 
 const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
   const { clinvar = {} } = variant
@@ -904,15 +907,16 @@ const getGeneConstraintSortScore = ({ constraints }) => {
   return constraints.louef - missenseOffset
 }
 
-const populationComparator = population => (a, b) =>
-  ((a.populations || {})[population] || {}).af - ((b.populations || {})[population] || {}).af
+const populationComparator =
+  population => (a, b) => ((a.populations || {})[population] || {}).af - ((b.populations || {})[population] || {}).af
 
-const predictionComparator = prediction => (a, b) =>
-  ((b.predictions || {})[prediction] || -1) - ((a.predictions || {})[prediction] || -1)
+const predictionComparator =
+  prediction => (a, b) => ((b.predictions || {})[prediction] || -1) - ((a.predictions || {})[prediction] || -1)
 
 const getConsequenceRank = ({ transcripts, svType }) => (
-  transcripts ? Math.min(...Object.values(transcripts || {}).flat().map(({ majorConsequence }) =>
-    VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence]).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
+  transcripts ? Math.min(...Object.values(transcripts || {}).flat().map(
+    ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence],
+  ).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
 )
 
 const VARIANT_SORT_OPTONS = [
@@ -936,35 +940,38 @@ const VARIANT_SORT_OPTONS = [
   {
     value: SORT_BY_PATHOGENICITY,
     text: 'Pathogenicity',
-    comparator: (a, b, geneId, tagsByGuid, user, familiesByGuid, projectByGuid) =>
-      clinsigSeverity(b, user, familiesByGuid, projectByGuid) - clinsigSeverity(a, user, familiesByGuid, projectByGuid),
+    comparator: (a, b, geneId, tagsByGuid, user, familiesByGuid, projectByGuid) => (
+      clinsigSeverity(b, user, familiesByGuid, projectByGuid) - clinsigSeverity(a, user, familiesByGuid, projectByGuid)
+    ),
   },
   {
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
-    comparator: (a, b, genesById) =>
-      Math.min(...Object.keys(a.transcripts || {}).reduce((acc, geneId) =>
-        [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])) -
-      Math.min(...Object.keys(b.transcripts || {}).reduce((acc, geneId) =>
-        [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [])),
+    comparator: (a, b, genesById) => (
+      Math.min(...Object.keys(a.transcripts || {}).reduce(
+        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+      )) - Math.min(...Object.keys(b.transcripts || {}).reduce(
+        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+      ))),
   },
   {
     value: SORT_BY_IN_OMIM,
     text: 'In OMIM',
-    comparator: (a, b, genesById) =>
+    comparator: (a, b, genesById) => (
       Object.keys(b.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0) -
-      Object.keys(a.transcripts || {}).reduce(
-        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0),
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      ) - Object.keys(a.transcripts || {}).reduce(
+        (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
+      )),
   },
   {
     value: SORT_BY_TAGGED_DATE,
     text: 'Last Tagged',
-    comparator: (a, b, genesById, tagsByGuid) =>
-      (b.tagGuids.map(
-        tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[b.tagGuids.length - 1] || '').localeCompare(
-        a.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[a.tagGuids.length - 1] || '',
-      ),
+    comparator: (a, b, genesById, tagsByGuid) => (
+      b.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[b.tagGuids.length - 1] || ''
+    ).localeCompare(
+      a.tagGuids.map(tagGuid => (tagsByGuid[tagGuid] || {}).lastModifiedDate).sort()[a.tagGuids.length - 1] || '',
+    ),
   },
 ]
 const VARIANT_SEARCH_SORT_OPTONS = VARIANT_SORT_OPTONS.slice(1, VARIANT_SORT_OPTONS.length - 1)
@@ -1031,41 +1038,65 @@ export const VARIANT_TAGGED_DATE_FIELD = {
   inline: true,
 }
 
-export const PREDICTION_INDICATOR_MAP = {
+const INDICATOR_MAP = {
   D: { color: 'red', value: 'damaging' },
-  A: { color: 'red', value: 'disease causing' },
   T: { color: 'green', value: 'tolerated' },
-  N: { color: 'green', value: 'polymorphism' },
-  P: { color: 'green', value: 'polymorphism' },
+}
+
+const POLYPHEN_MAP = {
+  D: { color: 'red', value: 'probably damaging' },
+  P: { color: 'yellow', value: 'possibly damaging' },
   B: { color: 'green', value: 'benign' },
 }
 
-export const POLYPHEN_MAP = {
-  D: { value: 'probably damaging' },
-  P: { color: 'yellow', value: 'possibly damaging' },
+const MUTTASTER_MAP = {
+  D: { color: 'red', value: 'disease causing' },
+  A: { color: 'red', value: 'disease causing automatic' },
+  N: { color: 'green', value: 'polymorphism' },
+  P: { color: 'green', value: 'polymorphism automatic' },
 }
 
-export const MUTTASTER_MAP = {
-  D: { value: 'disease causing' },
-}
+const MISSENSE_IN_SILICO_GROUP = 'Missense'
+const CODING_IN_SILICO_GROUP = 'Coding/Noncoding'
+const SPLICING_IN_SILICO_GROUP = 'Splicing'
+export const SV_IN_SILICO_GROUP = 'Structural'
+export const NO_SV_IN_SILICO_GROUPS = [MISSENSE_IN_SILICO_GROUP, CODING_IN_SILICO_GROUP]
+export const SPLICE_AI_FIELD = 'splice_ai'
+
+export const PREDICTOR_FIELDS = [
+  { field: 'cadd', group: CODING_IN_SILICO_GROUP, warningThreshold: 10, dangerThreshold: 20, min: 1, max: 99 },
+  { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
+  { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.7 },
+  { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 5 },
+  { field: SPLICE_AI_FIELD, group: SPLICING_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
+  { field: 'eigen', group: CODING_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 99 },
+  { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },
+  { field: 'strvctvre', group: SV_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
+  { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: POLYPHEN_MAP },
+  { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
+  { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'metasvm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
+  { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
+  { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
+]
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
   if (selectedMainTranscriptId || mainTranscriptId) {
-    return (Object.entries(transcripts).find(entry =>
-      entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
+    return (Object.entries(transcripts).find(
+      entry => entry[1].some(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)),
     ) || [])[0]
   }
-  if (Object.keys(transcripts).length === 1 && Object.values(transcripts)[0] && Object.values(transcripts)[0].length === 0) {
+  const transcriptList = Object.values(transcripts)
+  if (Object.keys(transcripts).length === 1 && transcriptList[0] && transcriptList[0].length === 0) {
     return Object.keys(transcripts)[0]
   }
   return null
 }
 
-
-export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) =>
-  flatten(Object.values(transcripts)).find(
-    ({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId),
-  ) || {}
+export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => flatten(
+  Object.values(transcripts),
+).find(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)) || {}
 
 const getPopAf = population => (variant) => {
   const populationData = (variant.populations || {})[population]
@@ -1088,10 +1119,10 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'revel', getVal: variant => (variant.predictions || {}).revel },
   { header: 'eigen', getVal: variant => (variant.predictions || {}).eigen },
   { header: 'splice_ai', getVal: variant => (variant.predictions || {}).splice_ai },
-  { header: 'polyphen', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).polyphen] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).polyphen] || {}).value },
-  { header: 'sift', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value },
-  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || PREDICTION_INDICATOR_MAP[(variant.predictions || {}).mut_taster] || {}).value },
-  { header: 'fathmm', getVal: variant => (PREDICTION_INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value },
+  { header: 'polyphen', getVal: variant => (POLYPHEN_MAP[(variant.predictions || {}).polyphen] || {}).value },
+  { header: 'sift', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).sift] || {}).value },
+  { header: 'muttaster', getVal: variant => (MUTTASTER_MAP[(variant.predictions || {}).mut_taster] || {}).value },
+  { header: 'fathmm', getVal: variant => (INDICATOR_MAP[(variant.predictions || {}).fathmm] || {}).value },
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
@@ -1100,6 +1131,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'filter', getVal: variant => variant.genotypeFilters },
   { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
   { header: 'tags', getVal: (variant, tagsByGuid) => variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid].name).join('|') },
+  { header: 'classification', getVal: variant => (variant.acmgClassification ? `${variant.acmgClassification.score}, ${variant.acmgClassification.classify}, ${variant.acmgClassification.criteria}` : '') },
   {
     header: 'notes',
     getVal: (variant, tagsByGuid, notesByGuid) => variant.noteGuids.map((noteGuid) => {
@@ -1193,3 +1225,170 @@ export const USER_NAME_FIELDS = [
   },
 ]
 
+// ACMG Classification
+export const ACMG_RULE_SPECIFICATION_CATEGORY_CRITERIA = [
+  {
+    rules:
+    [
+      { key: 'rs_hcm_dcm_01', value: 'HCM/DCM: >= 0.1%' },
+      { key: 'rs_noonan_005', value: 'Noonan: >= 0.05%' },
+      { key: 'rs_default_06', value: 'Default: >= 0.6%' },
+      { key: 'rs_autosomal_recessive_05', value: 'HL (Autosomal recessive): >= 0.5%' },
+      { key: 'hl_autosomal_dominan_01', value: 'HL (Autosomal dominant): >= 0.1%' },
+    ],
+    name: 'BA1',
+  },
+  {
+    rules:
+    [
+      { key: 'rs_hcm_dcm_02', value: 'HCM/DCM: >= 0.2%' },
+      { key: 'rs_noonan_0025', value: 'Noonan: >= 0.025%' },
+      { key: 'rs_default_03', value: 'Default: >= 0.3%' },
+      { key: 'rs_autosomal_recessive_03', value: 'HL (Autosomal recessive): >= 0.3%' },
+      { key: 'hl_autosomal_dominan_02', value: 'HL (Autosomal dominant): >= 0.02%' },
+    ],
+    name: 'BS1',
+  },
+  {
+    rules:
+    [
+      { key: 'rs_autosomal_recessive_0703', value: 'HL (Autosomal recessive): 0.07-0.3%' },
+    ],
+    name: 'BS1_P',
+  },
+  {
+    rules:
+    [
+      { key: 'rs_autosomal_recessive_007', value: 'HL (Autosomal recessive): <= 0.007%' },
+      { key: 'hl_autosomal_dominan_002', value: 'HL (Autosomal dominant): <= 0.002%' },
+    ],
+    name: 'PM2_P',
+  },
+]
+
+export const ACMG_RULE_SPECIFICATION_PROBAND = [
+  [['Noonan', '#'], ['Strong', '5'], ['Moderate', '3'], ['Supporting', '1']],
+  [['Cardio', '#'], ['Strong', '15'], ['Moderate', '6'], ['Supporting', '2']],
+]
+
+export const ACMG_RULE_SPECIFICATION_IN_TRANS = [
+  [
+    { value: 'Increase to PM3_Strong if observed in trans' },
+    {
+      isList: true,
+      listItems: [
+        { key: 'rs_2x_and_1_variant_path', value: '2x and >= 1 variant in PATH' },
+        { key: 'rs_3x_other_variants_lp', value: '3x if other variants are LP' },
+      ],
+    },
+  ],
+  [
+    { value: 'Increase to VeryStrong if observed in trans' },
+    {
+      isList: true,
+      listItems: [
+        { key: 'rs_4x_and_2_variant_path', value: '4x and >= 2 variant in PATH (can be same variant)' },
+        { key: 'rs_4x_lpp_different', value: '4x if LP/P variants are all different' },
+      ],
+    },
+  ],
+]
+
+export const ACMG_RULE_SPECIFICATION_LEVELS_TABLE = [
+  ['', 'Supporting', 'Moderate', 'Strong'],
+  ['Likelihood', '4:1', '16:1', '32:1'],
+  ['LOD Score', '0.6', '1.2', '1.5'],
+  ['Autosomal dominant threshold', '2 affected segregations', '4 affected segregations', '5 affected segregations<'],
+  ['Autosomal recessive threshold', 'See Table 2', 'See Table 2', 'See Table 2'],
+]
+
+export const ACMG_RULE_SPECIFICATION_GENERAL_RECOMMENDATIONS = [
+  [0, 0, 0.12, 0.25, 0.37, 0.5, 0.62, 0.75, 0.87, 1, 1.2, 1.25],
+  [1, 0.6, 0.73, 0.85, 0.98, 1.1, 1.23, 1.35, 1.48, 1.6, 1.73, 1.85],
+  [2, 1.2, 1.33, 1.45, 1.58, 1.7, 1.83, 1.95, 2.08, 2.2, 2.33, 2.45],
+  [3, 1.81, 1.83, 2.06, 2.18, 2.31, 2.43, 2.56, 2.68, 2.81, 2.93, 3.06],
+  [4, 2.41, 2.53, 2.66, 2.78, 2.91, 3.03, 3.16, 3.28, 3.41, 3.53, 3.06],
+  [5, 3.01, 3.14, 3.26, 3.39, 3.51, 3.63, 3.76, 3.88, 4.01, 4.13, 4.26],
+  [6, 3.61, 3.74, 3.86, 3.99, 4.11, 4.24, 4.36, 4.49, 4.61, 4.74, 4.86],
+  [7, 4.21, 4.34, 4.46, 4.59, 4.71, 4.84, 4.96, 5.09, 5.21, 5.34, 5.46],
+  [8, 4.82, 4.94, 5.07, 5.19, 5.32, 5.44, 5.57, 5.69, 5.82, 5.94, 6.07],
+  [9, 5.42, 5.54, 5.67, 5.79, 5.92, 6.04, 6.17, 6.29, 6.42, 6.54, 6.67],
+  [10, 6.02, 6.15, 6.27, 6.4, 6.52, 6.65, 6.77, 6.9, 7.02, 7.15, 7.27],
+]
+
+export const ACMG_RULE_SPECIFICATION_PM3 = [
+  ['Pathogenic/Likely pathogenic', '1.0', '0.5'],
+  ['Homozygous occurrence (Max points from homozygotes 1)', '0.5', 'N/A'],
+  ['Homozygous occurrence due to consanguinity, rare uncertain significance (confirmed in trans) (Max point 0.5)', '0.25', '0'],
+]
+
+export const ACMG_RULE_SPECIFICATION_DISEASE_BASED_CRITERIA = [
+  { key: 'cardiomyopathy', value: 'Cardiomyopathy', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN002' },
+  { key: 'rasopathy', value: 'RASopathy', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN004' },
+  { key: 'hearing-loss', value: 'Hearing Loss', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN005' },
+  { key: 'rett-angelman-disorders', value: 'Rett and Angelman-like Disorders', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN016' },
+  { key: 'mitochondrial-disease-mitochondrial', value: 'Mitochondrial Disease Mitochondrial', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN015' },
+  { key: 'mitochondrial-disease-nuclear', value: 'Mitochondrial Disease Nuclear', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN014' },
+  { key: 'hypercholesterolemia', value: 'Hypercholesterolemia', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN013' },
+  { key: 'hyperthermia-susceptibility', value: 'Hyperthermia Susceptibility', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN012' },
+  { key: 'platelet-discorders', value: 'Platelet Disorders', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN011' },
+  { key: 'lysosmal-storage-disorders', value: 'Lysosomal Storage Disorders', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN010' },
+  { key: 'pten', value: 'PTEN', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN003' },
+  { key: 'myeloid-malignancy', value: 'Myeloid Malignancy', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN008' },
+  { key: 'cdh1', value: 'CDH1', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN008' },
+  { key: 'tps3', value: 'TPS3', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN009' },
+  { key: 'pah', value: 'PAH', href: 'https://cspec.genome.network/cspec/ui/svi/svi/GN006' },
+]
+
+export const ACMG_RULE_SPECIFICATION_COMP_HET = [
+  [
+    { value: 'Supporting (PM3_Supporting) (total 0.5 points)' },
+    { value: '1 observation with LP/P but phase unknown or 2 VUS co-occurrences (exception: large genes)' },
+    { value: '1 with ADO rules out' },
+    { value: 'N/A' },
+  ],
+  [
+    { value: 'Moderate (PM3) (total 1.0 points)' },
+    { value: '1 comp het  with LP/P 2 observations with different LP/P but phase unknown' },
+    { value: '2 difference families and use of exome data to rule out consanguinity' },
+    {
+      description: 'A combination of the following adding to 1 point',
+      isList: true,
+      listItems: [
+        { key: 'rs_observations_with_lpp', value: 'Observations with LP/P but phase unknown' },
+        { key: 'rs_compund_rare_vus', value: 'Compound het with rare VUS' },
+        { key: 'rs_hom_ado_rules_out', value: 'Hom w/ ADO rules out' },
+      ],
+    },
+  ],
+  [
+    { value: 'Strong (PM3_Strong) (total 2.0 points)' },
+    { value: '2 comp het' },
+    { value: 'N/A' },
+    {
+      desription: 'A combination of the following adding to 2 points',
+      isList: true,
+      listItems: [
+        { key: 'rs_comp_lpp', value: 'Comp het with LP/P' },
+        { key: 'rs_hom_ado_rules_out_2', value: 'Hom w/ ADO rules out' },
+        { key: 'rs_observations_lpp_phase_unknown', value: 'Observations with different LP/P but phase unknown' },
+        { key: 'rs_compund_rare_vus_2', value: 'Compund het with rare VUS' },
+      ],
+    },
+  ],
+  [
+    { value: 'Very Strong (PM3_VeryStrong) (total 4.0 points)' },
+    { value: '4 comp het' },
+    { value: 'N/A' },
+    {
+      description: 'A combination of the following adding to 4 points',
+      isList: true,
+      listItems: [
+        { key: 'rs_comp_lpp_2', value: 'Comp hets with LP/P' },
+        { key: 'rs_different_observations_lpp_phase_unknown', value: 'Different observations with LP/P but phase unknown' },
+        { key: 'rs_compund_rare_vus_3', value: 'Compound het with rare VUS' },
+        { key: 'rs_hom_ado_rules_out_3', value: 'How w/ ADO ruled out' },
+      ],
+    },
+  ],
+]

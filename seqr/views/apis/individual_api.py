@@ -249,14 +249,14 @@ def receive_individuals_table_handler(request, project_guid):
         validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True)
 
     # send back some stats
-    individual_ids_by_family = defaultdict(list)
+    individual_ids_by_family = defaultdict(set)
     for r in json_records:
         if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN):
-            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].add(
                 (r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN], True)
             )
         else:
-            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(
+            individual_ids_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].add(
                 (r[JsonConstants.INDIVIDUAL_ID_COLUMN], False)
             )
 

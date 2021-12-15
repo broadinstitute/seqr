@@ -3,7 +3,7 @@ import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import configureStore from 'redux-mock-store'
 import { getProject } from '../selectors'
-import { CaseReviewTableComponent } from './CaseReview'
+import CaseReviewTable from './CaseReview'
 
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -15,5 +15,5 @@ test('shallow-render without crashing', () => {
    */
 
   const store = configureStore()(STATE_WITH_2_FAMILIES)
-  shallow(<CaseReviewTableComponent store={store} />)
+  shallow(<CaseReviewTable store={store} />)
 })

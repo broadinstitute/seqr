@@ -13,14 +13,14 @@ export const CORE_ANVIL_COLUMNS = [
   { name: 'subject_id' },
   {
     name: PROJECT_ID_FIELD,
-    format: row =>
-      <Link to={`/project/${row.project_guid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
+    format:
+      row => <Link to={`/project/${row.project_guid}/project_page`} target="_blank">{row[PROJECT_ID_FIELD]}</Link>,
     noFormatExport: true,
   },
   {
     name: FAMILY_FIELD_ID,
-    format: row =>
-      <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
+    format:
+      row => <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row[FAMILY_FIELD_ID]}</Link>,
     noFormatExport: true,
   },
   { name: 'pmid_id' },
@@ -73,14 +73,14 @@ export const VARIANT_ANVIL_COLUMNS = [
 
 const formatT0 = row => new Date(row.t0).toISOString().slice(0, 10)
 const pedigreeImageFamily = row => ({ pedigreeImage: row.extras_pedigree_url })
-const formatFamilySummary = row =>
+const formatFamilySummary = row => (
   <div>
     <PedigreeImagePanel family={pedigreeImageFamily(row)} disablePedigreeZoom compact />
     <Link to={`/project/${row.project_guid}/family_page/${row.family_guid}`} target="_blank">{row.family_id}</Link>
     {row.extras_variant_tag_list &&
-      <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>
-    }
+      <div>{row.extras_variant_tag_list.map(tag => <div><small>{tag}</small></div>)}</div>}
   </div>
+)
 
 export const DISCOVERY_SHEET_COLUMNS = [
   { name: 't0', content: 'T0', format: formatT0, style: { minWidth: '100px' } },

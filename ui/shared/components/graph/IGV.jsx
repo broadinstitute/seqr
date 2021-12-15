@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import igv from 'igv'
+import igv from 'igv/dist/igv.esm.min'
 
 import { FontAwesomeIconsContainer } from '../StyledComponents'
 
@@ -17,28 +17,20 @@ const IGVContainer = styled(FontAwesomeIconsContainer)`
   }
 `
 
-const getTrackId = track =>
-  // merged tracks do not have a URL
-  track.url || track.name
+const TRACK_UPDATE_PROPERTIES = ['minJunctionEndsVisible']
+
+const getTrackId = track => track.url || track.name // merged tracks do not have a URL
 
 class IGV extends React.PureComponent {
 
   static propTypes = {
-    tracks: PropTypes.array,
+    tracks: PropTypes.arrayOf(PropTypes.object),
   }
 
   constructor(props) {
     super(props)
     this.container = null
     this.browser = null
-  }
-
-  setContainerElement = (element) => {
-    this.container = element
-  }
-
-  render() {
-    return <IGVContainer><div ref={this.setContainerElement} /></IGVContainer>
   }
 
   componentDidMount() {
@@ -50,20 +42,43 @@ class IGV extends React.PureComponent {
   }
 
   componentDidUpdate(prevProps) {
-    if (this.browser && prevProps.tracks !== this.props.tracks) {
-      const prevTrackIds = prevProps.tracks.map(getTrackId)
-      const newTrackIds = this.props.tracks.map(getTrackId)
+    const { tracks } = this.props
+    if (this.browser && prevProps.tracks !== tracks) {
+      const prevTracksById = prevProps.tracks.reduce((acc, track) => ({ ...acc, [getTrackId(track)]: track }), {})
+      const prevTrackIds = Object.keys(prevTracksById)
+      const newTrackIds = tracks.map(getTrackId)
 
       prevProps.tracks.filter(track => track.name && !newTrackIds.includes(getTrackId(track))).forEach((track) => {
         this.browser.removeTrackByName(track.name)
       })
 
-      this.props.tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
+      tracks.filter(track => !prevTrackIds.includes(getTrackId(track))).forEach((track) => {
         this.browser.loadTrack(track)
       })
 
+      tracks.forEach((track) => {
+        const prevTrack = track.name && prevTracksById[getTrackId(track)]
+        if (prevTrack) {
+          const optionChanged = (track.type === 'merged') ?
+            track.tracks.some((tr, i) => TRACK_UPDATE_PROPERTIES.some(prop => tr[prop] !== prevTrack.tracks[i][prop])) :
+            TRACK_UPDATE_PROPERTIES.some(prop => track[prop] !== prevTrack[prop])
+          if (optionChanged) {
+            this.browser.removeTrackByName(track.name)
+            this.browser.loadTrack(track)
+          }
+        }
+      })
     }
   }
+
+  setContainerElement = (element) => {
+    this.container = element
+  }
+
+  render() {
+    return <IGVContainer><div ref={this.setContainerElement} /></IGVContainer>
+  }
+
 }
 
 export default IGV

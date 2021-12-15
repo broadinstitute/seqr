@@ -14,12 +14,13 @@ from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37
-from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, TRANSCRIPT_2
+from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT, TRANSCRIPT_2
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
 SV_INDEX_NAME = 'test_index_sv'
+SV_WGS_INDEX_NAME = 'test_index_sv_wgs'
 INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
 ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
 SUB_INDICES = ['sub_index_1', 'sub_index_2']
@@ -361,6 +362,17 @@ ES_SV_VARIANT = {
           'num_exon': 2,
           'start': 49045487,
           'end': 49045899,
+          'geneIds': ['ENSG00000228198'],
+        },
+        {
+          'qs': 80,
+          'cn': 2,
+          'defragged': False,
+          'sample_id': 'HG00733',
+          'num_exon': 1,
+          'start': 49045987,
+          'end': 49045890,
+          'geneIds': ['ENSG00000228198', 'ENSG00000135953'],
         }
       ],
       'xpos': 1049045387,
@@ -378,25 +390,60 @@ ES_SV_VARIANT = {
       'contig': '1',
       'sortedTranscriptConsequences': [
         {
-          'transcript_id': 'ENST00000371839',
-          'biotype': 'protein_coding',
           'gene_id': 'ENSG00000228198'
         },
         {
-          'transcript_id': 'ENST00000416121',
-          'biotype': 'protein_coding',
-          'gene_id': 'ENSG00000228198'
+          'gene_id': 'ENSG00000135953'
+        },
+        {
+          'gene_id': 'ENSG00000037183'
         },
       ],
-      'cpx_intervals': [{'type': 'DUP', 'chrom': '1', 'start': 1000, 'end': 3000},
-                        {'type': 'INS', 'chrom': '20', 'start': 11000, 'end': 13000}],
+      'geneIds': ['ENSG00000228198'],
+      'sf': 0.000693825,
+      'sn': 10088
+    },
+    'matched_queries': {SV_INDEX_NAME: ['F000002_2']},
+  }
+
+ES_SV_WGS_VARIANT = {
+    '_source': {
+      'genotypes': [
+        {
+          'gq': 33,
+          'cn': 1,
+          'sample_id': 'NA21234',
+          'num_alt': 1,
+        }
+      ],
+      'xpos': 2049045387,
+      'end': 49045898,
+      'start': 49045387,
+      'xstart': 2049045387,
+      'pos': 49045387,
+      'svType': 'CPX',
+      'xstop': 2049045898,
+      'variantId': 'prefix_19107_CPX',
+      'algorithms': ['wham', 'manta'],
+      'sc': 7,
+      'contig': '2',
+      'sortedTranscriptConsequences': [
+        {
+          'gene_symbol': 'OR4F5',
+          'major_consequence': 'DUP_PARTIAL',
+          'gene_id': 'ENSG00000228198'
+        }
+      ],
+      'cpx_intervals': [{'type': 'DUP', 'chrom': '2', 'start': 1000, 'end': 3000},
+                        {'type': 'INV', 'chrom': '20', 'start': 11000, 'end': 13000}],
+      'sv_type_detail': 'dupINV',
       'gnomad_svs_ID': 'gnomAD-SV_v2.1_BND_1_1',
       'gnomad_svs_AF': 0.00679,
       'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
     },
-    'matched_queries': {SV_INDEX_NAME: ['F000002_2']},
+    'matched_queries': {SV_WGS_INDEX_NAME: ['F000014_14']},
   }
 
 OR2M3_COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
@@ -430,6 +477,7 @@ INDEX_ES_VARIANTS = {
     INDEX_NAME: ES_VARIANTS,
     SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT],
     SV_INDEX_NAME: [ES_SV_VARIANT],
+    SV_WGS_INDEX_NAME: [ES_SV_WGS_VARIANT],
     NO_LIFT_38_INDEX_NAME: [BUILD_38_NO_LIFTOVER_ES_VARIANT],
 }
 INDEX_ES_VARIANTS.update({k: ES_VARIANTS for k in SUB_INDICES + SECOND_SUB_INDICES})
@@ -453,7 +501,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
     variant['genotypes'].update({
         'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
+            'sampleType': 'WES',
         },
     })
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
@@ -465,10 +513,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'variantId': '{}-het'.format(variant['variantId']),
         'familyGuids': ['F000011_11'],
         'genotypes': {
-            'I000015_na20885': {
-                'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-                'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
-            },
+            'I000015_na20885': variant['genotypes']['I000015_na20885'],
         },
         'genomeVersion': '38',
         'liftedOverGenomeVersion': '37',
@@ -500,23 +545,23 @@ PARSED_MULTI_INDEX_VARIANT.update({
     'genotypes': {
         'I000004_hg00731': {
             'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
+            'sampleType': 'WES',
         },
         'I000005_hg00732': {
             'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
+            'sampleType': 'WES',
         },
         'I000006_hg00733': {
             'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
+            'sampleType': 'WES',
         },
         'I000007_na20870': {
             'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
+            'sampleType': 'WES',
         },
         'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
+            'sampleType': 'WES',
         },
     },
 })
@@ -552,14 +597,8 @@ PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_
 PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
     'familyGuids': ['F000003_3', 'F000011_11'],
     'genotypes': {
-        'I000007_na20870': {
-            'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
-        },
-        'I000015_na20885': {
-            'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
-        },
+        ind_guid: PARSED_MULTI_GENOME_VERSION_VARIANT['genotypes'][ind_guid]
+        for ind_guid in ['I000007_na20870', 'I000015_na20885']
     },
 })
 MAPPING_FIELDS = [
@@ -677,11 +716,15 @@ SV_MAPPING_FIELDS = [
 ]
 
 SOURCE_FIELDS = {
-    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'gnomad_exomes_FAF_AF','sv_callset_Hemi', 'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID',
+    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
+    'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
-SOURCE_FIELDS -= {'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het'}
+SOURCE_FIELDS -= {
+    'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het',
+    'gnomad_genomes_FAF_AF',
+}
 
 FIELD_TYPE_MAP = {
     'cadd_PHRED': {'type': 'keyword'},
@@ -706,6 +749,7 @@ CORE_INDEX_METADATA = {
 }
 INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
+INDEX_METADATA[SV_WGS_INDEX_NAME] = INDEX_METADATA[SV_INDEX_NAME]
 
 ALL_INHERITANCE_QUERY = {
     'bool': {
@@ -859,7 +903,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
         hit.update({
             '_index': index,
             '_id': hit['_source']['variantId'],
-            '_type': 'structural_variant' if SV_INDEX_NAME in index else 'variant',
+            '_type': 'structural_variant' if SV_INDEX_NAME in index or SV_WGS_INDEX_NAME in index else 'variant',
         })
         matched_queries = hit.pop('matched_queries')
         if include_matched_queries:
@@ -894,7 +938,7 @@ def create_mock_response(search, index=INDEX_NAME):
         for search_filter in search['query']['bool']['filter']:
             if not variant_id_filters:
                 variant_id_filters = search_filter.get('terms', {}).get('variantId')
-            possible_inheritance_filters = search_filter.get('bool', {}).get('should', [])
+            possible_inheritance_filters = search_filter.get('bool', {}).get('should', []) + [search_filter]
             if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
                 include_matched_queries = True
                 break
@@ -1086,8 +1130,7 @@ class EsUtilsTest(TestCase):
         all_family_variant = deepcopy(PARSED_NO_SORT_VARIANTS[0])
         all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
         all_family_variant['genotypes']['I000004_hg00731'] = {
-            'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None,
-            'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WES',
+            'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None, 'sampleType': 'WES',
         }
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
@@ -1131,6 +1174,12 @@ class EsUtilsTest(TestCase):
             str(cm.exception),
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
         )
+
+        search_model.search['inheritance']['filter'] = {'genotype': {'I000004_hg00731': 'ref_ref'}}
+        search_model.save()
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(str(cm.exception), 'Invalid custom inheritance')
 
         search_model.search['inheritance']['filter'] = {}
         search_model.search['annotations'] = {'structural': ['DEL']}
@@ -1268,12 +1317,13 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'pathogenicity': {
-                'clinvar': ['pathogenic', 'likely_pathogenic'],
+                'clinvar': ['pathogenic', 'likely_pathogenic', 'vus_or_conflicting'],
                 'hgmd': ['disease_causing', 'likely_disease_causing'],
             },
             'annotations': {
                 'in_frame': ['inframe_insertion', 'inframe_deletion'],
                 'other': ['5_prime_UTR_variant', 'intergenic_variant'],
+                'splice_ai': '0.8',
             },
             'freqs': {
                 'callset': {'af': 0.1},
@@ -1284,6 +1334,7 @@ class EsUtilsTest(TestCase):
                 'topmed': {'ac': 2, 'af': None},
             },
             'qualityFilter': {'min_ab': 10, 'min_gq': 15, 'vcf_filter': 'pass'},
+            'in_silico': {'cadd': '11.5', 'sift': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
         })
@@ -1328,8 +1379,8 @@ class EsUtilsTest(TestCase):
                     ]
                 }
             },
-            {
-                'bool': {
+            {'bool': {'should': [
+                {'bool': {
                     'minimum_should_match': 1,
                     'should': [
                         {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
@@ -1374,8 +1425,8 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_FAF_AF'}}]}},
-                                {'range': {'gnomad_genomes_FAF_AF': {'lte': 0.01}}}
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_genomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
                             ]
                         }},
                         {'bool': {
@@ -1400,8 +1451,50 @@ class EsUtilsTest(TestCase):
                             ]}
                         }
                     ]
-                }
-            },
+                }},
+                {'bool': {
+                    'minimum_should_match': 1,
+                    'should': [
+                        {'bool': {'must_not': [{'exists': {'field': 'AF'}}]}},
+                        {'range': {'AF': {'lte': 0.1}}}
+                    ],
+                    'must': [
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
+                                {'range': {'g1k_POPMAX_AF': {'lte': 0.05}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.05}}}
+                            ]
+                        }},
+                        {'bool': {
+                            'minimum_should_match': 1,
+                            'should': [
+                                {'bool': {'must_not': [{'exists': {'field': 'gnomad_genomes_AF_POPMAX_OR_GLOBAL'}}]}},
+                                {'range': {'gnomad_genomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.05}}}
+                            ]
+                        }},
+                        {'terms': {
+                            'clinvar_clinical_significance': [
+                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic',
+                            ]
+                        }}
+                    ]
+                }},
+
+            ]}},
+            {'bool': {'should': [
+                {'bool': {'must_not': [{'exists': {'field': 'cadd_PHRED'}}]}},
+                {'range': {'cadd_PHRED': {'gte': 11.5}}},
+                {'bool': {'must_not': [{'exists': {'field': 'dbnsfp_SIFT_pred'}}]}},
+                {'prefix': {'dbnsfp_SIFT_pred': 'D'}},
+            ]}},
             {'bool': {'must_not': [{'exists': {'field': 'filters'}}]}},
             {'bool': {
                     'should': [
@@ -1416,10 +1509,12 @@ class EsUtilsTest(TestCase):
                         }},
                         {'terms': {
                             'clinvar_clinical_significance': [
-                                'Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic'
+                                'Conflicting_interpretations_of_pathogenicity', 'Likely_pathogenic', 'Pathogenic',
+                                'Pathogenic/Likely_pathogenic', 'Uncertain_significance', 'not_provided', 'other',
                             ]
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
+                        {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
                     ]
                 }
             },
@@ -1532,7 +1627,7 @@ class EsUtilsTest(TestCase):
     def test_sv_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DEL']},
+            'annotations': {'structural': ['DUP']},
             'freqs': {'sv_callset': {'af': 0.1}},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},
@@ -1550,11 +1645,11 @@ class EsUtilsTest(TestCase):
                     {'range': {'sf': {'lte': 0.1}}}
                 ]
             }},
-            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['DUP', 'gCNV_DUP']}},
             {'bool': {
                 'must': [
                     {'bool': {
-                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                        'must_not': [{'term': {'samples': 'HG00732'}}, {'term': {'samples': 'HG00733'}}],
                         'must': [{'term': {'samples': 'HG00731'}}],
                     }},
                     {'bool': {
@@ -1563,12 +1658,44 @@ class EsUtilsTest(TestCase):
                             {'term': {'samples_qs_10_to_20': 'HG00731'}},
                             {'term': {'samples_qs_0_to_10': 'HG00732'}},
                             {'term': {'samples_qs_10_to_20': 'HG00732'}},
+                            {'term': {'samples_qs_0_to_10': 'HG00733'}},
+                            {'term': {'samples_qs_10_to_20': 'HG00733'}},
                         ],
                     }}
                 ],
                 '_name': 'F000002_2'
             }}
         ], index=SV_INDEX_NAME)
+
+    @urllib3_responses.activate
+    def test_sv_wgs_get_es_variants(self):
+        self.families = Family.objects.filter(guid='F000014_14')
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'annotations': {'structural': ['CPX']},
+            'qualityFilter': {'min_gq_sv': 20},
+            'inheritance': {'mode': 'de_novo'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, _ = get_es_variants(results_model, num_results=2)
+        self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
+
+        self.assertExecutedSearch(filters=[
+            {'terms': {'transcriptConsequenceTerms': ['CPX']}},
+            {'bool': {
+                'must': [{'term': {'samples': 'NA21234'}},
+                    {'bool': {
+                        'must_not': [
+                            {'term': {'samples_gq_sv_0_to_10': 'NA21234'}},
+                            {'term': {'samples_gq_sv_10_to_20': 'NA21234'}},
+                        ],
+                    }}
+                ],
+                '_name': 'F000014_14'
+            }}
+        ], index=SV_WGS_INDEX_NAME)
 
     @urllib3_responses.activate
     def test_multi_dataset_get_es_variants(self):
@@ -1787,6 +1914,8 @@ class EsUtilsTest(TestCase):
                                         'must_not': [
                                             {'term': {'samples_cn_0': 'HG00732'}},
                                             {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
                                         ]
                                     }},
                                     {'bool': {
@@ -1796,7 +1925,11 @@ class EsUtilsTest(TestCase):
                                             {'term': {'samples_cn_2': 'HG00731'}},
                                             {'term': {'samples_cn_gte_4': 'HG00731'}},
                                         ],
-                                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                                        'must_not': [
+                                            {'term': {'samples': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
+                                        ],
                                         'must': [{'match': {'contig': 'X'}}],
                                     }}
                                 ]
@@ -1910,14 +2043,14 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, num_results=10)
 
         annotation_secondary_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
         ]}}
 
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'transcriptConsequenceTerms': ['DEL']}},
+                    {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{
@@ -1933,6 +2066,8 @@ class EsUtilsTest(TestCase):
                                         'must_not': [
                                             {'term': {'samples_cn_0': 'HG00732'}},
                                             {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
                                         ]
                                     }},
                                     {'bool': {
@@ -1942,7 +2077,11 @@ class EsUtilsTest(TestCase):
                                             {'term': {'samples_cn_2': 'HG00731'}},
                                             {'term': {'samples_cn_gte_4': 'HG00731'}},
                                         ],
-                                        'must_not': [{'term': {'samples': 'HG00732'}}],
+                                        'must_not': [
+                                            {'term': {'samples': 'HG00732'}},
+                                            {'term': {'samples_cn_0': 'HG00733'}},
+                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
+                                        ],
                                         'must': [{'match': {'contig': 'X'}}],
                                     }}
                                 ]
@@ -2288,7 +2427,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'frameshift': ['frameshift_variant']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_GENOME_VERSION_VARIANT]
@@ -2343,7 +2482,7 @@ class EsUtilsTest(TestCase):
         },
         )
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
         expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT]
@@ -2453,7 +2592,7 @@ class EsUtilsTest(TestCase):
             'locus': {'rawVariantItems': '2-103343363-GAGA-G', 'genomeVersion': '38'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         # Test liftover variant to hg37 when liftover fails
         mock_liftover.side_effect = Exception()
@@ -2525,7 +2664,7 @@ class EsUtilsTest(TestCase):
     def test_get_es_variants_create_index_alias(self):
         search_model = VariantSearch.objects.create(search={})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         setup_search_responses()
         urllib3_responses.add_json(
@@ -2725,7 +2864,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'frameshift': ['frameshift_variant']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.all())
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
         _set_cache('search_results__{}__xpos'.format(results_model.guid), json.dumps({'total_results': 5}))
         gene_counts = get_es_variant_gene_counts(results_model, None)
 
@@ -2923,7 +3062,7 @@ class EsUtilsTest(TestCase):
                 dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, **kwargs):
             _set_cache(cache_key, None)
             annotations = {'frameshift': ['frameshift_variant']} if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS \
-                else {'structural': ['DEL']}
+                else {'structural': ['DEL', 'gCNV_DEL']}
             search_model.search = {
                 'inheritance': {'mode': mode, 'filter': inheritance_filter},
                 'annotations': annotations,
@@ -2932,7 +3071,7 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model, num_results=2)
 
             index = INDEX_NAME if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else SV_INDEX_NAME
-            annotation_query = {'terms': {'transcriptConsequenceTerms': [next(iter(annotations.values()))[0]]}}
+            annotation_query = {'terms': {'transcriptConsequenceTerms': next(iter(annotations.values()))}}
             if expected_comp_het_filter:
                 self.assertExecutedSearches([
                     dict(gene_aggs=True, start_index=0, size=1, index=index, filters=[
@@ -2981,7 +3120,7 @@ class EsUtilsTest(TestCase):
         })
 
         _execute_inheritance_search(mode='de_novo', dataset_type='SV', expected_filter={'bool': {
-                'must_not': [{'term': {'samples': 'HG00732'}}],
+                'must_not': [{'term': {'samples': 'HG00732'}}, {'term': {'samples': 'HG00733'}}],
                 'must': [{'term': {'samples': 'HG00731'}}],
             }
         })
@@ -3051,6 +3190,8 @@ class EsUtilsTest(TestCase):
                 'must_not': [
                     {'term': {'samples_cn_0': 'HG00732'}},
                     {'term': {'samples_cn_gte_4': 'HG00732'}},
+                    {'term': {'samples_cn_0': 'HG00733'}},
+                    {'term': {'samples_cn_gte_4': 'HG00733'}},
                 ]
             }
         }
@@ -3140,7 +3281,11 @@ class EsUtilsTest(TestCase):
                     {'term': {'samples_cn_2': 'HG00731'}},
                     {'term': {'samples_cn_gte_4': 'HG00731'}},
                 ],
-                'must_not': [{'term': {'samples': 'HG00732'}}],
+                'must_not': [
+                    {'term': {'samples': 'HG00732'}},
+                    {'term': {'samples_cn_0': 'HG00733'}},
+                    {'term': {'samples_cn_gte_4': 'HG00733'}},
+                ],
                 'must': [{'match': {'contig': 'X'}}],
             }
         }

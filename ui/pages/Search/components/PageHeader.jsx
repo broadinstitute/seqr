@@ -3,10 +3,9 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { getProjectsByGuid, getFamiliesByGuid, getAnalysisGroupsByGuid, getSearchesByHash } from 'redux/selectors'
-import { PageHeaderLayout } from 'shared/components/page/PageHeader'
+import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import { getSelectedAnalysisGroups } from '../constants'
-
 
 const PAGE_CONFIGS = {
   project: (entityGuid, projectsByGuid) => ({
@@ -25,20 +24,21 @@ const PAGE_CONFIGS = {
     const { projectFamilies } = searchesByHash[entityGuid] || {}
     let pageType
     let description
+    let specificEntityGuid = entityGuid
     if (projectFamilies) {
       if (projectFamilies.length === 1) {
         const { projectGuid, familyGuids } = projectFamilies[0]
         if (familyGuids.length === 1) {
           pageType = 'family'
-          entityGuid = familyGuids[0] //eslint-disable-line prefer-destructuring
+          specificEntityGuid = familyGuids[0] // eslint-disable-line prefer-destructuring
         } else {
           const analysisGroups = getSelectedAnalysisGroups(analysisGroupsByGuid, familyGuids)
           if (analysisGroups.length === 1 && analysisGroups[0].familyGuids.length === familyGuids.length) {
             pageType = 'analysis_group'
-            entityGuid = analysisGroups[0].analysisGroupGuid
+            specificEntityGuid = analysisGroups[0].analysisGroupGuid
           } else {
             pageType = 'project'
-            entityGuid = projectGuid
+            specificEntityGuid = projectGuid
           }
         }
       } else if (projectFamilies.length > 20) {
@@ -52,7 +52,7 @@ const PAGE_CONFIGS = {
     if (pageType) {
       return {
         actualPageType: pageType,
-        ...PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid),
+        ...PAGE_CONFIGS[pageType](specificEntityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid),
       }
     }
     return { description }
@@ -60,17 +60,14 @@ const PAGE_CONFIGS = {
   variant: entityGuid => ({ entity: { name: entityGuid } }),
 }
 
-
-export const PageHeader = React.memo(({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
-
+const getPageHeaderProps = ({ projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash, match }) => {
   const { pageType, entityGuid } = match.params
 
-  let project
   const breadcrumbIdSections = []
   const { entity, entityUrlPath, actualPageType, description } =
     PAGE_CONFIGS[pageType](entityGuid, projectsByGuid, familiesByGuid, analysisGroupsByGuid, searchesByHash)
   if (entity) {
-    project = projectsByGuid[entity.projectGuid]
+    const project = projectsByGuid[entity.projectGuid]
     breadcrumbIdSections.push({ content: snakecaseToTitlecase(actualPageType || pageType) })
     breadcrumbIdSections.push({
       content: entity.displayName || entity.name,
@@ -78,14 +75,12 @@ export const PageHeader = React.memo(({ projectsByGuid, familiesByGuid, analysis
     })
   }
 
-  return (
-    <PageHeaderLayout
-      entity="variant_search"
-      breadcrumbIdSections={breadcrumbIdSections}
-      description={description}
-    />
-  )
-})
+  return { description, breadcrumbIdSections }
+}
+
+export const PageHeader = React.memo(
+  props => <PageHeaderLayout entity="variant_search" {...getPageHeaderProps(props)} />,
+)
 
 PageHeader.propTypes = {
   projectsByGuid: PropTypes.object,

@@ -28,13 +28,23 @@ const TagTitle = styled.span`
   color: #999;
 `
 
+const RedItal = styled.i`
+  color: red;
+`
+
 const NO_DISPLAY = { display: 'none' }
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
 
 const VARIANT_NOTE_FIELDS = [{
   name: 'submitToClinvar',
-  label: <label>Add to <i style={{ color: 'red' }}>ClinVar</i> submission</label>, //eslint-disable-line jsx-a11y/label-has-for
+  label: (
+    <label>
+      Add to
+      <RedItal>&nbsp; ClinVar &nbsp;</RedItal>
+      submission
+    </label>
+  ),
   component: BooleanCheckbox,
   style: { paddingTop: '2em' },
 },
@@ -44,7 +54,7 @@ const VARIANT_NOTE_FIELDS = [{
   component: BooleanCheckbox,
 }]
 
-export const taggedByPopup = (tag, title) => (trigger, hideMetadata) =>
+export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
   <Popup
     position="top right"
     size="tiny"
@@ -55,13 +65,24 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) =>
     content={
       <div>
         {tag.createdBy || 'unknown user'}
-        {tag.lastModifiedDate && <span>&nbsp; on {new Date(tag.lastModifiedDate).toLocaleDateString()}</span>}
-        {tag.metadata && !hideMetadata && <div>{tag.metadataTitle ? <span><b>{tag.metadataTitle}:</b> {tag.metadata}</span> : <i>{tag.metadata}</i>}</div>}
+        {tag.lastModifiedDate && <span>{` on ${new Date(tag.lastModifiedDate).toLocaleDateString()}`}</span>}
+        {tag.metadata && !hideMetadata && (
+          <div>
+            {tag.metadataTitle ? (
+              <span>
+                <b>{`${tag.metadataTitle}: `}</b>
+                {tag.metadata}
+              </span>
+            ) : <i>{tag.metadata}</i>}
+          </div>
+        )}
         {tag.searchHash && <div><NavLink to={`/variant_search/results/${tag.searchHash}`}>Re-run search</NavLink></div>}
       </div>
     }
   />
+)
 
+const notePopup = note => note && taggedByPopup(note, 'Note By')
 
 const ShortcutTagToggle = React.memo(({ tag, ...props }) => {
   const toggle = <InlineToggle color={tag && tag.color} divided {...props} value={tag} />
@@ -74,32 +95,35 @@ ShortcutTagToggle.propTypes = {
 
 const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantTags }) => {
   const { tags = [], ...variantMeta } = variantTagNotes || {}
-  const onSubmit = tagName => (value) => {
-    return dispatchUpdateFamilyVariantTags({
-      ...variantMeta,
-      tags: value ? [...tags, { name: tagName }] : tags.filter(tag => tag.name !== tagName),
-    })
-  }
+  const onSubmit = tagName => value => dispatchUpdateFamilyVariantTags({
+    ...variantMeta,
+    tags: value ? [...tags, { name: tagName }] : tags.filter(tag => tag.name !== tagName),
+  })
 
   return (
     <StyledForm inline hasSubmitButton={false}>
-      {SHORTCUT_TAGS.map(tagName =>
-        <ShortcutTagToggle key={tagName} label={tagName} tag={tags.find(tag => tag.name === tagName)} onChange={onSubmit(tagName)} />)}
+      {SHORTCUT_TAGS.map(tagName => (
+        <ShortcutTagToggle
+          key={tagName}
+          label={tagName}
+          tag={tags.find(tag => tag.name === tagName)}
+          onChange={onSubmit(tagName)}
+        />
+      ))}
     </StyledForm>
   )
 })
 
 ShortcutTags.propTypes = {
-  variantTagNotes: PropTypes.object,
-  dispatchUpdateFamilyVariantTags: PropTypes.func,
+  variantTagNotes: PropTypes.object.isRequired,
+  dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
 }
-
 
 const validateTags = tags => (tags.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
   'Only 1 Discovery Tag can be added' : undefined
 )
 
-const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, family, ...props }) =>
+const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, family, ...props }) => (
   <TagFieldView
     idField="variantGuids"
     defaultId={variantId}
@@ -117,22 +141,21 @@ const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, fam
     popup={taggedByPopup}
     validate={validateTags}
     {...props}
-  />,
-)
+  />
+))
 
 VariantTagField.propTypes = {
-  variantTagNotes: PropTypes.object,
-  fieldName: PropTypes.string,
+  variantTagNotes: PropTypes.object.isRequired,
+  fieldName: PropTypes.string.isRequired,
   variantId: PropTypes.string.isRequired,
   family: PropTypes.object.isRequired,
 }
 
-const VariantLink = React.memo(({ variant, variantTagNotes, family }) =>
+const VariantLink = React.memo(({ variant, variantTagNotes, family }) => (
   <NavLink
     to={variantTagNotes ?
       `/project/${family.projectGuid}/saved_variants/variant/${variantTagNotes.variantGuids}` :
-      `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`
-    }
+      `/variant_search/variant/${variant.variantId}/family/${family.familyGuid}`}
     activeStyle={NO_DISPLAY}
   >
     <Popup
@@ -142,57 +165,56 @@ const VariantLink = React.memo(({ variant, variantTagNotes, family }) =>
       position="right center"
       wide
     />
-  </NavLink>,
-)
+  </NavLink>
+))
 
 VariantLink.propTypes = {
-  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variantTagNotes: PropTypes.object,
-  family: PropTypes.object,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
+  variantTagNotes: PropTypes.object.isRequired,
+  family: PropTypes.object.isRequired,
 }
 
-const FamilyLabel = React.memo(props =>
+const FamilyLabel = React.memo(props => (
   <InlineHeader size="small">
-    Family<HorizontalSpacer width={5} />
+    Family
+    <HorizontalSpacer width={5} />
     <FamilyLink PopupClass={PopupWithModal} {...props} />
-  </InlineHeader>,
-)
-
+  </InlineHeader>
+))
 
 FamilyLabel.propTypes = {
-  family: PropTypes.object,
-  disableEdit: PropTypes.bool,
-  path: PropTypes.string,
-  target: PropTypes.string,
+  family: PropTypes.object.isRequired,
 }
 
 export const LoadedFamilyLabel = connect((state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
 }))(FamilyLabel)
 
-const FamilyVariantTags = React.memo((
-  { variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
-    dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId,
-    linkToSavedVariants },
-) => (
-  family ?
+const FamilyVariantTags = React.memo(({
+  variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
+  dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId,
+  linkToSavedVariants,
+}) => (
+  family ? (
     <NoBorderTable basic="very" compact="very" celled>
       <Table.Body>
         <Table.Row verticalAlign="top">
-          {!isCompoundHet &&
-          <Table.Cell collapsing rowSpan={2}>
-            <FamilyLabel family={family} path={linkToSavedVariants && `saved_variants/family/${family.familyGuid}`} />
-          </Table.Cell>}
+          {!isCompoundHet && (
+            <Table.Cell collapsing rowSpan={2}>
+              <FamilyLabel family={family} path={linkToSavedVariants ? `saved_variants/family/${family.familyGuid}` : null} />
+            </Table.Cell>
+          )}
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Tags:</TagTitle>
           </Table.Cell>
-          {!isCompoundHet &&
-          <Table.Cell collapsing>
-            <ShortcutTags
-              variantTagNotes={variantTagNotes}
-              dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags}
-            />
-          </Table.Cell>}
+          {!isCompoundHet && (
+            <Table.Cell collapsing>
+              <ShortcutTags
+                variantTagNotes={variantTagNotes}
+                dispatchUpdateFamilyVariantTags={dispatchUpdateFamilyVariantTags}
+              />
+            </Table.Cell>
+          )}
           <Table.Cell>
             <VariantTagField
               field="tags"
@@ -202,31 +224,32 @@ const FamilyVariantTags = React.memo((
               variantId={variantId}
               tagOptions={projectTagTypes}
               displayMetadata
+              linkTagType="seqr MME"
+              tagLinkUrl={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
-            {((variantTagNotes || {}).tags || []).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) &&
-            <span>
-              <TagTitle>Fxnl Data:</TagTitle>
-              <VariantTagField
-                field="functionalData"
-                fieldName="Fxnl Data"
-                family={family}
-                variantTagNotes={variantTagNotes}
-                variantId={variantId}
-                tagOptions={projectFunctionalTagTypes}
-                onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
-              />
-            </span>
-            }
+            {((variantTagNotes || {}).tags || []).some(tag => tag.category === DISCOVERY_CATEGORY_NAME) && (
+              <span>
+                <TagTitle>Fxnl Data:</TagTitle>
+                <VariantTagField
+                  field="functionalData"
+                  fieldName="Fxnl Data"
+                  family={family}
+                  variantTagNotes={variantTagNotes}
+                  variantId={variantId}
+                  tagOptions={projectFunctionalTagTypes}
+                  onSubmit={dispatchUpdateFamilyVariantFunctionalTags}
+                />
+              </span>
+            )}
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
             {(!Array.isArray(variant) || variantTagNotes) &&
-              <VariantLink variant={variant} variantTagNotes={variantTagNotes} family={family} />
-            }
+              <VariantLink variant={variant} variantTagNotes={variantTagNotes} family={family} />}
           </Table.Cell>
         </Table.Row>
-        <Table.Row verticalAlign="top" >
+        <Table.Row verticalAlign="top">
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Notes:</TagTitle>
           </Table.Cell>
@@ -241,27 +264,33 @@ const FamilyVariantTags = React.memo((
               isEditable
               showInLine
               compact
-              getTextPopup={note => note && taggedByPopup(note, 'Note By')}
+              getTextPopup={notePopup}
               onSubmit={dispatchUpdateVariantNote}
             />
           </Table.Cell>
         </Table.Row>
       </Table.Body>
-    </NoBorderTable> : null
+    </NoBorderTable>
+  ) : null
 ))
 
 FamilyVariantTags.propTypes = {
-  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
-  variantTagNotes: PropTypes.object,
-  variantId: PropTypes.string,
-  family: PropTypes.object,
-  projectTagTypes: PropTypes.array,
-  projectFunctionalTagTypes: PropTypes.array,
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
+  variantTagNotes: PropTypes.object.isRequired,
+  variantId: PropTypes.string.isRequired,
+  family: PropTypes.object.isRequired,
+  projectTagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  projectFunctionalTagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
   isCompoundHet: PropTypes.bool,
   linkToSavedVariants: PropTypes.bool,
-  dispatchUpdateVariantNote: PropTypes.func,
-  dispatchUpdateFamilyVariantTags: PropTypes.func,
-  dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func,
+  dispatchUpdateVariantNote: PropTypes.func.isRequired,
+  dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
+  dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func.isRequired,
+}
+
+FamilyVariantTags.defaultProps = {
+  isCompoundHet: false,
+  linkToSavedVariants: false,
 }
 
 const mapStateToProps = (state, ownProps) => {
