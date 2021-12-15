@@ -124,8 +124,9 @@ class HailSearch(object):
         if allowed_consequences:
             # allowed_consequences: list of allowed VEP transcript_consequence
             # TODO actually apply filters, get variants with any transcript with a consequence in the allowed list -
-            # filter_rows(vep_annotated_result.vep_cnsq in allowed_consequences)
-            raise NotImplementedError
+            allowed_consequences_set = hl.set(allowed_consequences)
+            consequence_terms = self.mt.vep.transcript_consequences.flatmap(lambda tc: tc.consequence_terms)
+            self.mt = self.mt.filter_rows(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
         if inheritance_filter or inheritance_mode:
@@ -231,6 +232,10 @@ class HailSearch(object):
                 "dp": 0
             } for sample_id, gt_call in zip(sample_ids, s.GT)}
 
+            transcripts = defaultdict(lambda: list())
+            for tc in s.vep.transcript_consequences:
+                transcripts[tc.gene_id].append(dict(tc))
+
             hail_results.append({
                 "chrom": chrom,
                 "pos": pos,
@@ -241,7 +246,8 @@ class HailSearch(object):
                 "familyGuids": family_guids,
                 "liftedOverGenomeVersion": None,
                 "liftedOverChrom": None,
-                "liftedOverPos": None
+                "liftedOverPos": None,
+                "transcripts": transcripts
             })
 
 
