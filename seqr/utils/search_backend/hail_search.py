@@ -237,6 +237,7 @@ class HailSearch(object):
             for tc in s.vep.transcript_consequences:
                 tc_dict = dict(tc.drop("domains"))
                 tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
+                tc_dict["majorConsequence"] = tc_dict["consequenceTerms"][0]
                 transcripts[tc.gene_id].append(tc_dict)
 
             hail_results.append({
