@@ -21,6 +21,7 @@ import {
   getProjectOverviewIsLoading,
   getFamiliesLoading,
   getTagTypeCounts,
+  getAnalysisGroupTagTypeCounts,
 } from '../selectors'
 import { loadProjectOverview } from '../reducers'
 import ProjectOverview from './ProjectOverview'
@@ -153,7 +154,8 @@ const mapStateToProps = (state, ownProps) => ({
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
   loading: getProjectOverviewIsLoading(state),
   familiesLoading: getFamiliesLoading(state),
-  tagTypeCounts: getTagTypeCounts(state, ownProps),
+  tagTypeCounts: ownProps.match.params.analysisGroupGuid ?
+    getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
 })
 
 const mapDispatchToProps = {

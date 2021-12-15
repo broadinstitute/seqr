@@ -221,21 +221,19 @@ export const getSavedVariantTagTypeCounts = createSelector(
   ),
 )
 
-export const getTagTypeCounts = createSelector(
-  getProjectTagTypes,
+export const getAnalysisGroupTagTypeCounts = createSelector(
   getCurrentAnalysisGroup,
   getFamilyTagTypeCounts,
-  (tagTypes, analysisGroup, familyTagTypeCounts) => {
-    if (analysisGroup) {
-      return analysisGroup.familyGuids.reduce((acc, familyGuid) => Object.entries(
-        familyTagTypeCounts[familyGuid] || {},
-      ).reduce((acc2, [tagType, count]) => (
-        { ...acc2, [tagType]: count + (acc2[tagType] || 0) }
-      ), acc), {})
-    }
+  (analysisGroup, familyTagTypeCounts) => (analysisGroup ? analysisGroup.familyGuids.reduce(
+    (acc, familyGuid) => Object.entries(familyTagTypeCounts[familyGuid] || {}).reduce((acc2, [tagType, count]) => (
+      { ...acc2, [tagType]: count + (acc2[tagType] || 0) }
+    ), acc), {},
+  ) : {}),
+)
 
-    return tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {})
-  },
+export const getTagTypeCounts = createSelector(
+  getProjectTagTypes,
+  tagTypes => tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
 )
 
 export const getVariantUniqueId = (
