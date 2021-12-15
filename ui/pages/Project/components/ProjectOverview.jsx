@@ -8,6 +8,8 @@ import { NavLink } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import UpdateButton from 'shared/components/buttons/UpdateButton'
+import { validators } from 'shared/components/form/ReduxFormWrapper'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
@@ -18,6 +20,7 @@ import {
   DATASET_TYPE_SV_CALLS,
   ANVIL_URL,
 } from 'shared/utils/constants'
+import { updateProjectMmeContact } from '../reducers'
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
@@ -82,26 +85,57 @@ const MME_COLUMNS = [
   { name: 'mmeNotes', content: 'Notes', width: 6, format: ({ mmeNotes }) => (mmeNotes || []).map(({ note }) => note).join('; ') },
 ]
 
-const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => (
-  <DataTable
-    basic="very"
-    fixed
-    data={Object.values(mmeSubmissions)}
-    idField="submissionGuid"
-    defaultSortColumn="familyName"
-    columns={MME_COLUMNS}
-  />
+const MME_CONTACT_FIELDS = [
+  {
+    name: 'contact',
+    label: 'Contact Email',
+    validate: validators.requiredEmail,
+  },
+]
+
+const BaseMatchmakerSubmissionOverview = React.memo(({ project, mmeSubmissions, onSubmit }) => (
+  <div>
+    {project.canEdit && (
+      <UpdateButton
+        onSubmit={onSubmit}
+        buttonText="Add Contact to MME Submissions"
+        editIconName="plus"
+        buttonFloated="right"
+        modalTitle="Add Contact to MME Submissions"
+        modalId="mmeContact"
+        formFields={MME_CONTACT_FIELDS}
+        confirmDialog="Are you sure you want to add this contact to all MME submissions in this project?"
+        showErrorPanel
+      />
+    )}
+    <DataTable
+      basic="very"
+      fixed
+      data={Object.values(mmeSubmissions)}
+      idField="submissionGuid"
+      defaultSortColumn="familyName"
+      columns={MME_COLUMNS}
+    />
+  </div>
 ))
 
 BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
+  project: PropTypes.object,
+  onSubmit: PropTypes.func,
 }
 
 const mapMatchmakerSubmissionsStateToProps = (state, ownProps) => ({
   mmeSubmissions: getProjectAnalysisGroupMmeSubmissionDetails(state, ownProps),
 })
 
-const MatchmakerSubmissionOverview = connect(mapMatchmakerSubmissionsStateToProps)(BaseMatchmakerSubmissionOverview)
+const mapDispatchToProps = {
+  onSubmit: updateProjectMmeContact,
+}
+
+const MatchmakerSubmissionOverview = connect(
+  mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
+)(BaseMatchmakerSubmissionOverview)
 
 const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
@@ -161,7 +195,7 @@ const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
             modalName="mmeSubmissions"
             size="large"
           >
-            <MatchmakerSubmissionOverview />
+            <MatchmakerSubmissionOverview project={project} />
           </Modal>
           {deletedSubmissionCount > 0 && <div>{`${deletedSubmissionCount} removed submissions`}</div>}
         </div>

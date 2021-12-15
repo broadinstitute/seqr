@@ -7,6 +7,7 @@ import { getUser } from 'redux/selectors'
 import { Error404, Error401 } from 'shared/components/page/Errors'
 
 import ElasticsearchStatus from './components/ElasticsearchStatus'
+import RnaSeq from './components/RnaSeq'
 import SampleQc from './components/SampleQc'
 import Users from './components/Users'
 
@@ -19,6 +20,7 @@ export const DATA_MANAGEMENT_PAGES = [
     component: () => <iframe width="100%" height="100%" title="Kibana" style={IFRAME_STYLE} src="/app/kibana" />,
   },
   { path: 'sample_qc', component: SampleQc },
+  { path: 'rna_seq', component: RnaSeq },
   { path: 'users', component: Users },
 ]
 

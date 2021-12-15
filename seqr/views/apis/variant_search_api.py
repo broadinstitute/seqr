@@ -11,7 +11,7 @@ from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.apis.saved_variant_api import _add_locus_lists
+from seqr.views.apis.saved_variant_api import _add_locus_lists, get_rna_seq_outliers
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
@@ -149,6 +149,7 @@ def _process_variants(variants, families, user):
         'searchedVariants': variants,
         'genesById': genes,
         'locusListsByGuid': locus_lists_by_guid,
+        'rnaSeqData': get_rna_seq_outliers(genes.keys(), sample__individual__family__in=families),
     })
     return response_json
 

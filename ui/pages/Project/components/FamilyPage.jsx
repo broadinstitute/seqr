@@ -8,7 +8,7 @@ import {
   getFamiliesByGuid,
   getSortedIndividualsByFamily,
   getGenesById,
-  getHasActiveVariantSampleByFamily,
+  getHasActiveSearchableSampleByFamily,
 } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
 import Family from 'shared/components/panel/family/Family'
@@ -94,7 +94,7 @@ BaseVariantDetail.propTypes = {
 const mapVariantDetailStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   genesById: getGenesById(state),
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.family.familyGuid],
+  hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.family.familyGuid] || {}).isSearchable,
 })
 
 const VariantDetail = connect(mapVariantDetailStateToProps)(BaseVariantDetail)

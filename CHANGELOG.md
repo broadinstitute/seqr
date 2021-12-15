@@ -2,6 +2,9 @@
 
 ## dev
 
+## 12/24/21
+* Show RNA-seq outlier data (REQUIRES DB MIGRATION)
+
 ## 12/07/21
 * Show delay warning on AnVIL loading requests
 

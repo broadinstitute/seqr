@@ -62,8 +62,6 @@ const FamilyFileUploadField = React.memo(({ onChange }) => (
     name="uploadedFamilyIds"
     normalize={normalizeFamilyUpload}
     onChange={onChange}
-    clearTimeOut={0}
-    auto
     returnParsedData
     dropzoneLabel="Drag-drop or click here to upload a list of family IDs"
   />

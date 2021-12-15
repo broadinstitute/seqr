@@ -18,6 +18,7 @@ const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
+const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
 
 // Data actions
 
@@ -218,6 +219,23 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
   }
 }
 
+export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
+  const data = getState().rnaSeqDataByIndividual[individualGuid]
+  // If variants were loaded for the individual, the significant gene data will be loaded but not all the needed data
+  if (!data || Object.values(data).every(({ isSignificant }) => isSignificant)) {
+    dispatch({ type: REQUEST_RNA_SEQ_DATA })
+    new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
+      (responseJson) => {
+        dispatch({
+          type: RECEIVE_DATA, updatesById: responseJson,
+        })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
+
 export const updateMmeSubmission = (values) => {
   const onSuccess = values.delete ? null : (responseJson, dispatch, getState) => (
     loadMmeMatches(Object.keys(responseJson.mmeSubmissionsByGuid)[0], true)(dispatch, getState)
@@ -243,6 +261,14 @@ export const sendMmeContactEmail = values => dispatch => new HttpRequestHelper(
   },
 ).post(values)
 
+export const updateProjectMmeContact = values => (dispatch, getState) => new HttpRequestHelper(
+  `/api/matchmaker/update_project_contact/${getState().currentProjectGuid}`,
+  (responseJson) => {
+    dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+  },
+  (e) => { throw new SubmissionError({ _error: [e.message] }) },
+).post(values)
+
 // Table actions
 export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
@@ -257,6 +283,7 @@ export const reducers = {
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
+  rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesFilter: SHOW_ALL,

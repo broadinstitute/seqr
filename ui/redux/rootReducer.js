@@ -310,6 +310,7 @@ const rootReducer = combineReducers({
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
   pagenesById: createObjectsByIdReducer(RECEIVE_DATA, 'pagenesById'),
+  rnaSeqDataByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'rnaSeqData'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
   hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),
   hpoTermsLoading: loadingReducer(REQUEST_HPO_TERMS, RECEIVE_HPO_TERMS),

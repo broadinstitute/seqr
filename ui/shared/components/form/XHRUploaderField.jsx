@@ -33,6 +33,8 @@ class UploaderFieldComponent extends React.PureComponent {
           onUploadFinished={this.onFinished}
           initialState={input.value ? input.value.uploaderState : null}
           url={`${url}${path}`}
+          clearTimeOut={0}
+          auto
           {...uploaderComponentProps}
           maxFiles={1}
         />

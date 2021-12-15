@@ -225,6 +225,7 @@ export const STATE1 = {
       caseReviewStatusLastModifiedDate: null,
       createdDate: '2016-12-05T10:28:21.303Z',
       displayName: '',
+      familyGuid: 'F011652_1',
       individualGuid: 'I021474_na19679',
       individualId: 'NA19679',
       lastModifiedDate: '2017-03-14T17:37:34.002Z',
@@ -325,6 +326,9 @@ export const STATE1 = {
       sampleGuid: 'S2310656_wal_mc16200_mc16203',
       filePath: 'gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ_MC16203.cram',
     },
+  },
+  rnaSeqDataByIndividual: {
+    I021474_na19679: { ENSG00000228198: { isSignificant: true } },
   },
   mmeSubmissionsByGuid: {},
   project: {
