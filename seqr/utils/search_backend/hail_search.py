@@ -251,7 +251,7 @@ class HailSearch(object):
                 "liftedOverChrom": None,
                 "liftedOverPos": None,
                 "transcripts": transcripts,
-                "mainTranscriptId": transcripts[0].transcript_id
+                "mainTranscriptId": s.vep.transcript_consequences[0].transcript_id
             })
 
 
