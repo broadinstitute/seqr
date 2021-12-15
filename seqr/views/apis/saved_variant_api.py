@@ -358,14 +358,14 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
 
 
-def add_locus_lists(projects, genes, include_all_lists=False, add_list_detail=False, user=None, is_analyst=None):
+def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
     locus_lists = LocusList.objects.filter(projects__in=projects)
 
-    if add_list_detail or include_all_lists:
-        locus_lists_by_guid = {locus_list.guid: {'intervals': []} for locus_list in locus_lists}
-        if add_list_detail:
-            for ll in get_json_for_locus_lists(locus_lists, user, is_analyst=is_analyst):
-                locus_lists_by_guid[ll['locusListGuid']].update(ll)
+    if add_list_detail:
+        locus_lists_by_guid = {
+            ll['locusListGuid']: dict(intervals=[], **ll)
+            for ll in get_json_for_locus_lists(locus_lists, user, is_analyst=is_analyst)
+        }
     else:
         locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
     intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)

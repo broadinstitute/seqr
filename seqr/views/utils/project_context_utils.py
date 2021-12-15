@@ -55,27 +55,28 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
     return response
 
 
-def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm):
+def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True):
     families = _get_json_for_families(
-        family_models, user, project_guid=project_guid, skip_nested=True,
-        is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+        family_models, user, project_guid=project_guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__in=family_models), is_analyst=is_analyst)
 
     individual_models = Individual.objects.filter(family__in=family_models)
     individuals = _get_json_for_individuals(
-        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=True,
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-    igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True,
-                                       is_analyst=is_analyst)
     response.update({
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
-        'igvSamplesByGuid': {s['sampleGuid']: s for s in igv_samples},
     })
+
+    if include_igv:
+        igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
+        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True,
+                                       is_analyst=is_analyst)
+        response['igvSamplesByGuid'] = {s['sampleGuid']: s for s in igv_samples}
 
     _add_child_ids(response)
 
@@ -123,15 +124,17 @@ def _add_child_ids(response):
         for sample in response['samplesByGuid'].values():
             sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
 
-    igv_sample_guids_by_individual = defaultdict(list)
-    for sample in response['igvSamplesByGuid'].values():
-        igv_sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
+    if 'igvSamplesByGuid' in response:
+        igv_sample_guids_by_individual = defaultdict(list)
+        for sample in response['igvSamplesByGuid'].values():
+            igv_sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
 
     individual_guids_by_family = defaultdict(list)
     for individual in response['individualsByGuid'].values():
         if 'samplesByGuid' in response:
             individual['sampleGuids'] = sample_guids_by_individual[individual['individualGuid']]
-        individual['igvSampleGuids'] = igv_sample_guids_by_individual[individual['individualGuid']]
+        if 'igvSamplesByGuid' in response:
+            individual['igvSampleGuids'] = igv_sample_guids_by_individual[individual['individualGuid']]
         individual_guids_by_family[individual['familyGuid']].append(individual['individualGuid'])
 
     for family in response['familiesByGuid'].values():

@@ -326,6 +326,7 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
+    # TODO can probably return much less data
     response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)
