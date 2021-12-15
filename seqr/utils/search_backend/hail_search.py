@@ -54,7 +54,8 @@ class HailSearch(object):
         self._sample_table_queries = {}
 
         # TODO set up connection to MTs/ any external resources
-        self.mt = hl.experimental.load_dataset("1000_Genomes_HighCov_autosomes", "NYGC_30x_phased", "GRCh38")
+        #self.mt = hl.experimental.load_dataset("1000_Genomes_HighCov_autosomes", "NYGC_30x_phased", "GRCh38")
+        self.mt = hl.read_matrix_table("/mnt/stateful_partition/seqr-data/small_vepped.mt/")
 
     def _sample_table(self, sample_id):
         # TODO should implement way to map sample id to table name
