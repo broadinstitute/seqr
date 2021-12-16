@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Table, Icon, Popup } from 'semantic-ui-react'
+import { Table, Icon, Popup, Visibility } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { withRouter } from 'react-router'
 
@@ -46,7 +46,7 @@ class FamilyTableRow extends React.PureComponent {
     showDetails: PropTypes.bool,
   }
 
-  state = { showDetails: null }
+  state = { showDetails: null, isVisible: false }
 
   toggle = () => {
     const { showDetails } = this.props
@@ -55,26 +55,35 @@ class FamilyTableRow extends React.PureComponent {
     ))
   }
 
+  handleOnScreen = () => {
+    this.setState({ isVisible: true })
+  }
+
   render() {
     const {
       familyGuid, showVariantDetails, detailFields, noDetailFields, tableName, showDetails: initialShowDetails,
     } = this.props
-    const { showDetails } = this.state
+    const { showDetails, isVisible } = this.state
     const showFamilyDetails = showDetails === null ? initialShowDetails : showDetails
     return (
       <Table.Row>
         <OverflowCell>
-          <FamilyDetail
-            key={familyGuid}
-            familyGuid={familyGuid}
-            showFamilyPageLink
-            showVariantDetails={showVariantDetails}
-            tableName={tableName}
-            fields={showFamilyDetails ? detailFields : noDetailFields}
-            compact={!showFamilyDetails}
-            disableEdit={!showFamilyDetails}
-            annotation={detailFields && noDetailFields && <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
-          />
+          <Visibility fireOnMount onOnScreen={this.handleOnScreen}>
+            {isVisible && (
+              <FamilyDetail
+                key={familyGuid}
+                familyGuid={familyGuid}
+                showFamilyPageLink
+                showVariantDetails={showVariantDetails}
+                tableName={tableName}
+                fields={showFamilyDetails ? detailFields : noDetailFields}
+                compact={!showFamilyDetails}
+                disableEdit={!showFamilyDetails}
+                annotation={detailFields && noDetailFields &&
+                <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
+              />
+            )}
+          </Visibility>
         </OverflowCell>
       </Table.Row>
     )
