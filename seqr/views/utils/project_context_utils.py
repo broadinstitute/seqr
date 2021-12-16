@@ -78,7 +78,7 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
 
     if include_igv:
         igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=True,
+        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=skip_child_ids,
                                        is_analyst=is_analyst)
         response['igvSamplesByGuid'] = {s['sampleGuid']: s for s in igv_samples}
 
@@ -107,6 +107,7 @@ def _add_parent_ids(response, projects, family_models, individual_models, locus_
     for sample in response['samplesByGuid'].values():
         individual_guid = individual_id_to_guid[sample.pop('individualId')]
         sample['individualGuid'] = individual_guid
+        sample['familyGuid'] = response['individualsByGuid'][individual_guid]['familyGuid']
         sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
     for sample in response['igvSamplesByGuid'].values():
         individual_guid = individual_id_to_guid[sample.pop('individualId')]

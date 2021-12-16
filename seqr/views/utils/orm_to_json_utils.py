@@ -355,7 +355,7 @@ def _get_json_for_individual(individual, user=None, **kwargs):
     return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
-def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_nested=False, **kwargs):
+def get_json_for_samples(samples, project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
     """Returns a JSON representation of the given list of Samples.
 
     Args:
@@ -367,6 +367,7 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     if project_guid or not skip_nested:
         additional_kwargs = {'nested_fields': [
             {'fields': ('individual', 'guid'), 'value': individual_guid},
+            {'fields': ('individual', 'family', 'guid'), 'key': 'familyGuid', 'value': family_guid},
             {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
         ]}
     else:

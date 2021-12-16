@@ -33,7 +33,7 @@ def family_page_data(request, family_guid):
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
     sample_models = Sample.objects.filter(individual__family=family)
-    samples = get_json_for_samples(sample_models, project_guid=project.guid, skip_nested=True, is_analyst=is_analyst)
+    samples = get_json_for_samples(sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst)
     response = {
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
     }

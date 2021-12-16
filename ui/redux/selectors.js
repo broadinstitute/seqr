@@ -126,22 +126,8 @@ const getSortedSamples = createSelector(
 )
 
 export const getSamplesByFamily = createSelector(
-  getFamiliesByGuid,
   getSortedSamples,
-  (familiesByGuid, sortedSamples) => {
-    const familyIndividuals = Object.values(familiesByGuid).reduce((acc, { familyGuid, individualGuids }) => ({
-      ...acc,
-      ...individualGuids.reduce((acc2, individualGuid) => ({ ...acc2, [individualGuid]: familyGuid }), {}),
-    }), {})
-    return sortedSamples.reduce((acc, sample) => {
-      const familyGuid = familyIndividuals[sample.individualGuid]
-      if (!acc[familyGuid]) {
-        acc[familyGuid] = []
-      }
-      acc[familyGuid].push(sample)
-      return acc
-    }, {})
-  },
+  sortedSamples => groupByFamilyGuid(sortedSamples || []),
 )
 
 export const getHasActiveSearchableSampleByFamily = createSelector(
