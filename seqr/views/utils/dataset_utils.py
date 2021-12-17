@@ -160,7 +160,7 @@ def match_sample_ids_to_sample_records(
                     len(sample_ids)
                 ))
         if raise_unmatched_error_template and remaining_sample_ids:
-            raise ValueError(raise_unmatched_error_template.format(sample_ids=(', '.join(remaining_sample_ids))))
+            raise ValueError(raise_unmatched_error_template.format(sample_ids=(', '.join(sorted(remaining_sample_ids)))))
 
         # create new Sample records for Individual records that matches
         new_samples = [
