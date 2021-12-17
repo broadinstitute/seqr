@@ -573,12 +573,10 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Parsed 1 RNA-seq samples',
             'Attempted data loading for 0 RNA-seq samples in the following 0 projects: ',
         ]
-        self.assertDictEqual(response.json(), {
-            'info': info,
-            'warnings': ['Skipped loading for 1 samples already loaded from this file'],
-            'sampleGuids': [],
-        })
+        warnings = ['Skipped loading for 1 samples already loaded from this file']
+        self.assertDictEqual(response.json(), {'info': info, 'warnings': warnings, 'sampleGuids': []})
         mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
+        mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
         self.assertEqual(RnaSeqOutlier.objects.count(), 3)
 
         # Test loading new data
@@ -603,12 +601,9 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Parsed 2 RNA-seq samples',
             'Attempted data loading for 1 RNA-seq samples in the following 1 projects: 1kg project nåme with uniçøde',
         ]
+        warnings = ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
         response_json = response.json()
-        self.assertDictEqual(response_json, {
-            'info': info,
-            'warnings': ['Skipped loading for the following 1 unmatched samples: NA19675_D3'],
-            'sampleGuids': [mock.ANY],
-        })
+        self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [mock.ANY]})
         mock_logger.info.assert_has_calls(
             [mock.call(info_log, self.data_manager_user) for info_log in info] + [
                 mock.call('delete 3 RnaSeqOutliers', self.data_manager_user, db_update={
@@ -616,6 +611,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 }),
             ], any_order=True
         )
+        mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
 
         # test database models are correct
         self.assertEqual(RnaSeqOutlier.objects.count(), 0)
