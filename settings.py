@@ -145,9 +145,18 @@ TEMPLATES = [
     },
 ]
 
-GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
-MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
-MEDIA_URL = '/media/'
+# If specified, store data in the named GCS bucket and use the gcloud storage backend.
+# Else, fall back to a path on the local filesystem.
+GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
+if GCS_MEDIA_ROOT_BUCKET:
+    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+    GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
+    GS_DEFAULT_ACL = 'publicRead'
+    MEDIA_URL = 'https://storage.googleapis.com/{bucket_name}/'.format(bucket_name=GS_BUCKET_NAME)
+else:
+    GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
+    MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
+    MEDIA_URL = '/media/'
 
 LOGGING = {
     'version': 1,
