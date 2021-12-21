@@ -14,6 +14,7 @@ REDIS_POD_MEMORY_LIMIT: 8Gi
 TERRA_API_ROOT_URL: 'https://firecloud-orchestration.dsde-dev.broadinstitute.org'
 
 CLOUDSQL_AVAILABILITY_TYPE: 'zonal'
+GCS_MEDIA_ROOT_BUCKET: 'seqr-media-storage-public-dev'
 
 ####  Elasticsearch settings ####
 
