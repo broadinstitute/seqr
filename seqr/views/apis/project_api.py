@@ -119,7 +119,8 @@ def delete_project_handler(request, project_guid):
 
 @login_and_policies_required
 def project_page_data(request, project_guid):
-    """Returns a JSON object containing basic project information
+    """
+    Returns a JSON object containing basic project information
 
     Args:
         project_guid (string): GUID of the Project to retrieve data for.

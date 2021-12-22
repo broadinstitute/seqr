@@ -4,7 +4,7 @@ import mock
 
 from django.urls.base import reverse
 
-from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family, Project, LocusList
+from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Family
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
