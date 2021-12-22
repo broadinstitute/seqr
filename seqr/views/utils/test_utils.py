@@ -457,7 +457,7 @@ INTERNAL_INDIVIDUAL_FIELDS = {
 INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
-    'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
+    'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
     'loadedDate', 'datasetType', 'elasticsearchIndex',
 }
 
