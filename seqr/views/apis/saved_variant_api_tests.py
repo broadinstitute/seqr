@@ -122,9 +122,6 @@ class SavedVariantAPITest(object):
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_saved_variant_data(self, mock_analyst_group):
-        # add a locus list
-        LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.add(Project.objects.get(guid=PROJECT_GUID))
-
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
