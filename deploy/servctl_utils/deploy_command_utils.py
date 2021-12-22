@@ -156,7 +156,7 @@ def _set_elasticsearch_kubernetes_resources():
 def deploy_elasticsearch_snapshot_config(settings):
     print_separator('elasticsearch snapshot configuration')
 
-    docker_build("curl", settings)
+    docker_build("curator", settings)
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
