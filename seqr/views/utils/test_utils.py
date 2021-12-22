@@ -462,7 +462,7 @@ SAMPLE_FIELDS = {
 }
 
 IGV_SAMPLE_FIELDS = {
-    'projectGuid', 'individualGuid', 'sampleGuid', 'filePath', 'sampleId', 'sampleType',
+    'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'filePath', 'sampleId', 'sampleType',
 }
 
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
@@ -485,6 +485,14 @@ LOCUS_LIST_FIELDS = {
 }
 LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 LOCUS_LIST_DETAIL_FIELDS.update(LOCUS_LIST_FIELDS)
+
+MATCHMAKER_SUBMISSION_FIELDS = {
+    'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate',
+}
+
+TAG_TYPE_FIELDS = {
+    'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'metadataTitle',
+}
 
 GENE_FIELDS = {
     'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38',  'endGrch37', 'endGrch38',

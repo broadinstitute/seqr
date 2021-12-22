@@ -7,8 +7,11 @@ from django.urls.base import reverse
 
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
-    receive_families_table_handler, create_family_note, update_family_note, delete_family_note
-from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS
+    receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
+    family_variant_tag_summary
+from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
+    SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
+    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -20,9 +23,83 @@ PM_REQUIRED_PROJECT_GUID = 'R0003_test'
 FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
-
 class FamilyAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+    fixtures = ['users', '1kg_project', 'reference_data']
+
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_family_page_data(self, mock_analyst_group):
+        url = reverse(family_page_data, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid',  'igvSamplesByGuid',
+            'mmeSubmissionsByGuid',
+        }
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        family = response_json['familiesByGuid'][FAMILY_GUID]
+        family_fields = {'individualGuids', 'detailsLoaded'}
+        family_fields.update(FAMILY_FIELDS)
+        self.assertSetEqual(set(family.keys()), family_fields)
+
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
+        individual_fields.update(INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
+        self.assertSetEqual(
+            set(next(iter(response_json['mmeSubmissionsByGuid'].values())).keys()), MATCHMAKER_SUBMISSION_FIELDS
+        )
+
+        # Test analyst users have internal fields returned
+        self.login_analyst_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        family_fields.update(INTERNAL_FAMILY_FIELDS)
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), family_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
+
+    def test_family_variant_tag_summary(self):
+        url = reverse(family_variant_tag_summary, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {
+            'projectsByGuid', 'familiesByGuid', 'familyTagTypeCounts', 'genesById',
+        }
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        family = response_json['familiesByGuid'][FAMILY_GUID]
+        self.assertSetEqual(set(family.keys()), {'familyGuid', 'discoveryTags'})
+        self.assertSetEqual({tag['variantGuid'] for tag in family['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
+
+        project = response_json['projectsByGuid'][PROJECT_GUID]
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
+        self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
+
+        self.assertDictEqual(response_json['familyTagTypeCounts'], {
+            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
+        })
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_edit_families_handler(self, mock_pm_group):

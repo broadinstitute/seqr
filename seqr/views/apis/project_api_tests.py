@@ -8,9 +8,10 @@ from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
-from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, SAMPLE_FIELDS, \
-    CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, SAMPLE_FIELDS, \
+    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
+    CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
+    AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -163,10 +164,9 @@ class ProjectAPITest(object):
         project_fields.update(PROJECT_FIELDS)
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project_response.keys()), project_fields)
-        self.assertSetEqual(
-            set(project_response['variantTagTypes'][0].keys()),
-            {'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'numTags', 'metadataTitle'}
-        )
+        tag_type_fields = {'numTags'}
+        tag_type_fields.update(TAG_TYPE_FIELDS)
+        self.assertSetEqual(set(project_response['variantTagTypes'][0].keys()), tag_type_fields)
         note_tag_type = project_response['variantTagTypes'][-1]
         self.assertDictEqual(note_tag_type, {
             'variantTagTypeGuid': 'notes',
@@ -317,10 +317,10 @@ class ProjectAPITest(object):
         response_keys = {'projectsByGuid', 'mmeSubmissionsByGuid', 'familyNotesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'mmeSubmissionsLoaded': True}})
-
+        submission_fields = {'geneIds'}
+        submission_fields.update(MATCHMAKER_SUBMISSION_FIELDS)
         self.assertSetEqual(
-            set(next(iter(response_json['mmeSubmissionsByGuid'].values())).keys()),
-            {'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate', 'geneIds'}
+            set(next(iter(response_json['mmeSubmissionsByGuid'].values())).keys()), submission_fields
         )
         self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
 

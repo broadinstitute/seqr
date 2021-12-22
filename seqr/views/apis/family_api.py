@@ -23,15 +23,6 @@ from seqr.views.utils.permissions_utils import check_project_permissions, get_pr
 FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
-# TODO
-# PROJECT_PAGE_RESPONSE_KEYS = {
-#
-#       'igvSamplesByGuid',
-# }
-
-# self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
-#        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
-
 @login_and_policies_required
 def family_page_data(request, family_guid):
     family = Family.objects.get(guid=family_guid)

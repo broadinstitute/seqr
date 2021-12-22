@@ -147,7 +147,7 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
   getIndividualsByGuid,
   getIgvSamplesByGuid,
   (individualsByGuid, igvSamplesByGuid) => Object.values(igvSamplesByGuid).reduce((acc, sample) => {
-    const { familyGuid } = individualsByGuid[sample.individualGuid]
+    const { familyGuid } = individualsByGuid[sample.individualGuid] // TODO use sample.familyGuid
     if (!acc[familyGuid]) {
       acc[familyGuid] = {}
     }
