@@ -205,7 +205,7 @@ class ProjectAPITest(object):
             self.mock_get_ws_acl.side_effect = TerraRefreshTokenFailedException('Refresh Error')
             response = self.client.get(url)
             self.assertEqual(response.status_code, 401)
-            self.assertEqual(response.json()['error'], '/login/google-oauth2')
+            self.assertEqual(response.json()['error'], '/login')
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
