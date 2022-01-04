@@ -47,7 +47,7 @@ class SavedVariants extends React.PureComponent {
     discoveryFilters: PropTypes.arrayOf(PropTypes.object),
     loading: PropTypes.bool,
     error: PropTypes.string,
-    variantsToDisplay: PropTypes.arrayOf(PropTypes.object),
+    variantsToDisplay: PropTypes.arrayOf(PropTypes.any),
     totalVariantsCount: PropTypes.number,
     filteredVariantsCount: PropTypes.number,
     variantExportConfig: PropTypes.arrayOf(PropTypes.object),
