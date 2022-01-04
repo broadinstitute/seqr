@@ -353,7 +353,7 @@ GeneDetails.propTypes = {
 }
 
 const BaseVariantGene = React.memo((
-  { geneId, gene, variant, compact, showInlineDetails, areCompoundHets, compoundHetToggle, rnaSeqData },
+  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, rnaSeqData },
 ) => {
   const geneTranscripts = variant.transcripts[geneId]
   const geneConsequence = geneTranscripts && geneTranscripts.length > 0 &&
@@ -369,7 +369,7 @@ const BaseVariantGene = React.memo((
     <GeneDetails
       gene={gene}
       compact={compactDetails}
-      containerStyle={(showInlineDetails || areCompoundHets) && INLINE_STYLE}
+      containerStyle={showInlineDetails ? INLINE_STYLE : null}
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
       rnaSeqData={rnaSeqData}
@@ -443,7 +443,6 @@ BaseVariantGene.propTypes = {
   variant: PropTypes.object.isRequired,
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
-  areCompoundHets: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
   rnaSeqData: PropTypes.object,
 }
