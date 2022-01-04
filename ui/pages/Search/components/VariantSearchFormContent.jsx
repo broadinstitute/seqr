@@ -15,7 +15,7 @@ import VariantSearchFormPanels, {
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
   HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
-  SV_GROUPS,
+  SV_GROUPS, SNP_FREQUENCIES, SV_FREQUENCIES,
 } from 'shared/components/panel/search/constants'
 import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
 import {
@@ -232,11 +232,11 @@ const PANELS = [
     ...FREQUENCY_PANEL,
     [DATASET_TYPE_VARIANT_CALLS]: {
       ...FREQUENCY_PANEL,
-      fields: FREQUENCY_PANEL.fields.filter(({ name }) => name !== SV_CALLSET_FREQUENCY),
+      fields: SNP_FREQUENCIES,
     },
     [DATASET_TYPE_SV_CALLS]: {
       ...FREQUENCY_PANEL,
-      fields: FREQUENCY_PANEL.fields.filter(({ name }) => name === SV_CALLSET_FREQUENCY),
+      fields: SV_FREQUENCIES,
       headerProps: {
         ...FREQUENCY_PANEL.headerProps,
         inputSize: 3,
