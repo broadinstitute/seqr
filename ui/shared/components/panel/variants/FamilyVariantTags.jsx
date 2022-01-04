@@ -16,7 +16,7 @@ import {
 import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
 import AcmgModal from '../acmg/AcmgModal'
 import PopupWithModal from '../../PopupWithModal'
-import { HorizontalSpacer } from '../../Spacers'
+import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
 import FamilyLink from '../../buttons/FamilyLink'
 import { StyledForm } from '../../form/ReduxFormWrapper'
@@ -275,6 +275,7 @@ const FamilyVariantTags = React.memo(({
           </Table.Cell>
         </Table.Row>
       </Table.Body>
+      <VerticalSpacer height={10} />
     </NoBorderTable>
   ) : null
 ))
