@@ -218,16 +218,16 @@ const CompoundHets = React.memo(({ variants, compoundHetToggle, ...props }) => {
 
   // If linked variants are complex and not comp-het (more than 2 variants) and the first variant is a manual variant,
   // display associated variants nested under the manual variant
-  const mainVariants = (variants.length > 2 && !variants[0].populations) && variants.splice(0, 1)
-  // TODO
-  const allVariants = [...(mainVariants || []), ...variants] // eslint-disable-line react-perf/jsx-no-new-array-as-prop
+  const mainVariants = (variants.length > 2 && !variants[0].populations) && variants.slice(0, 1)
 
   return (
     <VariantLayout
-      variant={allVariants}
+      variant={variants}
       mainGeneId={mainGeneId}
       compoundHetToggle={compoundHetToggle}
-      bottomContent={mainVariants && <NestedVariantTab panes={nestedVariantPanes(variants, mainGeneId, props)} />}
+      bottomContent={
+        mainVariants && <NestedVariantTab panes={nestedVariantPanes(variants.slice(1), mainGeneId, props)} />
+      }
     >
       <StyledCompoundHetRows>
         {compHetRows(mainVariants || variants, mainGeneId, props)}
