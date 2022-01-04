@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
+import { VerticalSpacer } from '../../Spacers'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
 import FamilyReads from '../family/FamilyReads'
 import FamilyVariantTags, { LoadedFamilyLabel, taggedByPopup } from './FamilyVariantTags'
@@ -85,7 +86,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
 
   const severity = CLINSIG_SEVERITY[((variant.clinvar || {}).clinicalSignificance || '').toLowerCase()]
   return (
-    <StyledVariantRow key={variant.variant} severity={severity} isSV={!!variant.svType}>
+    <StyledVariantRow severity={severity} isSV={!!variant.svType}>
       <Grid.Column width={16}>
         <Pathogenicity variant={variant} />
         {variant.discoveryTags && variant.discoveryTags.length > 0 && (
@@ -107,10 +108,10 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
           <FamilyVariantTags
             familyGuid={familyGuid}
             variant={variant}
-            key={variant.variantId}
             isCompoundHet={isCompoundHet}
             linkToSavedVariants={linkToSavedVariants}
           />
+          <VerticalSpacer height={10} />
         </Grid.Column>
       ))}
       {!isCompoundHet && (
@@ -190,6 +191,7 @@ const CompoundHets = React.memo(({ variants, compoundHetToggle, ...props }) => {
       {allVariants[0].familyGuids.map(familyGuid => (
         <Grid.Column key={familyGuid} width={16}>
           <FamilyVariantTags familyGuid={familyGuid} variant={allVariants} />
+          <VerticalSpacer height={10} />
         </Grid.Column>
       ))}
       <Grid.Column width={4}>
