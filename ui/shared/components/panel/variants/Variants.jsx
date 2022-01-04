@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Divider, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
+import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
 import { CLINSIG_SEVERITY, getVariantMainGeneId } from 'shared/utils/constants'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
@@ -113,10 +113,9 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
       ))}
       <Grid.Column width={4}>
         {variant.svName && <Header size="medium" content={variant.svName} />}
-        {!isCompoundHet && variantMainGeneId && <VariantGene geneId={variantMainGeneId} variant={variant} />}
-        {!isCompoundHet && variantMainGeneId && Object.keys(variant.transcripts || {}).length > 1 && <Divider />}
-        <VariantGenes mainGeneId={variantMainGeneId} variant={variant} />
-        {isCompoundHet && Object.keys(variant.transcripts || {}).length > 1 && <VerticalSpacer height={20} />}
+        {!isCompoundHet && (variantMainGeneId ?
+          <VariantGene geneId={variantMainGeneId} variant={variant} /> :
+          <VariantGenes mainGeneId={variantMainGeneId} variant={variant} />)}
         {isCompoundHet && <VariantIndividuals variant={variant} isCompoundHet />}
         {isCompoundHet && showReads}
       </Grid.Column>
@@ -124,7 +123,7 @@ const Variant = React.memo(({ variant, isCompoundHet, mainGeneId, linkToSavedVar
         <Grid columns="equal">
           <Grid.Row>
             <Grid.Column>
-              <Annotations variant={variant} />
+              <Annotations variant={variant} mainGeneId={variantMainGeneId} />
               { variant.variantGuid && <AcmgModal variant={variant} /> }
             </Grid.Column>
             <Grid.Column><Predictions variant={variant} /></Grid.Column>
