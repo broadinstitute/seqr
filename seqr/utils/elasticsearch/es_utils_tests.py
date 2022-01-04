@@ -2794,7 +2794,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5']))
 
         initial_cached_results = {
-            'compound_het_results': [],
+            'compound_het_results': [{'ENSG00000240361': PARSED_COMPOUND_HET_VARIANTS}],
             'variant_results': [PARSED_VARIANTS[1]],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS}],
             'duplicate_doc_count': 0,
@@ -2807,7 +2807,8 @@ class EsUtilsTest(TestCase):
         gene_counts = get_es_variant_gene_counts(results_model, None)
         self.assertDictEqual(gene_counts, {
             'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 2, 'F000002_2': 1, 'F000005_5': 1}},
-            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}}
+            'ENSG00000228198': {'total': 5, 'families': {'F000003_3': 4, 'F000002_2': 1, 'F000005_5': 1}},
+            'ENSG00000240361': {'total': 2, 'families': {'F000003_3': 2}},
         })
 
         self.assertExecutedSearch(
