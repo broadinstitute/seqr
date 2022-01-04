@@ -59,7 +59,8 @@ const InlinePopup = styled(Popup).attrs({ basic: true, flowing: true })`
 
 const NestedVariantTab = styled(Tab).attrs({
   menu: { fluid: true, vertical: true, secondary: true, pointing: true },
-  grid: { paneWidth: 15, tabWidth: 1 },
+  grid: { paneWidth: 12, tabWidth: 4 },
+  defaultActiveIndex: 1,
   renderActiveOnly: false,
 })`
   .segment.tab {
@@ -168,11 +169,7 @@ const compHetRows = (variants, mainGeneId, props) => variants.map(compoundHet =>
 const nestedVariantPanes = (variants, mainGeneId, props) => ([
   {
     menuIcon: 'plus',
-    content: (
-      <StyledCompoundHetRows stackable columns="equal">
-        {compHetRows(variants, mainGeneId, props)}
-      </StyledCompoundHetRows>
-    ),
+    content: compHetRows(variants, mainGeneId, props),
   },
   { menuIcon: 'minus', content: `Collapsing ${variants.length} nested variants` },
 ].map(({ menuIcon, content }, i) => ({
