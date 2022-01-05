@@ -335,10 +335,15 @@ urlpatterns += [
 urlpatterns += [
     url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
     url(r'^admin/', admin.site.urls),
-    url(r'^media/(?P<path>.*)$', django.views.static.serve, {
-        'document_root': MEDIA_ROOT,
-    }),
 ]
+
+# If serving /media from the local filesystem
+if MEDIA_ROOT:
+    urlpatterns += [
+        url(r'^media/(?P<path>.*)$', django.views.static.serve, {
+            'document_root': MEDIA_ROOT,
+        }),
+    ]
 
 urlpatterns += [
     url('', include('social_django.urls')),
