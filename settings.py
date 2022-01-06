@@ -153,7 +153,9 @@ if GCS_MEDIA_ROOT_BUCKET:
     GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
     GS_DEFAULT_ACL = 'publicRead'
     MEDIA_ROOT = False
-    MEDIA_URL = 'https://storage.googleapis.com/{bucket_name}/'.format(bucket_name=GS_BUCKET_NAME)
+    media_storage_url = 'https://{bucket_name}.storage.googleapis.com/'.format(bucket_name=GS_BUCKET_NAME)
+    MEDIA_URL = media_storage_url
+    CSP_IMG_SRC = CSP_IMG_SRC + (media_storage_url,)
 else:
     GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
     MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
