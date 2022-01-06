@@ -24,20 +24,7 @@ import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
 const WARNING_HEADER = 'Planned Data Loading Delay'
-const WARNING_BANNER = (
-  <p>
-    The Broad will be having an internal retreat and then will be closed for winter break from December 13th through
-    January 3rd.
-    <br />
-    As a result, any requests for data to be loaded as of &nbsp;
-    <b>December 13th 2021</b>
-    &nbsp; will be delayed until the &nbsp;
-    <b>2nd week of January 2022.</b>
-    <br />
-    We appreciate your understanding and support of our research team taking some well-deserved time off and hope
-    you also have a nice break.
-  </p>
-)
+const WARNING_BANNER = null
 
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
