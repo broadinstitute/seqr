@@ -249,33 +249,31 @@ const GENE_DETAIL_SECTIONS = [
     color: 'pink',
     description: 'RNA-Seq Outlier',
     label: 'RNA-Seq',
-    showDetails: () => true,
+    showDetails: (gene, rnaSeqData) => rnaSeqData && rnaSeqData[gene.geneId],
     detailsDisplay: (gene, rnaSeqData) => (
-      rnaSeqData && rnaSeqData[gene.geneId] && (
-        <div>
-          This gene is flagged as an outlier for RNA-Seq in the following samples
-          <Table basic="very" compact="very">
-            <Table.Header>
-              <Table.Row>
-                <Table.HeaderCell />
+      <div>
+        This gene is flagged as an outlier for RNA-Seq in the following samples
+        <Table basic="very" compact="very">
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell />
+              {RNA_SEQ_DETAIL_FIELDS.map(
+                field => <Table.HeaderCell key={field}>{camelcaseToTitlecase(field).replace(' ', '-')}</Table.HeaderCell>,
+              )}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {Object.entries(rnaSeqData[gene.geneId]).map(([individual, data]) => (
+              <Table.Row key={individual}>
+                <Table.HeaderCell>{individual}</Table.HeaderCell>
                 {RNA_SEQ_DETAIL_FIELDS.map(
-                  field => <Table.HeaderCell key={field}>{camelcaseToTitlecase(field).replace(' ', '-')}</Table.HeaderCell>,
+                  field => <Table.Cell key={field}>{data[field].toPrecision(3)}</Table.Cell>,
                 )}
               </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {Object.entries(rnaSeqData[gene.geneId]).map(([individual, data]) => (
-                <Table.Row key={individual}>
-                  <Table.HeaderCell>{individual}</Table.HeaderCell>
-                  {RNA_SEQ_DETAIL_FIELDS.map(
-                    field => <Table.Cell key={field}>{data[field].toPrecision(3)}</Table.Cell>,
-                  )}
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table>
-        </div>
-      )
+            ))}
+          </Table.Body>
+        </Table>
+      </div>
     ),
   },
 ]
@@ -299,7 +297,7 @@ export const GeneDetails = React.memo((
   { gene, compact, showLocusLists, containerStyle, rnaSeqData, ...labelProps },
 ) => {
   const geneDetails = GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => (
-    { ...sectionConfig, detail: showDetails(gene) && detailsDisplay(gene, rnaSeqData) }
+    { ...sectionConfig, detail: showDetails(gene, rnaSeqData) && detailsDisplay(gene, rnaSeqData) }
   )).filter(({ detail }) => detail).map(({ detail, ...sectionConfig }) => (
     <GeneDetailSection
       key={sectionConfig.label}
