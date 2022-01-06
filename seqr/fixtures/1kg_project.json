@@ -1379,7 +1379,6 @@
             ],
             "liftedOverPos": "",
             "genotypeFilters": "pass",
-            "mainTranscriptId": "ENST00000258436",
             "populations": {
                 "callset": {
                     "ac": null,
@@ -1446,24 +1445,7 @@
                 "T"
             ],
             "transcripts": {
-                "ENSG00000135953": [
-                    {
-                        "transcriptId": "ENST00000258436",
-                        "lofFilter": "",
-                        "biotype": "protein_coding",
-                        "geneSymbol": "MFSD9",
-                        "majorConsequence": "inframe_deletion",
-                        "canonical": "YES",
-                        "hgvsp": "ENSP00000258436.5:p.Leu126del",
-                        "lof": "",
-                        "lofFlags": "",
-                        "codons": "ctTCTc/ctc",
-                        "hgvsc": "ENST00000258436.5:c.375_377delTCT",
-                        "transcriptRank": 0,
-                        "aminoAcids": "LL/L",
-                        "cdnaPosition": "419-421"
-                    }
-                ]
+                "ENSG00000135953": []
             },
             "chrom": "1",
             "genotypes": {

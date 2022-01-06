@@ -137,11 +137,12 @@ class SavedVariantAPITest(object):
         variant = variants['SV0000001_2103343353_r0390_100']
         fields = {
             'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
-            'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'mainTranscriptId', 'genotypes', 'hgmd',
+            'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd',
             'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
         }
         fields.update(SAVED_VARIANT_FIELDS)
         self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
+        fields.add('mainTranscriptId')
         self.assertSetEqual(set(variant.keys()), fields)
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
