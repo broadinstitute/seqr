@@ -18,7 +18,8 @@ import { FAMILY_BULK_EDIT_EXPORT_DATA, INDIVIDUAL_DETAIL_EXPORT_DATA } from '../
 import { loadIndividuals, updateFamilies, updateIndividuals, updateIndividualsMetadata } from '../../reducers'
 import {
   getCurrentProject,
-  getEntityExportConfig, getIndivdualsLoading,
+  getEntityExportConfig,
+  getIndivdualsLoading,
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsByGuid,
 } from '../../selectors'

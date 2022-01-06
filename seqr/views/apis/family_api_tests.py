@@ -23,6 +23,8 @@ PM_REQUIRED_PROJECT_GUID = 'R0003_test'
 FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
+INDIVIDUAL_GUID = 'I000001_na19675'
+
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -43,20 +45,45 @@ class FamilyAPITest(AuthenticationTestCase):
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
+        self.assertEqual(len(response_json['familiesByGuid']), 1)
         family = response_json['familiesByGuid'][FAMILY_GUID]
         family_fields = {'individualGuids', 'detailsLoaded'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family.keys()), family_fields)
+        self.assertEqual(family['projectGuid'], PROJECT_GUID)
+        self.assertSetEqual(set(family['individualGuids']), set(response_json['individualsByGuid'].keys()))
 
+        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
         individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
         individual_fields.update(INDIVIDUAL_FIELDS)
-        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
+        self.assertSetEqual(set(individual.keys()), individual_fields)
+        self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
+        self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
+
+        self.assertEqual(len(response_json['samplesByGuid']), 4)
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
-        self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
+        self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
+        self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
+        self.assertEqual(len(individual['sampleGuids']), 2)
+        self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
+
+        self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
-        self.assertSetEqual(
-            set(next(iter(response_json['mmeSubmissionsByGuid'].values())).keys()), MATCHMAKER_SUBMISSION_FIELDS
-        )
+        self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual({INDIVIDUAL_GUID}, {s['individualGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual(set(individual['igvSampleGuids']), set(response_json['igvSamplesByGuid'].keys()))
+
+        self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
+        submission = next(iter(response_json['mmeSubmissionsByGuid'].values()))
+        self.assertSetEqual(set(submission.keys()), MATCHMAKER_SUBMISSION_FIELDS)
+        self.assertEqual(submission['individualGuid'], INDIVIDUAL_GUID)
+        self.assertEqual(submission['submissionGuid'], individual['mmeSubmissionGuid'])
+
+        self.assertEqual(len(response_json['familyNotesByGuid']), 3)
+        self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
+        self.assertSetEqual({FAMILY_GUID}, {f['familyGuid'] for f in response_json['familyNotesByGuid'].values()})
 
         # Test analyst users have internal fields returned
         self.login_analyst_user()

@@ -36,7 +36,8 @@ import {
   getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
-  getVariantUniqueId, getFamilyDetailsLoading,
+  getVariantUniqueId,
+  getFamilyDetailsLoading,
 } from '../selectors'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 

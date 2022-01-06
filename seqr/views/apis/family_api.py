@@ -63,7 +63,7 @@ def family_variant_tag_summary(request, family_guid):
     }
 
     response['projectsByGuid'] = {project.guid: {}}
-    add_project_tag_types(response['projectsByGuid'], project.guid)
+    add_project_tag_types(response['projectsByGuid'])
 
     return create_json_response(response)
 

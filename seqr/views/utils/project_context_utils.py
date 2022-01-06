@@ -18,7 +18,7 @@ def get_projects_child_entities(projects, user, is_analyst=None, include_family_
 
     response = _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm, include_family_entities)
 
-    add_project_tag_types(response['projectsByGuid'], project_guid)
+    add_project_tag_types(response['projectsByGuid'])
 
     return response
 
@@ -166,12 +166,13 @@ def families_discovery_tags(families):
     }
 
 
-def add_project_tag_types(projects_by_guid, project_guid):
+def add_project_tag_types(projects_by_guid):
     variant_tag_types_models = VariantTagType.objects.filter(Q(project__guid__in=projects_by_guid.keys()) | Q(project__isnull=True))
     variant_tag_types = _get_json_for_models(variant_tag_types_models)
 
     project_tag_types = defaultdict(list)
-    if project_guid:
+    if len(projects_by_guid) == 1:
+        project_guid = next(iter((projects_by_guid.keys())))
         project_tag_types[project_guid] = variant_tag_types
     else:
         prefetch_related_objects(variant_tag_types_models, 'project')

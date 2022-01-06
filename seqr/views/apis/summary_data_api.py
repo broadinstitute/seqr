@@ -96,11 +96,11 @@ def saved_variants_page(request, tag):
     response_json['locusListsByGuid'] = add_locus_lists(
         list(project_models_by_guid.values()), response_json['genesById'], add_list_detail=True, user=request.user, is_analyst=is_analyst)
 
-    project_guid = list(project_models_by_guid.keys())[0] if len(project_models_by_guid.keys()) == 1 else None
     response_json['projectsByGuid'] = {project_guid: {'projectGuid': project_guid} for project_guid in project_models_by_guid.keys()}
-    add_project_tag_types(response_json['projectsByGuid'], project_guid)
+    add_project_tag_types(response_json['projectsByGuid'])
 
+    project_guid = list(project_models_by_guid.keys())[0] if len(project_models_by_guid.keys()) == 1 else None
     add_families_context(
-        response_json, families, project_guid, request.user, is_analyst=is_analyst, has_case_review_perm=False, include_igv=False)
+        response_json, families, project_guid, request.user, is_analyst, has_case_review_perm=False, include_igv=False)
 
     return create_json_response(response_json)

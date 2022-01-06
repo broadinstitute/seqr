@@ -21,6 +21,8 @@ from seqr.views.utils.variant_utils import update_project_saved_variant_json, re
 
 logger = logging.getLogger(__name__)
 
+LOAD_PROJECT_CONTEXT_PARAM = 'loadProjectContext'
+LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 @login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
@@ -49,7 +51,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     variants = list(response['savedVariantsByGuid'].values())
     genes = saved_variant_genes(variants)
-    load_project_context = request.GET.get('loadProjectContext') == 'true'
+    load_project_context = request.GET.get(LOAD_PROJECT_CONTEXT_PARAM) == 'true'
     response['locusListsByGuid'] = add_locus_lists(
         [project], genes, add_list_detail=load_project_context, user=request.user, is_analyst=is_analyst)
 
@@ -62,9 +64,9 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     if load_project_context:
         response['projectsByGuid'] = {project_guid: {}}
-        add_project_tag_types(response['projectsByGuid'], project_guid)
+        add_project_tag_types(response['projectsByGuid'])
 
-    if request.GET.get('loadFamilyContext') == 'true':
+    if request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
         loaded_family_guids = set()
         for variant in variants:
             loaded_family_guids.update(variant['familyGuids'])
