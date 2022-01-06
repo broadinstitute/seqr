@@ -334,8 +334,11 @@ SV_GENOTYPE_FIELDS_CONFIG = {
     'end': {},
     'start': {},
     'num_exon': {},
-    'geneIds': {'response_key': 'geneIds'},
+    'geneIds': {'response_key': 'geneIds', 'format_value': list},
     'defragged': {'format_value': bool},
+    'prev_call': {'format_value': bool},
+    'prev_overlap': {'format_value': bool},
+    'new_call': {'format_value': bool},
 }
 SV_GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 SV_GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SV_QUALITY_FIELDS.keys()})
