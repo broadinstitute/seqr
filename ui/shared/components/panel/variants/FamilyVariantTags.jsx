@@ -14,6 +14,7 @@ import {
   getVariantId,
 } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
+import AcmgModal from '../acmg/AcmgModal'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
@@ -245,6 +246,10 @@ const FamilyVariantTags = React.memo(({
             )}
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
+            {variant.variantGuid && !Array.isArray(variant) &&
+              <AcmgModal variant={variant} familyGuid={family.familyGuid} /> }
+          </Table.Cell>
+          <Table.Cell collapsing textAlign="right">
             {(!Array.isArray(variant) || variantTagNotes) &&
               <VariantLink variant={variant} variantTagNotes={variantTagNotes} family={family} />}
           </Table.Cell>
@@ -253,7 +258,7 @@ const FamilyVariantTags = React.memo(({
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Notes:</TagTitle>
           </Table.Cell>
-          <Table.Cell colSpan={isCompoundHet ? 2 : 3}>
+          <Table.Cell colSpan={isCompoundHet ? 3 : 4}>
             <NoteListFieldView
               initialValues={variantTagNotes}
               modalId={family.familyGuid}
