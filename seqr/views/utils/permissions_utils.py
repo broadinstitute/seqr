@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
-from django.db.models import Value
+from django.db.models import Value, TextField
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
@@ -209,7 +209,7 @@ def get_project_guids_user_can_view(user):
                       list_anvil_workspaces(user)]
         project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
             workspace_name='').exclude(guid__in=project_guids).annotate(
-            workspace=Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
+            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
             workspace__in=workspaces).only('guid')]
 
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
