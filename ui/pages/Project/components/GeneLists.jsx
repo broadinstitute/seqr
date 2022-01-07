@@ -75,7 +75,7 @@ const mapItemDispatchToProps = (dispatch, ownProps) => ({
 
 const LocusList = connect(mapStateToProps, mapItemDispatchToProps)(LocusListItem)
 
-export const GeneLists = React.memo(({ project }) => project.locusListGuids.map(
+export const GeneLists = React.memo(({ project }) => (project.locusListGuids || []).map(
   locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
 ))
 

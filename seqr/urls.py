@@ -23,7 +23,9 @@ from seqr.views.apis.family_api import \
     update_family_pedigree_image, \
     create_family_note, \
     update_family_note, \
-    delete_family_note
+    delete_family_note, \
+    family_page_data, \
+    family_variant_tag_summary
 
 from seqr.views.apis.individual_api import \
     get_individual_rna_seq_data, \
@@ -122,7 +124,7 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
     igv_genomes_proxy
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
-    project_page_data
+    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
 from matchmaker.views import external_api
@@ -163,6 +165,8 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
     'individual/(?P<individual_guid>[\w.|-]+)/rna_seq_data': get_individual_rna_seq_data,
 
+    'family/(?P<family_guid>[\w.|-]+)/details': family_page_data,
+    'family/(?P<family_guid>[\w.|-]+)/variant_tag_summary': family_variant_tag_summary,
     'family/(?P<family_guid>[\w.|-]+)/update_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/update_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
@@ -176,6 +180,10 @@ api_endpoints = {
     'dashboard': dashboard_page_data,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
+    'project/(?P<project_guid>[^/]+)/get_families': project_families,
+    'project/(?P<project_guid>[^/]+)/get_individuals': project_individuals,
+    'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
+    'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
 
     'project/create_project': create_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,

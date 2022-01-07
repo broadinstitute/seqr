@@ -111,7 +111,7 @@ def update_individual_igv_sample(request, individual_guid):
 
         response = {
             'igvSamplesByGuid': {
-                sample.guid: get_json_for_sample(sample, individual_guid=individual_guid, project_guid=project.guid)}
+                sample.guid: get_json_for_sample(sample, individual_guid=individual_guid, family_guid=individual.family.guid, project_guid=project.guid)}
         }
         if created:
             response['individualsByGuid'] = {

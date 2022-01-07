@@ -81,9 +81,6 @@ class VariantSearchAPITest(object):
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
 
-        # add a locus list
-        LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.add(Project.objects.get(guid=PROJECT_GUID))
-
         # Test invalid inputs
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)

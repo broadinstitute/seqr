@@ -130,7 +130,7 @@ CollaboratorRow.propTypes = {
 }
 
 const getSortedCollabs = (project, isAnvil) => orderBy(
-  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
+  (project.collaborators || []).filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
   ['desc', 'asc'],
 )
 
