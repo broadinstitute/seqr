@@ -352,26 +352,46 @@ RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 
 
 @data_manager_required
 def update_rna_seq(request, upload_file_id):
-    serialized_file_path = _get_upload_file_path(upload_file_id)
+    file_path = _get_upload_file_path(upload_file_id)
 
     request_json = json.loads(request.body)
-    sample_id_to_individual_id_mapping = {}
-    ignore_extra_samples = request_json.get('ignoreExtraSamples')
+    mapping_file = None
+    uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
+    if uploaded_mapping_file_id:
+        mapping_file = load_uploaded_file(uploaded_mapping_file_id)
+
     try:
-        uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
-        if uploaded_mapping_file_id:
-            sample_id_to_individual_id_mapping = load_mapping_file_content(load_uploaded_file(uploaded_mapping_file_id))
+        samples_to_load, info, warnings = load_rna_seq(
+            file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
+    os.remove(file_path)
+
+    # Save sample data for loading
+    for sample, sample_data in samples_to_load.items():
+        with gzip.open(_get_sample_data_file_path(sample.guid), 'wt') as f:
+            json.dump(sample_data, f)
+
+    return create_json_response({
+        'info': info,
+        'warnings': warnings,
+        'sampleGuids': [s.guid for s in samples_to_load.keys()],
+    })
+
+def load_rna_seq(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    sample_id_to_individual_id_mapping = {}
+    if mapping_file:
+        sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
+
     samples_by_id = defaultdict(dict)
-    with gzip.open(serialized_file_path, 'rt') as f:
+    with gzip.open(file_path, 'rt') as f:
         header = _parse_tsv_row(next(f))
 
         header_index_map = {key: i for i, key in enumerate(header)}
         missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
         if missing_cols:
-            return create_json_response({'error': f'Invalid file: missing column(s) {missing_cols}'}, status=400)
+            raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
 
         for line in f:
             row = _parse_tsv_row(line)
@@ -380,62 +400,55 @@ def update_rna_seq(request, upload_file_id):
             gene_id = row_dict['gene_id']
             existing_data = samples_by_id[sample_id].get(gene_id)
             if existing_data and existing_data != row_dict:
-                return create_json_response({'error': f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}'}, status=400)
+                raise ValueError(f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
             samples_by_id[sample_id][gene_id] = row_dict
-    os.remove(serialized_file_path)
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
-    logger.info(message, request.user)
+    logger.info(message, user)
 
-    try:
-        samples, _, _, inactivated_sample_guids, _, remaining_sample_ids = match_and_update_samples(
-            projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
-            user=request.user,
-            sample_ids=samples_by_id.keys(),
-            data_source=upload_file_id.split('_-_')[-1],
-            sample_type=Sample.SAMPLE_TYPE_RNA,
-            sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-            raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
-        )
-    except ValueError as e:
-        return create_json_response({'error': str(e)}, status=400)
+    samples, _, _, inactivated_sample_guids, _, remaining_sample_ids = match_and_update_samples(
+        projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
+        user=user,
+        sample_ids=samples_by_id.keys(),
+        data_source=file_path.split('/')[-1].split('_-_')[-1],
+        sample_type=Sample.SAMPLE_TYPE_RNA,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
+    )
 
     # Delete old data
     to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
     if to_delete:
-        logger.info(f'delete {len(to_delete)} RnaSeqOutliers', request.user, db_update={
+        logger.info(f'delete {len(to_delete)} RnaSeqOutliers', user, db_update={
             'dbEntity': 'RnaSeqOutlier', 'numEntities': len(to_delete), 'parentEntityIds': inactivated_sample_guids, 'updateType': 'bulk_delete',
         })
         to_delete.delete()
 
     loaded_sample_ids = set(RnaSeqOutlier.objects.values_list('sample_id', flat=True).distinct())
-    samples_to_load = [sample for sample in samples if sample.id not in loaded_sample_ids]
+    samples_to_load = {
+        sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
+    }
 
-    # Save sample data for loading
-    for sample in samples_to_load:
-        with gzip.open(_get_sample_data_file_path(sample.guid), 'wt') as f:
-            json.dump(samples_by_id[sample.sample_id], f)
-
-    prefetch_related_objects(samples_to_load, 'individual__family__project')
+    prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
     projects = {sample.individual.family.project.name for sample in samples_to_load}
     project_names = ', '.join(sorted(projects))
     message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
     info.append(message)
-    logger.info(message, request.user)
+    logger.info(message, user)
 
     warnings = []
     if remaining_sample_ids:
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
-        warnings.append(f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}')
+        message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
+        warnings.append(message)
+        logger.warning(message, user)
     if loaded_sample_ids:
-        warnings.append(f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file')
+        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
+        warnings.append(message)
+        logger.warning(message, user)
 
-    return create_json_response({
-        'info': info,
-        'warnings': warnings,
-        'sampleGuids': [s.guid for s in samples_to_load],
-    })
+    return samples_to_load, info, warnings
 
 def _parse_tsv_row(row):
     return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]

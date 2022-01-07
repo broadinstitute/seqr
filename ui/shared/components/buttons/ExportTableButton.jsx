@@ -78,35 +78,48 @@ const mapStateToProps = (state, ownProps) => ({
 
 export const FileLink = connect(mapStateToProps)(BaseFileLink)
 
+export const DownloadButton = ({ buttonText, ...buttonProps }) => (
+  <ButtonLink icon="download" content={buttonText || 'Download Table'} {...buttonProps} />
+)
+
+DownloadButton.propTypes = {
+  buttonText: PropTypes.string,
+}
+
+export const ExportTableButtonContent = React.memo(({ downloads, downloadData }) => (
+  <NoBorderTable>
+    <Table.Body>
+      {
+        downloads.map(({ name, ...downloadProps }) => ([
+          <Table.Row key={1}>
+            <NameCell colSpan="2">
+              <b>{`${name}:`}</b>
+            </NameCell>
+          </Table.Row>,
+          <Table.Row key={2}>
+            <LinkCell>
+              <FileLink {...downloadProps} downloadData={downloadData} ext="xls" />
+            </LinkCell>
+            <LinkCell>
+              <FileLink {...downloadProps} downloadData={downloadData} ext="tsv" />
+              <br />
+            </LinkCell>
+          </Table.Row>,
+        ]))
+      }
+    </Table.Body>
+  </NoBorderTable>
+))
+
+ExportTableButtonContent.propTypes = {
+  downloads: PropTypes.arrayOf(PropTypes.object).isRequired,
+  downloadData: PropTypes.object,
+}
+
 const ExportTableButton = React.memo(({ downloads, buttonText, downloadData, ...buttonProps }) => (
   <Popup
-    trigger={
-      <ButtonLink icon="download" content={buttonText || 'Download Table'} {...buttonProps} />
-    }
-    content={
-      <NoBorderTable>
-        <Table.Body>
-          {
-            downloads.map(({ name, ...downloadProps }) => ([
-              <Table.Row key={1}>
-                <NameCell colSpan="2">
-                  <b>{`${name}:`}</b>
-                </NameCell>
-              </Table.Row>,
-              <Table.Row key={2}>
-                <LinkCell>
-                  <FileLink {...downloadProps} downloadData={downloadData} ext="xls" />
-                </LinkCell>
-                <LinkCell>
-                  <FileLink {...downloadProps} downloadData={downloadData} ext="tsv" />
-                  <br />
-                </LinkCell>
-              </Table.Row>,
-            ]))
-          }
-        </Table.Body>
-      </NoBorderTable>
-    }
+    trigger={<DownloadButton buttonText={buttonText} {...buttonProps} />}
+    content={<ExportTableButtonContent downloads={downloads} downloadData={downloadData} />}
     on="click"
     position="bottom center"
   />

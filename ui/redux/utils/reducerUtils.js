@@ -33,20 +33,3 @@ export const updateEntity = (
       throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
-
-// A helper method to load a project and all its detail fields
-export const loadProjectDetails = (
-  projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes',
-) => (dispatch, getState) => {
-  const project = getState().projectsByGuid[projectGuid]
-  if (!project || !project[detailField]) {
-    dispatch({ type: requestType || REQUEST_PROJECTS })
-    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      }).get()
-  }
-}
