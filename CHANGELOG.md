@@ -2,7 +2,7 @@
 
 ## dev
 
-## 1/07/21
+## 1/7/21
 * Update variant layout
 * Project page performance optimization
 
