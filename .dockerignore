@@ -1,4 +1,5 @@
 ui/dist/*
+ui/node_modules/*
 static/*
 !static/fonts/*
 !static/images/*
