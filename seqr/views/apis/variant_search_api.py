@@ -304,6 +304,7 @@ def search_context_handler(request):
     response = _get_saved_searches(request.user)
     context = json.loads(request.body)
 
+    projects = None
     if context.get('projectGuid'):
         projects = Project.objects.filter(guid=context.get('projectGuid'))
     elif context.get('familyGuid'):
@@ -322,7 +323,8 @@ def search_context_handler(request):
             except Exception as e:
                 return create_json_response({'error': str(e)}, status=400, reason=str(e))
             projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
-    else:
+
+    if not projects:
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
