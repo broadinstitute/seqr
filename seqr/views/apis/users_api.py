@@ -2,7 +2,7 @@ from requests.utils import quote
 
 import json
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from urllib.parse import unquote
 
