@@ -371,3 +371,10 @@ export const getLocusListTableData = createSelector(
     }, { My: [], Public: [] })
   },
 )
+
+export const getUserOptions = createSelector(
+  getUserOptionsByUsername,
+  usersOptionsByUsername => Object.values(usersOptionsByUsername).map(
+    user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
+  ),
+)
