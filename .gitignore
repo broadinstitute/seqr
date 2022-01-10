@@ -6,6 +6,10 @@
 ui/node_modules
 ui/jest*
 
+static/*
+!static/fonts
+!static/images
+
 *.pyc
 *.DS_Store
 .ipynb_checkpoints
