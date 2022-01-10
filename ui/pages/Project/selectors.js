@@ -310,23 +310,21 @@ const hasFamilySearch = createSelector(
   familiesSearch => !!familiesSearch,
 )
 
-const getFamilySearchFields = (family, individualsByGuid) => ([
+const getFamilySearchFields = family => ([
   family.displayName, family.familyId, (family.assignedAnalyst || {}).fullName, (family.assignedAnalyst || {}).email,
   ...family.analysedBy.map(({ createdBy }) => `${createdBy.fullName}${createdBy.email}`),
-  ...family.individualGuids.map(individualGuid => (individualsByGuid[individualGuid].features || []).map(feature => feature.label).join(';')),
 ])
 
 const getFamiliesBySearchString = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  getIndividualsByGuid,
   hasFamilySearch,
-  (familiesByGuid, individualsByGuid, shouldSearch) => {
+  (familiesByGuid, shouldSearch) => {
     if (!shouldSearch) {
       return null
     }
 
     return Object.values(familiesByGuid).reduce((acc, family) => (
-      { ...acc, [getFamilySearchFields(family, individualsByGuid).join(';').toLowerCase()]: family }), {})
+      { ...acc, [getFamilySearchFields(family).join(';').toLowerCase()]: family }), {})
   },
 )
 
