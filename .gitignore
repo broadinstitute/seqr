@@ -5,6 +5,7 @@
 
 ui/node_modules
 ui/jest*
+ui/dist
 
 static/*
 !static/fonts
