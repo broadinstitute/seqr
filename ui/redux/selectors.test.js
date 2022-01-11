@@ -5,6 +5,7 @@ import {
   getVariantTagNotesByFamilyVariants,
   getSearchGeneBreakdownValues,
   getTagTypesByProject,
+  getUserOptions,
 } from './selectors'
 import {FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
 
@@ -40,3 +41,10 @@ test('getTagTypesByProject', () => {
     { R0237_1000_genomes_demo: [] },
   )
 })
+
+test('getUserOptions', () => {
+  const options = getUserOptions(STATE_WITH_2_FAMILIES)
+  expect(Object.keys(options).length).toEqual(7)
+  expect(options[1]).toEqual({ key: '4MW8vPtmHG', value: '4MW8vPtmHG', text: 'Mekdes (mgetaneh@broadinstitute.org)'})
+})
+
