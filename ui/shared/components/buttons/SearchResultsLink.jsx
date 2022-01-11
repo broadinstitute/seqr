@@ -8,7 +8,7 @@ import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
   buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType,
-  familyGuids, familyGuid, projectFamilies, inheritanceMode, ...props
+  familyGuids, familyGuid, ...props
 }) => <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
 SearchResultsLink.propTypes = {
@@ -20,9 +20,7 @@ SearchResultsLink.propTypes = {
   svType: PropTypes.string,
   familyGuid: PropTypes.string,
   familyGuids: PropTypes.arrayOf(PropTypes.string),
-  projectFamilies: PropTypes.arrayOf(PropTypes.object),
   openSearchResults: PropTypes.func,
-  inheritanceMode: PropTypes.string,
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
@@ -36,11 +34,8 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     if (ownProps.svType) {
       search.annotations = { [VEP_GROUP_SV]: [ownProps.svType] }
     }
-    if (ownProps.inheritanceMode) {
-      search.inheritance = { mode: ownProps.inheritanceMode }
-    }
     const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
-    const projectFamilies = familyGuids ? [{ familyGuids }] : ownProps.projectFamilies
+    const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
       { allProjectFamilies: !projectFamilies, projectFamilies, search },
       resultsLink => window.open(resultsLink, '_blank'),
@@ -52,4 +47,8 @@ const ConnectedSearchResultsLink = connect(null, mapDispatchToProps)(SearchResul
 
 export default ConnectedSearchResultsLink
 
-export const GeneSearchLink = props => <ConnectedSearchResultsLink inheritanceMode={ANY_AFFECTED} {...props} />
+const INITIAL_GENE_SEARCH = {
+  inheritance: { mode: ANY_AFFECTED },
+}
+
+export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />
