@@ -7,13 +7,13 @@ import { Label, Popup, List, Header, Segment, Divider, Table } from 'semantic-ui
 
 import { getGenesById, getLocusListsByGuid, getSignificantRnaSeqDataByFamilyGene } from 'redux/selectors'
 import {
-  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, ANY_AFFECTED, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
+  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
   PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
-import SearchResultsLink from '../../buttons/SearchResultsLink'
+import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
@@ -350,6 +350,16 @@ GeneDetails.propTypes = {
   rnaSeqData: PropTypes.object,
 }
 
+const GeneSearchLinkWithPopup = props => (
+  <Popup
+    trigger={
+      <GeneSearchLink {...props} />
+    }
+    content="Search for all variants with AF < 10% in this gene present in any affected individual"
+    size="tiny"
+  />
+)
+
 const BaseVariantGene = React.memo((
   { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, rnaSeqData },
 ) => {
@@ -397,13 +407,7 @@ const BaseVariantGene = React.memo((
           size="tiny"
         />
         &nbsp; | &nbsp;
-        <Popup
-          trigger={
-            <SearchResultsLink location={geneId} familyGuids={variant.familyGuids} inheritanceMode={ANY_AFFECTED} />
-          }
-          content="Search for all variants in this gene present in any affected individual"
-          size="tiny"
-        />
+        <GeneSearchLinkWithPopup location={geneId} familyGuids={variant.familyGuids} />
       </GeneLinks>
     )
   }
@@ -477,7 +481,7 @@ class VariantGenes extends React.PureComponent {
     const geneIds = Object.keys(variant.transcripts || {})
 
     const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
-      <SearchResultsLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+      <GeneSearchLinkWithPopup location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
 
     if (geneIds.length < 6 || showAll) {
       return (
