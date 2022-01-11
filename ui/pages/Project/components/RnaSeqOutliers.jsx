@@ -9,8 +9,7 @@ import { select } from 'd3-selection'
 
 import { getGenesById, getRnaSeqDataByIndividual } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
-import SearchResultsLink from 'shared/components/buttons/SearchResultsLink'
-import { ANY_AFFECTED } from 'shared/utils/constants'
+import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import { loadRnaSeqData } from '../reducers'
 import { getRnaSeqDataLoading } from '../selectors'
 
@@ -100,12 +99,11 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
 const BaseRnaSeqOutliers = React.memo(({ sample, rnaSeqData, genesById, familyGuid, loading, load }) => (
   <DataLoader content={rnaSeqData} contentId={sample.individualGuid} load={load} loading={loading}>
-    <SearchResultsLink
+    <GeneSearchLink
       buttonText="Search for variants in outlier genes"
       icon="search"
       location={Object.values(rnaSeqData || {}).filter(({ isSignificant }) => isSignificant).map(({ geneId }) => geneId).join(',')}
       familyGuid={familyGuid}
-      inheritanceMode={ANY_AFFECTED}
       floated="right"
     />
     <RnaSeqOutliersGraph data={rnaSeqData} genesById={genesById} />

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { VEP_GROUP_SV } from 'shared/utils/constants'
+import { VEP_GROUP_SV, ANY_AFFECTED } from 'shared/utils/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
@@ -48,4 +48,8 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
   },
 })
 
-export default connect(null, mapDispatchToProps)(SearchResultsLink)
+const ConnectedSearchResultsLink = connect(null, mapDispatchToProps)(SearchResultsLink)
+
+export default ConnectedSearchResultsLink
+
+export const GeneSearchLink = props => <ConnectedSearchResultsLink inheritanceMode={ANY_AFFECTED} {...props} />
