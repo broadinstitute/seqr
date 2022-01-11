@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { VEP_GROUP_SV, ANY_AFFECTED } from 'shared/utils/constants'
+import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from '../panel/search/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
@@ -49,6 +50,9 @@ export default ConnectedSearchResultsLink
 
 const INITIAL_GENE_SEARCH = {
   inheritance: { mode: ANY_AFFECTED },
+  freqs: FREQUENCIES.filter(({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY).reduce(
+    (acc, { name }) => ({ ...acc, [name]: { af: 0.1 } }), {},
+  ),
 }
 
 export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />

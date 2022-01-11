@@ -350,6 +350,16 @@ GeneDetails.propTypes = {
   rnaSeqData: PropTypes.object,
 }
 
+const GeneSearchLinkWithPopup = props => (
+  <Popup
+    trigger={
+      <GeneSearchLink {...props} />
+    }
+    content="Search for all variants with AF < 10% in this gene present in any affected individual"
+    size="tiny"
+  />
+)
+
 const BaseVariantGene = React.memo((
   { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, rnaSeqData },
 ) => {
@@ -397,13 +407,7 @@ const BaseVariantGene = React.memo((
           size="tiny"
         />
         &nbsp; | &nbsp;
-        <Popup
-          trigger={
-            <GeneSearchLink location={geneId} familyGuids={variant.familyGuids} />
-          }
-          content="Search for all variants in this gene present in any affected individual"
-          size="tiny"
-        />
+        <GeneSearchLinkWithPopup location={geneId} familyGuids={variant.familyGuids} />
       </GeneLinks>
     )
   }
@@ -477,7 +481,7 @@ class VariantGenes extends React.PureComponent {
     const geneIds = Object.keys(variant.transcripts || {})
 
     const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
-      <GeneSearchLink location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+      <GeneSearchLinkWithPopup location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
 
     if (geneIds.length < 6 || showAll) {
       return (
