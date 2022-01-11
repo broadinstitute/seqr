@@ -310,23 +310,21 @@ const hasFamilySearch = createSelector(
   familiesSearch => !!familiesSearch,
 )
 
-const getFamilySearchFields = (family, individualsByGuid) => ([
+const getFamilySearchFields = family => ([
   family.displayName, family.familyId, (family.assignedAnalyst || {}).fullName, (family.assignedAnalyst || {}).email,
   ...family.analysedBy.map(({ createdBy }) => `${createdBy.fullName}${createdBy.email}`),
-  ...family.individualGuids.map(individualGuid => (individualsByGuid[individualGuid].features || []).map(feature => feature.label).join(';')),
 ])
 
 const getFamiliesBySearchString = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  getIndividualsByGuid,
   hasFamilySearch,
-  (familiesByGuid, individualsByGuid, shouldSearch) => {
+  (familiesByGuid, shouldSearch) => {
     if (!shouldSearch) {
       return null
     }
 
     return Object.values(familiesByGuid).reduce((acc, family) => (
-      { ...acc, [getFamilySearchFields(family, individualsByGuid).join(';').toLowerCase()]: family }), {})
+      { ...acc, [getFamilySearchFields(family).join(';').toLowerCase()]: family }), {})
   },
 )
 
@@ -605,19 +603,6 @@ export const getUserOptions = createSelector(
 export const getCollaborators = createSelector(
   getCurrentProject,
   project => project.collaborators,
-)
-
-// analyst option selectors (add project collaborators to analysts)
-export const getAnalystOptions = createSelector(
-  getCollaborators,
-  getUserOptionsByUsername,
-  (collaborators, usersOptionsByUsername) => {
-    const analyst = Object.values(usersOptionsByUsername).filter(user => user.isAnalyst)
-    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isAnalyst)
-    return [...uniqueCollaborators, ...analyst].map(
-      user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
-    )
-  },
 )
 
 export const getPageHeaderFamily = createSelector(

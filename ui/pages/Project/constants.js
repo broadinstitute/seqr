@@ -140,7 +140,7 @@ const familyHasFeatures = (family, individualsByGuid) => {
   const individuals = family.individualGuids.map(
     individualGuid => individualsByGuid[individualGuid],
   ).filter(individual => individual)
-  return individuals.length ? individuals.some(({ features = [] }) => features.length > 0) : family.hasFeatures
+  return individuals.length ? individuals.some(({ features }) => (features || []).length > 0) : family.hasFeatures
 }
 
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
