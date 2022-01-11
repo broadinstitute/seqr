@@ -394,6 +394,10 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid context params: {"foo": "bar"}')
 
+        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'familyGuid': 'bar'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid context params: {"familyGuid": "bar"}')
+
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'projectGuid': PROJECT_GUID}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
