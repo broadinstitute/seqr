@@ -19,6 +19,7 @@ import {
   UNAFFECTED,
   PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
+  VEP_GROUP_SV_NEW,
 } from 'shared/utils/constants'
 
 export const getSelectedAnalysisGroups = (
@@ -268,7 +269,7 @@ export const ALL_ANNOTATION_FILTER = {
   text: 'All',
   vepGroups: ALL_IMPACT_GROUPS,
 }
-export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]
+export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV, VEP_GROUP_SV_NEW]
 export const ANNOTATION_FILTER_OPTIONS = [
   ALL_ANNOTATION_FILTER,
   {

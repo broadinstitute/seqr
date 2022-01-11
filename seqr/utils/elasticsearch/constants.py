@@ -260,6 +260,7 @@ NESTED_FIELDS = {
 
 GRCH38_LOCUS_FIELD = 'rg37_locus'
 SPLICE_AI_FIELD = 'splice_ai'
+NEW_SV_FIELD = 'new_structural_variants'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},

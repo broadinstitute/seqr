@@ -17,7 +17,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
-    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, get_prediction_response_key
+    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -284,8 +284,14 @@ class EsSearch(object):
         if inheritance_filter.get('genotype'):
             inheritance_mode = None
 
+        additional_filters = []
+
         splice_ai = (annotations or {}).pop(SPLICE_AI_FIELD, None)
-        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
+        if splice_ai:
+            additional_filters.append(_in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False))
+
+        if bool((annotations or {}).get(NEW_SV_FIELD)):
+            additional_filters.append(Q('term', new_call=True))
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
@@ -299,9 +305,9 @@ class EsSearch(object):
             self._allowed_consequences_secondary = allowed_consequences_secondary
             secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
 
-        pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
-        if annotations or pathogenicity_filter or splice_ai_filter:
-            dataset_type = self._filter_by_annotations(annotations, [pathogenicity_filter, splice_ai_filter])
+        additional_filters.append(_pathogenicity_filter(pathogenicity or {}))
+        if annotations or any(additional_filters):
+            dataset_type = self._filter_by_annotations(annotations, additional_filters)
             if dataset_type is None or dataset_type == secondary_dataset_type:
                 secondary_dataset_type = None
 
@@ -1361,8 +1367,8 @@ def _annotations_filter(annotations):
 
 
 def _dataset_type_for_annotations(annotations):
-    sv = bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
-    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
+    sv = any(v for k, v in annotations.items() if 'structural' in k)
+    non_sv = any(v for k, v in annotations.items() if 'structural' not in k)
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS
     elif not sv and non_sv:
