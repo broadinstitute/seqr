@@ -11,15 +11,18 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
-    _get_json_for_models, get_json_for_discovery_tags, get_json_for_rna_seq_outliers
+    _get_json_for_models, get_json_for_discovery_tags, get_json_for_rna_seq_outliers, get_json_for_locus_lists
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    user_is_analyst, login_and_policies_required
+    user_is_analyst, login_and_policies_required, has_case_review_permissions
+from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
     get_variant_key, saved_variant_genes
 
 
 logger = logging.getLogger(__name__)
 
+LOAD_PROJECT_CONTEXT_PARAM = 'loadProjectContext'
+LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 @login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
@@ -41,13 +44,16 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
 
     discovery_tags = None
-    if user_is_analyst(request.user):
+    is_analyst = user_is_analyst(request.user)
+    if is_analyst:
         discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
         response.update(discovery_response)
 
     variants = list(response['savedVariantsByGuid'].values())
     genes = saved_variant_genes(variants)
-    response['locusListsByGuid'] = _add_locus_lists([project], genes)
+    load_project_context = request.GET.get(LOAD_PROJECT_CONTEXT_PARAM) == 'true'
+    response['locusListsByGuid'] = add_locus_lists(
+        [project], genes, add_list_detail=load_project_context, user=request.user, is_analyst=is_analyst)
 
     sample_filter = {'sample__individual__family__guid__in': family_guids} if family_guids else {'sample__individual__family__project': project}
     response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), **sample_filter)
@@ -55,6 +61,18 @@ def saved_variant_data(request, project_guid, variant_guids=None):
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
+
+    if load_project_context:
+        response['projectsByGuid'] = {project_guid: {}}
+        add_project_tag_types(response['projectsByGuid'])
+
+    if request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
+        loaded_family_guids = set()
+        for variant in variants:
+            loaded_family_guids.update(variant['familyGuids'])
+        families = Family.objects.filter(guid__in=loaded_family_guids)
+        add_families_context(
+            response, families, project_guid, request.user, is_analyst, has_case_review_permissions(project, request.user))
 
     return create_json_response(response)
 
@@ -342,11 +360,14 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
 
 
-def _add_locus_lists(projects, genes, include_all_lists=False):
+def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
     locus_lists = LocusList.objects.filter(projects__in=projects)
 
-    if include_all_lists:
-        locus_lists_by_guid = {locus_list.guid: {'intervals': []} for locus_list in locus_lists}
+    if add_list_detail:
+        locus_lists_by_guid = {
+            ll['locusListGuid']: dict(intervals=[], **ll)
+            for ll in get_json_for_locus_lists(locus_lists, user, is_analyst=is_analyst)
+        }
     else:
         locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
     intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)

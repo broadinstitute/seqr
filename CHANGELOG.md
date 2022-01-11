@@ -2,6 +2,10 @@
 
 ## dev
 
+## 1/7/21
+* Update variant layout
+* Project page performance optimization
+
 ## 12/24/21
 * Show RNA-seq outlier data (REQUIRES DB MIGRATION)
 

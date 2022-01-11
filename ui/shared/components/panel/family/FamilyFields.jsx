@@ -4,18 +4,18 @@ import { connect } from 'react-redux'
 import { Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadAnalystOptions } from 'redux/rootReducer'
+import { loadUserOptions } from 'redux/rootReducer'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
   getHasActiveSearchableSampleByFamily,
+  getUserOptions,
 } from 'redux/selectors'
 
 import Sample from '../sample'
 import { ColoredIcon } from '../../StyledComponents'
 import { Select } from '../../form/Inputs'
 import DataLoader from '../../DataLoader'
-import { getAnalystOptions } from '../../../../pages/Project/selectors'
 
 const NoWrap = styled.div`
   white-space: nowrap;
@@ -65,12 +65,12 @@ BaseAnalystEmailDropdown.propTypes = {
 
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
-  options: getAnalystOptions(state),
+  options: getUserOptions(state),
 })
 
-const mapDropdownDispatchToProps = {
-  load: loadAnalystOptions,
-}
+const mapDropdownDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadUserOptions(ownProps.meta.form.split('_-_')[1])),
+})
 
 export const AnalystEmailDropdown = connect(
   mapDropdownStateToProps, mapDropdownDispatchToProps,

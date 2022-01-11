@@ -11,7 +11,7 @@ from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.apis.saved_variant_api import _add_locus_lists, get_rna_seq_outliers
+from seqr.views.apis.saved_variant_api import add_locus_lists, get_rna_seq_outliers
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
@@ -142,7 +142,7 @@ def _process_variants(variants, families, user):
     prefetch_related_objects(families, 'project')
     genes = saved_variant_genes(variants)
     projects = {family.project for family in families}
-    locus_lists_by_guid = _add_locus_lists(projects, genes)
+    locus_lists_by_guid = add_locus_lists(projects, genes)
     response_json, _ = _get_saved_variants(variants, families, include_discovery_tags=user_is_analyst(user))
 
     response_json.update({
@@ -304,6 +304,7 @@ def search_context_handler(request):
     response = _get_saved_searches(request.user)
     context = json.loads(request.body)
 
+    projects = None
     if context.get('projectGuid'):
         projects = Project.objects.filter(guid=context.get('projectGuid'))
     elif context.get('familyGuid'):
@@ -322,10 +323,12 @@ def search_context_handler(request):
             except Exception as e:
                 return create_json_response({'error': str(e)}, status=400, reason=str(e))
             projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
-    else:
+
+    if not projects:
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
+    # TODO can probably return much less data
     response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)

@@ -91,7 +91,7 @@ class BaseFieldView extends React.PureComponent {
     }
 
     if (formFields || formFieldProps) {
-      const fieldModalId = `edit-${this.getFieldId() || 'new'}-${field}-${modalId}`
+      const fieldModalId = `edit_-_${this.getFieldId() || 'new'}_-_${field}_-_${modalId}`
       return showInLine ? (
         <span key="edit">
           {showInLineButton ? (

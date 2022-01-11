@@ -36,7 +36,7 @@ class Project extends React.PureComponent {
 
   render() {
     const { project, match, loading } = this.props
-    if (project && project.detailsLoaded) {
+    if (project) {
       return (
         <Switch>
           <Route path={`${match.url}/project_page`} component={ProjectPageUI} />

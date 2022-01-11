@@ -15,7 +15,8 @@ from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData
     get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
-    project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm
+    project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
+    project_has_analyst_access
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
@@ -355,7 +356,7 @@ def _get_json_for_individual(individual, user=None, **kwargs):
     return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
-def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_nested=False, **kwargs):
+def get_json_for_samples(samples, project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
     """Returns a JSON representation of the given list of Samples.
 
     Args:
@@ -367,6 +368,7 @@ def get_json_for_samples(samples, project_guid=None, individual_guid=None, skip_
     if project_guid or not skip_nested:
         additional_kwargs = {'nested_fields': [
             {'fields': ('individual', 'guid'), 'value': individual_guid},
+            {'fields': ('individual', 'family', 'guid'), 'key': 'familyGuid', 'value': family_guid},
             {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
         ]}
     else:
@@ -776,7 +778,7 @@ def get_json_for_project_collaborator_list(user, project):
         collaborator['lastName'] or '', collaborator['displayName'] or '', collaborator['email']))
 
 
-def get_project_collaborators_by_username(user, project, include_permissions=True):
+def get_project_collaborators_by_username(user, project, include_permissions=True, include_analysts=False, **kwargs):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
     analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP)) if ANALYST_USER_GROUP else None
@@ -784,12 +786,12 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
 
     for collaborator in project.get_collaborators(permissions=[CAN_VIEW]):
         collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, pm_users=pm_users
+            collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, pm_users=pm_users, **kwargs
         )
 
     for collaborator in project.get_collaborators(permissions=[CAN_EDIT]):
         collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, pm_users=pm_users
+            collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, pm_users=pm_users, **kwargs
         )
 
     if project_has_anvil(project):
@@ -801,7 +803,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
             collaborator = users_by_email.get(email)
             if collaborator:
                 collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
-                    can_edit=permission==CAN_EDIT, is_anvil=True, analyst_users=analyst_users, pm_users=pm_users)})
+                    can_edit=permission==CAN_EDIT, is_anvil=True, analyst_users=analyst_users, pm_users=pm_users, **kwargs)})
             else:
                 collaborators[email] = deepcopy(DEFAULT_USER)
                 collaborators[email].update({
@@ -812,11 +814,16 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
                     'hasEditPermissions': permission == CAN_EDIT,
                 })
 
+    if include_analysts and analyst_users and project_has_analyst_access(project):
+        collaborators.update({
+            user.username: _get_collaborator_json(user, include_permissions, can_edit=True, **kwargs) for user in analyst_users
+        })
+
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False, analyst_users=None, pm_users=None):
-    collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil, analyst_users=analyst_users, pm_users=pm_users)
+def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False, analyst_users=None, pm_users=None, **kwargs):
+    collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil, analyst_users=analyst_users, pm_users=pm_users, **kwargs)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,
