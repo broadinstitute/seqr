@@ -288,11 +288,8 @@ class EsSearch(object):
         if inheritance_filter.get('genotype'):
             inheritance_mode = None
 
-        additional_filters = []
-
         splice_ai = (annotations or {}).pop(SPLICE_AI_FIELD, None)
-        if splice_ai:
-            additional_filters.append(_in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False))
+        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
@@ -307,9 +304,9 @@ class EsSearch(object):
             self._allowed_consequences_secondary = allowed_consequences_secondary
             secondary_dataset_type = _dataset_type_for_annotations(annotations_secondary)
 
-        additional_filters.append(_pathogenicity_filter(pathogenicity or {}))
-        if annotations or any(additional_filters):
-            dataset_type, new_svs = self._filter_by_annotations(annotations, additional_filters)
+        pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
+        if annotations or pathogenicity_filter or splice_ai_filter:
+            dataset_type, new_svs = self._filter_by_annotations(annotations, [pathogenicity_filter, splice_ai_filter])
             if dataset_type is None or dataset_type == secondary_dataset_type:
                 secondary_dataset_type = None
 
@@ -1188,8 +1185,7 @@ def _quality_filters_by_family(quality_filter, samples_by_family_index, indices,
             raise Exception('Invalid {} filter {}'.format(config['field'], quality_filter[field]))
 
     quality_filters_by_family = {}
-    has_quality_filters = any(quality_filter[field] for field in quality_field_configs.keys())
-    if has_quality_filters or new_svs:
+    if new_svs or any(quality_filter[field] for field in quality_field_configs.keys()):
         family_sample_ids = defaultdict(set)
         for index in indices:
             family_samples_by_id = samples_by_family_index[index]
@@ -1198,19 +1194,18 @@ def _quality_filters_by_family(quality_filter, samples_by_family_index, indices,
 
         for family_guid, sample_ids in sorted(family_sample_ids.items()):
             quality_q = Q('terms', samples_new_call=list(sample_ids)) if new_svs else Q()
-            if has_quality_filters:
-                for sample_id in sorted(sample_ids):
-                    for field, config in sorted(quality_field_configs.items()):
-                        if quality_filter[field]:
-                            q = _build_or_filter('term', [
-                                {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
-                                for i in range(0, quality_filter[field], config['step'])
-                            ])
-                            if field == 'min_ab':
-                                #  AB only relevant for hets
-                                quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
-                            else:
-                                quality_q &= ~Q(q)
+            for sample_id in sorted(sample_ids):
+                for field, config in sorted(quality_field_configs.items()):
+                    if quality_filter[field]:
+                        q = _build_or_filter('term', [
+                            {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
+                            for i in range(0, quality_filter[field], config['step'])
+                        ])
+                        if field == 'min_ab':
+                            #  AB only relevant for hets
+                            quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
+                        else:
+                            quality_q &= ~Q(q)
             quality_filters_by_family[family_guid] = quality_q
     return quality_filters_by_family
 
@@ -1372,8 +1367,8 @@ def _annotations_filter(annotations):
 
 
 def _dataset_type_for_annotations(annotations, new_svs=False):
-    sv = new_svs or any(v for k, v in annotations.items() if 'structural' in k)
-    non_sv = any(v for k, v in annotations.items() if 'structural' not in k)
+    sv = new_svs or bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
+    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS
     elif not sv and non_sv:
