@@ -297,7 +297,6 @@ class EsSearch(object):
         annotations_secondary_search = None
         secondary_dataset_type = None
         if annotations_secondary:
-            # TODO handle new svs? maybe remove option from ui?
             annotations_secondary_filter, allowed_consequences_secondary = _annotations_filter(annotations_secondary)
             annotations_filter, _ = _annotations_filter(annotations or {})
             annotations_secondary_search = self._search.filter(annotations_filter | annotations_secondary_filter)
