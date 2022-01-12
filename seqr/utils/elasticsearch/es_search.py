@@ -1193,7 +1193,7 @@ def _quality_filters_by_family(quality_filter, samples_by_family_index, indices,
                 family_sample_ids[family_guid].update(samples_by_id.keys())
 
         for family_guid, sample_ids in sorted(family_sample_ids.items()):
-            quality_q = Q('terms', samples_new_call=list(sample_ids)) if new_svs else Q()
+            quality_q = Q('terms', samples_new_call=sorted(sample_ids)) if new_svs else Q()
             for sample_id in sorted(sample_ids):
                 for field, config in sorted(quality_field_configs.items()):
                     if quality_filter[field]:

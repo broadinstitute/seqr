@@ -1650,7 +1650,7 @@ class EsUtilsTest(TestCase):
     def test_sv_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DUP'], 'new_structural_variants': ['NEW']},
+            'annotations': {'new_structural_variants': ['NEW']},
             'freqs': {'sv_callset': {'af': 0.1}},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},
@@ -1668,7 +1668,6 @@ class EsUtilsTest(TestCase):
                     {'range': {'sf': {'lte': 0.1}}}
                 ]
             }},
-            {'terms': {'transcriptConsequenceTerms': ['DUP', 'gCNV_DUP']}},
             {'bool': {
                 'must': [
                     {'bool': {
@@ -1684,7 +1683,8 @@ class EsUtilsTest(TestCase):
                             {'term': {'samples_qs_0_to_10': 'HG00733'}},
                             {'term': {'samples_qs_10_to_20': 'HG00733'}},
                         ],
-                    }}
+                        'must': [{'terms': {'samples_new_call': ['HG00731', 'HG00732', 'HG00733']}}],
+                    }},
                 ],
                 '_name': 'F000002_2'
             }}
@@ -1695,7 +1695,7 @@ class EsUtilsTest(TestCase):
         self.families = Family.objects.filter(guid='F000014_14')
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['CPX']},
+            'annotations': {'structural': ['DUP', 'CPX']},
             'qualityFilter': {'min_gq_sv': 20},
             'inheritance': {'mode': 'de_novo'},
         })
@@ -1706,7 +1706,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
         self.assertExecutedSearch(filters=[
-            {'terms': {'transcriptConsequenceTerms': ['CPX']}},
+            {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP', 'gCNV_DUP']}},
             {'bool': {
                 'must': [{'term': {'samples': 'NA21234'}},
                     {'bool': {
