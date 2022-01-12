@@ -363,6 +363,9 @@ ES_SV_VARIANT = {
           'start': 49045487,
           'end': 49045899,
           'geneIds': ['ENSG00000228198'],
+          'prev_call': False,
+          'prev_overlap': False,
+          'new_call': True,
         },
         {
           'qs': 80,
@@ -373,6 +376,9 @@ ES_SV_VARIANT = {
           'start': 49045987,
           'end': 49045890,
           'geneIds': ['ENSG00000228198', 'ENSG00000135953'],
+          'prev_call': False,
+          'prev_overlap': True,
+          'new_call': False,
         }
       ],
       'xpos': 1049045387,
@@ -1644,7 +1650,7 @@ class EsUtilsTest(TestCase):
     def test_sv_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DUP']},
+            'annotations': {'structural': ['DUP'], 'new_structural_variants': ['NEW']},
             'freqs': {'sv_callset': {'af': 0.1}},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},

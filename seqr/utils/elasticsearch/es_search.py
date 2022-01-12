@@ -294,6 +294,7 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
+        new_svs = False
         annotations_secondary_search = None
         secondary_dataset_type = None
         if annotations_secondary:
