@@ -26,6 +26,7 @@ EXCLUDE_FIELDS = (
     'SORVA_LOF', 'Essential_gene', 'chr', 'MIM', 'OMIM', 'RVIS_percentile_EVS', 'RVIS_EVS', 'HIPred',
 )
 
+REFSEQ_OVERRIDE = {'NM_021006': 'ENSG00000256515'}
 
 class DbNSFPReferenceDataHandler(ReferenceDataHandler):
 
@@ -38,6 +39,8 @@ class DbNSFPReferenceDataHandler(ReferenceDataHandler):
                          for k, v in record.items() if not k.startswith(EXCLUDE_FIELDS)}
         parsed_record["function_desc"] = parsed_record["function_desc"].replace("FUNCTION: ", "")
         parsed_record['gene_id'] = parsed_record['gene_id'].split(';')[0]
+        if record['Refseq_id'] and REFSEQ_OVERRIDE.get(record['Refseq_id']):
+            parsed_record['gene_id'] = REFSEQ_OVERRIDE.get(record['Refseq_id'])
 
         gene_names = [record['Gene_name']]
         for gene_name_key in ['Gene_old_names', 'Gene_other_names']:
