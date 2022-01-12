@@ -29,3 +29,32 @@ On-prem installs can be created using docker-compose:
 For notes on how to update an older instance, see  	
 
 [Update/Migration Instructions](deploy/MIGRATE.md)
+
+
+## Contributing to seqr
+
+(Note: section inspired by, and some text copied from, [GATK](https://github.com/broadinstitute/gatk#contribute))
+
+We welcome all contributions to seqr. 
+Code should be contributed via GitHub pull requests against the main seqr repository.
+
+If you’d like to report a bug but don’t have time to fix it, you can submit a
+[GitHub issue](https://github.com/broadinstitute/seqr/issues/new?assignees=&labels=bug&template=bug_report.md&title=)
+
+For larger features, feel free to discuss your ideas or approach in our 
+[discussion forum](https://github.com/broadinstitute/seqr/discussions)
+
+To contribute code:
+
+* Submit a GitHub pull request against the master branch.
+* Break your work into small, single-purpose patches whenever possible. 
+However, do not break apart features to the point that they are not functional 
+(i.e. updates that require changes to both front end and backend code should be submitted as a single change)
+* For larger features, add a detailed description to the pull request to explain the changes and your approach
+* Make sure that your code passes all our tests and style linting
+* Add unit tests for all new python code you've written
+
+We tend to do fairly close readings of pull requests, and you may get a lot of comments.
+
+Thank you for getting involved!
+
