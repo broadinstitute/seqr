@@ -3,7 +3,6 @@ Utility functions for converting Django ORM object to JSON
 """
 
 import json
-import os
 from collections import defaultdict
 from copy import deepcopy
 from django.db.models import prefetch_related_objects, Prefetch
