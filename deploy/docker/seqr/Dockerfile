@@ -7,22 +7,12 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
-    cron \
     curl \
-    emacs \
     gcc \
-    git \
-    gnupg \
-    htop \
-    less \
     libc6-dev \
     libpq-dev \
-    nano \
     nodejs \
     npm \
-    xterm \
-    postgresql-client \
-    procps \
     redis-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -52,9 +42,18 @@ FROM python:3.7-slim-bullseye as runtime
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
     curl \
+    emacs \
     gnupg \
+    htop \
+    less \
     libpq-dev \
+    nano \
+    postgresql-client \
+    procps \
+    redis-tools \
+    xterm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -82,7 +81,6 @@ ENV TERM=xterm
 
 COPY deploy/docker/seqr/readiness_probe /
 COPY deploy/docker/seqr/bin/*.sh /usr/local/bin/
-COPY deploy/docker/seqr/gitconfig /root/.gitconfig
 COPY deploy/docker/seqr/config/*.py ./
 COPY deploy/docker/seqr/bashrc /root/.bashrc
 
