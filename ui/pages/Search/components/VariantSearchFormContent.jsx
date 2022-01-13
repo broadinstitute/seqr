@@ -130,25 +130,13 @@ const IN_SILICO_PANEL_MAP = {
   },
 }
 
-const panelAppItemsNormalizer = (val) => {
-  if (val && val.isPanelAppList) {
-    return {
-      ...val,
-      rawItems: undefined,
-      locusListItems: val,
-    }
-  }
-
-  return val
-}
-
 const LOCATION_PANEL_WITH_GENE_LIST = {
   ...LOCATION_PANEL,
   headerProps: {
     title: 'Location',
     name: 'locus',
     inputSize: 5,
-    inputProps: { component: LocusListSelector, normalize: panelAppItemsNormalizer },
+    inputProps: { component: LocusListSelector, format: val => val || {} },
   },
 }
 

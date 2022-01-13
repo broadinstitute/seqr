@@ -7,27 +7,23 @@ import { Form } from 'semantic-ui-react'
 import { ColoredIcon } from 'shared/components/StyledComponents'
 
 const PA_LABEL_HELP = 'A list of genes, can be separated by commas or whitespace.'
-const PA_GREEN_ICON = (
-  <ColoredIcon
-    name="circle"
-    title={PANEL_APP_CONFIDENCE_DESCRIPTION[3]}
-    color={PANEL_APP_CONFIDENCE_LEVEL_COLORS[3]}
-  />
-)
-const PA_AMBER_ICON = (
-  <ColoredIcon
-    name="circle"
-    title={PANEL_APP_CONFIDENCE_DESCRIPTION[2]}
-    color={PANEL_APP_CONFIDENCE_LEVEL_COLORS[2]}
-  />
-)
-const PA_RED_ICON = (
-  <ColoredIcon
-    name="circle"
-    title={PANEL_APP_CONFIDENCE_DESCRIPTION[1]}
-    color={PANEL_APP_CONFIDENCE_LEVEL_COLORS[1]}
-  />
-)
+const PA_ICON_PROPS = {
+  green: {
+    name: 'circle',
+    title: PANEL_APP_CONFIDENCE_DESCRIPTION[3],
+    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[3],
+  },
+  amber: {
+    name: 'circle',
+    title: PANEL_APP_CONFIDENCE_DESCRIPTION[2],
+    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[2],
+  },
+  red: {
+    name: 'circle',
+    title: PANEL_APP_CONFIDENCE_DESCRIPTION[1],
+    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[1],
+  },
+}
 
 const {
   additionalFormFields,
@@ -37,49 +33,57 @@ const {
   ...LOCUS_LIST_ITEMS_BASE_FIELD
 } = { ...LOCUS_LIST_ITEMS_FIELD }
 const LOCUS_LIST_RAW_ITEMS_FIELD = { ...LOCUS_LIST_ITEMS_BASE_FIELD, name: 'rawItems', rows: 8, width: 16 }
-const LOCUS_LIST_GREEN_ITEMS_FIELD = { ...LOCUS_LIST_ITEMS_BASE_FIELD, name: 'rawItemsGreen', label: 'Green Genes', labelHelp: PA_LABEL_HELP, labelIcon: PA_GREEN_ICON, rows: 8, width: 5 }
-const LOCUS_LIST_AMBER_ITEMS_FIELD = { ...LOCUS_LIST_ITEMS_BASE_FIELD, name: 'rawItemsAmber', label: 'Amber Genes', labelHelp: PA_LABEL_HELP, labelIcon: PA_AMBER_ICON, rows: 8, width: 5 }
-const LOCUS_LIST_RED_ITEMS_FIELD = { ...LOCUS_LIST_ITEMS_BASE_FIELD, name: 'rawItemsRed', label: 'Red Genes', labelHelp: PA_LABEL_HELP, labelIcon: PA_RED_ICON, rows: 8, width: 5 }
 
-export const LocusListItemsFilter = ({ value, onChange }) => {
-  const handleChange = (currFilterValue, filterField) => (_, newValue) => {
-    let result = { ...currFilterValue, [filterField]: newValue }
-    if (currFilterValue.isPanelAppList) {
-      result = {
-        ...result,
-        rawItems: toUniqueCsvString([result.rawItemsGreen, result.rawItemsAmber, result.rawItemsRed]),
-      }
+const PanelAppItemsFilter = ({ color, value, name, onChange }) => {
+  const onChangeInner = (event, colorVal) => {
+    let result = { ...value, [color]: colorVal }
+    result = {
+      ...result,
+      rawItems: toUniqueCsvString([result.green, result.amber, result.red]),
     }
 
     onChange(result)
   }
 
-  const RAW_FIELD = { ...LOCUS_LIST_RAW_ITEMS_FIELD, onChange: handleChange(value, 'rawItems') }
-  const GREEN_FIELD = { ...LOCUS_LIST_GREEN_ITEMS_FIELD, onChange: handleChange(value, 'rawItemsGreen') }
-  const AMBER_FIELD = { ...LOCUS_LIST_AMBER_ITEMS_FIELD, onChange: handleChange(value, 'rawItemsAmber') }
-  const RED_FIELD = { ...LOCUS_LIST_RED_ITEMS_FIELD, onChange: handleChange(value, 'rawItemsRed') }
+  const label = `${color} Genes`
+  const iconLabel = (
+    <span>
+      <ColoredIcon color={color} {...PA_ICON_PROPS[color]} />
+      {label}
+    </span>
+  )
 
-  return value?.isPanelAppList ?
+  const result = {
+    name,
+    label: iconLabel,
+    labelHelp: PA_LABEL_HELP,
+    fieldDisplay: () => null,
+    isEditable: true,
+    component: Form.TextArea,
+    width: 5,
+    rows: 8,
+    onChange: onChangeInner,
+  }
+
+  return configuredField(result)
+}
+
+export const LocusListItemsFilter = ({ ...props }) => {
+  const { value } = props
+
+  return value && typeof value === 'object' ?
+    [
+      <PanelAppItemsFilter {...props} key="green" color="green" name="rawItemsGreen" />,
+      <PanelAppItemsFilter {...props} key="amber" color="amber" name="rawItemsAmber" />,
+      <PanelAppItemsFilter {...props} key="red" color="red" name="rawItemsRed" />,
+    ] :
     (
-      <Form.Field>
-        <Form.Group>
-          {configuredField(GREEN_FIELD)}
-          {configuredField(AMBER_FIELD)}
-          {configuredField(RED_FIELD)}
-        </Form.Group>
-      </Form.Field>
-    ) :
-    (
-      <Form.Field>
-        <Form.Group>
-          {configuredField(RAW_FIELD)}
-        </Form.Group>
-      </Form.Field>
+      configuredField(LOCUS_LIST_RAW_ITEMS_FIELD)
     )
 }
 
 LocusListItemsFilter.propTypes = {
-  value: PropTypes.string,
+  value: PropTypes.object,
   onChange: PropTypes.func,
 }
 

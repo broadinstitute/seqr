@@ -354,7 +354,7 @@ export const FREQUENCIES = [
 
 export const LOCATION_FIELDS = [
   {
-    name: 'locusListItems',
+    name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
     component: LocusListItemsFilter,
