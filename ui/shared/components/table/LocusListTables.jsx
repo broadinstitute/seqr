@@ -7,7 +7,7 @@ import { Header } from 'semantic-ui-react'
 
 import { getLocusListTableData, getLocusListsIsLoading } from 'redux/selectors'
 import { UpdateLocusListButton, DeleteLocusListButton } from '../buttons/LocusListButtons'
-import DataTable from './DataTable'
+import { SelectableTableFormInput } from './DataTable'
 import { VerticalSpacer } from '../Spacers'
 import {
   LOCUS_LIST_FIELDS, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
@@ -76,12 +76,12 @@ const getLocusListFilterVal = list => [
   )].join()
 
 const LocusListTables = React.memo(
-  ({ tableData, basicFields, omitLocusLists, tableButtons, dispatch, ...tableProps }) => TABLES.map(
+  ({ tableData, basicFields, tableButtons, dispatch, ...tableProps }) => TABLES.map(
     ({ name, tableFields }) => (
       <div key={name}>
         <VerticalSpacer height={5} />
         <Header size="large" dividing content={`${name} Gene Lists`} />
-        <DataTable
+        <SelectableTableFormInput
           basic="very"
           fixed
           idField="locusListGuid"
@@ -101,7 +101,6 @@ const LocusListTables = React.memo(
 LocusListTables.propTypes = {
   tableData: PropTypes.object,
   basicFields: PropTypes.bool,
-  omitLocusLists: PropTypes.arrayOf(PropTypes.string),
   tableButtons: PropTypes.object,
   dispatch: PropTypes.func,
 }

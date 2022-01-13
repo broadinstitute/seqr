@@ -82,16 +82,13 @@ GeneLists.propTypes = {
   project: PropTypes.object.isRequired,
 }
 
-const LOCUS_LIST_FIELDS = [
-  { name: 'list' },
-]
-
-//         <LocusListTables
-//           basicFields
-//           omitLocusLists={project.locusListGuids}
-//           selectRows={this.selectList}
-//           selectedRows={selected}
-//         />
+const LOCUS_LIST_FIELDS = [{
+  name: 'locusListGuids',
+  component: LocusListTables,
+  basicFields: true,
+  normalize: value => Object.keys(value || {}).filter(locusListGuid => value[locusListGuid]),
+  format: value => (value || []).reduce((acc, locusListGuid) => ({ ...acc, [locusListGuid]: true }), {}),
+}]
 
 const LocustListsContainer = ({ project, children }) => (
   <LocusListsLoader>
@@ -106,53 +103,24 @@ LocustListsContainer.propTypes = {
   children: PropTypes.node,
 }
 
-class AddGeneLists extends React.PureComponent {
+const AddGeneLists = React.memo(({ project, onSubmit }) => (
+  <UpdateButton
+    modalTitle="Add Gene Lists"
+    modalId={`add-gene-list-${project.projectGuid}`}
+    modalSize="large"
+    buttonText="Add Gene List"
+    editIconName="plus"
+    formContainer={<LocustListsContainer project={project} />}
+    onSubmit={onSubmit}
+    formFields={LOCUS_LIST_FIELDS}
+  />
+))
 
-  static propTypes = {
-    project: PropTypes.object,
-    updateLocusLists: PropTypes.func,
-  }
-
-  state = { selected: {} }
-
-  constructor(props) {
-    super(props)
-
-    this.modalName = `${props.project.projectGuid}-add-gene-list`
-  }
-
-  selectList = (updatedSelected) => {
-    this.setState({ selected: updatedSelected })
-  }
-
-  submit = () => {
-    const { updateLocusLists: dispatchUpdateLocusLists } = this.props
-    const { selected } = this.state
-    return dispatchUpdateLocusLists({
-      locusListGuids: Object.keys(selected).filter(locusListGuid => selected[locusListGuid]),
-    })
-  }
-
-  render() {
-    const { project } = this.props
-    // const { selected } = this.state
-    return (
-      <UpdateButton
-        modalTitle="Add Gene Lists"
-        modalId={this.modalName}
-        modalSize="large"
-        buttonText="Add Gene List"
-        editIconName="plus"
-        formContainer={<LocustListsContainer project={project} />}
-        onSubmit={console.log} // this.submit
-        // initialValues={initialValues}
-        formFields={LOCUS_LIST_FIELDS}
-      />
-    )
-  }
-
+AddGeneLists.propTypes = {
+  project: PropTypes.object,
+  onSubmit: PropTypes.func,
 }
 
-const mapDispatchToProps = { updateLocusLists }
+const mapDispatchToProps = { onSubmit: updateLocusLists }
 
 export const AddGeneListsButton = connect(null, mapDispatchToProps)(AddGeneLists)
