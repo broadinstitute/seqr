@@ -312,9 +312,9 @@ const PedigreeError = () => <Icon name="picture" />
 const SafePedigreeImage = props => (
   <ErrorBoundary FallbackComponent={PedigreeError}><PedigreeImage {...props} /></ErrorBoundary>)
 
-const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
+const PedigreeImagePanel = React.memo(({ family, isEditable, disablePedigreeZoom }) => {
   const hasPedImage = family.pedigreeImage || family.pedigreeDataset || family.individualGuids.length > 1
-  if (!hasPedImage && (!isEditable || compact)) {
+  if (!hasPedImage && !isEditable) {
     return null
   }
 
@@ -322,7 +322,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
     <SafePedigreeImage
       family={family}
       disablePedigreeZoom={disablePedigreeZoom}
-      maxHeight={compact ? '35' : '150'}
+      maxHeight="150"
     />
   )
   if (disablePedigreeZoom) {
@@ -335,12 +335,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       modalName={modalId}
       title={`Family ${family.displayName}`}
       trigger={
-        image ? (
-          <span>
-            {compact && `(${family.individualGuids.length}) `}
-            {image}
-          </span>
-        ) : <ButtonLink content="Edit Pedigree Image" icon="edit" />
+        image || <ButtonLink content="Edit Pedigree Image" icon="edit" />
       }
     >
       <Segment basic textAlign="center">
@@ -372,7 +367,6 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
 PedigreeImagePanel.propTypes = {
   family: PropTypes.object.isRequired,
   disablePedigreeZoom: PropTypes.bool,
-  compact: PropTypes.bool,
   isEditable: PropTypes.bool,
 }
 

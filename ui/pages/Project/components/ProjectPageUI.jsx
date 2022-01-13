@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
+import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { SectionHeader } from 'shared/components/StyledComponents'
 import {
@@ -17,8 +18,12 @@ import {
   getCurrentProject,
   getProjectDetailsIsLoading,
   getAnalysisStatusCounts,
-  getProjectAnalysisGroupsByGuid,
+  getProjectOverviewIsLoading,
+  getFamiliesLoading,
+  getTagTypeCounts,
+  getAnalysisGroupTagTypeCounts,
 } from '../selectors'
+import { loadProjectOverview } from '../reducers'
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
 import { UpdateAnalysisGroupButton } from './AnalysisGroupButtons'
@@ -77,40 +82,51 @@ const NO_DETAIL_FIELDS = [
 
 const ProjectPageUI = React.memo(props => (
   <Grid stackable>
-    <Grid.Row>
-      <Grid.Column width={4}>
-        {props.match.params.analysisGroupGuid ? null : (
-          <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
-            <AnalysisGroups />
-          </ProjectSection>
-        )}
-        <VerticalSpacer height={10} />
-        <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
-          <GeneLists project={props.project} />
-        </ProjectSection>
-      </Grid.Column>
-      <Grid.Column width={8}>
-        <ProjectSection label="Overview">
-          <ProjectOverview project={props.project} analysisGroupGuid={props.match.params.analysisGroupGuid} />
-        </ProjectSection>
-        <VerticalSpacer height={10} />
-        <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
-          <VariantTagTypeBar
-            project={props.project}
-            analysisGroup={props.analysisGroup}
-            height={20}
-            showAllPopupCategorie
-          />
+    <DataLoader load={props.load} loading={props.loading} content>
+      <Grid.Row>
+        <Grid.Column width={4}>
+          {props.match.params.analysisGroupGuid ? null : (
+            <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
+              <AnalysisGroups />
+            </ProjectSection>
+          )}
           <VerticalSpacer height={10} />
-          <VariantTags project={props.project} analysisGroup={props.analysisGroup} />
-        </ProjectSection>
-      </Grid.Column>
-      <Grid.Column width={4}>
-        <ProjectSection label="Collaborators">
-          <ProjectCollaborators />
-        </ProjectSection>
-      </Grid.Column>
-    </Grid.Row>
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
+            <GeneLists project={props.project} />
+          </ProjectSection>
+        </Grid.Column>
+        <Grid.Column width={8}>
+          <ProjectSection label="Overview">
+            <ProjectOverview
+              project={props.project}
+              analysisGroupGuid={props.match.params.analysisGroupGuid}
+              familiesLoading={props.familiesLoading}
+            />
+          </ProjectSection>
+          <VerticalSpacer height={10} />
+          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
+            <VariantTagTypeBar
+              project={props.project}
+              analysisGroupGuid={props.match.params.analysisGroupGuid}
+              tagTypeCounts={props.tagTypeCounts}
+              height={20}
+              showAllPopupCategories
+            />
+            <VerticalSpacer height={10} />
+            <VariantTags
+              project={props.project}
+              analysisGroupGuid={props.match.params.analysisGroupGuid}
+              tagTypeCounts={props.tagTypeCounts}
+            />
+          </ProjectSection>
+        </Grid.Column>
+        <Grid.Column width={4}>
+          <ProjectSection label="Collaborators">
+            <ProjectCollaborators />
+          </ProjectSection>
+        </Grid.Column>
+      </Grid.Row>
+    </DataLoader>
     <Grid.Row>
       <Grid.Column width={16}>
         <SectionHeader>Families</SectionHeader>
@@ -126,16 +142,26 @@ const ProjectPageUI = React.memo(props => (
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
-  analysisGroup: PropTypes.object,
   match: PropTypes.object,
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+  familiesLoading: PropTypes.bool,
+  tagTypeCounts: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
-  analysisGroup: getProjectAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
   analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
+  loading: getProjectOverviewIsLoading(state),
+  familiesLoading: getFamiliesLoading(state),
+  tagTypeCounts: ownProps.match.params.analysisGroupGuid ?
+    getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
 })
+
+const mapDispatchToProps = {
+  load: loadProjectOverview,
+}
 
 export { ProjectPageUI as ProjectPageUIComponent }
 
-export default connect(mapStateToProps)(ProjectPageUI)
+export default connect(mapStateToProps, mapDispatchToProps)(ProjectPageUI)

@@ -46,8 +46,12 @@ export const fetchProjects = () => (dispatch) => {
     e => dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })).get()
 }
 
-export const loadUserOptions = analystsOnly => (dispatch) => {
-  const url = analystsOnly ? '/api/users/get_analyst_options' : '/api/users/get_options'
+export const loadUserOptions = familyGuid => (dispatch, getState) => {
+  let url = '/api/users/get_options'
+  if (familyGuid) {
+    const { projectGuid } = getState().familiesByGuid[familyGuid]
+    url = `${url}/${projectGuid}`
+  }
   dispatch({ type: REQUEST_USER_OPTIONS })
   new HttpRequestHelper(url,
     (responseJson) => {
@@ -57,8 +61,6 @@ export const loadUserOptions = analystsOnly => (dispatch) => {
       dispatch({ type: RECEIVE_USER_OPTIONS, error: e.message, newValue: [] })
     }).get()
 }
-
-export const loadAnalystOptions = () => loadUserOptions(true)
 
 export const updateUser = values => dispatch => new HttpRequestHelper('/api/users/update',
   (responseJson) => {

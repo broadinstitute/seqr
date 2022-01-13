@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import { RECEIVE_DATA, loadProjectDetails } from 'redux/utils/reducerUtils'
+import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -104,7 +104,16 @@ export const loadProjectContext = projectGuid => (dispatch, getState) => {
   if (state.searchHashContextLoading.isLoading) {
     return
   }
-  loadProjectDetails(projectGuid)(dispatch, getState)
+  const project = state.projectsByGuid[projectGuid]
+  if (!project || !project.variantTagTypes) {
+    new HttpRequestHelper('/api/search_context',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).post({ projectGuid })
+  }
 }
 
 export const loadProjectGroupContext = (projectCategoryGuid, addElementCallback) => (dispatch, getState) => {

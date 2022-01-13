@@ -39,13 +39,6 @@ const COLUMNS = [
     format: row => (
       <SearchResultsLink
         location={row.geneId}
-        projectFamilies={Object.entries(row.families.reduce((acc, { family }) => {
-          if (!acc[family.projectGuid]) {
-            acc[family.projectGuid] = []
-          }
-          acc[family.projectGuid].push(family.familyGuid)
-          return acc
-        }, {})).map(([projectGuid, familyGuids]) => ({ projectGuid, familyGuids }))}
         familyGuids={row.families.map(({ family }) => family.familyGuid)}
         buttonText={row.numVariants.toString()}
         initialSearch={row.search}

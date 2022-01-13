@@ -126,16 +126,8 @@ const getSortedSamples = createSelector(
 )
 
 export const getSamplesByFamily = createSelector(
-  getIndividualsByGuid,
   getSortedSamples,
-  (individualsByGuid, sortedSamples) => sortedSamples.reduce((acc, sample) => {
-    const { familyGuid } = individualsByGuid[sample.individualGuid]
-    if (!acc[familyGuid]) {
-      acc[familyGuid] = []
-    }
-    acc[familyGuid].push(sample)
-    return acc
-  }, {}),
+  sortedSamples => groupByFamilyGuid(sortedSamples || []),
 )
 
 export const getHasActiveSearchableSampleByFamily = createSelector(
@@ -152,17 +144,15 @@ export const getHasActiveSearchableSampleByFamily = createSelector(
 )
 
 export const getIGVSamplesByFamilySampleIndividual = createSelector(
-  getIndividualsByGuid,
   getIgvSamplesByGuid,
-  (individualsByGuid, igvSamplesByGuid) => Object.values(igvSamplesByGuid).reduce((acc, sample) => {
-    const { familyGuid } = individualsByGuid[sample.individualGuid]
-    if (!acc[familyGuid]) {
-      acc[familyGuid] = {}
+  igvSamplesByGuid => Object.values(igvSamplesByGuid).reduce((acc, sample) => {
+    if (!acc[sample.familyGuid]) {
+      acc[sample.familyGuid] = {}
     }
-    if (!acc[familyGuid][sample.sampleType]) {
-      acc[familyGuid][sample.sampleType] = {}
+    if (!acc[sample.familyGuid][sample.sampleType]) {
+      acc[sample.familyGuid][sample.sampleType] = {}
     }
-    acc[familyGuid][sample.sampleType][sample.individualGuid] = sample
+    acc[sample.familyGuid][sample.sampleType][sample.individualGuid] = sample
     return acc
   }, {}),
 )
@@ -380,4 +370,11 @@ export const getLocusListTableData = createSelector(
       return acc
     }, { My: [], Public: [] })
   },
+)
+
+export const getUserOptions = createSelector(
+  getUserOptionsByUsername,
+  usersOptionsByUsername => Object.values(usersOptionsByUsername).map(
+    user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
+  ),
 )

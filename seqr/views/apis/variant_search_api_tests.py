@@ -81,9 +81,6 @@ class VariantSearchAPITest(object):
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
 
-        # add a locus list
-        LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.add(Project.objects.get(guid=PROJECT_GUID))
-
         # Test invalid inputs
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
@@ -396,6 +393,10 @@ class VariantSearchAPITest(object):
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'foo': 'bar'}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.reason_phrase, 'Invalid context params: {"foo": "bar"}')
+
+        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'familyGuid': 'bar'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Invalid context params: {"familyGuid": "bar"}')
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'projectGuid': PROJECT_GUID}))
         self.assertEqual(response.status_code, 200)

@@ -34,12 +34,8 @@ anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_
 
 BLOCK_SIZE = 65536
 
-ANVIL_LOADING_EMAIL_DATE = '2021-12-13'
-ANVIL_LOADING_DELAY_EMAIL = """
-We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an internal 
-retreat or closed for the winter break so we are unable to load data until the 2nd week of January 2022. We appreciate 
-your understanding and support of our research team taking some well-deserved time off and hope you also have a nice break.
-"""
+ANVIL_LOADING_EMAIL_DATE = None
+ANVIL_LOADING_DELAY_EMAIL = None
 
 def get_vcf_samples(vcf_filename):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
