@@ -144,7 +144,9 @@ def _get_json_for_genes(genes, user=None, gene_fields=None):
 
 
 def parse_locus_list_items(request_json):
-    raw_items = request_json.get('rawItems', request_json.get('locusListItems', {}).get('rawItems'))
+    raw_items = request_json.get('rawItems', None)
+    if isinstance(raw_items, dict):
+        raw_items = raw_items.get('rawItems', None)
     if not raw_items:
         return None, None, None
 
