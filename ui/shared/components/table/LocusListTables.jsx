@@ -82,8 +82,6 @@ const LocusListTables = React.memo(
         <VerticalSpacer height={5} />
         <Header size="large" dividing content={`${name} Gene Lists`} />
         <SelectableTableFormInput
-          basic="very"
-          fixed
           idField="locusListGuid"
           defaultSortColumn="name"
           columns={basicFields ? BASIC_FIELDS : tableFields}
