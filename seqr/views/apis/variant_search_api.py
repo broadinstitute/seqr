@@ -328,7 +328,6 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    # TODO can probably return much less data
     response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
 
     return create_json_response(response)
@@ -338,7 +337,42 @@ def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
         check_project_permissions(project, user)
 
-    response = get_projects_child_entities(projects, user)
+    # response = get_projects_child_entities(projects, user) # TODO use for results context
+
+    # TODO use shared get_projects_child_entities
+    from seqr.models import AnalysisGroup
+    from seqr.views.utils.orm_to_json_utils import get_json_for_projects, get_json_for_analysis_groups, \
+        _get_json_for_families
+
+    project_guid = projects[0].guid if len(projects) == 1 else None
+    is_analyst = False
+
+    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
+
+    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
+    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True,
+                                                   is_analyst=is_analyst)
+
+    family_models = Family.objects.filter(project__in=projects)
+    families = _get_json_for_families(
+        family_models, user, project_guid=project_guid, skip_nested=True,
+        is_analyst=is_analyst, has_case_review_perm=False)  # TODO maybe only familyId?
+
+    response = {
+        'projectsByGuid': projects_by_guid,
+        # 'samplesByGuid': {s['sampleGuid']: s for s in samples},  # TODO use summary stats
+        'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
+        'familiesByGuid': {f['familyGuid']: f for f in families},
+    }
+
+    if not project_guid:
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        for family in response['familiesByGuid'].values():
+            project_guid = project_id_to_guid[family.pop('projectId')]
+            family['projectGuid'] = project_guid
+        for group in response['analysisGroupsByGuid'].values():
+            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
+
     if project_category_guid:
         response['projectCategoriesByGuid'] = {
             project_category_guid: ProjectCategory.objects.get(guid=project_category_guid).json()
