@@ -45,7 +45,7 @@ const PanelAppItemsFilter = ({ color, value, name, onChange }) => {
     onChange(result)
   }
 
-  const label = `${color} Genes`
+  const label = `${color} genes`
   const iconLabel = (
     <span>
       <ColoredIcon color={color} {...PA_ICON_PROPS[color]} />
