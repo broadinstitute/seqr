@@ -3,6 +3,8 @@ import json
 import time
 import tempfile
 from datetime import datetime
+import requests
+import base64
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
@@ -90,8 +92,8 @@ def anvil_workspace_page(request, namespace, name):
 
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
-
-@anvil_auth_and_policies_required
+# TODO: don't merge these to the repo
+# @anvil_auth_and_policies_required
 def create_project_from_workspace(request, namespace, name):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
@@ -103,7 +105,8 @@ def create_project_from_workspace(request, namespace, name):
 
     """
     # Validate that the current user has logged in through google and has sufficient permissions
-    workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
+    # workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
+    workspace_meta = {'workspace' : {'bucketName' : 'my_bucket'}}
 
     projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if projects:
@@ -123,7 +126,8 @@ def create_project_from_workspace(request, namespace, name):
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Add the seqr service account to the corresponding AnVIL workspace
-    added_account_to_workspace = add_service_account(request.user, namespace, name)
+    # added_account_to_workspace = add_service_account(request.user, namespace, name)
+    added_account_to_workspace = False
     if added_account_to_workspace:
         _wait_for_service_account_access(request.user, namespace, name)
 
@@ -133,16 +137,17 @@ def create_project_from_workspace(request, namespace, name):
     if not data_path.endswith(VCF_FILE_EXTENSIONS):
         error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
         return create_json_response({'error': error}, status=400, reason=error)
-    if not does_file_exist(data_path, user=request.user):
-        error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
-        return create_json_response({'error': error}, status=400, reason=error)
+    # if not does_file_exist(data_path, user=request.user):
+    #     error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
+    #     return create_json_response({'error': error}, status=400, reason=error)
 
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
     pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, fail_on_warnings=True)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = get_vcf_samples(data_path)
+    # samples = get_vcf_samples(data_path)
+    samples = ['sample1', 'sample2']
     if not samples:
         return create_json_response(
             {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
@@ -173,10 +178,44 @@ def create_project_from_workspace(request, namespace, name):
     sample_ids = [individual.individual_id for individual in updated_individuals]
     try:
         temp_path = save_temp_data('\n'.join(['s'] + sample_ids))
-        mv_file_to_gs(temp_path, ids_path, user=request.user)
+        # mv_file_to_gs(temp_path, ids_path, user=request.user)
     except Exception as ee:
         logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), request.user,
                      detail=sample_ids)
+
+    # trigger dags
+    anvil_type = 'AnVIL_{sample_type}'.format(sample_type=request_json['sampleType'])
+
+    anvil_variables = get_variables(anvil_type)
+    updated_anvil_variables = generate_AnVIL_variables(project, data_path, request_json['sampleType'])
+    projects = anvil_variables["active_projects"]
+    updated_projects = updated_anvil_variables["active_projects"]
+
+    # TODO: sanity check if the variables need to be updated
+    if json.dumps(anvil_variables) != json.dumps(updated_anvil_variables): 
+        update_variables(anvil_type, updated_anvil_variables)
+
+    dag_id = "seqr_vcf_to_es_%s" % (anvil_type)
+
+    # TODO: check logic
+    if set(projects) == set(updated_projects):
+        trigger_dag(dag_id)
+    else:
+        dag_task_ids = get_task_ids(dag_id)
+        # TODO: create task id use old task ids
+        # updated_task_ids = update_task_ids(projects, updated_projects, dag_task_ids)
+        # TODO: use copy()
+        updated_task_ids = get_task_ids(dag_id)
+        t0 = time.time()
+        # freeze one second and get variable again to compare
+        while(set(dag_task_ids) == set(updated_task_ids)):
+            time.sleep(5)
+            updated_task_ids = get_task_ids(dag_id)
+        t1 = time.time()
+        # print('total time')
+        # print(t1-t0)
+
+        trigger_dag(dag_id)
 
     # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
@@ -244,3 +283,82 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
     )
 
     safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
+
+
+def create_headers():
+    username = 'admin'
+    password = 'admin'
+
+    # encode 
+    userpass = username + ':' + password
+    encoded_u = base64.b64encode(userpass.encode()).decode()
+    headers = {
+        'content-type': 'application/json',
+        'Authorization' : 'Basic {}'.format(encoded_u)
+    }
+
+    return headers
+
+def get_variables(variable_key):
+    headers = create_headers()
+   
+    response = requests.get('http://localhost:8080/api/v1/variables/{}'.format(variable_key), headers=headers)
+    airflow_response = response.json()
+ 
+    val_str = airflow_response['value']
+
+    val_dict = json.loads(val_str)
+    print('get variables')
+    return val_dict
+
+def update_variables(key, val):
+    headers = create_headers()
+    val_str = json.dumps(val)
+    data= {
+        "key": key,
+        "value": val_str
+        }
+    body = json.dumps(data)
+    response = requests.patch('http://localhost:8080/api/v1/variables/{}'.format(key), headers=headers, data=body)
+    print('update variables')
+    # airflow_response = response.json()
+    # print(airflow_response)
+
+def generate_AnVIL_variables(project, data_path, sample_type):
+    pipeline_dag = {
+        "active_projects": [project.guid],
+        "es_enable_export": 'true',
+        "vcf_path": data_path,
+        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
+        "projects_to_run": [project.guid],
+    }
+    return pipeline_dag
+
+def get_task_ids(dag_id):
+    headers = create_headers()
+    response = requests.get('http://localhost:8080/api/v1/dags/{}/tasks'.format(dag_id), headers=headers)
+    airflow_response = response.json()
+    tasks = airflow_response['tasks']
+    task_lst = []
+    for task_dict in tasks:
+        task_lst += [task_dict['task_id']]
+    return task_lst
+    
+
+def trigger_dag(dag_id):
+    headers = create_headers()
+
+    data = {
+        'conf' : {}
+        }
+    
+    body = json.dumps(data)
+
+    response = requests.post('http://localhost:8080/api/v1/dags/{}/dagRuns'.format(dag_id), headers=headers, data=body)
+    print('trigger_dag')
+    airflow_response = response.json()
+    print(airflow_response)
+
+
+
+
