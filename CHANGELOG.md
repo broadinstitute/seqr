@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Support setting explicit order for saved search display (REQUIRES DB MIGRATION)
 
 ## 1/7/21
 * Update variant layout
