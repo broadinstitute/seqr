@@ -1,9 +1,9 @@
-import React from 'react'
 import PropTypes from 'prop-types'
+import React from 'react'
 import { connect } from 'react-redux'
-
 import { Dropdown } from 'shared/components/form/Inputs'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
+import { toUniqueCsvString } from 'shared/utils/stringUtils'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 class BaseLocusListDropdown extends React.Component {
@@ -29,6 +29,7 @@ class BaseLocusListDropdown extends React.Component {
       let { rawItems } = locusList
       if (isPanelAppList) {
         rawItems = {
+          rawItems: toUniqueCsvString([rawItemsGreen, rawItemsAmber, rawItemsRed]),
           green: rawItemsGreen,
           amber: rawItemsAmber,
           red: rawItemsRed,
