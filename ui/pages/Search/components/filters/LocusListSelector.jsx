@@ -3,7 +3,6 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { Dropdown } from 'shared/components/form/Inputs'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
-import { toUniqueCsvString } from 'shared/utils/stringUtils'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 class BaseLocusListDropdown extends React.Component {
@@ -24,19 +23,35 @@ class BaseLocusListDropdown extends React.Component {
 
   componentDidUpdate(prevProps) {
     const { locusList, onChange } = this.props
+
     if (prevProps.locusList.rawItems !== locusList.rawItems) {
-      const { locusListGuid, isPanelAppList, rawItemsGreen, rawItemsAmber, rawItemsRed } = locusList
+      const { locusListGuid } = locusList
       let { rawItems } = locusList
-      if (isPanelAppList) {
-        rawItems = {
-          rawItems: toUniqueCsvString([rawItemsGreen, rawItemsAmber, rawItemsRed]),
-          green: rawItemsGreen,
-          amber: rawItemsAmber,
-          red: rawItemsRed,
+
+      if (locusList.paLocusList) {
+        const grouped = locusList.items?.reduce((acc, item) => {
+          const confidence = item.pagene?.confidenceLevel || 0
+          const group = acc[confidence] || []
+          group.push(item.display)
+          acc[confidence] = group
+          return acc
+        }, {})
+        if (grouped) {
+          rawItems = {
+            green: grouped['3']?.concat(grouped['4'])?.join(', ') || '',
+            amber: grouped['2']?.join(', ') || '',
+            red: grouped['1']?.join(', ') || '',
+          }
+        } else {
+          rawItems = {
+            green: '',
+            amber: '',
+            red: '',
+          }
         }
       }
 
-      onChange({ locusListGuid, isPanelAppList, rawItems, rawItemsGreen, rawItemsAmber, rawItemsRed })
+      onChange({ locusListGuid, rawItems })
     }
   }
 

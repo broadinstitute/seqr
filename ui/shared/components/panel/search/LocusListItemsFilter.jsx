@@ -2,7 +2,6 @@ import PropTypes from 'prop-types'
 import React from 'react'
 import { LOCUS_LIST_ITEMS_FIELD, PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } from 'shared/utils/constants'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
-import { toUniqueCsvString } from 'shared/utils/stringUtils'
 import { Form } from 'semantic-ui-react'
 import { ColoredIcon } from 'shared/components/StyledComponents'
 
@@ -35,14 +34,8 @@ const {
 const LOCUS_LIST_RAW_ITEMS_FIELD = { ...LOCUS_LIST_ITEMS_BASE_FIELD, name: 'rawItems', rows: 8, width: 16 }
 
 const PanelAppItemsFilter = ({ color, value, name, onChange }) => {
-  const onChangeInner = (event, colorVal) => {
-    let result = { ...value, [color]: colorVal }
-    result = {
-      ...result,
-      rawItems: toUniqueCsvString([result.green, result.amber, result.red]),
-    }
-
-    onChange(result)
+  const onChangeInner = (_, colorVal) => {
+    onChange({ ...value, [color]: colorVal })
   }
 
   const label = `${color} genes`
@@ -73,9 +66,9 @@ export const LocusListItemsFilter = ({ ...props }) => {
 
   return value && typeof value === 'object' ?
     [
-      <PanelAppItemsFilter {...props} key="green" color="green" name="rawItemsGreen" />,
-      <PanelAppItemsFilter {...props} key="amber" color="amber" name="rawItemsAmber" />,
-      <PanelAppItemsFilter {...props} key="red" color="red" name="rawItemsRed" />,
+      <PanelAppItemsFilter {...props} key="green" color="green" name="rawItems.green" />,
+      <PanelAppItemsFilter {...props} key="amber" color="amber" name="rawItems.amber" />,
+      <PanelAppItemsFilter {...props} key="red" color="red" name="rawItems.red" />,
     ] :
     (
       configuredField(LOCUS_LIST_RAW_ITEMS_FIELD)

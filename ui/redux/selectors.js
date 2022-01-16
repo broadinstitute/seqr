@@ -262,26 +262,8 @@ export const getParsedLocusList = createSelector(
       })
       locusList.items.sort(compareObjects('display'))
       locusList.rawItems = locusList.items.map(({ display }) => display).join(', ')
-
-      if (locusList.paLocusList) {
-        const grouped = locusList.items.reduce((acc, item) => {
-          const confidence = item.pagene?.confidenceLevel || 0
-          const group = acc[confidence] || []
-          group.push(item.display)
-          acc[confidence] = group
-          return acc
-        }, {})
-        locusList.isPanelAppList = true
-        locusList.rawItemsGreen = grouped['3']?.concat(grouped['4'])?.join(', ') || ''
-        locusList.rawItemsAmber = grouped['2']?.join(', ') || ''
-        locusList.rawItemsRed = grouped['1']?.join(', ') || ''
-      } else {
-        locusList.isPanelAppList = false
-        locusList.rawItemsGreen = ''
-        locusList.rawItemsAmber = ''
-        locusList.rawItemsRed = ''
-      }
     }
+
     return locusList
   },
 )
