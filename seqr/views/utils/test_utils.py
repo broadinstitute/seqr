@@ -477,7 +477,7 @@ FUNCTIONAL_FIELDS = {
     'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy', 'variantGuids',
 }
 
-SAVED_SEARCH_FIELDS = {'savedSearchGuid', 'name', 'search', 'createdById'}
+SAVED_SEARCH_FIELDS = {'savedSearchGuid', 'name', 'order', 'search', 'createdById'}
 
 LOCUS_LIST_FIELDS = {
     'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate', 'canEdit',
