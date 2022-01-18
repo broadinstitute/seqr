@@ -337,7 +337,9 @@ urlpatterns += [
     url(r'^admin/', admin.site.urls),
 ]
 
-# If serving /media from the local filesystem
+# The /media urlpattern is not needed if we are storing static media in a GCS bucket,
+# so this logic disables it in that case. If we want to serve media from a local filepath 
+# instead, set MEDIA_ROOT in settings.py to that local path, and then this urlpattern will be enabled.
 if MEDIA_ROOT:
     urlpatterns += [
         url(r'^media/(?P<path>.*)$', django.views.static.serve, {
