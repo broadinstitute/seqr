@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Icon, Header, Divider } from 'semantic-ui-react'
+import { Popup, Icon, Header, Divider, Label } from 'semantic-ui-react'
 
 import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
@@ -45,6 +45,7 @@ const IndividualCell = styled.div`
   
   .ui.header {
     padding-top: 3px;
+    margin-bottom: 3px;
   }
 `
 
@@ -248,6 +249,15 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     warning = [warning, 'Copy Number does not match Call Type.'].join(warning ? '. ' : '')
   }
 
+  let previousCall
+  if (genotype.newCall) {
+    previousCall = { content: 'New Call', color: 'green' }
+  } else if (genotype.prevCall) {
+    previousCall = { content: 'Identical Call', color: 'blue' }
+  } else if (genotype.prevOverlap) {
+    previousCall = { content: 'Overlapping Call', color: 'teal' }
+  }
+
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
   const details = genotypeDetails(genotype, variant, genesById)
 
@@ -272,7 +282,7 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
         />
       )}
       <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
-      <VerticalSpacer height={2} />
+      {previousCall && <Label horizontal size="mini" {...previousCall} />}
       {`${genotype.gq || genotype.qs || '-'}${variant.svType ? '' : genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}`}
       {variant.genotypeFilters && (
         <small>

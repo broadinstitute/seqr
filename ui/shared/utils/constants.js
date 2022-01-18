@@ -479,6 +479,7 @@ export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
 export const VEP_GROUP_SV = 'structural'
 export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
+export const VEP_GROUP_SV_NEW = 'new_structural_variants'
 
 const VEP_SV_TYPES = [
   {
@@ -573,6 +574,14 @@ const VEP_SV_CONSEQUENCES = [
     description: 'An SV which disrupts a promoter sequence (within 1kb)',
     text: 'Promoter',
     value: 'PROMOTER',
+  },
+]
+
+const SV_NEW_OPTIONS = [
+  {
+    description: 'An SV with no overlap in a previous callset',
+    text: 'New Calls Only',
+    value: 'NEW',
   },
 ]
 
@@ -817,7 +826,7 @@ export const GROUPED_VEP_CONSEQUENCES = ORDERED_VEP_CONSEQUENCES.reduce((acc, co
   const group = consequence.group || VEP_GROUP_OTHER
   acc[group] = [...(acc[group] || []), consequence]
   return acc
-}, {})
+}, { [VEP_GROUP_SV_NEW]: SV_NEW_OPTIONS })
 
 export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce(
   (acc, consequence, i) => ({ ...acc, [consequence.value]: i }), {},

@@ -20,6 +20,7 @@ import {
 import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
 import {
   ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP,
+  VEP_GROUP_SV_NEW,
 } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
@@ -155,6 +156,7 @@ const ANNOTATION_PANEL_MAP = {
 }
 
 const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
+const SV_GROUPS_NO_NEW = SV_GROUPS.filter(name => name !== VEP_GROUP_SV_NEW)
 const secondaryPanel = panel => ({
   ...panel,
   headerProps: { ...panel.headerProps, title: 'Annotations (Second Hit)' },
@@ -171,8 +173,13 @@ const secondaryPanel = panel => ({
 })
 const ANNOTATION_SECONDARY_PANEL_MAP = {
   ...secondaryPanel(ANNOTATION_PANEL),
-  fieldLayout: annotationFieldLayout([SV_GROUPS, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
-  [DATASET_TYPE_SV_CALLS]: secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_SV_CALLS]),
+  fieldLayout: annotationFieldLayout(
+    [SV_GROUPS_NO_NEW, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS],
+  ),
+  [DATASET_TYPE_SV_CALLS]: {
+    ...secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_SV_CALLS]),
+    fieldLayout: annotationFieldLayout([SV_GROUPS_NO_NEW], true),
+  },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
     fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
