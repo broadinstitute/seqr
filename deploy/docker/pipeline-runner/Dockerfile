@@ -93,29 +93,23 @@ RUN /usr/bin/cpanm --notest  List::MoreUtils
 RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
-# clone and hail-elasticsearch-pipelines repo
-RUN git clone https://github.com/broadinstitute/hail-elasticsearch-pipelines.git
-RUN cd hail-elasticsearch-pipelines
-RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
-RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
-
-# download VEP reference data
-WORKDIR /vep_data
-RUN curl -LO http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh37.tar.gz
+# download VEP cache
+WORKDIR /root/.vep
+RUN curl -LO http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh38.tar.gz
+#RUN curl -LO http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh37.tar.gz
  #| tar xzf - &
-#RUN curl -LO http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh38.tar.gz
 
 # download loftee reference data
-WORKDIR /vep_data/loftee_data/GRCh37
+WORKDIR /root/.vep/loftee_data
 #RUN gsutil -m cp gs://seqr-reference-data/vep_data/loftee-beta/GRCh37.tar
 # | tar xf  - &
-WORKDIR /vep_data/loftee_data/GRCh38
 #RUN gsutil -m cp gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar
 
 # download reference data
-WORKDIR /seqr-reference-data
-#RUN gsutil -m cp -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht ./GRCh38
-#RUN gsutil -m cp -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht ./GRCh37
+WORKDIR /seqr-reference-data/GRCh38
+#RUN gsutil -m rsync -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
+#WORKDIR /seqr-reference-data/GRCh37
+#RUN gsutil -m rsync -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
 
 WORKDIR /seqr-reference-data/GRCh38/clinvar
 #RUN gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2021-11-13.ht .ls vep
@@ -124,6 +118,12 @@ WORKDIR /seqr-reference-data/GRCh37/clinvar
 #RUN gsutil -m cp -r gs://seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.2021-11-13.ht .
 
 WORKDIR /
+
+# clone and hail-elasticsearch-pipelines repo
+RUN git clone https://github.com/broadinstitute/hail-elasticsearch-pipelines.git
+RUN cd hail-elasticsearch-pipelines
+RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
+RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
 
 COPY vep-GRCh37.json /
 COPY vep-GRCh38.json /
