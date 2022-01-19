@@ -29,26 +29,15 @@ class BaseLocusListDropdown extends React.Component {
       let { rawItems } = locusList
 
       if (locusList.paLocusList) {
-        const grouped = locusList.items?.reduce((acc, item) => {
-          const confidence = item.pagene?.confidenceLevel || 0
-          const group = acc[confidence] || []
-          group.push(item.display)
-          acc[confidence] = group
+        const CONFIDENCE_COLORS = { 1: 'red', 2: 'amber', 3: 'green', 4: 'green' }
+        rawItems = locusList.items?.reduce((acc, item) => {
+          const color = CONFIDENCE_COLORS[item.pagene?.confidenceLevel || 0]
+          if (color in acc) {
+            acc[color] = [acc[color], item.display].filter(val => val).join(', ')
+          }
+
           return acc
-        }, {})
-        if (grouped) {
-          rawItems = {
-            green: grouped['3']?.concat(grouped['4'])?.join(', ') || '',
-            amber: grouped['2']?.join(', ') || '',
-            red: grouped['1']?.join(', ') || '',
-          }
-        } else {
-          rawItems = {
-            green: '',
-            amber: '',
-            red: '',
-          }
-        }
+        }, { green: '', amber: '', red: '' })
       }
 
       onChange({ locusListGuid, rawItems })
