@@ -198,6 +198,11 @@ def deploy_redis(settings):
 def deploy_seqr(settings):
     print_separator("seqr")
 
+    if settings['BUILD_DOCKER_IMAGES']:
+        raise Exception("seqr image docker builds have been deprecated. Please ensure that your desired build "
+                        "has been produced via Cloudbuild and GCR, and then run the deployment without the "
+                        "docker build flag.")
+
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
 
