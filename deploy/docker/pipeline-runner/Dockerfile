@@ -125,8 +125,7 @@ RUN cd hail-elasticsearch-pipelines
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
 
-COPY vep-GRCh37.json /
-COPY vep-GRCh38.json /
+COPY vep_configs/* /vep_configs
 
 COPY bashrc /root/.bashrc
 COPY gitconfig /root/.gitconfig
