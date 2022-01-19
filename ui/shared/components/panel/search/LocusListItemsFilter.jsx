@@ -6,8 +6,14 @@ import { ColoredIcon } from 'shared/components/StyledComponents'
 import { PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } from 'shared/utils/constants'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
-const PA_LABEL_HELP = 'A list of genes, can be separated by commas or whitespace.'
-const PA_POPUP_HELP = <Popup trigger={<Icon name="question circle outline" />} content={PA_LABEL_HELP} size="small" position="top center" />
+const PA_POPUP_HELP = (
+  <Popup
+    trigger={<Icon name="question circle outline" />}
+    content="A list of genes, can be separated by commas or whitespace."
+    size="small"
+    position="top center"
+  />
+)
 const PA_ICON_PROPS = Object.entries({ 1: 'red', 2: 'amber', 3: 'green' }).reduce((acc, [confidence, color]) => ({
   ...acc,
   [color]: {
@@ -46,7 +52,6 @@ const PanelAppItemsFilter = ({ color, value, onChange, ...props }) => {
       inputType="TextArea"
       width={3}
       label={iconLabel}
-      labelHelp={PA_LABEL_HELP}
       value={value[color]}
       onChange={onChangeInner}
     />
