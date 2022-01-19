@@ -1,9 +1,10 @@
 import PropTypes from 'prop-types'
-import React from 'react'
-import { LOCUS_LIST_ITEMS_FIELD, PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } from 'shared/utils/constants'
-import { configuredField } from 'shared/components/form/ReduxFormWrapper'
-import { Form } from 'semantic-ui-react'
+import React, { useCallback } from 'react'
+import { Icon, Popup } from 'semantic-ui-react'
+import { BaseSemanticInput } from 'shared/components/form/Inputs'
 import { ColoredIcon } from 'shared/components/StyledComponents'
+import { PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } from 'shared/utils/constants'
+import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 const PA_LABEL_HELP = 'A list of genes, can be separated by commas or whitespace.'
 const PA_ICON_PROPS = {
@@ -24,41 +25,38 @@ const PA_ICON_PROPS = {
   },
 }
 
-const {
-  additionalFormFields,
-  fieldDisplay,
-  isEditable,
-  validate,
-  ...LOCUS_LIST_ITEMS_BASE_FIELD
-} = { ...LOCUS_LIST_ITEMS_FIELD }
-const LOCUS_LIST_RAW_ITEMS_FIELD = { ...LOCUS_LIST_ITEMS_BASE_FIELD, name: 'rawItems', rows: 8, width: 16 }
-
-const PanelAppItemsFilter = ({ color, value, name, onChange }) => {
-  const onChangeInner = (_, colorVal) => {
+const PanelAppItemsFilter = ({ color, value, onChange, ...props }) => {
+  const onChangeInner = useCallback((colorVal) => {
     onChange({ ...value, [color]: colorVal })
-  }
+  })
 
-  const label = `${color} genes`
+  const label = `${camelcaseToTitlecase(color)} Genes`
   const iconLabel = (
-    <span>
+    <label>
       <ColoredIcon color={color} {...PA_ICON_PROPS[color]} />
       {label}
-    </span>
+      &nbsp;
+      <Popup trigger={<Icon name="question circle outline" />} content={PA_LABEL_HELP} size="small" position="top center" />
+    </label>
   )
 
-  const result = {
-    name,
-    label: iconLabel,
-    labelHelp: PA_LABEL_HELP,
-    fieldDisplay: () => null,
-    isEditable: true,
-    component: Form.TextArea,
-    width: 5,
-    rows: 8,
-    onChange: onChangeInner,
-  }
+  return (
+    <BaseSemanticInput
+      {...props}
+      inputType="TextArea"
+      width={3}
+      label={iconLabel}
+      labelHelp={PA_LABEL_HELP}
+      value={value[color]}
+      onChange={onChangeInner}
+    />
+  )
+}
 
-  return configuredField(result)
+PanelAppItemsFilter.propTypes = {
+  color: PropTypes.string,
+  value: PropTypes.object,
+  onChange: PropTypes.func,
 }
 
 export const LocusListItemsFilter = ({ ...props }) => {
@@ -71,7 +69,7 @@ export const LocusListItemsFilter = ({ ...props }) => {
       <PanelAppItemsFilter {...props} key="red" color="red" name="rawItems.red" />,
     ] :
     (
-      configuredField(LOCUS_LIST_RAW_ITEMS_FIELD)
+      <BaseSemanticInput {...props} inputType="TextArea" />
     )
 }
 
