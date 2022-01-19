@@ -339,6 +339,7 @@ export const SNP_FREQUENCIES = [
   },
 ]
 
+export const GNOMAD_SV_CRITERIA_MESSAGE = 'The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp'
 export const SV_FREQUENCIES = [
   {
     name: 'gnomad_svs',
@@ -350,7 +351,7 @@ export const SV_FREQUENCIES = [
     name: SV_CALLSET_FREQUENCY,
     label: 'SV Callset',
     homHemi: false,
-    labelHelp: 'Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project.',
+    labelHelp: `Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project. ${GNOMAD_SV_CRITERIA_MESSAGE}`,
   },
 ]
 
