@@ -7,23 +7,14 @@ import { PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } f
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 const PA_LABEL_HELP = 'A list of genes, can be separated by commas or whitespace.'
-const PA_ICON_PROPS = {
-  green: {
+const PA_ICON_PROPS = Object.entries({ 1: 'red', 2: 'amber', 3: 'green' }).reduce((acc, [confidence, color]) => ({
+  ...acc,
+  [color]: {
     name: 'circle',
-    title: PANEL_APP_CONFIDENCE_DESCRIPTION[3],
-    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[3],
+    title: PANEL_APP_CONFIDENCE_DESCRIPTION[confidence],
+    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[confidence],
   },
-  amber: {
-    name: 'circle',
-    title: PANEL_APP_CONFIDENCE_DESCRIPTION[2],
-    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[2],
-  },
-  red: {
-    name: 'circle',
-    title: PANEL_APP_CONFIDENCE_DESCRIPTION[1],
-    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[1],
-  },
-}
+}), {})
 
 const PanelAppItemsFilter = ({ color, value, onChange, ...props }) => {
   const onChangeInner = useCallback((colorVal) => {
@@ -33,7 +24,7 @@ const PanelAppItemsFilter = ({ color, value, onChange, ...props }) => {
   const label = `${camelcaseToTitlecase(color)} Genes`
   const iconLabel = (
     <label>
-      <ColoredIcon color={color} {...PA_ICON_PROPS[color]} />
+      <ColoredIcon {...PA_ICON_PROPS[color]} />
       {label}
       &nbsp;
       <Popup trigger={<Icon name="question circle outline" />} content={PA_LABEL_HELP} size="small" position="top center" />
