@@ -7,6 +7,7 @@ import { PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } f
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 const PA_LABEL_HELP = 'A list of genes, can be separated by commas or whitespace.'
+const PA_POPUP_HELP = <Popup trigger={<Icon name="question circle outline" />} content={PA_LABEL_HELP} size="small" position="top center" />
 const PA_ICON_PROPS = Object.entries({ 1: 'red', 2: 'amber', 3: 'green' }).reduce((acc, [confidence, color]) => ({
   ...acc,
   [color]: {
@@ -22,14 +23,22 @@ const PanelAppItemsFilter = ({ color, value, onChange, ...props }) => {
   })
 
   const label = `${camelcaseToTitlecase(color)} Genes`
-  const iconLabel = (
-    <label>
-      <ColoredIcon {...PA_ICON_PROPS[color]} />
-      {label}
-      &nbsp;
-      <Popup trigger={<Icon name="question circle outline" />} content={PA_LABEL_HELP} size="small" position="top center" />
-    </label>
-  )
+  const iconLabel = color === 'none' ?
+    (
+      <label>
+        Genes
+        &nbsp;
+        {PA_POPUP_HELP}
+      </label>
+    ) :
+    (
+      <label>
+        <ColoredIcon {...PA_ICON_PROPS[color]} />
+        {label}
+        &nbsp;
+        {PA_POPUP_HELP}
+      </label>
+    )
 
   return (
     <BaseSemanticInput
@@ -58,6 +67,7 @@ export const LocusListItemsFilter = ({ ...props }) => {
       <PanelAppItemsFilter {...props} key="green" color="green" name="rawItems.green" />,
       <PanelAppItemsFilter {...props} key="amber" color="amber" name="rawItems.amber" />,
       <PanelAppItemsFilter {...props} key="red" color="red" name="rawItems.red" />,
+      <PanelAppItemsFilter {...props} key="none" color="none" name="rawItems.none" />,
     ] :
     (
       <BaseSemanticInput {...props} inputType="TextArea" />
