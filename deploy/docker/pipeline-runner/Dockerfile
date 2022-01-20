@@ -93,21 +93,9 @@ RUN /usr/bin/cpanm --notest  List::MoreUtils
 RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
-# download VEP cache
-WORKDIR /root/.vep
-RUN curl -LO http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh38.tar.gz
-#RUN curl -LO http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh37.tar.gz
- #| tar xzf - &
-
-# download loftee reference data
-WORKDIR /root/.vep/loftee_data
-#RUN gsutil -m cp gs://seqr-reference-data/vep_data/loftee-beta/GRCh37.tar
-# | tar xf  - &
-#RUN gsutil -m cp gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar
-
 # download reference data
 WORKDIR /seqr-reference-data/GRCh38
-#RUN gsutil -m rsync -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
+RUN gsutil -m rsync -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
 #WORKDIR /seqr-reference-data/GRCh37
 #RUN gsutil -m rsync -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
 
