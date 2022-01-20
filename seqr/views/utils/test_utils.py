@@ -919,7 +919,7 @@ PARSED_SV_WGS_VARIANT = {
     'genotypes': {
         'I000018_na21234': {
             'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'geneIds': None,
-            'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
+            'cn': -1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
             'prevCall': None, 'prevOverlap': None, 'newCall': None,
         },
     },

@@ -417,7 +417,6 @@ ES_SV_WGS_VARIANT = {
       'genotypes': [
         {
           'gq': 33,
-          'cn': 1,
           'sample_id': 'NA21234',
           'num_alt': 1,
         }

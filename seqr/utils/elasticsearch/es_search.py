@@ -699,8 +699,8 @@ class EsSearch(object):
                         genotypes[sample.individual.guid] = _get_field_values(
                             {'sample_id': sample_id}, genotype_fields_config)
                         genotypes[sample.individual.guid]['isRef'] = True
-                        if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
-                            genotypes[sample.individual.guid]['cn'] = 1
+                        genotypes[sample.individual.guid]['cn'] = \
+                            1 if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE else 2
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(

@@ -331,7 +331,7 @@ GENOTYPE_FIELDS_CONFIG = {
 GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SNP_QUALITY_FIELDS.keys()})
 SV_GENOTYPE_FIELDS_CONFIG = {
-    'cn': {'format_value': int, 'default_value': 2},
+    'cn': {'format_value': int, 'default_value': -1},
     'end': {},
     'start': {},
     'num_exon': {},
