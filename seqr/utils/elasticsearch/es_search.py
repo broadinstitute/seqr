@@ -596,7 +596,7 @@ class EsSearch(object):
         compound_het_results = self.previous_search_results.get('compound_het_results', [])
         loaded_counts = defaultdict(lambda: defaultdict(int))
         for response_hits, response_total, is_compound_het, index_name in parsed_responses:
-            if not response_total:
+            if not response_hits:
                 continue
 
             if is_compound_het:
