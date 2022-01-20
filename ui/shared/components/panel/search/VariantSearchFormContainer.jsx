@@ -20,10 +20,10 @@ VariantSearchFormContainer.propTypes = {
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onSubmit: ({ search, ...searchParams }) => {
-    const { rawItems } = search?.locus || ''
-    const formattedRawItems = (rawItems && typeof rawItems === 'object') ? toUniqueCsvString(Object.values(rawItems)) : rawItems
     let restructuredSearchParams = searchParams
     if (search?.locus) {
+      const { rawItems } = search?.locus || ''
+      const formattedRawItems = (rawItems && typeof rawItems === 'object') ? toUniqueCsvString(Object.values(rawItems)) : rawItems
       restructuredSearchParams = {
         ...searchParams,
         search: { ...search, locus: { ...search.locus, rawItems: formattedRawItems } },
