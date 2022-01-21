@@ -22,7 +22,7 @@ class MGIReferenceDataHandler(ReferenceDataHandler):
 
     @staticmethod
     def get_file_header(f):
-        return ['gene_symbol', 'entrez_gene_id', 'homologene_id', '?', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
+        return ['gene_symbol', 'entrez_gene_id', 'homologene_id', 'marker_id', 'phenotype_ids']
 
     @staticmethod
     def parse_record(record):
