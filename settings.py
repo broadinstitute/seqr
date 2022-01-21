@@ -76,10 +76,14 @@ CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analy
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'data:')
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
-IGV_CSS1_HASH = "'sha256-mMr3XKHeuAZnT2THF0+nzpjf/J0GLygO9xHcQduGITY='"
-IGV_CSS2_HASH = "'sha256-/OhxYpMV/kE3A/RxJL4MplY3PG7a/Pxg3csCRBRyWeg='"
-CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
-CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
+IGV_CSS_HASHES = (
+    "'sha256-dUpUK4yXR60CNDI/4ZeR/kpSqQ3HmniKj/Z7Hw9ZNTA='",
+    "'sha256-s8l0U2/BsebhfOvm08Z+4w1MnftmnPeoOMbSi+f5hCI='",
+    "'sha256-T9widob1zmlNnk3NzLRUfXFToG7AkPTuLDXaKU2tc6c='",
+    "'sha256-ITHmamcImsZ/Je1xrdtDLZVvRSpj1Zokb6uHXORB824='",
+)
+CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False

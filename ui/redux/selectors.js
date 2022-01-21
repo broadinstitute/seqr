@@ -271,6 +271,7 @@ export const getParsedLocusList = createSelector(
       locusList.items.sort(compareObjects('display'))
       locusList.rawItems = locusList.items.map(({ display }) => display).join(', ')
     }
+
     return locusList
   },
 )
@@ -353,12 +354,14 @@ export const getLocusListIntervalsByChromProject = createSelector(
 )
 
 export const getLocusListTableData = createSelector(
-  (state, props) => props.omitLocusLists,
+  (state, props) => props.meta && props.meta.form && props.meta.form.replace('add-gene-list-', ''),
+  getProjectsByGuid,
   getLocusListsWithGenes,
-  (omitLocusLists, locusListsByGuid) => {
+  (omitProjectGuid, projectsByGuid, locusListsByGuid) => {
     let data = Object.values(locusListsByGuid)
-    if (omitLocusLists) {
-      data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
+    if (omitProjectGuid) {
+      const { locusListGuids = [] } = projectsByGuid[omitProjectGuid] || {}
+      data = data.filter(locusList => !locusListGuids.includes(locusList.locusListGuid))
     }
 
     return data.reduce((acc, locusList) => {
