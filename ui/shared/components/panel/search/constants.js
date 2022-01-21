@@ -22,6 +22,8 @@ import {
   VEP_GROUP_SV_NEW,
 } from 'shared/utils/constants'
 
+import { LocusListItemsFilter } from './LocusListItemsFilter'
+
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
 ) => Object.values(analysisGroupsByGuid).filter(
@@ -363,8 +365,7 @@ export const LOCATION_FIELDS = [
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
-    component: BaseSemanticInput,
-    inputType: 'TextArea',
+    component: LocusListItemsFilter,
     rows: 8,
     width: 7,
   },
