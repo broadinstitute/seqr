@@ -107,8 +107,6 @@ def deploy_secrets(settings, components=None):
 def deploy_elasticsearch(settings):
     print_separator("elasticsearch")
 
-    docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
-
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
