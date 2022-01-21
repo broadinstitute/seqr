@@ -85,6 +85,24 @@ const missingParentVariant = variant => (parentGuid) => {
 const isHemiUPDVariant = (numAlt, variant, individual) => (
   numAlt === 2 && [individual.maternalGuid, individual.paternalGuid].some(missingParentVariant(variant)))
 
+const isCalled = val => Number.isInteger(val) && val >= 0
+
+const getGentoypeCnWarning = (genotype, svType, isHemiX) => {
+  const refCn = isHemiX ? 1 : 2
+  const hasGentotype = isCalled(genotype.numAlt)
+
+  if ((svType === 'DUP' && genotype.cn < refCn) || (svType === 'DEL' && genotype.cn > refCn)) {
+    return `Copy Number does not match Call Type. Copy number calling may be unreliable for small events${hasGentotype ? ', however genotype call is likely accurate' : ''}`
+  }
+
+  if (hasGentotype && (
+    (genotype.numAlt === 0 && genotype.cn !== refCn) || (genotype.numAlt > 0 && genotype.cn === refCn))) {
+    return 'Copy number does not match genotype. Copy number calling may be unreliable for small events, however genotype call is likely accurate'
+  }
+
+  return null
+}
+
 const Allele = styled.div.attrs(({ isAlt, variant }) => ({ children: isAlt ? variant.alt : variant.ref }))`
   display: inline-block;
   max-width: 50px;
@@ -103,28 +121,24 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
+const copyNumberGenotype = (cn, isHemiX) => (
+  <span>
+    CN: &nbsp;
+    {cn !== (isHemiX ? 1 : 2) ? <b><i>{cn}</i></b> : cn}
+  </span>
+)
+
 const svGenotype = (genotype, isHemiX) => {
-  const hasGenotype = Number.isInteger(genotype.numAlt) && genotype.numAlt >= 0
-  const isAltCn = Number.isInteger(genotype.cn) && genotype.cn !== (isHemiX ? 1 : 2)
-  if (!hasGenotype) {
-    return (
-      <span>
-        CN: &nbsp;
-        {isAltCn ? <b><i>{genotype.cn}</i></b> : genotype.cn}
-      </span>
-    )
+  const cnDisplay = isCalled(genotype.cn) && copyNumberGenotype(genotype.cn, isHemiX)
+  if (!isCalled(genotype.numAlt)) {
+    return cnDisplay
   }
   return (
     <span>
       {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
       {isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}/{genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
-      {isAltCn && (
-        <span>
-          <br />
-          CN: &nbsp;
-          <b><i>{genotype.cn}</i></b>
-        </span>
-      )}
+      {cnDisplay && <br />}
+      {cnDisplay}
     </span>
   )
 }
@@ -133,7 +147,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
     {warning && (
       <Popup
-        flowing
+        wide
         trigger={<Icon name="warning sign" color="yellow" />}
         content={
           <div>
@@ -227,10 +241,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     return null
   }
 
-  const isNoCall = variant.svType ?
-    (!Number.isInteger(genotype.cn) && (!Number.isInteger(genotype.numAlt) || genotype.numAlt < 0)) :
-    genotype.numAlt < 0
-  if (isNoCall) {
+  const hasCnCall = isCalled(genotype.cn)
+  if (!hasCnCall && !isCalled(genotype.numAlt)) {
     return <b>NO CALL</b>
   }
 
@@ -245,8 +257,11 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     warning = 'Variant absent in parents'
   }
 
-  if ((variant.svType === 'DUP' && genotype.cn < 2) || (variant.svType === 'DEL' && genotype.cn > 2)) {
-    warning = [warning, 'Copy Number does not match Call Type.'].join(warning ? '. ' : '')
+  if (hasCnCall) {
+    const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
+    if (cnWarning) {
+      warning = warning ? `${warning}. ${cnWarning}` : cnWarning
+    }
   }
 
   let previousCall
