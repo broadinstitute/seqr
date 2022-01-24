@@ -20,8 +20,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, get_json_for_discovery_tags
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required
-from seqr.views.utils.project_context_utils import get_projects_child_entities
+    user_is_analyst, login_and_policies_required, has_case_review_permissions
+from seqr.views.utils.project_context_utils import get_projects_child_entities, add_project_tag_types, add_families_context
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 from settings import DEMO_PROJECT_CATEGORY
 
@@ -36,6 +36,8 @@ GENOTYPE_AC_LOOKUP = {
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
+LOAD_PROJECT_CONTEXT_PARAM = 'loadProjectContext'
+LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 @login_and_policies_required
 def query_variants_handler(request, search_hash):
@@ -60,20 +62,43 @@ def query_variants_handler(request, search_hash):
                                               skip_genotype_filter=is_all_project_search, user=request.user)
 
     response_context = {}
-    if is_all_project_search and len(variants) == total_results:
-        # For all project search only save the relevant families
+    result_families = None
+    load_project_context = request.GET.get(LOAD_PROJECT_CONTEXT_PARAM) == 'true'
+    load_family_context = request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true'
+    all_project_results_loaded = is_all_project_search and len(variants) == total_results
+
+    if load_family_context or all_project_results_loaded:
         family_guids = set()
         for variant in variants:
             family_guids.update(variant['familyGuids'])
-        families = results_model.families.filter(guid__in=family_guids)
-        results_model.families.set(families)
+        result_families = results_model.families.filter(guid__in=family_guids)
+        result_families = results_model.families.all()
+    
+    if all_project_results_loaded:
+        # For all project search only save the relevant families
+        results_model.families.set(result_families)
 
         projects = Project.objects.filter(family__in=families).distinct()
         if projects:
-            response_context = _get_projects_details(projects, request.user)
+            load_project_context = True
+
+    search_context = _get_search_context(results_model)
+
+    if load_project_context:
+        # TODO share code with saved variant api?
+        response_context['projectsByGuid'] = {p['projectGuid']: {} for p in search_context['projectFamilies']}
+        add_project_tag_types(response_context['projectsByGuid'])
+
+    if result_families:
+        prefetch_related_objects(result_families, 'project')
+        projects = {family.project for family in result_families}
+        project = list(projects)[0] if len(projects) == 1 else None
+        project_guid = project.guid if project else None
+        add_families_context(
+            response_context, result_families, project_guid, request.user, user_is_analyst(request.user), bool(project) and has_case_review_permissions(project, request.user))
 
     response = _process_variants(variants or [], results_model.families.all(), request.user)
-    response['search'] = _get_search_context(results_model)
+    response['search'] = search_context
     response['search']['totalResults'] = total_results
     response.update(response_context)
 
@@ -130,6 +155,7 @@ def query_single_variant_handler(request, variant_id):
     variant = get_single_es_variant(families, variant_id, user=request.user)
 
     response = _process_variants([variant], families, request.user)
+    # TODO full context
     response.update(_get_projects_details([families.first().project], request.user))
 
     return create_json_response(response)
