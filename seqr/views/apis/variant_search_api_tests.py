@@ -38,10 +38,10 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
 }]
 
 SEARCH_CONTEXT_RESPONSE_KEYS = {
-    'projectsByGuid', 'familiesByGuid','analysisGroupsByGuid',
+    'projectsByGuid', 'familiesByGuid','analysisGroupsByGuid', 'locusListsByGuid',
 }
 FAMILY_CONTEXT_RESPONSE_KEYS = {
-    'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'igvSamplesByGuid', 'locusListsByGuid',
+    'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'igvSamplesByGuid',
     'familyNotesByGuid',
 }
 SEARCH_RESPONSE_KEYS = {
