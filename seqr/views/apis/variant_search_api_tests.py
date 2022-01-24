@@ -189,6 +189,23 @@ class VariantSearchAPITest(object):
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
+        # include project context info
+        response = self.client.get('{}?loadProjectContext=true'.format(url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_keys = {'projectsByGuid'}
+        response_keys.update(SEARCH_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        project = response_json['projectsByGuid'][PROJECT_GUID]
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
+        
+        # include family context info
+        response = self.client.get('{}?loadFamilyContext=true'.format(url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_keys.update(ALL_RESPONSE_KEYS)
+        self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
+
         # Test pagination
         response = self.client.get('{}?page=3'.format(url))
         self.assertEqual(response.status_code, 200)
@@ -339,6 +356,7 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
+        # TODO should this include locus lists and analysis groups??
         self.assertSetEqual(set(response_json), ALL_RESPONSE_KEYS)
         self.assertDictEqual(response_json['search'], {
             'search': SEARCH,
@@ -614,7 +632,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 13)
+        assert_no_list_ws_has_al(self, 16)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
@@ -625,7 +643,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 9)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
         self.mock_get_ws_acl.assert_not_called()
 
     def test_query_all_project_families_variants(self, *args):
@@ -652,7 +670,7 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
 
     def test_query_variants(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 2)
+        assert_no_list_ws_has_al(self, 3)
 
     def test_query_all_projects_variants(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants(*args)
