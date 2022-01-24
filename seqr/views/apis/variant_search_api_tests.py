@@ -38,17 +38,19 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
 }]
 
 SEARCH_CONTEXT_RESPONSE_KEYS = {
-    'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'samplesByGuid', 'igvSamplesByGuid', 'locusListsByGuid',
-    'analysisGroupsByGuid', 'familyNotesByGuid',
+    'projectsByGuid', 'familiesByGuid','analysisGroupsByGuid',
 }
-
+FAMILY_CONTEXT_RESPONSE_KEYS = {
+    'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'igvSamplesByGuid', 'locusListsByGuid',
+    'familyNotesByGuid',
+}
 SEARCH_RESPONSE_KEYS = {
     'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
     'variantFunctionalDataByGuid', 'locusListsByGuid', 'rnaSeqData',
 }
 
 ALL_RESPONSE_KEYS = set()
-ALL_RESPONSE_KEYS.update(SEARCH_CONTEXT_RESPONSE_KEYS)
+ALL_RESPONSE_KEYS.update(FAMILY_CONTEXT_RESPONSE_KEYS)
 ALL_RESPONSE_KEYS.update(SEARCH_RESPONSE_KEYS)
 
 def _get_es_variants(results_model, **kwargs):
@@ -349,6 +351,8 @@ class VariantSearchAPITest(object):
         )
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        project = response_json['projectsByGuid'][PROJECT_GUID]
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
 
         result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         self.assertSetEqual({'F000001_1', 'F000002_2'}, {f.guid for f in result_model.families.all()})
@@ -406,6 +410,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json), response_keys)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
 
@@ -629,7 +634,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 21)
+        assert_no_list_ws_has_al(self, 15)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
@@ -664,7 +669,7 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
 
     def test_search_context(self):
         super(MixSavedVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 14)
+        assert_no_list_ws_has_al(self, 8)
 
     def test_query_single_variant(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)

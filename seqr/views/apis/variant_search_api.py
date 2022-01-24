@@ -72,13 +72,12 @@ def query_variants_handler(request, search_hash):
         for variant in variants:
             family_guids.update(variant['familyGuids'])
         result_families = results_model.families.filter(guid__in=family_guids)
-        result_families = results_model.families.all()
     
     if all_project_results_loaded:
         # For all project search only save the relevant families
         results_model.families.set(result_families)
 
-        projects = Project.objects.filter(family__in=families).distinct()
+        projects = Project.objects.filter(family__in=result_families).distinct()
         if projects:
             load_project_context = True
 
