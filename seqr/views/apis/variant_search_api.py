@@ -340,6 +340,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
     # response = get_projects_child_entities(projects, user) # TODO use for results context
 
     # TODO use shared get_projects_child_entities
+    from django.contrib.postgres.aggregates import ArrayAgg
     from seqr.models import AnalysisGroup
     from seqr.views.utils.orm_to_json_utils import get_json_for_projects, get_json_for_analysis_groups, \
         _get_json_for_families
@@ -356,11 +357,15 @@ def _get_projects_details(projects, user, project_category_guid=None):
     family_models = Family.objects.filter(project__in=projects)
     families = _get_json_for_families(
         family_models, user, project_guid=project_guid, skip_nested=True,
-        is_analyst=is_analyst, has_case_review_perm=False)  # TODO maybe only familyId?
+        is_analyst=is_analyst, has_case_review_perm=False)
+
+    for p in projects.annotate(dataset_types=ArrayAgg(
+        'family__individual__sample__dataset_type', distinct=True, filter=Q(
+            family__individual__sample__is_active=True, family__individual__sample__elasticsearch_index__isnull=False))):
+        projects_by_guid[p.guid]['datasetTypes'] = p.dataset_types
 
     response = {
         'projectsByGuid': projects_by_guid,
-        # 'samplesByGuid': {s['sampleGuid']: s for s in samples},  # TODO use summary stats
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
         'familiesByGuid': {f['familyGuid']: f for f in families},
     }

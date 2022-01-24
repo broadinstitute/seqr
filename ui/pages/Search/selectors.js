@@ -146,14 +146,25 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
   },
 )
 
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesGroupedByProjectGuid,
+  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
+    (acc, { projectGuid, datasetTypes }) => ({
+      ...acc,
+      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
+      ).map(({ datasetType }) => datasetType))],
+    }), {},
+  ),
+)
+
 export const getDatasetTypes = createSelector(
   getProjectsInput,
-  getSamplesGroupedByProjectGuid,
-  (projectGuids, samplesByProjectGuid) => {
+  getProjectDatasetTypes,
+  (projectGuids, projectDatasetTypes) => {
     const datasetTypes = projectGuids.reduce((acc, projectGuid) => new Set([
-      ...acc, ...Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
-        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
-      ).map(({ datasetType }) => datasetType)]), new Set())
+      ...acc, ...(projectDatasetTypes[projectGuid] || [])]), new Set())
     return [...datasetTypes].sort().join(',')
   },
 )

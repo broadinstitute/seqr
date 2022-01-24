@@ -21,7 +21,7 @@ import { getSearchIncludeAllProjectsInput, getSearchHashContextLoading } from '.
 
 const mapProjectsStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.value],
-  projectSamples: getSamplesGroupedByProjectGuid(state)[ownProps.value],
+  projectSamples: getSamplesGroupedByProjectGuid(state)[ownProps.value], // TODO should be projectHasSamples
 })
 
 const mapProjectsDispatchToProps = {
