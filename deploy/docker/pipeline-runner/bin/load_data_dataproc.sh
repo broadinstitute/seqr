@@ -44,9 +44,9 @@ hailctl dataproc submit seqr-loading-cluster \
          --dest-path ${DEST_FILE} \
          --genome-version ${BUILD_VERSION} \
          --sample-type ${SAMPLE_TYPE} \
-         --vep-config-json-path ${REFERENCE_DATA_BUCKET}/vep-${FULL_BUILD_VERSION}-loftee-gcloud.json \
-         --reference-ht-path  ${REFERENCE_DATA_BUCKET}/all_reference_data/combined_reference_data_grch${BUILD_VERSION}.ht \
-         --clinvar-ht-path ${REFERENCE_DATA_BUCKET}/clinvar/clinvar.${FULL_BUILD_VERSION}.2021-11-13.ht
+         --vep-config-json-path ${REFERENCE_DATA_BUCKET}/vep-${FULL_BUILD_VERSION}-loftee-dataproc.json \
+         --reference-ht-path  ${REFERENCE_DATA_BUCKET}/combined_reference_data_grch${BUILD_VERSION}.ht \
+         --clinvar-ht-path ${REFERENCE_DATA_BUCKET}/clinvar.${FULL_BUILD_VERSION}.2021-11-13.ht
 
 JOB_ID=$(gcloud dataproc jobs list)    # run this to get the dataproc job id
 gcloud dataproc jobs wait ${JOB_ID}  # view jobs logs and wait for the job to complete

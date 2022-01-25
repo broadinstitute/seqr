@@ -46,6 +46,7 @@ RUN install_packages python-pkg-resources
 
 # install gcloud tools
 RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install --no-cache-dir -U crcmod
 
 RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
 RUN tar xzf google-cloud-sdk-286.0.0-linux-x86_64.tar.gz && rm google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
@@ -93,15 +94,13 @@ RUN /usr/bin/cpanm --notest  List::MoreUtils
 RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
-WORKDIR /
-
 # clone and hail-elasticsearch-pipelines repo
 RUN git clone https://github.com/broadinstitute/hail-elasticsearch-pipelines.git
 RUN cd hail-elasticsearch-pipelines
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
 
-COPY vep_configs/* /vep_configs
+COPY vep_configs/* /vep_configs/
 
 COPY bashrc /root/.bashrc
 COPY gitconfig /root/.gitconfig
@@ -111,5 +110,7 @@ ENV PATH=/usr/local/lib/python3.7/site-packages/pyspark/bin:/google-cloud-sdk/bi
 ENV PYTHONPATH=".:/hail-elasticsearch-pipelines:/hail-elasticsearch-pipelines/luigi_pipeline"
 
 COPY entrypoint.sh /
+
+WORKDIR /
 
 CMD [ "/entrypoint.sh" ]

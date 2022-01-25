@@ -105,6 +105,16 @@ The steps below describe how to annotate a callset and then load it into your on
    ```
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
+   
+1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 
+This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
+This is expected to take a while
+   ```
+   BUILD_VERSION=38                 # can be 37 or 38
+    
+   docker-compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
+   
+   ``` 
 
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
    ```
