@@ -1,5 +1,8 @@
 # _seqr_ Changes
 
+## 1/25/22
+* Add support for serving the django media root out of a google cloud storage bucket
+
 ## dev
 * Support setting explicit order for saved search display (REQUIRES DB MIGRATION)
 
