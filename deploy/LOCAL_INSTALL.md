@@ -134,7 +134,7 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 
 1. Go to the project page
 2. Click on Edit Datasets
-3. Enter the elasticsearch index name (set via the `--es-index` arg at loading time), and submit the form.
+3. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
 
 
 #### Enable read viewing in the browser (optional): 
