@@ -1705,7 +1705,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
         self.assertExecutedSearch(filters=[
-            {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP', 'gCNV_DUP']}},
+            {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP']}},
             {'bool': {
                 'must': [{'term': {'samples': 'NA21234'}},
                     {'bool': {
