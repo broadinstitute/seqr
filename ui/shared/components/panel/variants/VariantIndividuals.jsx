@@ -266,11 +266,11 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   let previousCall
   if (genotype.newCall) {
-    previousCall = { content: 'New Call', color: 'green' }
+    previousCall = { content: 'New Call', hover: 'No overlap in previous callset', color: 'green' }
   } else if (genotype.prevCall) {
-    previousCall = { content: 'Identical Call', color: 'blue' }
+    previousCall = { content: 'Identical Call', hover: 'Identical call in previous callset', color: 'blue' }
   } else if (genotype.prevOverlap) {
-    previousCall = { content: 'Overlapping Call', color: 'teal' }
+    previousCall = { content: 'Overlapping Call', hover: 'Overlapping call in previous callset', color: 'teal' }
   }
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
@@ -297,7 +297,12 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
         />
       )}
       <Alleles genotype={genotype} variant={variant} isHemiX={isHemiX} warning={warning} />
-      {previousCall && <Label horizontal size="mini" {...previousCall} />}
+      {previousCall && (
+        <Popup
+          content={previousCall.hover}
+          trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
+        />
+      )}
       {`${genotype.gq || genotype.qs || '-'}${variant.svType ? '' : genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}`}
       {variant.genotypeFilters && (
         <small>
