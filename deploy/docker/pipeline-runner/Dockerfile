@@ -93,18 +93,6 @@ RUN /usr/bin/cpanm --notest  List::MoreUtils
 RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
-# download reference data
-WORKDIR /seqr-reference-data/GRCh38
-RUN gsutil -m rsync -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
-#WORKDIR /seqr-reference-data/GRCh37
-#RUN gsutil -m rsync -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
-
-WORKDIR /seqr-reference-data/GRCh38/clinvar
-#RUN gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2021-11-13.ht .ls vep
-
-WORKDIR /seqr-reference-data/GRCh37/clinvar
-#RUN gsutil -m cp -r gs://seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.2021-11-13.ht .
-
 WORKDIR /
 
 # clone and hail-elasticsearch-pipelines repo
