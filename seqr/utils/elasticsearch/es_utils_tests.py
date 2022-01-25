@@ -1919,7 +1919,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[2][1], PARSED_COMPOUND_HET_VARIANTS[1])
         self.assertDictEqual(variants[3], PARSED_VARIANTS[1])
 
-        annotations_q = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant', 'gCNV_DEL']}}
+        annotations_q = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant']}}
         self.assertExecutedSearches([
             dict(
                 filters=[
@@ -2062,7 +2062,7 @@ class EsUtilsTest(TestCase):
     def test_multi_datatype_secondary_annotations_recessive_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DEL']},
+            'annotations': {'structural': ['gCNV_DEL']},
             'annotations_secondary': {'frameshift': ['frameshift_variant']},
             'inheritance': {'mode': 'recessive'},
         })
@@ -2072,14 +2072,14 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, num_results=10)
 
         annotation_secondary_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['gCNV_DEL']}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
         ]}}
 
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
+                    {'terms': {'transcriptConsequenceTerms': ['gCNV_DEL']}},
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{
