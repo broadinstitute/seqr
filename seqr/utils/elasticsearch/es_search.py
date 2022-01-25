@@ -17,7 +17,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
-    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, get_prediction_response_key
+    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -240,6 +240,7 @@ class EsSearch(object):
         additional_filters = [f for f in additional_filters if f]
         annotation_filter = _or_filters(additional_filters) if additional_filters else None
 
+        new_svs = bool((annotations or {}).pop(NEW_SV_FIELD, False))
         consequences_filter, allowed_consequences = _annotations_filter(annotations or {})
         if allowed_consequences:
             if annotation_filter:
@@ -247,12 +248,15 @@ class EsSearch(object):
                 consequences_filter |= annotation_filter
             self.filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
-            dataset_type = _dataset_type_for_annotations(annotations)
-            if dataset_type:
-                self.update_dataset_type(dataset_type)
+            dataset_type = _dataset_type_for_annotations(annotations, new_svs=new_svs)
+        elif new_svs:
+            dataset_type = Sample.DATASET_TYPE_SV_CALLS
         elif annotation_filter:
             self.filter(annotation_filter)
-        return dataset_type
+
+        if dataset_type:
+            self.update_dataset_type(dataset_type)
+        return dataset_type, new_svs
 
     def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
         genome_version = locus and locus.get('genomeVersion')
@@ -290,6 +294,7 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self.filter(~Q('exists', field='filters'))
 
+        new_svs = False
         annotations_secondary_search = None
         secondary_dataset_type = None
         if annotations_secondary:
@@ -301,7 +306,7 @@ class EsSearch(object):
 
         pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
         if annotations or pathogenicity_filter or splice_ai_filter:
-            dataset_type = self._filter_by_annotations(annotations, [pathogenicity_filter, splice_ai_filter])
+            dataset_type, new_svs = self._filter_by_annotations(annotations, [pathogenicity_filter, splice_ai_filter])
             if dataset_type is None or dataset_type == secondary_dataset_type:
                 secondary_dataset_type = None
 
@@ -311,7 +316,8 @@ class EsSearch(object):
         if skip_genotype_filter:
             return
 
-        quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
+        quality_filters_by_family = _quality_filters_by_family(
+            quality_filter, self.samples_by_family_index, self._indices, new_svs=new_svs)
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not has_previous_compound_hets:
             self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search, has_location_filter)
@@ -590,7 +596,7 @@ class EsSearch(object):
         compound_het_results = self.previous_search_results.get('compound_het_results', [])
         loaded_counts = defaultdict(lambda: defaultdict(int))
         for response_hits, response_total, is_compound_het, index_name in parsed_responses:
-            if not response_total:
+            if not response_hits:
                 continue
 
             if is_compound_het:
@@ -693,8 +699,8 @@ class EsSearch(object):
                         genotypes[sample.individual.guid] = _get_field_values(
                             {'sample_id': sample_id}, genotype_fields_config)
                         genotypes[sample.individual.guid]['isRef'] = True
-                        if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE:
-                            genotypes[sample.individual.guid]['cn'] = 1
+                        genotypes[sample.individual.guid]['cn'] = \
+                            1 if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE else 2
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
@@ -1169,7 +1175,7 @@ def _get_family_affected_status(samples_by_id, inheritance_filter):
     return affected_status
 
 
-def _quality_filters_by_family(quality_filter, samples_by_family_index, indices):
+def _quality_filters_by_family(quality_filter, samples_by_family_index, indices, new_svs=False):
     quality_field_configs = {
         'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
     }
@@ -1179,7 +1185,7 @@ def _quality_filters_by_family(quality_filter, samples_by_family_index, indices)
             raise Exception('Invalid {} filter {}'.format(config['field'], quality_filter[field]))
 
     quality_filters_by_family = {}
-    if any(quality_filter[field] for field in quality_field_configs.keys()):
+    if new_svs or any(quality_filter[field] for field in quality_field_configs.keys()):
         family_sample_ids = defaultdict(set)
         for index in indices:
             family_samples_by_id = samples_by_family_index[index]
@@ -1187,7 +1193,7 @@ def _quality_filters_by_family(quality_filter, samples_by_family_index, indices)
                 family_sample_ids[family_guid].update(samples_by_id.keys())
 
         for family_guid, sample_ids in sorted(family_sample_ids.items()):
-            quality_q = Q()
+            quality_q = Q('terms', samples_new_call=sorted(sample_ids)) if new_svs else Q()
             for sample_id in sorted(sample_ids):
                 for field, config in sorted(quality_field_configs.items()):
                     if quality_filter[field]:
@@ -1360,8 +1366,8 @@ def _annotations_filter(annotations):
     return consequences_filter, vep_consequences
 
 
-def _dataset_type_for_annotations(annotations):
-    sv = bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
+def _dataset_type_for_annotations(annotations, new_svs=False):
+    sv = new_svs or bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
     non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS

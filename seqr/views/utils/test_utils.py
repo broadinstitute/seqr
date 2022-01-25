@@ -477,7 +477,7 @@ FUNCTIONAL_FIELDS = {
     'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy', 'variantGuids',
 }
 
-SAVED_SEARCH_FIELDS = {'savedSearchGuid', 'name', 'search', 'createdById'}
+SAVED_SEARCH_FIELDS = {'savedSearchGuid', 'name', 'order', 'search', 'createdById'}
 
 LOCUS_LIST_FIELDS = {
     'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate', 'canEdit',
@@ -849,14 +849,17 @@ PARSED_SV_VARIANT = {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'numAlt': -1, 'geneIds': ['ENSG00000228198'],
             'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': False, 'qs': 33, 'gq': None,
+            'prevCall': False, 'prevOverlap': False, 'newCall': True,
         },
         'I000005_hg00732': {
             'sampleId': 'HG00732', 'numAlt': -1, 'sampleType': None,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None,
         },
         'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'numAlt': -1,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': 49045890, 'start': 49045987, 'numExon': 1, 'defragged': False, 'qs': 80,
+            'prevCall': False, 'prevOverlap': True, 'newCall': False,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
@@ -916,7 +919,8 @@ PARSED_SV_WGS_VARIANT = {
     'genotypes': {
         'I000018_na21234': {
             'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'geneIds': None,
-            'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
+            'cn': -1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
+            'prevCall': None, 'prevOverlap': None, 'newCall': None,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},

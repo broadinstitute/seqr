@@ -389,9 +389,9 @@ const BaseVariantGene = React.memo((
   if (compact) {
     summaryDetail = showInlineDetails ? (
       <span>
-        {geneDetails}
-        &nbsp;
         {geneConsequence}
+        &nbsp; &nbsp;
+        {geneDetails}
       </span>
     ) : geneConsequence
   } else {
@@ -503,10 +503,14 @@ class VariantGenes extends React.PureComponent {
     }
 
     const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
+    const geneConsequences = [...(new Set(geneIds.map(
+      geneId => (variant.transcripts[geneId][0] || {}).majorConsequence,
+    ).filter(consequence => consequence).map(consequence => consequence.replace(/_/g, ' '))))].join(', ')
 
     return (
       <div>
         <ButtonLink fontWeight="bold" size="large" onClick={this.showGenes}>{`${geneIds.length} Genes`}</ButtonLink>
+        {geneConsequences}
         <VerticalSpacer height={10} />
         <div>
           {[OMIM_SECTION, ...GENE_DETAIL_SECTIONS].map(({ showDetails, detailsDisplay, ...sectionConfig }) => {

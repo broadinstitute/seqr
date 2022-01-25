@@ -2,6 +2,9 @@
 
 ## dev
 
+## 1/21/21
+* Support setting explicit order for saved search display (REQUIRES DB MIGRATION)
+
 ## 1/7/21
 * Update variant layout
 * Project page performance optimization
