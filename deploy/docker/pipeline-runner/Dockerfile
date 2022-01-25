@@ -48,6 +48,7 @@ RUN install_packages python-pkg-resources
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip install --no-cache-dir -U crcmod
 
+ENV CLOUDSDK_PYTHON=python3
 RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
 RUN tar xzf google-cloud-sdk-286.0.0-linux-x86_64.tar.gz && rm google-cloud-sdk-286.0.0-linux-x86_64.tar.gz
 RUN /google-cloud-sdk/install.sh -q
