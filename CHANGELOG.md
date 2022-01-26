@@ -2,6 +2,9 @@
 
 ## dev
 
+## 1/26/21
+* Improved usage for docker-compose pipeline runner
+
 ## 1/21/21
 * Support setting explicit order for saved search display (REQUIRES DB MIGRATION)
 
