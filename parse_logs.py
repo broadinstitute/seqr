@@ -50,7 +50,7 @@ FORMAT_SEARCH_FIELD = {
     'freqs': _parse_freqs,
     'in_silico': lambda search: {k: v for k, v in (search or {}).items() if v is not None and len(v) != 0},
     'locus': lambda search: {
-        'genes': search.get('rawItems', '').replace(',', ' ').replace('\n', ' '),
+        'genes': search.get('rawItems', '').replace(',', ' ').replace('\n', ' ')[:32000],
         'variantIds': search.get('rawVariantItems', '').replace(',', ' ').replace('\n', ' '),
         'excludeLocations': search.get('excludeLocations'),
     },
