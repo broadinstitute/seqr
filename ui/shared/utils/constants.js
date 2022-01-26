@@ -489,7 +489,7 @@ const VEP_SV_TYPES = [
   },
   {
     description: 'A large duplication called from exome data',
-    text: 'gCNVDuplication',
+    text: 'gCNV Duplication',
     value: 'gCNV_DUP',
   },
   {
