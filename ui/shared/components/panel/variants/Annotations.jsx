@@ -133,7 +133,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     <Popup
       key="seqr-search"
       trigger={<SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />}
-      content={`Search for this variant across all your seqr projects${variant.svType ? '. Any strictural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
+      content={`Search for this variant across all your seqr projects${variant.svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
       size="tiny"
     />,
   )
