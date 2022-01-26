@@ -483,12 +483,22 @@ export const VEP_GROUP_SV_NEW = 'new_structural_variants'
 
 const VEP_SV_TYPES = [
   {
-    description: 'A large deletion',
+    description: 'A large deletion called from exome data',
+    text: 'gCNV Deletion',
+    value: 'gCNV_DEL',
+  },
+  {
+    description: 'A large duplication called from exome data',
+    text: 'gCNV Duplication',
+    value: 'gCNV_DUP',
+  },
+  {
+    description: 'A large deletion called from genome data',
     text: 'Deletion',
     value: 'DEL',
   },
   {
-    description: 'A large duplication',
+    description: 'A large duplication called from genome data',
     text: 'Duplication',
     value: 'DUP',
   },

@@ -1349,12 +1349,6 @@ def _pathogenicity_filter(pathogenicity):
 
 def _annotations_filter(annotations):
     consequences = {ann for anns in annotations.values() for ann in anns}
-    #  TODO once all gCNV data has been reloaded, create explicit filters in the UI so users can set which type to use
-    # See https://github.com/broadinstitute/seqr/issues/2085
-    if 'DEL' in consequences:
-        consequences.add('gCNV_DEL')
-    if 'DUP' in consequences:
-        consequences.add('gCNV_DUP')
     vep_consequences = sorted(consequences)
 
     consequences_filter = Q('terms', transcriptConsequenceTerms=vep_consequences)
