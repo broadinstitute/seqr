@@ -23,13 +23,13 @@ SOURCE_FILE=/input_vcfs/${INPUT_FILE_PATH}
 DEST_FILE="${SOURCE_FILE/.*/}".mt
 
 python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-    --reference-ht-path /seqr-reference-data/${FULL_BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht \
-    --clinvar-ht-path /seqr-reference-data/${FULL_BUILD_VERSION}/clinvar.${FULL_BUILD_VERSION}.2021-11-13.ht \
-    --vep-config-json-path /vep_configs/vep-${FULL_BUILD_VERSION}-loftee.json \
+    --reference-ht-path "/seqr-reference-data/${FULL_BUILD_VERSION}/combined_reference_data_grch${BUILD_VERSION}.ht" \
+    --clinvar-ht-path "/seqr-reference-data/${FULL_BUILD_VERSION}/clinvar.${FULL_BUILD_VERSION}.2021-11-13.ht" \
+    --vep-config-json-path "/vep_configs/vep-${FULL_BUILD_VERSION}-loftee.json" \
     --es-host elasticsearch \
     --es-index-min-num-shards 1 \
-    --sample-type ${SAMPLE_TYPE} \
-    --es-index ${INDEX_NAME} \
-    --genome-version ${BUILD_VERSION} \
-    --source-paths ${SOURCE_FILE} \
-    --dest-path ${DEST_FILE}
+    --sample-type "${SAMPLE_TYPE}" \
+    --es-index "${INDEX_NAME}" \
+    --genome-version "${BUILD_VERSION}" \
+    --source-paths "${SOURCE_FILE}" \
+    --dest-path "${DEST_FILE}"

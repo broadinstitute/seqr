@@ -40,19 +40,19 @@ hailctl dataproc start \
 hailctl dataproc submit seqr-loading-cluster \
     seqr_loading.py --pyfiles "lib,../hail_scripts" \
     SeqrVCFToMTTask --local-scheduler \
-         --source-paths ${SOURCE_FILE} \
-         --dest-path ${DEST_FILE} \
-         --genome-version ${BUILD_VERSION} \
-         --sample-type ${SAMPLE_TYPE} \
-         --vep-config-json-path ${REFERENCE_DATA_BUCKET}/vep-${FULL_BUILD_VERSION}-loftee-dataproc.json \
-         --reference-ht-path  ${REFERENCE_DATA_BUCKET}/combined_reference_data_grch${BUILD_VERSION}.ht \
-         --clinvar-ht-path ${REFERENCE_DATA_BUCKET}/clinvar.${FULL_BUILD_VERSION}.2021-11-13.ht
+         --source-paths "${SOURCE_FILE}" \
+         --dest-path "${DEST_FILE}" \
+         --genome-version "${BUILD_VERSION}" \
+         --sample-type "${SAMPLE_TYPE}" \
+         --vep-config-json-path "${REFERENCE_DATA_BUCKET}/vep-${FULL_BUILD_VERSION}-loftee-dataproc.json" \
+         --reference-ht-path  "${REFERENCE_DATA_BUCKET}/combined_reference_data_grch${BUILD_VERSION}.ht" \
+         --clinvar-ht-path "${REFERENCE_DATA_BUCKET}/clinvar.${FULL_BUILD_VERSION}.2021-11-13.ht"
 
 JOB_ID=$(gcloud dataproc jobs list)    # run this to get the dataproc job id
-gcloud dataproc jobs wait ${JOB_ID}  # view jobs logs and wait for the job to complete
+gcloud dataproc jobs wait "${JOB_ID}"  # view jobs logs and wait for the job to complete
 
 # load the annotated dataset into your local elasticsearch instance
 python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-     --dest-path ${DEST_FILE} \
+     --dest-path "${DEST_FILE}" \
      --es-host elasticsearch  \
-     --es-index ${INDEX_NAME}
+     --es-index "${INDEX_NAME}"

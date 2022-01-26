@@ -133,8 +133,8 @@ This is expected to take a while
 After the dataset is loaded into elasticsearch, it can be added to your seqr project with these steps:
 
 1. Go to the project page
-2. Click on Edit Datasets
-3. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
+1. Click on Edit Datasets
+1. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
 
 
 #### Enable read viewing in the browser (optional): 
