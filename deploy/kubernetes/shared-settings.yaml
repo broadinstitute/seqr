@@ -39,7 +39,6 @@ DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 IMAGE_PULL_POLICY: 'Always'
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
-STATIC_MEDIA_DIR: '/seqr_static_files'
 MME_CONFIG_DIR: '/mme'
 
 POSTGRES_SERVICE_HOSTNAME: '127.0.0.1'

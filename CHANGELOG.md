@@ -1,5 +1,8 @@
 # _seqr_ Changes
 
+## 1/25/22
+* Add support for serving the django media root out of a google cloud storage bucket
+
 ## dev
 
 ## 1/26/21
