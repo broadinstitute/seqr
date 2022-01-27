@@ -3,7 +3,6 @@ Utility functions for converting Django ORM object to JSON
 """
 
 import json
-import os
 from collections import defaultdict
 from copy import deepcopy
 from django.db.models import prefetch_related_objects, Prefetch
@@ -205,7 +204,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = pedigree_image.url
             except Exception:
                 pedigree_image = None
-        return os.path.join("/media/", pedigree_image) if pedigree_image else None
+        return pedigree_image
 
     analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP) if ANALYST_USER_GROUP else [])
     def _process_result(result, family):
