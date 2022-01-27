@@ -156,8 +156,6 @@ spec:
           value: "{{ SEQR_GIT_BRANCH }}"
         - name: BASE_URL
           value: "https://{{ CLUSTER_HOSTNAME }}/"
-        - name: DATABASE_BACKUP_BUCKET
-          value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: RUN_CRON_JOBS
           value: "{{ RUN_CRON_JOBS }}"
         - name: MME_CONFIG_DIR
