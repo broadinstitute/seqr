@@ -21,8 +21,9 @@ from seqr.views.utils.variant_utils import update_project_saved_variant_json, re
 
 logger = logging.getLogger(__name__)
 
-LOAD_PROJECT_CONTEXT_PARAM = 'loadProjectContext'
+LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
+INCLUDE_LOCUS_LISTS_PARAM = 'includeLocusLists'
 
 @login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
@@ -51,9 +52,9 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     variants = list(response['savedVariantsByGuid'].values())
     genes = saved_variant_genes(variants)
-    load_project_context = request.GET.get(LOAD_PROJECT_CONTEXT_PARAM) == 'true'
+    add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
     response['locusListsByGuid'] = add_locus_lists(
-        [project], genes, add_list_detail=load_project_context, user=request.user, is_analyst=is_analyst)
+        [project], genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
 
     sample_filter = {'sample__individual__family__guid__in': family_guids} if family_guids else {'sample__individual__family__project': project}
     response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), **sample_filter)
@@ -62,7 +63,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
 
-    if load_project_context:
+    if request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
         response['projectsByGuid'] = {project_guid: {}}
         add_project_tag_types(response['projectsByGuid'])
 

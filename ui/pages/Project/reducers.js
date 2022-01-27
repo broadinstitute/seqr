@@ -154,7 +154,8 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
     loadFamilyContext: !(expectedFamilyGuids || []).length || expectedFamilyGuids.some(
       familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
     ),
-    loadProjectContext: !state.projectsByGuid[projectGuid].variantTagTypes,
+    loadProjectTagTypes: !state.projectsByGuid[projectGuid].variantTagTypes,
+    includeLocusLists: !state.projectsByGuid[projectGuid].locusListGuids,
   }
   if (familyGuids) {
     params.families = familyGuids.join(',')
