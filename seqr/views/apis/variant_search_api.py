@@ -20,7 +20,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, get_json_for_discovery_tags
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 from settings import DEMO_PROJECT_CATEGORY
@@ -392,8 +392,7 @@ def create_saved_search_handler(request):
 @login_and_policies_required
 def update_saved_search_handler(request, saved_search_guid):
     search = VariantSearch.objects.get(guid=saved_search_guid)
-    if search.created_by != request.user:
-        return create_json_response({}, status=403, reason='User does not have permission to edit this search')
+    check_user_created_object_permissions(search, request.user)
 
     request_json = json.loads(request.body)
     name = request_json.pop('name', None)

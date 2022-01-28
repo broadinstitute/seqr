@@ -302,7 +302,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.check_data_manager_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 400)
         self.assertDictEqual(
             response.json(), ({'error': 'Index "test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de'}))
         self.assertEqual(len(urllib3_responses.calls), 0)

@@ -93,7 +93,7 @@ class AuthAPITest(TestCase):
         url = reverse(login_view)
         response = self.client.post(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Username/ password authentication is disabled')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     def test_logout_view(self):
         url = reverse(login_view)
