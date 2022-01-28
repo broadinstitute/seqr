@@ -13,7 +13,7 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family,\
-    _get_json_for_families, get_json_for_family_notes, get_json_for_rna_seq_outliers
+    _get_json_for_families, get_json_for_family_notes, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
@@ -351,6 +351,7 @@ BIRTH_COL = 'birth_year'
 DEATH_COL = 'death_year'
 ONSET_AGE_COL = 'onset_age'
 NOTES_COL = 'notes'
+ASSIGNED_ANALYST_COL = 'assigned_analyst'
 CONSANGUINITY_COL = 'consanguinity'
 AFFECTED_REL_COL = 'affected_relatives'
 EXP_INHERITANCE_COL = 'expected_inheritance'
@@ -490,7 +491,7 @@ def receive_individuals_metadata_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     def process_records(json_records, filename=''):
-        records, errors, warnings = _process_hpo_records(json_records, filename, project)
+        records, errors, warnings = _process_hpo_records(json_records, filename, project, request.user)
         if errors:
             raise ErrorsWarningsException(errors, warnings)
         return records, warnings
@@ -509,7 +510,7 @@ def receive_individuals_metadata_handler(request, project_guid):
     return create_json_response(response)
 
 
-def _process_hpo_records(records, filename, project):
+def _process_hpo_records(records, filename, project, user):
     if filename.endswith('.json'):
         row_dicts = [_parse_phenotips_record(record) for record in records]
     else:
@@ -536,7 +537,7 @@ def _process_hpo_records(records, filename, project):
                     (AR_SURROGACY_COL, 'surrogacy'), (AR_DEGG_COL, 'donor egg'), (AR_DSPERM_COL, 'donor sperm'),
                     (MAT_ETHNICITY_COL, 'maternal ancestry'), (PAT_ETHNICITY_COL, 'paternal ancestry'),
                     (DISORDERS_COL, 'disorders'), (REJECTED_GENES_COL, 'tested genes'),
-                    (CANDIDATE_GENES_COL, 'candidate genes')
+                    (CANDIDATE_GENES_COL, 'candidate genes'), (ASSIGNED_ANALYST_COL, 'assigned analyst'),
                 ] if text in key), None)
                 if col_key:
                     column_map[col_key] = i
@@ -564,9 +565,9 @@ def _process_hpo_records(records, filename, project):
                     aggregate_entry[column] = []
                 aggregate_entry.update({k: v for k, v in row.items() if v})
 
-            return _parse_individual_hpo_terms(list(aggregate_rows.values()), project)
+            return _parse_individual_hpo_terms(list(aggregate_rows.values()), project, user)
 
-    return _parse_individual_hpo_terms(row_dicts, project)
+    return _parse_individual_hpo_terms(row_dicts, project, user)
 
 
 def _parse_hpo_terms(hpo_term_string):
@@ -580,7 +581,7 @@ def _has_same_features(individual, present_features, absent_features):
            {feature['id'] for feature in individual.absent_features or []} == set(absent_features or [])
 
 
-def _parse_individual_hpo_terms(json_records, project):
+def _parse_individual_hpo_terms(json_records, project, user):
     all_hpo_terms = set()
     for record in json_records:
         all_hpo_terms.update(record.get(FEATURES_COL, []))
@@ -593,6 +594,14 @@ def _parse_individual_hpo_terms(json_records, project):
     individual_lookup = defaultdict(dict)
     for i in Individual.objects.filter(family__project=project, individual_id__in=individual_ids).prefetch_related('family'):
         individual_lookup[i.individual_id][i.family.family_id] = i
+
+    allowed_assigned_analysts = None
+    if any(record.get(ASSIGNED_ANALYST_COL) for record in json_records):
+        allowed_assigned_analysts = {
+            u['email'] for u in get_project_collaborators_by_username(
+                user, project, include_permissions=False, include_analysts=True, fields=['email'],
+            ).values()
+        }
 
     parsed_records = []
     missing_individuals = []
@@ -609,7 +618,7 @@ def _parse_individual_hpo_terms(json_records, project):
         for term in invalid_record_terms:
             invalid_hpo_term_individuals[term].append(individual_id)
 
-        update_record = _get_record_updates(record, individual, invalid_values)
+        update_record = _get_record_updates(record, individual, invalid_values, allowed_assigned_analysts)
         if update_record:
             update_record.update({
                 INDIVIDUAL_GUID_COL: individual.guid,
@@ -657,7 +666,7 @@ def _remove_invalid_hpo_terms(record, hpo_terms):
     return invalid_terms
 
 
-def _get_record_updates(record, individual, invalid_values):
+def _get_record_updates(record, individual, invalid_values, allowed_assigned_analysts):
     has_feature_columns = bool(record.get(FEATURES_COL) or record.get(ABSENT_FEATURES_COL))
     has_same_features = has_feature_columns and _has_same_features(individual, record.get(FEATURES_COL),
                                                                    record.get(ABSENT_FEATURES_COL))
@@ -666,7 +675,12 @@ def _get_record_updates(record, individual, invalid_values):
         if not v:
             continue
         try:
-            parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
+            if k == ASSIGNED_ANALYST_COL:
+                if v not in allowed_assigned_analysts:
+                    raise ValueError
+                parsed_val = v
+            else:
+                parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
             if (k not in {FEATURES_COL, ABSENT_FEATURES_COL} and parsed_val != getattr(individual, k)) \
                     or not has_same_features:
                 update_record[k] = parsed_val
