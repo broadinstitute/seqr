@@ -5,6 +5,8 @@ import json
 import re
 from collections import defaultdict
 from datetime import datetime
+from django.contrib.auth.models import User
+from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual, Family, Sample, RnaSeqOutlier
@@ -681,8 +683,9 @@ def _get_record_updates(record, individual, invalid_values, allowed_assigned_ana
                 parsed_val = v
             else:
                 parsed_val = INDIVIDUAL_METADATA_FIELDS[k](v)
-            if (k not in {FEATURES_COL, ABSENT_FEATURES_COL} and parsed_val != getattr(individual, k)) \
-                    or not has_same_features:
+                if (k not in {FEATURES_COL, ABSENT_FEATURES_COL} and parsed_val == getattr(individual, k)) or has_same_features:
+                    parsed_val = None
+            if parsed_val:
                 update_record[k] = parsed_val
         except (KeyError, ValueError):
             invalid_values[k][v].append(individual.individual_id)
@@ -725,21 +728,39 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
     json_records, _ = load_uploaded_file(upload_file_id)
 
     individual_guids = [record[INDIVIDUAL_GUID_COL] for record in json_records]
-    individuals_by_guid = {
-        i.guid: i for i in Individual.objects.filter(family__project=project, guid__in=individual_guids)
-    }
+    individuals = Individual.objects.filter(family__project=project, guid__in=individual_guids)
+    individuals_by_guid = {i.guid: i for i in individuals}
+
+    if any(ASSIGNED_ANALYST_COL in record for record in json_records):
+        prefetch_related_objects(individuals, 'family')
+    family_assigned_analysts = defaultdict(list)
+    updated_families = set()
 
     for record in json_records:
         individual = individuals_by_guid[record[INDIVIDUAL_GUID_COL]]
         update_model_from_json(
             individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS.keys() if k in record}, user=request.user)
+        if record.get(ASSIGNED_ANALYST_COL):
+            family_assigned_analysts[record[ASSIGNED_ANALYST_COL]].append(individual.family.id)
+            updated_families.add(individual.family)
 
-    return create_json_response({
+    response = {
         'individualsByGuid': {
             individual['individualGuid']: individual for individual in _get_json_for_individuals(
-            list(individuals_by_guid.values()), user=request.user, add_hpo_details=True,
+            list(individuals_by_guid.values()), user=request.user, add_hpo_details=True, project_guid=project_guid,
         )},
-    })
+    }
+
+    if family_assigned_analysts:
+        for user in User.objects.filter(email__in=family_assigned_analysts.keys()):
+            Family.bulk_update(request.user, {'assigned_analyst': user}, id__in=family_assigned_analysts[user.email])
+
+        response['familiesByGuid'] = {
+            family['familyGuid']: family for family in _get_json_for_families(
+            list(updated_families), request.user, project_guid=project_guid, has_case_review_perm=False,
+        )}
+
+    return create_json_response(response)
 
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
