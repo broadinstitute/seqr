@@ -1,12 +1,13 @@
 # _seqr_ Changes
 
-## 1/25/22
-* Add support for serving the django media root out of a google cloud storage bucket
-
 ## dev
+
+## 1/27/21
+* Separate structural annotation search for gCNV and genome SVs
 
 ## 1/26/21
 * Improved usage for docker-compose pipeline runner
+* Add support for serving the django media root out of a google cloud storage bucket
 
 ## 1/21/21
 * Support setting explicit order for saved search display (REQUIRES DB MIGRATION)

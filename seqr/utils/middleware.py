@@ -97,6 +97,10 @@ class JsonErrorMiddleware(MiddlewareMixin):
         if isinstance(detail, dict):
             exception_json['detail'] = detail
 
+        if isinstance(exception, PermissionDenied):
+            logger.warning('PermissionDenied: {}'.format(exception_json['error']), request.user)
+            exception_json['error'] = 'Permission Denied'
+
         if request.path.startswith('/api'):
             return create_json_response(exception_json, status=status)
 

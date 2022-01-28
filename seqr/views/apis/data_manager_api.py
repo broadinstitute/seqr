@@ -112,7 +112,7 @@ def delete_index(request):
         projects = {
             sample.individual.family.project.name for sample in active_index_samples.select_related('individual__family__project')
         }
-        return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=403)
+        return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=400)
 
     client = get_es_client()
     client.indices.delete(index)

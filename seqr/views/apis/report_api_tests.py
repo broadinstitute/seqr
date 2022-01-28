@@ -305,20 +305,18 @@ class ReportAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User has insufficient permission')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'test_user does not have sufficient permissions for Non-Analyst Project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_google_authenticated.return_value = True
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
@@ -399,8 +397,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.login_pm_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -413,20 +410,18 @@ class ReportAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User has insufficient permission')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'test_user does not have sufficient permissions for Non-Analyst Project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual( response.json()['error'], 'Permission Denied')
         mock_google_authenticated.return_value = True
 
         # Test invalid airtable responses
@@ -470,5 +465,4 @@ class ReportAPITest(AuthenticationTestCase):
         self.login_pm_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
