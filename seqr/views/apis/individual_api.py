@@ -734,7 +734,6 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
     if any(ASSIGNED_ANALYST_COL in record for record in json_records):
         prefetch_related_objects(individuals, 'family')
     family_assigned_analysts = defaultdict(list)
-    updated_families = set()
 
     for record in json_records:
         individual = individuals_by_guid[record[INDIVIDUAL_GUID_COL]]
@@ -742,7 +741,6 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
             individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS.keys() if k in record}, user=request.user)
         if record.get(ASSIGNED_ANALYST_COL):
             family_assigned_analysts[record[ASSIGNED_ANALYST_COL]].append(individual.family.id)
-            updated_families.add(individual.family)
 
     response = {
         'individualsByGuid': {
@@ -752,12 +750,14 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
     }
 
     if family_assigned_analysts:
+        updated_families = set()
         for user in User.objects.filter(email__in=family_assigned_analysts.keys()):
-            Family.bulk_update(request.user, {'assigned_analyst': user}, id__in=family_assigned_analysts[user.email])
+            updated = Family.bulk_update(request.user, {'assigned_analyst': user}, id__in=family_assigned_analysts[user.email])
+            updated_families.update(updated)
 
         response['familiesByGuid'] = {
             family['familyGuid']: family for family in _get_json_for_families(
-            list(updated_families), request.user, project_guid=project_guid, has_case_review_perm=False,
+            Family.objects.filter(guid__in=updated_families), request.user, project_guid=project_guid, has_case_review_perm=False,
         )}
 
     return create_json_response(response)
