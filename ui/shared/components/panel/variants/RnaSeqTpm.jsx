@@ -7,15 +7,17 @@ import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import GtexLauncher, { GTEX_HOST } from '../../graph/GtexLauncher'
 
 const TISSUE = 'Thyroid,Whole_Blood' // TODO should be a prop
+// const TISSUE = 'Thyroid'
 
 const GTEX_CONTAINER_ID = 'gene-tissue-tpm-plot'
 
+const PLOT_WIDTH = 600
+const PLOT_MARGIN_LEFT = 40
 const PLOT_OPTIONS = {
-  width: 300,
+  width: PLOT_WIDTH,
   height: 450,
   padding: 0.35,
-  marginLeft: 40,
-  marginRight: 100,
+  marginLeft: PLOT_MARGIN_LEFT,
   marginTop: 0,
   marginBottom: 100,
   xAxisFontSize: 12,
@@ -26,10 +28,20 @@ const PLOT_OPTIONS = {
 const launchGtex = (geneId) => {
   new HttpRequestHelper(`${GTEX_HOST}expression/geneExpression`,
     (responseJson) => {
-      const boxplot = new Boxplot(responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
-        { data, label: `GTEx - ${snakecaseToTitlecase(tissueSiteDetailId)}`, color: 'efefef' }
-      )), false)
-      boxplot.render(GTEX_CONTAINER_ID, PLOT_OPTIONS)
+      const boxplotData = [
+        ...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
+          { data, label: `GTEx - ${snakecaseToTitlecase(tissueSiteDetailId)}`, color: 'efefef' }
+        )),
+        ...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
+          { data, label: tissueSiteDetailId, color: 'efefef' }
+        )),
+      ]
+
+      const numTissues = TISSUE.split(',').length * 2
+      const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numTissues * 70)
+
+      const boxplot = new Boxplot(boxplotData, false)
+      boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
     }).get({ tissueSiteDetailId: TISSUE, gencodeId: geneId })
 }
 
