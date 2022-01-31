@@ -5,6 +5,7 @@ import Boxplot from 'gtex-d3/src/modules/Boxplot'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import GtexLauncher, { GTEX_HOST } from '../../graph/GtexLauncher'
+import 'gtex-d3/css/boxplot.css'
 
 const TISSUE = 'Thyroid,Whole_Blood' // TODO should be a prop
 // const TISSUE = 'Thyroid'
@@ -38,7 +39,7 @@ const launchGtex = (geneId) => {
       ]
 
       const numTissues = TISSUE.split(',').length * 2
-      const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numTissues * 70)
+      const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numTissues * 80)
 
       const boxplot = new Boxplot(boxplotData, false)
       boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
