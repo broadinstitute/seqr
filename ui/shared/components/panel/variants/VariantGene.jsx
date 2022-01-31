@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Label, Popup, List, Header, Segment, Divider, Table } from 'semantic-ui-react'
+import { Label, Popup, List, Header, Segment, Divider, Table, Loader } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid, getSignificantRnaSeqDataByFamilyGene } from 'redux/selectors'
 import {
@@ -15,6 +15,9 @@ import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
+import Modal from '../../modal/Modal'
+
+const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 const HI_THRESHOLD = 0.84
@@ -416,6 +419,15 @@ const BaseVariantGene = React.memo((
     <div>
       <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
       <HorizontalSpacer width={10} />
+      <Modal
+        trigger={<ButtonLink content="Show TPM" />}
+        title={gene.geneSymbol}
+        modalName={`${variant.variantId}-${gene.geneId}-tpm`}
+      >
+        <React.Suspense fallback={<Loader />}>
+          <RnaSeqTpm geneId={geneId} />
+        </React.Suspense>
+      </Modal>
       {summaryDetail}
       {compoundHetToggle && compoundHetToggle(gene.geneId)}
     </div>
