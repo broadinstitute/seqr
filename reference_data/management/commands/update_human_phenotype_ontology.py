@@ -30,6 +30,7 @@ def update_hpo(hpo_file_path=None):
         hpo_file_path (str): optional local hp.obo file path. If not specified, or the path doesn't exist, the file
             will be downloaded.
     """
+    logger.info('Updating HPO')
 
     if not hpo_file_path or not os.path.isfile(hpo_file_path):
         hpo_file_path = download_file(url=HP_OBO_URL)
