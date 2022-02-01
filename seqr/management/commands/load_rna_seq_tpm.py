@@ -8,6 +8,13 @@ from seqr.views.utils.file_utils import parse_file
 
 logger = logging.getLogger(__name__)
 
+TISSUE_TYPE_MAP = {
+    'whole_blood': 'WB',
+    'fibroblasts': 'F',
+    'muscle': 'M',
+    'lymphocytes': 'L',
+}
+
 class Command(BaseCommand):
     help = 'Load RNA-Seq TPM data'
 
@@ -67,17 +74,35 @@ class Command(BaseCommand):
                 raise ValueError(
                     f'Unable to load data for the following samples with no tissue type: {no_tissue_samples}')
 
-
         def _parse_row(row):
-            raise NotImplementedError
+            gene_id = row.pop('gene_id')
+            if any(tpm for tpm in row.values() if tpm != '0.0'): # TODO test all 0s row
+                for sample_id, tpm in row.items():
+                    if not sample_id.startswith('GTEX'):
+                        yield sample_id, {'gene_id': gene_id, 'tpm': tpm}
 
-        load_rna_seq(
+        samples_to_load, _, _ = load_rna_seq(
             RnaSeqTpm, options['input_file'], user=None, sample_id_to_individual_id_mapping=sample_id_to_individual_id,
             ignore_extra_samples=options['ignore_extra_samples'], parse_row=_parse_row, validate_header=_validate_header)
-        #
-        # for sample, data_by_gene in samples_to_load.items():
-        #     models = RnaSeqOutlier.objects.bulk_create(
-        #         [RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
-        #     logger.info(f'create {len(models)} RnaSeqOutliers for {sample.sample_id}')
+
+        invalid_tissues = {}
+        for sample, data_by_gene in samples_to_load.items():
+            tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
+            if not sample.tissue_type:
+                sample.tissue_type = tissue_type
+                sample.save()
+            elif sample.tissue_type != tissue_type:
+                invalid_tissues[sample] = tissue_type
+                continue
+
+            models = RnaSeqTpm.objects.bulk_create(
+                [RnaSeqTpm(sample=sample, **data) for data in data_by_gene.values()], batch_size=1000)
+            logger.info(f'create {len(models)} RnaSeqTpm for {sample.sample_id}')
+
+        if invalid_tissues:
+            message = ', '.join([f'{sample.sample_id} ({sample.tissue_type/{expected_tissue}})' for sample, expected_tissue in invalid_tissues.items()])
+            logger.warning(f'Skipped data loading for the following {len(invalid_tissues)} due to mismatched tissue type: {message}')
+
+        logger.info('DONE')
 
 
