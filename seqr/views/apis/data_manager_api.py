@@ -388,12 +388,13 @@ def _validate_outlier_header(header):
         raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
 
 def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    return load_rna_seq(RnaSeqOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
-
-def load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, validate_header):
-    sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
+    return load_rna_seq(RnaSeqOutlier, file_path, user, mapping_file, sample_id_to_individual_id_mapping, _parse_outlier_row, _validate_outlier_header)
+
+def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, parse_row, validate_header):
+    sample_id_to_individual_id_mapping = {}
+
 
     samples_by_id = defaultdict(dict)
     with gzip.open(file_path, 'rt') as f:

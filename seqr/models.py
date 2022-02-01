@@ -970,15 +970,10 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
-
-class RnaSeqOutlier(models.Model):
-    SIGNIFICANCE_THRESHOLD = 0.05
+class DeletableSampleMetadataModel(models.Model):
 
     sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
     gene_id = models.CharField(max_length=20)  # ensembl ID
-    p_value = models.FloatField()
-    p_adjust = models.FloatField()
-    z_score = models.FloatField()
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
@@ -992,6 +987,32 @@ class RnaSeqOutlier(models.Model):
         return "%s:%s" % (self.sample.sample_id, self.gene_id)
 
     class Meta:
+        abstract = True
+
+
+class RnaSeqOutlier(DeletableSampleMetadataModel):
+    SIGNIFICANCE_THRESHOLD = 0.05
+
+    p_value = models.FloatField()
+    p_adjust = models.FloatField()
+    z_score = models.FloatField()
+
+    def __unicode__(self):
+        return "%s:%s" % (self.sample.sample_id, self.gene_id)
+
+    class Meta:
         unique_together = ('sample', 'gene_id')
 
         json_fields = ['gene_id', 'p_value', 'p_adjust', 'z_score']
+
+
+class RnaSeqTpm(DeletableSampleMetadataModel):
+    tpm = models.FloatField()
+
+    def __unicode__(self):
+        return "%s:%s" % (self.sample.sample_id, self.gene_id)
+
+    class Meta:
+        unique_together = ('sample', 'gene_id')
+
+        json_fields = ['gene_id', 'tpm']

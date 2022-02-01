@@ -8,7 +8,7 @@ from seqr.views.utils.file_utils import parse_file
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = 'Load RNA-Seq data'
+    help = 'Load RNA-Seq Outlier data'
 
     def add_arguments(self, parser):
         parser.add_argument('input_file')
