@@ -7,7 +7,7 @@ EXPOSE $SEQR_SERVICE_PORT
 WORKDIR /app/seqr
 COPY requirements.txt /app/seqr/
 
-RUN set -o pipefail &&
+RUN set -o pipefail && \
     apt-get update && apt-get install -y --no-install-recommends \
     apt-transport-https ca-certificates curl gnupg \
     # install dependencies of the HaploPainter.pl script used to generate static pedigree images
