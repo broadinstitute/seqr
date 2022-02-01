@@ -33,12 +33,10 @@ const launchGtex = (geneId) => {
         ...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
           { data, label: `GTEx - ${snakecaseToTitlecase(tissueSiteDetailId)}`, color: 'efefef' }
         )),
-        ...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
-          { data, label: tissueSiteDetailId, color: 'efefef' }
-        )),
+        { data: [3.7], label: 'Sample_XYZ' },
       ]
 
-      const numTissues = TISSUE.split(',').length * 2
+      const numTissues = TISSUE.split(',').length + 1
       const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numTissues * 80)
 
       const boxplot = new Boxplot(boxplotData, false)
