@@ -596,10 +596,19 @@ class Sample(ModelWithGUID):
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
+    TISSUE_TYPE_CHOICES = (
+        ('WB', 'Whole Blood'),
+        ('F', 'Fibroblast'),
+        ('M', 'Muscle'),
+        ('L', 'Lymphocyte'),
+    )
+
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
     dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
+
+    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES, null=True, blank=True)
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
