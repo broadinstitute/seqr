@@ -15,6 +15,8 @@ TISSUE_TYPE_MAP = {
     'lymphocytes': 'L',
 }
 
+REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
+
 class Command(BaseCommand):
     help = 'Load RNA-Seq TPM data'
 
@@ -34,7 +36,7 @@ class Command(BaseCommand):
             header_indices = {col: i for i, col in enumerate(header)}
             missing_cols = ', '.join([col for col in ['sample_id', 'imputed tissue', 'indiv (seqr)'] if col not in header_indices])
             if missing_cols:
-                raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
+                raise ValueError(f'Invalid mapping file: missing column(s) {missing_cols}')
             for row in mapping_file[1:]:
                 sample_id = row[header_indices['sample_id']]
                 indiv_id = row[header_indices['indiv (seqr)']]
@@ -76,7 +78,7 @@ class Command(BaseCommand):
 
         def _parse_row(row):
             gene_id = row.pop('gene_id')
-            if any(tpm for tpm in row.values() if tpm != '0.0'): # TODO test all 0s row
+            if any(tpm for tpm in row.values() if tpm != '0.0'):
                 for sample_id, tpm in row.items():
                     if not sample_id.startswith('GTEX'):
                         yield sample_id, {'gene_id': gene_id, 'tpm': tpm}
@@ -100,8 +102,10 @@ class Command(BaseCommand):
             logger.info(f'create {len(models)} RnaSeqTpm for {sample.sample_id}')
 
         if invalid_tissues:
-            message = ', '.join([f'{sample.sample_id} ({sample.tissue_type/{expected_tissue}})' for sample, expected_tissue in invalid_tissues.items()])
-            logger.warning(f'Skipped data loading for the following {len(invalid_tissues)} due to mismatched tissue type: {message}')
+            message = ', '.join([
+                f'{sample.sample_id} ({REVERSE_TISSUE_TYPE[expected_tissue]} to {REVERSE_TISSUE_TYPE[sample.tissue_type]})'
+                for sample, expected_tissue in invalid_tissues.items()])
+            logger.warning(f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {message}')
 
         logger.info('DONE')
 
