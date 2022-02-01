@@ -25,31 +25,31 @@ class LoadRnaSeqTest(TestCase):
             'NA19675_D2\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\n',
             'NA19675_D2\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
             'NA19675_D3\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
+            'NA19675_D4\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
         ]
-        mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19675_D2\tNA19675_1']
+        mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19675_D4\tNA19678']
 
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19675_D2, NA19675_D3')
+        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19675_D3, NA19675_D4')
 
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq', RNA_FILE_ID, '--mapping-file', 'map.tsv')
         self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19675_D3')
 
-        call_command('load_rna_seq', RNA_FILE_ID, '--mapping-file', 'map.tsv', '--ignore-extra-samples')
+        call_command('load_rna_seq', RNA_FILE_ID, '--ignore-extra-samples')
 
         rna_samples = Sample.objects.filter(individual_id=1, sample_id='NA19675_D2', sample_type='RNA')
-        self.assertEqual(len(rna_samples), 2)
-        existing_sample = next(s for s in rna_samples if s.guid == EXISTING_SAMPLE_GUID)
-        self.assertFalse(existing_sample.is_active)
-        new_sample = next(s for s in rna_samples if s.guid != EXISTING_SAMPLE_GUID)
-        self.assertTrue(new_sample.is_active)
-        self.assertIsNone(new_sample.elasticsearch_index)
-        self.assertEqual(new_sample.data_source, 'new_muscle_samples.tsv.gz')
+        self.assertEqual(len(rna_samples), 1)
+        sample = rna_samples.first()
+        self.assertEqual(sample.guid, EXISTING_SAMPLE_GUID)
+        self.assertTrue(sample.is_active)
+        self.assertIsNone(sample.elasticsearch_index)
+        self.assertEqual(sample.data_source, 'muscle_samples.tsv.gz')
 
         models = RnaSeqOutlier.objects.all()
         self.assertEqual(models.count(), 2)
-        self.assertSetEqual({model.sample for model in models}, {new_sample})
+        self.assertSetEqual({model.sample for model in models}, {sample})
         self.assertListEqual(get_json_for_rna_seq_outliers(models), [
             {'geneId': 'ENSG00000240361', 'pAdjust': 0.13, 'pValue': 0.01, 'zScore': -3.1, 'isSignificant': False},
             {'geneId': 'ENSG00000233750', 'pAdjust': 0.0000057, 'pValue': 0.064, 'zScore': 7.8, 'isSignificant': True},

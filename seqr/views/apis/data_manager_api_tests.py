@@ -616,20 +616,19 @@ class DataManagerAPITest(AuthenticationTestCase):
         # test database models are correct
         self.assertEqual(RnaSeqOutlier.objects.count(), 0)
         rna_samples = Sample.objects.filter(individual_id=1, sample_type='RNA')
-        self.assertEqual(len(rna_samples), 2)
-        existing_sample = next(s for s in rna_samples if s.guid == RNA_SAMPLE_GUID)
-        self.assertFalse(existing_sample.is_active)
-        new_sample = next(s for s in rna_samples if s.guid != RNA_SAMPLE_GUID)
-        self.assertTrue(new_sample.is_active)
-        self.assertIsNone(new_sample.elasticsearch_index)
-        self.assertEqual(new_sample.data_source, 'new_muscle_samples.tsv.gz')
-        self.assertEqual(new_sample.sample_type, 'RNA')
+        self.assertEqual(len(rna_samples), 1)
+        sample = rna_samples.first()
+        self.assertEqual(sample.guid, RNA_SAMPLE_GUID)
+        self.assertTrue(sample.is_active)
+        self.assertIsNone(sample.elasticsearch_index)
+        self.assertEqual(sample.data_source, 'muscle_samples.tsv.gz')
+        self.assertEqual(sample.sample_type, 'RNA')
 
-        self.assertEqual(response_json['sampleGuids'][0], new_sample.guid)
+        self.assertEqual(response_json['sampleGuids'][0], sample.guid)
 
         # test correct file interactions
         mock_open.assert_any_call(RNA_FILE_ID, 'rt')
-        mock_open.assert_called_with(f'rna_sample_data/{new_sample.guid}.json.gz', 'wt')
+        mock_open.assert_called_with(f'rna_sample_data/{sample.guid}.json.gz', 'wt')
         self.assertEqual(''.join(mock_writes), RNA_SAMPLE_DATA)
         mock_os.remove.assert_called_with(RNA_FILE_ID)
 

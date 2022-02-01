@@ -127,7 +127,7 @@ def match_sample_ids_to_sample_records(
     """
 
     samples = _find_matching_sample_records(
-        projects, sample_ids, sample_type, dataset_type, elasticsearch_index, data_source,
+        projects, sample_ids, sample_type, dataset_type, elasticsearch_index,
     )
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
@@ -183,7 +183,7 @@ def match_sample_ids_to_sample_records(
     return samples, included_families, matched_individual_ids, remaining_sample_ids
 
 
-def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index, data_source):
+def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index):
     """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
     If elasticsearch_index is provided, will only match samples with the same index or with no index set
 
@@ -193,7 +193,6 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
-        data_source (string): an optional string specifying the a non-elasticsearch source for the dataset
 
     Returns:
         dict: sample_id_to_sample_record containing the matching Sample records
@@ -205,7 +204,6 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
         dataset_type=dataset_type,
         sample_id__in=sample_ids,
         elasticsearch_index=elasticsearch_index,
-        data_source=data_source,
     ))
 
 
@@ -246,14 +244,16 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
         'loaded_date': loaded_date,
     }, id__in=updated_samples, is_active=False)
 
-    inactivate_samples = Sample.objects.filter(
-        individual_id__in={sample.individual_id for sample in samples},
-        is_active=True,
-        dataset_type=dataset_type,
-        sample_type=sample_type,
-    ).exclude(id__in=updated_samples)
+    inactivate_sample_guids = []
+    if elasticsearch_index:
+        inactivate_samples = Sample.objects.filter(
+            individual_id__in={sample.individual_id for sample in samples},
+            is_active=True,
+            dataset_type=dataset_type,
+            sample_type=sample_type,
+        ).exclude(id__in=updated_samples)
 
-    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
+        inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
     return activated_sample_guids, inactivate_sample_guids
 

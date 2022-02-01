@@ -361,7 +361,7 @@ def update_rna_seq(request, upload_file_id):
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
     try:
-        samples_to_load, info, warnings = load_rna_seq(
+        samples_to_load, info, warnings = load_rna_seq_outlier(
             file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
@@ -379,7 +379,18 @@ def update_rna_seq(request, upload_file_id):
         'sampleGuids': [s.guid for s in samples_to_load.keys()],
     })
 
-def load_rna_seq(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+def _parse_outlier_row(row):
+    yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_COLUMNS.items()}
+
+def _validate_outlier_header(header):
+    missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header])
+    if missing_cols:
+        raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
+
+def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    return load_rna_seq(RnaSeqOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
+
+def load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, validate_header):
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -387,45 +398,44 @@ def load_rna_seq(file_path, user=None, mapping_file=None, ignore_extra_samples=F
     samples_by_id = defaultdict(dict)
     with gzip.open(file_path, 'rt') as f:
         header = _parse_tsv_row(next(f))
-
-        header_index_map = {key: i for i, key in enumerate(header)}
-        missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
-        if missing_cols:
-            raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
+        validate_header(header)
 
         for line in f:
-            row = _parse_tsv_row(line)
-            sample_id = row[header_index_map['sampleID']]
-            row_dict = {mapped_key: row[header_index_map[key]] for key, mapped_key in RNA_COLUMNS.items()}
-            gene_id = row_dict['gene_id']
-            existing_data = samples_by_id[sample_id].get(gene_id)
-            if existing_data and existing_data != row_dict:
-                raise ValueError(f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
-            samples_by_id[sample_id][gene_id] = row_dict
+            row = dict(zip(header, _parse_tsv_row(line)))
+            for sample_id, row_dict in parse_row(row):
+                gene_id = row_dict['gene_id']
+                existing_data = samples_by_id[sample_id].get(gene_id)
+                if existing_data and existing_data != row_dict:
+                    raise ValueError(
+                        f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
+                samples_by_id[sample_id][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
     logger.info(message, user)
 
-    samples, _, _, inactivated_sample_guids, _, remaining_sample_ids = match_and_update_samples(
+    data_source = file_path.split('/')[-1].split('_-_')[-1]
+    samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
         projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
         user=user,
         sample_ids=samples_by_id.keys(),
-        data_source=file_path.split('/')[-1].split('_-_')[-1],
+        data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
     )
 
     # Delete old data
-    to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
+    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
     if to_delete:
-        logger.info(f'delete {len(to_delete)} RnaSeqOutliers', user, db_update={
-            'dbEntity': 'RnaSeqOutlier', 'numEntities': len(to_delete), 'parentEntityIds': inactivated_sample_guids, 'updateType': 'bulk_delete',
+        prefetch_related_objects(to_delete, 'sample')
+        logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
+            'dbEntity': model_cls.__name__, 'numEntities': len(to_delete), 'updateType': 'bulk_delete',
+            'parentEntityIds': list({model.sample.guid for model in to_delete}),
         })
         to_delete.delete()
 
-    loaded_sample_ids = set(RnaSeqOutlier.objects.values_list('sample_id', flat=True).distinct())
+    loaded_sample_ids = set(model_cls.objects.values_list('sample_id', flat=True).distinct())
     samples_to_load = {
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
