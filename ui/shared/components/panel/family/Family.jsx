@@ -174,14 +174,22 @@ class Family extends React.PureComponent {
       )
       leftContent = (
         <span>
-          {compact ? familyHeader : <div key="header">{familyHeader}</div>}
-          <PedigreeImagePanel
-            key="pedigree"
-            family={family}
-            disablePedigreeZoom={disablePedigreeZoom}
-            compact={compact}
-            isEditable={!disableEdit && project.canEdit}
-          />
+          {compact ? (
+            <span>
+              {familyHeader}
+              {`(${family.individualGuids.length})`}
+            </span>
+          ) : (
+            <div key="header">
+              {familyHeader}
+              <PedigreeImagePanel
+                key="pedigree"
+                family={family}
+                disablePedigreeZoom={disablePedigreeZoom}
+                isEditable={!disableEdit && project.canEdit}
+              />
+            </div>
+          )}
         </span>
       )
     }

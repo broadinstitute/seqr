@@ -31,7 +31,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Application definition
 INSTALLED_APPS = [
-    'seqr.apps.SuperuserAdminConfig',
+    'admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.messages',
@@ -60,6 +60,8 @@ MIDDLEWARE = [
     'seqr.utils.middleware.LogRequestMiddleware',
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 ALLOWED_HOSTS = ['*']
 

@@ -12,7 +12,7 @@ const ProjectFilterContent = React.memo((
   { project, removeField, projectSamples, value, dispatch, filterInputComponent, ...props },
 ) => {
   let filterInput
-  if (Object.values(projectSamples || {}).some(sample => sample.isActive)) {
+  if (Object.values(projectSamples || {}).some(sample => sample.isActive && sample.elasticsearchIndex)) {
     filterInput = filterInputComponent ? React.createElement(filterInputComponent, { ...props, value }) : null
   } else {
     filterInput = (

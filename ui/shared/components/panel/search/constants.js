@@ -299,7 +299,7 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
-export const FREQUENCIES = [
+export const SNP_FREQUENCIES = [
   {
     name: 'g1k',
     label: '1000 Genomes',
@@ -331,16 +331,19 @@ export const FREQUENCIES = [
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
   },
   {
-    name: 'gnomad_svs',
-    label: 'gnomAD genome SVs',
-    homHemi: false,
-    labelHelp: 'Filter by site frequency (AF) among gnomad SVs',
-  },
-  {
     name: THIS_CALLSET_FREQUENCY,
     label: 'This Callset',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
+  },
+]
+
+export const SV_FREQUENCIES = [
+  {
+    name: 'gnomad_svs',
+    label: 'gnomAD genome SVs',
+    homHemi: false,
+    labelHelp: 'Filter by locus frequency (AF) among gnomAD SVs. The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp',
   },
   {
     name: SV_CALLSET_FREQUENCY,
@@ -349,6 +352,9 @@ export const FREQUENCIES = [
     labelHelp: 'Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project.',
   },
 ]
+
+export const FREQUENCIES = [...SNP_FREQUENCIES]
+FREQUENCIES.splice(5, 0, ...SV_FREQUENCIES)
 
 export const LOCATION_FIELDS = [
   {

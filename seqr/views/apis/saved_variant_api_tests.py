@@ -8,11 +8,14 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS,\
+from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
+    TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, \
     AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
+PROJECT_GUID = 'R0001_1kg'
 VARIANT_GUID = 'SV0000001_2103343353_r0390_100'
+LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 GENE_GUID = 'ENSG00000135953'
 VARIANT_GUID_2 = 'SV0000002_1248367227_r0390_100'
 NO_TAG_VARIANT_GUID = 'SV0059957_11562437_f019313_1'
@@ -20,6 +23,11 @@ NO_TAG_VARIANT_GUID = 'SV0059957_11562437_f019313_1'
 COMPOUND_HET_1_GUID = 'SV0059956_11560662_f019313_1'
 COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
 GENE_GUID_2 = 'ENSG00000197530'
+
+SAVED_VARIANT_RESPONSE_KEYS = {
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+    'genesById', 'locusListsByGuid', 'rnaSeqData'
+}
 
 COMPOUND_HET_3_JSON = {
     'alt': 'C',
@@ -114,17 +122,14 @@ class SavedVariantAPITest(object):
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_saved_variant_data(self, mock_analyst_group):
-        url = reverse(saved_variant_data, args=['R0001_1kg'])
+        url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-            'genesById', 'locusListsByGuid',
-        })
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
 
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
@@ -132,11 +137,12 @@ class SavedVariantAPITest(object):
         variant = variants['SV0000001_2103343353_r0390_100']
         fields = {
             'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
-            'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'mainTranscriptId', 'genotypes', 'hgmd',
+            'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd',
             'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
         }
         fields.update(SAVED_VARIANT_FIELDS)
         self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
+        fields.add('mainTranscriptId')
         self.assertSetEqual(set(variant.keys()), fields)
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
@@ -147,10 +153,55 @@ class SavedVariantAPITest(object):
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
 
+        locus_list_fields = {'intervals'}
+        self.assertEqual(len(response_json['locusListsByGuid']), 1)
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
+
         gene_fields = {'locusListGuids'}
         gene_fields.update(GENE_VARIANT_FIELDS)
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
+
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': {
+            'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+            'isSignificant': True,
+        }}})
+
+        # include project context info
+        response = self.client.get('{}?loadProjectContext=true'.format(url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_keys = {'projectsByGuid'}
+        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
+        project = response_json['projectsByGuid'][PROJECT_GUID]
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
+        self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
+        locus_list_fields.update(LOCUS_LIST_FIELDS)
+        self.assertEqual(len(response_json['locusListsByGuid']), 2)
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
+
+        # include family context info
+        response = self.client.get('{}?loadFamilyContext=true'.format(url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_keys = {
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid',
+        }
+        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
+        self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
+        family_fields = {'individualGuids'}
+        family_fields.update(FAMILY_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
+        individual_fields = {'igvSampleGuids'}
+        individual_fields.update(INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
+        self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
+        self.assertEqual(len(response_json['locusListsByGuid']), 1)
 
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
@@ -163,8 +214,9 @@ class SavedVariantAPITest(object):
         # filter by family
         response = self.client.get('{}?families=F000002_2'.format(url))
         self.assertEqual(response.status_code, 200)
-
-        self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), {'SV0000002_1248367227_r0390_100'})
+        response_json = response.json()
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000002_1248367227_r0390_100'})
+        self.assertDictEqual(response_json['rnaSeqData'], {})
 
         # filter by variant guid
         response = self.client.get('{}{}'.format(url, VARIANT_GUID))
@@ -190,10 +242,9 @@ class SavedVariantAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-            'genesById', 'locusListsByGuid', 'familiesByGuid',
-        })
+        response_keys = {'familiesByGuid'}
+        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
             set(variants.keys()),
@@ -843,7 +894,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 8)
+        assert_no_list_ws_has_al(self, 11)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
@@ -904,7 +955,7 @@ class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
 
     def test_saved_variant_data(self):
         super(MixSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 2)
+        assert_no_list_ws_has_al(self, 3)
 
     def test_create_saved_variant(self):
         super(MixSavedVariantAPITest, self).test_create_saved_variant()

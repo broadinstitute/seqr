@@ -95,6 +95,8 @@ class EsGeneAggSearch(EsSearch):
             variants = next(iter(group.values()))
             gene_id = next(iter(group))
             if gene_id and gene_id != 'null':
+                if gene_id not in gene_counts:
+                    gene_counts[gene_id] = {'total': 0, 'families': defaultdict(int)}
                 gene_counts[gene_id]['total'] += len(variants)
                 for family_guid in variants[0]['familyGuids']:
                     gene_counts[gene_id]['families'][family_guid] += len(variants)

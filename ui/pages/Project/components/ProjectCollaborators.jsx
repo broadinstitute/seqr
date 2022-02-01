@@ -12,6 +12,7 @@ import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
+import { validators } from 'shared/components/form/ReduxFormWrapper'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
 import { updateCollaborator } from '../reducers'
@@ -46,9 +47,7 @@ const CREATE_FIELDS = [
     component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(CollaboratorEmailDropdown),
     format: value => value && (value.username ? value : value.email),
     normalize: value => (typeof value === 'object' ? value : { email: value }),
-    validate: value => (
-      /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test((value || {}).email) ? undefined : 'Invalid email address'
-    ),
+    validate: value => validators.requiredEmail((value || {}).email),
     width: 16,
     inline: true,
   },
@@ -131,7 +130,7 @@ CollaboratorRow.propTypes = {
 }
 
 const getSortedCollabs = (project, isAnvil) => orderBy(
-  project.collaborators.filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
+  (project.collaborators || []).filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
   ['desc', 'asc'],
 )
 

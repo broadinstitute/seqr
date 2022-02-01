@@ -37,6 +37,8 @@ import {
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
 
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
+  margin-top: 0px !important;
+
   .dropdown.icon {
     vertical-align: middle !important;
   }
@@ -160,7 +162,7 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
   ) : null,
 ].filter(fields => fields)
 
-const MAX_FREQ_COMPONENTS_PER_ROW = 6
+const MAX_FREQ_COMPONENTS_PER_ROW = 5
 
 // Layout the frequency filter fields into two rows.
 const freqFieldLayout = fieldComponents => (

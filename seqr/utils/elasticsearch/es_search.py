@@ -17,7 +17,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
-    PATH_FREQ_OVERRIDE_CUTOFF, get_prediction_response_key
+    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -36,7 +36,7 @@ class EsSearch(object):
         self._client = get_es_client()
 
         self.samples_by_family_index = defaultdict(lambda: defaultdict(dict))
-        samples = Sample.objects.filter(is_active=True, individual__family__in=families)
+        samples = Sample.objects.filter(is_active=True, individual__family__in=families, elasticsearch_index__isnull=False)
         for s in samples.select_related('individual__family'):
             self.samples_by_family_index[s.elasticsearch_index][s.individual.family.guid][s.sample_id] = s
 
@@ -209,7 +209,7 @@ class EsSearch(object):
             if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
         ]
         path_override = bool(clinvar_path_filters) and any(
-            freqs.get('af', 1) < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
+            freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
         q = Q()
         path_q = Q()
@@ -276,7 +276,7 @@ class EsSearch(object):
             self._filtered_variant_ids = variant_id_genome_versions
         return self
 
-    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None, skip_genotype_filter=False):
+    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None, skip_genotype_filter=False, has_location_filter=False):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -314,7 +314,7 @@ class EsSearch(object):
         quality_filters_by_family = _quality_filters_by_family(quality_filter, self.samples_by_family_index, self._indices)
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not has_previous_compound_hets:
-            self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search)
+            self._filter_compound_hets(quality_filters_by_family, annotations_secondary_search, has_location_filter)
             if inheritance_mode == COMPOUND_HET:
                 return
 
@@ -408,7 +408,11 @@ class EsSearch(object):
 
         return _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
 
-    def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search):
+    def _filter_compound_hets(self, quality_filters_by_family, annotations_secondary_search, has_location_filter):
+        if not self._allowed_consequences:
+            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
+
         indices = set(self._indices)
 
         paired_index_families = defaultdict(dict)
@@ -427,6 +431,11 @@ class EsSearch(object):
                         if overlapping_families:
                             paired_index_families[sv_index].update({var_index: overlapping_families})
                             paired_index_families[var_index].update({sv_index: overlapping_families})
+
+        if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
+                                       for family_samples_by_id in self.samples_by_family_index.values()):
+            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            raise InvalidSearchException('Location must be specified to search for compound heterozygous variants across many families')
 
         seen_paired_indices = set()
         comp_het_qs_by_index = defaultdict(list)

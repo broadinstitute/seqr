@@ -297,14 +297,19 @@ def _parse_anvil_metadata(project, individual_samples, user, include_collaborato
 
 def _get_variant_main_transcript(variant):
     main_transcript_id = variant.get('selectedMainTranscriptId') or variant.get('mainTranscriptId')
-    if not main_transcript_id:
-        return {}
-    for gene_id, transcripts in variant.get('transcripts', {}).items():
-        main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
-        if main_transcript:
-            if 'geneId' not in main_transcript:
-                main_transcript['geneId'] = gene_id
-            return main_transcript
+    if main_transcript_id:
+        for gene_id, transcripts in variant.get('transcripts', {}).items():
+            main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
+            if main_transcript:
+                if 'geneId' not in main_transcript:
+                    main_transcript['geneId'] = gene_id
+                return main_transcript
+    elif len(variant.get('transcripts', {})) == 1:
+        gene_id = next(k for k in variant['transcripts'].keys())
+        #  Handle manually created SNPs
+        if variant['transcripts'][gene_id] == []:
+            return {'geneId': gene_id}
+    return {}
 
 
 def _get_sv_name(variant_json):
@@ -322,7 +327,7 @@ def _get_loaded_before_date_project_individual_samples(project, max_loaded_date)
         max_loaded_date = datetime.now() - timedelta(days=365)
 
     loaded_samples = Sample.objects.filter(
-        individual__family__project=project,
+        individual__family__project=project, elasticsearch_index__isnull=False,
     ).select_related('individual__family').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
@@ -956,12 +961,11 @@ def _update_variant_inheritance(variant, affected_individual_guids, unaffected_i
     for gene_id in potential_compound_het_gene_ids:
         potential_compound_het_genes[gene_id].add(variant)
 
-    main_transcript_id = variant.selected_main_transcript_id or variant.saved_variant_json.get('mainTranscriptId')
-    if main_transcript_id:
-        for gene_id, transcripts in variant.saved_variant_json['transcripts'].items():
-            if any(t['transcriptId'] == main_transcript_id for t in transcripts):
-                variant.saved_variant_json['mainTranscriptGeneId'] = gene_id
-                break
+    variant_json = variant.saved_variant_json
+    variant_json['selectedMainTranscriptId'] = variant.selected_main_transcript_id
+    main_transcript = _get_variant_main_transcript(variant_json)
+    if main_transcript.get('geneId'):
+        variant.saved_variant_json['mainTranscriptGeneId'] = main_transcript['geneId']
 
 
 def _get_genotype_zygosity(genotype, is_hemi_variant):

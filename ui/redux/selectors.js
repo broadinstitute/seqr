@@ -28,6 +28,7 @@ export const getHpoTermsIsLoading = state => state.hpoTermsLoading.isLoading
 export const getLocusListsByGuid = state => state.locusListsByGuid
 export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
+export const getRnaSeqDataByIndividual = state => state.rnaSeqDataByIndividual
 export const getUser = state => state.user
 export const getUserOptionsByUsername = state => state.userOptionsByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
@@ -125,42 +126,49 @@ const getSortedSamples = createSelector(
 )
 
 export const getSamplesByFamily = createSelector(
-  getIndividualsByGuid,
   getSortedSamples,
-  (individualsByGuid, sortedSamples) => sortedSamples.reduce((acc, sample) => {
-    const { familyGuid } = individualsByGuid[sample.individualGuid]
-    if (!acc[familyGuid]) {
-      acc[familyGuid] = []
-    }
-    acc[familyGuid].push(sample)
-    return acc
-  }, {}),
+  sortedSamples => groupByFamilyGuid(sortedSamples || []),
 )
 
-export const getHasActiveVariantSampleByFamily = createSelector(
+export const getHasActiveSearchableSampleByFamily = createSelector(
   getSamplesByFamily,
   samplesByFamily => Object.entries(samplesByFamily).reduce(
     (acc, [familyGuid, familySamples]) => ({
       ...acc,
-      [familyGuid]: familySamples.some(({ isActive }) => isActive),
+      [familyGuid]: {
+        isActive: familySamples.some(({ isActive }) => isActive),
+        isSearchable: familySamples.some(({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex),
+      },
     }), {},
   ),
 )
 
 export const getIGVSamplesByFamilySampleIndividual = createSelector(
-  getIndividualsByGuid,
   getIgvSamplesByGuid,
-  (individualsByGuid, igvSamplesByGuid) => Object.values(igvSamplesByGuid).reduce((acc, sample) => {
-    const { familyGuid } = individualsByGuid[sample.individualGuid]
-    if (!acc[familyGuid]) {
-      acc[familyGuid] = {}
+  igvSamplesByGuid => Object.values(igvSamplesByGuid).reduce((acc, sample) => {
+    if (!acc[sample.familyGuid]) {
+      acc[sample.familyGuid] = {}
     }
-    if (!acc[familyGuid][sample.sampleType]) {
-      acc[familyGuid][sample.sampleType] = {}
+    if (!acc[sample.familyGuid][sample.sampleType]) {
+      acc[sample.familyGuid][sample.sampleType] = {}
     }
-    acc[familyGuid][sample.sampleType][sample.individualGuid] = sample
+    acc[sample.familyGuid][sample.sampleType][sample.individualGuid] = sample
     return acc
   }, {}),
+)
+
+export const getSignificantRnaSeqDataByFamilyGene = createSelector(
+  getIndividualsByGuid,
+  getRnaSeqDataByIndividual,
+  (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => {
+      const { familyGuid, displayName } = individualsByGuid[individualGuid]
+      acc[familyGuid] = Object.entries(rnaSeqData).reduce((acc2, [geneId, data]) => (data.isSignificant ?
+        { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
+      ), acc[familyGuid] || {})
+      return acc
+    }, {},
+  ),
 )
 
 // Saved variant selectors
@@ -345,12 +353,14 @@ export const getLocusListIntervalsByChromProject = createSelector(
 )
 
 export const getLocusListTableData = createSelector(
-  (state, props) => props.omitLocusLists,
+  (state, props) => props.meta && props.meta.form && props.meta.form.replace('add-gene-list-', ''),
+  getProjectsByGuid,
   getLocusListsWithGenes,
-  (omitLocusLists, locusListsByGuid) => {
+  (omitProjectGuid, projectsByGuid, locusListsByGuid) => {
     let data = Object.values(locusListsByGuid)
-    if (omitLocusLists) {
-      data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
+    if (omitProjectGuid) {
+      const { locusListGuids = [] } = projectsByGuid[omitProjectGuid] || {}
+      data = data.filter(locusList => !locusListGuids.includes(locusList.locusListGuid))
     }
 
     return data.reduce((acc, locusList) => {
@@ -362,4 +372,11 @@ export const getLocusListTableData = createSelector(
       return acc
     }, { My: [], Public: [] })
   },
+)
+
+export const getUserOptions = createSelector(
+  getUserOptionsByUsername,
+  usersOptionsByUsername => Object.values(usersOptionsByUsername).map(
+    user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
+  ),
 )

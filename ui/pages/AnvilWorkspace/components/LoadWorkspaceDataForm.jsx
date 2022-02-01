@@ -23,6 +23,9 @@ import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
+const WARNING_HEADER = 'Planned Data Loading Delay'
+const WARNING_BANNER = null
+
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
   [INDIVIDUAL_FIELD_ID]: 'Individual ID (needs to match the VCF ids)',
@@ -118,6 +121,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
         see &nbsp;
         <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
       </Message>
+      {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
     <ReduxFormWrapper
       form="loadWorkspaceData"

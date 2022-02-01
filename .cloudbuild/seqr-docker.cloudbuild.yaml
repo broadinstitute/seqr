@@ -1,0 +1,12 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'deploy/docker/seqr'
+  args: [ 'build', '.', '-t', 'seqr:$COMMIT_SHA' ]
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'deploy/docker/seqr'
+  args: [ 'tag', 'seqr:$COMMIT_SHA', 'gcr.io/seqr-project/seqr:$COMMIT_SHA']
+
+images:
+  - 'gcr.io/seqr-project/seqr:$COMMIT_SHA'
+
+timeout: 900s

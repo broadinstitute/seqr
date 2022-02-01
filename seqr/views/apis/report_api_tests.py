@@ -223,7 +223,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {'individualCount', 'familyCount', 'sampleCountByType'})
         self.assertEqual(response_json['individualCount'], 18)
         self.assertEqual(response_json['familyCount'], 14)
-        self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8, 'WGS': 1})
+        self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8, 'WGS': 1, 'RNA': 1})
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -280,7 +280,7 @@ class ReportAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
         self.assertListEqual(response_json['errors'], ['No data loaded for family: 9. Skipping...', 'No data loaded for family: no_individuals. Skipping...'])
-        self.assertEqual(len(response_json['rows']), 9)
+        self.assertEqual(len(response_json['rows']), 10)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_ROW, response_json['rows'])
 
         # test compound het reporting
@@ -379,8 +379,7 @@ class ReportAPITest(AuthenticationTestCase):
             '17-significance', '18-discovery_notes']))
         self.assertIn('\t'.join([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
-            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
-            '-', '-', '-', '-']), discovery_file)
+            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-']), discovery_file)
         self.assertIn('\t'.join([
             'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',

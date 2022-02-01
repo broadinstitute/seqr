@@ -16,4 +16,4 @@ else
     COMMAND="${POD_NAME}:${FILE} ."
 fi
 
-kubectl cp "${COMMAND}"
+kubectl cp ${COMMAND}

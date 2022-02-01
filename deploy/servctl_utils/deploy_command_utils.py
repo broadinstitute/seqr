@@ -149,13 +149,14 @@ def deploy_elasticsearch(settings):
 def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
-        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+        run('kubectl create -f https://download.elastic.co/downloads/eck/1.8.0/crds.yaml')
+        run('kubectl apply -f https://download.elastic.co/downloads/eck/1.8.0/operator.yaml')
 
 
 def deploy_elasticsearch_snapshot_config(settings):
     print_separator('elasticsearch snapshot configuration')
 
-    docker_build("curl", settings)
+    docker_build("curator", settings)
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
