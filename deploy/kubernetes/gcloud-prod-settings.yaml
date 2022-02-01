@@ -12,7 +12,6 @@ ES_SNAPSHOTS_ACCOUNT_NAME: seqr-es-snapshots-prod
 ES_SNAPSHOTS_BUCKET: seqr-es-7-snapshots-prod
 
 RUN_CRON_JOBS: true
-DATABASE_BACKUP_BUCKET: seqr-backups
 
 GUNICORN_WORKER_THREADS: 20    # number of webserver threads
 
@@ -22,6 +21,8 @@ REDIS_POD_MEMORY_LIMIT: 10Gi
 TERRA_API_ROOT_URL: 'https://api.firecloud.org'
 
 CLOUDSQL_AVAILABILITY_TYPE: 'regional'
+
+GCS_MEDIA_ROOT_BUCKET: 'seqr-media-storage-public-prod'
 
 ###########################################################
 ####### SETTINGS THAT SHOULDN'T NEED TO BE MODIFIED #######

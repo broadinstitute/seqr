@@ -363,6 +363,9 @@ ES_SV_VARIANT = {
           'start': 49045487,
           'end': 49045899,
           'geneIds': ['ENSG00000228198'],
+          'prev_call': False,
+          'prev_overlap': False,
+          'new_call': True,
         },
         {
           'qs': 80,
@@ -373,6 +376,9 @@ ES_SV_VARIANT = {
           'start': 49045987,
           'end': 49045890,
           'geneIds': ['ENSG00000228198', 'ENSG00000135953'],
+          'prev_call': False,
+          'prev_overlap': True,
+          'new_call': False,
         }
       ],
       'xpos': 1049045387,
@@ -411,7 +417,6 @@ ES_SV_WGS_VARIANT = {
       'genotypes': [
         {
           'gq': 33,
-          'cn': 1,
           'sample_id': 'NA21234',
           'num_alt': 1,
         }
@@ -1644,7 +1649,7 @@ class EsUtilsTest(TestCase):
     def test_sv_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DUP']},
+            'annotations': {'new_structural_variants': ['NEW']},
             'freqs': {'sv_callset': {'af': 0.1}},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},
@@ -1662,7 +1667,6 @@ class EsUtilsTest(TestCase):
                     {'range': {'sf': {'lte': 0.1}}}
                 ]
             }},
-            {'terms': {'transcriptConsequenceTerms': ['DUP', 'gCNV_DUP']}},
             {'bool': {
                 'must': [
                     {'bool': {
@@ -1678,7 +1682,8 @@ class EsUtilsTest(TestCase):
                             {'term': {'samples_qs_0_to_10': 'HG00733'}},
                             {'term': {'samples_qs_10_to_20': 'HG00733'}},
                         ],
-                    }}
+                        'must': [{'terms': {'samples_new_call': ['HG00731', 'HG00732', 'HG00733']}}],
+                    }},
                 ],
                 '_name': 'F000002_2'
             }}
@@ -1689,7 +1694,7 @@ class EsUtilsTest(TestCase):
         self.families = Family.objects.filter(guid='F000014_14')
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['CPX']},
+            'annotations': {'structural': ['DUP', 'CPX']},
             'qualityFilter': {'min_gq_sv': 20},
             'inheritance': {'mode': 'de_novo'},
         })
@@ -1700,7 +1705,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
         self.assertExecutedSearch(filters=[
-            {'terms': {'transcriptConsequenceTerms': ['CPX']}},
+            {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP']}},
             {'bool': {
                 'must': [{'term': {'samples': 'NA21234'}},
                     {'bool': {
@@ -1914,7 +1919,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[2][1], PARSED_COMPOUND_HET_VARIANTS[1])
         self.assertDictEqual(variants[3], PARSED_VARIANTS[1])
 
-        annotations_q = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant', 'gCNV_DEL']}}
+        annotations_q = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant']}}
         self.assertExecutedSearches([
             dict(
                 filters=[
@@ -2057,7 +2062,7 @@ class EsUtilsTest(TestCase):
     def test_multi_datatype_secondary_annotations_recessive_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'structural': ['DEL']},
+            'annotations': {'structural': ['gCNV_DEL']},
             'annotations_secondary': {'frameshift': ['frameshift_variant']},
             'inheritance': {'mode': 'recessive'},
         })
@@ -2067,14 +2072,14 @@ class EsUtilsTest(TestCase):
         get_es_variants(results_model, num_results=10)
 
         annotation_secondary_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
+            {'terms': {'transcriptConsequenceTerms': ['gCNV_DEL']}},
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
         ]}}
 
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'transcriptConsequenceTerms': ['DEL', 'gCNV_DEL']}},
+                    {'terms': {'transcriptConsequenceTerms': ['gCNV_DEL']}},
                     {'bool': {
                         '_name': 'F000002_2',
                         'must': [{

@@ -90,10 +90,7 @@ class UsersAPITest(object):
             create_url, content_type="application/json", data=json.dumps({})
         )
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()["error"],
-            "Adding collaborators directly in seqr is disabled. Users can be managed from the associated AnVIL workspace",
-        )
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch("seqr.views.apis.users_api.logger")
     @mock.patch("django.contrib.auth.models.send_mail")
@@ -250,8 +247,8 @@ class UsersAPITest(object):
 
     def _test_password_auth_disabled(self, url):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch("seqr.views.apis.users_api.SEQR_TOS_VERSION")
     @mock.patch("seqr.views.apis.users_api.SEQR_PRIVACY_VERSION")

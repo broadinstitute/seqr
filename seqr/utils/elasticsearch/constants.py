@@ -260,6 +260,7 @@ NESTED_FIELDS = {
 
 GRCH38_LOCUS_FIELD = 'rg37_locus'
 SPLICE_AI_FIELD = 'splice_ai'
+NEW_SV_FIELD = 'new_structural_variants'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
@@ -330,12 +331,15 @@ GENOTYPE_FIELDS_CONFIG = {
 GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SNP_QUALITY_FIELDS.keys()})
 SV_GENOTYPE_FIELDS_CONFIG = {
-    'cn': {'format_value': int, 'default_value': 2},
+    'cn': {'format_value': int, 'default_value': -1},
     'end': {},
     'start': {},
     'num_exon': {},
-    'geneIds': {'response_key': 'geneIds'},
+    'geneIds': {'response_key': 'geneIds', 'format_value': list},
     'defragged': {'format_value': bool},
+    'prev_call': {'format_value': bool},
+    'prev_overlap': {'format_value': bool},
+    'new_call': {'format_value': bool},
 }
 SV_GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 SV_GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SV_QUALITY_FIELDS.keys()})

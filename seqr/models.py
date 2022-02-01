@@ -935,6 +935,7 @@ class AnalysisGroup(ModelWithGUID):
 
 class VariantSearch(ModelWithGUID):
     name = models.CharField(max_length=200, null=True)
+    order = models.FloatField(null=True, blank=True)
     search = JSONField()
 
     def __unicode__(self):
@@ -946,7 +947,7 @@ class VariantSearch(ModelWithGUID):
     class Meta:
         unique_together = ('created_by', 'name')
 
-        json_fields = ['guid', 'name', 'search', 'created_by_id']
+        json_fields = ['guid', 'name', 'order', 'search', 'created_by_id']
 
 
 class VariantSearchResults(ModelWithGUID):

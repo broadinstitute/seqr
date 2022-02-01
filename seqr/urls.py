@@ -335,10 +335,17 @@ urlpatterns += [
 urlpatterns += [
     url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
     url(r'^admin/', admin.site.urls),
-    url(r'^media/(?P<path>.*)$', django.views.static.serve, {
-        'document_root': MEDIA_ROOT,
-    }),
 ]
+
+# The /media urlpattern is not needed if we are storing static media in a GCS bucket,
+# so this logic disables it in that case. If we want to serve media from a local filepath
+# instead, set MEDIA_ROOT in settings.py to that local path, and then this urlpattern will be enabled.
+if MEDIA_ROOT:
+    urlpatterns += [
+        url(r'^media/(?P<path>.*)$', django.views.static.serve, {
+            'document_root': MEDIA_ROOT,
+        }),
+    ]
 
 urlpatterns += [
     url('', include('social_django.urls')),

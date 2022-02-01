@@ -319,12 +319,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         url = reverse(delete_index)
         self.check_data_manager_login(url)
 
-        response = self.client.post(
-            url,
-            content_type="application/json",
-            data=json.dumps({"index": "test_index"}),
-        )
-        self.assertEqual(response.status_code, 403)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
+        self.assertEqual(response.status_code, 400)
         self.assertDictEqual(
             response.json(),
             (

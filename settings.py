@@ -74,12 +74,16 @@ CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://storage.googleapis.com') # google storage used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
-CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'data:')
+CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com', 'data:')
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
-IGV_CSS1_HASH = "'sha256-mMr3XKHeuAZnT2THF0+nzpjf/J0GLygO9xHcQduGITY='"
-IGV_CSS2_HASH = "'sha256-/OhxYpMV/kE3A/RxJL4MplY3PG7a/Pxg3csCRBRyWeg='"
-CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
-CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
+IGV_CSS_HASHES = (
+    "'sha256-dUpUK4yXR60CNDI/4ZeR/kpSqQ3HmniKj/Z7Hw9ZNTA='",
+    "'sha256-s8l0U2/BsebhfOvm08Z+4w1MnftmnPeoOMbSi+f5hCI='",
+    "'sha256-T9widob1zmlNnk3NzLRUfXFToG7AkPTuLDXaKU2tc6c='",
+    "'sha256-ITHmamcImsZ/Je1xrdtDLZVvRSpj1Zokb6uHXORB824='",
+)
+CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -141,9 +145,19 @@ TEMPLATES = [
     },
 ]
 
-GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
-MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
-MEDIA_URL = '/media/'
+# If specified, store data in the named GCS bucket and use the gcloud storage backend.
+# Else, fall back to a path on the local filesystem.
+GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
+if GCS_MEDIA_ROOT_BUCKET:
+    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+    GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
+    GS_DEFAULT_ACL = 'publicRead'
+    MEDIA_ROOT = False
+    MEDIA_URL = 'https://storage.googleapis.com/{bucket_name}/'.format(bucket_name=GS_BUCKET_NAME)
+else:
+    GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
+    MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
+    MEDIA_URL = '/media/'
 
 LOGGING = {
     'version': 1,

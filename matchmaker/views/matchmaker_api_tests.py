@@ -184,7 +184,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         invalid_url = reverse(get_individual_mme_matches, args=[INVALID_PROJECT_SUBMISSION_GUID])
         response = self.client.get(invalid_url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Matchmaker is not enabled')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
 
