@@ -88,6 +88,7 @@ class LoadRnaSeqTest(TestCase):
             mock.call('create 2 RnaSeqTpm for NA19675_D2'),
             mock.call('create 2 RnaSeqTpm for NA19678_D1'),
         ])
+        mock_logger.warning.assert_not_called()
 
         # test fails on mismatched tissue
         mock_open.return_value.__enter__.return_value.__iter__.return_value[2] = 'NA19678_D1\tNA19678\tfibroblasts'
