@@ -2,15 +2,17 @@
 import mock
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.urls.base import reverse
 
 from seqr.models import Sample, RnaSeqTpm, RnaSeqOutlier
+from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.apis.summary_data_api import rna_seq_expression
 
 RNA_FILE_ID = 'all_tissue_tpms.tsv.gz'
 MAPPING_FILE_ID = 'mapping.tsv'
 EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
 
-class LoadRnaSeqTest(TestCase):
+class LoadRnaSeqTest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     @mock.patch('seqr.views.apis.data_manager_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
@@ -60,6 +62,10 @@ class LoadRnaSeqTest(TestCase):
 
         call_command('load_rna_seq_tpm', RNA_FILE_ID, MAPPING_FILE_ID, '--ignore-extra-samples')
 
+        # Existing outlier data should be unchanged
+        self.assertEqual(RnaSeqOutlier.objects.count(), 3)
+
+        # Test database models
         existing_sample = Sample.objects.get(individual_id=1, sample_type='RNA')
         self.assertEqual(existing_sample.guid, EXISTING_SAMPLE_GUID)
         self.assertEqual(existing_sample.sample_id, 'NA19675_D2')
@@ -67,9 +73,6 @@ class LoadRnaSeqTest(TestCase):
         self.assertIsNone(existing_sample.elasticsearch_index)
         self.assertEqual(existing_sample.data_source, 'muscle_samples.tsv.gz')
         self.assertEqual(existing_sample.tissue_type, 'M')
-
-        # Existing outlier data should be unchanged
-        self.assertEqual(RnaSeqOutlier.objects.count(), 3)
 
         new_sample = Sample.objects.get(individual_id=2, sample_type='RNA')
         self.assertEqual(new_sample.sample_id, 'NA19678_D1')
@@ -90,7 +93,18 @@ class LoadRnaSeqTest(TestCase):
         ])
         mock_logger.warning.assert_not_called()
 
-        # test fails on mismatched tissue
+        # Test TPM expression API
+        url = reverse(rna_seq_expression, args=['ENSG00000233750', 'F,M,WB'])
+        self.check_require_login(url)
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'F': [],
+            'M': [1.04],
+            'WB': [6.04],
+        })
+
+        # Test fails on mismatched tissue
         mock_open.return_value.__enter__.return_value.__iter__.return_value[2] = 'NA19678_D1\tNA19678\tfibroblasts'
         call_command('load_rna_seq_tpm', 'new_file.tsv.gz', MAPPING_FILE_ID, '--ignore-extra-samples')
         mock_logger.warning.assert_called_with('Skipped data loading for the following 1 samples due to mismatched tissue type: NA19678_D1 (fibroblasts to whole_blood)')
