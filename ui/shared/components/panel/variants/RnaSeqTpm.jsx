@@ -38,29 +38,34 @@ const PLOT_OPTIONS = {
   yAxisUnit: 'TPM',
 }
 
-const launchGtex = tpms => (geneId) => {
+const launchGtex = (geneId, tpms) => (gencodeId) => {
   const tissues = [...new Set(Object.values(tpms).map(({ sampleTissueType }) => sampleTissueType))]
-  const sampleData = Object.entries(tpms).map(([individual, { tpm }]) => ({ label: individual, data: [tpm] }))
-  // TODO fetch RDG data
-  new HttpRequestHelper(`${GTEX_HOST}expression/geneExpression`,
-    (responseJson) => {
-      const boxplotData = [
-        ...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
+  const boxplotData = Object.entries(tpms).map(([individual, { tpm }]) => ({ label: individual, data: [tpm] }))
+
+  const numEntries = (tissues.length * 2) + boxplotData.length
+  const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numEntries * 80)
+
+  Promise.all([
+    new HttpRequestHelper(`${GTEX_HOST}expression/geneExpression`,
+      (responseJson) => {
+        boxplotData.push(...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
           { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
-        )),
-        ...sampleData,
-      ]
-
-      const numEntries = tissues.length + sampleData.length
-      const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numEntries * 80)
-
-      const boxplot = new Boxplot(boxplotData, false)
-      boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
-    }).get({ tissueSiteDetailId: tissues.map(tissue => GTEX_TISSUES[tissue]).join(','), gencodeId: geneId })
+        )))
+      }).get({ tissueSiteDetailId: tissues.map(tissue => GTEX_TISSUES[tissue]).join(','), gencodeId }),
+    new HttpRequestHelper(`/api/rna_seq_expression/gene/${geneId}/tissues/${tissues.join(',')}`,
+      (responseJson) => {
+        boxplotData.push(...Object.entries(responseJson).map(([tissue, data]) => (
+          { data, label: `*RDG - ${TISSUE_DISPLAY[tissue]}`, color: 'efefef' }
+        )))
+      }).get(),
+  ]).then(() => {
+    const boxplot = new Boxplot(boxplotData, false)
+    boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
+  })
 }
 
 const RnaSeqTpm = ({ geneId, tpms }) => (
-  <GtexLauncher geneId={geneId} containerId={GTEX_CONTAINER_ID} launchGtex={launchGtex(tpms)} />
+  <GtexLauncher geneId={geneId} containerId={GTEX_CONTAINER_ID} launchGtex={launchGtex(geneId, tpms)} />
 )
 
 RnaSeqTpm.propTypes = {
