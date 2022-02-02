@@ -392,9 +392,9 @@ def get_rna_seq_outliers(gene_ids, **sample_filter):
         RnaSeqOutlier.objects.filter(gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, **sample_filter),
         nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
     )
-    data_by_individual_gene = defaultdict(dict)
+    data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
     for data in outlier_data:
-        data_by_individual_gene[data.pop('individualGuid')][data['geneId']] = data
+        data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
 
     return data_by_individual_gene
 

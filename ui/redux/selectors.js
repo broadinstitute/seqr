@@ -163,7 +163,7 @@ export const getSignificantRnaSeqDataByFamilyGene = createSelector(
   (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
     (acc, [individualGuid, rnaSeqData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData).reduce((acc2, [geneId, data]) => (data.isSignificant ?
+      acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce((acc2, [geneId, data]) => (data.isSignificant ?
         { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
       ), acc[familyGuid] || {})
       return acc
