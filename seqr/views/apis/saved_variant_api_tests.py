@@ -162,10 +162,17 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': {
-            'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
-            'isSignificant': True,
-        }}})
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {
+            'outliers': {
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+                    'isSignificant': True,
+            }},
+            'tpms': {
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'tpm': 8.38, 'sampleTissueType': 'M',
+            }},
+        }})
 
         # include project tag types
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
