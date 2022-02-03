@@ -77,7 +77,8 @@ class Command(BaseCommand):
             raise ValueError(
                 f'Unable to load data for the following samples with no tissue type: {no_tissue_samples}')
 
-    def _parse_row(self, row):
+    @classmethod
+    def _parse_row(cls, row):
         gene_id = row.pop('gene_id')
         if any(tpm for tpm in row.values() if tpm != '0.0'):
             for sample_id, tpm in row.items():
