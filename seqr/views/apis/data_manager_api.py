@@ -25,8 +25,8 @@ from seqr.views.utils.permissions_utils import data_manager_required
 
 from seqr.models import Sample, Individual, Project, RnaSeqOutlier
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY, \
-    ANALYST_PROJECT_CATEGORY
+from settings import ANALYST_PROJECT_CATEGORY, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY
+
 
 logger = SeqrLogger(__name__)
 
@@ -40,9 +40,12 @@ def elasticsearch_status(request):
         _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
     }
 
-    for node in  _get_es_meta(
-            client, 'nodes', ['name', 'heap.percent'], filter_rows=lambda node: node['name'] in disk_status):
-        disk_status[node.pop('name')].update(node)
+    node_stats = {}
+    for node in  _get_es_meta(client, 'nodes', ['name', 'heap.percent']):
+        if node['name'] in disk_status:
+            disk_status[node.pop('name')].update(node)
+        else:
+            node_stats[node['name'] ] = node
 
     indices, seqr_index_projects = _get_es_indices(client)
 
@@ -53,7 +56,7 @@ def elasticsearch_status(request):
     return create_json_response({
         'indices': indices,
         'diskStats': list(disk_status.values()),
-        'elasticsearchHost': ELASTICSEARCH_SERVER,
+        'nodeStats': list(node_stats.values()),
         'errors': errors,
     })
 
