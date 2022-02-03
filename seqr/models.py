@@ -997,9 +997,6 @@ class RnaSeqOutlier(DeletableSampleMetadataModel):
     p_adjust = models.FloatField()
     z_score = models.FloatField()
 
-    def __unicode__(self):
-        return "%s:%s" % (self.sample.sample_id, self.gene_id)
-
     class Meta:
         unique_together = ('sample', 'gene_id')
 
@@ -1008,9 +1005,6 @@ class RnaSeqOutlier(DeletableSampleMetadataModel):
 
 class RnaSeqTpm(DeletableSampleMetadataModel):
     tpm = models.FloatField()
-
-    def __unicode__(self):
-        return "%s:%s" % (self.sample.sample_id, self.gene_id)
 
     class Meta:
         unique_together = ('sample', 'gene_id')

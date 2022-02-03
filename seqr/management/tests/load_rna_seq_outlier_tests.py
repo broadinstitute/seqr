@@ -13,10 +13,10 @@ EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
 class LoadRnaSeqTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.apis.data_manager_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.logger.info')
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.open')
-    @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
+    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
     def test_command(self, mock_gzip_open, mock_open, mock_logger):
         mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
         mock_gzip_file.__next__.return_value = 'sampleID\tgeneID\tdetail\tpValue\tpadjust\tzScore\n'

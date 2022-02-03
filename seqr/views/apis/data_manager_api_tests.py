@@ -521,11 +521,11 @@ class DataManagerAPITest(AuthenticationTestCase):
         })
         mock_open.return_value.__enter__.return_value.write.assert_called_with(b'sample_content')
 
-    @mock.patch('seqr.views.apis.data_manager_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
-    @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
-    @mock.patch('seqr.views.apis.data_manager_api.logger')
+    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
+    @mock.patch('seqr.views.utils.dataset_utils.logger')
     def test_update_rna_seq(self, mock_logger, mock_open, mock_load_uploaded_file, mock_os):
         url = reverse(update_rna_seq, args=['muscle_samples.tsv.gz'])
         self.check_data_manager_login(url)

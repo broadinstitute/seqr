@@ -1,6 +1,6 @@
+import logging
 from collections import defaultdict
 from django.core.management.base import BaseCommand
-import logging
 
 from seqr.models import RnaSeqTpm
 from seqr.views.apis.data_manager_api import load_rna_seq
@@ -16,6 +16,8 @@ TISSUE_TYPE_MAP = {
 }
 
 REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
+
+GENE_ID_COL = 'gene_id'
 
 class Command(BaseCommand):
     help = 'Load RNA-Seq TPM data'
@@ -53,9 +55,9 @@ class Command(BaseCommand):
                 self.multi_mapped_samples.update(sample_ids)
 
     def _validate_header(self, header):
-        if 'gene_id' not in header:
+        if GENE_ID_COL not in header:
             raise ValueError('Invalid file: missing column gene_id')
-        header_sample_ids = [s for s in header if s != 'gene_id' and not s.startswith('GTEX')]
+        header_sample_ids = [s for s in header if s != GENE_ID_COL and not s.startswith('GTEX')]
 
         multi_samples = {s for s in header_sample_ids if s in self.multi_mapped_samples}
         if multi_samples:
@@ -79,11 +81,11 @@ class Command(BaseCommand):
 
     @classmethod
     def _parse_row(cls, row):
-        gene_id = row.pop('gene_id')
+        gene_id = row.pop(GENE_ID_COL)
         if any(tpm for tpm in row.values() if tpm != '0.0'):
             for sample_id, tpm in row.items():
                 if not sample_id.startswith('GTEX'):
-                    yield sample_id, {'gene_id': gene_id, 'tpm': tpm}
+                    yield sample_id, {GENE_ID_COL: gene_id, 'tpm': tpm}
 
     def handle(self, *args, **options):
         self._parse_mapping_file(options['mapping_file'])

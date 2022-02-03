@@ -9,7 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, prefetch_related_objects
+from django.db.models import Max
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -18,15 +18,14 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file_content
+from seqr.views.utils.dataset_utils import load_rna_seq, load_mapping_file_content
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, Project, RnaSeqOutlier
+from seqr.models import Sample, Individual, RnaSeqOutlier
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY, \
-    ANALYST_PROJECT_CATEGORY
+from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -392,75 +391,6 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
     return load_rna_seq(RnaSeqOutlier, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
-
-def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, parse_row, validate_header):
-    samples_by_id = defaultdict(dict)
-    with gzip.open(file_path, 'rt') as f:
-        header = _parse_tsv_row(next(f))
-        validate_header(header)
-
-        for line in f:
-            row = dict(zip(header, _parse_tsv_row(line)))
-            for sample_id, row_dict in parse_row(row):
-                gene_id = row_dict['gene_id']
-                existing_data = samples_by_id[sample_id].get(gene_id)
-                if existing_data and existing_data != row_dict:
-                    raise ValueError(
-                        f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
-                samples_by_id[sample_id][gene_id] = row_dict
-
-    message = f'Parsed {len(samples_by_id)} RNA-seq samples'
-    info = [message]
-    logger.info(message, user)
-
-    data_source = file_path.split('/')[-1].split('_-_')[-1]
-    samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
-        projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
-        user=user,
-        sample_ids=samples_by_id.keys(),
-        data_source=data_source,
-        sample_type=Sample.SAMPLE_TYPE_RNA,
-        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
-    )
-
-    # Delete old data
-    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
-    if to_delete:
-        prefetch_related_objects(to_delete, 'sample')
-        logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
-            'dbEntity': model_cls.__name__, 'numEntities': len(to_delete), 'updateType': 'bulk_delete',
-            'parentEntityIds': list({model.sample.guid for model in to_delete}),
-        })
-        to_delete.delete()
-
-    loaded_sample_ids = set(model_cls.objects.values_list('sample_id', flat=True).distinct())
-    samples_to_load = {
-        sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
-    }
-
-    prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
-    projects = {sample.individual.family.project.name for sample in samples_to_load}
-    project_names = ', '.join(sorted(projects))
-    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
-    info.append(message)
-    logger.info(message, user)
-
-    warnings = []
-    if remaining_sample_ids:
-        skipped_samples = ', '.join(sorted(remaining_sample_ids))
-        message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
-        warnings.append(message)
-        logger.warning(message, user)
-    if loaded_sample_ids:
-        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
-        warnings.append(message)
-        logger.warning(message, user)
-
-    return samples_to_load, info, warnings
-
-def _parse_tsv_row(row):
-    return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
 
 def _get_upload_file_path(uploaded_file_id):
     upload_directory = get_temp_upload_directory()
