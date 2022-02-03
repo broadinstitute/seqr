@@ -65,9 +65,10 @@ RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /e
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=build /opt/venv /opt/venv
+
 WORKDIR /seqr
 COPY . .
-COPY --from=build /opt/venv /opt/venv
 COPY --from=build /build/ui/dist /seqr/ui/dist
 
 ENV VIRTUAL_ENV=/opt/venv
