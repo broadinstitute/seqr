@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('seqr', '0035_variantsearch_order'),
+        ('seqr', '0036_auto_20220201_2131'),
     ]
 
     operations = [
