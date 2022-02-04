@@ -120,7 +120,7 @@ BaseRnaSeqOutliers.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.sample.individualGuid],
+  rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.sample.individualGuid]?.outliers,
   genesById: getGenesById(state),
   loading: getRnaSeqDataLoading(state),
 })

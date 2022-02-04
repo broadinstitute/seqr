@@ -181,7 +181,8 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(
             set(intervals[0].keys()), {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000268903': mock.ANY}})
+        self.assertDictEqual(
+            response_json['rnaSeqData'], {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}})
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
@@ -498,7 +499,8 @@ class VariantSearchAPITest(object):
         self.assertListEqual(response_json['searchedVariants'], VARIANTS[:1])
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000268903': mock.ANY}})
+        self.assertDictEqual(
+            response_json['rnaSeqData'], {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
 
         mock_get_variant.side_effect = InvalidSearchException('Variant not found')
