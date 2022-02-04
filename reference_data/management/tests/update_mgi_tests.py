@@ -6,7 +6,7 @@ from django.core.management.base import CommandError
 
 
 class UpdateMgiTest(ReferenceDataCommandTestCase):
-    URL = 'http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt'
+    URL = 'https://storage.googleapis.com/seqr-reference-data/mgi/HMD_HumanPhenotype.rpt.txt'
     DATA = [
         'A1BG	  1	11167	  MGI:2152878		\n',
         'A1CF	  29974	16363	  MGI:1917115	  MP:0005367 MP:0005370 MP:0005385 MP:0010768 MP:0005369 MP:0005376 MP:0005384 MP:0005378\n',

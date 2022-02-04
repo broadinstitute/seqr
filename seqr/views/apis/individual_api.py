@@ -774,7 +774,7 @@ def get_individual_rna_seq_data(request, individual_guid):
     genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
 
     return create_json_response({
-        'rnaSeqData': {individual_guid: rna_seq_data},
+        'rnaSeqData': {individual_guid: {'outliers': rna_seq_data}},
         'genesById': genes_to_show,
     })
 

@@ -4,7 +4,7 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions
     parse_mme_gene_variants, get_mme_metrics
 from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.saved_variant_api import add_locus_lists
-from seqr.models import Family, VariantTagType, SavedVariant
+from seqr.models import Family, VariantTagType, SavedVariant, RnaSeqTpm
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
@@ -104,3 +104,11 @@ def saved_variants_page(request, tag):
         response_json, families, project_guid, request.user, is_analyst, has_case_review_perm=False, include_igv=False)
 
     return create_json_response(response_json)
+
+@login_and_policies_required
+def rna_seq_expression(request, gene, tissues):
+    response = {}
+    for tissue in tissues.split(','):
+        response[tissue] = list(RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene).values_list('tpm', flat=True))
+
+    return create_json_response(response)
