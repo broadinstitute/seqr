@@ -2,7 +2,7 @@
 
 ## dev
 
-## 1/27/22
+## 2/4/22
 * Show RNA-seq expression data (REQUIRES DB MIGRATION)
 * Allow deletion of analysed families (REQUIRES DB MIGRATION)
 * Allow bulk updating assigned analysts
