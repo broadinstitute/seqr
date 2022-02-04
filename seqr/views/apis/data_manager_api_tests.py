@@ -52,6 +52,8 @@ EXPECTED_DISK_ALLOCATION = [{
      'diskPercent': None
      }]
 
+EXPECTED_NODE_STATS = [{'name': 'no-disk-node', 'heapPercent': '83'}]
+
 ES_CAT_INDICES = [{
     "index": "test_index",
     "docs.count": "122674997",
@@ -285,7 +287,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'indices', 'errors', 'diskStats', 'elasticsearchHost'})
+        self.assertSetEqual(set(response_json.keys()), {'indices', 'errors', 'diskStats', 'nodeStats'})
 
         self.assertEqual(len(response_json['indices']), 6)
         self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
@@ -295,6 +297,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(response_json['errors'], EXPECTED_ERRORS)
 
         self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
+        self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
 
     @urllib3_responses.activate
     def test_delete_index(self):
