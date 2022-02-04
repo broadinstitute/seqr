@@ -142,7 +142,7 @@ gnomadLink.propTypes = {
 }
 
 const POPULATIONS = [
-  { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'SC' },
+  { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC' },
   { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' },
   { field: 'g1k', fieldTitle: '1kg WGS' },
   {
