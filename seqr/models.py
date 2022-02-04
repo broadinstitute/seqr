@@ -347,7 +347,7 @@ class Family(ModelWithGUID):
 
 # TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/broadinstitute/seqr-private/issues/449)
 class FamilyAnalysedBy(ModelWithGUID):
-    family = models.ForeignKey(Family, on_delete=models.PROTECT)
+    family = models.ForeignKey(Family, on_delete=models.CASCADE)
 
     def __unicode__(self):
         return '{}_{}'.format(self.family.guid, self.created_by)
@@ -596,10 +596,19 @@ class Sample(ModelWithGUID):
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
+    TISSUE_TYPE_CHOICES = (
+        ('WB', 'Whole Blood'),
+        ('F', 'Fibroblast'),
+        ('M', 'Muscle'),
+        ('L', 'Lymphocyte'),
+    )
+
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
     dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
+
+    tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES, null=True, blank=True)
 
     # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
     sample_id = models.TextField(db_index=True)
@@ -961,15 +970,10 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
-
-class RnaSeqOutlier(models.Model):
-    SIGNIFICANCE_THRESHOLD = 0.05
+class DeletableSampleMetadataModel(models.Model):
 
     sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
     gene_id = models.CharField(max_length=20)  # ensembl ID
-    p_value = models.FloatField()
-    p_adjust = models.FloatField()
-    z_score = models.FloatField()
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
@@ -983,6 +987,26 @@ class RnaSeqOutlier(models.Model):
         return "%s:%s" % (self.sample.sample_id, self.gene_id)
 
     class Meta:
+        abstract = True
+
+
+class RnaSeqOutlier(DeletableSampleMetadataModel):
+    SIGNIFICANCE_THRESHOLD = 0.05
+
+    p_value = models.FloatField()
+    p_adjust = models.FloatField()
+    z_score = models.FloatField()
+
+    class Meta:
         unique_together = ('sample', 'gene_id')
 
         json_fields = ['gene_id', 'p_value', 'p_adjust', 'z_score']
+
+
+class RnaSeqTpm(DeletableSampleMetadataModel):
+    tpm = models.FloatField()
+
+    class Meta:
+        unique_together = ('sample', 'gene_id')
+
+        json_fields = ['gene_id', 'tpm']

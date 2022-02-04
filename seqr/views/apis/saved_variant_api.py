@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusList, LocusListInterval, LocusListGene, Family, GeneNote, RnaSeqOutlier
+    LocusList, LocusListInterval, LocusListGene, Family, GeneNote, RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -388,13 +388,24 @@ def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analys
 
 
 def get_rna_seq_outliers(gene_ids, **sample_filter):
+    data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'tpms': {}})
+
     outlier_data = get_json_for_rna_seq_outliers(
         RnaSeqOutlier.objects.filter(gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, **sample_filter),
         nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
     )
-    data_by_individual_gene = defaultdict(dict)
     for data in outlier_data:
-        data_by_individual_gene[data.pop('individualGuid')][data['geneId']] = data
+        data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
+
+    tpm_data = _get_json_for_models(
+        RnaSeqTpm.objects.filter(gene_id__in=gene_ids, **sample_filter),
+        nested_fields=[
+            {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
+            {'fields': ('sample', 'tissue_type')},
+        ]
+    )
+    for data in tpm_data:
+        data_by_individual_gene[data.pop('individualGuid')]['tpms'][data['geneId']] = data
 
     return data_by_individual_gene
 

@@ -12,6 +12,7 @@ from seqr.views.apis.family_api import update_family_pedigree_image, update_fami
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
+from seqr.models import FamilyAnalysedBy
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -55,7 +56,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
@@ -200,6 +201,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID])
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID2])
+        self.assertEqual(FamilyAnalysedBy.objects.count(), 0)
 
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'families': None}))

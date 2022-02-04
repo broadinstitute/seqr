@@ -40,6 +40,11 @@ def family_page_data(request, family_guid):
     add_families_context(response, [family], project.guid, request.user, is_analyst, has_case_review_perm)
     response['familiesByGuid'][family_guid]['detailsLoaded'] = True
 
+    outlier_samples = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqoutlier=None)
+    for sample in outlier_samples:
+        individual_guid = response['samplesByGuid'][sample.guid]['individualGuid']
+        response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
+
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
     for individual in response['individualsByGuid'].values():

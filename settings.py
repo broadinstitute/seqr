@@ -69,6 +69,7 @@ CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+SECURE_BROWSER_XSS_FILTER = True
 
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
