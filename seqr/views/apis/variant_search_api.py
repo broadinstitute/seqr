@@ -73,18 +73,18 @@ def query_variants_handler(request, search_hash):
             family_guids.update(variant['familyGuids'])
         result_families = results_model.families.filter(guid__in=family_guids)
 
-    if all_project_results_loaded:
-        # For all project search only save the relevant families
-        results_model.families.set(result_families)
+        if all_project_results_loaded:
+            # For all project search only save the relevant families
+            results_model.families.set(result_families)
 
-        projects = Project.objects.filter(family__in=result_families).distinct()
-        if projects:
-            load_project_context = True
+            projects = Project.objects.filter(family__in=result_families).distinct()
+            if projects:
+                load_project_context = True
 
     search_context = _get_search_context(results_model)
 
     if load_project_context:
-        # TODO share code with saved variant api?
+        # TODO share code with saved variant api, use for query_single_variant
         response_context['projectsByGuid'] = {p['projectGuid']: {} for p in search_context['projectFamilies']}
         add_project_tag_types(response_context['projectsByGuid'])
 
