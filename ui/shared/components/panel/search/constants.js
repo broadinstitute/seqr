@@ -341,20 +341,21 @@ export const SNP_FREQUENCIES = [
   },
 ]
 
+export const SV_CALLSET_CRITERIA_MESSAGE = 'Only an SV that is estimated to be the same SV (type and breakpoints) among the jointly genotyped samples that were part of SV calling for this project will be counted as an allele. CNVs called on exomes have unknown breakpoints so similar overlapping CNVs may be counted as an allele.'
 export const GNOMAD_SV_CRITERIA_MESSAGE = 'The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp'
 export const SV_FREQUENCIES = [
   {
     name: 'gnomad_svs',
     label: 'gnomAD genome SVs',
     homHemi: false,
-    labelHelp: 'Filter by locus frequency (AF) among gnomAD SVs. The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp',
+    labelHelp: `Filter by locus frequency (AF) among gnomAD SVs. ${GNOMAD_SV_CRITERIA_MESSAGE}`,
   },
   {
     name: SV_CALLSET_FREQUENCY,
     label: 'SV Callset',
     homHemi: false,
-    labelHelp: `Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project. ${GNOMAD_SV_CRITERIA_MESSAGE}`,
-  },
+    labelHelp: `Filter by allele count (AC) among the jointly genotyped samples that were part of Structural Variant (SV) calling for this project.  ${SV_CALLSET_CRITERIA_MESSAGE}`,
+  }SV_CALLSET_CRITERIA_MESSAGE
 ]
 
 export const FREQUENCIES = [...SNP_FREQUENCIES]
