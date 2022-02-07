@@ -12,3 +12,10 @@ export const toCamelcase = s => (s || '').split(' ').map(
 ).join('')
 
 export const stripMarkdown = s => removeMd((s || '').replace(/\n/g, ' '))
+
+export const toUniqueCsvString = (...csvStrs) => {
+  const concated = ''.concat(csvStrs)
+  const splitted = concated.split(',').filter(s => s).map(s => s.trim())
+
+  return [...new Set(splitted)].join(',')
+}

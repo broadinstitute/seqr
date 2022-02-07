@@ -24,9 +24,6 @@ if [ -e "/.config/service-account-key.json" ]; then
     cp /.config/boto /root/.boto
 fi
 
-# link to persistent disk dir with static files
-mkdir -p /seqr_static_files/generated_files
-
 # launch django dev server in background
 cd /seqr
 
@@ -63,8 +60,7 @@ fi
 if [ "$RUN_CRON_JOBS" ]; then
     # set up cron jobs
     echo 'SHELL=/bin/bash
-0 0 * * 0 /usr/local/bin/python /seqr/manage.py run_settings_backup --bucket $DATABASE_BACKUP_BUCKET --deployment-type $DEPLOYMENT_TYPE >> /proc/1/fd/1 2>&1
-0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_omim --omim-key $OMIM_KEY >> /proc/1/fd/1 2>&1
+0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_omim --omim-key=$OMIM_KEY >> /proc/1/fd/1 2>&1
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_human_phenotype_ontology >> /proc/1/fd/1 2>&1
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py import_all_panels https://panelapp.agha.umccr.org/api/v1 --label=AU >> /proc/1/fd/1 2>&1
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py import_all_panels https://panelapp.genomicsengland.co.uk/api/v1 --label=UK >> /proc/1/fd/1 2>&1

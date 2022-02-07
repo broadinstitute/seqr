@@ -2,7 +2,22 @@
 
 ## dev
 
-## 1/7/21
+## 2/4/22
+* Show RNA-seq expression data (REQUIRES DB MIGRATION)
+* Allow deletion of analysed families (REQUIRES DB MIGRATION)
+* Allow bulk updating assigned analysts
+
+## 1/27/22
+* Separate structural annotation search for gCNV and genome SVs
+
+## 1/26/22
+* Improved usage for docker-compose pipeline runner
+* Add support for serving the django media root out of a google cloud storage bucket
+
+## 1/21/22
+* Support setting explicit order for saved search display (REQUIRES DB MIGRATION)
+
+## 1/7/22
 * Update variant layout
 * Project page performance optimization
 

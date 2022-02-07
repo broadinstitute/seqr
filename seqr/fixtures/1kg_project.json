@@ -383,6 +383,17 @@
         "success_story_types": ["A", "D"]
     }
 },
+    {
+    "model": "seqr.familyanalysedby",
+    "pk": 1,
+    "fields": {
+        "guid": "FAB000001_1",
+        "created_date": "2021-07-22T19:27:08.563Z",
+        "created_by": 12,
+        "last_modified_date": null,
+        "family": 1
+    }
+},
 {
     "model": "seqr.familynote",
     "pk": 1,
@@ -1199,6 +1210,7 @@
         "sample_id": "NA19675_D2",
         "is_active": true,
         "elasticsearch_index":null,
+        "tissue_type": "M",
         "data_source": "muscle_samples.tsv.gz",
         "loaded_date": "2017-02-05T06:42:55.397Z"
     }
@@ -1234,6 +1246,15 @@
         "z_score": 7.08,
         "p_value": 0.000000000588,
         "p_adjust": 0.00000000139
+    }
+},
+{
+    "model": "seqr.rnaseqtpm",
+    "pk": 3,
+    "fields": {
+        "sample": 150,
+        "gene_id": "ENSG00000135953",
+        "tpm": 8.38
     }
 },
 {

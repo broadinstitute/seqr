@@ -111,11 +111,13 @@ const createSavedSearchesSelector = createSelectorCreator(
 export const getSavedSearchOptions = createSavedSearchesSelector(
   getSavedSearches,
   (savedSearches) => {
-    const savedSeachOptions = savedSearches.map(({ name, savedSearchGuid, createdById }) => (
-      { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
-    ))
+    const savedSeachOptions = savedSearches.sort(compareObjects('name')).sort(compareObjects('order')).map(
+      ({ name, savedSearchGuid, createdById }) => (
+        { text: name, value: savedSearchGuid, category: createdById ? 'My Searches' : 'Default Searches' }
+      ),
+    )
     savedSeachOptions.push({ text: 'None', value: null, category: 'Default Searches', search: {} })
-    return savedSeachOptions.sort(compareObjects('text')).sort(compareObjects('category'))
+    return savedSeachOptions.sort(compareObjects('category'))
   },
 )
 

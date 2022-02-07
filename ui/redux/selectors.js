@@ -157,15 +157,23 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
   }, {}),
 )
 
-export const getSignificantRnaSeqDataByFamilyGene = createSelector(
+export const getRnaSeqDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
   (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
     (acc, [individualGuid, rnaSeqData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData).reduce((acc2, [geneId, data]) => (data.isSignificant ?
-        { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
-      ), acc[familyGuid] || {})
+      acc[familyGuid] = {
+        significantOutliers: Object.entries(rnaSeqData.outliers || {}).reduce(
+          (acc2, [geneId, data]) => (data.isSignificant ?
+            { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
+          ), acc[familyGuid]?.significantOutliers || {},
+        ),
+        tpms: Object.entries(rnaSeqData.tpms || {}).reduce(
+          (acc2, [geneId, data]) => ({ ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } }),
+          acc[familyGuid]?.tpms || {},
+        ),
+      }
       return acc
     }, {},
   ),
@@ -271,6 +279,7 @@ export const getParsedLocusList = createSelector(
       locusList.items.sort(compareObjects('display'))
       locusList.rawItems = locusList.items.map(({ display }) => display).join(', ')
     }
+
     return locusList
   },
 )

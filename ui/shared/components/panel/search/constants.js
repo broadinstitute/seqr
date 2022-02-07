@@ -19,7 +19,10 @@ import {
   UNAFFECTED,
   PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
+  VEP_GROUP_SV_NEW,
 } from 'shared/utils/constants'
+
+import { LocusListItemsFilter } from './LocusListItemsFilter'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
@@ -268,7 +271,7 @@ export const ALL_ANNOTATION_FILTER = {
   text: 'All',
   vepGroups: ALL_IMPACT_GROUPS,
 }
-export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]
+export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV, VEP_GROUP_SV_NEW]
 export const ANNOTATION_FILTER_OPTIONS = [
   ALL_ANNOTATION_FILTER,
   {
@@ -338,6 +341,7 @@ export const SNP_FREQUENCIES = [
   },
 ]
 
+export const GNOMAD_SV_CRITERIA_MESSAGE = 'The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp'
 export const SV_FREQUENCIES = [
   {
     name: 'gnomad_svs',
@@ -349,7 +353,7 @@ export const SV_FREQUENCIES = [
     name: SV_CALLSET_FREQUENCY,
     label: 'SV Callset',
     homHemi: false,
-    labelHelp: 'Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project.',
+    labelHelp: `Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project. ${GNOMAD_SV_CRITERIA_MESSAGE}`,
   },
 ]
 
@@ -361,8 +365,7 @@ export const LOCATION_FIELDS = [
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
-    component: BaseSemanticInput,
-    inputType: 'TextArea',
+    component: LocusListItemsFilter,
     rows: 8,
     width: 7,
   },

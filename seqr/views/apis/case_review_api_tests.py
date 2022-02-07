@@ -40,7 +40,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         url = reverse(save_internal_case_review_notes, args=[NO_CASE_REVIEW_FAMILY_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     def test_save_internal_case_review_summary(self):
         url = reverse(save_internal_case_review_summary, args=[FAMILY_GUID])
@@ -62,7 +62,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         url = reverse(save_internal_case_review_summary, args=[NO_CASE_REVIEW_FAMILY_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_case_review_status(self):
@@ -82,7 +82,7 @@ class CaseReviewAPITest(AuthenticationTestCase):
         url = reverse(update_case_review_status, args=[NO_CASE_REVIEW_INDIVIDUAL_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({'caseReviewStatus': 'A'}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     def test_update_case_review_discussion(self):
         url = reverse(update_case_review_discussion, args=[INDIVIDUAL_GUID])
@@ -99,4 +99,4 @@ class CaseReviewAPITest(AuthenticationTestCase):
         url = reverse(update_case_review_discussion, args=[NO_CASE_REVIEW_INDIVIDUAL_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps({'caseReviewDiscussion': 'A Note'}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User cannot edit case review for this project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')

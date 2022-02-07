@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Table, Header, Popup } from 'semantic-ui-react'
+import { Table, Header, Popup, Loader } from 'semantic-ui-react'
 
 import { getIndividualsByGuid } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
@@ -20,7 +20,13 @@ const CUSTOM_FILTERS = [
 ]
 
 const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, individualsByGuid }) => {
-  const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
+  const individuals = (family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).filter(
+    individual => individual,
+  )
+
+  if (!family.individualGuids || family.individualGuids.length !== individuals.length) {
+    return <Loader />
+  }
 
   const parentGenotypes = {}
   if (value.father) {

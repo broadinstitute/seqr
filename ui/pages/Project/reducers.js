@@ -154,7 +154,8 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
     loadFamilyContext: !(expectedFamilyGuids || []).length || expectedFamilyGuids.some(
       familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
     ),
-    loadProjectContext: !state.projectsByGuid[projectGuid].variantTagTypes,
+    loadProjectTagTypes: !state.projectsByGuid[projectGuid].variantTagTypes,
+    includeLocusLists: !state.projectsByGuid[projectGuid].locusListGuids,
   }
   if (familyGuids) {
     params.families = familyGuids.join(',')
@@ -316,7 +317,7 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   const data = getState().rnaSeqDataByIndividual[individualGuid]
   // If variants were loaded for the individual, the significant gene data will be loaded but not all the needed data
-  if (!data || Object.values(data).every(({ isSignificant }) => isSignificant)) {
+  if (!data?.outliers || Object.values(data.outliers).every(({ isSignificant }) => isSignificant)) {
     dispatch({ type: REQUEST_RNA_SEQ_DATA })
     new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
       (responseJson) => {

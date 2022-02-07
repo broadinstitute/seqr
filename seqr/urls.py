@@ -115,7 +115,7 @@ from seqr.views.apis.report_api import \
     get_cmg_projects, \
     sample_metadata_export, \
     seqr_stats
-from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, rna_seq_expression
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -292,6 +292,8 @@ api_endpoints = {
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
 
+    'rna_seq_expression/gene/(?P<gene>[^/]+)/tissues/(?P<tissues>[^/]+)': rna_seq_expression,
+
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
     'matchmaker/v1/match': external_api.mme_match_proxy,
@@ -335,10 +337,17 @@ urlpatterns += [
 urlpatterns += [
     url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
     url(r'^admin/', admin.site.urls),
-    url(r'^media/(?P<path>.*)$', django.views.static.serve, {
-        'document_root': MEDIA_ROOT,
-    }),
 ]
+
+# The /media urlpattern is not needed if we are storing static media in a GCS bucket,
+# so this logic disables it in that case. If we want to serve media from a local filepath
+# instead, set MEDIA_ROOT in settings.py to that local path, and then this urlpattern will be enabled.
+if MEDIA_ROOT:
+    urlpatterns += [
+        url(r'^media/(?P<path>.*)$', django.views.static.serve, {
+            'document_root': MEDIA_ROOT,
+        }),
+    ]
 
 urlpatterns += [
     url('', include('social_django.urls')),

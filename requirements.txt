@@ -1,9 +1,10 @@
-Django==3.2.11                   # core server-side framework
+Django==3.2.12                   # core server-side framework
 django-anymail==8.2              # for sending emails using cloud-based mail service providers
 django-csp==3.7                  # for setting CSP headers
 django-guardian==2.3.0           # object-level permissions for database records. Behind a major version due to missing Python 2 support
 django-hijack==2.1.10            # allows admins to login as other user
 django-cors-headers==3.5.0       # allows CORS requests for client-side development
+django-storages[google]==1.11.1  # alternative GCS storage backend for the django media_root
 social-auth-app-django==4.0.0    # the package for Django to authenticate users with social medieas
 social-auth-core==3.3.3          # the Python social authentication package. Required by social-auth-app-django
 

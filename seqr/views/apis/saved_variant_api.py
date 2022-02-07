@@ -4,7 +4,7 @@ from collections import defaultdict
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusList, LocusListInterval, LocusListGene, Family, GeneNote, RnaSeqOutlier
+    LocusList, LocusListInterval, LocusListGene, Family, GeneNote, RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -21,8 +21,9 @@ from seqr.views.utils.variant_utils import update_project_saved_variant_json, re
 
 logger = logging.getLogger(__name__)
 
-LOAD_PROJECT_CONTEXT_PARAM = 'loadProjectContext'
+LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
+INCLUDE_LOCUS_LISTS_PARAM = 'includeLocusLists'
 
 @login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
@@ -51,9 +52,9 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     variants = list(response['savedVariantsByGuid'].values())
     genes = saved_variant_genes(variants)
-    load_project_context = request.GET.get(LOAD_PROJECT_CONTEXT_PARAM) == 'true'
+    add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
     response['locusListsByGuid'] = add_locus_lists(
-        [project], genes, add_list_detail=load_project_context, user=request.user, is_analyst=is_analyst)
+        [project], genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
 
     sample_filter = {'sample__individual__family__guid__in': family_guids} if family_guids else {'sample__individual__family__project': project}
     response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), **sample_filter)
@@ -62,7 +63,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
 
-    if load_project_context:
+    if request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
         response['projectsByGuid'] = {project_guid: {}}
         add_project_tag_types(response['projectsByGuid'])
 
@@ -387,13 +388,24 @@ def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analys
 
 
 def get_rna_seq_outliers(gene_ids, **sample_filter):
+    data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'tpms': {}})
+
     outlier_data = get_json_for_rna_seq_outliers(
         RnaSeqOutlier.objects.filter(gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, **sample_filter),
         nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
     )
-    data_by_individual_gene = defaultdict(dict)
     for data in outlier_data:
-        data_by_individual_gene[data.pop('individualGuid')][data['geneId']] = data
+        data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
+
+    tpm_data = _get_json_for_models(
+        RnaSeqTpm.objects.filter(gene_id__in=gene_ids, **sample_filter),
+        nested_fields=[
+            {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
+            {'fields': ('sample', 'tissue_type')},
+        ]
+    )
+    for data in tpm_data:
+        data_by_individual_gene[data.pop('individualGuid')]['tpms'][data['geneId']] = data
 
     return data_by_individual_gene
 

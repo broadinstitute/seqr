@@ -162,13 +162,20 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': {
-            'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
-            'isSignificant': True,
-        }}})
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {
+            'outliers': {
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+                    'isSignificant': True,
+            }},
+            'tpms': {
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'tpm': 8.38, 'sampleTissueType': 'M',
+            }},
+        }})
 
-        # include project context info
-        response = self.client.get('{}?loadProjectContext=true'.format(url))
+        # include project tag types
+        response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         response_keys = {'projectsByGuid'}
@@ -178,6 +185,13 @@ class SavedVariantAPITest(object):
         project = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
         self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
+
+        # include locus list details
+        response = self.client.get('{}?includeLocusLists=true'.format(url))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         locus_list_fields.update(LOCUS_LIST_FIELDS)
         self.assertEqual(len(response_json['locusListsByGuid']), 2)
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
@@ -894,7 +908,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
-        assert_no_list_ws_has_al(self, 11)
+        assert_no_list_ws_has_al(self, 12)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()

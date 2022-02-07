@@ -183,7 +183,8 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(
             set(intervals[0].keys()), {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000268903': mock.ANY}})
+        self.assertDictEqual(
+            response_json['rnaSeqData'], {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}})
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
@@ -198,7 +199,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
         project = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
-        
+
         # include family context info
         response = self.client.get('{}?loadFamilyContext=true'.format(url))
         self.assertEqual(response.status_code, 200)
@@ -428,6 +429,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json), response_keys)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertTrue(response_json['projectsByGuid'][PROJECT_GUID]['searchContextLoaded'])
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
@@ -520,7 +522,8 @@ class VariantSearchAPITest(object):
         self.assertListEqual(response_json['searchedVariants'], VARIANTS[:1])
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000268903': mock.ANY}})
+        self.assertDictEqual(
+            response_json['rnaSeqData'], {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
 
         mock_get_variant.side_effect = InvalidSearchException('Variant not found')
@@ -557,7 +560,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(saved_searches), 1)
         search_guid = next(iter(saved_searches))
         self.assertDictEqual(saved_searches[search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 13,
+            'savedSearchGuid': search_guid, 'name': 'Test Search', 'search': SEARCH, 'createdById': 13, 'order': None,
         })
 
         # Test no errors if duplicate searches get created
@@ -589,7 +592,7 @@ class VariantSearchAPITest(object):
         response = self.client.post(update_saved_search_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['savedSearchesByGuid'][search_guid], {
-            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH, 'createdById': 13,
+            'savedSearchGuid': search_guid, 'name': 'Updated Test Search', 'search': SEARCH, 'createdById': 13, 'order': None,
         })
 
         delete_saved_search_url = reverse(delete_saved_search_handler, args=[search_guid])
