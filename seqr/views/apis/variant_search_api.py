@@ -20,7 +20,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, get_json_for_discovery_tags
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, has_case_review_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities, add_project_tag_types, add_families_context
 from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
 from settings import DEMO_PROJECT_CATEGORY
@@ -362,10 +362,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
         check_project_permissions(project, user)
 
-    # TODO searchContextLoaded
     # response = get_projects_child_entities(projects, user)
-    # for project in response['projectsByGuid'].values():
-    #     project['searchContextLoaded'] = True
 
     # TODO use shared get_projects_child_entities
     from django.contrib.postgres.aggregates import ArrayAgg

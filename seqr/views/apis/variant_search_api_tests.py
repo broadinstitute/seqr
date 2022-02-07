@@ -429,7 +429,6 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json), response_keys)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
-        self.assertTrue(response_json['projectsByGuid'][PROJECT_GUID]['searchContextLoaded'])
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])

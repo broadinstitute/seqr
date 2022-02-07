@@ -218,7 +218,7 @@ export const loadSearchedVariants = (
     )
     apiQueryParams.loadFamilyContext = search.projectFamilies.some(
       ({ familyGuids }) => !familyGuids || familyGuids.some(
-        familyGuid => !state.familiesByGuid[familyGuid]?. detailsLoaded,
+        familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
       ),
     )
   }

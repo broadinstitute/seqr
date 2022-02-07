@@ -30,7 +30,7 @@ export const loadProjectFamiliesContext = (
   }
 
   const contextParams = {}
-  if (projectGuid && !(state.projectsByGuid[projectGuid] && state.projectsByGuid[projectGuid].searchContextLoaded)) {
+  if (projectGuid && !(state.projectsByGuid[projectGuid] && state.projectsByGuid[projectGuid].locusListGuids && state.projectsByGuid[projectGuid].familiesLoaded)) {
     contextParams.projectGuid = projectGuid
   } else if (familyGuids && familyGuids.length) {
     const [familyGuid] = familyGuids
