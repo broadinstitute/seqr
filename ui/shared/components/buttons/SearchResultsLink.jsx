@@ -33,7 +33,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
       },
     }
     if (ownProps.svType) {
-      search.annotations = { [VEP_GROUP_SV]: [ownProps.svType] }
+      search.annotations = { [VEP_GROUP_SV]: [ownProps.svType, `gCNV_${ownProps.svType}`] }
     }
     const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
     const projectFamilies = familyGuids && [{ familyGuids }]
