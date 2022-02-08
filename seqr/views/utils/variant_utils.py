@@ -71,12 +71,12 @@ def reset_cached_search_results(project, reset_index_metadata=False):
     except Exception as e:
         logger.error("Unable to reset cached search results: {}".format(e))
 
-# TODO private?
+
 def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
     return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
-# TODO private?
-def saved_variant_genes(variants):
+
+def _saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants:
         if isinstance(variant, list):
@@ -90,8 +90,8 @@ def saved_variant_genes(variants):
             gene['locusListGuids'] = []
     return genes
 
-# TODO private?
-def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
+
+def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
     locus_lists = LocusList.objects.filter(projects__in=projects)
 
     if add_list_detail:
@@ -116,19 +116,20 @@ def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analys
 
     return locus_lists_by_guid
 
-# TODO private? sample filter always the same?
-def get_rna_seq_outliers(gene_ids, **sample_filter):
+
+def _get_rna_seq_outliers(gene_ids, families):
     data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'tpms': {}})
 
     outlier_data = get_json_for_rna_seq_outliers(
-        RnaSeqOutlier.objects.filter(gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, **sample_filter),
+        RnaSeqOutlier.objects.filter(
+            gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, sample__individual__family__in=families),
         nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
     )
     for data in outlier_data:
         data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
 
     tpm_data = _get_json_for_models(
-        RnaSeqTpm.objects.filter(gene_id__in=gene_ids, **sample_filter),
+        RnaSeqTpm.objects.filter(gene_id__in=gene_ids, sample__individual__family__in=families),
         nested_fields=[
             {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
             {'fields': ('sample', 'tissue_type')},
@@ -171,12 +172,12 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
         response.update(discovery_response)
 
-    genes = saved_variant_genes(variants)
-    response['locusListsByGuid'] = add_locus_lists(
+    genes = _saved_variant_genes(variants)
+    response['locusListsByGuid'] = _add_locus_lists(
         projects, genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
 
     if include_rna_seq:
-        response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), sample__individual__family__in=families)
+        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), families)
 
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
