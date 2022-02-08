@@ -304,18 +304,6 @@ export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
 export const SNP_FREQUENCIES = [
   {
-    name: 'g1k',
-    label: '1000 Genomes',
-    homHemi: false,
-    labelHelp: 'Filter by allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or by allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS',
-  },
-  {
-    name: 'exac',
-    label: 'ExAC',
-    homHemi: true,
-    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) in ExAC, or by allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS',
-  },
-  {
     name: 'gnomad_genomes',
     label: 'gnomAD genomes',
     homHemi: true,
@@ -351,14 +339,13 @@ export const SV_FREQUENCIES = [
   },
   {
     name: SV_CALLSET_FREQUENCY,
-    label: 'SV Callset',
+    label: 'This SV Callset',
     homHemi: false,
     labelHelp: `Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project. ${GNOMAD_SV_CRITERIA_MESSAGE}`,
   },
 ]
 
-export const FREQUENCIES = [...SNP_FREQUENCIES]
-FREQUENCIES.splice(5, 0, ...SV_FREQUENCIES)
+export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
 export const LOCATION_FIELDS = [
   {
