@@ -339,7 +339,7 @@ export const SV_FREQUENCIES = [
   },
   {
     name: SV_CALLSET_FREQUENCY,
-    label: 'SV Callset',
+    label: 'This SV Callset',
     homHemi: false,
     labelHelp: `Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project. ${GNOMAD_SV_CRITERIA_MESSAGE}`,
   },
