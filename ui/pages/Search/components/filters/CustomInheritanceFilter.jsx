@@ -3,7 +3,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table, Header, Popup, Loader } from 'semantic-ui-react'
 
-import { getIndividualsByGuid } from 'redux/selectors'
+import { loadFamilyDetails } from 'redux/rootReducer'
+import { getIndividualsByGuid, getFamilyDetailsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
@@ -11,8 +12,6 @@ import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/Pedi
 import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
 import { getSingleInputFamily } from '../../selectors'
-import { loadFamilyDetails } from '../../../Project/reducers' // TODO move to shared
-import { getFamilyDetailsLoading } from '../../../Project/selectors' // TODO move to shared
 
 const CUSTOM_FILTERS = [
   { filterField: 'affected', options: AFFECTED_OPTIONS },

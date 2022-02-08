@@ -15,7 +15,7 @@ import {
 import modalReducers from './utils/modalReducer'
 import {
   RECEIVE_DATA, REQUEST_PROJECTS, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES, REQUEST_SAVED_VARIANTS,
-  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity,
+  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity, loadFamilyData,
 } from './utils/reducerUtils'
 
 /**
@@ -34,6 +34,7 @@ const RECEIVE_USER_OPTIONS = 'RECEIVE_USER_OPTIONS'
 const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
+const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
 
 // action creators
 
@@ -74,6 +75,10 @@ export const updateProject = (values) => {
   const actionSuffix = values.projectField ? `_project_${values.projectField}` : '_project'
   return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)
 }
+
+export const loadFamilyDetails = familyGuid => loadFamilyData(
+  familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
+)
 
 export const updateFamily = (values) => {
   const urlBase = `/api/family/${values.familyGuid}`
@@ -316,6 +321,7 @@ const rootReducer = combineReducers({
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
+  familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),

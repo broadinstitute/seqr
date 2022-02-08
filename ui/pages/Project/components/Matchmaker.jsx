@@ -5,8 +5,10 @@ import { Link } from 'react-router-dom'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
+import { loadFamilyDetails } from 'redux/rootReducer'
 import {
   getIndividualsByGuid, getSortedIndividualsByFamily, getUser, getMmeSubmissionsByGuid, getFamiliesByGuid,
+  getFamilyDetailsLoading,
 } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
@@ -27,7 +29,6 @@ import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
-  loadFamilyDetails,
 } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
@@ -37,7 +38,6 @@ import {
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
   getVariantUniqueId,
-  getFamilyDetailsLoading,
 } from '../selectors'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 

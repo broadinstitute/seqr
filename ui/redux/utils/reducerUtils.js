@@ -33,3 +33,26 @@ export const updateEntity = (
       throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
+
+export const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, dispatchOnReceive) => (
+  dispatch, getState,
+) => {
+  const { familiesByGuid } = getState()
+  const family = familiesByGuid[familyGuid]
+  if (!family || !family[detailField]) {
+    dispatch({ type: dispatchType, updates: { [familyGuid]: true } })
+    new HttpRequestHelper(`/api/family/${familyGuid}/${urlPath}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (dispatchOnReceive) {
+          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
+        }
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        if (dispatchOnReceive) {
+          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
+        }
+      }).get()
+  }
+}
