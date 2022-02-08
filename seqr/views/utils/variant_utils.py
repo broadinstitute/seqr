@@ -116,7 +116,7 @@ def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analys
 
     return locus_lists_by_guid
 
-# TODO private?
+# TODO private? sample filter always the same?
 def get_rna_seq_outliers(gene_ids, **sample_filter):
     data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'tpms': {}})
 
