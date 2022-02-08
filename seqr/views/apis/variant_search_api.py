@@ -21,7 +21,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities
-from seqr.views.utils.variant_utils import get_variant_key, add_variant_context
+from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 from settings import DEMO_PROJECT_CATEGORY
 
 
@@ -138,9 +138,22 @@ def _process_variants(variants, families, request):
     if not variants:
         return {'searchedVariants': variants}
 
-    response_json, _ = _get_saved_variants(variants, families)
-    add_variant_context(request, response_json, _flatten_variants(variants)) # TODO only flatten once
+    flat_variants = _flatten_variants(variants)
+    saved_variants, variants_by_id = _get_saved_variant_models(flat_variants, families)
+
+    response_json = get_variants_response(request, saved_variants, response_variants=flat_variants)
     response_json['searchedVariants'] = variants
+
+    for saved_variant in response_json['savedVariantsByGuid'].values():
+        family_guids = saved_variant['familyGuids']
+        searched_variant = variants_by_id.get(get_variant_key(**saved_variant))
+        if not searched_variant:
+            # This can occur when an hg38 family has a saved variant that did not successfully lift from hg37
+            continue
+        saved_variant.update(searched_variant)
+        #  For saved variants only use family it was saved for, not all families in search
+        saved_variant['familyGuids'] = family_guids
+        response_json['savedVariantsByGuid'][saved_variant['variantGuid']] = saved_variant
 
     return response_json
 
@@ -436,8 +449,7 @@ def _get_saved_searches(user):
     return {'savedSearchesByGuid': {search['savedSearchGuid']: search for search in saved_searches}}
 
 
-# TODO cleanup
-def _get_saved_variants(variants, families):
+def _get_saved_variant_models(variants, families):
     variants = _flatten_variants(variants)
 
     prefetch_related_objects(families, 'project')
@@ -457,7 +469,12 @@ def _get_saved_variants(variants, families):
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
 
-    saved_variants = SavedVariant.objects.filter(variant_q)
+    return SavedVariant.objects.filter(variant_q), variants_by_id
+
+
+# TODO cleanup
+def _get_saved_variants(variants, families):
+    saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
 
     json = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
 

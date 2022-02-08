@@ -13,7 +13,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
-    add_variant_context
+    get_variants_response
 
 
 logger = logging.getLogger(__name__)
@@ -37,11 +37,8 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         get_note_only = bool(request.GET.get('includeNoteVariants'))
         variant_query = variant_query.filter(varianttag__isnull=get_note_only).distinct()
 
-    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
-
-    variants = list(response['savedVariantsByGuid'].values())
     add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
-    add_variant_context(request, response, variants, add_locus_list_detail=add_locus_list_detail)
+    response = get_variants_response(request, variant_query, add_locus_list_detail=add_locus_list_detail)
 
     return create_json_response(response)
 

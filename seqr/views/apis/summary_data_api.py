@@ -6,7 +6,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
-from seqr.views.utils.variant_utils import add_variant_context
+from seqr.views.utils.variant_utils import get_variants_response
 from settings import ANALYST_PROJECT_CATEGORY
 
 MAX_SAVED_VARIANTS = 10000
@@ -80,12 +80,9 @@ def saved_variants_page(request, tag):
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'error': 'Select a gene to filter variants'}, status=400)
 
-    response_json = get_json_for_saved_variants_with_tags(saved_variant_models, add_details=True, include_missing_variants=True)
-
-    saved_variants = list(response_json['savedVariantsByGuid'].values())
-    add_variant_context(
-        request, response_json, saved_variants,
-        add_all_context=True, include_igv=False, add_locus_list_detail=True, include_rna_seq=False,
+    response_json = get_variants_response(
+        request, saved_variant_models, add_all_context=True, include_igv=False, add_locus_list_detail=True,
+        include_missing_variants=True, include_rna_seq=False,
     )
 
     return create_json_response(response_json)

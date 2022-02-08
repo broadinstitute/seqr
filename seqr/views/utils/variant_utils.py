@@ -8,7 +8,7 @@ from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    _get_json_for_models, get_json_for_rna_seq_outliers
+    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME
@@ -152,8 +152,11 @@ def _add_discovery_tags(variants, discovery_tags):
 LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
-def add_variant_context(request, response, variants, add_all_context=False, include_igv=True, add_locus_list_detail=False, include_rna_seq=True):
-    is_analyst = user_is_analyst(request.user)
+def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
+                          add_locus_list_detail=False, include_rna_seq=True, include_missing_variants=False):
+    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, include_missing_variants=include_missing_variants)
+
+    variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
 
     loaded_family_guids = set()
     for variant in variants:
@@ -163,6 +166,7 @@ def add_variant_context(request, response, variants, add_all_context=False, incl
     project = list(projects)[0] if len(projects) == 1 else None
 
     discovery_tags = None
+    is_analyst = user_is_analyst(request.user)
     if is_analyst:
         discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
         response.update(discovery_response)
@@ -188,3 +192,4 @@ def add_variant_context(request, response, variants, add_all_context=False, incl
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
+    return response
