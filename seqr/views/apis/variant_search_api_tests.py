@@ -308,7 +308,11 @@ class VariantSearchAPITest(object):
         def _get_variants(results_model, **kwargs):
             results_model.save()
             self.assertSetEqual(expected_searched_families, {f.guid for f in results_model.families.all()})
-            return deepcopy(VARIANTS), len(VARIANTS)
+            matched_variants = [
+                deepcopy(variant) for variant in VARIANTS
+                if any(family_guid in expected_searched_families for family_guid in variant['familyGuids'])
+            ]
+            return matched_variants, len(matched_variants)
 
         mock_get_variants.side_effect = _get_variants
 
@@ -318,12 +322,10 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
-            'locusListsByGuid': {}, 'rnaSeqData': {}, 'variantTagsByGuid': mock.ANY,
-            'variantNotesByGuid': mock.ANY, 'variantFunctionalDataByGuid': {}, 'genesById': mock.ANY,
-            'savedVariantsByGuid': mock.ANY, 'searchedVariants': VARIANTS, 'search': {
+            'searchedVariants': [], 'search': {
                 'search': SEARCH,
                 'projectFamilies': [],
-                'totalResults': 3,
+                'totalResults': 0,
         }})
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True, user=self.no_access_user)
