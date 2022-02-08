@@ -260,7 +260,19 @@ def export_variants_handler(request, search_hash):
     variants, _ = get_es_variants(results_model, page=1, load_all=True, user=request.user)
     variants = _flatten_variants(variants)
 
-    json_saved_variants, variants_to_saved_variants = _get_saved_variants(variants, families)
+    saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
+    json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
+
+    saved_variants_by_variant_family = {}
+    for saved_variant in json_saved_variants['savedVariantsByGuid'].values():
+        variant_key = get_variant_key(**saved_variant)
+        searched_variant = variants_by_id.get(variant_key)
+        if searched_variant:
+            # Handles lifted over variant matching
+            variant_key = get_variant_key(**searched_variant)
+        saved_variants_by_variant_family[variant_key] = {
+            family_guid: saved_variant['variantGuid'] for family_guid in saved_variant['familyGuids']
+        }
 
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
@@ -268,9 +280,10 @@ def export_variants_handler(request, search_hash):
     rows = []
     for variant in variants:
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
+        family_saved_variants = saved_variants_by_variant_family.get(get_variant_key(**variant), {})
         for i in range(max_families_per_variant):
             family_guid = variant['familyGuids'][i] if i < len(variant['familyGuids']) else ''
-            variant_guid = variants_to_saved_variants.get(variant['variantId'], {}).get(family_guid, '')
+            variant_guid = family_saved_variants.get(family_guid, '')
             family_tags = {
                 'family_id': family_ids_by_guid.get(family_guid),
                 'tags': [tag for tag in json_saved_variants['variantTagsByGuid'].values() if variant_guid in tag['variantGuids']],
@@ -450,8 +463,6 @@ def _get_saved_searches(user):
 
 
 def _get_saved_variant_models(variants, families):
-    variants = _flatten_variants(variants)
-
     prefetch_related_objects(families, 'project')
     hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
 
@@ -470,32 +481,6 @@ def _get_saved_variant_models(variants, families):
                 )] = variant
 
     return SavedVariant.objects.filter(variant_q), variants_by_id
-
-
-# TODO cleanup
-def _get_saved_variants(variants, families):
-    saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
-
-    json = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
-
-    variants_to_saved_variants = {}
-    for saved_variant in json['savedVariantsByGuid'].values():
-        family_guids = saved_variant['familyGuids']
-        searched_variant = variants_by_id.get(get_variant_key(**saved_variant))
-        if not searched_variant:
-            # This can occur when an hg38 family has a saved variant that did not successfully lift from hg37
-            continue
-        saved_variant.update(searched_variant)
-        #  For saved variants only use family it was saved for, not all families in search
-        saved_variant['familyGuids'] = family_guids
-        json['savedVariantsByGuid'][saved_variant['variantGuid']] = saved_variant
-        if searched_variant['variantId'] not in variants_to_saved_variants:
-            variants_to_saved_variants[searched_variant['variantId']] = {}
-        for family_guid in family_guids:
-            variants_to_saved_variants[searched_variant['variantId']][family_guid] = saved_variant['variantGuid']
-
-    return json, variants_to_saved_variants
-
 
 def _flatten_variants(variants):
     flattened_variants = []
