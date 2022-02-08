@@ -1,21 +1,19 @@
 import logging
 import json
-from collections import defaultdict
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusList, LocusListInterval, LocusListGene, Family, GeneNote, RnaSeqOutlier, RnaSeqTpm
+    Family, GeneNote
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
-    _get_json_for_models, get_json_for_discovery_tags, get_json_for_rna_seq_outliers, get_json_for_locus_lists
+    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    user_is_analyst, login_and_policies_required
+    login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
-    get_variant_key, saved_variant_genes, get_variant_context
+    add_variant_context
 
 
 logger = logging.getLogger(__name__)
@@ -41,26 +39,9 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
 
-    discovery_tags = None
-    is_analyst = user_is_analyst(request.user)
-    if is_analyst:
-        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
-        response.update(discovery_response)
-
     variants = list(response['savedVariantsByGuid'].values())
-    genes = saved_variant_genes(variants)
     add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
-    response['locusListsByGuid'] = add_locus_lists(
-        [project], genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
-
-    sample_filter = {'sample__individual__family__guid__in': family_guids} if family_guids else {'sample__individual__family__project': project}
-    response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), **sample_filter)
-
-    if discovery_tags:
-        _add_discovery_tags(variants, discovery_tags)
-    response['genesById'] = genes
-
-    get_variant_context(request, response, [project_guid], variants, is_analyst)
+    add_variant_context(request, response, variants, add_locus_list_detail=add_locus_list_detail)
 
     return create_json_response(response)
 
@@ -346,61 +327,3 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
     update_model_from_json(saved_variant, {'selected_main_transcript_id': transcript_id}, request.user)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
-
-
-def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
-    locus_lists = LocusList.objects.filter(projects__in=projects)
-
-    if add_list_detail:
-        locus_lists_by_guid = {
-            ll['locusListGuid']: dict(intervals=[], **ll)
-            for ll in get_json_for_locus_lists(locus_lists, user, is_analyst=is_analyst)
-        }
-    else:
-        locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
-    intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)
-    for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
-        locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
-
-    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list', 'palocuslistgene'):
-        gene_json = genes[locus_list_gene.gene_id]
-        locus_list_guid = locus_list_gene.locus_list.guid
-        gene_json['locusListGuids'].append(locus_list_guid)
-        if hasattr(locus_list_gene, 'palocuslistgene'):
-            if not gene_json.get('locusListConfidence'):
-                gene_json['locusListConfidence'] = {}
-            gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
-
-    return locus_lists_by_guid
-
-
-def get_rna_seq_outliers(gene_ids, **sample_filter):
-    data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'tpms': {}})
-
-    outlier_data = get_json_for_rna_seq_outliers(
-        RnaSeqOutlier.objects.filter(gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, **sample_filter),
-        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
-    )
-    for data in outlier_data:
-        data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
-
-    tpm_data = _get_json_for_models(
-        RnaSeqTpm.objects.filter(gene_id__in=gene_ids, **sample_filter),
-        nested_fields=[
-            {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
-            {'fields': ('sample', 'tissue_type')},
-        ]
-    )
-    for data in tpm_data:
-        data_by_individual_gene[data.pop('individualGuid')]['tpms'][data['geneId']] = data
-
-    return data_by_individual_gene
-
-
-def _add_discovery_tags(variants, discovery_tags):
-    for variant in variants:
-        tags = discovery_tags.get(get_variant_key(**variant))
-        if tags:
-            if not variant.get('discoveryTags'):
-                variant['discoveryTags'] = []
-            variant['discoveryTags'] += [tag for tag in tags if tag['savedVariant']['familyGuid'] not in variant['familyGuids']]

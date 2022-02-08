@@ -11,7 +11,6 @@ from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
-from seqr.views.apis.saved_variant_api import add_locus_lists, get_rna_seq_outliers
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.json_utils import create_json_response
@@ -22,7 +21,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities
-from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes
+from seqr.views.utils.variant_utils import get_variant_key, saved_variant_genes, add_locus_lists, get_rna_seq_outliers
 from settings import DEMO_PROJECT_CATEGORY
 
 

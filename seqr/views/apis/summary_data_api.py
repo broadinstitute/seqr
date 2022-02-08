@@ -1,16 +1,12 @@
-from django.db.models import prefetch_related_objects
-
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
     parse_mme_gene_variants, get_mme_metrics
 from matchmaker.models import MatchmakerSubmission
-from seqr.views.apis.saved_variant_api import add_locus_lists
 from seqr.models import Family, VariantTagType, SavedVariant, RnaSeqTpm
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
-from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
-from seqr.views.utils.variant_utils import saved_variant_genes, get_variant_context
+from seqr.views.utils.variant_utils import add_variant_context
 from settings import ANALYST_PROJECT_CATEGORY
 
 MAX_SAVED_VARIANTS = 10000
@@ -84,20 +80,12 @@ def saved_variants_page(request, tag):
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'error': 'Select a gene to filter variants'}, status=400)
 
-    prefetch_related_objects(saved_variant_models, 'family__project')
     response_json = get_json_for_saved_variants_with_tags(saved_variant_models, add_details=True, include_missing_variants=True)
 
-    project_models_by_guid = {variant.family.project.guid: variant.family.project for variant in saved_variant_models}
-    is_analyst = user_is_analyst(request.user)
-
     saved_variants = list(response_json['savedVariantsByGuid'].values())
-    response_json['genesById'] = saved_variant_genes(saved_variants)
-    response_json['locusListsByGuid'] = add_locus_lists(
-        list(project_models_by_guid.values()), response_json['genesById'], add_list_detail=True, user=request.user, is_analyst=is_analyst)
-
-    get_variant_context(
-        request, response_json, project_models_by_guid.keys(), saved_variants, is_analyst,
-        add_all_context=True, include_igv=False,
+    add_variant_context(
+        request, response_json, saved_variants,
+        add_all_context=True, include_igv=False, add_locus_list_detail=True, include_rna_seq=False,
     )
 
     return create_json_response(response_json)

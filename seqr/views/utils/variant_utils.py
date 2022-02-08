@@ -1,11 +1,15 @@
+from collections import defaultdict
 import logging
 import redis
 
-from seqr.models import SavedVariant, VariantSearchResults, Family
+from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
+    RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
-from seqr.views.utils.permissions_utils import has_case_review_permissions
+from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
+    _get_json_for_models, get_json_for_rna_seq_outliers
+from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME
 
@@ -67,11 +71,11 @@ def reset_cached_search_results(project, reset_index_metadata=False):
     except Exception as e:
         logger.error("Unable to reset cached search results: {}".format(e))
 
-
+# TODO private?
 def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
     return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
-
+# TODO private?
 def saved_variant_genes(variants):
     gene_ids = set()
     for variant in variants:
@@ -86,22 +90,99 @@ def saved_variant_genes(variants):
             gene['locusListGuids'] = []
     return genes
 
+# TODO private?
+def add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
+    locus_lists = LocusList.objects.filter(projects__in=projects)
+
+    if add_list_detail:
+        locus_lists_by_guid = {
+            ll['locusListGuid']: dict(intervals=[], **ll)
+            for ll in get_json_for_locus_lists(locus_lists, user, is_analyst=is_analyst)
+        }
+    else:
+        locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
+    intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)
+    for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
+        locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
+
+    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list', 'palocuslistgene'):
+        gene_json = genes[locus_list_gene.gene_id]
+        locus_list_guid = locus_list_gene.locus_list.guid
+        gene_json['locusListGuids'].append(locus_list_guid)
+        if hasattr(locus_list_gene, 'palocuslistgene'):
+            if not gene_json.get('locusListConfidence'):
+                gene_json['locusListConfidence'] = {}
+            gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
+
+    return locus_lists_by_guid
+
+# TODO private?
+def get_rna_seq_outliers(gene_ids, **sample_filter):
+    data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'tpms': {}})
+
+    outlier_data = get_json_for_rna_seq_outliers(
+        RnaSeqOutlier.objects.filter(gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, **sample_filter),
+        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
+    )
+    for data in outlier_data:
+        data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
+
+    tpm_data = _get_json_for_models(
+        RnaSeqTpm.objects.filter(gene_id__in=gene_ids, **sample_filter),
+        nested_fields=[
+            {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
+            {'fields': ('sample', 'tissue_type')},
+        ]
+    )
+    for data in tpm_data:
+        data_by_individual_gene[data.pop('individualGuid')]['tpms'][data['geneId']] = data
+
+    return data_by_individual_gene
+
+
+def _add_discovery_tags(variants, discovery_tags):
+    for variant in variants:
+        tags = discovery_tags.get(get_variant_key(**variant))
+        if tags:
+            if not variant.get('discoveryTags'):
+                variant['discoveryTags'] = []
+            variant['discoveryTags'] += [tag for tag in tags if tag['savedVariant']['familyGuid'] not in variant['familyGuids']]
+
+
 LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
-def get_variant_context(request, response, project_guids, variants, is_analyst, add_all_context=False, include_igv=True):
+def add_variant_context(request, response, variants, add_all_context=False, include_igv=True, add_locus_list_detail=False, include_rna_seq=True):
+    is_analyst = user_is_analyst(request.user)
+
+    loaded_family_guids = set()
+    for variant in variants:
+        loaded_family_guids.update(variant['familyGuids'])
+    families = Family.objects.filter(guid__in=loaded_family_guids).prefetch_related('project')
+    projects = {family.project for family in families}
+    project = list(projects)[0] if len(projects) == 1 else None
+
+    discovery_tags = None
+    if is_analyst:
+        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
+        response.update(discovery_response)
+
+    genes = saved_variant_genes(variants)
+    response['locusListsByGuid'] = add_locus_lists(
+        projects, genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
+
+    if include_rna_seq:
+        response['rnaSeqData'] = get_rna_seq_outliers(genes.keys(), sample__individual__family__in=families)
+
+    if discovery_tags:
+        _add_discovery_tags(variants, discovery_tags)
+    response['genesById'] = genes
+
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
-        response['projectsByGuid'] = {project_guid: {'projectGuid': project_guid} for project_guid in project_guids}
+        response['projectsByGuid'] = {project.guid: {'projectGuid': project.guid} for project in projects}
         add_project_tag_types(response['projectsByGuid'])
 
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
-        loaded_family_guids = set()
-        for variant in variants:
-            loaded_family_guids.update(variant['familyGuids'])
-        families = Family.objects.filter(guid__in=loaded_family_guids).prefetch_related('project')
-        projects = {family.project for family in families}
-        project = list(projects)[0] if len(projects) == 1 else None
-
         add_families_context(
             response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
