@@ -50,7 +50,6 @@ export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoadi
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
-export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getFamilyVariantSummaryLoading = state => state.familyVariantSummaryLoading.isLoading
 export const getIndivdualsLoading = state => state.individualsLoading.isLoading
 export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
