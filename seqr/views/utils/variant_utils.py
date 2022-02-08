@@ -1,10 +1,12 @@
 import logging
 import redis
 
-from seqr.models import SavedVariant, VariantSearchResults
+from seqr.models import SavedVariant, VariantSearchResults, Family
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
+from seqr.views.utils.permissions_utils import has_case_review_permissions
+from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME
 
 logger = logging.getLogger(__name__)
@@ -83,3 +85,25 @@ def saved_variant_genes(variants):
         if gene:
             gene['locusListGuids'] = []
     return genes
+
+LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
+LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
+
+def get_variant_request_project_context(request, response, project_guids, variants, is_analyst):
+    if request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
+        response['projectsByGuid'] = {project_guid: {} for project_guid in project_guids}
+        add_project_tag_types(response['projectsByGuid'])
+
+    if request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
+        loaded_family_guids = set()
+        for variant in variants:
+            loaded_family_guids.update(variant['familyGuids'])
+        families = Family.objects.filter(guid__in=loaded_family_guids).prefetch_related('project')
+        projects = {family.project for family in families}
+        project = list(projects)[0] if len(projects) == 1 else None
+
+        add_families_context(
+            response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
+            has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user),
+        )
+
