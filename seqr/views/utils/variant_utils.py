@@ -89,12 +89,12 @@ def saved_variant_genes(variants):
 LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
-def get_variant_request_project_context(request, response, project_guids, variants, is_analyst):
-    if request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
-        response['projectsByGuid'] = {project_guid: {} for project_guid in project_guids}
+def get_variant_request_project_context(request, response, project_guids, variants, is_analyst, add_all_context=False, include_igv=True):
+    if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
+        response['projectsByGuid'] = {project_guid: {'projectGuid': project_guid} for project_guid in project_guids}
         add_project_tag_types(response['projectsByGuid'])
 
-    if request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
+    if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
         loaded_family_guids = set()
         for variant in variants:
             loaded_family_guids.update(variant['familyGuids'])
@@ -104,6 +104,6 @@ def get_variant_request_project_context(request, response, project_guids, varian
 
         add_families_context(
             response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
-            has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user),
+            has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
