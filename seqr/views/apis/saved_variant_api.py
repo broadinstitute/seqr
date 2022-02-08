@@ -15,7 +15,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     user_is_analyst, login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
-    get_variant_key, saved_variant_genes, get_variant_request_project_context
+    get_variant_key, saved_variant_genes, get_variant_context
 
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
 
-    get_variant_request_project_context(request, response, [project_guid], variants, is_analyst)
+    get_variant_context(request, response, [project_guid], variants, is_analyst)
 
     return create_json_response(response)
 

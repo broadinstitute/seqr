@@ -89,7 +89,7 @@ def saved_variant_genes(variants):
 LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
-def get_variant_request_project_context(request, response, project_guids, variants, is_analyst, add_all_context=False, include_igv=True):
+def get_variant_context(request, response, project_guids, variants, is_analyst, add_all_context=False, include_igv=True):
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
         response['projectsByGuid'] = {project_guid: {'projectGuid': project_guid} for project_guid in project_guids}
         add_project_tag_types(response['projectsByGuid'])
