@@ -19,8 +19,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, has_case_review_permissions
-from seqr.views.utils.project_context_utils import get_projects_child_entities, add_project_tag_types, add_families_context
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
 from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 from settings import DEMO_PROJECT_CATEGORY
 
@@ -35,8 +34,6 @@ GENOTYPE_AC_LOOKUP = {
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
-LOAD_PROJECT_CONTEXT_PARAM = 'loadProjectContext'
-LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 @login_and_policies_required
 def query_variants_handler(request, search_hash):
@@ -61,41 +58,21 @@ def query_variants_handler(request, search_hash):
                                               skip_genotype_filter=is_all_project_search, user=request.user)
 
     response_context = {}
-    result_families = None
-    load_project_context = request.GET.get(LOAD_PROJECT_CONTEXT_PARAM) == 'true'
-    load_family_context = request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true'
-    all_project_results_loaded = is_all_project_search and len(variants) == total_results
-
-    if load_family_context or all_project_results_loaded:
+    add_all_context = False
+    if is_all_project_search and len(variants) == total_results:
+        # TODO unnecessary?
+        # For all project search only save the relevant families
         family_guids = set()
         for variant in variants:
             family_guids.update(variant['familyGuids'])
-        result_families = results_model.families.filter(guid__in=family_guids)
+        families = results_model.families.filter(guid__in=family_guids)
+        results_model.families.set(families)
 
-        if all_project_results_loaded:
-            # For all project search only save the relevant families
-            results_model.families.set(result_families)
+        projects = Project.objects.filter(family__in=families).distinct()
+        if projects:
+            add_all_context = True
 
-            projects = Project.objects.filter(family__in=result_families).distinct()
-            if projects:
-                load_project_context = True
-
-    search_context = _get_search_context(results_model)
-
-    if load_project_context:
-        # TODO share code with saved variant api, use for query_single_variant
-        response_context['projectsByGuid'] = {p['projectGuid']: {} for p in search_context['projectFamilies']}
-        add_project_tag_types(response_context['projectsByGuid'])
-
-    if result_families:
-        prefetch_related_objects(result_families, 'project')
-        projects = {family.project for family in result_families}
-        project = list(projects)[0] if len(projects) == 1 else None
-        project_guid = project.guid if project else None
-        add_families_context(
-            response_context, result_families, project_guid, request.user, user_is_analyst(request.user), bool(project) and has_case_review_permissions(project, request.user))
-
-    response = _process_variants(variants or [], results_model.families.all(), request)
+    response = _process_variants(variants or [], results_model.families.all(), request, add_all_context=add_all_context)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
     response.update(response_context)
@@ -159,15 +136,14 @@ def query_single_variant_handler(request, variant_id):
     return create_json_response(response)
 
 
-def _process_variants(variants, families, request):
+def _process_variants(variants, families, request, add_all_context=False):
     if not variants:
         return {'searchedVariants': variants}
 
     flat_variants = _flatten_variants(variants)
     saved_variants, variants_by_id = _get_saved_variant_models(flat_variants, families)
 
-    # TODO context
-    response_json = get_variants_response(request, saved_variants, response_variants=flat_variants)
+    response_json = get_variants_response(request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context)
     response_json['searchedVariants'] = variants
 
     for saved_variant in response_json['savedVariantsByGuid'].values():

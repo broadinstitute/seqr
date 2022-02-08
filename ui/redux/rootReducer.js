@@ -218,7 +218,7 @@ export const loadSearchedVariants = (
   const apiQueryParams = { ...urlQueryParams, loadFamilyContext: true, loadProjectContext: true }
   const search = state.searchesByHash[searchHash]
   if (search && search.projectFamilies && search.projectFamilies.length > 0) {
-    apiQueryParams.loadProjectContext = search.projectFamilies.some(
+    apiQueryParams.loadProjectTagTypes = search.projectFamilies.some(
       ({ projectGuid }) => !state.projectsByGuid[projectGuid]?.variantTagTypes,
     )
     apiQueryParams.loadFamilyContext = search.projectFamilies.some(

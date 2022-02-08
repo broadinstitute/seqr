@@ -191,14 +191,14 @@ class VariantSearchAPITest(object):
         mock_error_logger.assert_not_called()
 
         # include project context info
-        response = self.client.get('{}?loadProjectContext=true'.format(url))
+        response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         response_keys = {'projectsByGuid'}
         response_keys.update(SEARCH_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), response_keys)
         project = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
+        self.assertSetEqual(set(project.keys()), {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'})
 
         # include family context info
         response = self.client.get('{}?loadFamilyContext=true'.format(url))
@@ -373,7 +373,7 @@ class VariantSearchAPITest(object):
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         project = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes', 'projectGuid'})
 
         result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         self.assertSetEqual({'F000001_1', 'F000002_2'}, {f.guid for f in result_model.families.all()})
