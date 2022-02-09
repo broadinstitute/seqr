@@ -6,7 +6,7 @@ from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
-from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch, ProjectCategory
+from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch, ProjectCategory, Family
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
@@ -70,17 +70,19 @@ EXPECTED_SEARCH_RESPONSE = {
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}},
 }
 
-EXPECTED_CONTEXT_SEARCH_RESPONSE = {
+EXPECTED_CONTEXT_RESPONSE = {
     'projectsByGuid': {PROJECT_GUID: mock.ANY},
     'familiesByGuid': mock.ANY,
     'individualsByGuid': mock.ANY,
     'samplesByGuid': mock.ANY,
     'igvSamplesByGuid': mock.ANY,
     'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY},
+    'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY, 'LL00005_retina_proteome': mock.ANY},
     'familyNotesByGuid': mock.ANY,
 }
-EXPECTED_CONTEXT_SEARCH_RESPONSE.update(deepcopy(EXPECTED_SEARCH_RESPONSE))
-EXPECTED_CONTEXT_SEARCH_RESPONSE['locusListsByGuid']['LL00005_retina_proteome'] = mock.ANY
+
+EXPECTED_CONTEXT_SEARCH_RESPONSE = deepcopy(EXPECTED_SEARCH_RESPONSE)
+EXPECTED_CONTEXT_SEARCH_RESPONSE.update(EXPECTED_CONTEXT_RESPONSE)
 
 def _get_es_variants(results_model, **kwargs):
     results_model.save()
@@ -411,6 +413,10 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(
             {'F000011_11', 'F000012_12'}, set(response_json['search']['projectFamilies'][0]['familyGuids']))
 
+        mock_get_variants.assert_called_with(
+            VariantSearchResults.objects.get(search_hash=SEARCH_HASH), sort='xpos', page=1, num_results=100,
+            skip_genotype_filter=False, user=self.collaborator_user)
+
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
         self.check_collaborator_login(search_context_url, request_data={'familyGuid': 'F000001_1'})
@@ -536,7 +542,10 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
 
-        mock_get_variant.assert_called_with()
+        mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G', user=self.collaborator_user)
+        searched_families = mock_get_variant.call_args.args[0]
+        self.assertEqual(searched_families.count(), 1)
+        self.assertEqual(searched_families.first().guid, 'F000001_1')
 
         mock_get_variant.side_effect = InvalidSearchException('Variant not found')
         response = self.client.get(url)
