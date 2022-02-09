@@ -13,7 +13,8 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
-    INDIVIDUAL_FIELDS, SAMPLE_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS
+    INDIVIDUAL_FIELDS, SAMPLE_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
+    SAVED_VARIANT_FIELDS, VARIANT_NOTE_FIELDS, TAG_FIELDS, FUNCTIONAL_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -146,6 +147,30 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
         self.assertSetEqual(set(response_json['familyNotesByGuid']['FAN000001_1'].keys()), FAMILY_NOTE_FIELDS)
 
+    def _assert_expected_results_context(self, response_json):
+        gene_fields = {'locusListGuids'}
+        gene_fields.update(GENE_VARIANT_FIELDS)
+        self.assertSetEqual(set(response_json['genesById']['ENSG00000268903'].keys()), gene_fields)
+        gene_fields.add('locusListConfidence')
+        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
+        self.assertListEqual(
+            response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
+        )
+        self.assertDictEqual(
+            response_json['genesById']['ENSG00000227232']['locusListConfidence'], {LOCUS_LIST_GUID: '3'}
+        )
+
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), {'intervals'})
+        intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
+        self.assertEqual(len(intervals), 2)
+        self.assertSetEqual(
+            set(intervals[0].keys()),
+            {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
+        )
+
+        self.assertSetEqual(set(next(iter(response_json['savedVariantsByGuid'].values())).keys()), SAVED_VARIANT_FIELDS)
+
+
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -227,24 +252,7 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), {'F000001_1', 'F000002_2'})
-
-        gene_fields = {'locusListGuids'}
-        gene_fields.update(GENE_VARIANT_FIELDS)
-        self.assertSetEqual(set(response_json['genesById']['ENSG00000268903'].keys()), gene_fields)
-        gene_fields.add('locusListConfidence')
-        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
-        self.assertListEqual(
-            response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
-        )
-        self.assertDictEqual(
-            response_json['genesById']['ENSG00000227232']['locusListConfidence'], {LOCUS_LIST_GUID: '3'}
-        )
-        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), {'intervals'})
-        intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
-        self.assertEqual(len(intervals), 2)
-        self.assertSetEqual(
-            set(intervals[0].keys()), {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
-        )
+        self._assert_expected_results_context(response_json)
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
