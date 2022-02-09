@@ -39,7 +39,7 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'createdBy': None,
 }]
 
-PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'searchContextLoaded'}
+PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes'}
 PROJECT_CONTEXT_FIELDS.update(PROJECT_FIELDS)
 
 PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
@@ -81,6 +81,14 @@ EXPECTED_SEARCH_RESPONSE = {
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}},
 }
 
+EXPECTED_SEARCH_CONTEXT_RESPONSE = {
+    'projectsByGuid': {PROJECT_GUID: mock.ANY},
+    'familiesByGuid': mock.ANY,
+    'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY},
+    'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY, 'LL00005_retina_proteome': mock.ANY},
+}
+
+# TODO
 EXPECTED_CONTEXT_RESPONSE = {
     'projectsByGuid': {PROJECT_GUID: mock.ANY},
     'familiesByGuid': mock.ANY,
@@ -114,19 +122,32 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
-    def _assert_expected_search_context(self, response_json):
+    def _assert_expected_search_context(self, response_json, has_sv=True):
         response_keys = {'savedSearchesByGuid'}
         response_keys.update(SEARCH_CONTEXT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json), response_keys)
-        expected_response = {'savedSearchesByGuid': mock.ANY}
-        expected_response.update(EXPECTED_CONTEXT_RESPONSE)
+        expected_response = {'savedSearchesByGuid': mock.ANY} # TODO move to fixture?
+        expected_response.update(EXPECTED_SEARCH_CONTEXT_RESPONSE)
         self.assertDictEqual(response_json, expected_response)
+
+        # TODO maybe share with _assert_expected_context?
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
-        self._assert_expected_context(response_json)
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
+        dataset_types = {'VARIANTS'}
+        if has_sv:
+            dataset_types.add('SV')
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), dataset_types)
+
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()),
+                            ANALYSIS_GROUP_FIELDS)
+
+        self.assertEqual(len(response_json['familiesByGuid']), 11)
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), FAMILY_FIELDS)
 
     def _assert_expected_context(self, response_json):
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
-        self.assertTrue(response_json['projectsByGuid'][PROJECT_GUID]['searchContextLoaded'])
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
 
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS)
@@ -518,14 +539,12 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self._assert_expected_search_context(response_json)
-        # TODO add to conext checker
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
-
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'familyGuid': 'F000001_1'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self._assert_expected_search_context(response_json)
+        # TODO since user can toggle to whole project search, this should always be the same and not dependent on num families
+        self._assert_expected_search_context(response_json, has_sv=False)
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'analysisGroupGuid': 'AG0000183_test_group'}))
         self.assertEqual(response.status_code, 200)
@@ -546,16 +565,12 @@ class VariantSearchAPITest(object):
             'savedSearchesByGuid': mock.ANY,
             'projectCategoriesByGuid': {'PC000003_test_category_name': mock.ANY},
         }
-        expected_response.update(deepcopy(EXPECTED_CONTEXT_RESPONSE))
+        expected_response.update(deepcopy(EXPECTED_SEARCH_CONTEXT_RESPONSE))
         expected_response['projectsByGuid']['R0003_test'] = mock.ANY
         self.assertDictEqual(response_json, expected_response)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
         self.assertEqual(len(response_json['familiesByGuid']), 13)
-        self.assertEqual(len(response_json['individualsByGuid']), 17)
-        self.assertEqual(len(response_json['samplesByGuid']), 20)
-        self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
-        self.assertEqual(len(response_json['familyNotesByGuid']), 3)
 
         # Test search hash context
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(
