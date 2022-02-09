@@ -14,7 +14,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, SAMPLE_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    SAVED_VARIANT_FIELDS, VARIANT_NOTE_FIELDS, TAG_FIELDS, FUNCTIONAL_FIELDS
+    VARIANT_NOTE_FIELDS, TAG_FIELDS, FUNCTIONAL_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -147,28 +147,36 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
         self.assertSetEqual(set(response_json['familyNotesByGuid']['FAN000001_1'].keys()), FAMILY_NOTE_FIELDS)
 
-    def _assert_expected_results_context(self, response_json):
+    def _assert_expected_results_context(self, response_json, has_confidence_gene=True, locus_list_detail=False):
         gene_fields = {'locusListGuids'}
         gene_fields.update(GENE_VARIANT_FIELDS)
-        self.assertSetEqual(set(response_json['genesById']['ENSG00000268903'].keys()), gene_fields)
-        gene_fields.add('locusListConfidence')
-        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
-        self.assertListEqual(
-            response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
-        )
-        self.assertDictEqual(
-            response_json['genesById']['ENSG00000227232']['locusListConfidence'], {LOCUS_LIST_GUID: '3'}
-        )
+        basic_gene_id = next(gene_id for gene_id in ['ENSG00000268903', 'ENSG00000233653'] if gene_id in response_json['genesById'])
+        self.assertSetEqual(set(response_json['genesById'][basic_gene_id].keys()), gene_fields)
+        if has_confidence_gene:
+            gene_fields.add('locusListConfidence')
+            self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
+            self.assertListEqual(
+                response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
+            )
+            self.assertDictEqual(
+                response_json['genesById']['ENSG00000227232']['locusListConfidence'], {LOCUS_LIST_GUID: '3'}
+            )
 
-        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), {'intervals'})
-        intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
-        self.assertEqual(len(intervals), 2)
-        self.assertSetEqual(
-            set(intervals[0].keys()),
-            {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
-        )
+        locus_list_fields = LOCUS_LIST_FIELDS if locus_list_detail else {'intervals'}
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
+        if not locus_list_detail:
+            intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
+            self.assertEqual(len(intervals), 2)
+            self.assertSetEqual(
+                set(intervals[0].keys()),
+                {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
+            )
 
-        self.assertSetEqual(set(next(iter(response_json['savedVariantsByGuid'].values())).keys()), SAVED_VARIANT_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['variantTagsByGuid'].values())).keys()), TAG_FIELDS)
+        if response_json['variantNotesByGuid']:
+            self.assertSetEqual(set(next(iter(response_json['variantNotesByGuid'].values())).keys()), VARIANT_NOTE_FIELDS)
+        if response_json['variantFunctionalDataByGuid']:
+            self.assertSetEqual(set(next(iter(response_json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
 
 
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
@@ -333,6 +341,7 @@ class VariantSearchAPITest(object):
         })
         expected_search_response['search']['totalResults'] = 1
         self.assertDictEqual(response_json, expected_search_response)
+        self._assert_expected_results_context(response_json, has_confidence_gene=False)
         mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for analyst users
@@ -354,6 +363,7 @@ class VariantSearchAPITest(object):
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
         expected_search_results['familiesByGuid'] = {'F000011_11': mock.ANY}
         self.assertDictEqual(response_json, expected_search_results)
+        self._assert_expected_results_context(response_json)
 
         mock_get_variants.assert_called_with(results_model, sort='pathogenicity_hgmd', page=1, num_results=100, skip_genotype_filter=False, user=self.analyst_user)
         mock_error_logger.assert_not_called()
@@ -421,6 +431,7 @@ class VariantSearchAPITest(object):
             {'F000001_1', 'F000002_2'}
         )
         self._assert_expected_context(response_json)
+        self._assert_expected_results_context(response_json, locus_list_detail=True)
 
         result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         self.assertSetEqual({'F000001_1', 'F000002_2'}, {f.guid for f in result_model.families.all()})
@@ -572,6 +583,7 @@ class VariantSearchAPITest(object):
         expected_search_response['searchedVariants'] = [single_family_variant]
         self.assertDictEqual(response_json, expected_search_response)
         self._assert_expected_context(response_json)
+        self._assert_expected_results_context(response_json, locus_list_detail=True)
 
         mock_get_variant.assert_called_with(mock.ANY, '21-3343353-GAGA-G', user=self.collaborator_user)
         searched_families = mock_get_variant.call_args.args[0]
