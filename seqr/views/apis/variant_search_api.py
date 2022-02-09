@@ -126,12 +126,11 @@ def query_single_variant_handler(request, variant_id):
     """Search variants.
     """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
+    check_project_permissions(families.first().project, request.user)
 
     variant = get_single_es_variant(families, variant_id, user=request.user)
 
-    response = _process_variants([variant], families, request)
-    # TODO full context
-    response.update(_get_projects_details([families.first().project], request.user))
+    response = _process_variants([variant], families, request, add_all_context=True)
 
     return create_json_response(response)
 
@@ -347,14 +346,8 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
-
-    return create_json_response(response)
-
-
-def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
-        check_project_permissions(project, user)
+        check_project_permissions(project, request.user)
 
     # response = get_projects_child_entities(projects, user)
 
@@ -367,7 +360,7 @@ def _get_projects_details(projects, user, project_category_guid=None):
     project_guid = projects[0].guid if len(projects) == 1 else None
     is_analyst = False
 
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
+    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, request.user, is_analyst=is_analyst)}
 
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
     analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True,
@@ -375,11 +368,11 @@ def _get_projects_details(projects, user, project_category_guid=None):
 
     locus_lists_models = LocusList.objects.filter(projects__in=projects)
     locus_lists_by_guid = {
-        ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists_models, user, is_analyst=is_analyst)}
+        ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists_models, request.user, is_analyst=is_analyst)}
 
     family_models = Family.objects.filter(project__in=projects)
     families = _get_json_for_families(
-        family_models, user, project_guid=project_guid, skip_nested=True,
+        family_models, request.user, project_guid=project_guid, skip_nested=True,
         is_analyst=is_analyst, has_case_review_perm=False)
 
     for p in projects.annotate(dataset_types=ArrayAgg(
@@ -387,12 +380,12 @@ def _get_projects_details(projects, user, project_category_guid=None):
             family__individual__sample__is_active=True, family__individual__sample__elasticsearch_index__isnull=False))):
         projects_by_guid[p.guid]['datasetTypes'] = p.dataset_types
 
-    response = {
+    response.update({
         'projectsByGuid': projects_by_guid,
         'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
         'familiesByGuid': {f['familyGuid']: f for f in families},
-    }
+    })
 
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
@@ -412,13 +405,13 @@ def _get_projects_details(projects, user, project_category_guid=None):
                 if project.guid in response['projectsByGuid']:
                     response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
 
-
+    project_category_guid = context.get('projectCategoryGuid')
     if project_category_guid:
         response['projectCategoriesByGuid'] = {
             project_category_guid: ProjectCategory.objects.get(guid=project_category_guid).json()
         }
 
-    return response
+    return create_json_response(response)
 
 
 @login_and_policies_required

@@ -695,7 +695,7 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
 
     def test_query_single_variant(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 3)
+        assert_no_list_ws_has_al(self, 2)
 
     def test_saved_search(self):
         super(MixSavedVariantSearchAPITest, self).test_saved_search()
