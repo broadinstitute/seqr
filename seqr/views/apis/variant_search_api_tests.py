@@ -64,9 +64,15 @@ EXPECTED_SEARCH_RESPONSE = {
         'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
         'totalResults': 3,
     },
-    'variantTagsByGuid': mock.ANY,
-    'variantNotesByGuid': mock.ANY,
-    'variantFunctionalDataByGuid': mock.ANY,
+    'variantTagsByGuid': {
+        'VT1708633_2103343353_r0390_100': mock.ANY, 'VT1726945_2103343353_r0390_100': mock.ANY,
+        'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726961_2103343353_r0390_100': mock.ANY,
+    },
+    'variantNotesByGuid': {'VN0714935_2103343353_r0390_100': mock.ANY},
+    'variantFunctionalDataByGuid': {
+        'VFD0000023_1248367227_r0390_10': mock.ANY, 'VFD0000024_1248367227_r0390_10': mock.ANY,
+        'VFD0000025_1248367227_r0390_10': mock.ANY, 'VFD0000026_1248367227_r0390_10': mock.ANY,
+    },
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}},
 }
@@ -239,9 +245,6 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(
             set(intervals[0].keys()), {'locusListGuid', 'locusListIntervalGuid', 'genomeVersion', 'chrom', 'start', 'end'}
         )
-        self.assertEqual(len(response_json['variantTagsByGuid']), 4)
-        self.assertEqual(len(response_json['variantFunctionalDataByGuid']), 4)
-        self.assertEqual(len(response_json['variantNotesByGuid']), 1)
 
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=False, user=self.collaborator_user)
@@ -551,6 +554,9 @@ class VariantSearchAPITest(object):
         expected_search_response = deepcopy(EXPECTED_CONTEXT_SEARCH_RESPONSE)
         expected_search_response.pop('search')
         expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
+        expected_search_response['variantTagsByGuid'].pop('VT1726945_2103343353_r0390_100')
+        expected_search_response['variantTagsByGuid'].pop('VT1726970_2103343353_r0004_tes')
+        expected_search_response['variantNotesByGuid'].pop('VN0714935_2103343353_r0390_100')
         expected_search_response['genesById'].pop('ENSG00000233653')
         expected_search_response['searchedVariants'] = [single_family_variant]
         self.assertDictEqual(response_json, expected_search_response)
