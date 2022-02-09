@@ -311,17 +311,20 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SEARCH_RESPONSE_KEYS) # TODO
-        self.assertListEqual(response_json['searchedVariants'], COMP_HET_VARAINTS)
-        self.assertSetEqual(
-            set(response_json['savedVariantsByGuid'].keys()),
-            {'SV0000002_1248367227_r0390_100'}
-        )
-        self.assertSetEqual(
-            set(response_json['genesById'].keys()),
-            {'ENSG00000233653'}
-        )
-        self.assertDictEqual(response_json['rnaSeqData'], {})
+        self.assertSetEqual(set(response_json.keys()), SEARCH_RESPONSE_KEYS)
+        expected_search_response = deepcopy(EXPECTED_SEARCH_RESPONSE)
+        expected_search_response.update({
+            'searchedVariants': COMP_HET_VARAINTS,
+            'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': mock.ANY},
+            'genesById': {'ENSG00000233653': mock.ANY},
+            'variantTagsByGuid': {
+                'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726945_2103343353_r0390_100': mock.ANY,
+            },
+            'variantFunctionalDataByGuid': {},
+            'rnaSeqData': {},
+        })
+        expected_search_response['search']['totalResults'] = 1
+        self.assertDictEqual(response_json, expected_search_response)
         mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for analyst users
