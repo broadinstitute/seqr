@@ -536,6 +536,8 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
 
+        mock_get_variant.assert_called_with()
+
         mock_get_variant.side_effect = InvalidSearchException('Variant not found')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
