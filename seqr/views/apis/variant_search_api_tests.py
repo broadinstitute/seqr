@@ -12,7 +12,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_FIELDS
+    MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_FIELDS, LOCUS_LIST_FIELDS, PROJECT_FIELDS, FAMILY_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -37,19 +37,20 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'createdBy': None,
 }]
 
+PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
+
 SEARCH_CONTEXT_RESPONSE_KEYS = {
-    'projectsByGuid', 'familiesByGuid','analysisGroupsByGuid', 'locusListsByGuid',
+    'projectsByGuid', 'familiesByGuid','analysisGroupsByGuid', 'locusListsByGuid', 'savedSearchesByGuid',
 }
 FAMILY_CONTEXT_RESPONSE_KEYS = {
-    'projectsByGuid', 'familiesByGuid', 'individualsByGuid', 'igvSamplesByGuid',
-    'familyNotesByGuid',
+    'familiesByGuid', 'familyNotesByGuid', 'individualsByGuid', 'igvSamplesByGuid',
 }
 SEARCH_RESPONSE_KEYS = {
     'searchedVariants', 'savedVariantsByGuid', 'genesById', 'search', 'variantTagsByGuid', 'variantNotesByGuid',
     'variantFunctionalDataByGuid', 'locusListsByGuid', 'rnaSeqData',
 }
 
-ALL_RESPONSE_KEYS = set()
+ALL_RESPONSE_KEYS = {'projectsByGuid'}
 ALL_RESPONSE_KEYS.update(FAMILY_CONTEXT_RESPONSE_KEYS)
 ALL_RESPONSE_KEYS.update(SEARCH_RESPONSE_KEYS)
 
@@ -178,6 +179,7 @@ class VariantSearchAPITest(object):
             response_json['genesById']['ENSG00000227232']['locusListConfidence'], {LOCUS_LIST_GUID: '3'}
         )
         self.assertSetEqual(set(response_json['locusListsByGuid'].keys()), {LOCUS_LIST_GUID})
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), {'intervals'})
         intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
         self.assertEqual(len(intervals), 2)
         self.assertSetEqual(
@@ -191,20 +193,26 @@ class VariantSearchAPITest(object):
         mock_error_logger.assert_not_called()
 
         # include project context info
+        core_response_json = response_json
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         response_keys = {'projectsByGuid'}
         response_keys.update(SEARCH_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), response_keys)
-        project = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project.keys()), {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'})
+        self.assertDictEqual(core_response_json, {k: v for k, v in response_json.items() if k in core_response_json})
+        self.assertSetEqual(set(response_json['projectsByGuid'].keys()), {PROJECT_GUID})
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
 
         # include family context info
         response = self.client.get('{}?loadFamilyContext=true'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        response_keys.update(ALL_RESPONSE_KEYS)
+        response_keys = set()
+        response_keys.update(SEARCH_RESPONSE_KEYS)
+        response_keys.update(FAMILY_CONTEXT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertDictEqual(core_response_json, {k: v for k, v in response_json.items() if k in core_response_json})
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
 
         # Test pagination
@@ -370,10 +378,12 @@ class VariantSearchAPITest(object):
             set(response_json['search']['projectFamilies'][0]['familyGuids']),
             {'F000001_1', 'F000002_2'}
         )
-        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
-        self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
+        self.assertSetEqual(set(response_json['projectsByGuid'].keys()), {PROJECT_GUID})
         project = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes', 'projectGuid'})
+        self.assertSetEqual(set(project.keys()), PROJECT_TAG_TYPE_FIELDS)
+        self.assertSetEqual(set(response_json['locusListsByGuid'].keys()), {LOCUS_LIST_GUID})
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), {'intervals'})
 
         result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         self.assertSetEqual({'F000001_1', 'F000002_2'}, {f.guid for f in result_model.families.all()})
@@ -426,19 +436,20 @@ class VariantSearchAPITest(object):
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'projectGuid': PROJECT_GUID}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        response_keys = {'savedSearchesByGuid'}
-        response_keys.update(SEARCH_CONTEXT_RESPONSE_KEYS)
-        self.assertSetEqual(set(response_json), response_keys)
+        # TODO shared test utility for search context
+        self.assertSetEqual(set(response_json), SEARCH_CONTEXT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
         self.assertTrue('AG0000183_test_group' in response_json['analysisGroupsByGuid'])
+        self.assertSetEqual(set(response_json['locusListsByGuid'].keys()), {LOCUS_LIST_GUID, 'LL00005_retina_proteome'})
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), LOCUS_LIST_FIELDS)
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'familyGuid': 'F000001_1'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json), response_keys)
+        self.assertSetEqual(set(response_json), SEARCH_CONTEXT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
@@ -447,7 +458,7 @@ class VariantSearchAPITest(object):
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'analysisGroupGuid': 'AG0000183_test_group'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json), response_keys)
+        self.assertSetEqual(set(response_json), SEARCH_CONTEXT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
@@ -460,7 +471,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         category_response_keys = {'projectCategoriesByGuid'}
-        category_response_keys.update(response_keys)
+        category_response_keys.update(SEARCH_CONTEXT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json), category_response_keys)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertSetEqual(set(response_json['projectsByGuid'].keys()), {PROJECT_GUID, 'R0003_test'})
@@ -483,7 +494,7 @@ class VariantSearchAPITest(object):
             {'searchHash': SEARCH_HASH, 'searchParams': {'projectFamilies': PROJECT_FAMILIES, 'search': SEARCH}}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json), response_keys)
+        self.assertSetEqual(set(response_json), SEARCH_CONTEXT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
@@ -492,7 +503,7 @@ class VariantSearchAPITest(object):
             {'searchHash': SEARCH_HASH}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json), response_keys)
+        self.assertSetEqual(set(response_json), SEARCH_CONTEXT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertTrue(PROJECT_GUID in response_json['projectsByGuid'])
         self.assertTrue('F000001_1' in response_json['familiesByGuid'])
@@ -508,7 +519,9 @@ class VariantSearchAPITest(object):
 
     @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
     def test_query_single_variant(self, mock_get_variant):
-        mock_get_variant.return_value = VARIANTS[0]
+        single_family_variant = deepcopy(VARIANTS[0])
+        single_family_variant['familyGuids'] = ['F000001_1']
+        mock_get_variant.return_value = single_family_variant
 
         url = '{}?familyGuid=F000001_1'.format(reverse(query_single_variant_handler, args=['21-3343353-GAGA-G']))
         self.check_collaborator_login(url)
@@ -520,12 +533,21 @@ class VariantSearchAPITest(object):
         response_keys.remove('search')
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
-        self.assertListEqual(response_json['searchedVariants'], VARIANTS[:1])
+        self.assertListEqual(response_json['searchedVariants'], [single_family_variant])
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), {'SV0000001_2103343353_r0390_100'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
         self.assertDictEqual(
             response_json['rnaSeqData'], {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}})
-        self.assertTrue('F000001_1' in response_json['familiesByGuid'])
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1'})
+        family_fields = {'individualGuids'}
+        family_fields.update(FAMILY_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
+        self.assertSetEqual(set(response_json['projectsByGuid'].keys()), {PROJECT_GUID})
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
+        self.assertSetEqual(set(response_json['locusListsByGuid'].keys()), {LOCUS_LIST_GUID, 'LL00005_retina_proteome'})
+        locus_list_fields = {'intervals'}
+        locus_list_fields.update(LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
 
         mock_get_variant.side_effect = InvalidSearchException('Variant not found')
         response = self.client.get(url)

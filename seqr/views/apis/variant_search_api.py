@@ -130,19 +130,21 @@ def query_single_variant_handler(request, variant_id):
 
     variant = get_single_es_variant(families, variant_id, user=request.user)
 
-    response = _process_variants([variant], families, request, add_all_context=True)
+    response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
 
     return create_json_response(response)
 
 
-def _process_variants(variants, families, request, add_all_context=False):
+def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False):
     if not variants:
         return {'searchedVariants': variants}
 
     flat_variants = _flatten_variants(variants)
     saved_variants, variants_by_id = _get_saved_variant_models(flat_variants, families)
 
-    response_json = get_variants_response(request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context)
+    response_json = get_variants_response(
+        request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
+        add_locus_list_detail=add_locus_list_detail)
     response_json['searchedVariants'] = variants
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
