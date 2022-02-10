@@ -385,7 +385,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 3)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 10)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 7)
 
 # Test for permissions from AnVIL and local
 class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
@@ -412,4 +412,4 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 3)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 7)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
