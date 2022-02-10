@@ -162,7 +162,7 @@ def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     is_analyst = user_is_analyst(request.user)
-    response = get_projects_child_entities([project], request.user, is_analyst=is_analyst, include_family_entities=False)
+    response = get_projects_child_entities([project], project.guid, request.user, is_analyst=is_analyst)
 
     project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
 

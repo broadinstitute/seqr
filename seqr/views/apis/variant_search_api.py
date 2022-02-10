@@ -19,7 +19,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, has_case_review_permissions
+from seqr.views.utils.project_context_utils import get_projects_child_entities, add_families_context, add_child_ids
 from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 from settings import DEMO_PROJECT_CATEGORY
 
@@ -351,61 +352,20 @@ def search_context_handler(request):
     for project in projects:
         check_project_permissions(project, request.user)
 
-    # response = get_projects_child_entities(projects, user)
-
-    # TODO use shared get_projects_child_entities
-    from django.contrib.postgres.aggregates import ArrayAgg
-    from seqr.models import AnalysisGroup, LocusList
-    from seqr.views.utils.orm_to_json_utils import get_json_for_projects, get_json_for_analysis_groups, \
-        _get_json_for_families, get_json_for_locus_lists
+    has_case_review_perm = has_case_review_permissions(projects[0], request.user)
+    is_analyst = user_is_analyst(request.user)
 
     project_guid = projects[0].guid if len(projects) == 1 else None
-    is_analyst = False
-
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, request.user, is_analyst=is_analyst)}
-
-    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
-    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True,
-                                                   is_analyst=is_analyst)
-
-    locus_lists_models = LocusList.objects.filter(projects__in=projects)
-    locus_lists_by_guid = {
-        ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists_models, request.user, is_analyst=is_analyst)}
+    response = get_projects_child_entities(projects, project_guid, request.user, is_analyst)
 
     family_models = Family.objects.filter(project__in=projects)
-    families = _get_json_for_families(
-        family_models, request.user, project_guid=project_guid, skip_nested=True,
-        is_analyst=is_analyst, has_case_review_perm=False)
+    individual_models = add_families_context(
+        response, family_models, project_guid, request.user, is_analyst, has_case_review_perm, skip_child_ids=True)
 
-    for p in projects.annotate(dataset_types=ArrayAgg(
-        'family__individual__sample__dataset_type', distinct=True, filter=Q(
-            family__individual__sample__is_active=True, family__individual__sample__elasticsearch_index__isnull=False))):
-        projects_by_guid[p.guid]['datasetTypes'] = p.dataset_types
+    if not project_guid:
+        _add_parent_ids(response, projects, family_models, individual_models)
 
-    response.update({
-        'projectsByGuid': projects_by_guid,
-        'locusListsByGuid': locus_lists_by_guid,
-        'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
-        'familiesByGuid': {f['familyGuid']: f for f in families},
-    })
-
-    if project_guid:
-        response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
-    else:
-        project_id_to_guid = {project.id: project.guid for project in projects}
-        for family in response['familiesByGuid'].values():
-            project_guid = project_id_to_guid[family.pop('projectId')]
-            family['projectGuid'] = project_guid
-        for group in response['analysisGroupsByGuid'].values():
-            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
-
-        for project in response['projectsByGuid'].values():
-            project['locusListGuids'] = []
-        prefetch_related_objects(locus_lists_models, 'projects')
-        for locus_list in locus_lists_models:
-            for project in locus_list.projects.all():
-                if project.guid in response['projectsByGuid']:
-                    response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
+    add_child_ids(response)
 
     project_category_guid = context.get('projectCategoryGuid')
     if project_category_guid:
@@ -414,6 +374,35 @@ def search_context_handler(request):
         }
 
     return create_json_response(response)
+
+
+def _add_parent_ids(response, projects, family_models, individual_models):
+    project_id_to_guid = {project.id: project.guid for project in projects}
+    family_id_to_guid = {family.id: family.guid for family in family_models}
+    individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
+    family_guid_to_project_guid = {}
+    individual_guid_to_project_guid = {}
+    for family in response['familiesByGuid'].values():
+        project_guid = project_id_to_guid[family.pop('projectId')]
+        family['projectGuid'] = project_guid
+        family_guid_to_project_guid[family['familyGuid']] = project_guid
+    for individual in response['individualsByGuid'].values():
+        family_guid = family_id_to_guid[individual.pop('familyId')]
+        project_guid = family_guid_to_project_guid[family_guid]
+        individual['familyGuid'] = family_guid
+        individual['projectGuid'] = project_guid
+        individual_guid_to_project_guid[individual['individualGuid']] = project_guid
+    for sample in response['samplesByGuid'].values():
+        individual_guid = individual_id_to_guid[sample.pop('individualId')]
+        sample['individualGuid'] = individual_guid
+        sample['familyGuid'] = response['individualsByGuid'][individual_guid]['familyGuid']
+        sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+    for sample in response['igvSamplesByGuid'].values():
+        individual_guid = individual_id_to_guid[sample.pop('individualId')]
+        sample['individualGuid'] = individual_guid
+        sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+    for group in response['analysisGroupsByGuid'].values():
+        group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
 
 @login_and_policies_required
