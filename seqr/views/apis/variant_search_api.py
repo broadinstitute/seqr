@@ -19,9 +19,9 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
-    get_json_for_saved_searches, _get_json_for_families
+    get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, has_case_review_permissions
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 from settings import DEMO_PROJECT_CATEGORY
@@ -60,25 +60,9 @@ def query_variants_handler(request, search_hash):
     variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page,
                                               skip_genotype_filter=is_all_project_search, user=request.user)
 
-    response_context = {}
-    add_all_context = False
-    if is_all_project_search and len(variants) == total_results:
-        # TODO unnecessary?
-        # For all project search only save the relevant families
-        family_guids = set()
-        for variant in variants:
-            family_guids.update(variant['familyGuids'])
-        families = results_model.families.filter(guid__in=family_guids)
-        results_model.families.set(families)
-
-        projects = Project.objects.filter(family__in=families).distinct()
-        if projects:
-            add_all_context = True
-
-    response = _process_variants(variants or [], results_model.families.all(), request, add_all_context=add_all_context)
+    response = _process_variants(variants or [], results_model.families.all(), request)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
-    response.update(response_context)
 
     return create_json_response(response)
 
@@ -116,9 +100,10 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         # If a search_context request and results request are dispatched at the same time, its possible the other
         # request already created the model
-        results_model, _ = get_or_create_model_from_json(
-            VariantSearchResults, {'search_hash': search_hash, 'variant_search': search_model},
-            update_json=None, user=user)
+        results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
+        if not results_model:
+            results_model = create_model_from_json(
+                VariantSearchResults, {'search_hash': search_hash, 'variant_search': search_model}, user)
 
         results_model.families.set(families)
     return results_model
@@ -338,14 +323,11 @@ def search_context_handler(request):
         projects = Project.objects.filter(projectcategory__guid=context.get('projectCategoryGuid'))
     elif context.get('searchHash'):
         search_context = context.get('searchParams')
-        if _is_all_project_family_search(search_context):
-            return create_json_response(response)
-        else:
-            try:
-                results_model = _get_or_create_results_model(context['searchHash'], search_context, request.user)
-            except Exception as e:
-                return create_json_response({'error': str(e)}, status=400, reason=str(e))
-            projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
+        try:
+            results_model = _get_or_create_results_model(context['searchHash'], search_context, request.user)
+        except Exception as e:
+            return create_json_response({'error': str(e)}, status=400, reason=str(e))
+        projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
 
     if not projects:
         error = 'Invalid context params: {}'.format(json.dumps(context))
