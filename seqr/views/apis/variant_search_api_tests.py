@@ -108,15 +108,12 @@ def _get_compound_het_es_variants(results_model, **kwargs):
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class VariantSearchAPITest(object):
 
-    def _assert_expected_search_context(self, response_json, has_sv=True):
+    def _assert_expected_search_context(self, response_json):
         self.assertSetEqual(set(response_json), set(EXPECTED_SEARCH_CONTEXT_RESPONSE))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_CONTEXT_RESPONSE)
 
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
-        dataset_types = {'VARIANTS'}
-        if has_sv:
-            dataset_types.add('SV')
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), dataset_types)
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
 
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS)
@@ -509,8 +506,7 @@ class VariantSearchAPITest(object):
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'familyGuid': 'F000001_1'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        # TODO since user can toggle to whole project search, this should always be the same and not dependent on num families
-        self._assert_expected_search_context(response_json, has_sv=False)
+        self._assert_expected_search_context(response_json)
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'analysisGroupGuid': 'AG0000183_test_group'}))
         self.assertEqual(response.status_code, 200)
@@ -533,6 +529,8 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response_json, expected_response)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
+        self.assertSetEqual(set(response_json['projectsByGuid']['R0003_test']['datasetTypes']), {'VARIANTS'})
         self.assertEqual(len(response_json['familiesByGuid']), 13)
 
         # Test search hash context

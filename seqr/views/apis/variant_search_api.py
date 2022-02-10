@@ -8,7 +8,8 @@ from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, \
+    Sample
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
@@ -365,11 +366,11 @@ def search_context_handler(request):
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
     response['familiesByGuid'] = {f['familyGuid']: f for f in families}
 
-    for p in projects.annotate(dataset_types=ArrayAgg(
-            'family__individual__sample__dataset_type', distinct=True, filter=Q(
-                family__individual__sample__is_active=True,
-                family__individual__sample__elasticsearch_index__isnull=False))):
-        response['projectsByGuid'][p.guid]['datasetTypes'] = p.dataset_types
+    project_dataset_types = Sample.objects.filter(
+        individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
+    ).values('individual__family__project__guid').annotate(dataset_types=ArrayAgg('dataset_type', distinct=True))
+    for agg in project_dataset_types:
+        response['projectsByGuid'][agg['individual__family__project__guid']]['datasetTypes'] = agg['dataset_types']
 
     if not project_guid:
         _add_parent_ids(response, projects)
