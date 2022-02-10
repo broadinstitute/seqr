@@ -119,8 +119,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), dataset_types)
 
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), LOCUS_LIST_FIELDS)
-        self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()),
-                            ANALYSIS_GROUP_FIELDS)
+        self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS)
 
         self.assertEqual(len(response_json['familiesByGuid']), 11)
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), FAMILY_FIELDS)
@@ -269,7 +268,7 @@ class VariantSearchAPITest(object):
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        expected_search_response = {'projectsByGuid': {PROJECT_GUID: mock.ANY}}
+        expected_search_response = {'projectsByGuid': EXPECTED_SEARCH_CONTEXT_RESPONSE['projectsByGuid']}
         expected_search_response.update(EXPECTED_SEARCH_RESPONSE)
         self.assertSetEqual(set(response_json.keys()), set(expected_search_response.keys()))
         self.assertDictEqual(response_json, expected_search_response)
