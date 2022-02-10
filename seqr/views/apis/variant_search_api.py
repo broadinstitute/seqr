@@ -388,8 +388,6 @@ def _add_parent_ids(response, projects):
     for family in response['familiesByGuid'].values():
         project_guid = project_id_to_guid[family.pop('projectId')]
         family['projectGuid'] = project_guid
-    for group in response['analysisGroupsByGuid'].values():
-        group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
 
 @login_and_policies_required
