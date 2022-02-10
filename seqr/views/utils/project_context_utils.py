@@ -9,12 +9,12 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json
     get_json_for_family_notes, get_json_for_saved_variants
 
 
-def get_projects_child_entities(projects, project_guid, user, is_analyst):
+def get_projects_child_entities(projects, project_guid, user, is_analyst, include_samples=True):
     projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
-    add_project_tag_types(projects_by_guid)
 
-    sample_models = Sample.objects.filter(individual__family__project__in=projects)
-    samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
+    if include_samples:
+        sample_models = Sample.objects.filter(individual__family__project__in=projects)
+        samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
 
     analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
     analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
@@ -25,10 +25,11 @@ def get_projects_child_entities(projects, project_guid, user, is_analyst):
 
     response = {
         'projectsByGuid': projects_by_guid,
-        'samplesByGuid': {s['sampleGuid']: s for s in samples},
         'locusListsByGuid': locus_lists_by_guid,
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
+    if include_samples:
+        response['samplesByGuid'] = {s['sampleGuid']: s for s in samples}
 
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
