@@ -33,13 +33,7 @@ def get_projects_child_entities(projects, project_guid, user, is_analyst):
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
     else:
-        for project in response['projectsByGuid'].values():
-            project['locusListGuids'] = []
-        prefetch_related_objects(locus_lists_models, 'projects')
-        for locus_list in locus_lists_models:
-            for project in locus_list.projects.all():
-                if project.guid in response['projectsByGuid']:
-                    response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
+        _add_parent_ids(response, projects, locus_lists_models)
 
     return response
 
@@ -72,6 +66,20 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
         add_child_ids(response)
 
     return individual_models
+
+
+def _add_parent_ids(response, projects, locus_lists_models):
+    project_id_to_guid = {project.id: project.guid for project in projects}
+    for group in response['analysisGroupsByGuid'].values():
+        group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
+
+    for project in response['projectsByGuid'].values():
+        project['locusListGuids'] = []
+    prefetch_related_objects(locus_lists_models, 'projects')
+    for locus_list in locus_lists_models:
+        for project in locus_list.projects.all():
+            if project.guid in response['projectsByGuid']:
+                response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
 
 
 def add_child_ids(response):

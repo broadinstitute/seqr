@@ -405,8 +405,6 @@ def _add_parent_ids(response, projects, family_models, individual_models):
         individual_guid = individual_id_to_guid[sample.pop('individualId')]
         sample['individualGuid'] = individual_guid
         sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
-    for group in response['analysisGroupsByGuid'].values():
-        group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
 
 @login_and_policies_required
