@@ -115,11 +115,14 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
 
-        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), LOCUS_LIST_FIELDS)
+        locus_list_fields = deepcopy(LOCUS_LIST_FIELDS)
+        locus_list_fields.remove('numEntries')
+        locus_list_fields.remove('canEdit')
+        self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
         self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS)
 
         self.assertEqual(len(response_json['familiesByGuid']), 11)
-        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), FAMILY_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {'projectGuid', 'familyGuid', 'displayName'})
 
     def _assert_expected_results_project_context(self, response_json, locus_list_detail=False):
         self._assert_expected_results_context(response_json, locus_list_detail=locus_list_detail)
@@ -726,7 +729,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 21)
+        assert_no_list_ws_has_al(self, 15)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
@@ -761,7 +764,7 @@ class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITe
 
     def test_search_context(self):
         super(MixSavedVariantSearchAPITest, self).test_search_context()
-        assert_no_list_ws_has_al(self, 14)
+        assert_no_list_ws_has_al(self, 8)
 
     def test_query_single_variant(self, *args):
         super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)
