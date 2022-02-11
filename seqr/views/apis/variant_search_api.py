@@ -357,7 +357,10 @@ def search_context_handler(request):
         response['projectsByGuid'][agg['individual__family__project__guid']]['datasetTypes'] = agg['dataset_types']
 
     if not project_guid:
-        _add_parent_ids(response, projects)
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        for family in response['familiesByGuid'].values():
+            project_guid = project_id_to_guid[family.pop('projectId')]
+            family['projectGuid'] = project_guid
 
     project_category_guid = context.get('projectCategoryGuid')
     if project_category_guid:
@@ -366,13 +369,6 @@ def search_context_handler(request):
         }
 
     return create_json_response(response)
-
-
-def _add_parent_ids(response, projects):
-    project_id_to_guid = {project.id: project.guid for project in projects}
-    for family in response['familiesByGuid'].values():
-        project_guid = project_id_to_guid[family.pop('projectId')]
-        family['projectGuid'] = project_guid
 
 
 @login_and_policies_required
