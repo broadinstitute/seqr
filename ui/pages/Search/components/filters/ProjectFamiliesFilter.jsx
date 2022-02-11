@@ -9,11 +9,12 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
+  getProjectDatasetTypes,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import { getSelectedAnalysisGroups } from '../../constants'
-import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions, getProjectDatasetTypes } from '../../selectors'
+import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
 
 class ProjectFamiliesFilterInput extends React.PureComponent {

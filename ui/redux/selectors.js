@@ -180,6 +180,19 @@ export const getRnaSeqDataByFamilyGene = createSelector(
   ),
 )
 
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesGroupedByProjectGuid,
+  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
+    (acc, { projectGuid, datasetTypes }) => ({
+      ...acc,
+      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
+      ).map(({ datasetType }) => datasetType))],
+    }), {},
+  ),
+)
+
 // Saved variant selectors
 export const getVariantId = variant => (
   Array.isArray(variant) ? variant : [variant]).map(({ variantId }) => variantId).sort().join(',')

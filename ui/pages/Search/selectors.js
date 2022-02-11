@@ -9,8 +9,8 @@ import {
   getLocusListsByGuid,
   getAnalysisGroupsGroupedByProjectGuid,
   getCurrentSearchParams,
-  getSamplesGroupedByProjectGuid,
   getUser,
+  getProjectDatasetTypes,
 } from 'redux/selectors'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { SEARCH_FORM_NAME } from './constants'
@@ -146,19 +146,6 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
     })
     return [{ value: null }, ...locusListOptions]
   },
-)
-
-export const getProjectDatasetTypes = createSelector(
-  getProjectsByGuid,
-  getSamplesGroupedByProjectGuid,
-  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
-    (acc, { projectGuid, datasetTypes }) => ({
-      ...acc,
-      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
-        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
-      ).map(({ datasetType }) => datasetType))],
-    }), {},
-  ),
 )
 
 export const getDatasetTypes = createSelector(
