@@ -1,29 +1,17 @@
 from collections import defaultdict
 from django.db.models import Q, prefetch_related_objects
 
-from seqr.models import Family, Individual, Sample, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
+from seqr.models import Individual, Sample, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
     get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects, \
     get_json_for_family_notes, get_json_for_saved_variants
-from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 
 
-def get_projects_child_entities(projects, user, is_analyst=None, include_family_entities=True):
-    project_guid = projects[0].guid if len(projects) == 1 else None
-    has_case_review_perm = has_case_review_permissions(projects[0], user)
-    if is_analyst is None:
-        is_analyst = user_is_analyst(user)
-
-    response = _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm, include_family_entities)
-
-    add_project_tag_types(response['projectsByGuid'])
-
-    return response
-
-def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_review_perm, include_family_entities):
+def get_projects_child_entities(projects, project_guid, user, is_analyst):
     projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
+    add_project_tag_types(projects_by_guid)
 
     sample_models = Sample.objects.filter(individual__family__project__in=projects)
     samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
@@ -42,18 +30,20 @@ def _fetch_child_entities(projects, project_guid, user, is_analyst, has_case_rev
         'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
     }
 
-    if include_family_entities:
-        family_models = Family.objects.filter(project__in=projects)
-        individual_models = add_families_context(
-            response, family_models, project_guid, user, is_analyst, has_case_review_perm, skip_child_ids=True)
-
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
     else:
-        _add_parent_ids(response, projects, family_models, individual_models, locus_lists_models)
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        for group in response['analysisGroupsByGuid'].values():
+            group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
 
-    if include_family_entities:
-        _add_child_ids(response)
+        for project in response['projectsByGuid'].values():
+            project['locusListGuids'] = []
+        prefetch_related_objects(locus_lists_models, 'projects')
+        for locus_list in locus_lists_models:
+            for project in locus_list.projects.all():
+                if project.guid in response['projectsByGuid']:
+                    response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
 
     return response
 
@@ -83,48 +73,12 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
         response['igvSamplesByGuid'] = {s['sampleGuid']: s for s in igv_samples}
 
     if not skip_child_ids:
-        _add_child_ids(response)
+        add_child_ids(response)
 
     return individual_models
 
 
-def _add_parent_ids(response, projects, family_models, individual_models, locus_lists_models):
-    project_id_to_guid = {project.id: project.guid for project in projects}
-    family_id_to_guid = {family.id: family.guid for family in family_models}
-    individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
-    family_guid_to_project_guid = {}
-    individual_guid_to_project_guid = {}
-    for family in response['familiesByGuid'].values():
-        project_guid = project_id_to_guid[family.pop('projectId')]
-        family['projectGuid'] = project_guid
-        family_guid_to_project_guid[family['familyGuid']] = project_guid
-    for individual in response['individualsByGuid'].values():
-        family_guid = family_id_to_guid[individual.pop('familyId')]
-        project_guid = family_guid_to_project_guid[family_guid]
-        individual['familyGuid'] = family_guid
-        individual['projectGuid'] = project_guid
-        individual_guid_to_project_guid[individual['individualGuid']] = project_guid
-    for sample in response['samplesByGuid'].values():
-        individual_guid = individual_id_to_guid[sample.pop('individualId')]
-        sample['individualGuid'] = individual_guid
-        sample['familyGuid'] = response['individualsByGuid'][individual_guid]['familyGuid']
-        sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
-    for sample in response['igvSamplesByGuid'].values():
-        individual_guid = individual_id_to_guid[sample.pop('individualId')]
-        sample['individualGuid'] = individual_guid
-        sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
-    for group in response['analysisGroupsByGuid'].values():
-        group['projectGuid'] = project_id_to_guid[group.pop('projectId')]
-
-    for project in response['projectsByGuid'].values():
-        project['locusListGuids'] = []
-    prefetch_related_objects(locus_lists_models, 'projects')
-    for locus_list in locus_lists_models:
-        for project in locus_list.projects.all():
-            if project.guid in response['projectsByGuid']:
-                response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
-
-def _add_child_ids(response):
+def add_child_ids(response):
     if 'samplesByGuid' in response:
         sample_guids_by_individual = defaultdict(list)
         for sample in response['samplesByGuid'].values():

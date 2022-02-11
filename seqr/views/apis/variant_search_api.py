@@ -19,8 +19,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
-from seqr.views.utils.project_context_utils import get_projects_child_entities
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, has_case_review_permissions
+from seqr.views.utils.project_context_utils import get_projects_child_entities, add_families_context, add_child_ids
 from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 from settings import DEMO_PROJECT_CATEGORY
 
@@ -355,7 +355,44 @@ def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
         check_project_permissions(project, user)
 
-    response = get_projects_child_entities(projects, user)
+    has_case_review_perm = has_case_review_permissions(projects[0], user)
+    is_analyst = user_is_analyst(user)
+
+    project_guid = projects[0].guid if len(projects) == 1 else None
+    response = get_projects_child_entities(projects, project_guid, user, is_analyst)
+
+    family_models = Family.objects.filter(project__in=projects)
+    individual_models = add_families_context(
+        response, family_models, project_guid, user, is_analyst, has_case_review_perm, skip_child_ids=True)
+
+    if not project_guid:
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        family_id_to_guid = {family.id: family.guid for family in family_models}
+        individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
+        family_guid_to_project_guid = {}
+        individual_guid_to_project_guid = {}
+        for family in response['familiesByGuid'].values():
+            project_guid = project_id_to_guid[family.pop('projectId')]
+            family['projectGuid'] = project_guid
+            family_guid_to_project_guid[family['familyGuid']] = project_guid
+        for individual in response['individualsByGuid'].values():
+            family_guid = family_id_to_guid[individual.pop('familyId')]
+            project_guid = family_guid_to_project_guid[family_guid]
+            individual['familyGuid'] = family_guid
+            individual['projectGuid'] = project_guid
+            individual_guid_to_project_guid[individual['individualGuid']] = project_guid
+        for sample in response['samplesByGuid'].values():
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['familyGuid'] = response['individualsByGuid'][individual_guid]['familyGuid']
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+        for sample in response['igvSamplesByGuid'].values():
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+
+    add_child_ids(response)
+
     for project in response['projectsByGuid'].values():
         project['searchContextLoaded'] = True
     if project_category_guid:
