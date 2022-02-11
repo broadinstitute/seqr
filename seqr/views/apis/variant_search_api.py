@@ -366,7 +366,30 @@ def _get_projects_details(projects, user, project_category_guid=None):
         response, family_models, project_guid, user, is_analyst, has_case_review_perm, skip_child_ids=True)
 
     if not project_guid:
-        _add_parent_ids(response, projects, family_models, individual_models)
+        project_id_to_guid = {project.id: project.guid for project in projects}
+        family_id_to_guid = {family.id: family.guid for family in family_models}
+        individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
+        family_guid_to_project_guid = {}
+        individual_guid_to_project_guid = {}
+        for family in response['familiesByGuid'].values():
+            project_guid = project_id_to_guid[family.pop('projectId')]
+            family['projectGuid'] = project_guid
+            family_guid_to_project_guid[family['familyGuid']] = project_guid
+        for individual in response['individualsByGuid'].values():
+            family_guid = family_id_to_guid[individual.pop('familyId')]
+            project_guid = family_guid_to_project_guid[family_guid]
+            individual['familyGuid'] = family_guid
+            individual['projectGuid'] = project_guid
+            individual_guid_to_project_guid[individual['individualGuid']] = project_guid
+        for sample in response['samplesByGuid'].values():
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['familyGuid'] = response['individualsByGuid'][individual_guid]['familyGuid']
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
+        for sample in response['igvSamplesByGuid'].values():
+            individual_guid = individual_id_to_guid[sample.pop('individualId')]
+            sample['individualGuid'] = individual_guid
+            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
 
     add_child_ids(response)
 
@@ -378,33 +401,6 @@ def _get_projects_details(projects, user, project_category_guid=None):
         }
 
     return response
-
-
-def _add_parent_ids(response, projects, family_models, individual_models):
-    project_id_to_guid = {project.id: project.guid for project in projects}
-    family_id_to_guid = {family.id: family.guid for family in family_models}
-    individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
-    family_guid_to_project_guid = {}
-    individual_guid_to_project_guid = {}
-    for family in response['familiesByGuid'].values():
-        project_guid = project_id_to_guid[family.pop('projectId')]
-        family['projectGuid'] = project_guid
-        family_guid_to_project_guid[family['familyGuid']] = project_guid
-    for individual in response['individualsByGuid'].values():
-        family_guid = family_id_to_guid[individual.pop('familyId')]
-        project_guid = family_guid_to_project_guid[family_guid]
-        individual['familyGuid'] = family_guid
-        individual['projectGuid'] = project_guid
-        individual_guid_to_project_guid[individual['individualGuid']] = project_guid
-    for sample in response['samplesByGuid'].values():
-        individual_guid = individual_id_to_guid[sample.pop('individualId')]
-        sample['individualGuid'] = individual_guid
-        sample['familyGuid'] = response['individualsByGuid'][individual_guid]['familyGuid']
-        sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
-    for sample in response['igvSamplesByGuid'].values():
-        individual_guid = individual_id_to_guid[sample.pop('individualId')]
-        sample['individualGuid'] = individual_guid
-        sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
 
 
 @login_and_policies_required
