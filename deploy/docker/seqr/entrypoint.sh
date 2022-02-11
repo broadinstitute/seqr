@@ -26,6 +26,7 @@ if [ -e "/.config/service-account-key.json" ]; then
     do
         gcloud auth activate-service-account --key-file /.config/service-account-key.json && break
         retries=$((retries+1)) 
+        echo "gcloud auth failed. Retrying, attempt ${retries}/5"
         sleep 10
     done
     
