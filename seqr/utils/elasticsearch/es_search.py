@@ -816,10 +816,13 @@ class EsSearch(object):
             # the filtered consequence needs to be present in at least one transcript in the gene of interest
             if self._allowed_consequences:
                 for variant in gene_variants:
-                    variant['gene_consequences'] = {
-                        k: [variant['svType']] if variant.get('svType') else [
-                            transcript['majorConsequence'] for transcript in transcripts
-                        ] for k, transcripts in variant['transcripts'].items()}
+                    variant['gene_consequences'] = {}
+                    for k, transcripts in variant['transcripts'].items():
+                        variant['gene_consequences'][k] = [
+                            transcript['majorConsequence'] for transcript in transcripts if transcript.get('majorConsequence')
+                        ]
+                        if variant.get('svType'):
+                            variant['gene_consequences'][k].append(variant['svType'])
 
                 gene_variants = [variant for variant in gene_variants if any(
                     consequence in self._allowed_consequences + (self._allowed_consequences_secondary or [])
