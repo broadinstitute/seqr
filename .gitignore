@@ -5,11 +5,6 @@
 
 ui/node_modules
 ui/jest*
-ui/dist
-
-static/*
-!static/fonts
-!static/images
 
 *.pyc
 *.DS_Store
