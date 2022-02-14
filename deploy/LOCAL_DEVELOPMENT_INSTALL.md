@@ -1,4 +1,3 @@
-
 # seqr local development set up
 
 Instructions for setting up seqr on a local machine for development
@@ -59,7 +58,6 @@ psql -U postgres -c 'CREATE DATABASE seqrdb';
 ./manage.py createsuperuser
 ```
 
-
 ### Set bash profile - Broad developers only
 
 This is not required, but it can be helpful to set several environment variables in your bash profile to ensure seqr
@@ -85,18 +83,20 @@ export SEQR_ES_PASSWORD=
 In order to run seqr, you need to have 2 sevrers running simultaneously, one for the client-side javascript and one
 for the server-side python
  
-
 ### Prerequisites
 Before running seqr, make sure the following are currently running/ started:
 
 - postgres
+
 - redis
+
 - elasticsearch (optional, only needed when actively developing search functionality) 
   - Since seqr accesses ES as read-only, it is safe to tunnel to production data during local development. 
   This is the easiest approach if you want representative data
     ```bash
     ./deploy/kubectl_helpers/connect_to.sh prod elasticsearch
     ```
+    
   - If you want ES running but do not need production data/ are working with a standalone seqr instance, 
   use docker-compose
     ```bash
