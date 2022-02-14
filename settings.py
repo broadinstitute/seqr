@@ -402,8 +402,9 @@ if TERRA_API_ROOT_URL:
         if os.path.exists('/.config/service-account-key.json'):
             SERVICE_ACCOUNT_FOR_ANVIL = \
                 re.findall('\[(.*)\]',
-                           subprocess.run(['gcloud auth activate-service-account --key-file /.config/service-account-key.json'],
-                                          capture_output=True, text=True, shell=True).stderr)[0]
+                           subprocess.run(['gcloud', 'auth', 'activate-service-account', '--key-file',
+                                           '/.config/service-account-key.json'],
+                                           capture_output=True, text=True).stderr)[0]
             # TODO: the above might match something in failure cases too...
             if not SERVICE_ACCOUNT_FOR_ANVIL:
                 raise Exception('Error starting seqr - gcloud auth is not properly configured')
