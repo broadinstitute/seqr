@@ -209,14 +209,26 @@ export const loadSearchedVariants = (
   if (!sort) {
     sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
   }
-  const apiQueryParams = { sort: sort.toLowerCase(), page }
+  const urlQueryParams = { sort: sort.toLowerCase(), page }
 
   // Update search table state and query params
   dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
-  updateQueryParams(apiQueryParams)
+  updateQueryParams(urlQueryParams)
+
+  const apiQueryParams = { ...urlQueryParams, loadFamilyContext: true, loadProjectContext: true }
+  const search = state.searchesByHash[searchHash]
+  if (search && search.projectFamilies && search.projectFamilies.length > 0) {
+    apiQueryParams.loadProjectTagTypes = search.projectFamilies.some(
+      ({ projectGuid }) => !state.projectsByGuid[projectGuid]?.variantTagTypes,
+    )
+    apiQueryParams.loadFamilyContext = search.projectFamilies.some(
+      ({ familyGuids }) => !familyGuids || familyGuids.some(
+        familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
+      ),
+    )
+  }
 
   const url = `/api/search/${searchHash}?${getUrlQueryString(apiQueryParams)}`
-  const search = state.searchesByHash[searchHash]
 
   // Fetch variants
   new HttpRequestHelper(url,

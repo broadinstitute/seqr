@@ -18,7 +18,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_family_notes, _get_json_for_individuals
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
-from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags
+from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
+    add_project_tag_types
 from settings import ANALYST_PROJECT_CATEGORY
 
 
@@ -163,6 +164,7 @@ def project_overview(request, project_guid):
 
     is_analyst = user_is_analyst(request.user)
     response = get_projects_child_entities([project], project.guid, request.user, is_analyst=is_analyst)
+    add_project_tag_types(response['projectsByGuid'])
 
     project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
 

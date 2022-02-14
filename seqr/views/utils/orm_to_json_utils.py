@@ -701,7 +701,7 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False, is_analyst=None):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False, is_analyst=None, include_metadata=True):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -735,10 +735,12 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
 
         if include_project_count:
             result['numProjects'] = locus_list.num_projects
-        result.update({
-            'numEntries': gene_set.count() + interval_set.count(),
-            'canEdit': user == locus_list.created_by,
-        })
+
+        if include_metadata:
+            result.update({
+                'numEntries': gene_set.count() + interval_set.count(),
+                'canEdit': user == locus_list.created_by,
+            })
 
         if hasattr(locus_list, 'palocuslist'):
             pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user, is_analyst=is_analyst)
@@ -746,9 +748,11 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
                 'paLocusList': pa_locus_list_json,
             })
 
-    prefetch_related_objects(locus_lists, 'created_by')
-    prefetch_related_objects(locus_lists, 'locuslistgene_set')
-    prefetch_related_objects(locus_lists, 'locuslistinterval_set')
+    if include_metadata:
+        prefetch_related_objects(locus_lists, 'created_by')
+    if include_metadata or include_genes:
+        prefetch_related_objects(locus_lists, 'locuslistgene_set')
+        prefetch_related_objects(locus_lists, 'locuslistinterval_set')
     prefetch_related_objects(locus_lists, 'palocuslist')
 
     if include_pagenes:

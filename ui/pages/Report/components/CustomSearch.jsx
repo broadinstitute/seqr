@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Header } from 'semantic-ui-react'
 
-import { getProjectsByGuid, getSamplesGroupedByProjectGuid, getCurrentSearchParams } from 'redux/selectors'
+import { getProjectsByGuid, getProjectDatasetTypes, getCurrentSearchParams } from 'redux/selectors'
 import { Select, InlineToggle, BaseSemanticInput } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
@@ -21,7 +21,7 @@ import { getSearchIncludeAllProjectsInput, getSearchHashContextLoading } from '.
 
 const mapProjectsStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.value],
-  projectSamples: getSamplesGroupedByProjectGuid(state)[ownProps.value],
+  projectHasSamples: (getProjectDatasetTypes(state)[ownProps.value] || []).length > 0,
 })
 
 const mapProjectsDispatchToProps = {
