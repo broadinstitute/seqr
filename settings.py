@@ -400,8 +400,8 @@ if TERRA_API_ROOT_URL:
     if not SERVICE_ACCOUNT_FOR_ANVIL:
         # attempt to acquire a service account token
         if os.path.exists('/.config/service-account-key.json'):
-            auth_output = subprocess.run(['gcloud', 'auth', 'activate-service-account', '--key-file',
-                                          '/.config/service-account-key.json'], capture_output=True, text=True).stderr # nosec
+            auth_output = subprocess.run(['gcloud', 'auth', 'activate-service-account', '--key-file', '/.config/service-account-key.json'],  # nosec
+                                         capture_output=True, text=True).stderr
 
             SERVICE_ACCOUNT_FOR_ANVIL = re.findall(r'\[(.*)\]', auth_output)[0]
 
