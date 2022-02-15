@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+* Update seqr dockerfile to improve immutability and build automation (REQUIRES IMAGE UPDATE)
+* Adds NPM asset build to the seqr dockerfile
 
 ## 2/4/22
 * Show RNA-seq expression data (REQUIRES DB MIGRATION)
