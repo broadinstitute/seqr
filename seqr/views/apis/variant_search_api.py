@@ -2,12 +2,14 @@ import json
 import jmespath
 from collections import defaultdict
 from django.utils import timezone
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 
 from reference_data.models import GENOME_VERSION_GRCh37
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, \
+    Sample
 from seqr.utils.elasticsearch.utils import get_es_variants, get_single_es_variant, get_es_variant_gene_counts
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.xpos_utils import get_xpos
@@ -19,8 +21,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, has_case_review_permissions
-from seqr.views.utils.project_context_utils import get_projects_child_entities, add_families_context, add_child_ids
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
+from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 from settings import DEMO_PROJECT_CATEGORY
 
@@ -58,23 +60,9 @@ def query_variants_handler(request, search_hash):
     variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page,
                                               skip_genotype_filter=is_all_project_search, user=request.user)
 
-    response_context = {}
-    if is_all_project_search and len(variants) == total_results:
-        # For all project search only save the relevant families
-        family_guids = set()
-        for variant in variants:
-            family_guids.update(variant['familyGuids'])
-        families = results_model.families.filter(guid__in=family_guids)
-        results_model.families.set(families)
-
-        projects = Project.objects.filter(family__in=families).distinct()
-        if projects:
-            response_context = _get_projects_details(projects, request.user)
-
     response = _process_variants(variants or [], results_model.families.all(), request)
     response['search'] = _get_search_context(results_model)
     response['search']['totalResults'] = total_results
-    response.update(response_context)
 
     return create_json_response(response)
 
@@ -112,9 +100,10 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         # If a search_context request and results request are dispatched at the same time, its possible the other
         # request already created the model
-        results_model, _ = get_or_create_model_from_json(
-            VariantSearchResults, {'search_hash': search_hash, 'variant_search': search_model},
-            update_json=None, user=user)
+        results_model = VariantSearchResults.objects.filter(search_hash=search_hash).first()
+        if not results_model:
+            results_model = create_model_from_json(
+                VariantSearchResults, {'search_hash': search_hash, 'variant_search': search_model}, user)
 
         results_model.families.set(families)
     return results_model
@@ -125,23 +114,25 @@ def query_single_variant_handler(request, variant_id):
     """Search variants.
     """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
+    check_project_permissions(families.first().project, request.user)
 
     variant = get_single_es_variant(families, variant_id, user=request.user)
 
-    response = _process_variants([variant], families, request)
-    response.update(_get_projects_details([families.first().project], request.user))
+    response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
 
     return create_json_response(response)
 
 
-def _process_variants(variants, families, request):
+def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False):
     if not variants:
         return {'searchedVariants': variants}
 
     flat_variants = _flatten_variants(variants)
     saved_variants, variants_by_id = _get_saved_variant_models(flat_variants, families)
 
-    response_json = get_variants_response(request, saved_variants, response_variants=flat_variants)
+    response_json = get_variants_response(
+        request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
+        add_locus_list_detail=add_locus_list_detail)
     response_json['searchedVariants'] = variants
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
@@ -332,75 +323,52 @@ def search_context_handler(request):
         projects = Project.objects.filter(projectcategory__guid=context.get('projectCategoryGuid'))
     elif context.get('searchHash'):
         search_context = context.get('searchParams')
-        if _is_all_project_family_search(search_context):
-            return create_json_response(response)
-        else:
-            try:
-                results_model = _get_or_create_results_model(context['searchHash'], search_context, request.user)
-            except Exception as e:
-                return create_json_response({'error': str(e)}, status=400, reason=str(e))
-            projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
+        try:
+            results_model = _get_or_create_results_model(context['searchHash'], search_context, request.user)
+        except Exception as e:
+            return create_json_response({'error': str(e)}, status=400, reason=str(e))
+        projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
 
     if not projects:
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    # TODO can probably return much less data
-    response.update(_get_projects_details(projects, request.user, project_category_guid=context.get('projectCategoryGuid')))
-
-    return create_json_response(response)
-
-
-def _get_projects_details(projects, user, project_category_guid=None):
     for project in projects:
-        check_project_permissions(project, user)
+        check_project_permissions(project, request.user)
 
-    has_case_review_perm = has_case_review_permissions(projects[0], user)
-    is_analyst = user_is_analyst(user)
+    is_analyst = user_is_analyst(request.user)
 
     project_guid = projects[0].guid if len(projects) == 1 else None
-    response = get_projects_child_entities(projects, project_guid, user, is_analyst)
+    response.update(get_projects_child_entities(
+        projects, project_guid, request.user, is_analyst, include_samples=False, include_locus_list_metadata=False,
+    ))
 
     family_models = Family.objects.filter(project__in=projects)
-    individual_models = add_families_context(
-        response, family_models, project_guid, user, is_analyst, has_case_review_perm, skip_child_ids=True)
+    response['familiesByGuid'] = {f.guid: {
+        'projectGuid' if project_guid else 'projectId': project_guid or f.project_id,
+        'familyGuid': f.guid,
+        'displayName': f.display_name or f.family_id,
+    } for f in family_models}
+
+    project_dataset_types = Sample.objects.filter(
+        individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
+    ).values('individual__family__project__guid').annotate(dataset_types=ArrayAgg('dataset_type', distinct=True))
+    for agg in project_dataset_types:
+        response['projectsByGuid'][agg['individual__family__project__guid']]['datasetTypes'] = agg['dataset_types']
 
     if not project_guid:
         project_id_to_guid = {project.id: project.guid for project in projects}
-        family_id_to_guid = {family.id: family.guid for family in family_models}
-        individual_id_to_guid = {individual.id: individual.guid for individual in individual_models}
-        family_guid_to_project_guid = {}
-        individual_guid_to_project_guid = {}
         for family in response['familiesByGuid'].values():
             project_guid = project_id_to_guid[family.pop('projectId')]
             family['projectGuid'] = project_guid
-            family_guid_to_project_guid[family['familyGuid']] = project_guid
-        for individual in response['individualsByGuid'].values():
-            family_guid = family_id_to_guid[individual.pop('familyId')]
-            project_guid = family_guid_to_project_guid[family_guid]
-            individual['familyGuid'] = family_guid
-            individual['projectGuid'] = project_guid
-            individual_guid_to_project_guid[individual['individualGuid']] = project_guid
-        for sample in response['samplesByGuid'].values():
-            individual_guid = individual_id_to_guid[sample.pop('individualId')]
-            sample['individualGuid'] = individual_guid
-            sample['familyGuid'] = response['individualsByGuid'][individual_guid]['familyGuid']
-            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
-        for sample in response['igvSamplesByGuid'].values():
-            individual_guid = individual_id_to_guid[sample.pop('individualId')]
-            sample['individualGuid'] = individual_guid
-            sample['projectGuid'] = individual_guid_to_project_guid[individual_guid]
 
-    add_child_ids(response)
-
-    for project in response['projectsByGuid'].values():
-        project['searchContextLoaded'] = True
+    project_category_guid = context.get('projectCategoryGuid')
     if project_category_guid:
         response['projectCategoriesByGuid'] = {
             project_category_guid: ProjectCategory.objects.get(guid=project_category_guid).json()
         }
 
-    return response
+    return create_json_response(response)
 
 
 @login_and_policies_required
