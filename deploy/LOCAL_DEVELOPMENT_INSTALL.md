@@ -10,7 +10,7 @@ Before installing, always check first to see if a dependency is already installe
 - [gcloud](https://cloud.google.com/sdk/install)
 - [postgres](https://www.postgresql.org/download/)
 - [redis](https://redis.io/topics/quickstart)
-- [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+- [node/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 - [docker](https://docs.docker.com/install/)
 - [docker-compose](https://docs.docker.com/compose/install/)   
 
@@ -29,15 +29,15 @@ npm install
 
 ### Setup postgres database
 
-#### Existing seqr instance
+#### Broad seqr instance
 
-If you are developing for an existing seqr instance (i.e. the Broad's), copy the production database to your local 
+If you are developing for the Broad's seqr instance, copy the production database to your local 
 database so the data looks comparable. You will want to periodically re-run this to keep in sync.
 
 ```bash
 ./deploy/kubectl_helpers/set_env.sh prod 
-./deploy/kubectl_helpers/restore_locl_db.sh prod seqrdb
-./deploy/kubectl_helpers/restore_locl_db.sh prod reference_data_db
+./deploy/kubectl_helpers/restore_local_db.sh prod seqrdb
+./deploy/kubectl_helpers/restore_local_db.sh prod reference_data_db
 ```
 
 #### Stand alone seqr instance
@@ -88,7 +88,7 @@ Before running seqr, make sure the following are currently running/ started:
 
 - postgres
 
-- redis
+- redis (optional, improves performance but only needed  when actively developing cache-related code)
 
 - elasticsearch (optional, only needed when actively developing search functionality) 
   - Since seqr accesses ES as read-only, it is safe to tunnel to production data during local development. 
