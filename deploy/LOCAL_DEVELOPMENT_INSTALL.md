@@ -4,13 +4,15 @@ Instructions for setting up seqr on a local machine for development
 
 ## Install dependencies
 
-Before installing, always check first to see if a dependency is already installed
+Before installing, always check first to see if a dependency is already installed.
 
 - [python 3](https://www.python.org/downloads/)
 - [gcloud](https://cloud.google.com/sdk/install)
 - [postgres](https://www.postgresql.org/download/)
 - [redis](https://redis.io/topics/quickstart)
 - [node/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+
+Optionally, if planning to use elasticsearch from docker-compose, install:
 - [docker](https://docs.docker.com/install/)
 - [docker-compose](https://docs.docker.com/compose/install/)   
 
