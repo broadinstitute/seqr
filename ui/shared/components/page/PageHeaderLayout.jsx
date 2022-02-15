@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import DocumentTitle from 'react-document-title'
+import useTitle from 'react-use/lib/useTitle'
 import { NavLink } from 'react-router-dom'
 import styled from 'styled-components'
 import { Grid, Breadcrumb, Popup, Icon, Header, Menu } from 'semantic-ui-react'
@@ -74,10 +74,11 @@ const PageHeaderLayout = React.memo(({
       return [...acc, section]
     }, [],
   )
+  // TODO should header be ocnfigurable? should breadcrumb go here?
+  useTitle(header || `${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`)
 
   return (
     <PageHeaderRow>
-      <DocumentTitle key="title" title={header || `${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`} />
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <BreadcrumbContainer>
@@ -125,22 +126,26 @@ PageHeaderLayout.propTypes = {
 
 export default PageHeaderLayout
 
-export const SimplePageHeader = ({ page, pages }) => ([
-  <Menu attached key="submenu">
-    <Menu.Item key="title">
-      <Header size="medium">
-        <HorizontalSpacer width={90} />
-        {`${snakecaseToTitlecase(page)} Pages:`}
-      </Header>
-    </Menu.Item>
-    {pages.map(
-      ({ path }) => <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
-    )}
-  </Menu>,
-  <VerticalSpacer height={20} key="spacer" />,
-])
+export const SimplePageHeader = ({ page, pages, subPage }) => {
+  useTitle(`seqr: ${snakecaseToTitlecase(subPage) || snakecaseToTitlecase(page)}`)
+  return [
+    <Menu attached key="submenu">
+      <Menu.Item key="title">
+        <Header size="medium">
+          <HorizontalSpacer width={90} />
+          {`${snakecaseToTitlecase(page)} Pages:`}
+        </Header>
+      </Menu.Item>
+      {pages.map(
+        ({ path }) => <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
+      )}
+    </Menu>,
+    <VerticalSpacer height={20} key="spacer" />,
+  ]
+}
 
 SimplePageHeader.propTypes = {
   page: PropTypes.string,
   pages: PropTypes.arrayOf(PropTypes.object),
+  subPage: PropTypes.string,
 }
