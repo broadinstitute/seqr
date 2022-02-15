@@ -10,7 +10,8 @@ Before installing, always check first to see if a dependency is already installe
 - [gcloud](https://cloud.google.com/sdk/install)
 - [postgres](https://www.postgresql.org/download/)
 - [redis](https://redis.io/topics/quickstart)
-- [node/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+- [node/npm](npm -v
+)
 
 Optionally, if planning to use elasticsearch from docker-compose, install:
 - [docker](https://docs.docker.com/install/)
@@ -116,4 +117,11 @@ npm run start
 ### Run python/ django server
 ```bash
 ./manage.py runserver
+```
+
+### Run unit tests
+
+Unit tests are run automatically when code is PR'd to seqr. To run locally, run
+```bash
+./manage.py test -p '*_tests.py' reference_data seqr matchmaker panelapp
 ```
