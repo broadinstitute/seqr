@@ -3,7 +3,9 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table, Header, Popup, Loader } from 'semantic-ui-react'
 
-import { getIndividualsByGuid } from 'redux/selectors'
+import { loadFamilyDetails } from 'redux/rootReducer'
+import { getIndividualsByGuid, getFamilyDetailsLoading } from 'redux/selectors'
+import DataLoader from 'shared/components/DataLoader'
 import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
@@ -16,11 +18,7 @@ const CUSTOM_FILTERS = [
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
 ]
 
-const CustomInheritanceFilter = React.memo(({ value, onChange, family, individualsByGuid }) => {
-  if (!family) {
-    return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
-  }
-
+const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, individualsByGuid }) => {
   const individuals = (family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).filter(
     individual => individual,
   )
@@ -98,16 +96,38 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
   )
 })
 
-const mapStateToProps = state => ({
-  family: getSingleInputFamily(state),
-  individualsByGuid: getIndividualsByGuid(state),
-})
-
-CustomInheritanceFilter.propTypes = {
+CustomInheritanceFilterContent.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
   family: PropTypes.object,
   individualsByGuid: PropTypes.object,
 }
 
-export default connect(mapStateToProps)(CustomInheritanceFilter)
+const CustomInheritanceFilter = React.memo(({ load, loading, family, ...props }) => {
+  if (!family) {
+    return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
+  }
+  return (
+    <DataLoader load={load} contentId={family.familyGuid} content={family && family.detailsLoaded} loading={loading}>
+      <CustomInheritanceFilterContent family={family} {...props} />
+    </DataLoader>
+  )
+})
+
+const mapStateToProps = (state, ownProps) => ({
+  family: getSingleInputFamily(state),
+  individualsByGuid: getIndividualsByGuid(state),
+  loading: !!getFamilyDetailsLoading(state)[ownProps.family?.familyGuid],
+})
+
+const mapDispatchToProps = {
+  load: loadFamilyDetails,
+}
+
+CustomInheritanceFilter.propTypes = {
+  load: PropTypes.func,
+  family: PropTypes.object,
+  loading: PropTypes.bool,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(CustomInheritanceFilter)

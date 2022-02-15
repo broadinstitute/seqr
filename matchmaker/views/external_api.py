@@ -84,7 +84,7 @@ def mme_match_proxy(request, originating_node_name):
     except Exception as e:
         logger.error('Unable to create notification for incoming MME match request for {} matches{}: {}'.format(
             len(results),
-            ' ({})'.format(', '.join([result.get('patient', {}).get('id') for result in results])) if results else '',
+            ' ({})'.format(', '.join(sorted([result.get('patient', {}).get('id') for result in results]))) if results else '',
             str(e)),
         )
 

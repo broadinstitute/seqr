@@ -50,7 +50,6 @@ export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoadi
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
-export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getFamilyVariantSummaryLoading = state => state.familyVariantSummaryLoading.isLoading
 export const getIndivdualsLoading = state => state.individualsLoading.isLoading
 export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
@@ -100,7 +99,9 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
 
 export const getProjectAnalysisGroupIndividualsCount = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).reduce((acc, family) => acc + family.individualGuids.length, 0),
+  familiesByGuid => Object.values(familiesByGuid).reduce(
+    (acc, family) => acc + (family.individualGuids || []).length, 0,
+  ),
 )
 
 export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
@@ -365,7 +366,8 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   getFamiliesSortOrder,
   getFamiliesSortDirection,
   (visibleFamilies, individualsByGuid, samplesByFamily, familiesSortOrder, familiesSortDirection) => {
-    if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
+    if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder] ||
+      visibleFamilies.some(({ familyId }) => !familyId)) { // families have been loaded without any core fields
       return visibleFamilies
     }
 
