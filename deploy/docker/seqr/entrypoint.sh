@@ -20,7 +20,16 @@ fi
 if [ -e "/.config/service-account-key.json" ]; then
     # authenticate to google cloud using service account
     cp /usr/share/zoneinfo/US/Eastern /etc/localtime
-    gcloud auth activate-service-account --key-file /.config/service-account-key.json
+    # this is error prone, retry up to 5 times, 10 seconds in between
+    retries=0
+    until [ "$retries" -ge 5 ]
+    do
+        gcloud auth activate-service-account --key-file /.config/service-account-key.json && break
+        retries=$((retries+1)) 
+        echo "gcloud auth failed. Retrying, attempt ${retries}/5"
+        sleep 10
+    done
+    
     cp /.config/boto /root/.boto
 fi
 
