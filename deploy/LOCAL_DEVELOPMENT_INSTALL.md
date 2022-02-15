@@ -123,5 +123,10 @@ npm run start
 
 Unit tests are run automatically when code is PR'd to seqr. To run locally, run
 ```bash
+# Server side tests
 ./manage.py test -p '*_tests.py' reference_data seqr matchmaker panelapp
+  
+# Client side tests
+cd ./ui
+npm run test
 ```
