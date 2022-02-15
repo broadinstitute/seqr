@@ -215,7 +215,7 @@ export const loadSearchedVariants = (
   dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
   updateQueryParams(urlQueryParams)
 
-  const apiQueryParams = { ...urlQueryParams, loadFamilyContext: true, loadProjectContext: true }
+  const apiQueryParams = { ...urlQueryParams, loadFamilyContext: true, loadProjectTagTypes: true }
   const search = state.searchesByHash[searchHash]
   if (search && search.projectFamilies && search.projectFamilies.length > 0) {
     apiQueryParams.loadProjectTagTypes = search.projectFamilies.some(
