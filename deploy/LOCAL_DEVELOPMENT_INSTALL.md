@@ -10,8 +10,7 @@ Before installing, always check first to see if a dependency is already installe
 - [gcloud](https://cloud.google.com/sdk/install)
 - [postgres](https://www.postgresql.org/download/)
 - [redis](https://redis.io/topics/quickstart)
-- [node/npm](npm -v
-)
+- [node/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 
 Optionally, if planning to use elasticsearch from docker-compose, install:
 - [docker](https://docs.docker.com/install/)
