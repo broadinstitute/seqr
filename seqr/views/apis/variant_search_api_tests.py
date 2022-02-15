@@ -119,6 +119,8 @@ class VariantSearchAPITest(object):
 
         self.assertEqual(len(response_json['familiesByGuid']), 11)
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {'projectGuid', 'familyGuid', 'displayName'})
+        self.assertEqual(response_json['familiesByGuid']['F000001_1']['displayName'], '1')
+
 
     def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):
         self._assert_expected_results_context(response_json, locus_list_detail=locus_list_detail)

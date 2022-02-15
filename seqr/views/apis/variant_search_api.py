@@ -347,7 +347,7 @@ def search_context_handler(request):
     response['familiesByGuid'] = {f.guid: {
         'projectGuid' if project_guid else 'projectId': project_guid or f.project_id,
         'familyGuid': f.guid,
-        'displayName': f.display_name,
+        'displayName': f.display_name or f.family_id,
     } for f in family_models}
 
     project_dataset_types = Sample.objects.filter(
