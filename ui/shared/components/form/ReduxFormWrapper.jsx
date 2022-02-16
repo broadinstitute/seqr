@@ -95,7 +95,7 @@ ArrayFieldItem.propTypes = {
   arrayFieldName: PropTypes.string,
   singleFieldProps: PropTypes.object,
   label: PropTypes.string,
-  fields: PropTypes.arrayOf(PropTypes.string),
+  fields: PropTypes.object,
 }
 
 const arrayFieldItem = fieldProps => arrayProps => <ArrayFieldItem {...fieldProps} {...arrayProps} />
