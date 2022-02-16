@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
-import useTitle from 'react-use/lib/useTitle'
 
 import ProjectPageHeader from 'pages/Project/components/PageHeader'
 import VariantSearchPageHeader from 'pages/Search/components/PageHeader'
@@ -10,8 +9,7 @@ import { DATA_MANAGEMENT_PAGES } from 'pages/DataManagement/DataManagement'
 import { REPORT_PAGES } from 'pages/Report/Report'
 import { SummaryDataPageHeader } from 'pages/SummaryData/SummaryData'
 import { getGenesById } from 'redux/selectors'
-import PageHeaderLayout, { SimplePageHeader } from './PageHeaderLayout'
-import { snakecaseToTitlecase } from '../../utils/stringUtils'
+import PageHeaderLayout, { SimplePageHeader, useSeqrTitle } from './PageHeaderLayout'
 
 const BaseGenePageHeader = React.memo(({ gene, match }) => (
   <PageHeaderLayout
@@ -53,7 +51,7 @@ const SIMPLE_HEADER_PAGES = [
 
 const EmptyHeader = ({ match }) => {
   const page = match.path.split('/').pop()
-  useTitle(`seqr: ${NO_HEADER_PAGE_TITLES[[page]] || snakecaseToTitlecase(page)}`)
+  useSeqrTitle(NO_HEADER_PAGE_TITLES[[page]] || page)
 
   return null
 }

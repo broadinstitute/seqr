@@ -29,8 +29,10 @@ const BreadcrumbContainer = styled.div`
   }
 `
 
+export const useSeqrTitle = title => useTitle(`seqr: ${snakecaseToTitlecase(title)}`)
+
 const PageHeaderLayout = React.memo(({
-  entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, header, entityLinkPath, entityGuidLinkPath,
+  entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, entityLinkPath, entityGuidLinkPath,
   entityLinks, button, description,
 }) => {
   let breadcrumbSections = [
@@ -74,8 +76,10 @@ const PageHeaderLayout = React.memo(({
       return [...acc, section]
     }, [],
   )
-  // TODO should header be ocnfigurable? should breadcrumb go here?
-  useTitle(header || `${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`)
+
+  const mainTitle = title || entity
+  const subTitle = breadcrumbIdSections?.length ? breadcrumbIdSections[breadcrumbIdSections.length - 1].content : null
+  useSeqrTitle(`${mainTitle}${(subTitle && subTitle !== mainTitle) ? ` - ${subTitle}` : ''}`)
 
   return (
     <PageHeaderRow>
@@ -116,7 +120,6 @@ PageHeaderLayout.propTypes = {
   breadcrumbId: PropTypes.string,
   breadcrumbIdSections: PropTypes.arrayOf(PropTypes.object),
   title: PropTypes.string,
-  header: PropTypes.string,
   entityLinkPath: PropTypes.string,
   entityGuidLinkPath: PropTypes.string,
   entityLinks: PropTypes.arrayOf(PropTypes.object),
@@ -127,7 +130,7 @@ PageHeaderLayout.propTypes = {
 export default PageHeaderLayout
 
 export const SimplePageHeader = ({ page, pages, subPage }) => {
-  useTitle(`seqr: ${snakecaseToTitlecase(subPage) || snakecaseToTitlecase(page)}`)
+  useSeqrTitle(subPage || page)
   return [
     <Menu attached key="submenu">
       <Menu.Item key="title">
