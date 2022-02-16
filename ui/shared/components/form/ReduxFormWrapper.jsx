@@ -90,7 +90,7 @@ const ArrayFieldItem = ({ addArrayElement, addArrayElementProps, arrayFieldName,
 )
 
 ArrayFieldItem.propTypes = {
-  addArrayElement: PropTypes.func,
+  addArrayElement: PropTypes.object,
   addArrayElementProps: PropTypes.object,
   arrayFieldName: PropTypes.string,
   singleFieldProps: PropTypes.object,
