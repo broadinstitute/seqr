@@ -12,6 +12,7 @@ ui/jest*
 
 deploy/secrets/gcloud*/*
 deploy/secrets/gcloud*/*
+deploy/*.tar.gz
 
 pedigree_images/*
 seqr_settings
