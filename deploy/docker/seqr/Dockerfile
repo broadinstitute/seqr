@@ -13,7 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     nodejs \
     npm \
-    redis-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
