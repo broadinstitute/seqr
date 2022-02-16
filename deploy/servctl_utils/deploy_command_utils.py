@@ -267,18 +267,18 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
     if not components:
         raise ValueError("components list is empty")
 
-    # if components:
-    #     run('deploy/kubectl_helpers/utils/check_context.sh {}'.format(deployment_target.replace('gcloud-', '')))
+    if components:
+        run('deploy/kubectl_helpers/utils/check_context.sh {}'.format(deployment_target.replace('gcloud-', '')))
 
     settings = prepare_settings_for_deployment(deployment_target, output_dir, runtime_settings)
 
     # make sure namespace exists
-    # if not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
-    #     create_namespace(settings)
-    #
-    # if components[0] == 'secrets':
-    #     deploy_secrets(settings, components=components[1:])
-    #     return
+    if not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
+        create_namespace(settings)
+
+    if components[0] == 'secrets':
+        deploy_secrets(settings, components=components[1:])
+        return
 
     # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
     for component in DEPLOYABLE_COMPONENTS:
