@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -45,15 +44,7 @@ const submitRequest = (urlPath, receiveDataAction, values) => dispatch => new Ht
   (responseJson) => {
     dispatch({ type: receiveDataAction, newValue: responseJson })
   },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-    } else if (e.body && e.body.error) {
-      throw new SubmissionError({ _error: [e.body.error] })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
-  },
+
 ).post(values)
 
 export const uploadQcPipelineOutput = values => submitRequest(
@@ -74,13 +65,6 @@ export const uploadRnaSeq = ({ file, ...values }) => dispatch => new HttpRequest
       info.push(`Successfully loaded data for ${numLoaded} RNA-seq samples`)
       dispatch({ type: RECEIVE_RNA_SEQ_UPLOAD_STATS, newValue: { info, warnings } })
     })
-  },
-  (e) => {
-    if (e.body && e.body.error) {
-      throw new SubmissionError({ _error: [e.body.error] })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
   },
 ).post(values)
 

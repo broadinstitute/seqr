@@ -104,6 +104,9 @@ export class HttpRequestHelper {
     .catch((exception) => {
       if (this.onError) {
         this.onError(exception)
+      } else {
+        // TODO test not actually using
+        return Promise.reject(exception)
       }
 
       return -1 // don't ever hide the error message
