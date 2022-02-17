@@ -105,7 +105,6 @@ export class HttpRequestHelper {
       if (this.onError) {
         this.onError(exception)
       } else {
-        // TODO test not actually using
         return Promise.reject(exception)
       }
 

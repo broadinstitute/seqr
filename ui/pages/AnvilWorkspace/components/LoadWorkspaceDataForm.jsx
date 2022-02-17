@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment, Message } from 'semantic-ui-react'
-import { SubmissionError } from 'redux-form'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -99,13 +98,6 @@ const createProjectFromWorkspace = (namespace, name) => ({ uploadedFile, ...valu
   `/api/create_project_from_workspace/submit/${namespace}/${name}`,
   (responseJson) => {
     window.location.href = `/project/${responseJson.projectGuid}/project_page`
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
   },
 ).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
 

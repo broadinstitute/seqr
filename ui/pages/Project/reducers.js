@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import { SubmissionError } from 'redux-form'
 
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
@@ -171,8 +170,7 @@ export const updateFamilies = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-    },
-    (e) => { throw new SubmissionError({ _error: [e.message] }) }).post(values)
+    }).post(values)
 }
 
 export const updateIndividuals = values => (dispatch, getState) => {
@@ -186,14 +184,6 @@ export const updateIndividuals = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-    },
-    (e) => {
-      if (e.body && e.body.errors) {
-        throw new SubmissionError({ _error: e.body.errors })
-        // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-      } else {
-        throw new SubmissionError({ _error: [e.message] })
-      }
     }).post(values)
 }
 
@@ -201,14 +191,6 @@ export const updateIndividualsMetadata = ({ uploadedFileId }) => (dispatch, getS
   `/api/project/${getState().currentProjectGuid}/save_individuals_metadata_table/${uploadedFileId}`,
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-      // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
   },
 ).post()
 
@@ -219,14 +201,7 @@ export const addVariantsDataset = values => (dispatch, getState) => new HttpRequ
 
     // Clear all loaded variants and update the saved variant json. This should happen asynchronously
     unloadSavedVariants(dispatch, getState)
-    new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`).post()
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
+    new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`, () => {}).post()
   },
 ).post(values)
 
@@ -241,7 +216,9 @@ export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch, getState
     ).post({ ...update, ...values }),
   )).then(() => {
     if (errors.length) {
-      throw new SubmissionError({ _error: errors })
+      const err = new Error()
+      err.body = { errors }
+      throw err
     }
   })
 }
@@ -252,8 +229,7 @@ export const updateLocusLists = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${projectGuid}/${action}_locus_lists`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson } } })
-    },
-    (e) => { throw new SubmissionError({ _error: [e.message] }) }).post(values)
+    }).post(values)
 }
 
 export const updateCollaborator = values => updateEntity(
@@ -323,9 +299,6 @@ export const sendMmeContactEmail = values => dispatch => new HttpRequestHelper(
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post(values)
 
 export const updateProjectMmeContact = values => (dispatch, getState) => new HttpRequestHelper(
@@ -333,7 +306,6 @@ export const updateProjectMmeContact = values => (dispatch, getState) => new Htt
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => { throw new SubmissionError({ _error: [e.message] }) },
 ).post(values)
 
 // Table actions

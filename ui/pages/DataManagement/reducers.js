@@ -44,7 +44,6 @@ const submitRequest = (urlPath, receiveDataAction, values) => dispatch => new Ht
   (responseJson) => {
     dispatch({ type: receiveDataAction, newValue: responseJson })
   },
-
 ).post(values)
 
 export const uploadQcPipelineOutput = values => submitRequest(

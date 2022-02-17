@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { reducer as formReducer, SubmissionError } from 'redux-form'
+import { reducer as formReducer } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
@@ -66,9 +66,6 @@ export const loadUserOptions = familyGuid => (dispatch, getState) => {
 export const updateUser = values => dispatch => new HttpRequestHelper('/api/users/update',
   (responseJson) => {
     dispatch({ type: UPDATE_USER, updates: responseJson })
-  },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
   }).post(values)
 
 export const updateProject = (values) => {
@@ -90,9 +87,6 @@ export const updateFamily = (values) => {
   return dispatch => new HttpRequestHelper(`${urlBase}/update${familyField}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
 
@@ -101,9 +95,6 @@ export const updateIndividual = values => (dispatch) => {
   return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update${individualField}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { individualsByGuid: responseJson } })
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
 
@@ -264,9 +255,6 @@ const updateSavedVariant = (values, action = 'create') => (dispatch, getState) =
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post({ searchHash: getState().currentSearchHash, ...values })
 
 export const updateVariantNote = (values) => {
@@ -288,9 +276,6 @@ export const updateVariantMainTranscript = (variantGuid, transcriptId) => dispat
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post()
 
 export const updateLocusList = values => (dispatch) => {
@@ -308,9 +293,7 @@ export const updateLocusList = values => (dispatch) => {
       if (e.body && e.body.invalidLocusListItems) {
         error = `${error} Invalid genes/ intervals: ${e.body.invalidLocusListItems.join(', ')}`
       }
-      throw new SubmissionError({
-        _error: [error],
-      })
+      throw new Error(error)
     }).post(values)
 }
 

@@ -131,7 +131,6 @@ export const configuredField = (field, formProps = {}) => {
   ) : <Field {...baseProps} {...singleFieldProps} />
 }
 
-// TODO take needed props only instead of whole props dict
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
 
 const SUBMISSION_PANEL_SUBSCRIPTION = [
@@ -159,7 +158,6 @@ class ReduxFormWrapper extends React.PureComponent {
     modalName: PropTypes.string, // eslint-disable-line react/no-unused-prop-types
 
     /* A callback when a valid form is submitted. Will be passed all the form data */
-    /* Note that this differs from handleSubmit, which is a redux-form supplied handler that shouldn't be overridden */
     onSubmit: PropTypes.func.isRequired,
 
     /* A callback for when the cancel button is selected */
@@ -196,7 +194,7 @@ class ReduxFormWrapper extends React.PureComponent {
     loading: PropTypes.bool,
 
     /* Array of objects representing the fields to show in the form. */
-    /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
+    /* Each field must have a name and a component, and can have any extra props accepted by react-final-form's Field */
     fields: PropTypes.arrayOf(PropTypes.object), // eslint-disable-line react/no-unused-prop-types
 
     /* React child component class. Mutually exclusive with fields */
@@ -308,7 +306,7 @@ class ReduxFormWrapper extends React.PureComponent {
     } = this.props
     const { confirming } = this.state
 
-    const fieldComponents = children || configuredFields(this.props) // TODO only pass needed props
+    const fieldComponents = children || configuredFields(this.props)
 
     return (
       <FinalForm onSubmit={this.handledOnSubmit} initialValues={initialValues} subscription={SUBMITTING_SUBSCRIPTION}>
