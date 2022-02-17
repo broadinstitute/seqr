@@ -134,11 +134,9 @@ export const configuredField = (field, formProps = {}) => {
 // TODO take needed props only instead of whole props dict
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
 
-// specify which fields to check for re-rendering entire form
-const SUBSCRIPTION = [
+const SUBMISSION_PANEL_SUBSCRIPTION = [
   'submitSucceeded',
   'submitFailed',
-  'submitting',
   'dirty',
   'dirtySinceLastSubmit',
   'hasSubmitErrors',
@@ -146,7 +144,7 @@ const SUBSCRIPTION = [
   'errors',
   'submitErrors',
 ].reduce((acc, k) => ({ ...acc, [k]: true }), {})
-
+const SUBMITTING_SUBSCRIPTION = { submitting: true }
 const SUBMIT_SUCCEEDED_SUBSCRIPTION = { submitSucceeded: true }
 const DIRTY_SUBSCRIPTION = { dirty: true }
 
@@ -261,70 +259,80 @@ class ReduxFormWrapper extends React.PureComponent {
     handleSubmit()
   }
 
+  renderSubmissionPanel = ({
+    submitSucceeded, submitFailed, hasSubmitErrors, hasValidationErrors, errors, submitErrors,
+    dirty, dirtySinceLastSubmit,
+  }) => {
+    const {
+      submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, onSubmitSucceeded,
+      noModal, liveValidate,
+    } = this.props
+
+    const currentFormSubmitFailed = submitFailed && !dirtySinceLastSubmit
+    let saveStatus = NONE
+    if (submitSucceeded) {
+      saveStatus = SUCCEEDED
+    } else if (currentFormSubmitFailed) {
+      saveStatus = ERROR
+    }
+
+    const shouldShowValidationErrors = submitFailed || (liveValidate && dirty)
+    let errorMessages
+    if (hasSubmitErrors) {
+      errorMessages = submitErrors.errors
+    } else if (hasValidationErrors && shouldShowValidationErrors) {
+      errorMessages = flattenDeep(nestedObjectValues(errors)).filter(err => err)
+    }
+    const saveErrorMessage = errorMessages?.join('; ') || (currentFormSubmitFailed ? 'Error' : null)
+
+    return [
+      showErrorPanel && errorMessages && <MessagePanel key="errorPanel" error visible list={errorMessages} />,
+      submitSucceeded && successMessage && <MessagePanel key="infoPanel" success visible content={successMessage} />,
+      !submitOnChange && (
+        <ButtonPanel
+          key="buttonPanel"
+          cancelButtonText={cancelButtonText}
+          submitButtonText={submitButtonText}
+          saveStatus={saveStatus}
+          saveErrorMessage={saveErrorMessage}
+          handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
+        />
+      ),
+    ]
+  }
+
   render() {
     const {
-      children, confirmDialog, size, loading, submitOnChange, inline, showErrorPanel, successMessage, cancelButtonText,
-      submitButtonText, onSubmitSucceeded, noModal, initialValues, liveValidate, closeOnSuccess, confirmCloseIfNotSaved,
+      children, confirmDialog, size, loading, submitOnChange, inline, onSubmitSucceeded, noModal, initialValues,
+      closeOnSuccess, confirmCloseIfNotSaved,
     } = this.props
     const { confirming } = this.state
 
     const fieldComponents = children || configuredFields(this.props) // TODO only pass needed props
 
     return (
-      <FinalForm onSubmit={this.handledOnSubmit} initialValues={initialValues} subscription={SUBSCRIPTION}>
-        {({
-          handleSubmit, submitSucceeded, submitFailed, submitting, dirty, hasSubmitErrors, hasValidationErrors,
-          errors, submitErrors, dirtySinceLastSubmit,
-        }) => {
-          const currentFormSubmitFailed = submitFailed && !dirtySinceLastSubmit
-          let saveStatus = NONE
-          if (submitSucceeded) {
-            saveStatus = SUCCEEDED
-          } else if (currentFormSubmitFailed) {
-            saveStatus = ERROR
-          }
-
-          const shouldShowValidationErrors = submitFailed || (liveValidate && dirty)
-          let errorMessages
-          if (hasSubmitErrors) {
-            errorMessages = submitErrors.errors
-          } else if (hasValidationErrors && shouldShowValidationErrors) {
-            errorMessages = flattenDeep(nestedObjectValues(errors)).filter(err => err)
-          }
-          const saveErrorMessage = errorMessages?.join('; ') || (currentFormSubmitFailed ? 'Error' : null)
-
-          return (
-            <StyledForm
-              onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
-              size={size}
-              loading={submitting || loading}
-              hasSubmitButton={!submitOnChange}
-              inline={inline}
-            >
-              {fieldComponents}
-              {showErrorPanel && errorMessages && <MessagePanel error visible list={errorMessages} />}
-              {submitSucceeded && successMessage && <MessagePanel success visible content={successMessage} />}
-              {!submitOnChange && (
-                <ButtonPanel
-                  cancelButtonText={cancelButtonText}
-                  submitButtonText={submitButtonText}
-                  saveStatus={saveStatus}
-                  saveErrorMessage={saveErrorMessage}
-                  handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
-                />
-              )}
-              <Confirm
-                content={confirmDialog}
-                open={confirming}
-                onCancel={this.hideConfirmDialog}
-                onConfirm={this.handleConfirmedSubmit(handleSubmit)}
-              />
-              {(onSubmitSucceeded || (closeOnSuccess && !noModal)) &&
-                <FormSpy subscription={SUBMIT_SUCCEEDED_SUBSCRIPTION} onChange={this.onSubmitSucceededChange} />}
-              {confirmCloseIfNotSaved && <FormSpy subscription={DIRTY_SUBSCRIPTION} onChange={this.onDirtyChange} />}
-            </StyledForm>
-          )
-        }}
+      <FinalForm onSubmit={this.handledOnSubmit} initialValues={initialValues} subscription={SUBMITTING_SUBSCRIPTION}>
+        {({ handleSubmit, submitting }) => (
+          <StyledForm
+            onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
+            size={size}
+            loading={submitting || loading}
+            hasSubmitButton={!submitOnChange}
+            inline={inline}
+          >
+            {fieldComponents}
+            <FormSpy subscription={SUBMISSION_PANEL_SUBSCRIPTION} render={this.renderSubmissionPanel} />
+            <Confirm
+              content={confirmDialog}
+              open={confirming}
+              onCancel={this.hideConfirmDialog}
+              onConfirm={this.handleConfirmedSubmit(handleSubmit)}
+            />
+            {(onSubmitSucceeded || (closeOnSuccess && !noModal)) &&
+              <FormSpy subscription={SUBMIT_SUCCEEDED_SUBSCRIPTION} onChange={this.onSubmitSucceededChange} />}
+            {confirmCloseIfNotSaved && <FormSpy subscription={DIRTY_SUBSCRIPTION} onChange={this.onDirtyChange} />}
+          </StyledForm>
+        )}
       </FinalForm>
     )
   }
