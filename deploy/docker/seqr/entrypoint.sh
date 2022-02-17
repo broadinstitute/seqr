@@ -33,15 +33,7 @@ if [ -e "/.config/service-account-key.json" ]; then
     cp /.config/boto /root/.boto
 fi
 
-# launch django dev server in background
 cd /seqr
-
-if [ "$SEQR_GIT_BRANCH" ]; then
-  git pull
-  git checkout "$SEQR_GIT_BRANCH"
-fi
-
-pip install --upgrade -r requirements.txt  # doublecheck that requirements are up-to-date
 
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
@@ -57,7 +49,6 @@ if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -l | grep seqrdb; then
   python -u manage.py migrate
   python -u manage.py migrate --database=reference_data
   python -u manage.py check
-  python -u manage.py collectstatic --no-input
   python -u manage.py loaddata variant_tag_types
   python -u manage.py loaddata variant_searches
   python -u manage.py update_all_reference_data --use-cached-omim
