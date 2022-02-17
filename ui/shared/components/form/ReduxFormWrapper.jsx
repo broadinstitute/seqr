@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import {
   Field,
+  FormSpy,
   // FieldArray, TODO
   Form as FinalForm,
 } from 'react-final-form'
@@ -146,11 +147,14 @@ const SUBSCRIPTION = [
   'submitErrors',
 ].reduce((acc, k) => ({ ...acc, [k]: true }), {})
 
+const SUBMIT_SUCCEEDED_SUBSCRIPTION = { submitSucceeded: true }
+const DIRTY_SUBSCRIPTION = { dirty: true }
+
 class ReduxFormWrapper extends React.PureComponent {
 
   static propTypes = {
     /* A unique string identifier for the form */
-    // TODO was required for keeping all the forms in the redux state, now isn't, probably should clean up behavior with modalName
+    // TODO was required for keeping all forms in redux state, now isn't, prob should clean up behavior with modalName
     form: PropTypes.string.isRequired, // eslint-disable-line react/no-unused-prop-types
 
     /* A unique string identifier for the parent modal. Defaults to the "form" identifier */
@@ -216,25 +220,24 @@ class ReduxFormWrapper extends React.PureComponent {
 
   state = { confirming: false }
 
-  // componentDidUpdate(prevProps) {
-  //   TODO
-  //   const {
-  //     onSubmitSucceeded, submitSucceeded, handleClose, confirmCloseIfNotSaved, closeOnSuccess, noModal, dirty,
-  //     setModalConfirm: dispatchSetModalConfirm,
-  //   } = this.props
-  //   if (onSubmitSucceeded && submitSucceeded) {
-  //     onSubmitSucceeded()
-  //   }
-  //   if (submitSucceeded && closeOnSuccess && !noModal) {
-  //     handleClose(true)
-  //   } else if (confirmCloseIfNotSaved) {
-  //     if (dirty && !prevProps.dirty) {
-  //       dispatchSetModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
-  //     } else if (!dirty && prevProps.dirty) {
-  //       dispatchSetModalConfirm(null)
-  //     }
-  //   }
-  // }
+  onSubmitSucceededChange = ({ submitSucceeded }) => {
+    const { onSubmitSucceeded, handleClose, closeOnSuccess, noModal } = this.props
+    if (onSubmitSucceeded && submitSucceeded) {
+      onSubmitSucceeded()
+    }
+    if (submitSucceeded && closeOnSuccess && !noModal) {
+      handleClose(true)
+    }
+  }
+
+  onDirtyChange = ({ dirty }) => {
+    const { setModalConfirm: dispatchSetModalConfirm } = this.props
+    if (dirty) {
+      dispatchSetModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
+    } else {
+      dispatchSetModalConfirm(null)
+    }
+  }
 
   handledOnSubmit = (values, form, callback) => {
     const { onSubmit } = this.props
@@ -261,7 +264,7 @@ class ReduxFormWrapper extends React.PureComponent {
   render() {
     const {
       children, confirmDialog, size, loading, submitOnChange, inline, showErrorPanel, successMessage, cancelButtonText,
-      submitButtonText, onSubmitSucceeded, noModal, initialValues, liveValidate,
+      submitButtonText, onSubmitSucceeded, noModal, initialValues, liveValidate, closeOnSuccess, confirmCloseIfNotSaved,
     } = this.props
     const { confirming } = this.state
 
@@ -316,6 +319,9 @@ class ReduxFormWrapper extends React.PureComponent {
                 onCancel={this.hideConfirmDialog}
                 onConfirm={this.handleConfirmedSubmit(handleSubmit)}
               />
+              {(onSubmitSucceeded || (closeOnSuccess && !noModal)) &&
+                <FormSpy subscription={SUBMIT_SUCCEEDED_SUBSCRIPTION} onChange={this.onSubmitSucceededChange} />}
+              {confirmCloseIfNotSaved && <FormSpy subscription={DIRTY_SUBSCRIPTION} onChange={this.onDirtyChange} />}
             </StyledForm>
           )
         }}
