@@ -145,7 +145,7 @@ const SUBSCRIPTION = [
   'submitErrors',
 ].reduce((acc, k) => ({ ...acc, [k]: true }), {})
 
-class ReduxFormWrapper extends React.Component {
+class ReduxFormWrapper extends React.PureComponent {
 
   static propTypes = {
     /* A unique string identifier for the form */
@@ -213,33 +213,6 @@ class ReduxFormWrapper extends React.Component {
   }
 
   state = { confirming: false }
-
-  shouldComponentUpdate(nextProps, nextState) {
-    // TODO
-    const updateProps = [
-      'modalName',
-      'form',
-      'submitSucceeded',
-      'submitFailed',
-      'closeOnSuccess',
-      'fields',
-      'showErrorPanel',
-      'size',
-      'submitting',
-      'submitOnChange',
-      'cancelButtonText',
-      'submitButtonText',
-      'dirty',
-      'confirmCloseIfNotSaved',
-      'confirmDialog',
-      'initialValues',
-      'children',
-    ]
-    if (updateProps.some(k => nextProps[k] !== this.props[k])) { // eslint-disable-line react/destructuring-assignment
-      return true
-    }
-    return nextState !== this.state
-  }
 
   // componentDidUpdate(prevProps) {
   //   TODO
