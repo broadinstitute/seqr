@@ -130,6 +130,7 @@ export const configuredField = (field, formProps = {}) => {
   ) : <Field {...baseProps} {...singleFieldProps} />
 }
 
+// TODO take needed props only instead of whole props dict
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
 
 // specify which fields to check for re-rendering entire form
@@ -149,6 +150,7 @@ class ReduxFormWrapper extends React.PureComponent {
 
   static propTypes = {
     /* A unique string identifier for the form */
+    // TODO was required for keeping all the forms in the redux state, now isn't, probably should clean up behavior with modalName
     form: PropTypes.string.isRequired, // eslint-disable-line react/no-unused-prop-types
 
     /* A unique string identifier for the parent modal. Defaults to the "form" identifier */
@@ -263,7 +265,7 @@ class ReduxFormWrapper extends React.PureComponent {
     } = this.props
     const { confirming } = this.state
 
-    const fieldComponents = children || configuredFields(this.props)
+    const fieldComponents = children || configuredFields(this.props) // TODO only pass needed props
 
     return (
       <FinalForm onSubmit={this.handledOnSubmit} initialValues={initialValues} subscription={SUBSCRIPTION}>
