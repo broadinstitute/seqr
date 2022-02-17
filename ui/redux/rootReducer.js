@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import { reducer as formReducer } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
@@ -337,7 +336,6 @@ const rootReducer = combineReducers({
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USER_OPTIONS, RECEIVE_USER_OPTIONS),
   meta: zeroActionsReducer,
-  form: formReducer,
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,
