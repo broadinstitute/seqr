@@ -132,6 +132,19 @@ export const configuredField = (field, formProps = {}) => {
 
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
 
+// specify which fields to check for re-rendering entire form
+const SUBSCRIPTION = [
+  'submitSucceeded',
+  'submitFailed',
+  'submitting',
+  'dirty',
+  'dirtySinceLastSubmit',
+  'hasSubmitErrors',
+  'hasValidationErrors',
+  'errors',
+  'submitErrors',
+].reduce((acc, k) => ({ ...acc, [k]: true }), {})
+
 class ReduxFormWrapper extends React.Component {
 
   static propTypes = {
@@ -280,8 +293,7 @@ class ReduxFormWrapper extends React.Component {
     const fieldComponents = children || configuredFields(this.props)
 
     return (
-      // TODO use subscription to only re-render on specific internal field updates
-      <FinalForm onSubmit={this.handledOnSubmit} initialValues={initialValues}>
+      <FinalForm onSubmit={this.handledOnSubmit} initialValues={initialValues} subscription={SUBSCRIPTION}>
         {({
           handleSubmit, submitSucceeded, submitFailed, submitting, dirty, hasSubmitErrors, hasValidationErrors,
           errors, submitErrors, dirtySinceLastSubmit,
