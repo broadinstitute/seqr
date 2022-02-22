@@ -33,7 +33,7 @@ bokeh==1.4.0
     # via hail
 boto3==1.21.4
     # via hail
-botocore==1.24.4
+botocore==1.24.5
     # via
     #   boto3
     #   hail
@@ -77,18 +77,17 @@ django==3.2.12
     #   django-cors-headers
     #   django-csp
     #   django-guardian
+    #   django-hijack
     #   django-storages
-django-anymail==8.2
+django-anymail==8.5
     # via -r requirements.in
-django-compat==1.0.15
-    # via django-hijack
-django-cors-headers==3.5.0
+django-cors-headers==3.11.0
     # via -r requirements.in
 django-csp==3.7
     # via -r requirements.in
-django-guardian==2.3.0
+django-guardian==2.4.0
     # via -r requirements.in
-django-hijack==2.1.10
+django-hijack==3.1.6
     # via -r requirements.in
 django-storages[google]==1.11.1
     # via -r requirements.in
@@ -127,7 +126,7 @@ google-resumable-media==0.5.1
     # via google-cloud-storage
 googleapis-common-protos==1.54.0
     # via google-api-core
-gunicorn==19.10.0
+gunicorn==20.1.0
     # via -r requirements.in
 hail==0.2.85
     # via -r requirements.in
@@ -135,7 +134,7 @@ humanize==1.0.0
     # via hail
 hurry-filesize==0.9
     # via hail
-idna==2.8
+idna==2.10
     # via
     #   requests
     #   yarl
@@ -143,11 +142,9 @@ isodate==0.6.1
     # via msrest
 janus==0.6.2
     # via hail
-jdcal==1.4.1
-    # via openpyxl
 jinja2==3.0.3
     # via bokeh
-jmespath==0.9.4
+jmespath==0.10.0
     # via
     #   -r requirements.in
     #   boto3
@@ -178,7 +175,7 @@ oauthlib==3.2.0
     # via
     #   requests-oauthlib
     #   social-auth-core
-openpyxl==2.6.4
+openpyxl==3.0.9
     # via -r requirements.in
 orjson==3.6.4
     # via hail
@@ -200,7 +197,7 @@ portalocker==2.4.0
     # via msal-extensions
 protobuf==3.19.4
     # via google-api-core
-psycopg2==2.8.4
+psycopg2==2.9.3
     # via -r requirements.in
 py4j==0.10.9
     # via pyspark
@@ -267,14 +264,13 @@ rsa==4.8
     # via google-auth
 s3transfer==0.5.1
     # via boto3
-scipy==1.6.3
+scipy==1.7.3
     # via hail
 six==1.16.0
     # via
     #   azure-core
     #   azure-identity
     #   bokeh
-    #   django-compat
     #   elasticsearch-dsl
     #   google-api-core
     #   google-auth
@@ -284,15 +280,13 @@ six==1.16.0
     #   parsimonious
     #   plotly
     #   python-dateutil
-    #   social-auth-app-django
-    #   social-auth-core
-slacker==0.13.0
+slacker==0.14.0
     # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
-social-auth-app-django==4.0.0
+social-auth-app-django==5.0.0
     # via -r requirements.in
-social-auth-core==3.3.3
+social-auth-core==4.2.0
     # via
     #   -r requirements.in
     #   social-auth-app-django
@@ -306,7 +300,7 @@ tenacity==8.0.1
     # via plotly
 tornado==6.1
     # via bokeh
-tqdm==4.42.1
+tqdm==4.62.3
     # via
     #   -r requirements.in
     #   hail
@@ -315,14 +309,14 @@ typing-extensions==4.1.1
     #   aiohttp
     #   asgiref
     #   yarl
-urllib3==1.25.11
+urllib3==1.26.8
     # via
     #   botocore
     #   elasticsearch
     #   requests
 uvloop==0.16.0
     # via hail
-whitenoise==5.2.0
+whitenoise==6.0.0
     # via -r requirements.in
 wrapt==1.13.3
     # via deprecated
