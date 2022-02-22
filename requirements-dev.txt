@@ -1,7 +1,8 @@
-coverage==5.1
-django-compressor==2.1.1
-django-debug-toolbar==3.2.1                      # https://github.com/jazzband/django-debug-toolbar
-mock                                            # mock objects for unit tests
-responses==0.10.15                               # mock HTTP responses for unit tests
-urllib3-mock==0.3.3                             # mock urllib3 for tests
-Jinja2==2.11.3                                # jinja templates are used by servctl k8s deployment scripts
+-c requirements.txt # use the generated reqs as a constraint
+coverage<5.2
+django-compressor
+django-debug-toolbar<3.3  # https://github.com/jazzband/django-debug-toolbar
+mock                      # mock objects for unit tests
+responses                 # mock HTTP responses for unit tests
+urllib3-mock              # mock urllib3 for tests
+Jinja2                    # jinja templates are used by servctl k8s deployment scripts
