@@ -6,6 +6,9 @@ from datetime import datetime
 import requests
 import base64
 
+from google.auth.transport.requests import Request
+from google.oauth2 import id_token
+
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
@@ -26,7 +29,7 @@ from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
-from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
+from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_CLIENT_ID, AIRFLOW_WEBSERVER_ID, DAG_VERSION
 
 logger = SeqrLogger(__name__)
 
@@ -187,31 +190,20 @@ def create_project_from_workspace(request, namespace, name):
     projects = anvil_variables["active_projects"]
     updated_projects = updated_anvil_variables["active_projects"]
 
-    # TODO: sanity check if the variables need to be updated
-    if json.dumps(anvil_variables) != json.dumps(updated_anvil_variables): 
+    if anvil_variables != updated_anvil_variables: 
         update_variables(anvil_type, updated_anvil_variables)
 
-    dag_id = "seqr_vcf_to_es_%s" % (anvil_type)
+    dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=anvil_type, version=DAG_VERSION)
 
-    # TODO: check logic
-    if set(projects) == set(updated_projects):
-        trigger_dag(dag_id)
-    else:
+    if set(projects) != set(updated_projects):
         dag_task_ids = get_task_ids(dag_id)
-        # TODO: create task id use old task ids
-        # updated_task_ids = update_task_ids(projects, updated_projects, dag_task_ids)
-        # TODO: use copy()
         updated_task_ids = get_task_ids(dag_id)
         t0 = time.time()
         # freeze one second and get variable again to compare
         while(set(dag_task_ids) == set(updated_task_ids)):
-            time.sleep(5)
             updated_task_ids = get_task_ids(dag_id)
-        t1 = time.time()
-        # print('total time')
-        # print(t1-t0)
 
-        trigger_dag(dag_id)
+    trigger_dag(dag_id)
 
     # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
@@ -281,45 +273,6 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
     safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
 
 
-def create_headers():
-    username = 'admin'
-    password = 'admin'
-
-    # encode 
-    userpass = username + ':' + password
-    encoded_u = base64.b64encode(userpass.encode()).decode()
-    headers = {
-        'content-type': 'application/json',
-        'Authorization' : 'Basic {}'.format(encoded_u)
-    }
-
-    return headers
-
-def get_variables(variable_key):
-    headers = create_headers()
-   
-    response = requests.get('http://localhost:8080/api/v1/variables/{}'.format(variable_key), headers=headers)
-    airflow_response = response.json()
- 
-    val_str = airflow_response['value']
-
-    val_dict = json.loads(val_str)
-    print('get variables')
-    return val_dict
-
-def update_variables(key, val):
-    headers = create_headers()
-    val_str = json.dumps(val)
-    data= {
-        "key": key,
-        "value": val_str
-        }
-    body = json.dumps(data)
-    response = requests.patch('http://localhost:8080/api/v1/variables/{}'.format(key), headers=headers, data=body)
-    print('update variables')
-    # airflow_response = response.json()
-    # print(airflow_response)
-
 def generate_AnVIL_variables(project, data_path, sample_type):
     pipeline_dag = {
         "active_projects": [project.guid],
@@ -330,10 +283,33 @@ def generate_AnVIL_variables(project, data_path, sample_type):
     }
     return pipeline_dag
 
+def get_variables(variable_key):
+
+    endpoint = 'api/v1/variables/{}'.format(variable_key)
+    airflow_response = make_request(endpoint, method='GET')
+ 
+    val_str = airflow_response['value']
+    val_dict = json.loads(val_str)
+
+    return val_dict
+
+def update_variables(key, val):
+    
+    endpoint = 'api/v1/variables/{}'.format(key)
+  
+    val_str = json.dumps(val)
+    json_data= {
+        "key": key,
+        "value": val_str
+        }
+
+    make_request(endpoint, method='PATCH', json=json_data)
+
 def get_task_ids(dag_id):
-    headers = create_headers()
-    response = requests.get('http://localhost:8080/api/v1/dags/{}/tasks'.format(dag_id), headers=headers)
-    airflow_response = response.json()
+
+    endpoint = 'api/v1/dags/{}/tasks'.format(dag_id)  
+    airflow_response = make_request(endpoint, method='GET')
+
     tasks = airflow_response['tasks']
     task_lst = []
     for task_dict in tasks:
@@ -342,19 +318,42 @@ def get_task_ids(dag_id):
     
 
 def trigger_dag(dag_id):
-    headers = create_headers()
-
-    data = {
+    json_data = {
         'conf' : {}
         }
+    endpoint = 'api/v1/dags/{}/dagRuns'.format(dag_id) 
+    make_request(endpoint, method='POST', json=json_data)
+
+
+def make_request(endpoint, method, **kwargs):
+    # Set the default timeout, if missing
+    if 'timeout' not in kwargs:
+        kwargs['timeout'] = 90
+
+    # Obtain an OpenID Connect (OIDC) token from metadata server or using service
+    # account.
+    google_open_id_connect_token = id_token.fetch_id_token(Request(), AIRFLOW_CLIENT_ID)
     
-    body = json.dumps(data)
+    webserver_url = (
+        'https://'
+        + AIRFLOW_WEBSERVER_ID
+        + '.appspot.com/'
+        + endpoint
+    )
+    resp = requests.request(
+        method, webserver_url,
+        headers={'Authorization': 'Bearer {}'.format(
+            google_open_id_connect_token)}, **kwargs)
 
-    response = requests.post('http://localhost:8080/api/v1/dags/{}/dagRuns'.format(dag_id), headers=headers, data=body)
-    print('trigger_dag')
-    airflow_response = response.json()
-    print(airflow_response)
-
+    if resp.status_code == 403:
+        raise Exception('Service account does not have permission to '
+                        'access the IAP-protected application.')
+    elif resp.status_code != 200:
+        raise Exception(
+            'Bad response from application: {!r} / {!r} / {!r}'.format(
+                resp.status_code, resp.headers, resp.text))
+    else:
+        return resp.json()
 
 
 
