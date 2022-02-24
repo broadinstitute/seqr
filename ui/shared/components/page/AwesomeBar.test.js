@@ -1,7 +1,7 @@
 import React from 'react'
 import toJson from 'enzyme-to-json'
 import { shallow, configure } from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import { AwesomeBarComponent, AwesomeBarFormInput } from './AwesomeBar'
 
 configure({ adapter: new Adapter() })

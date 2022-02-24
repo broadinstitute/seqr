@@ -1,6 +1,6 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import LocusListTables from './LocusListTables'
 import configureStore from "redux-mock-store";
 import { STATE1 } from '../panel/fixtures'
