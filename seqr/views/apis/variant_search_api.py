@@ -7,6 +7,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
+from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, \
@@ -275,8 +276,8 @@ def export_variants_handler(request, search_hash):
                 split_variants.append(variant)
                 continue
 
-            num_split = (len(variant['familyGuids']) // MAX_FAMILIES_PER_ROW) + 1
-            gens_per_row = (len(variant['genotypes']) // num_split) + 1
+            num_split = ceil(len(variant['familyGuids']) / MAX_FAMILIES_PER_ROW)
+            gens_per_row = ceil(len(variant['genotypes']) / num_split)
             gen_keys = list(variant['genotypes'].keys())
             for i in range(num_split):
                 split_var = deepcopy(variant)
