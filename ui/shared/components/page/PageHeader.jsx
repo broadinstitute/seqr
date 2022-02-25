@@ -9,7 +9,7 @@ import { DATA_MANAGEMENT_PAGES } from 'pages/DataManagement/DataManagement'
 import { REPORT_PAGES } from 'pages/Report/Report'
 import { SummaryDataPageHeader } from 'pages/SummaryData/SummaryData'
 import { getGenesById } from 'redux/selectors'
-import PageHeaderLayout, { SimplePageHeader } from './PageHeaderLayout'
+import PageHeaderLayout, { SimplePageHeader, useSeqrTitle } from './PageHeaderLayout'
 
 const BaseGenePageHeader = React.memo(({ gene, match }) => (
   <PageHeaderLayout
@@ -35,18 +35,28 @@ const NO_HEADER_PAGES = [
   '/terms_of_service', '/accept_policies',
 ]
 
+const NO_HEADER_PAGE_TITLES = {
+  '': 'Dashboard',
+  create_project_from_workspace: 'Load Data',
+}
+
 const SIMPLE_HEADER_PAGES = [
   { page: 'data_management', pages: DATA_MANAGEMENT_PAGES },
   { page: 'report', pages: REPORT_PAGES },
 ].map(({ page, ...props }) => ({
   key: page,
-  path: `/${page}`,
-  component: () => <SimplePageHeader page={page} {...props} />,
+  path: `/${page}/:subPage?`,
+  component: ({ match }) => <SimplePageHeader page={page} subPage={match.params.subPage} {...props} />,
 }))
 
-const nullComponent = () => null
+const EmptyHeader = ({ match }) => {
+  const page = match.path.split('/').pop()
+  useSeqrTitle(NO_HEADER_PAGE_TITLES[page] || page)
 
-const noHeaderRoute = page => <Route key={page} path={page} component={nullComponent} />
+  return null
+}
+
+const noHeaderRoute = page => <Route key={page} path={page} component={EmptyHeader} />
 
 const simpleHeaderRoute = props => <Route {...props} />
 
@@ -62,11 +72,12 @@ DefaultPageHeaderLayout.propTypes = {
 
 export default () => (
   <Switch>
+    <Route exact path="/" component={EmptyHeader} />
     {NO_HEADER_PAGES.map(noHeaderRoute)}
     {SIMPLE_HEADER_PAGES.map(simpleHeaderRoute)}
     <Route path="/project/:projectGuid/saved_variants/:variantPage?/:breadcrumbId?/:tag?" component={ProjectSavedVariantsPageHeader} />
     <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?/:breadcrumbIdSection*" component={ProjectPageHeader} />
-    <Route path="/summary_data" component={SummaryDataPageHeader} />
+    <Route path="/summary_data/:subPage?" component={SummaryDataPageHeader} />
     <Route path="/variant_search/:pageType/:entityGuid" component={VariantSearchPageHeader} />
     <Route path="/:entity/:entityGuid?/:breadcrumb?/:breadcrumbId*" component={DefaultPageHeaderLayout} />
   </Switch>
