@@ -146,11 +146,7 @@ class TagFieldView extends React.PureComponent {
 
     const formFieldProps = {
       ...TAG_FIELD_PROPS,
-      normalize: (value, previousValue, allValues, previousAllValues) => value.map( // TODO
-        option => previousAllValues[field].find(
-          prevFieldValue => prevFieldValue.name === option,
-        ) || tagOptionsMap[option],
-      ),
+      parse: value => value.map(option => tagOptionsMap[option]),
       format: options => options.map(tag => tag.name),
     }
     if (validate) {
