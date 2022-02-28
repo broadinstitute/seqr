@@ -122,10 +122,13 @@ def create_variant_note_handler(request, variant_guids):
     }
 
     if save_as_gene_note:
-        main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json['mainTranscriptId']
-        gene_id = next(
-            (gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
-             if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
+        main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json.get('mainTranscriptId')
+        if main_transcript_id:
+            gene_id = next(
+                gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
+                if any(t['transcriptId'] == main_transcript_id for t in transcripts))
+        else:
+            gene_id = next(gene_id for gene_id in sorted(saved_variants[0].saved_variant_json['transcripts']))
         create_model_from_json(GeneNote, {'note': request_json.get('note'), 'gene_id': gene_id}, request.user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user)[gene_id],
