@@ -1,11 +1,13 @@
 import json
 import jmespath
 from collections import defaultdict
+from copy import deepcopy
 from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned
 from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
+from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, \
@@ -226,6 +228,8 @@ VARIANT_SAMPLE_DATA = [
     {'header': 'ab'},
 ]
 
+MAX_FAMILIES_PER_ROW = 1000
+
 
 @login_and_policies_required
 def get_variant_gene_breakdown(request, search_hash):
@@ -265,15 +269,34 @@ def export_variants_handler(request, search_hash):
             family_guid: saved_variant['variantGuid'] for family_guid in saved_variant['familyGuids']
         }
 
+    if any(len(variant['familyGuids']) > MAX_FAMILIES_PER_ROW for variant in variants):
+        split_variants = []
+        for variant in variants:
+            if len(variant['familyGuids']) <= MAX_FAMILIES_PER_ROW:
+                split_variants.append(variant)
+                continue
+
+            num_split = ceil(len(variant['familyGuids']) / MAX_FAMILIES_PER_ROW)
+            gens_per_row = ceil(len(variant['genotypes']) / num_split)
+            gen_keys = list(variant['genotypes'].keys())
+            for i in range(num_split):
+                split_var = deepcopy(variant)
+                split_var['familyGuids'] = variant['familyGuids'][i*MAX_FAMILIES_PER_ROW:(i+1)*MAX_FAMILIES_PER_ROW]
+                split_gen = set(gen_keys[i*gens_per_row:(i+1)*gens_per_row])
+                split_var['genotypes'] = {k: v for k, v in variant['genotypes'].items() if k in split_gen}
+                split_variants.append(split_var)
+
+        variants = split_variants
+
     max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
     max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
 
     rows = []
     for variant in variants:
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
+
         family_saved_variants = saved_variants_by_variant_family.get(get_variant_key(**variant), {})
-        for i in range(max_families_per_variant):
-            family_guid = variant['familyGuids'][i] if i < len(variant['familyGuids']) else ''
+        for family_guid in variant['familyGuids']:
             variant_guid = family_saved_variants.get(family_guid, '')
             family_tags = {
                 'family_id': family_ids_by_guid.get(family_guid),
@@ -281,10 +304,12 @@ def export_variants_handler(request, search_hash):
                 'notes': [note for note in json_saved_variants['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
             }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
+        row += ['' for i in range(len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant['familyGuids'])))]
+
         genotypes = list(variant['genotypes'].values())
-        for i in range(max_samples_per_variant):
-            genotype = genotypes[i] if i < len(genotypes) else {}
+        for genotype in genotypes:
             row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
+        row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]
         rows.append(row)
 
     header = [config['header'] for config in VARIANT_EXPORT_DATA]

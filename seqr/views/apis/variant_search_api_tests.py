@@ -312,6 +312,28 @@ class VariantSearchAPITest(object):
              '', '', '', '', '']]
         self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
 
+        # test export with max families
+        with mock.patch('seqr.views.apis.variant_search_api.MAX_FAMILIES_PER_ROW', 1):
+            response = self.client.get(export_url)
+            self.assertEqual(response.status_code, 200)
+            expected_content = [
+                ['chrom', 'pos', 'ref', 'alt', 'gene', 'worst_consequence', '1kg_freq', 'exac_freq', 'gnomad_genomes_freq',
+                 'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'polyphen', 'sift', 'muttaster', 'fathmm',
+                 'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'filter', 'family_id_1',
+                 'tags_1', 'notes_1', 'sample_1', 'num_alt_alleles_1', 'gq_1', 'ab_1',],
+                ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '',
+                 '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '1',
+                 'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', 'NA19675', '1', '46.0', '0.702127659574',],
+                ['21', '3343400', 'GAGA', 'G', 'WASH7P', 'missense_variant', '', '', '', '', '', '', '', '', '', '', '', '',
+                 '', 'ENST00000623083.3:c.1075G>A', 'ENSP00000485442.1:p.Gly359Ser', '', '', '', '2', '', '',
+                 'NA19679', '0', '99.0', '0.0'],
+                ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                 '1', '', '', 'NA19679', '0', '99.0', '0.0',],
+                ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+                 '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xf8te (None)', '', '', '', '',]]
+            self.assertEqual(response.content,
+                             ('\n'.join(['\t'.join(line) for line in expected_content]) + '\n').encode('utf-8'))
+
         mock_get_variants.assert_called_with(results_model, page=1, load_all=True, user=self.collaborator_user)
         mock_error_logger.assert_not_called()
 
@@ -713,7 +735,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 16)
+        assert_no_list_ws_has_al(self, 17)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
