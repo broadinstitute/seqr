@@ -107,6 +107,7 @@ const AddGeneLists = React.memo(({ project, onSubmit }) => (
   <UpdateButton
     modalTitle="Add Gene Lists"
     modalId={`add-gene-list-${project.projectGuid}`}
+    formMetaId={project.projectGuid}
     modalSize="large"
     buttonText="Add Gene List"
     editIconName="plus"

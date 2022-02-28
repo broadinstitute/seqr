@@ -376,7 +376,7 @@ export const getLocusListIntervalsByChromProject = createSelector(
 )
 
 export const getLocusListTableData = createSelector(
-  (state, props) => props.meta && props.meta.form && props.meta.form.replace('add-gene-list-', ''),
+  (state, props) => props.meta && props.meta.data && props.meta.data.formId,
   getProjectsByGuid,
   getLocusListsWithGenes,
   (omitProjectGuid, projectsByGuid, locusListsByGuid) => {

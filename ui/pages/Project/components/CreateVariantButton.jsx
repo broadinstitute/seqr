@@ -17,7 +17,6 @@ import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
 import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
-const BASE_FORM_ID = '-addVariant'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
 const ZYGOSITY_OPTIONS = [{ value: 0, name: 'Hom Ref' }, { value: 1, name: 'Het' }, { value: 2, name: 'Hom Alt' }]
 
@@ -58,10 +57,8 @@ ZygosityInput.propTypes = {
 }
 
 const mapZygosityInputStateToProps = (state, ownProps) => ({
-  individuals: getSortedIndividualsByFamily(state)[ownProps.meta.form.split(BASE_FORM_ID)[0]],
+  individuals: getSortedIndividualsByFamily(state)[ownProps.meta.data.formId],
 })
-
-const getFormFamilyGuid = props => props.meta.form.split(BASE_FORM_ID)[0]
 
 const mapTagInputStateToProps = state => ({
   options: getProjectTagTypeOptions(state),
@@ -76,7 +73,7 @@ const accordionPanels = ({ accordionLabel, dispatch, showSVs, ...props }) => ([{
 const SavedVariantToggle = props => <Accordion styled fluid panels={accordionPanels(props)} />
 
 const mapSavedVariantsStateToProps = (state, ownProps) => {
-  const familyGuid = getFormFamilyGuid(ownProps)
+  const familyGuid = ownProps.meta.data.formId
   return {
     data: (getTaggedVariantsByFamilyType(state)[familyGuid] || {})[ownProps.showSVs || false],
     familyGuid,
@@ -218,7 +215,8 @@ const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...prop
     <UpdateButton
       key={`manual${variantType}`}
       modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
-      modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}
+      modalId={`${family.familyGuid}-addVariant-${variantType || 'SNV'}`}
+      formMetaId={family.familyGuid}
       modalSize="large"
       buttonText={`Add Manual ${variantType}`}
       editIconName="plus"

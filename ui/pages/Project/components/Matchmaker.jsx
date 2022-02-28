@@ -77,7 +77,7 @@ const GENOTYPE_FIELDS = [
 ]
 
 const mapGenotypesStateToProps = (state, ownProps) => {
-  const individualGuid = ownProps.meta.form.split('_-_')[0]
+  const individualGuid = ownProps.meta.data.formId
   const { familyGuid } = state.individualsByGuid[individualGuid]
   return {
     data: getIndividualTaggedVariants(state, { individualGuid }),
@@ -116,7 +116,7 @@ BaseEditPhenotypesTable.propTypes = {
 }
 
 const mapPhenotypeStateToProps = (state, ownProps) => ({
-  individual: getIndividualsByGuid(state)[ownProps.meta.form.split('_-_')[0]],
+  individual: getIndividualsByGuid(state)[ownProps.meta.data.formId],
 })
 
 const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypesTable)
@@ -131,7 +131,7 @@ const SUBMISSION_EDIT_FIELDS = [
     idField: 'variantId',
     columns: GENOTYPE_FIELDS,
     includeSelectedRowData: true,
-    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : Object.values(val || {}).filter(v => v)), // TODO
+    parse: val => Object.values(val || {}).filter(v => v),
     format: value => (value || []).reduce(
       (acc, variant) => ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {},
     ),
@@ -406,6 +406,7 @@ const BaseMatchmakerIndividual = React.memo((
                 modalSize="large"
                 modalTitle={`Create Submission for ${individual.displayName}`}
                 modalId={`${individual.individualGuid}_-_createMmeSubmission`}
+                formMetaId={individual.individualGuid}
                 confirmDialog="Are you sure you want to submit this individual?"
                 formFields={SUBMISSION_EDIT_FIELDS}
                 onSubmit={onSubmit}

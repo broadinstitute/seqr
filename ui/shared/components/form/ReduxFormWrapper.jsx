@@ -117,6 +117,7 @@ export const configuredField = (field, formProps = {}) => {
     fieldComponent: component,
     submitForm: formProps.submitOnChange ? formProps.onSubmit : null,
     label: helpLabel(label, labelHelp),
+    data: formProps.formMetaId && { formId: formProps.formMetaId },
     ...fieldProps,
   }
   return isArrayField ? (
