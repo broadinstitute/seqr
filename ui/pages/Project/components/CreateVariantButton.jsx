@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { FormSection } from 'redux-form'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
 import { updateVariantTags } from 'redux/rootReducer'
@@ -31,13 +30,13 @@ const FORMAT_RESPONSE_FIELDS = [
 ]
 
 const ZygosityInput = React.memo(({ individuals, name, title, individualField, error }) => (
-  <FormSection name={name}>
+  <div>
     <Divider horizontal>{title}</Divider>
     <Grid columns="equal">
       {individuals.map((({ individualGuid, displayName }) => (
         <Grid.Column key={individualGuid}>
           {configuredField({
-            name: individualGuid,
+            name: `${name}.${individualGuid}`,
             label: displayName,
             error,
             ...individualField,
@@ -45,7 +44,7 @@ const ZygosityInput = React.memo(({ individuals, name, title, individualField, e
         </Grid.Column>
       )))}
     </Grid>
-  </FormSection>
+  </div>
 ))
 
 ZygosityInput.propTypes = {
@@ -121,8 +120,6 @@ const SAVED_VARIANT_FIELD = {
   idField: 'variantGuid',
   includeSelectedRowData: true,
   control: SavedVariantField,
-  // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
-  normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val), // TODO
 }
 
 const SV_TYPE_OPTIONS = [
