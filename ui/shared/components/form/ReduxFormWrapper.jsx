@@ -2,12 +2,9 @@ import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import {
-  Field,
-  FormSpy,
-  // FieldArray, TODO
-  Form as FinalForm,
-} from 'react-final-form'
+import { Field, FormSpy, Form as FinalForm } from 'react-final-form'
+import { FieldArray } from 'react-final-form-arrays'
+import arrayMutators from 'final-form-arrays'
 import { Form, Message, Icon, Popup, Confirm } from 'semantic-ui-react'
 import flattenDeep from 'lodash/flattenDeep'
 
@@ -123,8 +120,7 @@ export const configuredField = (field, formProps = {}) => {
     ...fieldProps,
   }
   return isArrayField ? (
-    // <FieldArray TODO
-    <Field
+    <FieldArray
       {...baseProps}
       component={arrayFieldItem({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label })}
     />
@@ -309,7 +305,12 @@ class ReduxFormWrapper extends React.PureComponent {
     const fieldComponents = children || configuredFields(this.props)
 
     return (
-      <FinalForm onSubmit={this.handledOnSubmit} initialValues={initialValues} subscription={SUBMITTING_SUBSCRIPTION}>
+      <FinalForm
+        onSubmit={this.handledOnSubmit}
+        initialValues={initialValues}
+        subscription={SUBMITTING_SUBSCRIPTION}
+        mutators={arrayMutators}
+      >
         {({ handleSubmit, submitting }) => (
           <StyledForm
             onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
