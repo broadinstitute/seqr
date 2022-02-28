@@ -1,6 +1,6 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import CategoryIndicator from './CategoryIndicator'
 import { getVisibleProjects } from '../selectors'
 import { STATE1 } from '../fixtures'

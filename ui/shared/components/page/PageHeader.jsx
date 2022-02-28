@@ -51,7 +51,7 @@ const SIMPLE_HEADER_PAGES = [
 
 const EmptyHeader = ({ match }) => {
   const page = match.path.split('/').pop()
-  useSeqrTitle(NO_HEADER_PAGE_TITLES[[page]] || page)
+  useSeqrTitle(NO_HEADER_PAGE_TITLES[page] || page)
 
   return null
 }
