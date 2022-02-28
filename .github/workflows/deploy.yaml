@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: gcloud setup
-        uses: google-github-actions/setup-gcloud@master
+        uses: google-github-actions/setup-gcloud@v0
         with:
           project_id: seqr-308602
           service_account_key: ${{ secrets.GCP_DEPLOY_KEY }}
