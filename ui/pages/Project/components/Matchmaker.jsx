@@ -131,7 +131,7 @@ const SUBMISSION_EDIT_FIELDS = [
     idField: 'variantId',
     columns: GENOTYPE_FIELDS,
     includeSelectedRowData: true,
-    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : Object.values(val || {}).filter(v => v)),
+    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : Object.values(val || {}).filter(v => v)), // TODO
     format: value => (value || []).reduce(
       (acc, variant) => ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {},
     ),

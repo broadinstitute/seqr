@@ -76,7 +76,7 @@ const INHERITANCE_PANEL = {
         const { affected, genotype, ...coreFilter } = val.filter
         return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
-      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null : {
+      normalize: (val, prevVal) => (val === ALL_INHERITANCE_FILTER ? null : { // TODO
         mode: val,
         filter: { affected: ((prevVal || {}).filter || {}).affected, ...INHERITANCE_FILTER_LOOKUP[val] },
         annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val),

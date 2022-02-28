@@ -39,7 +39,7 @@ const parseFamilyGuids = (newValue, previousValue, allValues) => {
   return parsed
 }
 
-const normalizeFamilyUpload = (newValue, previousValue, allValues) => {
+const normalizeFamilyUpload = (newValue, previousValue, allValues) => { // TODO
   if (newValue.errors) {
     return { ...newValue, info: newValue.errors, errors: [] }
   }
@@ -82,7 +82,7 @@ const FORM_FIELDS = [
     name: 'familyGuids',
     key: 'familyUpload',
     component: FamilyFileUploadField,
-    normalize: (newValue, previousValue, allValues) => {
+    normalize: (newValue, previousValue, allValues) => { // TODO
       const { familyGuids } = parseFamilyGuids(newValue, previousValue, allValues)
       return [...new Set([...(previousValue || []), ...(familyGuids || [])])]
     },
@@ -96,7 +96,7 @@ const FORM_FIELDS = [
     component: connect(mapTableInputStateToProps)(SelectableTableFormInput),
     validate: value => ((value && value.length) ? undefined : 'Families are required'),
     format: value => (value || []).reduce((acc, key) => ({ ...acc, [key]: true }), {}),
-    normalize: value => Object.keys(value).filter(key => value[key]),
+    parse: value => Object.keys(value).filter(key => value[key]),
   },
 ]
 

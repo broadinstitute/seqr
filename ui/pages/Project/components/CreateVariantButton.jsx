@@ -125,7 +125,7 @@ const SAVED_VARIANT_FIELD = {
   includeSelectedRowData: true,
   control: SavedVariantField,
   // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
-  normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
+  normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val), // TODO
 }
 
 const SV_TYPE_OPTIONS = [
@@ -175,7 +175,7 @@ const SNV_FIELDS = [
     individualField: {
       options: ZYGOSITY_OPTIONS,
       component: Select,
-      normalize: numAlt => ({ numAlt }),
+      parse: numAlt => ({ numAlt }),
       format: value => (value || {}).numAlt,
     },
   },
@@ -205,7 +205,7 @@ const SV_FIELDS = [
     validate: validators.required,
     individualField: {
       component: IntegerInput,
-      normalize: cn => ({ cn }),
+      parse: cn => ({ cn }),
       format: value => (value || {}).cn,
       min: 0,
       max: 12,

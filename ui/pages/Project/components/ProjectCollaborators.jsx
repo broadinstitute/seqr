@@ -46,7 +46,7 @@ const CREATE_FIELDS = [
     label: 'Email',
     component: connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(CollaboratorEmailDropdown),
     format: value => value && (value.username ? value : value.email),
-    normalize: value => (typeof value === 'object' ? value : { email: value }),
+    parse: value => (typeof value === 'object' ? value : { email: value }),
     validate: value => validators.requiredEmail((value || {}).email),
     width: 16,
     inline: true,

@@ -86,7 +86,7 @@ const LOCUS_LIST_FIELDS = [{
   name: 'locusListGuids',
   component: LocusListTables,
   basicFields: true,
-  normalize: value => Object.keys(value || {}).filter(locusListGuid => value[locusListGuid]),
+  parse: value => Object.keys(value || {}).filter(locusListGuid => value[locusListGuid]),
   format: value => (value || []).reduce((acc, locusListGuid) => ({ ...acc, [locusListGuid]: true }), {}),
 }]
 

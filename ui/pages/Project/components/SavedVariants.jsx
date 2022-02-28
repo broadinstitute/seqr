@@ -88,7 +88,7 @@ const LINK_VARIANT_FIELDS = [
       TAG_COLUMN,
     ],
     // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
-    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
+    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val), // TODO
     validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
   },
 ]

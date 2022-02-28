@@ -69,7 +69,7 @@ const CUSTOM_QUERY_FIELD = {
   rows: 10,
   style: { fontFamily: 'monospace' },
   format: val => (typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
-  normalize: getParsedJson,
+  parse: getParsedJson,
   validate: val => (typeof val === 'string' ? getJsonParseError(val) : undefined),
 }
 
@@ -81,7 +81,7 @@ const INHERITANCE_PANEL = {
       component: Select,
       options: INHERITANCE_FILTER_OPTIONS,
       format: val => val || ALL_INHERITANCE_FILTER,
-      normalize: val => (val === ALL_INHERITANCE_FILTER ? null : val),
+      parse: val => (val === ALL_INHERITANCE_FILTER ? null : val),
     },
   },
   helpText: <Header disabled content="Custom inheritance search is disabled for multi-family searches" />,
