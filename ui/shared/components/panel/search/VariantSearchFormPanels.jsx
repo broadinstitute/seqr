@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { FormSection } from 'redux-form'
 import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
