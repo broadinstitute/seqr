@@ -202,6 +202,9 @@ class ReduxFormWrapper extends React.PureComponent {
     setModalConfirm: PropTypes.func,
 
     initialValues: PropTypes.object,
+
+    /* decorators for final-form-calculate to calculate field values */
+    decorators: PropTypes.arrayOf(PropTypes.func),
   }
 
   static defaultProps = {
@@ -298,7 +301,7 @@ class ReduxFormWrapper extends React.PureComponent {
   render() {
     const {
       children, confirmDialog, size, loading, submitOnChange, inline, onSubmitSucceeded, noModal, initialValues,
-      closeOnSuccess, confirmCloseIfNotSaved,
+      closeOnSuccess, confirmCloseIfNotSaved, decorators,
     } = this.props
     const { confirming } = this.state
 
@@ -310,6 +313,7 @@ class ReduxFormWrapper extends React.PureComponent {
         initialValues={initialValues}
         subscription={SUBMITTING_SUBSCRIPTION}
         mutators={arrayMutators}
+        decorators={decorators}
       >
         {({ handleSubmit, submitting }) => (
           <StyledForm

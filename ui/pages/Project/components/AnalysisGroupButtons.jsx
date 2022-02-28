@@ -1,4 +1,5 @@
 import React from 'react'
+import createDecorator from 'final-form-calculate'
 import PropTypes from 'prop-types'
 import { withRouter } from 'react-router-dom'
 import { connect } from 'react-redux'
@@ -28,39 +29,37 @@ const FAMILY_FIELDS = [
   { name: FAMILY_FIELD_DESCRIPTION, width: 9, content: 'Description' },
 ]
 
-const parseFamilyGuids = (newValue, previousValue, allValues) => {
-  const parsed = {}
-  if (newValue.parsedData && newValue.uploadedFileId !== (previousValue || {}).uploadedFileId) {
-    parsed.familyIdMap = allValues.allFamilies.reduce(
-      (acc, family) => ({ ...acc, [family.familyId]: family.familyGuid }), {},
-    )
-    parsed.familyGuids = newValue.parsedData.map(row => parsed.familyIdMap[row[0]]).filter(familyGuid => familyGuid)
-  }
-  return parsed
-}
-
-const normalizeFamilyUpload = (newValue, previousValue, allValues) => { // TODO
+const normalizeFamilyUpload = allFamilies => (newValue) => {
   if (newValue.errors) {
     return { ...newValue, info: newValue.errors, errors: [] }
   }
 
-  const { familyGuids, familyIdMap } = parseFamilyGuids(newValue, previousValue, allValues)
-  if (familyGuids) {
-    const info = [`Uploaded ${familyGuids.length} families`]
-    if (newValue.parsedData.length !== familyGuids.length) {
-      const missingFamilies = newValue.parsedData.filter(row => !familyIdMap[row[0]]).map(row => row[0])
-      info.push(`Unable to find families with the following IDs: ${missingFamilies.join(', ')}`)
+  if (newValue.parsedData) {
+    const familyIdMap = allFamilies.reduce(
+      (acc, family) => ({ ...acc, [family.familyId]: family.familyGuid }), {},
+    )
+    const familyGuids = newValue.parsedData.map(row => familyIdMap[row[0]]).filter(familyGuid => familyGuid)
+
+    if (familyGuids) {
+      const info = [`Uploaded ${familyGuids.length} families`]
+      if (newValue.parsedData.length !== familyGuids.length) {
+        const missingFamilies = newValue.parsedData.filter(row => !familyIdMap[row[0]]).map(row => row[0])
+        info.push(`Unable to find families with the following IDs: ${missingFamilies.join(', ')}`)
+      }
+      return { ...newValue, familyGuids, info }
     }
-    return { ...newValue, familyGuids, info }
   }
 
   return newValue
 }
 
-const FamilyFileUploadField = React.memo(({ onChange }) => (
+const UPLOADED_FAMILIES_FIELD = 'uploadedFamilyIds'
+const FAMILY_GUIDS_FIELD = 'familyGuids'
+
+const FamilyFileUploadField = React.memo(({ onChange, data }) => (
   <FileUploadField
-    name="uploadedFamilyIds"
-    normalize={normalizeFamilyUpload}
+    name={UPLOADED_FAMILIES_FIELD}
+    parse={normalizeFamilyUpload(data)}
     onChange={onChange}
     returnParsedData
     dropzoneLabel="Drag-drop or click here to upload a list of family IDs"
@@ -69,6 +68,7 @@ const FamilyFileUploadField = React.memo(({ onChange }) => (
 
 FamilyFileUploadField.propTypes = {
   onChange: PropTypes.func,
+  data: PropTypes.arrayOf(PropTypes.object),
 }
 
 const mapTableInputStateToProps = state => ({
@@ -79,16 +79,12 @@ const FORM_FIELDS = [
   { name: 'name', label: 'Name', validate: value => (value ? undefined : 'Name is required') },
   { name: 'description', label: 'Description' },
   {
-    name: 'familyGuids',
+    name: UPLOADED_FAMILIES_FIELD,
     key: 'familyUpload',
-    component: FamilyFileUploadField,
-    normalize: (newValue, previousValue, allValues) => { // TODO
-      const { familyGuids } = parseFamilyGuids(newValue, previousValue, allValues)
-      return [...new Set([...(previousValue || []), ...(familyGuids || [])])]
-    },
+    component: connect(mapTableInputStateToProps)(FamilyFileUploadField),
   },
   {
-    name: 'familyGuids',
+    name: FAMILY_GUIDS_FIELD,
     key: 'familyTable',
     idField: 'familyGuid',
     defaultSortColumn: FAMILY_DISPLAY_NAME,
@@ -100,7 +96,18 @@ const FORM_FIELDS = [
   },
 ]
 
-export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, initialValues, onSubmit, iconOnly }) => {
+const DECORATORS = [
+  createDecorator({
+    field: UPLOADED_FAMILIES_FIELD,
+    updates: {
+      [FAMILY_GUIDS_FIELD]: (uploadedFamiliesValue, allValues) => ([
+        ...new Set([...(allValues[FAMILY_GUIDS_FIELD] || []), ...(uploadedFamiliesValue[FAMILY_GUIDS_FIELD] || [])]),
+      ]),
+    },
+  }),
+]
+
+export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, iconOnly }) => {
   if (!project.canEdit) {
     return null
   }
@@ -117,7 +124,8 @@ export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, initial
       onSubmit={onSubmit}
       formFields={FORM_FIELDS}
       showErrorPanel
-      initialValues={initialValues}
+      initialValues={analysisGroup}
+      decorators={DECORATORS}
     />
   )
 })
@@ -126,21 +134,15 @@ UpdateAnalysisGroup.propTypes = {
   project: PropTypes.object,
   analysisGroup: PropTypes.object,
   iconOnly: PropTypes.bool,
-  initialValues: PropTypes.object,
   onSubmit: PropTypes.func,
 }
 
-const mapUpdateStateToProps = (state, ownProps) => {
-  const project = getCurrentProject(state)
-  const initialValues = ownProps.analysisGroup ? ownProps.analysisGroup : { projectGuid: project.projectGuid }
-  return {
-    initialValues: { ...initialValues, allFamilies: Object.values(getProjectFamiliesByGuid(state)) },
-    project,
-  }
-}
+const mapUpdateStateToProps = state => ({
+  project: getCurrentProject(state),
+})
 
 const mapDispatchToProps = {
-  onSubmit: ({ allFamilies, ...values }) => updateAnalysisGroup(values),
+  onSubmit: updateAnalysisGroup,
 }
 
 export const UpdateAnalysisGroupButton = connect(mapUpdateStateToProps, mapDispatchToProps)(UpdateAnalysisGroup)

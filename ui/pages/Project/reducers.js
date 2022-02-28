@@ -237,7 +237,7 @@ export const updateCollaborator = values => updateEntity(
 )
 
 export const updateAnalysisGroup = values => updateEntity(
-  values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid',
+  values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/analysis_groups`,
 )
 
 export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) => {
