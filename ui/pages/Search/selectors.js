@@ -1,5 +1,4 @@
 import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
-import { formValueSelector } from 'redux-form'
 
 import {
   getProjectsByGuid,
@@ -13,7 +12,6 @@ import {
   getProjectDatasetTypes,
 } from 'redux/selectors'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { SEARCH_FORM_NAME } from './constants'
 
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
 export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
@@ -74,16 +72,6 @@ export const getIntitialSearch = createSelector(
 
     return projectFamilies ? { projectFamilies: [projectFamilies] } : null
   },
-)
-
-export const getSearchInput = state => formValueSelector(SEARCH_FORM_NAME)(state, 'search')
-
-export const getCurrentSavedSearch = createSelector(
-  getSearchInput,
-  getSavedSearchesByGuid,
-  (search, savedSearchesByGuid) => Object.values(savedSearchesByGuid).find(
-    savedSearch => savedSearch.search === search,
-  ),
 )
 
 const createListEqualSelector = createSelectorCreator(
