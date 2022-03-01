@@ -3,9 +3,6 @@ import { Link } from 'react-router-dom'
 
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 
-export const CUSTOM_SEARCH_FORM_NAME = 'customVariantSearch'
-export const INCLUDE_ALL_PROJECTS = 'allProjectFamilies'
-
 const PROJECT_ID_FIELD = 'project_id'
 const FAMILY_FIELD_ID = 'family_id'
 

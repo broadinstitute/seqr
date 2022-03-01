@@ -49,6 +49,8 @@ class AllProjectFamiliesField extends React.PureComponent {
 
 }
 
+// TODO can't add project??
+
 const SUBSCRIPTION = { values: true }
 
 export default props => (
