@@ -40,19 +40,22 @@ echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
 cat ~/.pgpass
 
-# init seqrdb unless it already exists
+# init and populate seqrdb unless it already exists
 if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -l | grep seqrdb; then
-
-  psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE reference_data_db';
-  psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE seqrdb';
-  python -u manage.py makemigrations
-  python -u manage.py migrate
-  python -u manage.py migrate --database=reference_data
-  python -u manage.py check
-  python -u manage.py loaddata variant_tag_types
-  python -u manage.py loaddata variant_searches
-  python -u manage.py update_all_reference_data --use-cached-omim
+    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE reference_data_db';
+    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE seqrdb';
+    python -u manage.py migrate
+    python -u manage.py migrate --database=reference_data
+    python -u manage.py loaddata variant_tag_types
+    python -u manage.py loaddata variant_searches
+    python -u manage.py update_all_reference_data --use-cached-omim
+else
+    # run any pending migrations if the database already exists
+    python -u manage.py migrate
+    python -u manage.py migrate --database=reference_data
 fi
+
+python -u manage.py check
 
 # launch django server in background
 /usr/local/bin/start_server.sh
