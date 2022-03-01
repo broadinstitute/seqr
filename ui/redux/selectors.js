@@ -48,14 +48,6 @@ export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownL
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
-export const getAnnotationSecondary = (state) => { // TODO
-  try {
-    return !!state.form.variantSearch.values.search.inheritance.annotationSecondary
-  } catch (err) {
-    return false
-  }
-}
-
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {
     acc[entity.projectGuid] = {}

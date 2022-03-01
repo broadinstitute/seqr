@@ -5,7 +5,6 @@ import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
 import { Header, List, Form, Grid } from 'semantic-ui-react'
 
-import { getAnnotationSecondary } from 'redux/selectors'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/ReduxFormWrapper'
 import { Select } from 'shared/components/form/Inputs'
@@ -80,7 +79,6 @@ const INHERITANCE_PANEL = {
       parse: val => (val === ALL_INHERITANCE_FILTER ? null : {
         mode: val,
         filter: INHERITANCE_FILTER_LOOKUP[val],
-        annotationSecondary: ALL_RECESSIVE_INHERITANCE_FILTERS.includes(val),
       }),
     },
   },
@@ -286,7 +284,9 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
   }
 }, {})
 
-const VariantSearchFormContent = React.memo(({ hasHgmdPermission, displayAnnotationSecondary, datasetTypes }) => (
+const hasSecondaryAnnotation = inheritance => ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritance?.mode)
+
+const VariantSearchFormContent = React.memo(({ hasHgmdPermission, inheritance, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
     <Header size="huge" block>
@@ -300,19 +300,18 @@ const VariantSearchFormContent = React.memo(({ hasHgmdPermission, displayAnnotat
       </Grid>
     </Header>
     <Header content="Customize Search:" />
-    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][hasHgmdPermission][displayAnnotationSecondary]} />
+    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][hasHgmdPermission][hasSecondaryAnnotation(inheritance)]} />
   </div>
 ))
 
 VariantSearchFormContent.propTypes = {
   hasHgmdPermission: PropTypes.bool,
-  displayAnnotationSecondary: PropTypes.bool,
+  inheritance: PropTypes.object,
   datasetTypes: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   hasHgmdPermission: getHasHgmdPermission(state, ownProps),
-  displayAnnotationSecondary: getAnnotationSecondary(state, ownProps),
   datasetTypes: getDatasetTypes(state, ownProps),
 })
 
@@ -323,7 +322,11 @@ const SUBSCRIPTION = { values: true }
 export default props => (
   <FormSpy subscription={SUBSCRIPTION}>
     {({ values }) => (
-      <ConnectedVariantSearchFormContent {...props} projectFamilies={values.projectFamilies} />
+      <ConnectedVariantSearchFormContent
+        {...props}
+        projectFamilies={values.projectFamilies}
+        inheritance={values.search?.inheritance}
+      />
     )}
   </FormSpy>
 )
