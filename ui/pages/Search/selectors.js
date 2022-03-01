@@ -76,8 +76,6 @@ export const getIntitialSearch = createSelector(
   },
 )
 
-const getProjectsFamiliesFieldInput = state => formValueSelector(SEARCH_FORM_NAME)(state, 'projectFamilies')
-
 export const getSearchInput = state => formValueSelector(SEARCH_FORM_NAME)(state, 'search')
 
 export const getCurrentSavedSearch = createSelector(
@@ -121,23 +119,13 @@ export const getSavedSearchOptions = createSavedSearchesSelector(
   },
 )
 
-const getProjectsInput = createSelector(
-  getProjectsFamiliesFieldInput,
-  projectFamilies => (projectFamilies || []).map(({ projectGuid }) => projectGuid),
-)
-
-export const getInputProjectsCount = createSelector(
-  getProjectsFamiliesFieldInput,
-  projectFamilies => (projectFamilies || []).length,
-)
-
 export const getSearchedProjectsLocusListOptions = createListEqualSelector(
-  getProjectsInput,
+  (state, props) => props.projectFamilies,
   getProjectsByGuid,
   getLocusListsByGuid,
-  (projectGuids, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set((projectGuids || []).reduce(
-      (acc, projectGuid) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
+  (projectFamilies, projectsByGuid, locusListsByGuid) => {
+    const locusListGuids = [...new Set((projectFamilies || []).reduce(
+      (acc, { projectGuid }) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
         [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))]
     const locusListOptions = locusListGuids.map((locusListGuid) => {
@@ -149,10 +137,10 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
 )
 
 export const getDatasetTypes = createSelector(
-  getProjectsInput,
+  (state, props) => props.projectFamilies,
   getProjectDatasetTypes,
-  (projectGuids, projectDatasetTypes) => {
-    const datasetTypes = projectGuids.reduce((acc, projectGuid) => new Set([
+  (projectFamilies, projectDatasetTypes) => {
+    const datasetTypes = (projectFamilies || []).reduce((acc, { projectGuid }) => new Set([
       ...acc, ...(projectDatasetTypes[projectGuid] || [])]), new Set())
     return [...datasetTypes].sort().join(',')
   },
@@ -160,10 +148,10 @@ export const getDatasetTypes = createSelector(
 
 export const getHasHgmdPermission = createSelector(
   getUser,
-  getProjectsInput,
+  (state, props) => props.projectFamilies,
   getProjectsByGuid,
-  (user, projectGuids, projectsByGuid) => user.isAnalyst || projectGuids.some(
-    projectGuid => (projectsByGuid[projectGuid] || {}).enableHgmd,
+  (user, projectFamilies, projectsByGuid) => user.isAnalyst || (projectFamilies || []).some(
+    ({ projectGuid }) => (projectsByGuid[projectGuid] || {}).enableHgmd,
   ),
 )
 

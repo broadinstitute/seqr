@@ -1,6 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
+import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
 import { Header, List, Form, Grid } from 'semantic-ui-react'
 
@@ -309,10 +310,20 @@ VariantSearchFormContent.propTypes = {
   datasetTypes: PropTypes.string,
 }
 
-const mapStateToProps = state => ({
-  hasHgmdPermission: getHasHgmdPermission(state),
-  displayAnnotationSecondary: getAnnotationSecondary(state),
-  datasetTypes: getDatasetTypes(state),
+const mapStateToProps = (state, ownProps) => ({
+  hasHgmdPermission: getHasHgmdPermission(state, ownProps),
+  displayAnnotationSecondary: getAnnotationSecondary(state, ownProps),
+  datasetTypes: getDatasetTypes(state, ownProps),
 })
 
-export default connect(mapStateToProps)(VariantSearchFormContent)
+const ConnectedVariantSearchFormContent = connect(mapStateToProps)(VariantSearchFormContent)
+
+const SUBSCRIPTION = { values: true }
+
+export default props => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => (
+      <ConnectedVariantSearchFormContent {...props} projectFamilies={values.projectFamilies} />
+    )}
+  </FormSpy>
+)
