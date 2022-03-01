@@ -167,20 +167,6 @@ export const getHasHgmdPermission = createSelector(
   ),
 )
 
-const getSingleFamlilyGuidInput = createSelector(
-  getProjectsFamiliesFieldInput,
-  projectFamilies => (
-    (projectFamilies && projectFamilies.length === 1 && (projectFamilies[0].familyGuids || []).length === 1) ?
-      projectFamilies[0].familyGuids[0] : null
-  ),
-)
-
-export const getSingleInputFamily = createSelector(
-  getSingleFamlilyGuidInput,
-  getFamiliesByGuid,
-  (familyGuid, familiesByGuid) => familiesByGuid[familyGuid],
-)
-
 export const getFamilyOptions = createSelector(
   getFamiliesGroupedByProjectGuid,
   (state, props) => props.value.projectGuid,

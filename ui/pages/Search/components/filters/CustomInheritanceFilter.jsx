@@ -1,17 +1,17 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { FormSpy } from 'react-final-form'
 import { Table, Header, Popup, Loader } from 'semantic-ui-react'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
-import { getIndividualsByGuid, getFamilyDetailsLoading } from 'redux/selectors'
+import { getFamiliesByGuid, getIndividualsByGuid, getFamilyDetailsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
-import { getSingleInputFamily } from '../../selectors'
 
 const CUSTOM_FILTERS = [
   { filterField: 'affected', options: AFFECTED_OPTIONS },
@@ -115,9 +115,9 @@ const CustomInheritanceFilter = React.memo(({ load, loading, family, ...props })
 })
 
 const mapStateToProps = (state, ownProps) => ({
-  family: getSingleInputFamily(state),
+  family: getFamiliesByGuid(state)[ownProps.familyGuid],
   individualsByGuid: getIndividualsByGuid(state),
-  loading: !!getFamilyDetailsLoading(state)[ownProps.family?.familyGuid],
+  loading: !!getFamilyDetailsLoading(state)[ownProps.familyGuid],
 })
 
 const mapDispatchToProps = {
@@ -130,4 +130,19 @@ CustomInheritanceFilter.propTypes = {
   loading: PropTypes.bool,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(CustomInheritanceFilter)
+const ConnectedCustomInheritanceFilter = connect(mapStateToProps, mapDispatchToProps)(CustomInheritanceFilter)
+
+const SUBSCRIPTION = { values: true }
+
+const getSingleFamlilyGuid = projectFamilies => (
+  (projectFamilies && projectFamilies.length === 1 && (projectFamilies[0].familyGuids || []).length === 1) ?
+    projectFamilies[0].familyGuids[0] : null
+)
+
+export default props => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => (
+      <ConnectedCustomInheritanceFilter {...props} familyGuid={getSingleFamlilyGuid(values.projectFamilies)} />
+    )}
+  </FormSpy>
+)
