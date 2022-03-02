@@ -153,11 +153,7 @@ const DIRTY_SUBSCRIPTION = { dirty: true }
 class ReduxFormWrapper extends React.PureComponent {
 
   static propTypes = {
-    /* A unique string identifier for the form */
-    // TODO was required for keeping all forms in redux state, now isn't, prob should clean up behavior with modalName
-    form: PropTypes.string.isRequired, // eslint-disable-line react/no-unused-prop-types
-
-    /* A unique string identifier for the parent modal. Defaults to the "form" identifier */
+    /* A unique string identifier for the parent modal */
     modalName: PropTypes.string, // eslint-disable-line react/no-unused-prop-types
 
     /* A callback when a valid form is submitted. Will be passed all the form data */
@@ -365,10 +361,10 @@ class ReduxFormWrapper extends React.PureComponent {
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   handleClose: (confirmed) => {
-    dispatch(closeModal(ownProps.modalName || ownProps.form, confirmed))
+    dispatch(closeModal(ownProps.modalName, confirmed))
   },
   setModalConfirm: (confirm) => {
-    dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
+    dispatch(setModalConfirm(ownProps.modalName, confirm))
   },
 })
 

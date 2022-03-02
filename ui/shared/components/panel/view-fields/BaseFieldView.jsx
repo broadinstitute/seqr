@@ -111,7 +111,7 @@ class BaseFieldView extends React.PureComponent {
                 key="edit"
                 onSubmit={onSubmit}
                 onSubmitSucceeded={this.toggleButtonVisibility}
-                form={fieldModalId}
+                modalName={fieldModalId}
                 initialValues={initialValues}
                 fields={formFields || this.getFormFields()}
                 showErrorPanel={showErrorPanel}

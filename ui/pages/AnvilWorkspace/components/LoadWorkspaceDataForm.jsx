@@ -116,7 +116,6 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
     <ReduxFormWrapper
-      form="loadWorkspaceData"
       modalName="loadWorkspaceData"
       onSubmit={createProjectFromWorkspace(namespace, name)}
       confirmCloseIfNotSaved

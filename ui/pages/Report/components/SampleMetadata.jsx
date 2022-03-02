@@ -27,7 +27,6 @@ const FIELDS = [
 const SampleMetadataFilters = React.memo(({ load }) => (
   <ReduxFormWrapper
     onSubmit={load}
-    form="sampleMetadataFilters"
     fields={FIELDS}
     noModal
     inline

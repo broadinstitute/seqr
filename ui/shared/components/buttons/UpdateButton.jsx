@@ -30,7 +30,7 @@ const UpdateButton = React.memo(({
       children: (
         <ReduxFormWrapper
           onSubmit={onSubmit}
-          form={modalId}
+          modalName={modalId}
           initialValues={initialValues}
           fields={formFields}
           showErrorPanel={showErrorPanel}

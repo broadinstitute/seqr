@@ -103,7 +103,6 @@ const CustomSearch = React.memo(({ match, history, loadContext, loading, searchP
           <VariantSearchFormContainer
             history={history}
             resultsPath="/report/custom_search"
-            form="customVariantSearch"
             initialValues={searchParams}
           >
             <InlineHeader content="Include All Projects: " />

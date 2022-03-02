@@ -27,7 +27,6 @@ const SUBMIT_FUNCTIONS = {
 
 const BaseUpdateDatasetForm = React.memo(({ formType, formFields, initialValues, onSubmit }) => (
   <ReduxFormWrapper
-    form={`upload${formType}`}
     modalName={MODAL_NAME}
     onSubmit={onSubmit}
     confirmCloseIfNotSaved

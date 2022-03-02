@@ -71,7 +71,7 @@ const BaseVariantSearchResultsContent = React.memo(({
         {additionalDisplayEdit}
         <ReduxFormWrapper
           onSubmit={onSubmit}
-          form="editSearchedVariantsDisplayTop"
+          modalName="editSearchedVariantsDisplayTop"
           initialValues={variantSearchDisplay}
           closeOnSuccess={false}
           submitOnChange
@@ -89,7 +89,7 @@ const BaseVariantSearchResultsContent = React.memo(({
       <Grid.Column width={11} floated="right" textAlign="right">
         <ReduxFormWrapper
           onSubmit={onSubmit}
-          form="editSearchedVariantsDisplayBottom"
+          modalName="editSearchedVariantsDisplayBottom"
           initialValues={variantSearchDisplay}
           closeOnSuccess={false}
           submitOnChange

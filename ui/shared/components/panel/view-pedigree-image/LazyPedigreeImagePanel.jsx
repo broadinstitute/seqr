@@ -282,7 +282,7 @@ class BasePedigreeImage extends React.PureComponent {
         <Modal title={(editIndividual.data || {}).label} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
           <ReduxFormWrapper
             onSubmit={editIndividual.save}
-            form={EDIT_INDIVIDUAL_MODAL_ID}
+            modalName={EDIT_INDIVIDUAL_MODAL_ID}
             initialValues={editIndividual.data}
             fields={EDIT_INDIVIDUAL_FIELDS}
             submitButtonText="Update"

@@ -41,7 +41,7 @@ const SetPassword = ({ onSubmit, newUser, location }) => {
       header={isReset ? 'Reset password' : 'Welcome to seqr'}
       subheader={isReset ? '' : 'Fill out this form to finish setting up your account'}
       onSubmit={onSubmit}
-      form="set-password"
+      modalName="set-password"
       fields={isReset ? PASSWORD_FIELDS : FIELDS}
       initialValues={newUser}
     />

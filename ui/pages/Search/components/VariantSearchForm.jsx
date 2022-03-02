@@ -13,7 +13,6 @@ const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading }
     <VariantSearchFormContainer
       history={history}
       initialValues={initialSearch}
-      form="variantSearch"
       loading={contentLoading}
     >
       <VariantSearchFormContent />
