@@ -2,6 +2,7 @@ import PropTypes from 'prop-types'
 import React from 'react'
 import { connect } from 'react-redux'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
+import { getSearchedVariantsErrorMessage } from 'redux/selectors'
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { toUniqueCsvString } from 'shared/utils/stringUtils'
 
@@ -18,6 +19,10 @@ VariantSearchFormContainer.propTypes = {
   resultsPath: PropTypes.string,
 }
 
+const mapStateToProps = state => ({
+  submissionError: getSearchedVariantsErrorMessage(state),
+})
+
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onSubmit: ({ search, ...searchParams }) => {
     let restructuredSearch = search
@@ -32,4 +37,4 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
   },
 })
 
-export default connect(null, mapDispatchToProps)(VariantSearchFormContainer)
+export default connect(mapStateToProps, mapDispatchToProps)(VariantSearchFormContainer)

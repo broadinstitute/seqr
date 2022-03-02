@@ -208,6 +208,9 @@ class ReduxFormWrapper extends React.PureComponent {
 
     setModalConfirm: PropTypes.func,
 
+    /* Optional submission error generated outside the form */
+    submissionError: PropTypes.string,
+
     initialValues: PropTypes.object,
 
     /* decorators for final-form-calculate to calculate field values */
@@ -220,7 +223,15 @@ class ReduxFormWrapper extends React.PureComponent {
     submitButtonText: 'Submit',
   }
 
-  state = { confirming: false }
+  state = { confirming: false, submitCallback: null }
+
+  componentDidUpdate(prevProps) {
+    const { submissionError } = this.props
+    const { submitCallback } = this.state
+    if (submitCallback && submissionError && submissionError !== prevProps.submissionError) {
+      submitCallback({ errors: [submissionError] })
+    }
+  }
 
   onSubmitSucceededChange = ({ submitSucceeded }) => {
     const { onSubmitSucceeded, handleClose, closeOnSuccess, noModal } = this.props
@@ -242,8 +253,11 @@ class ReduxFormWrapper extends React.PureComponent {
   }
 
   handledOnSubmit = (values, form, callback) => {
-    const { onSubmit } = this.props
-    onSubmit(values, form, callback).then(
+    const { onSubmit, submissionError } = this.props
+    if (submissionError !== undefined) {
+      this.setState({ submitCallback: callback })
+    }
+    onSubmit(values, form, callback)?.then(
       () => callback(),
       e => callback({ errors: e.body?.errors || [e.body?.error] || [e.message] }),
     )
@@ -289,7 +303,6 @@ class ReduxFormWrapper extends React.PureComponent {
     }
     const saveErrorMessage = errorMessages?.join('; ') || (currentFormSubmitFailed ? 'Error' : null)
 
-    // TODO search form does not stop submitting on error
     return [
       showErrorPanel && errorMessages && <MessagePanel key="errorPanel" error visible list={errorMessages} />,
       submitSucceeded && successMessage && <MessagePanel key="infoPanel" success visible content={successMessage} />,
