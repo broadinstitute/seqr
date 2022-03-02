@@ -57,18 +57,26 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
   return null
 }
 
-export const getIntitialSearch = createSelector(
+const createProjectFamiliesSelector = createSelectorCreator(
+  defaultMemoize,
+  (a, b) => a.projectGuid === b.projectGuid && a.familyGuids === b.familyGuids,
+)
+
+const getIntitialProjectFamilies = createProjectFamiliesSelector(
   (state, props) => props.match.params,
-  getCurrentSearchParams,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
-  (urlParams, searchParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  getProjectFamilies,
+)
+
+export const getIntitialSearch = createSelector(
+  getCurrentSearchParams,
+  getIntitialProjectFamilies,
+  (searchParams, projectFamilies) => {
     if (searchParams) {
       return searchParams
     }
-
-    const projectFamilies = getProjectFamilies(urlParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid)
 
     return projectFamilies ? { projectFamilies: [projectFamilies] } : null
   },

@@ -101,8 +101,6 @@ ArrayFieldItem.propTypes = {
   fields: PropTypes.object,
 }
 
-const arrayFieldItem = fieldProps => arrayProps => <ArrayFieldItem {...fieldProps} {...arrayProps} />
-
 export const configuredField = (field, formProps = {}) => {
   const {
     component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
@@ -121,10 +119,18 @@ export const configuredField = (field, formProps = {}) => {
     ...fieldProps,
   }
   return isArrayField ? (
-    <FieldArray
-      {...baseProps}
-      component={arrayFieldItem({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label })}
-    />
+    <FieldArray {...baseProps}>
+      {({ fields }) => (
+        <ArrayFieldItem
+          fields={fields}
+          addArrayElement={addArrayElement}
+          addArrayElementProps={addArrayElementProps}
+          arrayFieldName={arrayFieldName}
+          singleFieldProps={singleFieldProps}
+          label={label}
+        />
+      )}
+    </FieldArray>
   ) : <Field {...baseProps} {...singleFieldProps} />
 }
 
@@ -283,6 +289,7 @@ class ReduxFormWrapper extends React.PureComponent {
     }
     const saveErrorMessage = errorMessages?.join('; ') || (currentFormSubmitFailed ? 'Error' : null)
 
+    // TODO search form does not stop submitting on error
     return [
       showErrorPanel && errorMessages && <MessagePanel key="errorPanel" error visible list={errorMessages} />,
       submitSucceeded && successMessage && <MessagePanel key="infoPanel" success visible content={successMessage} />,
