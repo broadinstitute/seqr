@@ -101,7 +101,6 @@
     "react-use": "^17.3.2",
     "react-xhr-uploader": "^0.4.4",
     "redux": "^4.1.2",
-    "redux-form": "^8.3.8",
     "redux-thunk": "2.2.0",
     "reselect": "3.0.1",
     "semantic-ui-css": "^2.4.1",
