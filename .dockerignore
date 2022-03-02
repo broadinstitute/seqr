@@ -1,0 +1,10 @@
+ui/dist/*
+ui/node_modules/*
+static/*
+!static/fonts/*
+!static/images/*
+deploy/*
+!deploy/docker/seqr/*
+.git
+.vscode
+.idea

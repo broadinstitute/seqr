@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import { shallow, configure } from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
 
 import { getRnaSeqDataByFamilyGene } from 'redux/selectors'

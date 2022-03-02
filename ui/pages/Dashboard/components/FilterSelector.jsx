@@ -33,7 +33,7 @@ export { FilterSelector as FilterSelectorComponent }
 
 FilterSelector.propTypes = {
   filter: PropTypes.string.isRequired,
-  options: PropTypes.arrayOf(PropTypes.obect),
+  options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func.isRequired,
 }
 

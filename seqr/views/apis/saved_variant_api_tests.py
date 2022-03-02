@@ -485,6 +485,16 @@ class SavedVariantAPITest(object):
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][1]
         self.assertEqual(new_gene_note_response['note'], 'new user-selected gene note')
 
+        # save variant_note as gene_note for SV
+        create_sv_variant_note_url = reverse(create_variant_note_handler, args=['SV0000007_prefix_19107_DEL_r00'])
+        response = self.client.post(create_sv_variant_note_url, content_type='application/json', data=json.dumps(
+            {'note': 'SV gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000011_11'}))
+        self.assertEqual(response.status_code, 200)
+        new_variant_note_response = next(iter(response.json()['variantNotesByGuid'].values()))
+        self.assertEqual(new_variant_note_response['note'], 'SV gene note')
+        new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][2]
+        self.assertEqual(new_gene_note_response['note'], 'SV gene note')
+
         # update the variant_note
         update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_note_guid])
         response = self.client.post(update_variant_note_url, content_type='application/json',  data=json.dumps(
@@ -924,7 +934,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_update_and_delete_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 7)
+        assert_no_list_ws_has_al(self, 8)
 
     def test_create_partially_saved_compound_het_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()

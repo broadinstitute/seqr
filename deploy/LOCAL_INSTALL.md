@@ -36,6 +36,18 @@ docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin
 
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
+
+#### Updating seqr
+
+Updating your local installation of seqr involves pulling the latest version of the seqr docker container, and then recreating the container.
+
+```
+# run this from the directory containing your docker-compose.yml file
+docker-compose pull
+docker-compose up -d seqr
+
+docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
+```
    
 #### Annotating and loading VCF callsets 
 

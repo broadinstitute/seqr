@@ -376,8 +376,8 @@ export const LOCATION_FIELDS = [
 ]
 
 export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-  ({ field, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
-    const label = snakecaseToTitlecase(field)
+  ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
+    const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
 
     if (indicatorMap) {
