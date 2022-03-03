@@ -59,7 +59,7 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
 
 const createProjectFamiliesSelector = createSelectorCreator(
   defaultMemoize,
-  (a, b) => a.projectGuid === b.projectGuid && a.familyGuids === b.familyGuids,
+  (a, b) => ['projectGuid', 'familyGuids', 'familyGuid', 'analysisGroupGuid', 'searchHash'].every(k => a[k] === b[k]),
 )
 
 const getIntitialProjectFamilies = createProjectFamiliesSelector(
