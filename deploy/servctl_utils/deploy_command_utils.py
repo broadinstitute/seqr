@@ -212,8 +212,6 @@ def deploy_seqr(settings):
 def deploy_kibana(settings):
     print_separator("kibana")
 
-    docker_build("kibana", settings)
-
     _set_elasticsearch_kubernetes_resources()
 
     deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
