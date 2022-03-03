@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Segment, Header, Grid } from 'semantic-ui-react'
 
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
 import { VerticalSpacer } from 'shared/components/Spacers'
 
 export const UserFormContainer = ({ header, subheader, children }) => (
@@ -25,7 +25,7 @@ UserFormContainer.propTypes = {
   children: PropTypes.node,
 }
 
-export const UserForm = props => <ReduxFormWrapper {...props} showErrorPanel noModal />
+export const UserForm = props => <FormWrapper {...props} showErrorPanel noModal />
 
 const UserFormLayout = React.memo(({ header, subheader, children, content, ...formProps }) => (
   <UserFormContainer header={header} subheader={subheader}>

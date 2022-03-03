@@ -6,7 +6,7 @@ import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-u
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
-import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
+import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
 import { VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'

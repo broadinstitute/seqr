@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { Header, List, Form, Grid } from 'semantic-ui-react'
 
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { configuredField } from 'shared/components/form/ReduxFormWrapper'
+import { configuredField } from 'shared/components/form/FormHelpers'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {

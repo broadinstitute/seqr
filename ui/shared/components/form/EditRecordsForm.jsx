@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../buttons/DeleteButton'
 import DataTable from '../table/DataTable'
-import ReduxFormWrapper from './FormHelpers'
+import FormWrapper from './FormWrapper'
 
 const ROWS_PER_PAGE = 12
 
@@ -113,7 +113,7 @@ class EditRecordsForm extends React.PureComponent {
 
     return (
       <FormContentContainer>
-        <ReduxFormWrapper
+        <FormWrapper
           modalName={modalName}
           submitButtonText="Apply"
           onSubmit={this.submitRecords}
@@ -147,7 +147,7 @@ class EditRecordsForm extends React.PureComponent {
               {...tableProps}
             />
           </TableContainer>
-        </ReduxFormWrapper>
+        </FormWrapper>
       </FormContentContainer>
     )
   }

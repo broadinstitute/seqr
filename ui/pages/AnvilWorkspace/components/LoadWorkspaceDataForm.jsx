@@ -17,7 +17,8 @@ import {
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
-import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
@@ -115,7 +116,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
       </Message>
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
-    <ReduxFormWrapper
+    <FormWrapper
       modalName="loadWorkspaceData"
       onSubmit={createProjectFromWorkspace(namespace, name)}
       confirmCloseIfNotSaved

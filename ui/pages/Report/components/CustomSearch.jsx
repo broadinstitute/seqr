@@ -6,7 +6,7 @@ import { Grid, Header } from 'semantic-ui-react'
 
 import { getProjectsByGuid, getProjectDatasetTypes, getCurrentSearchParams } from 'redux/selectors'
 import { Select, InlineToggle, BaseSemanticInput } from 'shared/components/form/Inputs'
-import { configuredField } from 'shared/components/form/ReduxFormWrapper'
+import { configuredField } from 'shared/components/form/FormHelpers'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
   HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,

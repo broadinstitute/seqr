@@ -18,7 +18,7 @@ import DataLoader from '../../DataLoader'
 import { QueryParamsEditor } from '../../QueryParamEditor'
 import { HorizontalSpacer } from '../../Spacers'
 import ExportTableButton from '../../buttons/ExportTableButton'
-import ReduxFormWrapper from '../../form/FormHelpers'
+import FormWrapper from '../../form/FormWrapper'
 import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 
@@ -69,7 +69,7 @@ const BaseVariantSearchResultsContent = React.memo(({
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}
-        <ReduxFormWrapper
+        <FormWrapper
           onSubmit={onSubmit}
           modalName="editSearchedVariantsDisplayTop"
           initialValues={variantSearchDisplay}
@@ -87,7 +87,7 @@ const BaseVariantSearchResultsContent = React.memo(({
     <DisplayVariants key="variants" displayVariants={displayVariants} compoundHetToggle={compoundHetToggle} />,
     <LargeRow key="bottomPagination">
       <Grid.Column width={11} floated="right" textAlign="right">
-        <ReduxFormWrapper
+        <FormWrapper
           onSubmit={onSubmit}
           modalName="editSearchedVariantsDisplayBottom"
           initialValues={variantSearchDisplay}

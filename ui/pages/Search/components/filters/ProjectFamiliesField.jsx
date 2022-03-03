@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 
-import { configuredField } from 'shared/components/form/ReduxFormWrapper'
+import { configuredField } from 'shared/components/form/FormHelpers'
 import { AddProjectButton } from 'shared/components/panel/search/ProjectsField'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { loadProjectGroupContext } from '../../reducers'
