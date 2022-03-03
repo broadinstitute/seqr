@@ -2,7 +2,7 @@ import React from 'react'
 import { Form } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
-import { validators } from '../components/form/ReduxFormWrapper'
+import { validators } from '../components/form/FormHelpers'
 import {
   BooleanCheckbox,
   RadioGroup,

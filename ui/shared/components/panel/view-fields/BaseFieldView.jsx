@@ -10,7 +10,7 @@ import DeleteButton from '../../buttons/DeleteButton'
 import UpdateButton from '../../buttons/UpdateButton'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import ReduxFormWrapper from '../../form/FormHelpers'
 
 const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 

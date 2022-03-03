@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { ButtonLink } from '../StyledComponents'
-import ReduxFormWrapper from '../form/ReduxFormWrapper'
+import ReduxFormWrapper from '../form/FormHelpers'
 import Modal from '../modal/Modal'
 
 const UpdateButton = React.memo(({

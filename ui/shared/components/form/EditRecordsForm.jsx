@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../buttons/DeleteButton'
 import DataTable from '../table/DataTable'
-import ReduxFormWrapper from './ReduxFormWrapper'
+import ReduxFormWrapper from './FormHelpers'
 
 const ROWS_PER_PAGE = 12
 

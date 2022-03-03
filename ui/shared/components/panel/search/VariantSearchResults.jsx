@@ -18,7 +18,7 @@ import DataLoader from '../../DataLoader'
 import { QueryParamsEditor } from '../../QueryParamEditor'
 import { HorizontalSpacer } from '../../Spacers'
 import ExportTableButton from '../../buttons/ExportTableButton'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import ReduxFormWrapper from '../../form/FormHelpers'
 import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 
