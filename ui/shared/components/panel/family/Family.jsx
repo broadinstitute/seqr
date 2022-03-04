@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { updateFamily } from 'redux/rootReducer'
-import { getProjectsByGuid, getNotesByFamilyType, getAnalysisGroupsByFamily } from 'redux/selectors'
+import { getProjectsByGuid, getNotesByFamilyType } from 'redux/selectors'
 
 import PedigreeImagePanel from '../view-pedigree-image/PedigreeImagePanel'
 import BaseFieldView from '../view-fields/BaseFieldView'
@@ -30,7 +30,7 @@ import {
   FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
   FAMILY_FIELD_ANALYSIS_GROUPS,
 } from '../../../utils/constants'
-import { FirstSample, AnalystEmailDropdown, AnalysedBy, analysisStatusIcon } from './FamilyFields'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy, AnalysisGroups, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
 const ASSIGNED_ANALYST_EDIT_FIELDS = [
@@ -42,10 +42,6 @@ const ASSIGNED_ANALYST_EDIT_FIELDS = [
     inline: true,
   },
 ]
-
-const mapAnalysisGroupsStateToProps = (state, ownProps) => ({
-  fieldValue: getAnalysisGroupsByFamily(state)[ownProps.initialValues.familyGuid],
-})
 
 const mapNotesStateToProps = (state, ownProps) => ({
   notes: (getNotesByFamilyType(state)[ownProps.initialValues.familyGuid] || {})[ownProps.modalId],
@@ -65,7 +61,7 @@ const getNoteField = noteType => ({
 const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_ANALYSIS_GROUPS]: {
     canEdit: false,
-    component: connect(mapAnalysisGroupsStateToProps)(BaseFieldView),
+    component: AnalysisGroups,
     fieldDisplay: values => values.map(({ name }) => name).join(', '),
   },
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },

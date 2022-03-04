@@ -15,6 +15,7 @@ export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
+export const getAnalysisGroupIsLoading = state => state.analysisGroupsLoading.isLoading
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getVariantTagsByGuid = state => state.variantTagsByGuid
 export const getVariantNotesByGuid = state => state.variantNotesByGuid
