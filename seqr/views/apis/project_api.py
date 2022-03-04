@@ -19,7 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
-    add_project_tag_types
+    add_project_tag_types, get_project_analysis_groups
 from settings import ANALYST_PROJECT_CATEGORY
 
 
@@ -189,6 +189,15 @@ def project_individuals(request, project_guid):
     return create_json_response({
         'projectsByGuid': {project_guid: {'individualsLoaded': True}},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
+    })
+
+@login_and_policies_required
+def project_analysis_groups(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'analysisGroupsLoaded': True}},
+        'analysisGroupsByGuid': get_project_analysis_groups([project], project_guid)
     })
 
 @login_and_policies_required
