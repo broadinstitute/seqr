@@ -112,14 +112,6 @@ const INHERITANCE_PANEL = {
   ),
 }
 
-const IN_SILICO_PANEL_MAP = {
-  ...IN_SILICO_PANEL,
-  [DATASET_TYPE_VARIANT_CALLS]: {
-    ...IN_SILICO_PANEL,
-    fieldLayout: inSilicoFieldLayout(NO_SV_IN_SILICO_GROUPS),
-  },
-}
-
 const LOCATION_PANEL_WITH_GENE_LIST = {
   ...LOCATION_PANEL,
   headerProps: {
@@ -132,19 +124,11 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
 
 const ALL_DATASET_TYPE = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
 
-const ANNOTATION_PANEL_MAP = {
-  ...ANNOTATION_PANEL,
-  [DATASET_TYPE_VARIANT_CALLS]: {
-    ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
-  },
-}
-
 const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
 const SV_GROUPS_NO_NEW = SV_GROUPS.filter(name => name !== VEP_GROUP_SV_NEW)
-const secondaryPanel = panel => ({
-  ...panel,
-  headerProps: { ...panel.headerProps, title: 'Annotations (Second Hit)' },
+const ANNOTATION_SECONDARY_PANEL = {
+  ...ANNOTATION_PANEL,
+  headerProps: { ...ANNOTATION_PANEL.headerProps, title: 'Annotations (Second Hit)' },
   name: ANNOTATION_SECONDARY_NAME,
   helpText: (
     <span>
@@ -155,16 +139,9 @@ const secondaryPanel = panel => ({
       annotations filter.
     </span>
   ),
-})
-const ANNOTATION_SECONDARY_PANEL_MAP = {
-  ...secondaryPanel(ANNOTATION_PANEL),
   fieldLayout: annotationFieldLayout(
     [SV_GROUPS_NO_NEW, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS],
   ),
-  [DATASET_TYPE_VARIANT_CALLS]: {
-    ...secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
-    fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
-  },
 }
 
 const PANELS = [
@@ -172,28 +149,37 @@ const PANELS = [
   {
     hasHgmdPermission: { [true]: HGMD_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
-  ANNOTATION_PANEL_MAP,
-  ANNOTATION_SECONDARY_PANEL_MAP,
-  IN_SILICO_PANEL_MAP,
-  {
-    ...FREQUENCY_PANEL,
-    [DATASET_TYPE_VARIANT_CALLS]: {
-      ...FREQUENCY_PANEL,
+  ANNOTATION_PANEL,
+  ANNOTATION_SECONDARY_PANEL,
+  IN_SILICO_PANEL,
+  FREQUENCY_PANEL,
+  LOCATION_PANEL_WITH_GENE_LIST,
+  QUALITY_PANEL,
+]
+
+const DATASET_TYPE_PANEL_PROPS = {
+  [DATASET_TYPE_VARIANT_CALLS]: {
+    [ANNOTATION_PANEL.name]: {
+      fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+    },
+    [ANNOTATION_SECONDARY_NAME]: {
+      fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
+    },
+    [IN_SILICO_PANEL.name]: {
+      fieldLayout: inSilicoFieldLayout(NO_SV_IN_SILICO_GROUPS),
+    },
+    [FREQUENCY_PANEL.name]: {
       fields: SNP_FREQUENCIES,
     },
-  },
-  LOCATION_PANEL_WITH_GENE_LIST,
-  {
-    ...QUALITY_PANEL,
-    [DATASET_TYPE_VARIANT_CALLS]: {
-      ...QUALITY_PANEL,
+    [QUALITY_PANEL.name]: {
       fields: SNP_QUALITY_FILTER_FIELDS,
     },
   },
-]
+}
 
 const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS].reduce((typeAcc, type) => {
-  const typePanels = PANELS.map(panel => (panel[type] === undefined ? panel : panel[type])).filter(panel => panel)
+  const datasetTypePanelProps = DATASET_TYPE_PANEL_PROPS[type] || {}
+  const typePanels = PANELS.map(panel => ({ ...panel, ...(datasetTypePanelProps[panel.name] || {}) }))
   return {
     ...typeAcc,
     [type]: [true, false].reduce((analystAcc, hasHgmdBool) => {
