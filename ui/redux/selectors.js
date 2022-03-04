@@ -82,6 +82,16 @@ export const getNotesByFamilyType = createSelector(
   }, {}),
 )
 
+export const getAnalysisGroupsByFamily = createSelector(
+  getAnalysisGroupsByGuid,
+  analysisGroupsByGuid => Object.values(analysisGroupsByGuid).reduce(
+    (acc, analysisGroup) => analysisGroup.familyGuids.reduce(
+      (familyAcc, familyGuid) => ({ ...familyAcc, [familyGuid]: [...(familyAcc[familyGuid] || []), analysisGroup] }),
+      acc,
+    ), {},
+  ),
+)
+
 export const getIndividualsByFamily = createSelector(
   getIndividualsByGuid,
   individualsByGuid => groupByFamilyGuid(Object.values(individualsByGuid)),
