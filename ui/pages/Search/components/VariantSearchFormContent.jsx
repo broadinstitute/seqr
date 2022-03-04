@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
 import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
-import { Header, List, Form, Grid } from 'semantic-ui-react'
+import { Header, List, Grid } from 'semantic-ui-react'
 
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { configuredField } from 'shared/components/form/FormHelpers'
@@ -15,7 +15,7 @@ import VariantSearchFormPanels, {
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
   HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
-  SV_GROUPS, SNP_FREQUENCIES,
+  SV_GROUPS, SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS,
 } from 'shared/components/panel/search/constants'
 import {
   ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, VEP_GROUP_SV_NEW,
@@ -46,10 +46,6 @@ const BaseDetailLink = styled(ButtonLink)`
   }
 `
 const DetailLink = props => <BaseDetailLink {...props} />
-
-const DividedFormField = styled(Form.Field)`
-  border-left: solid grey 1px;
-`
 
 const SAVED_SEARCH_FIELD = {
   name: 'search',
@@ -171,25 +167,6 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   },
 }
 
-const SV_QS_FILTER_FIELD = {
-  name: 'min_qs',
-  label: 'WES SV Quality Score',
-  labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplication >= 50, deletion >= 100, homozygous deletion >= 400.',
-  min: 0,
-  max: 1000,
-  step: 10,
-  component: DividedFormField,
-}
-
-const SV_GQ_FILTER_FIELD = {
-  name: 'min_gq_sv',
-  label: 'WGS SV Genotype Quality',
-  labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 10.',
-  min: 0,
-  max: 100,
-  step: 10,
-}
-
 const PANELS = [
   INHERITANCE_PANEL,
   {
@@ -208,9 +185,9 @@ const PANELS = [
   LOCATION_PANEL_WITH_GENE_LIST,
   {
     ...QUALITY_PANEL,
-    [ALL_DATASET_TYPE]: { // TODO should be default
+    [DATASET_TYPE_VARIANT_CALLS]: {
       ...QUALITY_PANEL,
-      fields: [...QUALITY_PANEL.fields, SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
+      fields: SNP_QUALITY_FILTER_FIELDS,
     },
   },
 ]
