@@ -377,8 +377,7 @@ TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXP
 SERVICE_ACCOUNT_FOR_ANVIL = None
 
 AIRFLOW_CLIENT_ID = os.environ.get('AIRFLOW_CLIENT_ID')
-AIRFLOW_WEBSERVER_ID = os.environ.get('AIRFLOW_WEBSERVER_ID')
-DAG_VERSION = '0.0.1'
+AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
 
 if TERRA_API_ROOT_URL:
     SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],

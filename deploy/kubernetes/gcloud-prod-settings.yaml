@@ -20,6 +20,7 @@ SEQR_POD_MEMORY_LIMIT: 35Gi
 REDIS_POD_MEMORY_LIMIT: 10Gi
 
 TERRA_API_ROOT_URL: 'https://api.firecloud.org'
+AIRFLOW_WEBSERVER_URL: 'https://rf1b81cf3e6c1c7e7p-tp.appspot.com'
 
 CLOUDSQL_AVAILABILITY_TYPE: 'regional'
 
