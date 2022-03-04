@@ -1,5 +1,4 @@
 import { createSelector, createSelectorCreator, defaultMemoize } from 'reselect'
-import { formValueSelector } from 'redux-form'
 
 import {
   getProjectsByGuid,
@@ -13,7 +12,6 @@ import {
   getProjectDatasetTypes,
 } from 'redux/selectors'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { SEARCH_FORM_NAME } from './constants'
 
 export const getSearchContextIsLoading = state => state.searchContextLoading.isLoading
 export const getMultiProjectSearchContextIsLoading = state => state.multiProjectSearchContextLoading.isLoading
@@ -59,33 +57,29 @@ export const getProjectFamilies = (params, familiesByGuid, familiesByProjectGuid
   return null
 }
 
-export const getIntitialSearch = createSelector(
+const createProjectFamiliesSelector = createSelectorCreator(
+  defaultMemoize,
+  (a, b) => ['projectGuid', 'familyGuids', 'familyGuid', 'analysisGroupGuid', 'searchHash'].every(k => a[k] === b[k]),
+)
+
+const getIntitialProjectFamilies = createProjectFamiliesSelector(
   (state, props) => props.match.params,
-  getCurrentSearchParams,
   getFamiliesByGuid,
   getFamiliesGroupedByProjectGuid,
   getAnalysisGroupsByGuid,
-  (urlParams, searchParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid) => {
+  getProjectFamilies,
+)
+
+export const getIntitialSearch = createSelector(
+  getCurrentSearchParams,
+  getIntitialProjectFamilies,
+  (searchParams, projectFamilies) => {
     if (searchParams) {
       return searchParams
     }
 
-    const projectFamilies = getProjectFamilies(urlParams, familiesByGuid, familiesByProjectGuid, analysisGroupByGuid)
-
     return projectFamilies ? { projectFamilies: [projectFamilies] } : null
   },
-)
-
-const getProjectsFamiliesFieldInput = state => formValueSelector(SEARCH_FORM_NAME)(state, 'projectFamilies')
-
-export const getSearchInput = state => formValueSelector(SEARCH_FORM_NAME)(state, 'search')
-
-export const getCurrentSavedSearch = createSelector(
-  getSearchInput,
-  getSavedSearchesByGuid,
-  (search, savedSearchesByGuid) => Object.values(savedSearchesByGuid).find(
-    savedSearch => savedSearch.search === search,
-  ),
 )
 
 const createListEqualSelector = createSelectorCreator(
@@ -121,38 +115,28 @@ export const getSavedSearchOptions = createSavedSearchesSelector(
   },
 )
 
-const getProjectsInput = createSelector(
-  getProjectsFamiliesFieldInput,
-  projectFamilies => (projectFamilies || []).map(({ projectGuid }) => projectGuid),
-)
-
-export const getInputProjectsCount = createSelector(
-  getProjectsFamiliesFieldInput,
-  projectFamilies => (projectFamilies || []).length,
-)
-
 export const getSearchedProjectsLocusListOptions = createListEqualSelector(
-  getProjectsInput,
+  (state, props) => props.projectFamilies,
   getProjectsByGuid,
   getLocusListsByGuid,
-  (projectGuids, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set((projectGuids || []).reduce(
-      (acc, projectGuid) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
+  (projectFamilies, projectsByGuid, locusListsByGuid) => {
+    const locusListGuids = [...new Set((projectFamilies || []).reduce(
+      (acc, { projectGuid }) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
         [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))]
     const locusListOptions = locusListGuids.map((locusListGuid) => {
       const { name, paLocusList } = locusListsByGuid[locusListGuid]
-      return { text: name, value: locusListGuid, description: paLocusList && 'PanelApp' }
+      return { text: name, value: locusListGuid, key: locusListGuid, description: paLocusList && 'PanelApp' }
     })
     return [{ value: null }, ...locusListOptions]
   },
 )
 
 export const getDatasetTypes = createSelector(
-  getProjectsInput,
+  (state, props) => props.projectFamilies,
   getProjectDatasetTypes,
-  (projectGuids, projectDatasetTypes) => {
-    const datasetTypes = projectGuids.reduce((acc, projectGuid) => new Set([
+  (projectFamilies, projectDatasetTypes) => {
+    const datasetTypes = (projectFamilies || []).reduce((acc, { projectGuid }) => new Set([
       ...acc, ...(projectDatasetTypes[projectGuid] || [])]), new Set())
     return [...datasetTypes].sort().join(',')
   },
@@ -160,25 +144,11 @@ export const getDatasetTypes = createSelector(
 
 export const getHasHgmdPermission = createSelector(
   getUser,
-  getProjectsInput,
+  (state, props) => props.projectFamilies,
   getProjectsByGuid,
-  (user, projectGuids, projectsByGuid) => user.isAnalyst || projectGuids.some(
-    projectGuid => (projectsByGuid[projectGuid] || {}).enableHgmd,
+  (user, projectFamilies, projectsByGuid) => user.isAnalyst || (projectFamilies || []).some(
+    ({ projectGuid }) => (projectsByGuid[projectGuid] || {}).enableHgmd,
   ),
-)
-
-const getSingleFamlilyGuidInput = createSelector(
-  getProjectsFamiliesFieldInput,
-  projectFamilies => (
-    (projectFamilies && projectFamilies.length === 1 && (projectFamilies[0].familyGuids || []).length === 1) ?
-      projectFamilies[0].familyGuids[0] : null
-  ),
-)
-
-export const getSingleInputFamily = createSelector(
-  getSingleFamlilyGuidInput,
-  getFamiliesByGuid,
-  (familyGuid, familiesByGuid) => familiesByGuid[familyGuid],
 )
 
 export const getFamilyOptions = createSelector(

@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { FormSpy } from 'react-final-form'
 import { Grid, Header } from 'semantic-ui-react'
 
 import { getProjectsByGuid, getProjectDatasetTypes, getCurrentSearchParams } from 'redux/selectors'
@@ -15,9 +16,10 @@ import VariantSearchResults from 'shared/components/panel/search/VariantSearchRe
 import DataLoader from 'shared/components/DataLoader'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { INHERITANCE_FILTER_OPTIONS, ALL_INHERITANCE_FILTER } from 'shared/utils/constants'
-import { CUSTOM_SEARCH_FORM_NAME, INCLUDE_ALL_PROJECTS } from '../constants'
 import { loadProjectContext, loadProjectGroupContext, loadSearchHashContext } from '../reducers'
-import { getSearchIncludeAllProjectsInput, getSearchHashContextLoading } from '../selectors'
+import { getSearchHashContextLoading } from '../selectors'
+
+const INCLUDE_ALL_PROJECTS = 'allProjectFamilies'
 
 const mapProjectsStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.value],
@@ -69,7 +71,7 @@ const CUSTOM_QUERY_FIELD = {
   rows: 10,
   style: { fontFamily: 'monospace' },
   format: val => (typeof val === 'object' ? JSON.stringify(val) : (val || '{}')),
-  normalize: getParsedJson,
+  parse: getParsedJson,
   validate: val => (typeof val === 'string' ? getJsonParseError(val) : undefined),
 }
 
@@ -81,7 +83,7 @@ const INHERITANCE_PANEL = {
       component: Select,
       options: INHERITANCE_FILTER_OPTIONS,
       format: val => val || ALL_INHERITANCE_FILTER,
-      normalize: val => (val === ALL_INHERITANCE_FILTER ? null : val),
+      parse: val => (val === ALL_INHERITANCE_FILTER ? null : val),
     },
   },
   helpText: <Header disabled content="Custom inheritance search is disabled for multi-family searches" />,
@@ -91,9 +93,9 @@ const PANELS = [
   INHERITANCE_PANEL, HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
 ]
 
-const CustomSearch = React.memo((
-  { match, history, includeAllProjects, loadContext, loading, searchParams, ...props },
-) => (
+const SUBSCRIPTION = { values: true }
+
+const CustomSearch = React.memo(({ match, history, loadContext, loading, searchParams, ...props }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={16}>
@@ -101,12 +103,13 @@ const CustomSearch = React.memo((
           <VariantSearchFormContainer
             history={history}
             resultsPath="/report/custom_search"
-            form={CUSTOM_SEARCH_FORM_NAME}
             initialValues={searchParams}
           >
             <InlineHeader content="Include All Projects: " />
             {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
-            {includeAllProjects ? null : configuredField(PROJECT_FAMILIES_FIELD)}
+            <FormSpy subscription={SUBSCRIPTION}>
+              {({ values }) => (values[INCLUDE_ALL_PROJECTS] ? null : configuredField(PROJECT_FAMILIES_FIELD))}
+            </FormSpy>
             <VariantSearchFormPanels panels={PANELS} />
             {configuredField(CUSTOM_QUERY_FIELD)}
           </VariantSearchFormContainer>
@@ -121,14 +124,12 @@ const CustomSearch = React.memo((
 CustomSearch.propTypes = {
   match: PropTypes.object,
   history: PropTypes.object,
-  includeAllProjects: PropTypes.bool,
   loadContext: PropTypes.func,
   loading: PropTypes.bool,
   searchParams: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  includeAllProjects: getSearchIncludeAllProjectsInput(state),
   loading: getSearchHashContextLoading(state),
   searchParams: getCurrentSearchParams(state, ownProps),
 })

@@ -30,7 +30,7 @@ const AcceptPolicies = React.memo(({ onSubmit }) => (
     header="Seqr Policies"
     subheader="Before continuing to use seqr, please read and accept our policies"
     onSubmit={onSubmit}
-    form="acceptPolicies"
+    modalName="acceptPolicies"
     fields={POLICY_FORM_FIELDS}
   />
 ))

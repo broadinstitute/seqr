@@ -1,4 +1,3 @@
-import { SubmissionError } from 'redux-form'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 // actions
@@ -28,9 +27,6 @@ export const updateEntity = (
       if (onSuccess) {
         onSuccess(responseJson, dispatch, getState)
       }
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
 

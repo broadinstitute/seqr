@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Field } from 'redux-form'
+import { Field } from 'react-final-form'
 import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
@@ -283,7 +283,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     subFieldsLookup: {
       deathYear: {
         format: val => (val === 0 ? 0 : (val || -1)),
-        normalize: val => (val < 0 ? null : val),
+        parse: val => (val < 0 ? null : val),
         includeAlive: true,
       },
     },

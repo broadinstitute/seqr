@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { FormSection } from 'redux-form'
 import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
@@ -236,7 +235,7 @@ const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps && (
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={stopPropagation}>
-          {configuredField({ ...inputProps, name })}
+          {configuredField({ ...inputProps, name: `search.${name}` })}
         </ToggleHeaderFieldColumn>
       )}
     </Grid.Row>
@@ -252,10 +251,10 @@ HeaderContent.propTypes = {
 
 const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout }) => {
   const fieldComponents = fields && configuredFields(
-    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) },
+    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field, name: `search.${name}.${field.name}` })) },
   )
   return (
-    <FormSection name={name}>
+    <div>
       {helpText && (
         <i>
           {helpText}
@@ -267,7 +266,7 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
         {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
         <Form.Field width={2} />
       </Form.Group>
-    </FormSection>
+    </div>
   )
 })
 
@@ -320,42 +319,40 @@ class VariantSearchFormPanels extends React.PureComponent {
           </ButtonLink>
         </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
-        <FormSection name="search">
-          <Accordion fluid exclusive={false}>
-            {panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
-              const isActive = !!active[name]
-              let attachedTitle = true
-              if (i === 0) {
-                attachedTitle = 'top'
-              } else if (i === panels.length - 1 && !isActive) {
-                attachedTitle = 'bottom'
-              }
-              return [...acc,
-                <Accordion.Title
-                  key={`${name}-title`}
-                  active={isActive}
-                  index={i}
-                  onClick={this.handleTitleClick(name)}
-                  as={ToggleHeader}
-                  attached={attachedTitle}
-                >
-                  <Icon name="dropdown" />
-                  <HeaderContent name={name} {...headerProps} />
-                </Accordion.Title>,
-                <Accordion.Content
-                  key={`${name}-content`}
-                  active={isActive}
-                  as={Segment}
-                  attached={i === panels.length - 1 ? 'bottom' : true}
-                  padded
-                  textAlign="center"
-                >
-                  <PanelContent name={name} {...panelContentProps} />
-                </Accordion.Content>,
-              ]
-            }, [])}
-          </Accordion>
-        </FormSection>
+        <Accordion fluid exclusive={false}>
+          {panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
+            const isActive = !!active[name]
+            let attachedTitle = true
+            if (i === 0) {
+              attachedTitle = 'top'
+            } else if (i === panels.length - 1 && !isActive) {
+              attachedTitle = 'bottom'
+            }
+            return [...acc,
+              <Accordion.Title
+                key={`${name}-title`}
+                active={isActive}
+                index={i}
+                onClick={this.handleTitleClick(name)}
+                as={ToggleHeader}
+                attached={attachedTitle}
+              >
+                <Icon name="dropdown" />
+                <HeaderContent name={name} {...headerProps} />
+              </Accordion.Title>,
+              <Accordion.Content
+                key={`${name}-content`}
+                active={isActive}
+                as={Segment}
+                attached={i === panels.length - 1 ? 'bottom' : true}
+                padded
+                textAlign="center"
+              >
+                <PanelContent name={name} {...panelContentProps} />
+              </Accordion.Content>,
+            ]
+          }, [])}
+        </Accordion>
       </div>
     )
   }

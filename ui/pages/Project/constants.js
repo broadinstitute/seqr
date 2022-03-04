@@ -606,6 +606,6 @@ export const TAG_FORM_FIELD = {
   label: 'Tags',
   includeCategories: true,
   format: value => (value || []).map(({ name }) => name),
-  normalize: value => (value || []).map(name => ({ name })),
+  parse: value => (value || []).map(name => ({ name })),
   validate: value => (value && value.length ? undefined : 'Required'),
 }

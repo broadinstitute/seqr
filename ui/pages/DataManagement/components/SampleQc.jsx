@@ -16,7 +16,6 @@ const UPLOAD_FIELDS = [
 ]
 
 const mapStateToProps = state => ({
-  formId: 'sampleQc',
   fields: UPLOAD_FIELDS,
   uploadStats: getQcUploadStats(state),
 })

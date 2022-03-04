@@ -69,7 +69,7 @@ const mapDropdownStateToProps = state => ({
 })
 
 const mapDropdownDispatchToProps = (dispatch, ownProps) => ({
-  load: () => dispatch(loadUserOptions(ownProps.meta.form.split('_-_')[1])),
+  load: () => dispatch(loadUserOptions(ownProps.meta.data.formId)),
 })
 
 export const AnalystEmailDropdown = connect(

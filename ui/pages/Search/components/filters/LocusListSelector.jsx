@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types'
 import React from 'react'
 import { connect } from 'react-redux'
+import { FormSpy } from 'react-final-form'
 import { Dropdown } from 'shared/components/form/Inputs'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
@@ -67,11 +68,13 @@ class BaseLocusListDropdown extends React.Component {
 
 }
 
-const mapStateToProps = state => ({
-  projectLocusListOptions: getSearchedProjectsLocusListOptions(state),
+const mapStateToProps = (state, ownProps) => ({
+  projectLocusListOptions: getSearchedProjectsLocusListOptions(state, ownProps),
 })
 
 const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
+
+const SUBSCRIPTION = { values: true }
 
 const LocusListSelector = React.memo(({ value, ...props }) => (
   <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
@@ -83,4 +86,8 @@ LocusListSelector.propTypes = {
   value: PropTypes.object,
 }
 
-export default LocusListSelector
+export default props => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => <LocusListSelector {...props} projectFamilies={values.projectFamilies} />}
+  </FormSpy>
+)

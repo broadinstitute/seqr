@@ -12,7 +12,6 @@ import { getProjectAnalysisGroupIndividualsByGuid, getIndivdualsLoading } from '
 const EditIndividualsForm = React.memo(({ load, loading, ...props }) => (
   <DataLoader load={load} content={props.records} loading={loading}>
     <EditRecordsForm
-      formName="editIndividuals"
       idField="individualGuid"
       entityKey="individuals"
       defaultSortColumn={FAMILY_FIELD_ID}

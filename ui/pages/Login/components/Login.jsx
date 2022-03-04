@@ -16,7 +16,7 @@ const Login = ({ onSubmit }) => (
   <UserFormContainer header="Login to seqr">
     <UserForm
       onSubmit={onSubmit}
-      form="login"
+      modalName="login"
       fields={FIELDS}
       submitButtonText="Log In"
     />

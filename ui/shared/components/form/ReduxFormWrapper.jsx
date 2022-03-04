@@ -1,9 +1,10 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { createSelector } from 'reselect'
 import { connect } from 'react-redux'
-import { Field, FieldArray, reduxForm, getFormSyncErrors, getFormSyncWarnings } from 'redux-form'
+import { Field, FormSpy, Form as FinalForm } from 'react-final-form'
+import { FieldArray } from 'react-final-form-arrays'
+import arrayMutators from 'final-form-arrays'
 import { Form, Message, Icon, Popup, Confirm } from 'semantic-ui-react'
 import flattenDeep from 'lodash/flattenDeep'
 
@@ -38,6 +39,8 @@ export const validators = {
     /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(value) ? undefined : 'Invalid email address'
   ),
 }
+
+const nestedObjectValues = obj => (typeof obj === 'object' ? Object.values(obj).map(nestedObjectValues) : obj)
 
 const renderField = (props) => {
   const { fieldComponent = Form.Input, meta: { touched, invalid }, submitForm, input, ...additionalProps } = props
@@ -98,8 +101,6 @@ ArrayFieldItem.propTypes = {
   fields: PropTypes.object,
 }
 
-const arrayFieldItem = fieldProps => arrayProps => <ArrayFieldItem {...fieldProps} {...arrayProps} />
-
 export const configuredField = (field, formProps = {}) => {
   const {
     component, name, isArrayField, addArrayElement, addArrayElementProps, arrayFieldName, key, label, labelHelp,
@@ -114,30 +115,49 @@ export const configuredField = (field, formProps = {}) => {
     fieldComponent: component,
     submitForm: formProps.submitOnChange ? formProps.onSubmit : null,
     label: helpLabel(label, labelHelp),
+    data: formProps.formMetaId && { formId: formProps.formMetaId },
     ...fieldProps,
   }
   return isArrayField ? (
-    <FieldArray
-      {...baseProps}
-      component={arrayFieldItem({ addArrayElement, addArrayElementProps, arrayFieldName, singleFieldProps, label })}
-    />
+    <FieldArray {...baseProps}>
+      {({ fields }) => (
+        <ArrayFieldItem
+          fields={fields}
+          addArrayElement={addArrayElement}
+          addArrayElementProps={addArrayElementProps}
+          arrayFieldName={arrayFieldName}
+          singleFieldProps={singleFieldProps}
+          label={label}
+        />
+      )}
+    </FieldArray>
   ) : <Field {...baseProps} {...singleFieldProps} />
 }
 
 export const configuredFields = props => props.fields.map(field => configuredField(field, props))
 
-class ReduxFormWrapper extends React.Component {
+const SUBMISSION_PANEL_SUBSCRIPTION = [
+  'submitSucceeded',
+  'submitFailed',
+  'dirty',
+  'dirtySinceLastSubmit',
+  'hasSubmitErrors',
+  'hasValidationErrors',
+  'errors',
+  'submitErrors',
+].reduce((acc, k) => ({ ...acc, [k]: true }), {})
+const SUBMITTING_SUBSCRIPTION = { submitting: true }
+const SUBMIT_SUCCEEDED_SUBSCRIPTION = { submitSucceeded: true }
+const DIRTY_SUBSCRIPTION = { dirty: true }
+
+class ReduxFormWrapper extends React.PureComponent {
 
   static propTypes = {
-    /* A unique string identifier for the form */
-    form: PropTypes.string.isRequired, // eslint-disable-line react/no-unused-prop-types
-
-    /* A unique string identifier for the parent modal. Defaults to the "form" identifier */
+    /* A unique string identifier for the parent modal */
     modalName: PropTypes.string, // eslint-disable-line react/no-unused-prop-types
 
     /* A callback when a valid form is submitted. Will be passed all the form data */
-    /* Note that this differs from handleSubmit, which is a redux-form supplied handler that shouldn't be overridden */
-    onSubmit: PropTypes.func.isRequired, // eslint-disable-line react/no-unused-prop-types
+    onSubmit: PropTypes.func.isRequired,
 
     /* A callback for when the cancel button is selected */
     handleClose: PropTypes.func.isRequired,
@@ -154,6 +174,7 @@ class ReduxFormWrapper extends React.Component {
     /* Whether or not the form is rendered outside a modal */
     noModal: PropTypes.bool,
 
+    liveValidate: PropTypes.bool,
     showErrorPanel: PropTypes.bool,
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
@@ -172,7 +193,7 @@ class ReduxFormWrapper extends React.Component {
     loading: PropTypes.bool,
 
     /* Array of objects representing the fields to show in the form. */
-    /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
+    /* Each field must have a name and a component, and can have any extra props accepted by react-final-form's Field */
     fields: PropTypes.arrayOf(PropTypes.object), // eslint-disable-line react/no-unused-prop-types
 
     /* React child component class. Mutually exclusive with fields */
@@ -181,15 +202,15 @@ class ReduxFormWrapper extends React.Component {
     /* Call if submit succeeded */
     onSubmitSucceeded: PropTypes.func,
 
-    /*  These props are added by redux-form and should never be passed explicitly */
-    submitting: PropTypes.bool,
-    submitFailed: PropTypes.bool,
-    submitSucceeded: PropTypes.bool,
-    dirty: PropTypes.bool,
-    errorMessages: PropTypes.arrayOf(PropTypes.string),
-    warningMessages: PropTypes.arrayOf(PropTypes.string),
-    handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
+
+    /* Optional submission error generated outside the form */
+    submissionError: PropTypes.string,
+
+    initialValues: PropTypes.object,
+
+    /* decorators for final-form-calculate to calculate field values */
+    decorators: PropTypes.arrayOf(PropTypes.func),
   }
 
   static defaultProps = {
@@ -198,63 +219,44 @@ class ReduxFormWrapper extends React.Component {
     submitButtonText: 'Submit',
   }
 
-  state = { confirming: false }
-
-  shouldComponentUpdate(nextProps, nextState) {
-    const updateProps = [
-      'modalName',
-      'form',
-      'submitSucceeded',
-      'submitFailed',
-      'closeOnSuccess',
-      'fields',
-      'showErrorPanel',
-      'size',
-      'submitting',
-      'submitOnChange',
-      'cancelButtonText',
-      'submitButtonText',
-      'dirty',
-      'confirmCloseIfNotSaved',
-      'confirmDialog',
-      'initialValues',
-      'children',
-    ]
-    const listUpdateProps = [
-      'errorMessages',
-      'warningMessages',
-    ]
-    if (updateProps.some(k => nextProps[k] !== this.props[k])) { // eslint-disable-line react/destructuring-assignment
-      return true
-    }
-    if (listUpdateProps.some(k => (
-      // eslint-disable-next-line react/destructuring-assignment
-      (nextProps[k] && this.props[k] && nextProps[k].length === this.props[k].length) ?
-        // eslint-disable-next-line react/destructuring-assignment
-        nextProps[k].some((val, i) => val !== this.props[k][i]) : nextProps[k] !== this.props[k]
-    ))) {
-      return true
-    }
-    return nextState !== this.state
-  }
+  state = { confirming: false, submitCallback: null }
 
   componentDidUpdate(prevProps) {
-    const {
-      onSubmitSucceeded, submitSucceeded, handleClose, confirmCloseIfNotSaved, closeOnSuccess, noModal, dirty,
-      setModalConfirm: dispatchSetModalConfirm,
-    } = this.props
+    const { submissionError } = this.props
+    const { submitCallback } = this.state
+    if (submitCallback && submissionError && submissionError !== prevProps.submissionError) {
+      submitCallback({ errors: [submissionError] })
+    }
+  }
+
+  onSubmitSucceededChange = ({ submitSucceeded }) => {
+    const { onSubmitSucceeded, handleClose, closeOnSuccess, noModal } = this.props
     if (onSubmitSucceeded && submitSucceeded) {
       onSubmitSucceeded()
     }
     if (submitSucceeded && closeOnSuccess && !noModal) {
       handleClose(true)
-    } else if (confirmCloseIfNotSaved) {
-      if (dirty && !prevProps.dirty) {
-        dispatchSetModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
-      } else if (!dirty && prevProps.dirty) {
-        dispatchSetModalConfirm(null)
-      }
     }
+  }
+
+  onDirtyChange = ({ dirty }) => {
+    const { setModalConfirm: dispatchSetModalConfirm } = this.props
+    if (dirty) {
+      dispatchSetModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
+    } else {
+      dispatchSetModalConfirm(null)
+    }
+  }
+
+  handledOnSubmit = (values, form, callback) => {
+    const { onSubmit, submissionError } = this.props
+    if (submissionError !== undefined) {
+      this.setState({ submitCallback: callback })
+    }
+    onSubmit(values, form, callback)?.then(
+      () => callback(),
+      e => callback({ errors: e.body?.errors || [e.body?.error] || [e.message] }),
+    )
   }
 
   showConfirmDialog = () => this.setState({ confirming: true })
@@ -266,119 +268,104 @@ class ReduxFormWrapper extends React.Component {
     handleClose()
   }
 
-  handleConfirmedSubmit = () => {
-    const { handleSubmit } = this.props
+  handleConfirmedSubmit = handleSubmit => () => {
     this.hideConfirmDialog()
     handleSubmit()
   }
 
-  render() {
+  renderSubmissionPanel = ({
+    submitSucceeded, submitFailed, hasSubmitErrors, hasValidationErrors, errors, submitErrors,
+    dirty, dirtySinceLastSubmit,
+  }) => {
     const {
-      submitSucceeded, submitFailed, errorMessages, warningMessages, children, confirmDialog, handleSubmit, size,
-      submitting, loading, submitOnChange, inline, showErrorPanel, successMessage, cancelButtonText, submitButtonText,
-      onSubmitSucceeded, noModal,
+      submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, onSubmitSucceeded,
+      noModal, liveValidate,
     } = this.props
-    const { confirming } = this.state
 
+    const currentFormSubmitFailed = submitFailed && !dirtySinceLastSubmit
     let saveStatus = NONE
     if (submitSucceeded) {
       saveStatus = SUCCEEDED
-    } else if (submitFailed) {
+    } else if (currentFormSubmitFailed) {
       saveStatus = ERROR
     }
 
-    const populatedErrorMessages = (errorMessages || []).length > 0 && errorMessages
-    const populatedWarningMessages = (warningMessages || []).length > 0 && warningMessages
+    const shouldShowValidationErrors = submitFailed || (liveValidate && dirty)
+    let errorMessages
+    if (hasSubmitErrors) {
+      errorMessages = submitErrors.errors
+    } else if (hasValidationErrors && shouldShowValidationErrors) {
+      errorMessages = flattenDeep(nestedObjectValues(errors)).filter(err => err)
+    }
+    const saveErrorMessage = errorMessages?.join('; ') || (currentFormSubmitFailed ? 'Error' : null)
 
-    const saveErrorMessage =
-      (populatedErrorMessages && populatedErrorMessages.join('; ')) ||
-      (populatedWarningMessages && populatedWarningMessages.join('; ')) ||
-      (submitFailed ? 'Error' : null)
-
-    const errorPanel = showErrorPanel && [
-      populatedErrorMessages && <MessagePanel key="error" error visible list={populatedErrorMessages} />,
-      populatedWarningMessages && <MessagePanel key="warning" warning visible list={populatedWarningMessages} />,
+    return [
+      showErrorPanel && errorMessages && <MessagePanel key="errorPanel" error visible list={errorMessages} />,
+      submitSucceeded && successMessage && <MessagePanel key="infoPanel" success visible content={successMessage} />,
+      !submitOnChange && (
+        <ButtonPanel
+          key="buttonPanel"
+          cancelButtonText={cancelButtonText}
+          submitButtonText={submitButtonText}
+          saveStatus={saveStatus}
+          saveErrorMessage={saveErrorMessage}
+          handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
+        />
+      ),
     ]
+  }
+
+  render() {
+    const {
+      children, confirmDialog, size, loading, submitOnChange, inline, onSubmitSucceeded, noModal, initialValues,
+      closeOnSuccess, confirmCloseIfNotSaved, decorators,
+    } = this.props
+    const { confirming } = this.state
 
     const fieldComponents = children || configuredFields(this.props)
 
     return (
-      <StyledForm
-        onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
-        size={size}
-        loading={submitting || loading}
-        hasSubmitButton={!submitOnChange}
-        inline={inline}
+      <FinalForm
+        onSubmit={this.handledOnSubmit}
+        initialValues={initialValues}
+        subscription={SUBMITTING_SUBSCRIPTION}
+        mutators={arrayMutators}
+        decorators={decorators}
       >
-        {fieldComponents}
-        {errorPanel}
-        {submitSucceeded && successMessage && <MessagePanel success visible content={successMessage} />}
-        {!submitOnChange && (
-          <ButtonPanel
-            cancelButtonText={cancelButtonText}
-            submitButtonText={submitButtonText}
-            saveStatus={saveStatus}
-            saveErrorMessage={saveErrorMessage}
-            handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
-          />
+        {({ handleSubmit, submitting }) => (
+          <StyledForm
+            onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
+            size={size}
+            loading={submitting || loading}
+            hasSubmitButton={!submitOnChange}
+            inline={inline}
+          >
+            {fieldComponents}
+            <FormSpy subscription={SUBMISSION_PANEL_SUBSCRIPTION} render={this.renderSubmissionPanel} />
+            <Confirm
+              content={confirmDialog}
+              open={confirming}
+              onCancel={this.hideConfirmDialog}
+              onConfirm={this.handleConfirmedSubmit(handleSubmit)}
+            />
+            {(onSubmitSucceeded || (closeOnSuccess && !noModal)) &&
+              <FormSpy subscription={SUBMIT_SUCCEEDED_SUBSCRIPTION} onChange={this.onSubmitSucceededChange} />}
+            {confirmCloseIfNotSaved && <FormSpy subscription={DIRTY_SUBSCRIPTION} onChange={this.onDirtyChange} />}
+          </StyledForm>
         )}
-        <Confirm
-          content={confirmDialog}
-          open={confirming}
-          onCancel={this.hideConfirmDialog}
-          onConfirm={this.handleConfirmedSubmit}
-        />
-      </StyledForm>
+      </FinalForm>
     )
   }
 
 }
 
-const nestedObjectValues = obj => (typeof obj === 'object' ? Object.values(obj).map(nestedObjectValues) : obj)
-
-const shouldShowValidationErrors = props => props.submitFailed || (props.liveValidate && props.dirty)
-const getValidationErrorList =
-  validationErrors => (validationErrors ? flattenDeep(nestedObjectValues(validationErrors)).filter(err => err) : null)
-const getValidationErrors = createSelector(
-  (state, props) => (shouldShowValidationErrors(props) ? getFormSyncErrors(props.form)(state) : null),
-  getValidationErrorList,
-)
-const getValidationWarnings = createSelector(
-  (state, props) => (shouldShowValidationErrors(props) ? getFormSyncWarnings(props.form)(state) : null),
-  getValidationErrorList,
-)
-
-// redux-form does not support throwing submission warnings so this is a work around
-const getSubmissionWarnings =
-  (state, props) => props.warning || (props.error && props.error.map(error => error.warning).filter(warning => warning))
-const getSubmissionErrors = (state, props) => props.error && props.error.filter(error => !error.warning)
-
-const getErrors = (submissionErrors, validationErrors) => (
-  (submissionErrors && submissionErrors.length > 0) ? submissionErrors : validationErrors)
-
-const getErrorMessages = createSelector(
-  getSubmissionErrors,
-  getValidationErrors,
-  getErrors,
-)
-const getWarningMessages = createSelector(
-  getSubmissionWarnings,
-  getValidationWarnings,
-  getErrors,
-)
-
-const mapStateToProps = (state, ownProps) => ({
-  errorMessages: getErrorMessages(state, ownProps),
-  warningMessages: getWarningMessages(state, ownProps),
-})
-
 const mapDispatchToProps = (dispatch, ownProps) => ({
   handleClose: (confirmed) => {
-    dispatch(closeModal(ownProps.modalName || ownProps.form, confirmed))
+    dispatch(closeModal(ownProps.modalName, confirmed))
   },
   setModalConfirm: (confirm) => {
-    dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
+    dispatch(setModalConfirm(ownProps.modalName, confirm))
   },
 })
 
-export default reduxForm()(connect(mapStateToProps, mapDispatchToProps)(ReduxFormWrapper))
+export default connect(null, mapDispatchToProps)(ReduxFormWrapper)
