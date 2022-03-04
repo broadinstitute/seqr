@@ -3,13 +3,13 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { getSearchedVariantsErrorMessage } from 'redux/selectors'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
 import { toUniqueCsvString } from 'shared/utils/stringUtils'
 
 const VariantSearchFormContainer = React.memo(({ history, onSubmit, resultsPath, children, ...formProps }) => (
-  <ReduxFormWrapper onSubmit={onSubmit} submitButtonText="Search" noModal {...formProps}>
+  <FormWrapper onSubmit={onSubmit} submitButtonText="Search" noModal {...formProps}>
     {children}
-  </ReduxFormWrapper>
+  </FormWrapper>
 ))
 
 VariantSearchFormContainer.propTypes = {

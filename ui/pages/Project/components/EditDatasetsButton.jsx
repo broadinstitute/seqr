@@ -5,7 +5,7 @@ import { Tab, Table } from 'semantic-ui-react'
 
 import Modal from 'shared/components/modal/Modal'
 import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS } from 'shared/utils/constants'
@@ -26,7 +26,7 @@ const SUBMIT_FUNCTIONS = {
 }
 
 const BaseUpdateDatasetForm = React.memo(({ formType, formFields, initialValues, onSubmit }) => (
-  <ReduxFormWrapper
+  <FormWrapper
     modalName={MODAL_NAME}
     onSubmit={onSubmit}
     confirmCloseIfNotSaved

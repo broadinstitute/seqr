@@ -2,14 +2,14 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Grid, Message } from 'semantic-ui-react'
 
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
 
 const UploadFormPage = React.memo(({ fields, uploadStats, onSubmit }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={4} />
       <Grid.Column width={8}>
-        <ReduxFormWrapper
+        <FormWrapper
           onSubmit={onSubmit}
           fields={fields}
           noModal

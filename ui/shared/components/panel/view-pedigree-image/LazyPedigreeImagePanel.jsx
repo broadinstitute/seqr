@@ -16,7 +16,7 @@ import { getIndividualsByFamily } from 'redux/selectors'
 import { openModal } from 'redux/utils/modalReducer'
 import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX, AFFECTED } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import FormWrapper from '../../form/FormWrapper'
 import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer, ButtonLink } from '../../StyledComponents'
@@ -280,7 +280,7 @@ class BasePedigreeImage extends React.PureComponent {
         </NoBorderTable>
         <div ref={this.setContainerElement} id={this.containerId} />
         <Modal title={(editIndividual.data || {}).label} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
-          <ReduxFormWrapper
+          <FormWrapper
             onSubmit={editIndividual.save}
             modalName={EDIT_INDIVIDUAL_MODAL_ID}
             initialValues={editIndividual.data}
