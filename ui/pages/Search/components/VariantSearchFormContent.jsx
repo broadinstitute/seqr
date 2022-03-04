@@ -14,13 +14,11 @@ import VariantSearchFormPanels, {
   IN_SILICO_PANEL, annotationFieldLayout, inSilicoFieldLayout,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
-  HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, SV_CALLSET_FREQUENCY,
-  SV_GROUPS, SNP_FREQUENCIES, SV_FREQUENCIES,
+  HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
+  SV_GROUPS, SNP_FREQUENCIES,
 } from 'shared/components/panel/search/constants'
-import { AfFilter } from 'shared/components/panel/search/FrequencyFilter'
 import {
-  ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, SV_IN_SILICO_GROUP,
-  VEP_GROUP_SV_NEW,
+  ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, VEP_GROUP_SV_NEW,
 } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
@@ -120,10 +118,6 @@ const INHERITANCE_PANEL = {
 
 const IN_SILICO_PANEL_MAP = {
   ...IN_SILICO_PANEL,
-  [DATASET_TYPE_SV_CALLS]: {
-    ...IN_SILICO_PANEL,
-    fieldLayout: inSilicoFieldLayout([SV_IN_SILICO_GROUP]),
-  },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...IN_SILICO_PANEL,
     fieldLayout: inSilicoFieldLayout(NO_SV_IN_SILICO_GROUPS),
@@ -144,10 +138,6 @@ const ALL_DATASET_TYPE = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}
 
 const ANNOTATION_PANEL_MAP = {
   ...ANNOTATION_PANEL,
-  [DATASET_TYPE_SV_CALLS]: {
-    ...ANNOTATION_PANEL,
-    fieldLayout: annotationFieldLayout([SV_GROUPS], true),
-  },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...ANNOTATION_PANEL,
     fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS_SPLICE, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
@@ -175,35 +165,10 @@ const ANNOTATION_SECONDARY_PANEL_MAP = {
   fieldLayout: annotationFieldLayout(
     [SV_GROUPS_NO_NEW, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS],
   ),
-  [DATASET_TYPE_SV_CALLS]: {
-    ...secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_SV_CALLS]),
-    fieldLayout: annotationFieldLayout([SV_GROUPS_NO_NEW], true),
-  },
   [DATASET_TYPE_VARIANT_CALLS]: {
     ...secondaryPanel(ANNOTATION_PANEL_MAP[DATASET_TYPE_VARIANT_CALLS]),
     fieldLayout: annotationFieldLayout([HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS]),
   },
-}
-
-const svCallsetChange = (onChange, initialValues) => val => onChange(
-  { ...initialValues, [SV_CALLSET_FREQUENCY]: val },
-)
-
-const SVFrequecyHeaderFilter = ({ value, onChange }) => (
-  <Form.Group inline>
-    <AfFilter
-      value={value[SV_CALLSET_FREQUENCY]}
-      onChange={svCallsetChange(onChange, value)}
-      inline
-      label="Callset"
-      width={16}
-    />
-  </Form.Group>
-)
-
-SVFrequecyHeaderFilter.propTypes = {
-  value: PropTypes.object,
-  onChange: PropTypes.func,
 }
 
 const SV_QS_FILTER_FIELD = {
@@ -228,7 +193,6 @@ const SV_GQ_FILTER_FIELD = {
 const PANELS = [
   INHERITANCE_PANEL,
   {
-    [DATASET_TYPE_SV_CALLS]: null,
     hasHgmdPermission: { [true]: HGMD_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
   },
   ANNOTATION_PANEL_MAP,
@@ -240,31 +204,18 @@ const PANELS = [
       ...FREQUENCY_PANEL,
       fields: SNP_FREQUENCIES,
     },
-    [DATASET_TYPE_SV_CALLS]: {
-      ...FREQUENCY_PANEL,
-      fields: SV_FREQUENCIES,
-      headerProps: {
-        ...FREQUENCY_PANEL.headerProps,
-        inputSize: 3,
-        inputProps: { component: SVFrequecyHeaderFilter },
-      },
-    },
   },
   LOCATION_PANEL_WITH_GENE_LIST,
   {
     ...QUALITY_PANEL,
-    [ALL_DATASET_TYPE]: {
+    [ALL_DATASET_TYPE]: { // TODO should be default
       ...QUALITY_PANEL,
       fields: [...QUALITY_PANEL.fields, SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
-    },
-    [DATASET_TYPE_SV_CALLS]: {
-      ...QUALITY_PANEL,
-      fields: [SV_QS_FILTER_FIELD, SV_GQ_FILTER_FIELD],
     },
   },
 ]
 
-const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, ''].reduce((typeAcc, type) => {
+const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS].reduce((typeAcc, type) => {
   const typePanels = PANELS.map(panel => (panel[type] === undefined ? panel : panel[type])).filter(panel => panel)
   return {
     ...typeAcc,
@@ -286,6 +237,10 @@ const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV
 
 const hasSecondaryAnnotation = inheritance => ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritance?.mode)
 
+const getPanels = (hasHgmdPermission, inheritance, datasetTypes) => (
+  (PANEL_MAP[datasetTypes] || PANEL_MAP[ALL_DATASET_TYPE])[hasHgmdPermission][hasSecondaryAnnotation(inheritance)]
+)
+
 const VariantSearchFormContent = React.memo(({ hasHgmdPermission, inheritance, datasetTypes }) => (
   <div>
     <ProjectFamiliesField />
@@ -300,7 +255,7 @@ const VariantSearchFormContent = React.memo(({ hasHgmdPermission, inheritance, d
       </Grid>
     </Header>
     <Header content="Customize Search:" />
-    <VariantSearchFormPanels panels={PANEL_MAP[datasetTypes][hasHgmdPermission][hasSecondaryAnnotation(inheritance)]} />
+    <VariantSearchFormPanels panels={getPanels(hasHgmdPermission, inheritance, datasetTypes)} />
   </div>
 ))
 

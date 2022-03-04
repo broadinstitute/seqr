@@ -84,7 +84,7 @@ FrequencyIntegerInput.propTypes = {
   onChange: PropTypes.func,
 }
 
-export const AfFilter = ({ value, onChange, inline, label, width }) => {
+const AfFilter = ({ value, onChange, inline, label, width }) => {
   const afProps = {
     value: (value || {}).af,
     onChange: updateFrequency({ onChange, initialValue: value, field: 'af', nullField: 'ac' }),
