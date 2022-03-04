@@ -10,12 +10,12 @@ import { configuredField } from 'shared/components/form/FormHelpers'
 import { Select } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 import VariantSearchFormPanels, {
-  HGMD_PATHOGENICITY_PANEL, PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL,
-  IN_SILICO_PANEL, annotationFieldLayout, inSilicoFieldLayout,
+  HGMD_PATHOGENICITY_PANEL, ANNOTATION_PANEL, FREQUENCY_PANEL, LOCATION_PANEL, QUALITY_PANEL, IN_SILICO_PANEL,
+  annotationFieldLayout, inSilicoFieldLayout, JsonSelectPropsWithAll,
 } from 'shared/components/panel/search/VariantSearchFormPanels'
 import {
-  HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS,
-  SV_GROUPS, SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS,
+  HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, ANY_PATHOGENICITY_FILTER,
+  SV_GROUPS, SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS, PATHOGENICITY_FIELDS, PATHOGENICITY_FILTER_OPTIONS,
 } from 'shared/components/panel/search/constants'
 import {
   ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, VEP_GROUP_SV_NEW,
@@ -124,6 +124,14 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
 
 const ALL_DATASET_TYPE = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
 
+const NO_HGMD_PANEL_PROPS = {
+  headerProps: {
+    ...HGMD_PATHOGENICITY_PANEL.headerProps,
+    inputProps: JsonSelectPropsWithAll(PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER),
+  },
+  fields: PATHOGENICITY_FIELDS,
+}
+
 const ANNOTATION_SECONDARY_NAME = 'annotations_secondary'
 const SV_GROUPS_NO_NEW = SV_GROUPS.filter(name => name !== VEP_GROUP_SV_NEW)
 const ANNOTATION_SECONDARY_PANEL = {
@@ -146,9 +154,7 @@ const ANNOTATION_SECONDARY_PANEL = {
 
 const PANELS = [
   INHERITANCE_PANEL,
-  {
-    hasHgmdPermission: { [true]: HGMD_PATHOGENICITY_PANEL, [false]: PATHOGENICITY_PANEL },
-  },
+  HGMD_PATHOGENICITY_PANEL,
   ANNOTATION_PANEL,
   ANNOTATION_SECONDARY_PANEL,
   IN_SILICO_PANEL,
@@ -178,20 +184,20 @@ const DATASET_TYPE_PANEL_PROPS = {
 }
 
 const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS].reduce((typeAcc, type) => {
-  const datasetTypePanelProps = DATASET_TYPE_PANEL_PROPS[type] || {}
-  const typePanels = PANELS.map(panel => ({ ...panel, ...(datasetTypePanelProps[panel.name] || {}) }))
+  const typePanelProps = DATASET_TYPE_PANEL_PROPS[type] || {}
+  const typePanels = PANELS.map(panel => ({ ...panel, ...(typePanelProps[panel.name] || {}) }))
   return {
     ...typeAcc,
-    [type]: [true, false].reduce((analystAcc, hasHgmdBool) => {
-      const analystPanels = typePanels.map(
-        ({ hasHgmdPermission, ...panel }) => (hasHgmdPermission === undefined ? panel : hasHgmdPermission[hasHgmdBool]),
-      )
+    [type]: [true, false].reduce((hgmdAcc, hasHgmdBool) => {
+      const hgmdPanels = typePanels.map(panel => (
+        (!hasHgmdBool && panel.name === HGMD_PATHOGENICITY_PANEL) ? { ...panel, ...NO_HGMD_PANEL_PROPS } : panel
+      ))
       return {
-        ...analystAcc,
+        ...hgmdAcc,
         [hasHgmdBool]: [true, false].reduce((acc, annSecondaryBool) => ({
           ...acc,
-          [annSecondaryBool]: annSecondaryBool ? analystPanels :
-            analystPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
+          [annSecondaryBool]: annSecondaryBool ? hgmdPanels :
+            hgmdPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
         }), {}),
       }
     }, {}),
