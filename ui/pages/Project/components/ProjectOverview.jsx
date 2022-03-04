@@ -145,7 +145,7 @@ const MatchmakerSubmissionOverview = connect(
 
 const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
-    .map(family => Math.min(family.individualGuids.length, 5))
+    .map(family => Math.min((family.individualGuids || []).length, 5))
     .reduce((acc, familySize) => (
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
     ), {})

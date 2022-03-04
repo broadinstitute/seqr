@@ -67,6 +67,7 @@ def update_records(reference_data_handler, file_path=None):
     Args:
         file_path (str): optional local file path. If not specified, or the path doesn't exist, the table will be downloaded.
     """
+    logger.info('Updating {}'.format(reference_data_handler))
 
     if not file_path or not os.path.isfile(file_path):
         file_path = download_file(reference_data_handler.url)

@@ -353,10 +353,10 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
 
-    def _is_expected_individuals_metadata_upload(self, response):
+    def _is_expected_individuals_metadata_upload(self, response, expected_families=False):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertDictEqual(response_json, {
+        expected_response = {
             'uploadedFileId': mock.ANY,
             'errors': [],
             'warnings': [
@@ -365,7 +365,10 @@ class IndividualAPITest(AuthenticationTestCase):
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ],
             'info': ['1 individuals will be updated'],
-        })
+        }
+        if expected_families:
+            expected_response['warnings'].insert(1, 'The following invalid values for "assigned_analyst" will not be added: test_user_no_access@test.com (NA19679)')
+        self.assertDictEqual(response_json, expected_response)
 
         # Save uploaded file
         url = reverse(save_individuals_metadata_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
@@ -373,7 +376,10 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['individualsByGuid'])
+        expected_keys = {'individualsByGuid'}
+        if expected_families:
+            expected_keys.add('familiesByGuid')
+        self.assertSetEqual(set(response_json.keys()), expected_keys)
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertSetEqual(set(response_json['individualsByGuid']['I000001_na19675'].keys()), INDIVIDUAL_FIELDS)
         self.assertListEqual(
@@ -395,6 +401,13 @@ class IndividualAPITest(AuthenticationTestCase):
             response_json['individualsByGuid']['I000001_na19675']['candidateGenes'],
             [{'gene': 'IKBKAP', 'comments': 'multiple panels, no confirm'}, {'gene': 'EHBP1L1'}])
 
+        if expected_families:
+            self.assertListEqual(list(response_json['familiesByGuid'].keys()), ['F000001_1'])
+            self.assertDictEqual(
+                response_json['familiesByGuid']['F000001_1']['assignedAnalyst'],
+                {'email': 'test_user_collaborator@test.com', 'fullName': 'Test Collaborator User'}
+            )
+
     def test_individuals_metadata_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
         self.check_collaborator_login(url)
@@ -406,11 +419,11 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
 
-        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes'
+        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes,assigned analyst'
         rows = [
-            '1,NA19678,,,,,no,infant,recessive,,',
-            '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),,,,,,,',
+            '1,NA19678,,,,,no,infant,recessive,,,not_an_email',
+            '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
+            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia),,,,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -424,16 +437,17 @@ class IndividualAPITest(AuthenticationTestCase):
                 'The following invalid values for "affected_relatives" will not be added: no (NA19678)',
                 'The following invalid values for "onset_age" will not be added: infant (NA19678)',
                 'The following invalid values for "expected_inheritance" will not be added: recessive (NA19678)',
+                'The following invalid values for "assigned_analyst" will not be added: not_an_email (NA19678); test_user_no_access@test.com (NA19679)',
                 'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ]})
 
         # send valid request
-        rows[0] = '1,NA19678,,,,,,,,,'
-        rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F,2000,True,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1"')
+        rows[0] = '1,NA19678,,,,,,,,,,'
+        rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F,2000,True,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1",test_user_collaborator@test.com')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
-        self._is_expected_individuals_metadata_upload(response)
+        self._is_expected_individuals_metadata_upload(response, expected_families=True)
 
     def test_individuals_metadata_json_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
@@ -504,7 +518,7 @@ class IndividualAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'rnaSeqData', 'genesById'})
         self.assertDictEqual(response_json['rnaSeqData'], {
-            INDIVIDUAL_GUID: {
+            INDIVIDUAL_GUID: {'outliers': {
                 'ENSG00000135953': {
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
@@ -516,7 +530,7 @@ class IndividualAPITest(AuthenticationTestCase):
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
                 },
-            }
+            }}
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 

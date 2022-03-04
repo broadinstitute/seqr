@@ -328,7 +328,10 @@ export const STATE1 = {
     },
   },
   rnaSeqDataByIndividual: {
-    I021474_na19679: { ENSG00000228198: { isSignificant: true } },
+    I021474_na19679: {
+      outliers: { ENSG00000228198: { isSignificant: true } },
+      tpms: { ENSG00000228198: { tpm: 1.03, geneId: 'ENSG00000228198' } },
+    },
   },
   mmeSubmissionsByGuid: {},
   project: {

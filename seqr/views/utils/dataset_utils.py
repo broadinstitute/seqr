@@ -1,14 +1,16 @@
 import elasticsearch_dsl
+import gzip
 from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 import random
 
-from seqr.models import Sample, Individual, Family
+from seqr.models import Sample, Individual, Family, Project
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
+from settings import ANALYST_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -129,7 +131,7 @@ def match_sample_ids_to_sample_records(
     """
 
     samples = _find_matching_sample_records(
-        projects, sample_ids, sample_type, dataset_type, elasticsearch_index, data_source,
+        projects, sample_ids, sample_type, dataset_type, elasticsearch_index,
     )
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
@@ -185,7 +187,7 @@ def match_sample_ids_to_sample_records(
     return samples, included_families, matched_individual_ids, remaining_sample_ids
 
 
-def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index, data_source):
+def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index):
     """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
     If elasticsearch_index is provided, will only match samples with the same index or with no index set
 
@@ -195,7 +197,6 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
-        data_source (string): an optional string specifying the a non-elasticsearch source for the dataset
 
     Returns:
         dict: sample_id_to_sample_record containing the matching Sample records
@@ -207,7 +208,6 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
         dataset_type=dataset_type,
         sample_id__in=sample_ids,
         elasticsearch_index=elasticsearch_index,
-        data_source=data_source,
     ))
 
 
@@ -248,14 +248,16 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
         'loaded_date': loaded_date,
     }, id__in=updated_samples, is_active=False)
 
-    inactivate_samples = Sample.objects.filter(
-        individual_id__in={sample.individual_id for sample in samples},
-        is_active=True,
-        dataset_type=dataset_type,
-        sample_type=sample_type,
-    ).exclude(id__in=updated_samples)
+    inactivate_sample_guids = []
+    if elasticsearch_index:
+        inactivate_samples = Sample.objects.filter(
+            individual_id__in={sample.individual_id for sample in samples},
+            is_active=True,
+            dataset_type=dataset_type,
+            sample_type=sample_type,
+        ).exclude(id__in=updated_samples)
 
-    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
+        inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
 
     return activated_sample_guids, inactivate_sample_guids
 
@@ -289,4 +291,78 @@ def match_and_update_samples(
     Family.bulk_update(
         user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
+    # refresh sample models to get updated values
+    samples = Sample.objects.filter(id__in=[s.id for s in samples])
+
     return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update, remaining_sample_ids
+
+
+def _parse_tsv_row(row):
+    return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
+
+
+def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, parse_row, validate_header):
+    samples_by_id = defaultdict(dict)
+    with gzip.open(file_path, 'rt') as f:
+        header = _parse_tsv_row(next(f))
+        validate_header(header)
+
+        for line in f:
+            row = dict(zip(header, _parse_tsv_row(line)))
+            for sample_id, row_dict in parse_row(row):
+                gene_id = row_dict['gene_id']
+                existing_data = samples_by_id[sample_id].get(gene_id)
+                if existing_data and existing_data != row_dict:
+                    raise ValueError(
+                        f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
+                samples_by_id[sample_id][gene_id] = row_dict
+
+    message = f'Parsed {len(samples_by_id)} RNA-seq samples'
+    info = [message]
+    logger.info(message, user)
+
+    data_source = file_path.split('/')[-1].split('_-_')[-1]
+    samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
+        projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
+        user=user,
+        sample_ids=samples_by_id.keys(),
+        data_source=data_source,
+        sample_type=Sample.SAMPLE_TYPE_RNA,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
+    )
+
+    # Delete old data
+    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
+    if to_delete:
+        prefetch_related_objects(to_delete, 'sample')
+        logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
+            'dbEntity': model_cls.__name__, 'numEntities': len(to_delete), 'updateType': 'bulk_delete',
+            'parentEntityIds': list({model.sample.guid for model in to_delete}),
+        })
+        to_delete.delete()
+
+    loaded_sample_ids = set(model_cls.objects.values_list('sample_id', flat=True).distinct())
+    samples_to_load = {
+        sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
+    }
+
+    prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
+    projects = {sample.individual.family.project.name for sample in samples_to_load}
+    project_names = ', '.join(sorted(projects))
+    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
+    info.append(message)
+    logger.info(message, user)
+
+    warnings = []
+    if remaining_sample_ids:
+        skipped_samples = ', '.join(sorted(remaining_sample_ids))
+        message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
+        warnings.append(message)
+        logger.warning(message, user)
+    if loaded_sample_ids:
+        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
+        warnings.append(message)
+        logger.warning(message, user)
+
+    return samples_to_load, info, warnings

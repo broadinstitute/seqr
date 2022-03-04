@@ -61,12 +61,13 @@ EXPECTED_DISK_ALLOCATION = [
     },
 ]
 
-ES_CAT_INDICES = [
-    {
-        "index": "test_index",
-        "docs.count": "122674997",
-        "store.size": "14.9gb",
-        "creation.date.string": "2019-11-04T19:33:47.522Z",
+EXPECTED_NODE_STATS = [{'name': 'no-disk-node', 'heapPercent': '83'}]
+
+ES_CAT_INDICES = [{
+    "index": "test_index",
+    "docs.count": "122674997",
+    "store.size": "14.9gb",
+    "creation.date.string": "2019-11-04T19:33:47.522Z"
     },
     {
         "index": "test_index_alias_1",
@@ -302,7 +303,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         response_json = response.json()
         self.assertSetEqual(
             set(response_json.keys()),
-            {"indices", "errors", "diskStats", "elasticsearchHost"},
+            {'indices', 'errors', 'diskStats', 'nodeStats'}
         )
 
         self.assertEqual(len(response_json['indices']), 6)
@@ -312,7 +313,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertListEqual(response_json["errors"], EXPECTED_ERRORS)
 
-        self.assertListEqual(response_json["diskStats"], EXPECTED_DISK_ALLOCATION)
+        self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
+        self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
 
     @urllib3_responses.activate
     def test_delete_index(self):
@@ -584,11 +586,11 @@ class DataManagerAPITest(AuthenticationTestCase):
         })
         mock_open.return_value.__enter__.return_value.write.assert_called_with(b'sample_content')
 
-    @mock.patch('seqr.views.apis.data_manager_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
-    @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
-    @mock.patch('seqr.views.apis.data_manager_api.logger')
+    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
+    @mock.patch('seqr.views.utils.dataset_utils.logger')
     def test_update_rna_seq(self, mock_logger, mock_open, mock_load_uploaded_file, mock_os):
         url = reverse(update_rna_seq, args=['muscle_samples.tsv.gz'])
         self.check_data_manager_login(url)
@@ -679,20 +681,19 @@ class DataManagerAPITest(AuthenticationTestCase):
         # test database models are correct
         self.assertEqual(RnaSeqOutlier.objects.count(), 0)
         rna_samples = Sample.objects.filter(individual_id=1, sample_type='RNA')
-        self.assertEqual(len(rna_samples), 2)
-        existing_sample = next(s for s in rna_samples if s.guid == RNA_SAMPLE_GUID)
-        self.assertFalse(existing_sample.is_active)
-        new_sample = next(s for s in rna_samples if s.guid != RNA_SAMPLE_GUID)
-        self.assertTrue(new_sample.is_active)
-        self.assertIsNone(new_sample.elasticsearch_index)
-        self.assertEqual(new_sample.data_source, 'new_muscle_samples.tsv.gz')
-        self.assertEqual(new_sample.sample_type, 'RNA')
+        self.assertEqual(len(rna_samples), 1)
+        sample = rna_samples.first()
+        self.assertEqual(sample.guid, RNA_SAMPLE_GUID)
+        self.assertTrue(sample.is_active)
+        self.assertIsNone(sample.elasticsearch_index)
+        self.assertEqual(sample.data_source, 'muscle_samples.tsv.gz')
+        self.assertEqual(sample.sample_type, 'RNA')
 
-        self.assertEqual(response_json['sampleGuids'][0], new_sample.guid)
+        self.assertEqual(response_json['sampleGuids'][0], sample.guid)
 
         # test correct file interactions
         mock_open.assert_any_call(RNA_FILE_ID, 'rt')
-        mock_open.assert_called_with(f'rna_sample_data/{new_sample.guid}.json.gz', 'wt')
+        mock_open.assert_called_with(f'rna_sample_data/{sample.guid}.json.gz', 'wt')
         self.assertEqual(''.join(mock_writes), RNA_SAMPLE_DATA)
         mock_os.remove.assert_called_with(RNA_FILE_ID)
 

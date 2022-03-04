@@ -11,7 +11,7 @@ import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
-import VariantGenes, { LocusListLabels } from './VariantGene'
+import VariantGenes, { getGeneConsequence, LocusListLabels } from './VariantGene'
 import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
 import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
 
@@ -259,6 +259,7 @@ const Annotations = React.memo(({ variant, mainGeneId }) => {
           <Transcripts variant={variant} />
         </Modal>
       )}
+      {svType && mainGeneId && getGeneConsequence(mainGeneId, variant)}
       {svType && end && (
         <b>
           <HorizontalSpacer width={5} />

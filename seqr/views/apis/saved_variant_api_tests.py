@@ -162,10 +162,17 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
 
-        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {'ENSG00000135953': {
-            'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
-            'isSignificant': True,
-        }}})
+        self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {
+            'outliers': {
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
+                    'isSignificant': True,
+            }},
+            'tpms': {
+                'ENSG00000135953': {
+                    'geneId': 'ENSG00000135953', 'tpm': 8.38, 'sampleTissueType': 'M',
+            }},
+        }})
 
         # include project tag types
         response = self.client.get('{}?loadProjectTagTypes=true'.format(url))
@@ -176,7 +183,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         project = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes', 'projectGuid'})
         self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
 
         # include locus list details
@@ -477,6 +484,16 @@ class SavedVariantAPITest(object):
         self.assertEqual(new_variant_note_response['note'], 'new user-selected gene note')
         new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][1]
         self.assertEqual(new_gene_note_response['note'], 'new user-selected gene note')
+
+        # save variant_note as gene_note for SV
+        create_sv_variant_note_url = reverse(create_variant_note_handler, args=['SV0000007_prefix_19107_DEL_r00'])
+        response = self.client.post(create_sv_variant_note_url, content_type='application/json', data=json.dumps(
+            {'note': 'SV gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000011_11'}))
+        self.assertEqual(response.status_code, 200)
+        new_variant_note_response = next(iter(response.json()['variantNotesByGuid'].values()))
+        self.assertEqual(new_variant_note_response['note'], 'SV gene note')
+        new_gene_note_response = response.json()['genesById'][GENE_GUID]['notes'][2]
+        self.assertEqual(new_gene_note_response['note'], 'SV gene note')
 
         # update the variant_note
         update_variant_note_url = reverse(update_variant_note_handler, args=[VARIANT_GUID, new_note_guid])
@@ -917,7 +934,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_update_and_delete_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 7)
+        assert_no_list_ws_has_al(self, 8)
 
     def test_create_partially_saved_compound_het_variant_note(self):
         super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()

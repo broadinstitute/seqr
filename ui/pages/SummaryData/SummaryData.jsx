@@ -34,11 +34,12 @@ const ANALYST_SUMMARY_DATA_PAGES = [
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
 ]
 
-const BaseSummaryDataPageHeader = ({ user }) => (
-  <SimplePageHeader page="summary_data" pages={user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES} />)
+const BaseSummaryDataPageHeader = ({ user, match }) => (
+  <SimplePageHeader page="summary_data" subPage={match.params.subPage} pages={user.isAnalyst ? ANALYST_SUMMARY_DATA_PAGES : SUMMARY_DATA_PAGES} />)
 
 BaseSummaryDataPageHeader.propTypes = {
   user: PropTypes.object,
+  match: PropTypes.object,
 }
 
 const mapStateToProps = state => ({

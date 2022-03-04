@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import re
 import string
 import subprocess
 
@@ -69,12 +70,15 @@ CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+SECURE_BROWSER_XSS_FILTER = True
 
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
 CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://storage.googleapis.com') # google storage used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com', 'data:')
+CSP_OBJECT_SRC = ("'none'")
+CSP_BASE_URI = ("'none'")
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
 IGV_CSS_HASHES = (
     "'sha256-dUpUK4yXR60CNDI/4ZeR/kpSqQ3HmniKj/Z7Hw9ZNTA='",
@@ -398,7 +402,17 @@ if TERRA_API_ROOT_URL:
     SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0]
     if not SERVICE_ACCOUNT_FOR_ANVIL:
-        raise Exception('Error starting seqr - gcloud auth is not properly configured')
+        # attempt to acquire a service account token
+        if os.path.exists('/.config/service-account-key.json'):
+            auth_output = subprocess.run(['gcloud', 'auth', 'activate-service-account', '--key-file', '/.config/service-account-key.json'],  # nosec
+                                         capture_output=True, text=True).stderr
+
+            SERVICE_ACCOUNT_FOR_ANVIL = re.findall(r'\[(.*)\]', auth_output)[0]
+
+            if not SERVICE_ACCOUNT_FOR_ANVIL:
+                raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
+        else:
+            raise Exception('Error starting seqr - gcloud auth is not properly configured')
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)

@@ -10,7 +10,7 @@ from seqr.views.apis.project_api import create_project_handler, delete_project_h
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
-    CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
+    CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
     AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
@@ -184,8 +184,7 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['locusListsByGuid'].values())).keys()), LOCUS_LIST_FIELDS)
         self.assertSetEqual(
-            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()),
-            {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
+            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
         )
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
@@ -386,7 +385,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 3)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 10)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 7)
 
 # Test for permissions from AnVIL and local
 class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
@@ -413,4 +412,4 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 3)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 7)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)

@@ -80,7 +80,7 @@ export const LocusListItemsFilter = ({ ...props }) => {
 }
 
 LocusListItemsFilter.propTypes = {
-  value: PropTypes.object,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   onChange: PropTypes.func,
 }
 

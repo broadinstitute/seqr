@@ -116,7 +116,7 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const ShowRnaSeqOutliers = ({ sample, ...props }) => (sample ? (
+const ShowRnaSeqOutliers = ({ sample, hasRnaOutlierData, ...props }) => (hasRnaOutlierData ? (
   <Modal
     modalName={`OUTRIDER-${sample.sampleId}`}
     title={`RNA-Seq OUTRIDER: ${sample.sampleId}`}
@@ -129,6 +129,7 @@ const ShowRnaSeqOutliers = ({ sample, ...props }) => (sample ? (
 ) : null)
 
 ShowRnaSeqOutliers.propTypes = {
+  hasRnaOutlierData: PropTypes.bool,
   sample: PropTypes.object,
 }
 
@@ -173,6 +174,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
     <ShowRnaSeqOutliers
       familyGuid={individual.familyGuid}
       sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
+      hasRnaOutlierData={individual.hasRnaOutlierData}
     />
   </div>
 ))

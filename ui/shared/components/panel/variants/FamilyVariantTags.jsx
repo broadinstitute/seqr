@@ -120,7 +120,7 @@ ShortcutTags.propTypes = {
   dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
 }
 
-const validateTags = tags => (tags.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
+const validateTags = tags => (tags?.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
   'Only 1 Discovery Tag can be added' : undefined
 )
 

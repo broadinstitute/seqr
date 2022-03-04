@@ -10,6 +10,7 @@ export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid
 export const getFamilyNotesByGuid = state => state.familyNotesByGuid
+export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
@@ -157,17 +158,38 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
   }, {}),
 )
 
-export const getSignificantRnaSeqDataByFamilyGene = createSelector(
+export const getRnaSeqDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
   (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
     (acc, [individualGuid, rnaSeqData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData).reduce((acc2, [geneId, data]) => (data.isSignificant ?
-        { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
-      ), acc[familyGuid] || {})
+      acc[familyGuid] = {
+        significantOutliers: Object.entries(rnaSeqData.outliers || {}).reduce(
+          (acc2, [geneId, data]) => (data.isSignificant ?
+            { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
+          ), acc[familyGuid]?.significantOutliers || {},
+        ),
+        tpms: Object.entries(rnaSeqData.tpms || {}).reduce(
+          (acc2, [geneId, data]) => ({ ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } }),
+          acc[familyGuid]?.tpms || {},
+        ),
+      }
       return acc
     }, {},
+  ),
+)
+
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesGroupedByProjectGuid,
+  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
+    (acc, { projectGuid, datasetTypes }) => ({
+      ...acc,
+      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
+      ).map(({ datasetType }) => datasetType))],
+    }), {},
   ),
 )
 

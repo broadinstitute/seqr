@@ -483,22 +483,22 @@ export const VEP_GROUP_SV_NEW = 'new_structural_variants'
 
 const VEP_SV_TYPES = [
   {
-    description: 'A large deletion called from exome data',
-    text: 'gCNV Deletion',
+    description: 'A deletion called from exome data',
+    text: 'Exome Deletion',
     value: 'gCNV_DEL',
   },
   {
-    description: 'A large duplication called from exome data',
-    text: 'gCNV Duplication',
+    description: 'A duplication called from exome data',
+    text: 'Exome Duplication',
     value: 'gCNV_DUP',
   },
   {
-    description: 'A large deletion called from genome data',
+    description: 'A deletion called from genome data',
     text: 'Deletion',
     value: 'DEL',
   },
   {
-    description: 'A large duplication called from genome data',
+    description: 'A duplication called from genome data',
     text: 'Duplication',
     value: 'DUP',
   },
@@ -954,7 +954,7 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_REVEL, text: 'Revel', comparator: predictionComparator('revel') },
   { value: SORT_BY_EIGEN, text: 'Eigen', comparator: predictionComparator('eigen') },
   { value: SORT_BY_MPC, text: 'MPC', comparator: predictionComparator('mpc') },
-  { value: SORT_BY_SPLICE_AI, text: 'Splice AI', comparator: predictionComparator('splice_ai') },
+  { value: SORT_BY_SPLICE_AI, text: 'SpliceAI', comparator: predictionComparator('splice_ai') },
   { value: SORT_BY_PRIMATE_AI, text: 'Primate AI', comparator: predictionComparator('primate_ai') },
   {
     value: SORT_BY_PATHOGENICITY,
@@ -1087,7 +1087,15 @@ export const PREDICTOR_FIELDS = [
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.7 },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 5 },
-  { field: SPLICE_AI_FIELD, group: SPLICING_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
+  {
+    field: SPLICE_AI_FIELD,
+    group: SPLICING_IN_SILICO_GROUP,
+    warningThreshold: 0.5,
+    dangerThreshold: 0.8,
+    infoField: 'splice_ai_consequence',
+    infoTitle: 'Predicted Consequence',
+    fieldTitle: 'SpliceAI',
+  },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 99 },
   { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },
   { field: 'strvctvre', group: SV_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },

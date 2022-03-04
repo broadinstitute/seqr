@@ -6,8 +6,7 @@
 ui/node_modules
 ui/jest*
 ui/dist
-
-static
+static/
 
 *.pyc
 *.DS_Store
@@ -15,10 +14,10 @@ static
 
 deploy/secrets/gcloud*/*
 deploy/secrets/gcloud*/*
+deploy/*.tar.gz
 
 pedigree_images/*
 seqr_settings
 
 django_key
-static/
 .coverage

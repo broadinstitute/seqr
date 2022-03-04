@@ -52,7 +52,7 @@ class ListFieldView extends React.PureComponent {
 
   fieldDisplay = (values) => {
     const { itemJoin, itemDisplay, itemKey } = this.props
-    return (itemJoin ? values.join(itemJoin) : values.map(
+    return (itemJoin ? values.join(itemJoin) : values.filter(val => val).map(
       value => <div key={itemKey ? itemKey(value) : value}>{itemDisplay ? itemDisplay(value) : value}</div>,
     ))
   }

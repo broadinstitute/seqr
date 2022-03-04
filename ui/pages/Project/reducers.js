@@ -4,7 +4,7 @@ import { SubmissionError } from 'redux-form'
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_SAVED_VARIANTS, updateEntity } from 'redux/utils/reducerUtils'
+import { REQUEST_SAVED_VARIANTS, updateEntity, loadFamilyData } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
@@ -23,7 +23,6 @@ const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
-const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
 const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
 const REQUEST_INDIVIDUALS = 'REQUEST_INDIVIDUALS'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
@@ -87,33 +86,6 @@ export const loadProjectOverview = () => (dispatch, getState) => {
       }).get()
   }
 }
-
-const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, dispatchOnReceive) => (
-  dispatch, getState,
-) => {
-  const { familiesByGuid } = getState()
-  const family = familiesByGuid[familyGuid]
-  if (!family || !family[detailField]) {
-    dispatch({ type: dispatchType, updates: { [familyGuid]: true } })
-    new HttpRequestHelper(`/api/family/${familyGuid}/${urlPath}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        if (dispatchOnReceive) {
-          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
-        }
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        if (dispatchOnReceive) {
-          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
-        }
-      }).get()
-  }
-}
-
-export const loadFamilyDetails = familyGuid => loadFamilyData(
-  familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
-)
 
 export const loadFamilyVariantSummary = familyGuid => loadFamilyData(
   familyGuid, 'discoveryTags', 'variant_tag_summary', REQUEST_FAMILY_VARIANT_SUMMARY,
@@ -317,7 +289,7 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   const data = getState().rnaSeqDataByIndividual[individualGuid]
   // If variants were loaded for the individual, the significant gene data will be loaded but not all the needed data
-  if (!data || Object.values(data).every(({ isSignificant }) => isSignificant)) {
+  if (!data?.outliers || Object.values(data.outliers).every(({ isSignificant }) => isSignificant)) {
     dispatch({ type: REQUEST_RNA_SEQ_DATA })
     new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
       (responseJson) => {
@@ -382,7 +354,6 @@ export const reducers = {
   familyTagTypeCounts: createObjectsByIdReducer(RECEIVE_DATA, 'familyTagTypeCounts'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_FAMILIES),
-  familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
   familyVariantSummaryLoading: loadingReducer(REQUEST_FAMILY_VARIANT_SUMMARY, RECEIVE_DATA),
   individualsLoading: loadingReducer(REQUEST_INDIVIDUALS, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),

@@ -27,6 +27,7 @@ export const STATE = {
   multiProjectSearchContextLoading: { isLoading: false },
   searchGeneBreakdownLoading: { isLoading: false },
   locusListLoading: { isLoading: false },
+  familyDetailsLoading: { isLoading: false },
   currentSearchHash: SEARCH_HASH,
   searchesByHash: { [SEARCH_HASH]: SEARCH },
   searchGeneBreakdown: { [SEARCH_HASH]: {[GENE_ID]: { total: 3, families: { [FAMILY_GUID]: 2 }}} },
