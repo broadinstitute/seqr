@@ -41,7 +41,7 @@ class TransferFamiliesTest(TestCase):
 
     @mock.patch('seqr.management.commands.clear_project_tags.logger.info')
     def test_cron_command(self, mock_logger):
-        Project.objects.filter(guid='R0003_test').update(all_user_demo=True)
+        Project.objects.update(all_user_demo=True)
         call_command('clear_project_tags', 'ALL_USER_DEMO', '--skip-confirm')
 
         mock_logger.assert_has_calls([
