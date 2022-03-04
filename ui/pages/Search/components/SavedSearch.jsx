@@ -6,7 +6,7 @@ import styled from 'styled-components'
 
 import DataLoader from 'shared/components/DataLoader'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import { Select, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { saveSearch, loadSavedSearches } from '../reducers'
 import {

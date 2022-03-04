@@ -8,7 +8,7 @@ import { getUser, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
-import { validators, configuredField } from 'shared/components/form/ReduxFormWrapper'
+import { validators, configuredField } from 'shared/components/form/FormHelpers'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 

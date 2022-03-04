@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import { login } from '../reducers'
 import { UserFormContainer, UserForm } from './UserFormLayout'
 

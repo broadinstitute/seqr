@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import {
   FILE_FIELD_NAME,
@@ -53,7 +53,7 @@ const BulkContent = connect(mapStateToProps)(BulkUploadForm)
 const submitForm = onSubmit => values => onSubmit(values[FILE_FIELD_NAME])
 
 const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) => (
-  <ReduxFormWrapper
+  <FormWrapper
     modalName={modalName}
     onSubmit={submitForm(onSubmit)}
     confirmCloseIfNotSaved
@@ -63,7 +63,7 @@ const EditBulkForm = React.memo(({ name, modalName, onSubmit, ...props }) => (
     size="small"
   >
     <BulkContent name={name} {...props} />
-  </ReduxFormWrapper>
+  </FormWrapper>
 ))
 
 EditBulkForm.propTypes = {

@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { ButtonLink } from '../StyledComponents'
-import ReduxFormWrapper from '../form/ReduxFormWrapper'
+import FormWrapper from '../form/FormWrapper'
 import Modal from '../modal/Modal'
 
 const UpdateButton = React.memo(({
@@ -28,7 +28,7 @@ const UpdateButton = React.memo(({
   >
     {React.cloneElement(formContainer, {
       children: (
-        <ReduxFormWrapper
+        <FormWrapper
           onSubmit={onSubmit}
           modalName={modalId}
           initialValues={initialValues}

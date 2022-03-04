@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 
 import { updateUserPolicies } from '../reducers'
 import UserFormLayout from './UserFormLayout'
