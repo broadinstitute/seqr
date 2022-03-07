@@ -1,5 +1,6 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
+import styled from 'styled-components'
 import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
@@ -331,7 +332,7 @@ export const SNP_FREQUENCIES = [
 
 export const SV_CALLSET_CRITERIA_MESSAGE = 'Only an SV that is estimated to be the same SV (type and breakpoints) among jointly genotyped samples will be counted as an allele. CNVs called on exomes have unknown breakpoints so similar overlapping CNVs may be counted as an allele.'
 export const GNOMAD_SV_CRITERIA_MESSAGE = 'The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp'
-export const SV_FREQUENCIES = [
+const SV_FREQUENCIES = [
   {
     name: 'gnomad_svs',
     label: 'gnomAD genome SVs',
@@ -416,7 +417,7 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
   },
 )
 
-export const QUALITY_FILTER_FIELDS = [
+export const SNP_QUALITY_FILTER_FIELDS = [
   {
     name: 'vcf_filter',
     label: 'Filter Value',
@@ -441,6 +442,31 @@ export const QUALITY_FILTER_FIELDS = [
     min: 0,
     max: 50,
     step: 5,
+  },
+]
+
+const DividedFormField = styled(Form.Field)`
+  border-left: solid grey 1px;
+`
+
+export const QUALITY_FILTER_FIELDS = [
+  ...SNP_QUALITY_FILTER_FIELDS,
+  {
+    name: 'min_qs',
+    label: 'WES SV Quality Score',
+    labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplication >= 50, deletion >= 100, homozygous deletion >= 400.',
+    min: 0,
+    max: 1000,
+    step: 10,
+    component: DividedFormField,
+  },
+  {
+    name: 'min_gq_sv',
+    label: 'WGS SV Genotype Quality',
+    labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 10.',
+    min: 0,
+    max: 100,
+    step: 10,
   },
 ]
 
