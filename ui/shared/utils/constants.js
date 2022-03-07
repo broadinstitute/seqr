@@ -187,9 +187,11 @@ export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
+export const FAMILY_FIELD_ANALYSIS_GROUPS = 'analysisGroups'
 
 export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
+  [FAMILY_FIELD_ANALYSIS_GROUPS]: 'Analysis Groups',
   [FAMILY_FIELD_ANALYSIS_STATUS]: 'Analysis Status',
   [FAMILY_FIELD_ASSIGNED_ANALYST]: 'Assigned Analyst',
   [FAMILY_FIELD_ANALYSED_BY]: 'Analysed By',
@@ -213,6 +215,7 @@ export const FAMILY_NOTES_FIELDS = [
 ]
 
 export const FAMILY_DETAIL_FIELDS = [
+  { id: FAMILY_FIELD_ANALYSIS_GROUPS },
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST },

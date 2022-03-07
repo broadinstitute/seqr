@@ -28,8 +28,9 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
   FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
+  FAMILY_FIELD_ANALYSIS_GROUPS,
 } from '../../../utils/constants'
-import { FirstSample, AnalystEmailDropdown, AnalysedBy, analysisStatusIcon } from './FamilyFields'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy, AnalysisGroups, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
 const ASSIGNED_ANALYST_EDIT_FIELDS = [
@@ -58,6 +59,11 @@ const getNoteField = noteType => ({
 })
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
+  [FAMILY_FIELD_ANALYSIS_GROUPS]: {
+    canEdit: false,
+    component: AnalysisGroups,
+    fieldDisplay: values => values.map(({ name }) => name).join(', '),
+  },
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     canEdit: true,

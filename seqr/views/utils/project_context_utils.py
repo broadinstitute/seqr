@@ -16,9 +16,6 @@ def get_projects_child_entities(projects, project_guid, user, is_analyst, includ
         sample_models = Sample.objects.filter(individual__family__project__in=projects)
         samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
 
-    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
-    analysis_groups = get_json_for_analysis_groups(analysis_group_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
-
     locus_lists_models = LocusList.objects.filter(projects__in=projects)
     locus_lists_by_guid = {
         ll['locusListGuid']: ll for ll in get_json_for_locus_lists(locus_lists_models, user, is_analyst=is_analyst, include_metadata=include_locus_list_metadata)}
@@ -26,13 +23,14 @@ def get_projects_child_entities(projects, project_guid, user, is_analyst, includ
     response = {
         'projectsByGuid': projects_by_guid,
         'locusListsByGuid': locus_lists_by_guid,
-        'analysisGroupsByGuid': {ag['analysisGroupGuid']: ag for ag in analysis_groups},
+        'analysisGroupsByGuid': get_project_analysis_groups(projects, project_guid),
     }
     if include_samples:
         response['samplesByGuid'] = {s['sampleGuid']: s for s in samples}
 
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(response['locusListsByGuid'].keys())
+        response['projectsByGuid'][project_guid]['analysisGroupsLoaded'] = True
     else:
         project_id_to_guid = {project.id: project.guid for project in projects}
         for group in response['analysisGroupsByGuid'].values():
@@ -40,6 +38,7 @@ def get_projects_child_entities(projects, project_guid, user, is_analyst, includ
 
         for project in response['projectsByGuid'].values():
             project['locusListGuids'] = []
+            project['analysisGroupsLoaded'] = True
         prefetch_related_objects(locus_lists_models, 'projects')
         for locus_list in locus_lists_models:
             for project in locus_list.projects.all():
@@ -47,6 +46,13 @@ def get_projects_child_entities(projects, project_guid, user, is_analyst, includ
                     response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
 
     return response
+
+
+def get_project_analysis_groups(projects, project_guid):
+    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
+    analysis_groups = get_json_for_analysis_groups(
+        analysis_group_models, project_guid=project_guid, skip_nested=True, is_analyst=False)
+    return {ag['analysisGroupGuid']: ag for ag in analysis_groups}
 
 
 def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True, skip_child_ids=False):

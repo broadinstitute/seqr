@@ -124,7 +124,8 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
     igv_genomes_proxy
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
-    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals
+    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
+    project_analysis_groups
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
 from matchmaker.views import external_api
@@ -183,6 +184,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/get_families': project_families,
     'project/(?P<project_guid>[^/]+)/get_individuals': project_individuals,
     'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
+    'project/(?P<project_guid>[^/]+)/get_analysis_groups': project_analysis_groups,
     'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
 
     'project/create_project': create_project_handler,
