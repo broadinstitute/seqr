@@ -183,18 +183,23 @@ const DATASET_TYPE_PANEL_PROPS = {
   },
 }
 
+const HAS_HGMD = true
+const NO_HGMD = false
+const HAS_ANN_SECONDARY = true
+const NO_ANN_SECONDARY = false
+
 const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS].reduce((typeAcc, type) => {
   const typePanelProps = DATASET_TYPE_PANEL_PROPS[type] || {}
   const typePanels = PANELS.map(panel => ({ ...panel, ...(typePanelProps[panel.name] || {}) }))
   return {
     ...typeAcc,
-    [type]: [true, false].reduce((hgmdAcc, hasHgmdBool) => {
+    [type]: [HAS_HGMD, NO_HGMD].reduce((hgmdAcc, hasHgmdBool) => {
       const hgmdPanels = typePanels.map(panel => (
         (!hasHgmdBool && panel.name === HGMD_PATHOGENICITY_PANEL) ? { ...panel, ...NO_HGMD_PANEL_PROPS } : panel
       ))
       return {
         ...hgmdAcc,
-        [hasHgmdBool]: [true, false].reduce((acc, annSecondaryBool) => ({
+        [hasHgmdBool]: [HAS_ANN_SECONDARY, NO_ANN_SECONDARY].reduce((acc, annSecondaryBool) => ({
           ...acc,
           [annSecondaryBool]: annSecondaryBool ? hgmdPanels :
             hgmdPanels.filter(({ name }) => name !== ANNOTATION_SECONDARY_NAME),
