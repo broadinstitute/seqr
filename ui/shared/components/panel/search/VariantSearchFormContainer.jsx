@@ -2,12 +2,14 @@ import PropTypes from 'prop-types'
 import React from 'react'
 import { connect } from 'react-redux'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { getSearchedVariantsErrorMessage } from 'redux/selectors'
+import { getSearchedVariantsErrorMessage, getSearchedVariantsIsLoading } from 'redux/selectors'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { toUniqueCsvString } from 'shared/utils/stringUtils'
 
-const VariantSearchFormContainer = React.memo(({ history, onSubmit, resultsPath, children, ...formProps }) => (
-  <FormWrapper onSubmit={onSubmit} submitButtonText="Search" noModal {...formProps}>
+const VariantSearchFormContainer = React.memo((
+  { history, onSubmit, resultsPath, loading, variantsLoading, children, ...formProps },
+) => (
+  <FormWrapper onSubmit={onSubmit} loading={loading || variantsLoading} submitButtonText="Search" noModal {...formProps}>
     {children}
   </FormWrapper>
 ))
@@ -17,9 +19,12 @@ VariantSearchFormContainer.propTypes = {
   history: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
   resultsPath: PropTypes.string,
+  loading: PropTypes.bool,
+  variantsLoading: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
+  variantsLoading: getSearchedVariantsIsLoading(state),
   submissionError: getSearchedVariantsErrorMessage(state),
 })
 
