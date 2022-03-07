@@ -3,10 +3,9 @@ import { combineReducers } from 'redux'
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_SAVED_VARIANTS, updateEntity, loadFamilyData } from 'redux/utils/reducerUtils'
+import { REQUEST_SAVED_VARIANTS, updateEntity, loadProjectChildEntities, loadFamilyData } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -43,33 +42,16 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   }
 }
 
-const loadProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
-  const { currentProjectGuid, projectsByGuid } = getState()
-  const project = projectsByGuid[currentProjectGuid]
-
-  if (!project[`${toCamelcase(entityType)}Loaded`]) {
-    dispatch({ type: dispatchType })
-    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_${toSnakecase(entityType)}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        if (receiveDispatchType) {
-          dispatch({ type: receiveDispatchType, updatesById: responseJson })
-        }
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        if (receiveDispatchType) {
-          dispatch({ type: receiveDispatchType, updatesById: {} })
-        }
-      }).get()
-  }
+const loadCurrentProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
+  const { currentProjectGuid } = getState()
+  return loadProjectChildEntities(currentProjectGuid, entityType, dispatchType, receiveDispatchType)(dispatch, getState)
 }
 
-export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
+export const loadFamilies = () => loadCurrentProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
 
-export const loadIndividuals = () => loadProjectChildEntities('individuals', REQUEST_INDIVIDUALS)
+export const loadIndividuals = () => loadCurrentProjectChildEntities('individuals', REQUEST_INDIVIDUALS)
 
-export const loadMmeSubmissions = () => loadProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
+export const loadMmeSubmissions = () => loadCurrentProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
 
 export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()

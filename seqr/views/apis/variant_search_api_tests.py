@@ -39,7 +39,7 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'createdBy': None,
 }]
 
-PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes'}
+PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded'}
 PROJECT_CONTEXT_FIELDS.update(PROJECT_FIELDS)
 
 PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}

@@ -280,6 +280,7 @@ class Family(ModelWithGUID):
         ('C', 'Closed, no longer under analysis'),
         ('I', 'Analysis in Progress'),
         ('Q', 'Waiting for data'),
+        ('N', 'No data expected'),
     )
 
     SUCCESS_STORY_TYPE_CHOICES = (
