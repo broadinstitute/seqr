@@ -196,6 +196,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertListEqual(
             [project.genome_version, project.description, project.workspace_namespace, project.workspace_name],
             ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+        self.assertListEqual(
+            [project.mme_contact_institution, project.mme_primary_data_owner, project.mme_contact_url],
+            ['Broad Center for Mendelian Genomics', 'Test Manager User', 'mailto:test_user_manager@test.com'])
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
