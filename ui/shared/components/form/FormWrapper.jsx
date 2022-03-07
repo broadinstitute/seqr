@@ -237,7 +237,7 @@ class FormWrapper extends React.PureComponent {
           <StyledForm
             onSubmit={confirmDialog ? this.showConfirmDialog : handleSubmit}
             size={size}
-            loading={submitting || loading}
+            loading={loading === undefined ? submitting : loading}
             hasSubmitButton={!submitOnChange}
             inline={inline}
           >
