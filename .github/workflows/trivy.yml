@@ -13,7 +13,8 @@ jobs:
 
       - uses: broadinstitute/dsp-appsec-trivy-action@v1
         with:
-          context: deploy/docker/seqr
+          context: .
+          dockerfile: deploy/docker/seqr/Dockerfile
           sarif: trivy-results.sarif
 
       - name: Upload Trivy scan results to GitHub Security tab
