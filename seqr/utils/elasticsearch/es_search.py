@@ -17,7 +17,8 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
-    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, get_prediction_response_key
+    PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
+    get_prediction_response_key
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
@@ -64,7 +65,7 @@ class EsSearch(object):
 
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
-            dataset_type = self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+            dataset_type = self._get_index_dataset_type(index)
             self.indices_by_dataset_type[dataset_type].append(index)
 
         self.previous_search_results = previous_search_results or {}
@@ -77,8 +78,12 @@ class EsSearch(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
+        self._paired_index_comp_het = False
         self._no_sample_filters = False
         self._any_affected_sample_filters = False
+
+    def _get_index_dataset_type(self, index):
+        return self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
 
     def _set_index_name(self):
         self.index_name = ','.join(sorted(self._indices))
@@ -462,17 +467,19 @@ class EsSearch(object):
                 samples_by_id = family_samples_by_id[family_guid]
 
                 affected_status = self._family_individual_affected_status[family_guid]
+                inheritance_filters = self._comp_het_inheritance_filter(index, paired_index)
                 family_samples_q = _family_genotype_inheritance_filter(
-                    COMPOUND_HET, INHERITANCE_FILTERS[COMPOUND_HET], samples_by_id, affected_status, index_fields,
+                    COMPOUND_HET, inheritance_filters, samples_by_id, affected_status, index_fields,
                 )
 
                 family_index = index
                 if paired_index:
+                    self._paired_index_comp_het = True
                     pair_index_fields = self.index_metadata[paired_index]['fields']
                     pair_samples_by_id = self.samples_by_family_index[paired_index][family_guid]
+                    pair_inheritance_filters = self._comp_het_inheritance_filter(paired_index, True)
                     family_samples_q |= _family_genotype_inheritance_filter(
-                        COMPOUND_HET, INHERITANCE_FILTERS[COMPOUND_HET], pair_samples_by_id, affected_status,
-                        pair_index_fields,
+                        COMPOUND_HET, pair_inheritance_filters, pair_samples_by_id, affected_status, pair_index_fields,
                     )
                     family_index = ','.join(sorted([index, paired_index]))
 
@@ -491,6 +498,15 @@ class EsSearch(object):
                     'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
                 )
                 self._index_searches[index].append(compound_het_search)
+
+    def _comp_het_inheritance_filter(self, index, has_paired_index):
+        if has_paired_index and self._get_index_dataset_type(index) == Sample.DATASET_TYPE_VARIANT_CALLS:
+            # SNPs in trans with deletions may be called as hom alt instead of ref alt
+            return {
+                AFFECTED: HAS_ALT,
+                UNAFFECTED: INHERITANCE_FILTERS[COMPOUND_HET][UNAFFECTED],
+            }
+        return INHERITANCE_FILTERS[COMPOUND_HET]
 
     def search(self,  **kwargs):
         indices = self._indices
@@ -657,7 +673,7 @@ class EsSearch(object):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
         index_family_samples = self.samples_by_family_index[index_name]
-        is_sv = self.index_metadata[index_name].get('datasetType') == Sample.DATASET_TYPE_SV_CALLS
+        is_sv = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_SV_CALLS
 
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
@@ -898,10 +914,29 @@ class EsSearch(object):
         for family_guid, variants in family_compound_het_pairs.items():
             unaffected_individuals = family_unaffected_individual_guids.get(family_guid, [])
 
+            hom_alt_variant_ids = set()
+            if self._paired_index_comp_het:
+                hom_alt_variant_ids = {
+                    var['variantId'] for var in variants if any(gen.get('numAlt') == 2 for gen in var['genotypes'].values())
+                }
+
             valid_combinations = []
             for ch_1_index, ch_2_index in combinations(range(len(variants)), 2):
                 variant_1 = variants[ch_1_index]
                 variant_2 = variants[ch_2_index]
+
+                if hom_alt_variant_ids:
+                    """
+                    SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
+                    considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
+                    """
+                    hom_alt_var = next(
+                        (var for var in [variant_1, variant_2] if var['variantId'] in hom_alt_variant_ids), None)
+                    if hom_alt_var:
+                        pair_var = next(var for var in [variant_1, variant_2] if var != hom_alt_var)
+                        is_valid = pair_var.get('svType') == 'DEL' and pair_var['pos'] <= hom_alt_var['pos'] <= pair_var['end']
+                        if not is_valid:
+                            continue
 
                 is_valid_for_individual = True
                 for individual_guid in unaffected_individuals:
