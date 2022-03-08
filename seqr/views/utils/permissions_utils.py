@@ -226,7 +226,7 @@ def get_local_access_projects(user):
 def check_mme_permissions(submission, user):
     project = submission.individual.family.project
     check_project_permissions(project, user)
-    if not project.is_mme_enabled:
+    if not (project.is_mme_enabled and not project.is_demo):
         raise PermissionDenied('Matchmaker is not enabled')
 
 def has_case_review_permissions(project, user):
