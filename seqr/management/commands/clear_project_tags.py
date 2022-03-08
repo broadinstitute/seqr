@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from seqr.models import Project, SavedVariant, VariantTag, VariantNote, VariantFunctionalData
-from settings import DEMO_PROJECT_CATEGORY
 
 import logging
 logger = logging.getLogger(__name__)
@@ -14,7 +13,7 @@ class Command(BaseCommand):
         parser.add_argument('--skip-confirm', action='store_true')
 
     def handle(self, *args, **options):
-        projects = Project.objects.filter(projectcategory__name=DEMO_PROJECT_CATEGORY)
+        projects = Project.objects.filter(is_demo=True)
         if options['project_prefix'] == ALL_USER_DEMO:
             projects = projects.filter(all_user_demo=True)
         else:
