@@ -182,6 +182,7 @@ class Project(ModelWithGUID):
     has_case_review = models.BooleanField(default=False)
     enable_hgmd = models.BooleanField(default=False)
     all_user_demo = models.BooleanField(default=False)
+    is_demo = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
