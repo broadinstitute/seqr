@@ -73,6 +73,7 @@ class DashboardPageTest(object):
         project_json = response.json()['projectsByGuid']
         self.assertSetEqual(set(project_json.keys()), {'R0003_test'})
         self.assertFalse(project_json['R0003_test']['canEdit'])
+        self.assertFalse(project_json['R0003_test']['isMmeEnabled'])
 
         if hasattr(self, 'mock_list_workspaces'):
             self.mock_list_workspaces.side_effect = TerraAPIException('AnVIL Error', 400)

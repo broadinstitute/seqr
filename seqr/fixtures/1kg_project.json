@@ -52,7 +52,7 @@
 	"can_view_group": 3,
     "workspace_name": "anvil-project 1000 Genomes Demo",
     "workspace_namespace": "my-seqr-billing",
-	"is_mme_enabled": false,
+	"is_mme_enabled": true,
     "is_demo": true,
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",

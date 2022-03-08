@@ -155,6 +155,7 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
             'projectCategoryGuids': [
                 c.guid for c in project.projectcategory_set.all() if c.name != ANALYST_PROJECT_CATEGORY
             ] if add_project_category_guids_field else [],
+            'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
             'canEdit': has_project_permissions(project, user, can_edit=True),
         })
 
