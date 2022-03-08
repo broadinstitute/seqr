@@ -206,6 +206,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 class ReportAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
 
+    @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_seqr_stats(self, mock_analyst_group):
@@ -220,10 +221,14 @@ class ReportAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'individualCount', 'familyCount', 'sampleCountByType'})
-        self.assertEqual(response_json['individualCount'], 18)
-        self.assertEqual(response_json['familyCount'], 14)
-        self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8, 'WGS': 1, 'RNA': 1})
+        self.assertSetEqual(set(response_json.keys()), {'projectsCount', 'individualsCount', 'familiesCount', 'sampleCountsByType'})
+        self.assertEqual(response_json['projectsCount'], {'internal': 3, 'external': 1})
+        self.assertEqual(response_json['individualsCount'], {'internal': 17, 'external': 1})
+        self.assertEqual(response_json['familiesCount'], {'internal': 13, 'external': 1})
+        self.assertDictEqual(
+            response_json['sampleCountsByType'],
+            {'WES__VARIANTS': {'internal': 8}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 1}},
+        )
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
