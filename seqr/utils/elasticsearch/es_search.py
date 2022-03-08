@@ -926,10 +926,8 @@ class EsSearch(object):
                 variant_2 = variants[ch_2_index]
 
                 if hom_alt_variant_ids:
-                    """
-                    SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
-                    considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
-                    """
+                    # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
+                    # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
                     hom_alt_var = next(
                         (var for var in [variant_1, variant_2] if var['variantId'] in hom_alt_variant_ids), None)
                     if hom_alt_var:
