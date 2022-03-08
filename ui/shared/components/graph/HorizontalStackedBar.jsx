@@ -116,7 +116,7 @@ class HorizontalStackedBar extends React.PureComponent {
                         <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>
                           {d.name}
                         </TableCell>
-                        {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toPrecision(2)}%)`}</TableCell>}
+                        {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toFixed(0)}%)`}</TableCell>}
                       </TableRow>
                     ))
                   }
