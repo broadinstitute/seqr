@@ -315,21 +315,21 @@ ES_VARIANTS = [
                 'sample_id': 'NA20885',
             },
             {
-                'num_alt': 0,
+                'num_alt': 2,
                 'ab': 0,
                 'dp': 67,
                 'gq': 99,
                 'sample_id': 'HG00731',
             },
             {
-                'num_alt': 2,
+                'num_alt': 1,
                 'ab': 0,
                 'dp': 42,
                 'gq': 96,
                 'sample_id': 'HG00732',
             },
             {
-                'num_alt': 1,
+                'num_alt': 0,
                 'ab': 0,
                 'dp': 42,
                 'gq': 96,
@@ -464,6 +464,17 @@ EXTRA_FAMILY_ES_VARIANTS = deepcopy(ES_VARIANTS) + [deepcopy(ES_VARIANTS[0])]
 EXTRA_FAMILY_ES_VARIANTS[2]['matched_queries'][INDEX_NAME] = ['F000005_5']
 MISSING_SAMPLE_ES_VARIANTS = deepcopy(ES_VARIANTS)
 MISSING_SAMPLE_ES_VARIANTS[1]['_source']['samples_num_alt_1'] = []
+
+ES_SV_COMP_HET_VARIANT = deepcopy(ES_SV_VARIANT)
+ES_SV_COMP_HET_VARIANT['_source']['xpos'] = 2101343374
+ES_SV_COMP_HET_VARIANT['_source']['start'] = 101343374
+ES_SV_COMP_HET_VARIANT['_source']['end'] = 104943628
+ES_SV_COMP_HET_VARIANT['_source']['num_exon'] = 2
+ES_SV_COMP_HET_VARIANT['_source']['variantId'] = 'prefix_191011_DEL'
+for gen in ES_SV_COMP_HET_VARIANT['_source']['genotypes']:
+    gen.update({'start': None, 'end': None, 'num_exon': None})
+    gen.pop('geneIds')
+
 COMPOUND_HET_INDEX_VARIANTS = {
     INDEX_NAME: {
         'ENSG00000135953': EXTRA_FAMILY_ES_VARIANTS,
@@ -475,7 +486,7 @@ COMPOUND_HET_INDEX_VARIANTS = {
     },
     '{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME): {'ENSG00000135953': MISSING_SAMPLE_ES_VARIANTS},
     SV_INDEX_NAME: {'ENSG00000228198': [ES_SV_VARIANT], 'ENSG00000135953': []},
-    '{},{}'.format(INDEX_NAME, SV_INDEX_NAME): {'ENSG00000228198': [ES_SV_VARIANT, ES_VARIANTS[1]], 'ENSG00000135953': []},
+    '{},{}'.format(INDEX_NAME, SV_INDEX_NAME): {'ENSG00000228198': [ES_SV_VARIANT, ES_SV_COMP_HET_VARIANT, ES_VARIANTS[1]], 'ENSG00000135953': []},
 }
 
 INDEX_ES_VARIANTS = {
@@ -497,7 +508,16 @@ PARSED_COMPOUND_HET_VARIANTS[1]['_sort'] = [2103343453]
 PARSED_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000003_3']
 
 PARSED_SV_COMPOUND_HET_VARIANTS = [deepcopy(PARSED_SV_VARIANT), deepcopy(PARSED_COMPOUND_HET_VARIANTS[1])]
-PARSED_SV_COMPOUND_HET_VARIANTS[0]['_sort'] = [1049045487]
+PARSED_SV_COMPOUND_HET_VARIANTS[0].update({
+    '_sort': [2101343474],
+    'xpos': 2101343374,
+    'pos': 101343374,
+    'end': 104943628,
+    'variantId': 'prefix_191011_DEL',
+})
+PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000037183'] = [{'geneId': 'ENSG00000037183'}]
+for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
+    gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
 PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
 
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT = deepcopy(PARSED_COMPOUND_HET_VARIANTS)
@@ -545,31 +565,10 @@ PARSED_CADD_VARIANTS[1]['_sort'][0] = maxsize
 
 
 PARSED_MULTI_INDEX_VARIANT = deepcopy(PARSED_VARIANTS[1])
-PARSED_MULTI_INDEX_VARIANT.update({
-    'familyGuids': ['F000002_2', 'F000003_3', 'F000011_11'],
-    'genotypes': {
-        'I000004_hg00731': {
-            'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
-            'sampleType': 'WES',
-        },
-        'I000005_hg00732': {
-            'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None,
-            'sampleType': 'WES',
-        },
-        'I000006_hg00733': {
-            'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None,
-            'sampleType': 'WES',
-        },
-        'I000007_na20870': {
-            'ab': 0.70212764, 'ad': None, 'gq': 46, 'sampleId': 'NA20870', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'sampleType': 'WES',
-        },
-        'I000015_na20885': {
-            'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
-            'sampleType': 'WES',
-        },
-    },
-})
+PARSED_MULTI_INDEX_VARIANT['familyGuids'].append('F000011_11')
+PARSED_MULTI_INDEX_VARIANT['genotypes']['I000015_na20885'] = {
+    'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None, 'sampleType': 'WES',
+}
 
 PARSED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
 PARSED_MULTI_GENOME_VERSION_VARIANT.update({
@@ -1915,8 +1914,8 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 4)
         self.assertDictEqual(variants[0], PARSED_SV_VARIANT)
         self.assertDictEqual(variants[1], PARSED_VARIANTS[0])
-        self.assertDictEqual(variants[2][0], PARSED_COMPOUND_HET_VARIANTS[0])
-        self.assertDictEqual(variants[2][1], PARSED_COMPOUND_HET_VARIANTS[1])
+        self.assertDictEqual(variants[2][0], PARSED_SV_COMPOUND_HET_VARIANTS[0])
+        self.assertDictEqual(variants[2][1], PARSED_SV_COMPOUND_HET_VARIANTS[1])
         self.assertDictEqual(variants[3], PARSED_VARIANTS[1])
 
         annotations_q = {'terms': {'transcriptConsequenceTerms': ['DEL', 'frameshift_variant']}}
@@ -1972,13 +1971,18 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'should': [
                                 {'bool': {
+                                    'minimum_should_match': 1,
                                     'must_not': [
                                         {'term': {'samples_no_call': 'HG00732'}},
                                         {'term': {'samples_num_alt_2': 'HG00732'}},
                                         {'term': {'samples_no_call': 'HG00733'}},
                                         {'term': {'samples_num_alt_2': 'HG00733'}}
                                     ],
-                                    'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                                    'should': [
+                                        {'term': {'samples_num_alt_1': 'HG00731'}},
+                                        {'term': {'samples_num_alt_2': 'HG00731'}},
+                                    ]
+
                                 }},
                                 {'term': {'samples': 'HG00731'}},
                             ]
@@ -2126,13 +2130,17 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'should': [
                                 {'bool': {
+                                    'minimum_should_match': 1,
                                     'must_not': [
                                         {'term': {'samples_no_call': 'HG00732'}},
                                         {'term': {'samples_num_alt_2': 'HG00732'}},
                                         {'term': {'samples_no_call': 'HG00733'}},
                                         {'term': {'samples_num_alt_2': 'HG00733'}}
                                     ],
-                                    'must': [{'term': {'samples_num_alt_1': 'HG00731'}}]
+                                    'should': [
+                                        {'term': {'samples_num_alt_1': 'HG00731'}},
+                                        {'term': {'samples_num_alt_2': 'HG00731'}},
+                                    ]
                                 }},
                                 {'term': {'samples': 'HG00731'}},
                             ]
