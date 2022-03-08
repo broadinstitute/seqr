@@ -331,10 +331,21 @@ export const getDisplayVariants = createSelector(
 
 export const getSearchedVariantExportConfig = createSelector(
   getCurrentSearchHash,
-  searchHash => [{
-    name: 'Variant Search Results',
-    url: `/api/search/${searchHash}/download`,
-  }],
+  getCurrentSearchParams,
+  getProjectsByGuid,
+  (searchHash, searchParams, projectsByGuid) => {
+    const { projectFamilies } = searchParams || {}
+    if ((projectFamilies || []).some(
+      ({ projectGuid }) => projectsByGuid[projectGuid]?.isDemo && !projectsByGuid[projectGuid].allUserDemo,
+    )) {
+      // Do not allow downloads for demo projects
+      return null
+    }
+    return [{
+      name: 'Variant Search Results',
+      url: `/api/search/${searchHash}/download`,
+    }]
+  },
 )
 
 export const getSearchGeneBreakdownValues = createSelector(
