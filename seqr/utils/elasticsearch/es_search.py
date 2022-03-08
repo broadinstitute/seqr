@@ -931,7 +931,7 @@ class EsSearch(object):
                     hom_alt_var = next(
                         (var for var in [variant_1, variant_2] if var['variantId'] in hom_alt_variant_ids), None)
                     if hom_alt_var:
-                        pair_var = next(var for var in [variant_1, variant_2] if var != hom_alt_var)
+                        pair_var = variant_1 if hom_alt_var == variant_2 else variant_2
                         is_valid = pair_var.get('svType') == 'DEL' and pair_var['pos'] <= hom_alt_var['pos'] <= pair_var['end']
                         if not is_valid:
                             continue
