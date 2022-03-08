@@ -23,7 +23,6 @@ def dashboard_page_data(request):
     """
     projects_by_guid = _get_projects_json(request.user)
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
-    # TODO fake demo category?
 
     json_response = {
         'projectsByGuid': projects_by_guid,
