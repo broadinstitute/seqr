@@ -18,7 +18,7 @@ import { ButtonLink, HelpIcon } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
-  DATASET_TYPE_SV_CALLS,
+  DATASET_TITLE_LOOKUP,
   ANVIL_URL,
 } from 'shared/utils/constants'
 import { updateProjectMmeContact, loadMmeSubmissions } from '../reducers'
@@ -37,8 +37,6 @@ import EditDatasetsButton from './EditDatasetsButton'
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
 `
-
-const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
 
 const FAMILY_SIZE_LABELS = {
   0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,
