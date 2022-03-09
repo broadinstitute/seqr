@@ -298,7 +298,6 @@ API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
 POLICY_REQUIRED_URL = '/accept_policies'
 
-DEMO_PROJECT_CATEGORY = 'Demo'
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
 PM_USER_GROUP = os.environ.get('PM_USER_GROUP')

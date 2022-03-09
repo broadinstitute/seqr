@@ -79,7 +79,7 @@ const BaseVariantSearchResultsContent = React.memo(({
           fields={fields}
         />
         <HorizontalSpacer width={10} />
-        <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
+        {searchedVariantExportConfig && <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />}
         <HorizontalSpacer width={10} />
         <GeneBreakdown searchHash={searchHash} />
       </Grid.Column>
