@@ -5,10 +5,12 @@
  - *Software:* 
    - [docker](https://docs.docker.com/install/)
      - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb  
+   
    - [docker-compose](https://docs.docker.com/compose/install/)       
+   
    - [gcloud](https://cloud.google.com/sdk/install)
 
- - OS settings for elasticsearch:
+- OS settings for elasticsearch:
     - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
        ```
        echo '
@@ -19,7 +21,7 @@
        ```
        This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
     
-    
+
 #### Starting seqr
 
 The steps below describe how to create a new empty seqr instance with a single Admin user account.
