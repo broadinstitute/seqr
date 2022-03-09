@@ -123,10 +123,11 @@ class FormWrapper extends React.PureComponent {
   state = { confirming: false, submitCallback: null }
 
   componentDidUpdate(prevProps) {
-    const { submissionError } = this.props
+    const { submissionError, loading } = this.props
     const { submitCallback } = this.state
-    if (submitCallback && submissionError && submissionError !== prevProps.submissionError) {
-      submitCallback({ errors: [submissionError] })
+    if (submitCallback && loading !== prevProps.loading) {
+      const resolved = submissionError && { errors: [submissionError] }
+      submitCallback(resolved)
     }
   }
 
@@ -150,8 +151,8 @@ class FormWrapper extends React.PureComponent {
   }
 
   handledOnSubmit = (values, form, callback) => {
-    const { onSubmit, submissionError } = this.props
-    if (submissionError !== undefined) {
+    const { onSubmit, loading } = this.props
+    if (loading !== undefined) {
       this.setState({ submitCallback: callback })
     }
     onSubmit(values, form, callback)?.then(
