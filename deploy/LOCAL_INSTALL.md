@@ -4,6 +4,7 @@
 
  - *Software:* 
    - [docker](https://docs.docker.com/install/)
+   
      - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb  
    
    - [docker-compose](https://docs.docker.com/compose/install/)       
