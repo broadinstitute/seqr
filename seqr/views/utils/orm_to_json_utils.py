@@ -263,6 +263,23 @@ def get_json_for_family_notes(notes, **kwargs):
 def get_json_for_family_note(note):
     return _get_json_for_model(note, get_json_for_models=get_json_for_family_notes)
 
+def _process_individual_result(add_sample_guids_field):
+    def _process_result(result, individual):
+        mother = result.pop('mother', None)
+        father = result.pop('father', None)
+
+        result.update({
+            'maternalGuid': mother.guid if mother else None,
+            'paternalGuid': father.guid if father else None,
+            'maternalId': mother.individual_id if mother else None,
+            'paternalId': father.individual_id if father else None,
+            'displayName': result['displayName'] or result['individualId'],
+        })
+
+        if add_sample_guids_field:
+            result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
+            result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
+    return _process_result
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
                               family_fields=None, skip_nested=False, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
@@ -280,22 +297,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
     if not individuals:
         return []
-
-    def _process_result(result, individual):
-        mother = result.pop('mother', None)
-        father = result.pop('father', None)
-
-        result.update({
-            'maternalGuid': mother.guid if mother else None,
-            'paternalGuid': father.guid if father else None,
-            'maternalId': mother.individual_id if mother else None,
-            'paternalId': father.individual_id if father else None,
-            'displayName': result['displayName'] or result['individualId'],
-        })
-
-        if add_sample_guids_field:
-            result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
-            result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
 
     kwargs = {
         'additional_model_fields': _get_case_review_fields(
@@ -323,24 +324,28 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         prefetch_related_objects(individuals, 'sample_set')
         prefetch_related_objects(individuals, 'igvsample_set')
 
-    parsed_individuals = _get_json_for_models(individuals, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
+    parsed_individuals = _get_json_for_models(individuals, user=user, is_analyst=is_analyst, process_result=_process_individual_result(add_sample_guids_field), **kwargs)
     if add_hpo_details:
-        all_hpo_ids = set()
-        for i in parsed_individuals:
-            all_hpo_ids.update([feature['id'] for feature in i.get('features') or []])
-            all_hpo_ids.update([feature['id'] for feature in i.get('absentFeatures') or []])
-        hpo_terms_by_id = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_ids)}
-        for i in parsed_individuals:
-            for feature in i.get('features') or []:
-                hpo = hpo_terms_by_id.get(feature['id'])
-                if hpo:
-                    feature.update({'category': hpo.category_id, 'label': hpo.name})
-            for feature in i.get('absentFeatures') or []:
-                hpo = hpo_terms_by_id.get(feature['id'])
-                if hpo:
-                    feature.update({'category': hpo.category_id, 'label': hpo.name})
+        _add_individual_hpo_details(parsed_individuals)
 
     return parsed_individuals
+
+
+def _add_individual_hpo_details(parsed_individuals):
+    all_hpo_ids = set()
+    for i in parsed_individuals:
+        all_hpo_ids.update([feature['id'] for feature in i.get('features') or []])
+        all_hpo_ids.update([feature['id'] for feature in i.get('absentFeatures') or []])
+    hpo_terms_by_id = {hpo.hpo_id: hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_hpo_ids)}
+    for i in parsed_individuals:
+        for feature in i.get('features') or []:
+            hpo = hpo_terms_by_id.get(feature['id'])
+            if hpo:
+                feature.update({'category': hpo.category_id, 'label': hpo.name})
+        for feature in i.get('absentFeatures') or []:
+            hpo = hpo_terms_by_id.get(feature['id'])
+            if hpo:
+                feature.update({'category': hpo.category_id, 'label': hpo.name})
 
 
 def _get_json_for_individual(individual, user=None, **kwargs):
