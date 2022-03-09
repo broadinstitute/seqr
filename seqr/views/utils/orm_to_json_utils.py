@@ -20,6 +20,21 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
 
+def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
+    fields = set(model_class._meta.json_fields)
+    if is_analyst is None:
+        is_analyst = user and user_is_analyst(user)
+    if is_analyst:
+        fields.update(getattr(model_class._meta, 'internal_json_fields', []))
+    if additional_model_fields:
+        fields.update(additional_model_fields)
+    audit_fields = [field for field in getattr(model_class._meta, 'audit_fields', set()) if field in fields]
+    for audit_field in audit_fields:
+        fields.update(get_audit_field_names(audit_field))
+
+    return fields
+
+
 def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None, process_result=None, guid_key=None, additional_model_fields=None):
     """Returns an array JSON representations of the given models.
 
@@ -37,18 +52,9 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
         return []
 
     model_class = type(models[0])
-    fields = set(model_class._meta.json_fields)
-    if is_analyst is None:
-        is_analyst = user and user_is_analyst(user)
-    if is_analyst:
-        fields.update(getattr(model_class._meta, 'internal_json_fields', []))
-    if additional_model_fields:
-        fields.update(additional_model_fields)
-    audit_fields = [field for field in getattr(model_class._meta, 'audit_fields', set()) if field in fields]
-    for audit_field in audit_fields:
-        fields.update(get_audit_field_names(audit_field))
-
+    fields = _get_model_json_fields(model_class, user, is_analyst, additional_model_fields)
     user_fields = [field for field in fields if field.endswith('last_modified_by') or field == 'created_by']
+
     for field in user_fields:
         prefetch_related_objects(models, field)
     for nested_field in nested_fields or []:
