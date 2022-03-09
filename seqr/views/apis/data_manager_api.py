@@ -25,7 +25,7 @@ from seqr.views.utils.permissions_utils import data_manager_required
 
 from seqr.models import Sample, Individual, RnaSeqOutlier
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
 logger = SeqrLogger(__name__)
 
@@ -149,7 +149,7 @@ def upload_qc_pipeline_output(request):
         dataset_type=dataset_type,
     ).exclude(
         individual__family__project__name__in=EXCLUDE_PROJECTS
-    ).exclude(individual__family__project__projectcategory__name=DEMO_PROJECT_CATEGORY)
+    ).exclude(individual__family__project__is_demo=True)
 
     sample_individuals = {
         agg['sample_id']: agg['individuals'] for agg in
@@ -175,7 +175,7 @@ def upload_qc_pipeline_output(request):
     if missing_sample_ids:
         individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
             family__project__name__in=EXCLUDE_PROJECTS).exclude(
-            family__project__projectcategory__name=DEMO_PROJECT_CATEGORY).filter(
+            family__project__is_demo=True).filter(
             sample__sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS).distinct()
         individual_db_ids_by_id = defaultdict(list)
         for individual in individuals:
