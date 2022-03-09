@@ -4,7 +4,7 @@ from collections import defaultdict
 from copy import deepcopy
 from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.core.exceptions import MultipleObjectsReturned
+from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
 from django.db.utils import IntegrityError
 from django.db.models import Q, prefetch_related_objects
 from math import ceil
@@ -246,7 +246,8 @@ def get_variant_gene_breakdown(request, search_hash):
 def export_variants_handler(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
 
-    _check_results_permission(results_model, request.user)
+    _check_results_permission(
+        results_model, request.user, project_perm_check=lambda project: (not project.is_demo) or project.all_user_demo)
 
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
@@ -461,11 +462,13 @@ def delete_saved_search_handler(request, saved_search_guid):
     return create_json_response({'savedSearchesByGuid': {saved_search_guid: None}})
 
 
-def _check_results_permission(results_model, user):
+def _check_results_permission(results_model, user, project_perm_check=None):
     families = results_model.families.prefetch_related('project').all()
     projects = {family.project for family in families}
     for project in projects:
         check_project_permissions(project, user)
+        if project_perm_check and not project_perm_check(project):
+            raise PermissionDenied()
 
 
 def _get_search_context(results_model):
