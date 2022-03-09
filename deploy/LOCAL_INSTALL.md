@@ -43,7 +43,7 @@ open http://localhost     # open the seqr landing page in your browser. Log in t
 
 Updating your local installation of seqr involves pulling the latest version of the seqr docker container, and then recreating the container.
 
-```
+```bash
 # run this from the directory containing your docker-compose.yml file
 docker-compose pull
 docker-compose up -d seqr
