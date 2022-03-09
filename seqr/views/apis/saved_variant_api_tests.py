@@ -916,8 +916,8 @@ def assert_no_list_ws_has_al(self, acl_call_count):
 class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    def test_saved_variant_data(self):
-        super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
+    def test_saved_variant_data(self, *args):
+        super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
         assert_no_list_ws_has_al(self, 12)
 
     def test_create_saved_variant(self):
@@ -977,8 +977,8 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    def test_saved_variant_data(self):
-        super(MixSavedVariantAPITest, self).test_saved_variant_data()
+    def test_saved_variant_data(self, *args):
+        super(MixSavedVariantAPITest, self).test_saved_variant_data(*args)
         assert_no_list_ws_has_al(self, 3)
 
     def test_create_saved_variant(self):
