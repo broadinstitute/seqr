@@ -49,7 +49,7 @@ def get_parsed_feature(feature, feature_id=None, additional_fields=None):
     return feature_json
 
 
-def update_phenotips_fields(apps, schema_editor):
+def update_phenotips_fields(apps, schema_editor): # noqa: MC0001
     Individual = apps.get_model("seqr", "Individual")
     HumanPhenotypeOntology = apps.get_model("reference_data", "HumanPhenotypeOntology")
     Omim = apps.get_model("reference_data", "Omim")
@@ -151,7 +151,7 @@ def update_phenotips_fields(apps, schema_editor):
                 len(miscarriages), ', '.join(miscarriages)))
 
 
-def _update_individual_phenotips_fields(indiv, phenotips_json):
+def _update_individual_phenotips_fields(indiv, phenotips_json): # noqa: MC0001
     if phenotips_json.get('date_of_birth'):
         indiv.birth_year = datetime.strptime(phenotips_json['date_of_birth'], '%Y-%m-%d').year
     if phenotips_json.get('life_status') == 'deceased':

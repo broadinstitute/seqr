@@ -675,68 +675,11 @@ class EsSearch(object):
         index_family_samples = self.samples_by_family_index[index_name]
         is_sv = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_SV_CALLS
 
-        if hasattr(raw_hit.meta, 'matched_queries'):
-            family_guids = list(raw_hit.meta.matched_queries)
-        elif self._return_all_queried_families:
-            family_guids = list(index_family_samples.keys())
-        else:
-            # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
-            alt_allele_samples = set()
-            for alt_samples_field in HAS_ALT_FIELD_KEYS:
-                if alt_samples_field in hit:
-                    alt_allele_samples.update(hit[alt_samples_field])
-
-            if self._any_affected_sample_filters:
-                # If using the any inheritance filter only include matched families
-                def _is_matched_sample(family_guid, sample):
-                    return self._family_individual_affected_status[family_guid][sample.individual.guid] == \
-                           Individual.AFFECTED_STATUS_AFFECTED
-            else:
-                _is_matched_sample = lambda *args: True
-
-            family_guids = [family_guid for family_guid, samples_by_id in index_family_samples.items()
-                            if any(sample_id in alt_allele_samples and _is_matched_sample(family_guid, sample)
-                                   for sample_id, sample in samples_by_id.items())]
-
-        genotypes = {}
-        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
-        for family_guid in family_guids:
-            samples_by_id = index_family_samples[family_guid]
-            for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
-                sample = samples_by_id.get(genotype_hit['sample_id'])
-                if sample:
-                    genotype_hit['sample_type'] = sample.sample_type
-                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
-
-            if len(samples_by_id) != len(genotypes) and is_sv:
-                # Family members with no variants are not included in the SV index
-                for sample_id, sample in samples_by_id.items():
-                    if sample.individual.guid not in genotypes:
-                        genotypes[sample.individual.guid] = _get_field_values(
-                            {'sample_id': sample_id}, genotype_fields_config)
-                        genotypes[sample.individual.guid]['isRef'] = True
-                        genotypes[sample.individual.guid]['cn'] = \
-                            1 if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE else 2
+        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, is_sv)
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if is_sv and genotypes and any(not gen.get('isRef') for gen in genotypes.values()) and all(
-                (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
-            for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
-                gen_field = conf.get('genotype_field', field)
-                val = conf['select_val']([
-                    gen.get(gen_field) or hit.get(field) for gen in genotypes.values() if not gen.get('isRef')
-                ])
-                if val != hit.get(field):
-                    hit[field] = val
-                    if field == 'start':
-                        hit['xpos'] = get_xpos(hit['contig'], val)
-
-            for gen in genotypes.values():
-                for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
-                    gen_field = conf.get('genotype_field', field)
-                    compare_func = conf.get('equal') or (lambda a, b: a == b)
-                    if compare_func(gen.get(gen_field), hit[field]):
-                        gen[gen_field] = None
+        if is_sv and genotypes:
+            self._set_sv_genotype_coords(genotypes, hit)
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -746,28 +689,7 @@ class EsSearch(object):
         if hasattr(raw_hit.meta, 'sort'):
             result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
-
-        genome_version = self.index_metadata[index_name]['genomeVersion']
-        lifted_over_genome_version = None
-        lifted_over_chrom = None
-        lifted_over_pos = None
-        grch37_locus = result.pop(GRCH38_LOCUS_FIELD, None)
-        if genome_version == GENOME_VERSION_GRCh38:
-            if grch37_locus:
-                lifted_over_genome_version = GENOME_VERSION_GRCh37
-                lifted_over_chrom = grch37_locus['contig']
-                lifted_over_pos = grch37_locus['position']
-            else:
-                # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
-                liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
-                if liftover_grch38_to_grch37:
-                    grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
-                        'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
-                    )
-                    if grch37_coord and grch37_coord[0]:
-                        lifted_over_genome_version = GENOME_VERSION_GRCh37
-                        lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
-                        lifted_over_pos = grch37_coord[0][1]
+        self._parse_genome_versions(result, index_name, hit)
 
         populations = {
             population: _get_field_values(
@@ -796,10 +718,6 @@ class EsSearch(object):
         result.update({
             'familyGuids': sorted(family_guids),
             'genotypes': genotypes,
-            'genomeVersion': genome_version,
-            'liftedOverGenomeVersion': lifted_over_genome_version,
-            'liftedOverChrom': lifted_over_chrom,
-            'liftedOverPos': lifted_over_pos,
             'mainTranscriptId': main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
@@ -808,6 +726,103 @@ class EsSearch(object):
             'transcripts': dict(transcripts),
         })
         return result
+
+    def _parse_genotypes(self, raw_hit, hit, index_family_samples, is_sv):
+        if hasattr(raw_hit.meta, 'matched_queries'):
+            family_guids = list(raw_hit.meta.matched_queries)
+        elif self._return_all_queried_families:
+            family_guids = list(index_family_samples.keys())
+        else:
+            # Searches for all inheritance and all families do not filter on inheritance so there are no matched_queries
+            alt_allele_samples = set()
+            for alt_samples_field in HAS_ALT_FIELD_KEYS:
+                if alt_samples_field in hit:
+                    alt_allele_samples.update(hit[alt_samples_field])
+
+            if self._any_affected_sample_filters:
+                # If using the any inheritance filter only include matched families
+                def _is_matched_sample(family_guid, sample):
+                    return self._family_individual_affected_status[family_guid][sample.individual.guid] == \
+                           Individual.AFFECTED_STATUS_AFFECTED
+            else:
+                _is_matched_sample = lambda *args: True
+
+            family_guids = [family_guid for family_guid, samples_by_id in index_family_samples.items()
+                if any(sample_id in alt_allele_samples and _is_matched_sample(family_guid, sample)
+                       for sample_id, sample in samples_by_id.items())]
+
+        genotypes = {}
+        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
+        for family_guid in family_guids:
+            samples_by_id = index_family_samples[family_guid]
+            for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
+                sample = samples_by_id.get(genotype_hit['sample_id'])
+                if sample:
+                    genotype_hit['sample_type'] = sample.sample_type
+                    genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
+
+            if len(samples_by_id) != len(genotypes) and is_sv:
+                # Family members with no variants are not included in the SV index
+                for sample_id, sample in samples_by_id.items():
+                    if sample.individual.guid not in genotypes:
+                        genotypes[sample.individual.guid] = _get_field_values(
+                            {'sample_id': sample_id}, genotype_fields_config)
+                        genotypes[sample.individual.guid]['isRef'] = True
+                        genotypes[sample.individual.guid]['cn'] = \
+                            1 if hit['contig'] == 'X' and sample.individual.sex == Individual.SEX_MALE else 2
+
+        return family_guids, genotypes
+
+    @classmethod
+    def _set_sv_genotype_coords(cls, genotypes, hit):
+        # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
+        if any(not gen.get('isRef') for gen in genotypes.values()) and all(
+                (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
+            for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                gen_field = conf.get('genotype_field', field)
+                val = conf['select_val']([
+                    gen.get(gen_field) or hit.get(field) for gen in genotypes.values() if not gen.get('isRef')
+                ])
+                if val != hit.get(field):
+                    hit[field] = val
+                    if field == 'start':
+                        hit['xpos'] = get_xpos(hit['contig'], val)
+
+            for gen in genotypes.values():
+                for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
+                    gen_field = conf.get('genotype_field', field)
+                    compare_func = conf.get('equal') or (lambda a, b: a == b)
+                    if compare_func(gen.get(gen_field), hit[field]):
+                        gen[gen_field] = None
+
+    def _parse_genome_versions(self, result, index_name, hit):
+        genome_version = self.index_metadata[index_name]['genomeVersion']
+        lifted_over_genome_version = None
+        lifted_over_chrom = None
+        lifted_over_pos = None
+        grch37_locus = result.pop(GRCH38_LOCUS_FIELD, None)
+        if genome_version == GENOME_VERSION_GRCh38:
+            if grch37_locus:
+                lifted_over_genome_version = GENOME_VERSION_GRCh37
+                lifted_over_chrom = grch37_locus['contig']
+                lifted_over_pos = grch37_locus['position']
+            else:
+                # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
+                liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+                if liftover_grch38_to_grch37:
+                    grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
+                        'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
+                    )
+                    if grch37_coord and grch37_coord[0]:
+                        lifted_over_genome_version = GENOME_VERSION_GRCh37
+                        lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
+                        lifted_over_pos = grch37_coord[0][1]
+        result.update({
+            'genomeVersion': genome_version,
+            'liftedOverGenomeVersion': lifted_over_genome_version,
+            'liftedOverChrom': lifted_over_chrom,
+            'liftedOverPos': lifted_over_pos,
+        })
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:
