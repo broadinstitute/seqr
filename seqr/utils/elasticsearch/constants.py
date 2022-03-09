@@ -220,6 +220,14 @@ SORT_FIELDS = {
             }
         },
     }],
+    'size': [{
+        '_script': {
+            'type': 'number',
+            'script': {
+               'source': "doc['start'].value - doc['end'].value"
+            }
+        }
+    }],
     XPOS_SORT_KEY: ['xpos'],
 }
 POPULATION_SORTS = {
