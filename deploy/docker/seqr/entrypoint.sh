@@ -4,9 +4,9 @@ set -x
 
 env
 
-echo SHELL: $SHELL
-echo PATH: $PATH
-echo PYTHONPATH: $PYTHONPATH
+echo SHELL: "$SHELL"
+echo PATH: "$PATH"
+echo PYTHONPATH: "$PYTHONPATH"
 
 # init gcloud
 if [ "$GCLOUD_PROJECT" ]; then
@@ -62,6 +62,7 @@ python -u manage.py check
 
 if [ "$RUN_CRON_JOBS" ]; then
     # set up cron jobs
+    # shellcheck disable=SC2016
     echo 'SHELL=/bin/bash
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_omim --omim-key=$OMIM_KEY >> /proc/1/fd/1 2>&1
 0 0 * * 0 /usr/local/bin/python /seqr/manage.py update_human_phenotype_ontology >> /proc/1/fd/1 2>&1
