@@ -31,7 +31,7 @@ body {
 
 .ui.search .prompt {
   border: 1px solid #85B7D9;
-  border-radius: .35rem !important;
+  border-radius: .35rem !important; /* csslint allow: important */
 }
 
 .ui.search .ui.input input {
