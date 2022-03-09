@@ -14,11 +14,6 @@ body {
   max-width: 350px;
 }
 
-.ui.search .prompt {
-  border: 1px solid #85B7D9;
-  border-radius: .35rem !important; /* csslint allow: important */
-}
-
 .ui.search .ui.input input {
   padding: 0.3em 1em;
 }
@@ -43,7 +38,7 @@ body {
 }
 
 .ui.search .results .message .header {
-  color: #333333;
+  color: #333;
   font-weight: 400;
 }
 

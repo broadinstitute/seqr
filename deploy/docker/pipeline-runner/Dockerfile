@@ -38,7 +38,7 @@ ENV PYTHON_VERSION="3.7.1"
 RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz \
 	&& tar xvf Python-${PYTHON_VERSION}.tar.xz \
 	&& rm Python-${PYTHON_VERSION}.tar.xz
-WORKDIR ./Python-${PYTHON_VERSION}
+WORKDIR /Python-${PYTHON_VERSION}
 RUN ./configure --enable-optimizations \
     && make install \
     && make clean
@@ -99,7 +99,7 @@ RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
 # clone and hail-elasticsearch-pipelines repo
 RUN git clone https://github.com/broadinstitute/hail-elasticsearch-pipelines.git
-WORKDIR ./hail-elasticsearch-pipelines
+WORKDIR /hail-elasticsearch-pipelines
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
 
