@@ -89,7 +89,7 @@ def process_jinja_template(input_base_dir, relative_file_path, template_variable
             ostream.write(yaml_string)
     except Exception as e:
         logger.error("Couldn't write out %s" % relative_file_path)
-        raise
+        raise e
 
     #os.chmod(output_file_path, 0x777)
     logger.info("-- wrote out %s" % output_file_path)

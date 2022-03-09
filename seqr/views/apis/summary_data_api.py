@@ -3,7 +3,7 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Family, VariantTagType, SavedVariant, RnaSeqTpm
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_matchmaker_submissions
+from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import get_variants_response

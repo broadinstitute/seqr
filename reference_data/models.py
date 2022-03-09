@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.postgres import fields as postgres_fields
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
