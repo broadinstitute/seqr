@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Return hom alt SNPs in trans with Deletions as compound hets
 
 ## 3/2/22
 * Update seqr dockerfile to improve immutability and build automation (REQUIRES IMAGE UPDATE)

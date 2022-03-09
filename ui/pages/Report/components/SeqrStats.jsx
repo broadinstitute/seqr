@@ -4,26 +4,37 @@ import PropTypes from 'prop-types'
 import { Header, Table } from 'semantic-ui-react'
 
 import DataLoader from 'shared/components/DataLoader'
+import { DATASET_TITLE_LOOKUP } from 'shared/utils/constants'
 import { getSeqrStatsLoading, getSeqrStatsLoadingError, getSeqrStats } from '../selectors'
 import { loadSeqrStats } from '../reducers'
 
 const SeqrStats = React.memo(({ stats, error, loading, load }) => (
   <div>
-    <Header size="medium" content="Seqr Stats:" subheader="NOTE: counts are based on the total number of unique family/individual/sample ids" />
+    <Header size="large" content="Seqr Stats:" />
     <DataLoader load={load} content={Object.keys(stats).length} loading={loading} errorMessage={error}>
       <Table collapsing basic="very">
-        <Table.Row>
-          <Table.Cell textAlign="right"><b>Families</b></Table.Cell>
-          <Table.Cell>{stats.familyCount}</Table.Cell>
-        </Table.Row>
-        <Table.Row>
-          <Table.Cell textAlign="right"><b>Individuals</b></Table.Cell>
-          <Table.Cell>{stats.individualCount}</Table.Cell>
-        </Table.Row>
-        {Object.entries(stats.sampleCountByType || {}).map(([sampleType, count]) => (
-          <Table.Row key={sampleType}>
-            <Table.Cell textAlign="right"><b>{`${sampleType} samples`}</b></Table.Cell>
-            <Table.Cell>{count}</Table.Cell>
+        <Table.Header>
+          <Table.Row>
+            <Table.HeaderCell />
+            <Table.HeaderCell content="Internal Projects" />
+            <Table.HeaderCell content="External AnVIL Projects" />
+          </Table.Row>
+        </Table.Header>
+        {['Projects', 'Families', 'Individuals'].map(field => (
+          <Table.Row key={field}>
+            <Table.HeaderCell textAlign="right" content={field} />
+            <Table.Cell content={stats[`${field.toLowerCase()}Count`]?.internal} />
+            <Table.Cell content={stats[`${field.toLowerCase()}Count`]?.external} />
+          </Table.Row>
+        ))}
+        {Object.keys(stats.sampleCountsByType || {}).sort().map(sampleTypes => (
+          <Table.Row key={sampleTypes}>
+            <Table.HeaderCell
+              textAlign="right"
+              content={`${sampleTypes.split('__')[0]}${DATASET_TITLE_LOOKUP[sampleTypes.split('__')[1]] || ''} samples`}
+            />
+            <Table.Cell content={stats.sampleCountsByType[sampleTypes].internal} />
+            <Table.Cell content={stats.sampleCountsByType[sampleTypes].external} />
           </Table.Row>
         ))}
       </Table>

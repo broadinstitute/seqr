@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
 from django.core.exceptions import PermissionDenied
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count
 from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
@@ -22,7 +22,7 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import AIRTABLE_API_KEY, AIRTABLE_URL
+from settings import AIRTABLE_API_KEY, AIRTABLE_URL, ANALYST_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -33,22 +33,37 @@ HEMI = 'Hemizygous'
 
 @analyst_required
 def seqr_stats(request):
-
-    families_count = Family.objects.only('family_id').distinct('family_id').count()
-    individuals_count = Individual.objects.only('individual_id').distinct('individual_id').count()
-
-    sample_counts = defaultdict(set)
-    for sample in Sample.objects.filter(is_active=True).only('sample_id', 'sample_type'):
-        sample_counts[sample.sample_type].add(sample.sample_id)
-
-    for sample_type, sample_ids_set in sample_counts.items():
-        sample_counts[sample_type] = len(sample_ids_set)
+    internal_samples_counts = _get_sample_counts(
+        Sample.objects.filter(individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY))
+    external_samples_counts = _get_sample_counts(
+        Sample.objects.exclude(individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY))
+    grouped_sample_counts = defaultdict(dict)
+    for k, v in internal_samples_counts.items():
+        grouped_sample_counts[k]['internal'] = v
+    for k, v in external_samples_counts.items():
+        grouped_sample_counts[k]['external'] = v
 
     return create_json_response({
-        'familyCount': families_count,
-        'individualCount': individuals_count,
-        'sampleCountByType': sample_counts,
+        'projectsCount': {
+            'internal': Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+            'external': Project.objects.exclude(projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+        },
+        'familiesCount': {
+            'internal': Family.objects.filter(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+            'external': Family.objects.exclude(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+        },
+        'individualsCount': {
+            'internal': Individual.objects.filter(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+            'external': Individual.objects.exclude(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+        },
+        'sampleCountsByType': grouped_sample_counts,
     })
+
+def _get_sample_counts(sample_q):
+    samples_agg = sample_q.filter(is_active=True).values('sample_type', 'dataset_type').annotate(count=Count('*'))
+    return {
+        f'{sample_agg["sample_type"]}__{sample_agg["dataset_type"]}': sample_agg['count'] for sample_agg in samples_agg
+    }
 
 
 SUBJECT_TABLE_COLUMNS = [
