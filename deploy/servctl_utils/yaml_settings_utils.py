@@ -15,7 +15,7 @@ def _parse_jinja_template(jinja_template_path, template_variables):
         try:
             jinja_template_contents = jinja_template_file.read()
             yaml_string = jinja2.Template(jinja_template_contents).render(template_variables)
-        except TypeError as e:
+        except TypeError:
             raise ValueError('unable to render file: %(e)s' % locals())
 
     return yaml_string
@@ -46,7 +46,7 @@ def load_settings(settings_file_paths, settings=None):
 
         try:
             settings_from_this_file = yaml.load(yaml_string) # nosec
-        except yaml.parser.ParserError as e:
+        except yaml.parser.ParserError:
             raise ValueError('Unable to parse yaml file %(settings_path)s: %(e)s' % locals())
 
         if not settings_from_this_file:

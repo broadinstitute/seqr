@@ -22,7 +22,7 @@ class Command(BaseCommand):
         source_project = Project.objects.get(Q(name=source_project_name) | Q(guid=source_project_name))
 
         target_project = Project.objects.get(Q(name=target_project_name) | Q(guid=target_project_name))
-        
+
         tags = VariantTagType.objects.filter(project=source_project)
         
         for tag in tags:
@@ -31,4 +31,3 @@ class Command(BaseCommand):
             tag.project = target_project
             tag.save()
             logger.info('Saved tag %s (new id = %d)' % (tag.name, tag.id))
-
