@@ -76,8 +76,8 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         is_updated = update_individual_from_json(individual, update, user=user)
         if is_updated:
             updated_individuals.add(individual)
-            if family.pedigree_image:
-                updated_families.add(family)
+            if individual.family.pedigree_image:
+                updated_families.add(individual.family)
 
     _remove_pedigree_images(updated_families, user)
 
