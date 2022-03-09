@@ -3,7 +3,7 @@ import os
 import random
 import re
 import string
-import subprocess
+import subprocess # nosec
 
 from ssl import create_default_context
 

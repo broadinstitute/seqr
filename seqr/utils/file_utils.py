@@ -1,5 +1,5 @@
 import os
-import subprocess
+import subprocess # nosec
 
 from seqr.utils.logging_utils import SeqrLogger
 

@@ -30,7 +30,7 @@ RUN install_packages default-jdk
 # install python3.7 (adds 800Mb)
 RUN apt-get update \
 	&& apt-get dist-upgrade -y \
-	&& apt-get install -y python-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev libssl-dev openssl libffi-dev
+	&& apt-get install -y --no-install-recommends python-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev libssl-dev openssl libffi-dev
 
 ENV PYTHON_VERSION="3.7.1"
 RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz \

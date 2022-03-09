@@ -105,7 +105,7 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
             # do an initial save to generate the self.pk id which is then used when computing self._compute_guid()
             # Temporarily set guid to a randint to avoid a brief window when guid="". Otherwise guid uniqueness errors
             # can occur if 2 objects are being created simultaneously and both attempt to save without setting guid.
-            temp_guid = str(random.randint(10**10, 10**11))
+            temp_guid = str(random.randint(10**10, 10**11)) # nosec
             self.guid = kwargs.pop('guid', temp_guid)
             # allows for overriding created_date during save, but this should only be used for migrations
             self.created_date = kwargs.pop('created_date', current_time)

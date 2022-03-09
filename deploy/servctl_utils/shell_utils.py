@@ -1,6 +1,6 @@
 import logging
 import os
-import subprocess
+import subprocess # nosec
 import sys
 from io import StringIO
 
