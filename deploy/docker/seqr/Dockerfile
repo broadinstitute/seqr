@@ -9,16 +9,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bzip2 \
     curl \
     gcc \
+    # git needed for the nodejs install
+    git \
     libc6-dev \
     libpq-dev \
-    nodejs \
-    npm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# install nodejs14 repo since debian is still on node 12.x
+RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
+# installs the nodejs and npm packages
+RUN apt-get install -y --no-install-recommends \
+    nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
 
@@ -29,13 +37,19 @@ RUN pip install --no-cache-dir wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     ln -s python3 /opt/venv/bin/python3.7
 
-WORKDIR /build
+WORKDIR /build/
+COPY ./ui/package.json ./ui/package.json
+COPY ./ui/package-lock.json ./ui/package-lock.json
+WORKDIR /build/ui
+RUN git config --global url."https://github.com/".insteadOf git@github.com: \
+    && git config --global url."https://".insteadOf ssh:// \
+    && npm ci
 
+WORKDIR /build/
 COPY ./ui ./ui
 
 WORKDIR /build/ui
-RUN npm ci && \
-    npm run build
+RUN npm run build
 
 FROM python:3.7-slim-bullseye as runtime
 
