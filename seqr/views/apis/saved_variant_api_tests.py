@@ -648,7 +648,7 @@ class SavedVariantAPITest(object):
                 COMPOUND_HET_2_GUID: {'noteGuids': [new_gene_note_guid]}
             },
             'variantNotesByGuid': {new_note_guid: None}})
-        
+
         # check that variant_note was deleted
         new_variant_note = VariantNote.objects.filter(guid=new_note_guid)
         self.assertEqual(len(new_variant_note), 0)

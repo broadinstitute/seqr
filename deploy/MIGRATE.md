@@ -18,11 +18,11 @@ This README describes steps for migrating an older seqr instance.
    ```
     
 1. Update gene-level reference datasets:
-    ```bash
-    psql -U postgres postgres -c "drop database reference_data_db"
-    psql -U postgres postgres -c "create database reference_data_db"
-    REFERENCE_DATA_BACKUP_FILE=gene_reference_data_backup.gz
-    wget -N https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz -O ${REFERENCE_DATA_BACKUP_FILE}
-    psql -U postgres reference_data_db <  <(gunzip -c ${REFERENCE_DATA_BACKUP_FILE})
-    rm ${REFERENCE_DATA_BACKUP_FILE}
-    ```
+   ```bash
+   psql -U postgres postgres -c "drop database reference_data_db"
+   psql -U postgres postgres -c "create database reference_data_db"
+   REFERENCE_DATA_BACKUP_FILE=gene_reference_data_backup.gz
+   wget -N https://storage.googleapis.com/seqr-reference-data/gene_reference_data_backup.gz -O ${REFERENCE_DATA_BACKUP_FILE}
+   psql -U postgres reference_data_db <  <(gunzip -c ${REFERENCE_DATA_BACKUP_FILE})
+   rm ${REFERENCE_DATA_BACKUP_FILE}
+   ```

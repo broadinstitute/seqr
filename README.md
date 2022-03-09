@@ -1,4 +1,3 @@
-
 # seqr
 
 ![Unit Tests](https://github.com/broadinstitute/seqr/workflows/Unit%20Tests/badge.svg?branch=master) | ![Local Install Tests](https://github.com/broadinstitute/seqr/workflows/local%20install%20tests/badge.svg?branch=master)
@@ -31,7 +30,6 @@ For notes on how to update an older instance, see
 
 [Update/Migration Instructions](deploy/MIGRATE.md)
 
-
 ## Contributing to seqr
 
 (Note: section inspired by, and some text copied from, [GATK](https://github.com/broadinstitute/gatk#contribute))
@@ -47,17 +45,17 @@ For larger features, feel free to discuss your ideas or approach in our
 
 To contribute code:
 
-* Submit a GitHub pull request against the master branch.
+- Submit a GitHub pull request against the master branch.
 
-* Break your work into small, single-purpose patches whenever possible. 
+- Break your work into small, single-purpose patches whenever possible. 
 However, do not break apart features to the point that they are not functional 
 (i.e. updates that require changes to both front end and backend code should be submitted as a single change)
 
-* For larger features, add a detailed description to the pull request to explain the changes and your approach
+- For larger features, add a detailed description to the pull request to explain the changes and your approach
 
-* Make sure that your code passes all our tests and style linting
+- Make sure that your code passes all our tests and style linting
 
-* Add unit tests for all new python code you've written
+- Add unit tests for all new python code you've written
 
 We tend to do fairly close readings of pull requests, and you may get a lot of comments.
 

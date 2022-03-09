@@ -24,7 +24,7 @@ class Command(BaseCommand):
         target_project = Project.objects.get(Q(name=target_project_name) | Q(guid=target_project_name))
 
         tags = VariantTagType.objects.filter(project=source_project)
-        
+
         for tag in tags:
             tag.pk = None
             tag.id = None

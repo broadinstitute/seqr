@@ -1,4 +1,3 @@
-
 #### Prerequisites
  - *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
 
@@ -12,15 +11,15 @@
    - [gcloud](https://cloud.google.com/sdk/install)
 
 - OS settings for elasticsearch:
-    - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
-       ```
-       echo '
-       vm.max_map_count=262144
-       ' | sudo tee -a /etc/sysctl.conf
-         
-       sudo sysctl -w vm.max_map_count=262144
-       ```
-       This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+   - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
+      ```
+      echo '
+      vm.max_map_count=262144
+      ' | sudo tee -a /etc/sysctl.conf
+        
+      sudo sysctl -w vm.max_map_count=262144
+      ```
+      This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
     
 
 #### Starting seqr
@@ -150,7 +149,6 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 1. Go to the project page
 1. Click on Edit Datasets
 1. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
-
 
 #### Enable read viewing in the browser (optional): 
 
