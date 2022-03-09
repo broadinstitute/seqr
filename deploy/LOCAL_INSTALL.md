@@ -59,12 +59,12 @@ Google Dataproc makes it easy to start a spark cluster which can be used to para
 The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
 
 1. authenticate into your google cloud account.
-   ```
+   ```bash
    gcloud auth application-default login  
    ```
 
 1. upload your .vcf.gz callset to a google bucket
-   ```
+   ```bash
    GS_BUCKET=gs://your-bucket       # your google bucket
    GS_FILE_PATH=data/GRCh38         # the desired file path. Good to include build version and/ or sample type to directory structure
    FILENAME=your-callset.vcf.gz     # the local file you want to load  
@@ -73,14 +73,14 @@ The steps below describe how to annotate a callset and then load it into your on
    ```
    
 1. start a pipeline-runner container which has the necessary tools and environment for starting and submitting jobs to a Dataproc cluster.
-   ```
+   ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
    
 1. if you haven't already, upload reference data to your own google bucket. 
 This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
 This is expected to take a while
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
     
    docker-compose exec pipeline-runner copy_reference_data_to_gs.sh $BUILD_VERSION $GS_BUCKET
@@ -88,7 +88,7 @@ This is expected to take a while
    ``` 
    
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
    SAMPLE_TYPE=WES                  # can be WES or WGS
    INDEX_NAME=your-dataset-name     # the desired index name to output. Will be used later to link the data to the corresponding seqr project
@@ -107,7 +107,7 @@ The steps below describe how to annotate a callset and then load it into your on
 
 1. create a directory for your vcf files. docker-compose will mount this directory into the pipeline-runner container.
 
-   ```
+   ```bash
    mkdir ./data/input_vcfs/ 
     
    FILE_PATH=GRCh38                 # the desired file path. Good to include build version and/ or sample type to directory structure
@@ -117,14 +117,14 @@ The steps below describe how to annotate a callset and then load it into your on
    ```
 
 1. start a pipeline-runner container
-   ```
+   ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
    
 1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 
 This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
 This is expected to take a while
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
     
    docker-compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
@@ -132,7 +132,7 @@ This is expected to take a while
    ``` 
 
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
    SAMPLE_TYPE=WES                  # can be WES or WGS
    INDEX_NAME=your-dataset-name     # the desired index name to output. Will be used later to link the data to the corresponding seqr project
