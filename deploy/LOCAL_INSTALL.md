@@ -1,25 +1,25 @@
 #### Prerequisites
- - *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
+- *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
 
- - *Software:* 
-   - [docker](https://docs.docker.com/install/)
+- *Software:* 
+  - [docker](https://docs.docker.com/install/)
    
-     - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb  
+    - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb
+    
+  - [docker-compose](https://docs.docker.com/compose/install/)       
    
-   - [docker-compose](https://docs.docker.com/compose/install/)       
-   
-   - [gcloud](https://cloud.google.com/sdk/install)
+  - [gcloud](https://cloud.google.com/sdk/install)
 
 - OS settings for elasticsearch:
-   - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
-      ```
-      echo '
+  - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
+   ```bash
+   echo '
       vm.max_map_count=262144
-      ' | sudo tee -a /etc/sysctl.conf
-        
-      sudo sysctl -w vm.max_map_count=262144
-      ```
-      This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+   ' | sudo tee -a /etc/sysctl.conf
+       
+   sudo sysctl -w vm.max_map_count=262144
+   ```
+   This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
     
 
 #### Starting seqr
@@ -62,6 +62,7 @@ The steps below describe how to annotate a callset and then load it into your on
    ```
    gcloud auth application-default login  
    ```
+
 1. upload your .vcf.gz callset to a google bucket
    ```
    GS_BUCKET=gs://your-bucket       # your google bucket
@@ -142,7 +143,7 @@ This is expected to take a while
    
    ``` 
 
-#### Adding a loaded dataset to a seqr project.
+#### Adding a loaded dataset to a seqr project
 
 After the dataset is loaded into elasticsearch, it can be added to your seqr project with these steps:
 
@@ -150,6 +151,6 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 1. Click on Edit Datasets
 1. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
 
-#### Enable read viewing in the browser (optional): 
+#### Enable read viewing in the browser (optional)
 
 To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](https://github.com/broadinstitute/seqr/blob/master/deploy/READVIZ_SETUP.md)**      
