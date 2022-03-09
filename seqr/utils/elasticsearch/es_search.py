@@ -837,55 +837,7 @@ class EsSearch(object):
 
         compound_het_pairs_by_gene = {}
         for gene_agg in response.aggregations.genes.buckets:
-            gene_variants = [self._parse_hit(hit) for hit in gene_agg['vars_by_gene']]
-            gene_id = gene_agg['key']
-
-            if gene_id in compound_het_pairs_by_gene:
-                continue
-
-            # Variants are returned if any transcripts have the filtered consequence, but to be compound het
-            # the filtered consequence needs to be present in at least one transcript in the gene of interest
-            if self._allowed_consequences:
-                for variant in gene_variants:
-                    variant['gene_consequences'] = {}
-                    for k, transcripts in variant['transcripts'].items():
-                        variant['gene_consequences'][k] = [
-                            transcript['majorConsequence'] for transcript in transcripts if transcript.get('majorConsequence')
-                        ]
-                        if variant.get('svType'):
-                            variant['gene_consequences'][k].append(variant['svType'])
-
-                gene_variants = [variant for variant in gene_variants if any(
-                    consequence in self._allowed_consequences + (self._allowed_consequences_secondary or [])
-                    for consequence in variant['gene_consequences'].get(gene_id, [])
-                )]
-
-            if len(gene_variants) < 2:
-                continue
-
-            # Do not include groups multiple times if identical variants are in the same multiple genes
-            if any((not variant['mainTranscriptId']) or all(t['transcriptId'] != variant['mainTranscriptId']
-                       for t in variant['transcripts'][gene_id]) for variant in gene_variants):
-                if not self._is_primary_compound_het_gene(gene_id, gene_variants, compound_het_pairs_by_gene):
-                    continue
-
-            family_compound_het_pairs = defaultdict(list)
-            for variant in gene_variants:
-                for family_guid in variant['familyGuids']:
-                    family_compound_het_pairs[family_guid].append(variant)
-
-            self._filter_invalid_family_compound_hets(gene_id, family_compound_het_pairs, family_unaffected_individual_guids)
-
-            gene_compound_het_pairs = [ch_pair for ch_pairs in family_compound_het_pairs.values() for ch_pair in ch_pairs]
-            for compound_het_pair in gene_compound_het_pairs:
-                for variant in compound_het_pair:
-                    variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
-                                              if len(family_compound_het_pairs[family_guid]) > 0]
-                    variant.pop('gene_consequences', None)
-            gene_compound_het_pairs = [compound_het_pair for compound_het_pair in gene_compound_het_pairs
-                                       if compound_het_pair[0]['familyGuids'] and compound_het_pair[1]['familyGuids']]
-            if gene_compound_het_pairs:
-                compound_het_pairs_by_gene[gene_id] = gene_compound_het_pairs
+            self._parse_compound_het_gene(gene_agg, compound_het_pairs_by_gene, family_unaffected_individual_guids)
 
         total_compound_het_results = sum(len(compound_het_pairs) for compound_het_pairs in compound_het_pairs_by_gene.values())
         logger.info('Total compound het hits: {}'.format(total_compound_het_results), self._user)
@@ -894,6 +846,47 @@ class EsSearch(object):
         for k, compound_het_pairs in compound_het_pairs_by_gene.items():
             compound_het_results.extend([{k: compound_het_pair} for compound_het_pair in compound_het_pairs])
         return compound_het_results, total_compound_het_results
+
+    def _parse_compound_het_gene(self, gene_agg, compound_het_pairs_by_gene, family_unaffected_individual_guids):
+        gene_variants = [self._parse_hit(hit) for hit in gene_agg['vars_by_gene']]
+        gene_id = gene_agg['key']
+
+        if gene_id in compound_het_pairs_by_gene:
+            return
+
+        # Variants are returned if any transcripts have the filtered consequence, but to be compound het
+        # the filtered consequence needs to be present in at least one transcript in the gene of interest
+        if self._allowed_consequences:
+            gene_variants = self._filter_invalid_annotation_compound_hets(gene_id, gene_variants)
+
+        if len(gene_variants) < 2:
+            return
+
+        # Do not include groups multiple times if identical variants are in the same multiple genes
+        if any((not variant['mainTranscriptId']) or all(t['transcriptId'] != variant['mainTranscriptId']
+                                                        for t in variant['transcripts'][gene_id]) for variant in
+               gene_variants):
+            if not self._is_primary_compound_het_gene(gene_id, gene_variants, compound_het_pairs_by_gene):
+                return
+
+        family_compound_het_pairs = defaultdict(list)
+        for variant in gene_variants:
+            for family_guid in variant['familyGuids']:
+                family_compound_het_pairs[family_guid].append(variant)
+
+        self._filter_invalid_family_compound_hets(gene_id, family_compound_het_pairs,
+                                                  family_unaffected_individual_guids)
+
+        gene_compound_het_pairs = [ch_pair for ch_pairs in family_compound_het_pairs.values() for ch_pair in ch_pairs]
+        for compound_het_pair in gene_compound_het_pairs:
+            for variant in compound_het_pair:
+                variant['familyGuids'] = [family_guid for family_guid in variant['familyGuids']
+                                          if len(family_compound_het_pairs[family_guid]) > 0]
+                variant.pop('gene_consequences', None)
+        gene_compound_het_pairs = [compound_het_pair for compound_het_pair in gene_compound_het_pairs
+                                   if compound_het_pair[0]['familyGuids'] and compound_het_pair[1]['familyGuids']]
+        if gene_compound_het_pairs:
+            compound_het_pairs_by_gene[gene_id] = gene_compound_het_pairs
 
     def _is_primary_compound_het_gene(self, gene_id, gene_variants, compound_het_pairs_by_gene):
         primary_genes = set()
@@ -924,6 +917,22 @@ class EsSearch(object):
                                         compound_het_pairs_by_gene.get(gene, [])]:
                     return False
         return True
+
+    def _filter_invalid_annotation_compound_hets(self, gene_id, gene_variants):
+        for variant in gene_variants:
+            variant['gene_consequences'] = {}
+            for k, transcripts in variant['transcripts'].items():
+                variant['gene_consequences'][k] = [
+                    transcript['majorConsequence'] for transcript in transcripts if
+                    transcript.get('majorConsequence')
+                ]
+                if variant.get('svType'):
+                    variant['gene_consequences'][k].append(variant['svType'])
+
+        return [variant for variant in gene_variants if any(
+            consequence in self._allowed_consequences + (self._allowed_consequences_secondary or [])
+            for consequence in variant['gene_consequences'].get(gene_id, [])
+        )]
 
     def _filter_invalid_family_compound_hets(self, gene_id, family_compound_het_pairs, family_unaffected_individual_guids):
         for family_guid, variants in family_compound_het_pairs.items():
