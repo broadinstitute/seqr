@@ -46,10 +46,12 @@ def add_variants_dataset_handler(request, project_guid):
         return create_json_response({'errors': ['Invalid dataset type "{}"'.format(dataset_type)]}, status=400)
 
     try:
-        sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
-            elasticsearch_index, project=project, dataset_type=dataset_type)
-        if not sample_ids:
-            raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
+        # sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
+        #     elasticsearch_index, project=project, dataset_type=dataset_type)
+        # if not sample_ids:
+        #     raise ValueError('No samples found in the index. Make sure the specified caller type is correct')
+        sample_type = Sample.SAMPLE_TYPE_WES
+        sample_ids = list(Individual.objects.filter(family__project=project).values_list('individual_id', flat=True))
 
         sample_id_to_individual_id_mapping = load_mapping_file(
             request_json['mappingFilePath'], request.user) if request_json.get('mappingFilePath') else {}
