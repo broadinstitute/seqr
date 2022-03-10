@@ -24,6 +24,7 @@ export const StyledForm = styled(({ hasSubmitButton, inline, ...props }) => <For
 export const validators = {
   required: value => (value ? undefined : 'Required'),
   requiredBoolean: value => ((value === true || value === false) ? undefined : 'Required'),
+  requiredList: value => ((value && value.length > 0) ? undefined : 'Required'),
   requiredEmail: value => (
     /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(value) ? undefined : 'Invalid email address'
   ),
