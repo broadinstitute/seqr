@@ -900,6 +900,7 @@ const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
+const SORT_BY_SIZE = 'SIZE'
 
 export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
   user.isAnalyst || variant.familyGuids.some(
@@ -989,6 +990,11 @@ const VARIANT_SORT_OPTONS = [
       ) - Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
       )),
+  },
+  {
+    value: SORT_BY_SIZE,
+    text: 'Size',
+    comparator: (a, b) => ((a.pos - a.end) - (b.pos - b.end)),
   },
   {
     value: SORT_BY_TAGGED_DATE,
