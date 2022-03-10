@@ -144,40 +144,7 @@ def _convert_fam_file_rows_to_json(rows):
     json_results = []
     for i, row_dict in enumerate(rows):
 
-        json_record = {}
-
-        # parse
-        for key, value in row_dict.items():
-            full_key = key
-            key = key.lower()
-            value = (value or '').strip()
-            if key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
-                json_record[JsonConstants.FAMILY_NOTES_COLUMN] = value
-            elif "family" in key:
-                json_record[JsonConstants.FAMILY_ID_COLUMN] = value
-            elif "indiv" in key:
-                if "previous" in key:
-                    json_record[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = value
-                else:
-                    json_record[JsonConstants.INDIVIDUAL_ID_COLUMN] = value
-            elif full_key in {
-                JsonConstants.MATERNAL_ETHNICITY, JsonConstants.PATERNAL_ETHNICITY, JsonConstants.BIRTH_YEAR,
-                JsonConstants.DEATH_YEAR, JsonConstants.ONSET_AGE, JsonConstants.AFFECTED_RELATIVES}:
-                json_record[full_key] = json.loads(value)
-            elif "father" in key or "paternal" in key:
-                json_record[JsonConstants.PATERNAL_ID_COLUMN] = value if value != "." else ""
-            elif "mother" in key or "maternal" in key:
-                json_record[JsonConstants.MATERNAL_ID_COLUMN] = value if value != "." else ""
-            elif "sex" in key or "gender" in key:
-                json_record[JsonConstants.SEX_COLUMN] = value
-            elif "affected" in key:
-                json_record[JsonConstants.AFFECTED_COLUMN] = value
-            elif key.startswith("notes"):
-                json_record[JsonConstants.NOTES_COLUMN] = value
-            elif "coded" in key and "phenotype" in key:
-                json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
-            elif 'proband' in key and 'relation' in key:
-                json_record[JsonConstants.PROBAND_RELATIONSHIP] = value
+        json_record = _parse_row_dict(row_dict)
 
         # validate
         if not json_record.get(JsonConstants.FAMILY_ID_COLUMN):
@@ -215,6 +182,42 @@ def _convert_fam_file_rows_to_json(rows):
         json_results.append(json_record)
 
     return json_results
+
+
+def _parse_row_dict(row_dict):
+    json_record = {}
+    for key, value in row_dict.items():
+        full_key = key
+        key = key.lower()
+        value = (value or '').strip()
+        if key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
+            json_record[JsonConstants.FAMILY_NOTES_COLUMN] = value
+        elif "family" in key:
+            json_record[JsonConstants.FAMILY_ID_COLUMN] = value
+        elif "indiv" in key:
+            if "previous" in key:
+                json_record[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = value
+            else:
+                json_record[JsonConstants.INDIVIDUAL_ID_COLUMN] = value
+        elif full_key in {
+            JsonConstants.MATERNAL_ETHNICITY, JsonConstants.PATERNAL_ETHNICITY, JsonConstants.BIRTH_YEAR,
+            JsonConstants.DEATH_YEAR, JsonConstants.ONSET_AGE, JsonConstants.AFFECTED_RELATIVES}:
+            json_record[full_key] = json.loads(value)
+        elif "father" in key or "paternal" in key:
+            json_record[JsonConstants.PATERNAL_ID_COLUMN] = value if value != "." else ""
+        elif "mother" in key or "maternal" in key:
+            json_record[JsonConstants.MATERNAL_ID_COLUMN] = value if value != "." else ""
+        elif "sex" in key or "gender" in key:
+            json_record[JsonConstants.SEX_COLUMN] = value
+        elif "affected" in key:
+            json_record[JsonConstants.AFFECTED_COLUMN] = value
+        elif key.startswith("notes"):
+            json_record[JsonConstants.NOTES_COLUMN] = value
+        elif "coded" in key and "phenotype" in key:
+            json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
+        elif 'proband' in key and 'relation' in key:
+            json_record[JsonConstants.PROBAND_RELATIONSHIP] = value
+    return json_record
 
 
 def validate_fam_file_records(records, fail_on_warnings=False):

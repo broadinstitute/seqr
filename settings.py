@@ -3,7 +3,7 @@ import os
 import random
 import re
 import string
-import subprocess
+import subprocess # nosec
 
 from ssl import create_default_context
 
@@ -395,7 +395,7 @@ SERVICE_ACCOUNT_FOR_ANVIL = None
 
 if TERRA_API_ROOT_URL:
     SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
-                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0]
+                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if not SERVICE_ACCOUNT_FOR_ANVIL:
         # attempt to acquire a service account token
         if os.path.exists('/.config/service-account-key.json'):

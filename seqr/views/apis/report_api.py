@@ -351,7 +351,6 @@ def _get_loaded_before_date_project_individual_samples(project, max_loaded_date)
 
 
 def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
-    compound_het_gene_id_by_family = {}
     gene_ids = set()
     for family_guid, saved_variants in saved_variants_by_family.items():
         potential_com_het_gene_variants = defaultdict(list)
@@ -369,41 +368,54 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
                 potential_com_het_gene_variants[gene_id].append(variant)
             for guid in variant['discovery_tag_guids_by_name'].values():
                 potential_mnvs[guid].append(variant)
-        mnv_genes = set()
-        for mnvs in potential_mnvs.values():
-            if len(mnvs) <= 2:
-                continue
-            parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
-            nested_mnvs = [v for v in mnvs if v['variantId'] != parent_mnv['variantId']]
-            mnv_genes |= {gene_id for variant in nested_mnvs for gene_id in variant['transcripts'].keys()}
-            parent_transcript = parent_mnv.get('main_transcript') or {}
-            parent_details = [parent_transcript[key] for key in ['hgvsc', 'hgvsp'] if parent_transcript.get(key)]
-            parent_name = _get_nested_variant_name(parent_mnv)
-            discovery_notes = 'The following variants are part of the {variant_type} variant {parent}: {nested}'.format(
-                variant_type='complex structural' if parent_mnv.get('svType') else 'multinucleotide',
-                parent='{} ({})'.format(parent_name, ', '.join(parent_details)) if parent_details else parent_name,
-                nested=', '.join(sorted([_get_nested_variant_name(v) for v in nested_mnvs])))
-            for variant in nested_mnvs:
-                variant['discovery_notes'] = discovery_notes
-            saved_variants.remove(parent_mnv)
-        for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
-            if gene_id in mnv_genes:
-                continue
-            if len(comp_het_variants) > 1:
-                main_gene_ids = set()
-                for variant in comp_het_variants:
-                    variant['inheritance_models'] = {'AR-comphet'}
-                    if variant['main_transcript']:
-                        main_gene_ids.add(variant['main_transcript']['geneId'])
-                    else:
-                        main_gene_ids.update(list(variant['transcripts'].keys()))
-                if len(main_gene_ids) > 1:
-                    # This occurs in compound hets where some hits have a primary transcripts in different genes
-                    for gene_id in sorted(main_gene_ids):
-                        if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
-                            compound_het_gene_id_by_family[family_guid] = gene_id
-                            gene_ids.add(gene_id)
+
+        mnv_genes = _process_mnvs(potential_mnvs, saved_variants)
+        compound_het_gene_id_by_family = _process_comp_hets(family_guid, potential_com_het_gene_variants, gene_ids, mnv_genes)
+
     return compound_het_gene_id_by_family, gene_ids
+
+
+def _process_mnvs(potential_mnvs, saved_variants):
+    mnv_genes = set()
+    for mnvs in potential_mnvs.values():
+        if len(mnvs) <= 2:
+            continue
+        parent_mnv = next((v for v in mnvs if not v.get('populations')), mnvs[0])
+        nested_mnvs = [v for v in mnvs if v['variantId'] != parent_mnv['variantId']]
+        mnv_genes |= {gene_id for variant in nested_mnvs for gene_id in variant['transcripts'].keys()}
+        parent_transcript = parent_mnv.get('main_transcript') or {}
+        parent_details = [parent_transcript[key] for key in ['hgvsc', 'hgvsp'] if parent_transcript.get(key)]
+        parent_name = _get_nested_variant_name(parent_mnv)
+        discovery_notes = 'The following variants are part of the {variant_type} variant {parent}: {nested}'.format(
+            variant_type='complex structural' if parent_mnv.get('svType') else 'multinucleotide',
+            parent='{} ({})'.format(parent_name, ', '.join(parent_details)) if parent_details else parent_name,
+            nested=', '.join(sorted([_get_nested_variant_name(v) for v in nested_mnvs])))
+        for variant in nested_mnvs:
+            variant['discovery_notes'] = discovery_notes
+        saved_variants.remove(parent_mnv)
+    return mnv_genes
+
+
+def _process_comp_hets(family_guid, potential_com_het_gene_variants, gene_ids, mnv_genes):
+    compound_het_gene_id_by_family = {}
+    for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
+        if gene_id in mnv_genes:
+            continue
+        if len(comp_het_variants) > 1:
+            main_gene_ids = set()
+            for variant in comp_het_variants:
+                variant['inheritance_models'] = {'AR-comphet'}
+                if variant['main_transcript']:
+                    main_gene_ids.add(variant['main_transcript']['geneId'])
+                else:
+                    main_gene_ids.update(list(variant['transcripts'].keys()))
+            if len(main_gene_ids) > 1:
+                # This occurs in compound hets where some hits have a primary transcripts in different genes
+                for gene_id in sorted(main_gene_ids):
+                    if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
+                        compound_het_gene_id_by_family[family_guid] = gene_id
+                        gene_ids.add(gene_id)
+    return compound_het_gene_id_by_family
 
 
 def _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_family, genes_by_id):

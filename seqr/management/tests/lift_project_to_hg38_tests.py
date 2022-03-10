@@ -68,7 +68,7 @@ class LiftProjectToHg38Test(TestCase):
             mock.call('chr1', 1560662),
         ]
         mock_liftover_to_38.convert_coordinate.assert_has_calls(calls, any_order = True)
-        
+
         families = {family for family in Family.objects.filter(pk__in = [1, 2])}
         self.assertSetEqual(families, mock_get_es_variants.call_args.args[0])
         self.assertSetEqual(set([(1001627057, 'G', 'C'), (21003343400, 'GAGA', 'G'), (1248203925, 'TC', 'T'),

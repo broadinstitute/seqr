@@ -6,7 +6,7 @@ from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
-from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch, ProjectCategory
+from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \

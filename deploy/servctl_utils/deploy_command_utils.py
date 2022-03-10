@@ -242,7 +242,7 @@ def deploy_pipeline_runner(settings):
     ])
 
 
-def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
+def deploy(deployment_target, components, output_dir=None, runtime_settings=None):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
     Args:
@@ -253,6 +253,8 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         output_dir (string): path of directory where to put deployment logs and rendered config files
         runtime_settings (dict): a dictionary of other key-value pairs that override settings file(s) values.
     """
+    runtime_settings = runtime_settings or {}
+
     if not components:
         raise ValueError("components list is empty")
 
