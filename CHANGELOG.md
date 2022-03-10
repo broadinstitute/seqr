@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 3/10/22
 * Return hom alt SNPs in trans with Deletions as compound hets
 * Disable variant download in demo projects (REQUIRES DB MIGRATION)
 
