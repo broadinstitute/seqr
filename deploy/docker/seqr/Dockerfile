@@ -27,6 +27,8 @@ RUN apt-get install -y --no-install-recommends \
     nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+# upgrade npm to v7 to fix lockfile resolution
+RUN npm install -g npm@7.24.2
 
 WORKDIR /opt
 
@@ -37,15 +39,14 @@ RUN pip install --no-cache-dir wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     ln -s python3 /opt/venv/bin/python3.7
 
-WORKDIR /build/
+# update nodejs modules on package lock updates
+WORKDIR /build
 COPY ./ui/package.json ./ui/package.json
 COPY ./ui/package-lock.json ./ui/package-lock.json
 WORKDIR /build/ui
-RUN git config --global url."https://github.com/".insteadOf git@github.com: \
-    && git config --global url."https://".insteadOf ssh:// \
-    && npm ci
+RUN npm ci
 
-WORKDIR /build/
+WORKDIR /build
 COPY ./ui ./ui
 
 WORKDIR /build/ui
