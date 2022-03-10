@@ -60,6 +60,11 @@ spec:
           # This disk must already exist.
           pdName: {{ CLUSTER_NAME }}-seqr-static-files-disk
           fsType: ext4
+      - name: hail-datasets
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: hail-datasets-disk
+          fsType: ext4
       # - name: elasticsearch-es-http-certs-public
       #   secret:
       #     secretName: elasticsearch-es-http-certs-public
@@ -80,6 +85,8 @@ spec:
         {% endif %}
         - name: seqr-static-files
           mountPath: {{ STATIC_MEDIA_DIR }}
+        - name: hail-datasets
+          mountPath: /hail_datasets
         # - name: elasticsearch-es-http-certs-public
         #   mountPath: "/elasticsearch-certs"
         #   readOnly: true
