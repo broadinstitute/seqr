@@ -569,7 +569,7 @@ class SavedVariantAPITest(object):
         # send valid request to create variant_note for compound hets
         create_comp_hets_variant_note_url = reverse(create_variant_note_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
         self.check_collaborator_login(create_comp_hets_variant_note_url, request_data={'familyGuid': 'F000001_1'})
-        
+
         invalid_comp_hets_variant_note_url = reverse(
             create_variant_note_handler, args=['not_variant,{}'.format(COMPOUND_HET_1_GUID)])
         response = self.client.post(invalid_comp_hets_variant_note_url, content_type='application/json', data=json.dumps(
@@ -644,11 +644,11 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'savedVariantsByGuid': {
-                COMPOUND_HET_1_GUID: {'noteGuids': [new_gene_note_guid]}, 
+                COMPOUND_HET_1_GUID: {'noteGuids': [new_gene_note_guid]},
                 COMPOUND_HET_2_GUID: {'noteGuids': [new_gene_note_guid]}
             },
             'variantNotesByGuid': {new_note_guid: None}})
-        
+
         # check that variant_note was deleted
         new_variant_note = VariantNote.objects.filter(guid=new_note_guid)
         self.assertEqual(len(new_variant_note), 0)
@@ -916,8 +916,8 @@ def assert_no_list_ws_has_al(self, acl_call_count):
 class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    def test_saved_variant_data(self):
-        super(AnvilSavedVariantAPITest, self).test_saved_variant_data()
+    def test_saved_variant_data(self, *args):
+        super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
         assert_no_list_ws_has_al(self, 12)
 
     def test_create_saved_variant(self):
@@ -977,8 +977,8 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
 
-    def test_saved_variant_data(self):
-        super(MixSavedVariantAPITest, self).test_saved_variant_data()
+    def test_saved_variant_data(self, *args):
+        super(MixSavedVariantAPITest, self).test_saved_variant_data(*args)
         assert_no_list_ws_has_al(self, 3)
 
     def test_create_saved_variant(self):

@@ -105,7 +105,7 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
             # do an initial save to generate the self.pk id which is then used when computing self._compute_guid()
             # Temporarily set guid to a randint to avoid a brief window when guid="". Otherwise guid uniqueness errors
             # can occur if 2 objects are being created simultaneously and both attempt to save without setting guid.
-            temp_guid = str(random.randint(10**10, 10**11))
+            temp_guid = str(random.randint(10**10, 10**11)) # nosec
             self.guid = kwargs.pop('guid', temp_guid)
             # allows for overriding created_date during save, but this should only be used for migrations
             self.created_date = kwargs.pop('created_date', current_time)
@@ -182,6 +182,7 @@ class Project(ModelWithGUID):
     has_case_review = models.BooleanField(default=False)
     enable_hgmd = models.BooleanField(default=False)
     all_user_demo = models.BooleanField(default=False)
+    is_demo = models.BooleanField(default=False)
 
     last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
 
@@ -247,7 +248,7 @@ class Project(ModelWithGUID):
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
             'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
-            'workspace_namespace', 'workspace_name', 'has_case_review', 'enable_hgmd'
+            'workspace_namespace', 'workspace_name', 'has_case_review', 'enable_hgmd', 'is_demo', 'all_user_demo',
         ]
 
 
@@ -280,6 +281,7 @@ class Family(ModelWithGUID):
         ('C', 'Closed, no longer under analysis'),
         ('I', 'Analysis in Progress'),
         ('Q', 'Waiting for data'),
+        ('N', 'No data expected'),
     )
 
     SUCCESS_STORY_TYPE_CHOICES = (

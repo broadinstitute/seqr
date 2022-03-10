@@ -10,7 +10,7 @@ import { getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
@@ -18,7 +18,7 @@ import { ButtonLink, HelpIcon } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
-  DATASET_TYPE_SV_CALLS,
+  DATASET_TITLE_LOOKUP,
   ANVIL_URL,
 } from 'shared/utils/constants'
 import { updateProjectMmeContact, loadMmeSubmissions } from '../reducers'
@@ -37,8 +37,6 @@ import EditDatasetsButton from './EditDatasetsButton'
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
 `
-
-const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
 
 const FAMILY_SIZE_LABELS = {
   0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,

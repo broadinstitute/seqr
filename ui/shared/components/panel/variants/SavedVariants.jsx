@@ -130,7 +130,7 @@ class SavedVariants extends React.PureComponent {
               <HorizontalSpacer width={10} />
               {hasHiddenFilters && <ButtonLink content="more" icon="sort amount down" onClick={this.showAllFilters} />}
               {hasHiddenFilters && <HorizontalSpacer width={10} />}
-              <ExportTableButton downloads={variantExportConfig} />
+              {variantExportConfig && <ExportTableButton downloads={variantExportConfig} />}
             </Grid.Column>
           </ControlsRow>
         )}

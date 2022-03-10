@@ -4,7 +4,7 @@ import { Icon } from 'semantic-ui-react'
 
 import BaseFieldView from './BaseFieldView'
 import { BaseSemanticInput } from '../../form/Inputs'
-import { validators } from '../../form/ReduxFormWrapper'
+import { validators } from '../../form/FormHelpers'
 import { ButtonLink } from '../../StyledComponents'
 
 const RemovableInput = React.memo(({ removeField, itemComponent, ...props }) => React.createElement(

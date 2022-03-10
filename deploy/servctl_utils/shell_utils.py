@@ -1,6 +1,6 @@
 import logging
 import os
-import subprocess
+import subprocess # nosec
 import sys
 from io import StringIO
 
@@ -13,7 +13,7 @@ def run(command,
         ignore_all_errors=False,
         print_command=True,
         verbose=True,
-        env={},
+        env=None,
         is_interactive=False, **kwargs):
 
     """Runs the given command in a shell.
@@ -33,7 +33,8 @@ def run(command,
         string: command output (combined stdout and stderr), or if return_subprocess_obj=True the return 2-tuple: (output, subprocess Popen object)
     """
     full_env = dict(os.environ)  # copy external environment
-    full_env.update({key: str(value) for key, value in env.items()})  # make sure all values are strings
+    if env:
+        full_env.update({key: str(value) for key, value in env.items()})  # make sure all values are strings
 
     if print_command:
         logger.info("==> %(command)s" % locals())

@@ -49,7 +49,7 @@ def get_parsed_feature(feature, feature_id=None, additional_fields=None):
     return feature_json
 
 
-def update_phenotips_fields(apps, schema_editor):
+def update_phenotips_fields(apps, schema_editor): # noqa: C901
     Individual = apps.get_model("seqr", "Individual")
     HumanPhenotypeOntology = apps.get_model("reference_data", "HumanPhenotypeOntology")
     Omim = apps.get_model("reference_data", "Omim")
@@ -70,78 +70,7 @@ def update_phenotips_fields(apps, schema_editor):
             if (phenotips_json.get('family_history') or {}).get('miscarriages'):
                 miscarriages.append(indiv.individual_id)
 
-            nonstandard_features = []
-            for feature in phenotips_json.get('nonstandard_features') or []:
-                mapped = False
-                parsed_label = map(lambda s: s.strip().upper(), feature['label'].split(','))
-                for label in parsed_label:
-                    if label.startswith('HP:'):
-                        hpo_data = hpo_map.get(label)
-                    else:
-                        hpo_data = hpo_name_map.get(label)
-                    if hpo_data:
-                        mapped = True
-                        if not phenotips_json.get('features'):
-                            phenotips_json['features'] = []
-                        feature['id'] = hpo_data.hpo_id
-                        phenotips_json['features'].append(feature)
-                if not mapped:
-                    nonstandard_features.append(feature)
-            phenotips_json['nonstandard_features'] = nonstandard_features
-
-            for feature in phenotips_json.get('features') or []:
-                if feature['id'] in NONSTANDARD_HPO_TERMS:
-                    feature['label'] = feature['id']
-                    phenotips_json['nonstandard_features'].append(feature)
-                    continue
-                if feature['id'] in HPO_ID_REMAP:
-                    feature['id'] = HPO_ID_REMAP[feature['id']]
-                hpo_data = hpo_map.get(feature['id'])
-                if not hpo_data:
-                    raise Exception('Invalid HPO term for {}: {}'.format(indiv.individual_id, feature['id']))
-
-            if phenotips_json.get('disorders'):
-                mim_ids = map(lambda d: int(d['id'].lstrip('MIM:')), phenotips_json['disorders'])
-                missing_ids = [mim_id for mim_id in mim_ids if mim_id not in all_mim_ids]
-                if missing_ids:
-                    raise Exception('Invalid MIM IDs for {}: {}'.format(
-                        indiv.individual_id, ', '.join(map(str, missing_ids))))
-
-            notes = phenotips_json.get('notes') or {}
-            if notes.get('family_history'):
-                if indiv.family.analysis_notes:
-                    indiv.family.analysis_notes += '\n\n'
-                else:
-                    indiv.family.analysis_notes = ''
-                indiv.family.analysis_notes += '__Family Health Conditions__: {}'.format(notes['family_history'])
-                indiv.family.save()
-
-            if notes.get('indication_for_referral'):
-                if indiv.notes:
-                    indiv.notes += '\n\n'
-                else:
-                    indiv.notes = ''
-                indiv.notes += '__Indication for referral__: {}'.format(notes['indication_for_referral'])
-            if notes.get('diagnosis_notes'):
-                if indiv.notes:
-                    indiv.notes += '\n\n'
-                else:
-                    indiv.notes = ''
-                indiv.notes += '__Diagnosis Notes__: {}'.format(notes['diagnosis_notes'])
-
-            prenatal = phenotips_json['prenatal_perinatal_history']
-            if prenatal.get('paternal_age') or prenatal.get('maternal_age'):
-                if indiv.notes:
-                    indiv.notes += '\n\n'
-                else:
-                    indiv.notes = ''
-                if prenatal.get('maternal_age'):
-                    indiv.notes += '__Maternal Age__: {}'.format(prenatal['maternal_age'])
-                    if prenatal.get('paternal_age'):
-                        indiv.notes += '; '
-                if prenatal.get('paternal_age'):
-                    indiv.notes += '__Paternal Age__: {}'.format(prenatal['paternal_age'])
-
+            _parse_phenotips_json(indiv.individual_id, phenotips_json, hpo_map, hpo_name_map, all_mim_ids)
             _update_individual_phenotips_fields(indiv, phenotips_json)
 
             indiv.save()
@@ -151,7 +80,106 @@ def update_phenotips_fields(apps, schema_editor):
                 len(miscarriages), ', '.join(miscarriages)))
 
 
+def _parse_phenotips_json(individual_id, phenotips_json, hpo_map, hpo_name_map, all_mim_ids):
+    nonstandard_features = []
+    for feature in phenotips_json.get('nonstandard_features') or []:
+        mapped = False
+        parsed_label = map(lambda s: s.strip().upper(), feature['label'].split(','))
+        for label in parsed_label:
+            if label.startswith('HP:'):
+                hpo_data = hpo_map.get(label)
+            else:
+                hpo_data = hpo_name_map.get(label)
+            if hpo_data:
+                mapped = True
+                if not phenotips_json.get('features'):
+                    phenotips_json['features'] = []
+                feature['id'] = hpo_data.hpo_id
+                phenotips_json['features'].append(feature)
+        if not mapped:
+            nonstandard_features.append(feature)
+    phenotips_json['nonstandard_features'] = nonstandard_features
+
+    for feature in phenotips_json.get('features') or []:
+        if feature['id'] in NONSTANDARD_HPO_TERMS:
+            feature['label'] = feature['id']
+            phenotips_json['nonstandard_features'].append(feature)
+            continue
+        if feature['id'] in HPO_ID_REMAP:
+            feature['id'] = HPO_ID_REMAP[feature['id']]
+        hpo_data = hpo_map.get(feature['id'])
+        if not hpo_data:
+            raise Exception('Invalid HPO term for {}: {}'.format(individual_id, feature['id']))
+
+    if phenotips_json.get('disorders'):
+        mim_ids = map(lambda d: int(d['id'].lstrip('MIM:')), phenotips_json['disorders'])
+        missing_ids = [mim_id for mim_id in mim_ids if mim_id not in all_mim_ids]
+        if missing_ids:
+            raise Exception('Invalid MIM IDs for {}: {}'.format(
+                individual_id, ', '.join(map(str, missing_ids))))
+
+
+def _update_individual_notes(indiv, phenotips_json):
+    notes = phenotips_json.get('notes') or {}
+    if notes.get('family_history'):
+        if indiv.family.analysis_notes:
+            indiv.family.analysis_notes += '\n\n'
+        else:
+            indiv.family.analysis_notes = ''
+        indiv.family.analysis_notes += '__Family Health Conditions__: {}'.format(notes['family_history'])
+        indiv.family.save()
+
+    if notes.get('indication_for_referral'):
+        if indiv.notes:
+            indiv.notes += '\n\n'
+        else:
+            indiv.notes = ''
+        indiv.notes += '__Indication for referral__: {}'.format(notes['indication_for_referral'])
+    if notes.get('diagnosis_notes'):
+        if indiv.notes:
+            indiv.notes += '\n\n'
+        else:
+            indiv.notes = ''
+        indiv.notes += '__Diagnosis Notes__: {}'.format(notes['diagnosis_notes'])
+
+    prenatal = phenotips_json['prenatal_perinatal_history']
+    if prenatal.get('paternal_age') or prenatal.get('maternal_age'):
+        if indiv.notes:
+            indiv.notes += '\n\n'
+        else:
+            indiv.notes = ''
+        if prenatal.get('maternal_age'):
+            indiv.notes += '__Maternal Age__: {}'.format(prenatal['maternal_age'])
+            if prenatal.get('paternal_age'):
+                indiv.notes += '; '
+        if prenatal.get('paternal_age'):
+            indiv.notes += '__Paternal Age__: {}'.format(prenatal['paternal_age'])
+
+def _update_indvidual_features(indiv, phenotips_json):
+    present_features = []
+    absent_features = []
+    nonstandard_features = []
+    absent_nonstandard_features = []
+    for feature in phenotips_json.get('features') or []:
+        feature_list = present_features if feature['observed'] == 'yes' else absent_features
+        feature_list.append(get_parsed_feature(feature))
+    for feature in phenotips_json.get('nonstandard_features') or []:
+        feature_list = nonstandard_features if feature['observed'] == 'yes' else absent_nonstandard_features
+        feature_list.append(
+            get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
+    if present_features:
+        indiv.features = present_features
+    if absent_features:
+        indiv.absent_features = absent_features
+    if nonstandard_features:
+        indiv.nonstandard_features = nonstandard_features
+    if absent_nonstandard_features:
+        indiv.absent_nonstandard_features = absent_nonstandard_features
+
+
 def _update_individual_phenotips_fields(indiv, phenotips_json):
+    _update_individual_notes(indiv, phenotips_json)
+
     if phenotips_json.get('date_of_birth'):
         indiv.birth_year = datetime.strptime(phenotips_json['date_of_birth'], '%Y-%m-%d').year
     if phenotips_json.get('life_status') == 'deceased':
@@ -177,25 +205,7 @@ def _update_individual_phenotips_fields(indiv, phenotips_json):
     if family_history.get('affectedRelatives') is not None:
         indiv.affected_relatives = family_history['affectedRelatives']
 
-    present_features = []
-    absent_features = []
-    nonstandard_features = []
-    absent_nonstandard_features = []
-    for feature in phenotips_json.get('features') or []:
-        feature_list = present_features if feature['observed'] == 'yes' else absent_features
-        feature_list.append(get_parsed_feature(feature))
-    for feature in phenotips_json.get('nonstandard_features') or []:
-        feature_list = nonstandard_features if feature['observed'] == 'yes' else absent_nonstandard_features
-        feature_list.append(
-            get_parsed_feature(feature, feature_id=feature['label'], additional_fields=['categories']))
-    if present_features:
-        indiv.features = present_features
-    if absent_features:
-        indiv.absent_features = absent_features
-    if nonstandard_features:
-        indiv.nonstandard_features = nonstandard_features
-    if absent_nonstandard_features:
-        indiv.absent_nonstandard_features = absent_nonstandard_features
+    _update_indvidual_features(indiv, phenotips_json)
 
     if phenotips_json.get('disorders'):
         mim_ids = map(lambda d: int(d['id'].lstrip('MIM:')), phenotips_json['disorders'])

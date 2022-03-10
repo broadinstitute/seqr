@@ -34,17 +34,12 @@ test('getIntitialSearch', () => {
   )
 })
 
-test('getSearchGeneBreakdownValues', () => {
-  expect(getSearchedProjectsLocusListOptions.resultFunc(
-    [PROJECT_GUID], STATE.projectsByGuid, STATE.locusListsByGuid,
-  )).toEqual([{ value: null }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid }])
+test('getSearchedProjectsLocusListOptions', () => {
+  expect(getSearchedProjectsLocusListOptions(
+    STATE, { projectFamilies: [{ projectGuid: PROJECT_GUID }] },
+  )).toEqual([{ value: null }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid, key: LOCUS_LIST.locusListGuid }])
 })
 
 test('getDatasetTypes', () => {
-  const projectDatasetTypes = getProjectDatasetTypes.resultFunc(
-    STATE.projectsByGuid, { [PROJECT_GUID]: STATE.samplesByGuid },
-  )
-  expect(getDatasetTypes.resultFunc(
-    [PROJECT_GUID], projectDatasetTypes,
-  )).toEqual('SV,VARIANTS')
+  expect(getDatasetTypes(STATE, { projectFamilies: [{ projectGuid: PROJECT_GUID }] })).toEqual('SV,VARIANTS')
 })

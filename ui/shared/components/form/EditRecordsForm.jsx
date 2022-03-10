@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../buttons/DeleteButton'
 import DataTable from '../table/DataTable'
-import ReduxFormWrapper from './ReduxFormWrapper'
+import FormWrapper from './FormWrapper'
 
 const ROWS_PER_PAGE = 12
 
@@ -59,10 +59,7 @@ class EditRecordsForm extends React.PureComponent {
     /* Array of fields to show for a given record row */
     columns: PropTypes.arrayOf(PropTypes.object).isRequired,
 
-    /* Unique identifier for the form */
-    formName: PropTypes.string.isRequired,
-
-    /* Unique identifier for the modal containing the form if there are multiple forms in the modal */
+    /* Unique identifier for the modal containing the form */
     modalName: PropTypes.string,
 
     /* Column for filtering displayed table rows */
@@ -103,7 +100,7 @@ class EditRecordsForm extends React.PureComponent {
 
   render() {
     const {
-      formName, modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps
+      modalName, records, onSubmit, entityKey, closeParentModal, idField, columns, filterColumn, ...tableProps
     } = this.props
     const { data } = this.state
     const recordData = data || records
@@ -116,8 +113,7 @@ class EditRecordsForm extends React.PureComponent {
 
     return (
       <FormContentContainer>
-        <ReduxFormWrapper
-          form={formName}
+        <FormWrapper
           modalName={modalName}
           submitButtonText="Apply"
           onSubmit={this.submitRecords}
@@ -151,7 +147,7 @@ class EditRecordsForm extends React.PureComponent {
               {...tableProps}
             />
           </TableContainer>
-        </ReduxFormWrapper>
+        </FormWrapper>
       </FormContentContainer>
     )
   }

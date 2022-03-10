@@ -155,6 +155,8 @@ def create_project_from_workspace(request, namespace, name):
         'description': request_json.get('description', ''),
         'workspace_namespace': namespace,
         'workspace_name': name,
+        'mme_primary_data_owner': request.user.get_full_name(),
+        'mme_contact_url': 'mailto:{}'.format(request.user.email),
     }
 
     project = create_model_from_json(Project, project_args, user=request.user)

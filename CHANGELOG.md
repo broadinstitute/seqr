@@ -2,6 +2,10 @@
 
 ## dev
 
+## 3/10/22
+* Return hom alt SNPs in trans with Deletions as compound hets
+* Disable variant download in demo projects (REQUIRES DB MIGRATION)
+
 ## 3/2/22
 * Update seqr dockerfile to improve immutability and build automation (REQUIRES IMAGE UPDATE)
 * Adds NPM asset build to the seqr dockerfile

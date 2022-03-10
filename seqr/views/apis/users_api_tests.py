@@ -362,7 +362,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
-    def test_create_project_collaborator(self):
+    def test_create_project_collaborator(self, *args):
         # Creating project collaborators is only allowed in non-anvil projects, so it always fails for the AnVIL only case
         create_url = reverse(create_project_collaborator, args=[NON_ANVIL_PROJECT_GUID])
         self.check_manager_login(create_url)

@@ -15,6 +15,7 @@ export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
+export const getAnalysisGroupIsLoading = state => state.analysisGroupsLoading.isLoading
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getVariantTagsByGuid = state => state.variantTagsByGuid
 export const getVariantNotesByGuid = state => state.variantNotesByGuid
@@ -48,14 +49,6 @@ export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownL
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
-export const getAnnotationSecondary = (state) => {
-  try {
-    return !!state.form.variantSearch.values.search.inheritance.annotationSecondary
-  } catch (err) {
-    return false
-  }
-}
-
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {
     acc[entity.projectGuid] = {}
@@ -88,6 +81,16 @@ export const getNotesByFamilyType = createSelector(
     acc[note.familyGuid][note.noteType].push(note)
     return acc
   }, {}),
+)
+
+export const getAnalysisGroupsByFamily = createSelector(
+  getAnalysisGroupsByGuid,
+  analysisGroupsByGuid => Object.values(analysisGroupsByGuid).reduce(
+    (acc, analysisGroup) => analysisGroup.familyGuids.reduce(
+      (familyAcc, familyGuid) => ({ ...familyAcc, [familyGuid]: [...(familyAcc[familyGuid] || []), analysisGroup] }),
+      acc,
+    ), {},
+  ),
 )
 
 export const getIndividualsByFamily = createSelector(
@@ -328,10 +331,21 @@ export const getDisplayVariants = createSelector(
 
 export const getSearchedVariantExportConfig = createSelector(
   getCurrentSearchHash,
-  searchHash => [{
-    name: 'Variant Search Results',
-    url: `/api/search/${searchHash}/download`,
-  }],
+  getCurrentSearchParams,
+  getProjectsByGuid,
+  (searchHash, searchParams, projectsByGuid) => {
+    const { projectFamilies } = searchParams || {}
+    if ((projectFamilies || []).some(
+      ({ projectGuid }) => projectsByGuid[projectGuid]?.isDemo && !projectsByGuid[projectGuid].allUserDemo,
+    )) {
+      // Do not allow downloads for demo projects
+      return null
+    }
+    return [{
+      name: 'Variant Search Results',
+      url: `/api/search/${searchHash}/download`,
+    }]
+  },
 )
 
 export const getSearchGeneBreakdownValues = createSelector(
@@ -376,7 +390,7 @@ export const getLocusListIntervalsByChromProject = createSelector(
 )
 
 export const getLocusListTableData = createSelector(
-  (state, props) => props.meta && props.meta.form && props.meta.form.replace('add-gene-list-', ''),
+  (state, props) => props.meta && props.meta.data && props.meta.data.formId,
   getProjectsByGuid,
   getLocusListsWithGenes,
   (omitProjectGuid, projectsByGuid, locusListsByGuid) => {

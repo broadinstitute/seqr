@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Field } from 'redux-form'
+import { Field } from 'react-final-form'
 import { Message, Loader } from 'semantic-ui-react'
 import styled from 'styled-components'
 
@@ -50,7 +50,7 @@ const hasUploadedFile = value => (value && value.uploadedFileId ? undefined : 'F
 export const validateUploadedFile = value => uploadedFileHasErrors(value) || hasUploadedFile(value)
 export const warnUploadedFile = value => value && value.warnings && (value.warnings.length ? value.warnings : undefined)
 
-const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...props }) => (
+const UploaderFormField = React.memo(({ name, required, onChange, parse, ...props }) => (
   <Field
     name={name}
     validate={required ? validateUploadedFile : uploadedFileHasErrors}
@@ -58,7 +58,7 @@ const UploaderFormField = React.memo(({ name, required, onChange, normalize, ...
     uploaderProps={props}
     component={UploaderFieldComponent}
     onChange={onChange}
-    normalize={normalize}
+    parse={parse}
   />
 ))
 
@@ -66,7 +66,7 @@ UploaderFormField.propTypes = {
   name: PropTypes.string.isRequired,
   required: PropTypes.bool,
   onChange: PropTypes.func,
-  normalize: PropTypes.func,
+  parse: PropTypes.func,
 }
 
 export default UploaderFormField

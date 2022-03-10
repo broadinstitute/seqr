@@ -4,14 +4,17 @@ import { connect } from 'react-redux'
 import { Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadUserOptions } from 'redux/rootReducer'
+import { loadUserOptions, loadProjectAnalysisGroups } from 'redux/rootReducer'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
   getHasActiveSearchableSampleByFamily,
   getUserOptions,
+  getAnalysisGroupsByFamily,
+  getAnalysisGroupIsLoading,
 } from 'redux/selectors'
 
+import BaseFieldView from '../view-fields/BaseFieldView'
 import Sample from '../sample'
 import { ColoredIcon } from '../../StyledComponents'
 import { Select } from '../../form/Inputs'
@@ -69,7 +72,7 @@ const mapDropdownStateToProps = state => ({
 })
 
 const mapDropdownDispatchToProps = (dispatch, ownProps) => ({
-  load: () => dispatch(loadUserOptions(ownProps.meta.form.split('_-_')[1])),
+  load: () => dispatch(loadUserOptions(ownProps.meta.data.formId)),
 })
 
 export const AnalystEmailDropdown = connect(
@@ -138,3 +141,25 @@ AnalysedBy.propTypes = {
   analysedByList: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
 }
+
+const BaseAnalysisGroups = React.memo(({ load, loading, ...props }) => (
+  <DataLoader load={load} loading={loading} content>
+    <BaseFieldView {...props} />
+  </DataLoader>
+))
+
+BaseAnalysisGroups.propTypes = {
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+}
+
+const mapGroupsStateToProps = (state, ownProps) => ({
+  fieldValue: getAnalysisGroupsByFamily(state)[ownProps.initialValues.familyGuid],
+  loading: getAnalysisGroupIsLoading(state),
+})
+
+const mapGroupsDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadProjectAnalysisGroups(ownProps.initialValues.projectGuid)),
+})
+
+export const AnalysisGroups = connect(mapGroupsStateToProps, mapGroupsDispatchToProps)(BaseAnalysisGroups)

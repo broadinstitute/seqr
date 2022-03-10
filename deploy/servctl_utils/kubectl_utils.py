@@ -10,7 +10,7 @@ logger.setLevel(logging.INFO)
 
 def _get_resource_info(
         resource_type="pod",
-        labels={},
+        labels=None,
         json_path="{.items[].metadata.name}",
         errors_to_ignore=("array index out of bounds:",),
         verbose=False,
@@ -27,6 +27,7 @@ def _get_resource_info(
     Returns:
         (string) kubectl command output (eg. "postgres-410765475-1vtkn") or None if the kubectl command returned nothing
     """
+    labels = labels or {}
 
     l_arg = "-l {}".format(",".join(["%s=%s" % (key, value) for key, value in labels.items()])) if labels else ""
 
