@@ -272,7 +272,6 @@ class HailSearch(object):
 
         collected = rows.take(num_results)
         hail_results = [_json_serialize(dict(row)) for row in collected]
-        logger.info(str(list(hail_results[0]['transcripts'].values())[0].__class__))
         logger.info(str(hail_results[0]))
 
         # TODO format return values into correct dicts, potentially post-process compound hets
@@ -280,21 +279,14 @@ class HailSearch(object):
 
 # TODO should use custom json serializer
 def _json_serialize(result):
-    if not isinstance(result, dict):
-        return result
+    if isinstance(result, list):
+        return [_json_serialize(o) for o in result]
 
-    parsed = {}
-    for k, v in result.items():
-        if isinstance(v, hl.Struct) or isinstance(v, hl.utils.frozendict):
-            v = dict(v)
+    if isinstance(result, hl.Struct) or isinstance(result, hl.utils.frozendict):
+        result = dict(result)
 
-        if isinstance(v, list):
-            v = [_json_serialize(o) for o in v]
-        else:
-            v = _json_serialize(v)
-        parsed[k] = v
+    if isinstance(result, dict):
+        return {k: _json_serialize(v)  for k, v in result.items()}
 
-    return parsed
-
-
+    return result
 
