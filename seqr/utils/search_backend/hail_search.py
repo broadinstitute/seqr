@@ -233,7 +233,8 @@ class HailSearch(object):
         sample_individuals = {s.sample_id: s.individual.guid for s in samples}
 
         CORE_FIELDS = ['chrom', 'pos', 'ref', 'alt', 'genotypes', 'variantId','hgmd','rsid', 'xpos']
-        DROP_FIELDS = ['locus', 'alleles', 'sortedTranscriptConsequences']
+        KEY_BY_FIELDS = ['locus', 'alleles', 'sortedTranscriptConsequences']
+        DROP_FIELDS = ['sortedTranscriptConsequences']
         RENAME_FIELDS = {'contig': 'chrom'}
         ANNOTATION_FIELDS = {
             'clinvar': lambda r: hl.struct(
@@ -253,6 +254,7 @@ class HailSearch(object):
             'liftedOverPos': lambda r: hl.if_else(
                 hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
             ),
+            'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
             'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
             # TODO populations and predictions
         }
@@ -276,11 +278,8 @@ class HailSearch(object):
                 tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
                 transcripts[tc.gene_id].append(tc_dict)
 
-            result = {
-                'transcripts': transcripts,
-                'mainTranscriptId': variant.sortedTranscriptConsequences[0].transcript_id,
-            }
-            result.update(variant.drop(*DROP_FIELDS))
+            result = dict(variant.drop(*DROP_FIELDS, *KEY_BY_FIELDS))
+            result['transcripts'] = transcripts
             result['genotypes'] = {sample_individuals[gen['sampleId']]: dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
             result = {k: dict(v) if isinstance(v, hl.Struct) else v for k, v in result.items()}
