@@ -88,12 +88,15 @@ class JsonErrorMiddleware(MiddlewareMixin):
     def process_exception(request, exception):
         exception_json =  _get_core_exception_json(exception)
         status = _get_exception_status_code(exception)
+        if status == 401:
+            status = 500
+            detail = 'was 401'
         if exception.__class__ in ERROR_LOG_EXCEPTIONS:
             exception_json['log_error'] = True
         if DEBUG or status == 500:
             traceback_message = traceback.format_exc()
             exception_json['traceback'] = traceback_message
-        detail = getattr(exception, 'info', None)
+        detail = detail or getattr(exception, 'info', None)
         if isinstance(detail, dict):
             exception_json['detail'] = detail
 

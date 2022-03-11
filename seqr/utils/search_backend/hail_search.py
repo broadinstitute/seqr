@@ -1,14 +1,17 @@
 from collections import defaultdict
-from seqr.views.utils.json_utils import _to_camel_case
-
 import hail as hl
+import logging
 
+from seqr.views.utils.json_utils import _to_camel_case
+from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, \
     POPULATIONS # TODO may need different constants
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _annotations_filter
+
+logger = logging.getLogger(__name__)
 
 GENOTYPE_QUERY_MAP = {
     REF_REF: 'is_hom_ref',
@@ -25,6 +28,13 @@ class HailSearch(object):
 
         self.samples_by_family = defaultdict(dict)
         samples = Sample.objects.filter(is_active=True, individual__family__in=families)
+
+        data_sources = {s.elasitcsearch_Ondex for s in samples}
+        if len(data_sources) > 1:
+            raise InvalidSearchException(
+                f'Search is only enabled on a single data source, requested {", ".join(data_sources)}')
+        data_source = data_sources.pop()
+
         for s in samples.select_related('individual__family'):
             self.samples_by_family[s.individual.family.guid][s.sample_id] = s
 
@@ -56,7 +66,7 @@ class HailSearch(object):
 
         # TODO set up connection to MTs/ any external resources
         #self.mt = hl.experimental.load_dataset("1000_Genomes_HighCov_autosomes", "NYGC_30x_phased", "GRCh38")
-        self.mt = hl.read_matrix_table("/mnt/stateful_partition/seqr-data/small_vepped.mt/")
+        self.mt = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt')
 
     def _sample_table(self, sample_id):
         # TODO should implement way to map sample id to table name
@@ -136,7 +146,6 @@ class HailSearch(object):
             all_samples = set()
             for samples_by_id in self.samples_by_family.values():
                 all_samples.update(samples_by_id.keys())
-            # TODO filter result to desired samples - result.filter_cols(hl.array(all_samples).contains(result.sample_id))
             self.mt = self.mt.filter_cols(hl.array(all_samples).contains(self.mt.s))
 
             # TODO remove all samples in families where any sample is not passing the quality filters
@@ -209,16 +218,13 @@ class HailSearch(object):
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
         localized = self.mt.localize_entries("ent", "s")
         localized = localized.transmute(GT=localized.ent.GT)
+
         collected = localized.take(num_results)
         sample_info = hl.eval(localized.globals.s)
         sample_ids = [sample.s for sample in sample_info]
 
         hail_results = []
         for idx, s in enumerate(collected):
-            chrom = s.locus.contig
-            pos = s.locus.position
-            ref = s.alleles[0]
-            alt = s.alleles[1]
             family_guids = list(self.samples_by_family.keys())
             samples = []
             for family_guid in family_guids:
@@ -237,26 +243,36 @@ class HailSearch(object):
             for tc in s.vep.transcript_consequences:
                 tc_dict = dict(tc.drop("domains"))
                 tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
+                #  TODO should be sorted
                 tc_dict["majorConsequence"] = tc_dict["consequenceTerms"][0]
                 transcripts[tc.gene_id].append(tc_dict)
 
             hail_results.append({
-                "chrom": chrom,
-                "pos": pos,
-                "ref": ref,
-                "alt": alt,
-                "genotypes": genotypes,
-                "variantId": str(idx),
-                "familyGuids": family_guids,
-                "liftedOverGenomeVersion": None,
-                "liftedOverChrom": None,
-                "liftedOverPos": None,
-                "transcripts": transcripts,
-                "mainTranscriptId": s.vep.transcript_consequences[0].transcript_id
+                'chrom': s.locus.contig,
+                'pos': s.locus.position,
+                'ref': s.alleles[0],
+                'alt': s.alleles[1],
+                'genotypes': genotypes,
+                'transcripts': transcripts,
+                'mainTranscriptId': s.vep.transcript_consequences[0].transcript_id,
+                'variantId': str(idx),
+                'familyGuids': family_guids,
+                'genomeVersion': GENOME_VERSION_GRCh38,
+                'liftedOverGenomeVersion': None,
+                'liftedOverChrom': None, # TODO rg37_locus
+                'liftedOverPos': None, # TODO rg37_locus
+                'clinvar': {}, # TODO
+                'hgmd': {},  # TODO
+                'populations': {}, # TODO
+                'predictions': {}, # TODO
+                # 'filters': {'response_key': 'genotypeFilters', 'format_value': ', '.join, 'default_value': ''},
+                # 'num_exon': {'response_key': 'numExon'},
+                # 'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
+                # 'rsid': {},
+                # 'xpos': {'format_value': int},
+                # 'algorithms': {'format_value': ', '.join}
             })
 
-
-        # TODO actually get results back - result.collect() ?
 
         # TODO format return values into correct dicts, potentially post-process compound hets
 
