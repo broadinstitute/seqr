@@ -3,7 +3,7 @@ import hail as hl
 import logging
 
 from seqr.views.utils.json_utils import _to_camel_case
-from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
@@ -272,6 +272,7 @@ class HailSearch(object):
 
         collected = rows.take(num_results)
         hail_results = [_json_serialize(dict(row)) for row in collected]
+        logger.info(str(hail_results[0]))
 
         # TODO format return values into correct dicts, potentially post-process compound hets
         return hail_results
