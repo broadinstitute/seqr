@@ -260,7 +260,7 @@ class HailSearch(object):
         rows = self.mt.rows()
         rows = rows.annotate_globals(gv=hl.eval(rows.genomeVersion)).drop('genomeVersion') # prevents name collision with global
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
-        rows = rows.rename(**RENAME_FIELDS)
+        rows = rows.rename(RENAME_FIELDS)
         rows = rows.select(*CORE_FIELDS, *DROP_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
 
         total_results = rows.count()
