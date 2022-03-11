@@ -252,7 +252,7 @@ class HailSearch(object):
         }
 
         rows = self.mt.rows()
-        rows = rows.annotate(**ANNOTATION_FIELDS)
+        rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
         rows = rows.rename(**RENAME_FIELDS)
         rows = rows.select(*CORE_FIELDS, *DROP_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
 
