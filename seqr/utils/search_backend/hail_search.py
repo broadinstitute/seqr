@@ -231,7 +231,7 @@ class HailSearch(object):
             # TODO ab
         ))).rows()
 
-        rows.annotate(
+        rows = rows.annotate(
             clinvar=hl.struct(
                 clinicalSignificance=rows.clinvar.clinical_significance,
                 alleleId=rows.clinvar.allele_id,
