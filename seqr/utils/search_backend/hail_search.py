@@ -149,6 +149,14 @@ class HailSearch(object):
             for samples_by_id in self.samples_by_family.values():
                 all_samples.update(samples_by_id.keys())
             self.mt = self.mt.filter_cols(hl.array(all_samples).contains(self.mt.s))
+        # TODO genotypes need to come from sample-specific tables
+        self.mt = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
+            sampleId=self.mt.s,
+            gq=self.mt.GQ,
+            numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
+            dp=self.mt.DP,
+            # TODO ab
+        )))
 
             # TODO remove all samples in families where any sample is not passing the quality filters
             # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
@@ -224,44 +232,35 @@ class HailSearch(object):
             samples += list(self.samples_by_family[family_guid].values())
         sample_individuals = {s.sample_id: s.individual.guid for s in samples}
 
-        # TODO genotypes need to come from sample-specific tables
-        rows = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
-            sampleId=self.mt.s,
-            gq=self.mt.GQ,
-            numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
-            dp=self.mt.DP,
-            # TODO ab
-        ))).rows()
-
-        rows = rows.annotate(
-            clinvar=hl.struct(
-                clinicalSignificance=rows.clinvar.clinical_significance,
-                alleleId=rows.clinvar.allele_id,
-                goldStars=rows.clinvar.gold_stars,
+        CORE_FIELDS = ['chrom', 'pos', 'ref', 'alt', 'genotypes', 'variantId','hgmd','rsid', 'xpos']
+        DROP_FIELDS = ['locus', 'alleles', 'sortedTranscriptConsequences']
+        RENAME_FIELDS = {'contig': 'chrom'}
+        ANNOTATION_FIELDS = {
+            'clinvar': lambda r: hl.struct(
+                clinicalSignificance=r.clinvar.clinical_significance,
+                alleleId=r.clinvar.allele_id,
+                goldStars=r.clinvar.gold_stars,
             ),
-            genotypeFilters=hl.str(' ,').join(rows.filters),
-        )
-        # TODO populations and predictions
+            'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
+            'familyGuids': lambda r: hl.literal(family_guids),
+            'genomeVersion': lambda r: hl.literal(GENOME_VERSION_GRCh38),
+            'liftedOverGenomeVersion': lambda r: hl.literal(GENOME_VERSION_GRCh37),
+            'liftedOverChrom': lambda r: r.rg37_locus.contig,
+            'liftedOverPos': lambda r: r.rg37_locus.position,
+            # 'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []}, TODO
+            # TODO populations and predictions
+        }
 
-        rows = rows.rename({'contig': 'chrom'})
-        rows = rows.select(
-            'chrom', 'pos', 'ref', 'alt', 'rg37_locus', 'genotypes', 'sortedTranscriptConsequences', 'variantId',
-            'genotypeFilters', 'clinvar', 'hgmd','rsid', 'xpos', # TODO populations and predictions
-        )
+        rows = self.mt.rows()
+        rows = rows.annotate(**ANNOTATION_FIELDS)
+        rows = rows.rename(**RENAME_FIELDS)
+        rows = rows.select(*CORE_FIELDS, *DROP_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
 
         total_results = rows.count()
         self.previous_search_results['total_results'] = total_results
         logger.info(f'Total hits: {total_results}')
 
         collected = rows.take(num_results)
-
-        # localized = self.mt.localize_entries("ent", "s")
-        # localized = localized.transmute(GT=localized.ent.GT)
-        #
-        # collected = localized.take(num_results)
-        # sample_info = hl.eval(localized.globals.s)
-        # sample_ids = [sample.s for sample in sample_info]
-
         hail_results = []
         for variant in collected:
             transcripts = defaultdict(lambda: list())
@@ -273,51 +272,12 @@ class HailSearch(object):
             result = {
                 'transcripts': transcripts,
                 'mainTranscriptId': variant.sortedTranscriptConsequences[0].transcript_id,
-                'familyGuids': family_guids,
-                'genomeVersion': GENOME_VERSION_GRCh38,
-                'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
-                'liftedOverChrom': variant.rg37_locus.contig,
-                'liftedOverPos': variant.rg37_locus.position,
             }
-            result.update(variant.drop('locus', 'alleles', 'sortedTranscriptConsequences', 'rg37_locus'))
+            result.update(variant.drop(*DROP_FIELDS))
             result['genotypes'] = {sample_individuals[gen['sampleId']]: dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
             result = {k: dict(v) if isinstance(v, hl.Struct) else v for k, v in result.items()}
             hail_results.append(result)
 
-            # genotypes = {sample_individuals[sample_id]: {
-            #     "sampleId": sample_id,
-            #     "numAlt": gt_call.n_alt_alleles(),
-            #     "gq": 0,
-            #     "ab": 0,
-            #     "dp": 0
-            # } for sample_id, gt_call in zip(sample_ids, s.GT)}
-            #
-            # transcripts = defaultdict(lambda: list())
-            # for tc in s.vep.transcript_consequences:
-            #     tc_dict = dict(tc.drop("domains"))
-            #     tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
-            #     #  TODO should be sorted
-            #     tc_dict["majorConsequence"] = tc_dict["consequenceTerms"][0]
-            #     transcripts[tc.gene_id].append(tc_dict)
-            #
-            # hail_results.append({
-            #     'chrom': s.locus.contig,
-            #     'pos': s.locus.position,
-            #     'ref': s.alleles[0],
-            #     'alt': s.alleles[1],
-            #     'genotypes': genotypes,
-            #     'transcripts': transcripts,
-            #     'mainTranscriptId': s.vep.transcript_consequences[0].transcript_id,
-            #     'variantId': str(idx),
-            #     'familyGuids': family_guids,
-            #     'genomeVersion': GENOME_VERSION_GRCh38,
-            #     'liftedOverGenomeVersion': None,
-            #     'liftedOverChrom': None,
-            #     'liftedOverPos': None,
-            # })
-            #
-
         # TODO format return values into correct dicts, potentially post-process compound hets
-        logger.info(str(hail_results[0]))
         return hail_results
