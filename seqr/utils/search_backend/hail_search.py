@@ -216,63 +216,107 @@ class HailSearch(object):
         raise NotImplementedError
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
-        localized = self.mt.localize_entries("ent", "s")
-        localized = localized.transmute(GT=localized.ent.GT)
+        family_guids = list(self.samples_by_family.keys())
+        samples = []
+        for family_guid in family_guids:
+            samples += list(self.samples_by_family[family_guid].values())
+        sample_individuals = {s.sample_id: s.individual.guid for s in samples}
 
-        collected = localized.take(num_results)
-        sample_info = hl.eval(localized.globals.s)
-        sample_ids = [sample.s for sample in sample_info]
+        rows = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
+            sampleId=self.mt.s,
+            gq=self.mt.GQ,
+            numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
+            dp=self.mt.DP,
+            # TODO ab
+        ))).rows()
+
+        rows.annotate(
+            clinvar=hl.struct(
+                clinicalSignificance=rows.clinvar.clinical_significance,
+                alleleId=rows.clinvar.allele_id,
+                goldStars=rows.clinvar.gold_stars,
+            ),
+            genotypeFilters=hl.str(' ,').join(rows.filters),
+        )
+        # TODO populations and predictions
+
+        rows = rows.rename({'contig': 'chrom'})
+        rows = rows.select(
+            'chrom', 'pos', 'ref', 'alt', 'rg37_locus', 'genotypes', 'sortedTranscriptConsequences', 'variantId',
+            'genotypeFilters', 'clinvar', 'hgmd','rsid', 'xpos', # TODO populations and predictions
+        )
+        collected = rows.take(num_results)
+
+        # localized = self.mt.localize_entries("ent", "s")
+        # localized = localized.transmute(GT=localized.ent.GT)
+        #
+        # collected = localized.take(num_results)
+        # sample_info = hl.eval(localized.globals.s)
+        # sample_ids = [sample.s for sample in sample_info]
 
         hail_results = []
-        for idx, s in enumerate(collected):
-            family_guids = list(self.samples_by_family.keys())
-            samples = []
-            for family_guid in family_guids:
-                samples += list(self.samples_by_family[family_guid].values())
-            sample_individuals = {s.sample_id: s.individual.guid for s in samples}
-
-            genotypes = {sample_individuals[sample_id]: {
-                "sampleId": sample_id,
-                "numAlt": gt_call.n_alt_alleles(),
-                "gq": 0,
-                "ab": 0,
-                "dp": 0
-            } for sample_id, gt_call in zip(sample_ids, s.GT)}
-
+        for variant in collected:
             transcripts = defaultdict(lambda: list())
-            for tc in s.vep.transcript_consequences:
+            for tc in variant.sortedTranscriptConsequences:
                 tc_dict = dict(tc.drop("domains"))
                 tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
-                #  TODO should be sorted
-                tc_dict["majorConsequence"] = tc_dict["consequenceTerms"][0]
                 transcripts[tc.gene_id].append(tc_dict)
 
-            hail_results.append({
-                'chrom': s.locus.contig,
-                'pos': s.locus.position,
-                'ref': s.alleles[0],
-                'alt': s.alleles[1],
-                'genotypes': genotypes,
+            result = {
                 'transcripts': transcripts,
-                'mainTranscriptId': s.vep.transcript_consequences[0].transcript_id,
-                'variantId': str(idx),
+                'mainTranscriptId': variant.sortedTranscriptConsequences[0].transcript_id,
                 'familyGuids': family_guids,
                 'genomeVersion': GENOME_VERSION_GRCh38,
                 'liftedOverGenomeVersion': None,
-                'liftedOverChrom': None, # TODO rg37_locus
-                'liftedOverPos': None, # TODO rg37_locus
-                'clinvar': {}, # TODO
-                'hgmd': {},  # TODO
-                'populations': {}, # TODO
-                'predictions': {}, # TODO
-                # 'filters': {'response_key': 'genotypeFilters', 'format_value': ', '.join, 'default_value': ''},
-                # 'num_exon': {'response_key': 'numExon'},
-                # 'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
-                # 'rsid': {},
-                # 'xpos': {'format_value': int},
-                # 'algorithms': {'format_value': ', '.join}
-            })
+                'liftedOverChrom': variant.rg37_locus.contig,
+                'liftedOverPos': variant.rg37_locus.position,
+            }
+            variant.drop('locus', 'alleles', 'sortedTranscriptConsequences')
+            result.update(variant)
+            result['genotypes'] = {sample_individuals[gen['sampleId']]: gen for gen in result['genotypes']}
 
+            # genotypes = {sample_individuals[sample_id]: {
+            #     "sampleId": sample_id,
+            #     "numAlt": gt_call.n_alt_alleles(),
+            #     "gq": 0,
+            #     "ab": 0,
+            #     "dp": 0
+            # } for sample_id, gt_call in zip(sample_ids, s.GT)}
+            #
+            # transcripts = defaultdict(lambda: list())
+            # for tc in s.vep.transcript_consequences:
+            #     tc_dict = dict(tc.drop("domains"))
+            #     tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
+            #     #  TODO should be sorted
+            #     tc_dict["majorConsequence"] = tc_dict["consequenceTerms"][0]
+            #     transcripts[tc.gene_id].append(tc_dict)
+            #
+            # hail_results.append({
+            #     'chrom': s.locus.contig,
+            #     'pos': s.locus.position,
+            #     'ref': s.alleles[0],
+            #     'alt': s.alleles[1],
+            #     'genotypes': genotypes,
+            #     'transcripts': transcripts,
+            #     'mainTranscriptId': s.vep.transcript_consequences[0].transcript_id,
+            #     'variantId': str(idx),
+            #     'familyGuids': family_guids,
+            #     'genomeVersion': GENOME_VERSION_GRCh38,
+            #     'liftedOverGenomeVersion': None,
+            #     'liftedOverChrom': None, # TODO rg37_locus
+            #     'liftedOverPos': None, # TODO rg37_locus
+            #     'clinvar': {}, # TODO
+            #     'hgmd': {},  # TODO
+            #     'populations': {}, # TODO
+            #     'predictions': {}, # TODO
+            #     # 'filters': {'response_key': 'genotypeFilters', 'format_value': ', '.join, 'default_value': ''},
+            #     # 'num_exon': {'response_key': 'numExon'},
+            #     # 'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
+            #     # 'rsid': {},
+            #     # 'xpos': {'format_value': int},
+            #     # 'algorithms': {'format_value': ', '.join}
+            # })
+            #
 
         # TODO format return values into correct dicts, potentially post-process compound hets
 
