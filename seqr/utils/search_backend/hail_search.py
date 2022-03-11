@@ -287,11 +287,13 @@ def _json_serialize(result):
     for k, v in result.items():
         if isinstance(v, hl.Struct) or isinstance(v, hl.utils.frozendict):
             v = dict(v)
-        if isinstance(v, dict):
-            v = _json_serialize(v)
-        elif isinstance(v, list):
+
+        if isinstance(v, list):
             v = [_json_serialize(o) for o in v]
+        else:
+            v = _json_serialize(v)
         parsed[k] = v
+
     return parsed
 
 
