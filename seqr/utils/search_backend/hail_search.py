@@ -231,8 +231,6 @@ class HailSearch(object):
         family_guids = list(self.samples_by_family.keys())
 
         CORE_FIELDS = ['pos', 'ref', 'alt', 'genotypes', 'hgmd','rsid', 'xpos']
-        KEY_BY_FIELDS = ['locus', 'alleles']
-        DROP_FIELDS = ['sortedTranscriptConsequences']
         RENAME_FIELDS = {'contig': 'chrom'}
         ANNOTATION_FIELDS = {
             'clinvar': lambda r: hl.struct(
@@ -254,6 +252,11 @@ class HailSearch(object):
             ),
             'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
             'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
+            'transcripts': lambda r: r.sortedTranscriptConsequences.map(
+                lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
+                    'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
+                    'lof', 'lof_flags', 'lof_filter', 'lof_info', 'transcript_id',
+                ]})).group_by(lambda t: t.geneId),
             # TODO populations and predictions
         }
 
@@ -262,7 +265,7 @@ class HailSearch(object):
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
         rows = rows.rename(RENAME_FIELDS)
         rows = rows.key_by('variantId')
-        rows = rows.select(*CORE_FIELDS, *DROP_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
+        rows = rows.select(*CORE_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
 
         total_results = rows.count()
         self.previous_search_results['total_results'] = total_results
@@ -271,14 +274,15 @@ class HailSearch(object):
         collected = rows.take(num_results)
         hail_results = []
         for variant in collected:
-            transcripts = defaultdict(lambda: list())
-            for tc in variant.sortedTranscriptConsequences:
-                tc_dict = dict(tc.drop("domains"))
-                tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
-                transcripts[tc.gene_id].append(tc_dict)
-
-            result = dict(variant.drop(*DROP_FIELDS))
-            result['transcripts'] = transcripts
+            # transcripts = defaultdict(lambda: list())
+            # for tc in variant.sortedTranscriptConsequences:
+            #     tc_dict = dict(tc.drop("domains"))
+            #     tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
+            #     transcripts[tc.gene_id].append(tc_dict)
+            #
+            # result = dict(variant.drop(*DROP_FIELDS))
+            # result['transcripts'] = transcripts
+            result = dict(variant)
             result['genotypes'] = {gen.get('individualGuid'): dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
             result = {k: dict(v) if isinstance(v, hl.Struct) else v for k, v in result.items()}
