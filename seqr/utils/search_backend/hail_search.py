@@ -285,6 +285,7 @@ def _json_serialize(result):
         if isinstance(v, dict):
             v = _json_serialize(v)
         parsed[k] = v
+    return parsed
 
 
 
