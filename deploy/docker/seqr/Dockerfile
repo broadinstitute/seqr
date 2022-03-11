@@ -34,22 +34,20 @@ WORKDIR /opt
 
 COPY ./requirements.txt .
 
-# install seqr dependencies
+# install seqr python dependencies
 RUN pip install --no-cache-dir wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     ln -s python3 /opt/venv/bin/python3.7
 
-# update nodejs modules on package lock updates
-WORKDIR /build
-COPY ./ui/package.json ./ui/package.json
-COPY ./ui/package-lock.json ./ui/package-lock.json
+# install seqr nodejs dependencies
 WORKDIR /build/ui
+# Copy the package configs from the build context -> the temporary build container, for generating node_modules
+COPY ./ui/package.json .
+COPY ./ui/package-lock.json .
 RUN npm ci
 
-WORKDIR /build
-COPY ./ui ./ui
+COPY ./ui/ .
 
-WORKDIR /build/ui
 RUN npm run build
 
 FROM python:3.7-slim-bullseye as runtime
