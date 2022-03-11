@@ -230,7 +230,7 @@ class HailSearch(object):
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
         family_guids = list(self.samples_by_family.keys())
 
-        CORE_FIELDS = ['pos', 'ref', 'alt', 'genotypes', 'variantId','hgmd','rsid', 'xpos']
+        CORE_FIELDS = ['pos', 'ref', 'alt', 'genotypes', 'hgmd','rsid', 'xpos']
         KEY_BY_FIELDS = ['locus', 'alleles']
         DROP_FIELDS = ['sortedTranscriptConsequences']
         RENAME_FIELDS = {'contig': 'chrom'}
