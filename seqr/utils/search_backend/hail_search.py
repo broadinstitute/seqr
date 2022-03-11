@@ -243,15 +243,22 @@ class HailSearch(object):
             ),
             'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
             'familyGuids': lambda r: hl.literal(family_guids),
-            'genomeVersion': lambda r: hl.literal(GENOME_VERSION_GRCh38),
-            'liftedOverGenomeVersion': lambda r: hl.literal(GENOME_VERSION_GRCh37),
-            'liftedOverChrom': lambda r: r.rg37_locus.contig,
-            'liftedOverPos': lambda r: r.rg37_locus.position,
-            # 'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []}, TODO
+            'genomeVersion': lambda r: hl.eval(rows.gv),
+            'liftedOverGenomeVersion': lambda r: hl.if_else(
+                hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
+            ),
+            'liftedOverChrom': lambda r: hl.if_else(
+                hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
+            ),
+            'liftedOverPos': lambda r: hl.if_else(
+                hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
+            ),
+            'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
             # TODO populations and predictions
         }
 
         rows = self.mt.rows()
+        rows = rows.annotate_globals(gv=hl.eval(rows.genomeVersion)).drop('genomeVersion') # prevents name collision with global
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
         rows = rows.rename(**RENAME_FIELDS)
         rows = rows.select(*CORE_FIELDS, *DROP_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
