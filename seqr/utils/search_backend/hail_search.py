@@ -67,6 +67,7 @@ class HailSearch(object):
         # TODO set up connection to MTs/ any external resources
         #self.mt = hl.experimental.load_dataset("1000_Genomes_HighCov_autosomes", "NYGC_30x_phased", "GRCh38")
         self.mt = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt')
+        logger.info(f'Intitial rows: {self.mt.rows().count()}')
 
     def _sample_table(self, sample_id):
         # TODO should implement way to map sample id to table name
@@ -90,6 +91,7 @@ class HailSearch(object):
         ]
 
         self.mt = hl.filter_intervals(self.mt, parsed_intervals)
+        logger.info(f'Interval filtered hits: {self.mt.rows().count()}')
 
     def filter_by_frequency(self, frequencies, **kwargs):
         freq_filters = {}
@@ -138,6 +140,7 @@ class HailSearch(object):
             allowed_consequences_set = hl.set(allowed_consequences)
             consequence_terms = self.mt.vep.transcript_consequences.flatmap(lambda tc: tc.consequence_terms)
             self.mt = self.mt.filter_rows(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
+            logger.info(f'Annotation filtered hits: {self.mt.rows().count()}')
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
         if inheritance_filter or inheritance_mode:
@@ -147,6 +150,7 @@ class HailSearch(object):
             for samples_by_id in self.samples_by_family.values():
                 all_samples.update(samples_by_id.keys())
             self.mt = self.mt.filter_cols(hl.array(all_samples).contains(self.mt.s))
+            logger.info(f'Genotype filtered hits: {self.mt.rows().count()}')
 
             # TODO remove all samples in families where any sample is not passing the quality filters
             # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
@@ -221,6 +225,7 @@ class HailSearch(object):
         for family_guid in family_guids:
             samples += list(self.samples_by_family[family_guid].values())
         sample_individuals = {s.sample_id: s.individual.guid for s in samples}
+        logger.info(f'Un-annotated hits: {self.mt.rows().count()}')
 
         # TODO genotypes need to come from sample-specific tables
         rows = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
