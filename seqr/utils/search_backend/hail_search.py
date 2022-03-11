@@ -3,7 +3,7 @@ import hail as hl
 import logging
 
 from seqr.views.utils.json_utils import _to_camel_case
-from reference_data.models import GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
@@ -246,6 +246,8 @@ class HailSearch(object):
             'chrom', 'pos', 'ref', 'alt', 'rg37_locus', 'genotypes', 'sortedTranscriptConsequences', 'variantId',
             'genotypeFilters', 'clinvar', 'hgmd','rsid', 'xpos', # TODO populations and predictions
         )
+
+        self.previous_search_results['total_results'] = rows.count()
         collected = rows.take(num_results)
 
         # localized = self.mt.localize_entries("ent", "s")
@@ -268,13 +270,14 @@ class HailSearch(object):
                 'mainTranscriptId': variant.sortedTranscriptConsequences[0].transcript_id,
                 'familyGuids': family_guids,
                 'genomeVersion': GENOME_VERSION_GRCh38,
-                'liftedOverGenomeVersion': None,
+                'liftedOverGenomeVersion': GENOME_VERSION_GRCh37,
                 'liftedOverChrom': variant.rg37_locus.contig,
                 'liftedOverPos': variant.rg37_locus.position,
             }
             variant.drop('locus', 'alleles', 'sortedTranscriptConsequences')
             result.update(variant)
             result['genotypes'] = {sample_individuals[gen['sampleId']]: gen for gen in result['genotypes']}
+            hail_results.append(result)
 
             # genotypes = {sample_individuals[sample_id]: {
             #     "sampleId": sample_id,
@@ -304,24 +307,11 @@ class HailSearch(object):
             #     'familyGuids': family_guids,
             #     'genomeVersion': GENOME_VERSION_GRCh38,
             #     'liftedOverGenomeVersion': None,
-            #     'liftedOverChrom': None, # TODO rg37_locus
-            #     'liftedOverPos': None, # TODO rg37_locus
-            #     'clinvar': {}, # TODO
-            #     'hgmd': {},  # TODO
-            #     'populations': {}, # TODO
-            #     'predictions': {}, # TODO
-            #     # 'filters': {'response_key': 'genotypeFilters', 'format_value': ', '.join, 'default_value': ''},
-            #     # 'num_exon': {'response_key': 'numExon'},
-            #     # 'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
-            #     # 'rsid': {},
-            #     # 'xpos': {'format_value': int},
-            #     # 'algorithms': {'format_value': ', '.join}
+            #     'liftedOverChrom': None,
+            #     'liftedOverPos': None,
             # })
             #
 
         # TODO format return values into correct dicts, potentially post-process compound hets
-
-        # TODO get total number results beyond the current page (currently computes up to 10000)
-        self.previous_search_results['total_results'] = len(hail_results)
 
         return hail_results
