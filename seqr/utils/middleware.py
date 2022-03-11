@@ -88,6 +88,7 @@ class JsonErrorMiddleware(MiddlewareMixin):
     def process_exception(request, exception):
         exception_json =  _get_core_exception_json(exception)
         status = _get_exception_status_code(exception)
+        detail = None
         if status == 401:
             status = 500
             detail = 'was 401'
