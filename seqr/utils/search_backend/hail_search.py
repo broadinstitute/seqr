@@ -75,8 +75,10 @@ class HailSearch(object):
         raise NotImplementedError
 
     @classmethod
-    def process_previous_results(cls, *args, **kwargs):
-        return EsSearch.process_previous_results(*args, **kwargs)
+    def process_previous_results(cls, previous_search_results, page=1, num_results=100, **kwargs):
+        # return EsSearch.process_previous_results(*args, **kwargs)
+        # TODO re-enable caching at some point, but not helpful for deevelopment
+        return None, {'page': page, 'num_results': num_results}
 
     def sort(self, sort):
         pass
