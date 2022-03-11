@@ -285,7 +285,7 @@ class HailSearch(object):
             result = dict(variant)
             result['genotypes'] = {gen.get('individualGuid'): dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
-            result = {k: dict(v) if isinstance(v, hl.Struct) else v for k, v in result.items()}
+            result = {k: dict(v) if isinstance(v, hl.Struct) or isinstance(v, hl.utils.frozendict) else v for k, v in result.items()}
             hail_results.append(result)
 
         # TODO format return values into correct dicts, potentially post-process compound hets
