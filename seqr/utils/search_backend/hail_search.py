@@ -320,4 +320,5 @@ class HailSearch(object):
             #
 
         # TODO format return values into correct dicts, potentially post-process compound hets
+        logger.info('result', extra={'result': str(hail_results[0])})
         return hail_results
