@@ -261,6 +261,7 @@ class HailSearch(object):
         rows = rows.annotate_globals(gv=hl.eval(rows.genomeVersion)).drop('genomeVersion') # prevents name collision with global
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
         rows = rows.rename(RENAME_FIELDS)
+        rows = rows.key_by('variantId')
         rows = rows.select(*CORE_FIELDS, *DROP_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
 
         total_results = rows.count()
@@ -276,7 +277,7 @@ class HailSearch(object):
                 tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
                 transcripts[tc.gene_id].append(tc_dict)
 
-            result = dict(variant.drop(*DROP_FIELDS, *KEY_BY_FIELDS))
+            result = dict(variant.drop(*DROP_FIELDS))
             result['transcripts'] = transcripts
             result['genotypes'] = {gen.get('individualGuid'): dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
