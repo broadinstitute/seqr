@@ -29,7 +29,7 @@ class HailSearch(object):
         self.samples_by_family = defaultdict(dict)
         samples = Sample.objects.filter(is_active=True, individual__family__in=families)
 
-        data_sources = {s.elasitcsearch_Ondex for s in samples}
+        data_sources = {s.elasitcsearch_index for s in samples}
         if len(data_sources) > 1:
             raise InvalidSearchException(
                 f'Search is only enabled on a single data source, requested {", ".join(data_sources)}')
@@ -222,6 +222,7 @@ class HailSearch(object):
             samples += list(self.samples_by_family[family_guid].values())
         sample_individuals = {s.sample_id: s.individual.guid for s in samples}
 
+        # TODO genotypes need to come from sample-specific tables
         rows = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
             sampleId=self.mt.s,
             gq=self.mt.GQ,
