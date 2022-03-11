@@ -279,6 +279,9 @@ class HailSearch(object):
 
 # TODO should use custom json serializer
 def _json_serialize(result):
+    if not isinstance(result, dict):
+        return result
+
     parsed = {}
     for k, v in result.items():
         if isinstance(v, hl.Struct) or isinstance(v, hl.utils.frozendict):
