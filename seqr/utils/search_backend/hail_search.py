@@ -279,8 +279,7 @@ class HailSearch(object):
                 'liftedOverChrom': variant.rg37_locus.contig,
                 'liftedOverPos': variant.rg37_locus.position,
             }
-            variant.drop('locus', 'alleles', 'sortedTranscriptConsequences', 'rg37_locus')
-            result.update(variant)
+            result.update(variant.drop('locus', 'alleles', 'sortedTranscriptConsequences', 'rg37_locus'))
             result['genotypes'] = {sample_individuals[gen['sampleId']]: dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
             result = {k: dict(v) if isinstance(v, hl.Struct) else v for k, v in result.items()}
