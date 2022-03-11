@@ -145,18 +145,20 @@ class HailSearch(object):
         if inheritance_filter or inheritance_mode:
             self._filter_by_genotype_inheritance(inheritance_mode, inheritance_filter, quality_filter)
         else:
-            all_samples = set()
+            all_samples = {}
             for samples_by_id in self.samples_by_family.values():
-                all_samples.update(samples_by_id.keys())
-            self.mt = self.mt.filter_cols(hl.array(all_samples).contains(self.mt.s))
-        # TODO genotypes need to come from sample-specific tables
-        self.mt = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
-            sampleId=self.mt.s,
-            gq=self.mt.GQ,
-            numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
-            dp=self.mt.DP,
-            # TODO ab
-        )))
+                all_samples.update(samples_by_id)
+            sample_individuals = hl.literal({s.sample_id: s.individual.guid for s in all_samples.values()})
+            # TODO genotypes need to come from sample-specific tables
+            self.mt = self.mt.filter_cols(hl.array(all_samples.keys()).contains(self.mt.s))
+            self.mt = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
+                individualGuid=sample_individuals.get(self.mt.s),
+                sampleId=self.mt.s,
+                gq=self.mt.GQ,
+                numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
+                dp=self.mt.DP,
+                # TODO ab
+            )))
 
             # TODO remove all samples in families where any sample is not passing the quality filters
             # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
@@ -227,10 +229,6 @@ class HailSearch(object):
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
         family_guids = list(self.samples_by_family.keys())
-        samples = []
-        for family_guid in family_guids:
-            samples += list(self.samples_by_family[family_guid].values())
-        sample_individuals = {s.sample_id: s.individual.guid for s in samples}
 
         CORE_FIELDS = ['pos', 'ref', 'alt', 'genotypes', 'variantId','hgmd','rsid', 'xpos']
         KEY_BY_FIELDS = ['locus', 'alleles']
@@ -243,7 +241,7 @@ class HailSearch(object):
                 goldStars=r.clinvar.gold_stars,
             ),
             'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
-            'familyGuids': lambda r: hl.literal(family_guids),
+            'familyGuids': lambda r: hl.literal(family_guids), # TODO should be set based on match
             'genomeVersion': lambda r: hl.eval(rows.gv),
             'liftedOverGenomeVersion': lambda r: hl.if_else(
                 hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
@@ -280,7 +278,7 @@ class HailSearch(object):
 
             result = dict(variant.drop(*DROP_FIELDS, *KEY_BY_FIELDS))
             result['transcripts'] = transcripts
-            result['genotypes'] = {sample_individuals[gen['sampleId']]: dict(gen) for gen in result['genotypes']}
+            result['genotypes'] = {gen.pop('individualGuid'): dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
             result = {k: dict(v) if isinstance(v, hl.Struct) else v for k, v in result.items()}
             hail_results.append(result)
