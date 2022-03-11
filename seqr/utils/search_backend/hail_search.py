@@ -272,6 +272,7 @@ class HailSearch(object):
 
         collected = rows.take(num_results)
         hail_results = [_json_serialize(dict(row)) for row in collected]
+        logger.info(str(hail_results[0]['transcripts'].__class__))
         logger.info(str(hail_results[0]))
 
         # TODO format return values into correct dicts, potentially post-process compound hets
