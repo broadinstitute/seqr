@@ -29,7 +29,7 @@ class HailSearch(object):
         self.samples_by_family = defaultdict(dict)
         samples = Sample.objects.filter(is_active=True, individual__family__in=families)
 
-        data_sources = {s.elasitcsearch_index for s in samples}
+        data_sources = {s.elasticsearch_index for s in samples}
         if len(data_sources) > 1:
             raise InvalidSearchException(
                 f'Search is only enabled on a single data source, requested {", ".join(data_sources)}')
