@@ -150,7 +150,7 @@ class HailSearch(object):
                 all_samples.update(samples_by_id)
             sample_individuals = hl.literal({s.sample_id: s.individual.guid for s in all_samples.values()})
             # TODO genotypes need to come from sample-specific tables
-            self.mt = self.mt.filter_cols(hl.array(all_samples.keys()).contains(self.mt.s))
+            self.mt = self.mt.filter_cols(hl.array(list(all_samples.keys())).contains(self.mt.s))
             self.mt = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
                 individualGuid=sample_individuals.get(self.mt.s),
                 sampleId=self.mt.s,
