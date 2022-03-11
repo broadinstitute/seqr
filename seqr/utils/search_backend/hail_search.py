@@ -278,7 +278,7 @@ class HailSearch(object):
 
             result = dict(variant.drop(*DROP_FIELDS, *KEY_BY_FIELDS))
             result['transcripts'] = transcripts
-            result['genotypes'] = {gen.pop('individualGuid'): dict(gen) for gen in result['genotypes']}
+            result['genotypes'] = {gen.get('individualGuid'): dict(gen) for gen in result['genotypes']}
             # TODO should use custom json serializer
             result = {k: dict(v) if isinstance(v, hl.Struct) else v for k, v in result.items()}
             hail_results.append(result)
