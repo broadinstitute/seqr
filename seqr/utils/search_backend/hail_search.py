@@ -232,7 +232,7 @@ class HailSearch(object):
             samples += list(self.samples_by_family[family_guid].values())
         sample_individuals = {s.sample_id: s.individual.guid for s in samples}
 
-        CORE_FIELDS = ['chrom', 'pos', 'ref', 'alt', 'genotypes', 'variantId','hgmd','rsid', 'xpos']
+        CORE_FIELDS = ['pos', 'ref', 'alt', 'genotypes', 'variantId','hgmd','rsid', 'xpos']
         KEY_BY_FIELDS = ['locus', 'alleles']
         DROP_FIELDS = ['sortedTranscriptConsequences']
         RENAME_FIELDS = {'contig': 'chrom'}
