@@ -21,6 +21,34 @@ GENOTYPE_QUERY_MAP = {
     HAS_REF: '', # TODO find function for this
 }
 
+CORE_FIELDS = ['pos', 'ref', 'alt', 'familyGuids', 'genotypes', 'hgmd', 'rsid', 'xpos']
+RENAME_FIELDS = {'contig': 'chrom'}
+ANNOTATION_FIELDS = {
+    'clinvar': lambda r: hl.struct(
+        clinicalSignificance=r.clinvar.clinical_significance,
+        alleleId=r.clinvar.allele_id,
+        goldStars=r.clinvar.gold_stars,
+    ),
+    'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
+    'genomeVersion': lambda r: hl.eval(r.gv),
+    'liftedOverGenomeVersion': lambda r: hl.if_else(
+        hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
+    ),
+    'liftedOverChrom': lambda r: hl.if_else(
+        hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
+    ),
+    'liftedOverPos': lambda r: hl.if_else(
+        hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
+    ),
+    'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
+    'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
+    'transcripts': lambda r: r.sortedTranscriptConsequences.map(
+        lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
+            'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
+            'lof', 'lof_flags', 'lof_filter', 'lof_info', 'transcript_id',
+        ]})).group_by(lambda t: t.geneId),
+    # TODO populations and predictions
+}
 
 class HailSearch(object):
 
@@ -151,14 +179,17 @@ class HailSearch(object):
             sample_individuals = hl.literal({s.sample_id: s.individual.guid for s in all_samples.values()})
             # TODO genotypes need to come from sample-specific tables
             self.mt = self.mt.filter_cols(hl.array(list(all_samples.keys())).contains(self.mt.s))
-            self.mt = self.mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
-                individualGuid=sample_individuals.get(self.mt.s),
-                sampleId=self.mt.s,
-                gq=self.mt.GQ,
-                numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
-                dp=self.mt.DP,
-                # TODO ab
-            )))
+            self.mt = self.mt.annotate_rows(
+                familyGuids=hl.literal(list(self.samples_by_family.keys())), # TODO should base on match
+                genotypes=hl.agg.collect(hl.struct(
+                    individualGuid=sample_individuals.get(self.mt.s),
+                    sampleId=self.mt.s,
+                    gq=self.mt.GQ,
+                    numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
+                    dp=self.mt.DP,
+                    # TODO ab
+                )).group_by(lambda g: g.individualGuid).map_values(lambda g: g[0]),
+            )
 
             # TODO remove all samples in families where any sample is not passing the quality filters
             # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
@@ -228,38 +259,6 @@ class HailSearch(object):
         raise NotImplementedError
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
-        family_guids = list(self.samples_by_family.keys())
-
-        CORE_FIELDS = ['pos', 'ref', 'alt', 'genotypes', 'hgmd','rsid', 'xpos']
-        RENAME_FIELDS = {'contig': 'chrom'}
-        ANNOTATION_FIELDS = {
-            'clinvar': lambda r: hl.struct(
-                clinicalSignificance=r.clinvar.clinical_significance,
-                alleleId=r.clinvar.allele_id,
-                goldStars=r.clinvar.gold_stars,
-            ),
-            'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
-            'familyGuids': lambda r: hl.literal(family_guids), # TODO should be set based on match
-            'genomeVersion': lambda r: hl.eval(rows.gv),
-            'liftedOverGenomeVersion': lambda r: hl.if_else(
-                hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
-            ),
-            'liftedOverChrom': lambda r: hl.if_else(
-                hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
-            ),
-            'liftedOverPos': lambda r: hl.if_else(
-                hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
-            ),
-            'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
-            'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
-            'transcripts': lambda r: r.sortedTranscriptConsequences.map(
-                lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
-                    'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
-                    'lof', 'lof_flags', 'lof_filter', 'lof_info', 'transcript_id',
-                ]})).group_by(lambda t: t.geneId),
-            # TODO populations and predictions
-        }
-
         rows = self.mt.rows()
         rows = rows.annotate_globals(gv=hl.eval(rows.genomeVersion)).drop('genomeVersion') # prevents name collision with global
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
@@ -272,21 +271,20 @@ class HailSearch(object):
         logger.info(f'Total hits: {total_results}')
 
         collected = rows.take(num_results)
-        hail_results = []
-        for variant in collected:
-            # transcripts = defaultdict(lambda: list())
-            # for tc in variant.sortedTranscriptConsequences:
-            #     tc_dict = dict(tc.drop("domains"))
-            #     tc_dict = {_to_camel_case(k): v for k, v in tc_dict.items()}
-            #     transcripts[tc.gene_id].append(tc_dict)
-            #
-            # result = dict(variant.drop(*DROP_FIELDS))
-            # result['transcripts'] = transcripts
-            result = dict(variant)
-            result['genotypes'] = {gen.get('individualGuid'): dict(gen) for gen in result['genotypes']}
-            # TODO should use custom json serializer
-            result = {k: dict(v) if isinstance(v, hl.Struct) or isinstance(v, hl.utils.frozendict) else v for k, v in result.items()}
-            hail_results.append(result)
+        hail_results = [_json_serialize(dict(row)) for row in collected]
 
         # TODO format return values into correct dicts, potentially post-process compound hets
         return hail_results
+
+# TODO should use custom json serializer
+def _json_serialize(result):
+    parsed = {}
+    for k, v in result.items():
+        if isinstance(v, hl.Struct) or isinstance(v, hl.utils.frozendict):
+            v = dict(v)
+        if isinstance(v, dict):
+            v = _json_serialize(v)
+        parsed[k] = v
+
+
+
