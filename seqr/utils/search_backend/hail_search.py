@@ -248,6 +248,7 @@ class HailSearch(object):
         )
 
         self.previous_search_results['total_results'] = rows.count()
+        logger.info(f'Total hits: {self.previous_search_results["total_results"]}')
         collected = rows.take(num_results)
 
         # localized = self.mt.localize_entries("ent", "s")
