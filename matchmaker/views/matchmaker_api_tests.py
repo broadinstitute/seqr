@@ -840,11 +840,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.maxDiff = None
-        self.assertDictEqual(response_json, {'mmeSubmissionsByGuid': {'MS000015_na20885': mock.ANY}})
+        self.assertDictEqual(response_json, {'mmeSubmissionsByGuid': {'MS000015_na20885': mock.ANY, 'MS000016_P0004515': mock.ANY}})
 
         updated_submission = MatchmakerSubmission.objects.get(guid='MS000015_na20885')
-        self.assertEqual(updated_submission.contact_href, 'mailto:matchmaker@broadinstitute.org,UDNCC@hms.harvard.edu')
+        self.assertEqual(updated_submission.contact_href, 'mailto:matchmaker@populationgenomics.org.au,UDNCC@hms.harvard.edu')
 
         # test submission already with contact not updated
         existing_submission = MatchmakerSubmission.objects.get(guid='MS000016_P0004515')
-        self.assertEqual(existing_submission.contact_href, 'mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org')
+        self.assertEqual(
+            existing_submission.contact_href,
+            'mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au,UDNCC@hms.harvard.edu'
+        )

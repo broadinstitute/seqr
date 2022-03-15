@@ -92,8 +92,11 @@ class AuthAPITest(TestCase):
     def test_login_view_with_google(self):
         url = reverse(login_view)
         response = self.client.post(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json()['error'],
+            'Password-based authentication is disabled. Please use Google authentication instead.'
+        )
 
     def test_logout_view(self):
         url = reverse(login_view)
