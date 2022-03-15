@@ -1088,6 +1088,13 @@ const MUTTASTER_MAP = {
   P: { color: 'green', value: 'polymorphism automatic' },
 }
 
+const MITOTIP_MAP = {
+  likely_pathogenic: { color: 'red', value: 'Likely pathogenic' },
+  possibly_pathogenic: { color: 'red', value: 'Possibly pathogenic' },
+  possibly_benign: { color: 'green', value: 'Possibly benign' },
+  likely_benign: { color: 'green', value: 'Likely benign' },
+}
+
 const MISSENSE_IN_SILICO_GROUP = 'Missense'
 const CODING_IN_SILICO_GROUP = 'Coding/Noncoding'
 const SPLICING_IN_SILICO_GROUP = 'Splicing'
@@ -1119,6 +1126,10 @@ export const PREDICTOR_FIELDS = [
   { field: 'metasvm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
   { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
+  { field: 'apogeeScore', warningThreshold: 0.5, dangerThreshold: 0.5, fieldTitle: 'APOGEE' },
+  { field: 'hapDefiningVariant', fieldTitle: 'Haplogroup Defining', indicatorMap: { Y: { color: 'green', value: '' } } },
+  { field: 'mitotipTrnaPrediction', fieldTitle: 'MitoTIP', indicatorMap: MITOTIP_MAP },
+  { field: 'HmtVarScore', warningThreshold: 0.35, dangerThreshold: 0.35, fieldTitle: 'HmtVar' },
 ]
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {

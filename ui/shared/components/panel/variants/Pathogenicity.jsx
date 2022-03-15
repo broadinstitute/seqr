@@ -107,6 +107,18 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
           />
         </span>
       )}
+      {variant.mitomapPathogenic && (
+        <span>
+          <HorizontalSpacer width={5} />
+          <b>MITOMAP:</b>
+          <HorizontalSpacer width={5} />
+          <PathogenicityLink
+            significance="pathogenic"
+            href="https://www.mitomap.org/foswiki/bin/view/MITOMAP/ConfirmedMutations"
+            formatName={snakecaseToTitlecase}
+          />
+        </span>
+      )}
     </span>
   )
 })

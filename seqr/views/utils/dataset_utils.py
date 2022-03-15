@@ -17,7 +17,7 @@ logger = SeqrLogger(__name__)
 SAMPLE_FIELDS_LIST = ['samples', 'samples_num_alt_1']
 VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
 #  support .bgz instead of requiring .vcf.bgz due to issues with DSP delivery of large callsets
-DATASET_FILE_EXTENSIONS = VCF_FILE_EXTENSIONS[:-1] + ('.bgz', '.bed')
+DATASET_FILE_EXTENSIONS = VCF_FILE_EXTENSIONS[:-1] + ('.bgz', '.bed', '.mt')
 
 
 def validate_index_metadata_and_get_elasticsearch_index_samples(elasticsearch_index, **kwargs):

@@ -109,6 +109,13 @@ POPULATIONS = {
     },
     'gnomad_svs': {},
 }
+
+MITO_POPULATION = {
+    'gnomad_mito': {},
+    'helix': {},
+}
+POPULATIONS.update(MITO_POPULATION)
+
 POPULATION_FIELD_CONFIGS = {
     'AF': {'format_value': float},
     'filter_AF': {'format_value': lambda val: float(val) if val is not None else None, 'default_value': None},
@@ -118,6 +125,9 @@ POPULATION_FIELD_CONFIGS = {
     'Hemi': {},
     'Het': {},
     'ID': {'format_value': str, 'default_value': None},
+    'AC_het': {},
+    'AF_het': {'format_value': float},
+    'max_hl': {'format_value': float},
 }
 for population, pop_config in POPULATIONS.items():
     for freq_field in POPULATION_FIELD_CONFIGS.keys():
@@ -290,6 +300,12 @@ CORE_FIELDS_CONFIG = {
     },
     'algorithms': {'format_value': ', '.join}
 }
+MITO_CORE_FIELDS_CONFIG = {
+    'common_low_heteroplasmy': {'response_key': 'commonLowHeteroplasmy'},
+    'high_constraint_region': {'response_key': 'highConstraintRegion'},
+    'mitomap_pathogenic': {'response_key': 'mitomapPathogenic'},
+}
+CORE_FIELDS_CONFIG.update(MITO_CORE_FIELDS_CONFIG)
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
     'dbnsfp_DANN_score': {},
@@ -308,6 +324,13 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_SIFT_pred': {},
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
+MITO_PREDICTION_FIELDS_CONFIG = {
+    'APOGEE_score': {'response_key': 'apogeeScore'},
+    'hap_defining_variant': {'response_key': 'hapDefiningVariant', 'format_value': lambda k: 'Y' if k else None},
+    'mitotip_trna_prediction': {'response_key': 'mitotipTrnaPrediction'},
+    'HmtVar_score': {'response_key': 'HmtVarScore'},
+}
+PREDICTION_FIELDS_CONFIG.update(MITO_PREDICTION_FIELDS_CONFIG)
 
 def get_prediction_response_key(key):
     return key.split('_')[1].lower()
@@ -338,6 +361,12 @@ GENOTYPE_FIELDS_CONFIG = {
 }
 GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SNP_QUALITY_FIELDS.keys()})
+MITO_GENOTYPE_FIELDS_CONFIG = {
+    'hl': {},
+    'mito_cn': {},
+    'contamination': {},
+}
+GENOTYPE_FIELDS_CONFIG.update(MITO_GENOTYPE_FIELDS_CONFIG)
 SV_GENOTYPE_FIELDS_CONFIG = {
     'cn': {'format_value': int, 'default_value': -1},
     'end': {},

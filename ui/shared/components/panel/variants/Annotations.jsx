@@ -61,6 +61,14 @@ const addDividedLink = (links, name, href) => links.push((
   </span>
 ), <a key={name} href={href} target="_blank" rel="noreferrer">{name}</a>)
 
+const isTrnaOrRrna = (geneNames) => {
+  if (!geneNames) {
+    return false
+  }
+  const geneName = geneNames.find(name => name.startsWith('MT-T') || name.startsWith('MT-R'))
+  return !!geneName
+}
+
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = []
   const mainGene = genesById[mainTranscript.geneId]
@@ -137,6 +145,13 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       size="tiny"
     />,
   )
+  if (variant.chrom === 'M') {
+    addDividedLink(links, 'mitomap', 'https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele')
+    if (isTrnaOrRrna(geneNames)) {
+      addDividedLink(links, 'Mitovisualize',
+        `https://www.mitovisualize.org/variant/m-${variant.pos}-${variant.ref}-${variant.alt}`)
+    }
+  }
 
   return links
 })
@@ -343,6 +358,15 @@ const Annotations = React.memo(({ variant, mainGeneId }) => {
       ).map(e => <div key={e}>{e}</div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
+      {variant.highConstraintRegion && (
+        <span>
+          <HorizontalSpacer width={12} />
+          <Popup
+            trigger={<Label color="red" horizontal size="tiny">High Constraint Region</Label>}
+            content="The variant locate in one of the high constraint region"
+          />
+        </span>
+      )}
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>
