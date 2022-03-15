@@ -239,7 +239,7 @@ def _add_tag_type_counts(project, project_variant_tags):
     }
 
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
-        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
     for tag_type in project_variant_tags:
         current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
                                    counts['variant_tag_type__name'] == tag_type['name']]
