@@ -7,7 +7,6 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('seqr', '0039_project_is_demo'),
         ('matchmaker', '0003_auto_20201123_2111'),
     ]
 
