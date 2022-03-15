@@ -352,6 +352,7 @@ def _get_loaded_before_date_project_individual_samples(project, max_loaded_date)
 
 def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
     gene_ids = set()
+    compound_het_gene_id_by_family = {}
     for family_guid, saved_variants in saved_variants_by_family.items():
         potential_com_het_gene_variants = defaultdict(list)
         potential_mnvs = defaultdict(list)
@@ -370,7 +371,9 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
                 potential_mnvs[guid].append(variant)
 
         mnv_genes = _process_mnvs(potential_mnvs, saved_variants)
-        compound_het_gene_id_by_family = _process_comp_hets(family_guid, potential_com_het_gene_variants, gene_ids, mnv_genes)
+        compound_het_gene_id_by_family.update(
+            _process_comp_hets(family_guid, potential_com_het_gene_variants, gene_ids, mnv_genes)
+        )
 
     return compound_het_gene_id_by_family, gene_ids
 
