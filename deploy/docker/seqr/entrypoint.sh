@@ -25,7 +25,7 @@ if [ -e "/.config/service-account-key.json" ]; then
     until [ "$retries" -ge 5 ]
     do
         gcloud auth activate-service-account --key-file /.config/service-account-key.json && break
-        retries=$((retries+1)) 
+        retries=$((retries+1))
         echo "gcloud auth failed. Retrying, attempt ${retries}/5"
         sleep 10
     done
@@ -39,6 +39,21 @@ cd /seqr
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
 cat ~/.pgpass
+
+# wait for database connectivity, exit if we don't get it within ~2 minutes
+pg_retries=0
+until [ "$pg_retries" -ge 10 ]
+do
+    pg_isready -d postgres -h "$POSTGRES_SERVICE_HOSTNAME" -U postgres && break
+    pg_retries=$((pg_retries+1))
+    if [ "$pg_retries" -eq 10 ]; then
+        echo "Postgres database wasn't available after 10 connection attempts"
+        exit 1
+    else
+        echo "Unable to connect to postgres, retrying. Attempt ${pg_retries}/10"
+        sleep 12
+    fi
+done
 
 # init and populate seqrdb unless it already exists
 if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -l | grep seqrdb; then
