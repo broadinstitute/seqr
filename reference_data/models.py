@@ -239,3 +239,12 @@ class MGI(models.Model):
     class Meta:
         unique_together = ('gene', 'marker_id')
         json_fields = ['marker_id']
+
+
+class GenCC(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    classifications = models.JSONField()
+
+    class Meta:
+        json_fields = ['classifications']

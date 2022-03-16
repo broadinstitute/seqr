@@ -2,6 +2,7 @@
 
 ## dev
 * Disallow deleting individuals in matchmaker (REQUIRES DB MIGRATION)
+* Add GenCC reference data (REQUIRES DB MIGRATION)
 
 ## 3/10/22
 * Return hom alt SNPs in trans with Deletions as compound hets
