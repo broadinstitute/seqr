@@ -218,14 +218,23 @@ def upload_qc_pipeline_output(request):
         'info': info,
     })
 
+SV_WES_FALSE_FLAGS = {'lt100_raw_calls': 'raw_calls:_>100', 'lt10_highQS_rare_calls': 'high_QS_rare_calls:_>10'}
+SV_WGS_FALSE_FLAGS = {'expected_num_calls': 'outlier_num._calls'}
+SV_FALSE_FLAGS = {}
+SV_FALSE_FLAGS.update(SV_WES_FALSE_FLAGS)
+SV_FALSE_FLAGS.update(SV_WGS_FALSE_FLAGS)
 
 def _parse_raw_qc_records(json_records):
-    # Parse SV QC
-    if all(field in json_records[0] for field in ['sample', 'lt100_raw_calls', 'lt10_highQS_rare_calls']):
+    # Parse SV WES QC
+    if all(field in json_records[0] for field in ['sample'] + list(SV_WES_FALSE_FLAGS.keys())):
         records_by_sample_id = {
             re.search('(\d+)_(?P<sample_id>.+)_v\d_Exome_GCP', record['sample']).group('sample_id'): record
             for record in json_records}
         return Sample.DATASET_TYPE_SV_CALLS, 'exome', records_by_sample_id
+
+    # Parse SV WGS QC
+    if all(field in json_records[0] for field in ['sample'] + list(SV_WGS_FALSE_FLAGS.keys())):
+        return Sample.DATASET_TYPE_SV_CALLS, 'genome', {record['sample']: record for record in json_records}
 
     # Parse regular variant QC
     missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
@@ -295,18 +304,13 @@ def _update_individuals_variant_qc(json_records, data_type, warnings, user):
 
 
 def _update_individuals_sv_qc(json_records, user):
-    inidividuals_by_qc = defaultdict(list)
+    inidividuals_by_qc_flags = defaultdict(list)
     for record in json_records:
-        inidividuals_by_qc[(record['lt100_raw_calls'], record['lt10_highQS_rare_calls'])] += record['individual_ids']
+        flags = tuple(sorted(flag for field, flag in SV_FALSE_FLAGS.items() if record.get(field) == 'FALSE'))
+        inidividuals_by_qc_flags[flags] += record['individual_ids']
 
-    for raw_flags, indiv_ids in inidividuals_by_qc.items():
-        lt100_raw_calls, lt10_highQS_rare_calls = raw_flags
-        sv_flags = []
-        if lt100_raw_calls == 'FALSE':
-            sv_flags.append('raw_calls:_>100')
-        if lt10_highQS_rare_calls == 'FALSE':
-            sv_flags.append('high_QS_rare_calls:_>10')
-        Individual.bulk_update(user, {'sv_flags': sv_flags or None}, id__in=indiv_ids)
+    for flags, indiv_ids in inidividuals_by_qc_flags.items():
+        Individual.bulk_update(user, {'sv_flags': list(flags) or None}, id__in=indiv_ids)
 
 
 FILTER_FLAG_COL_MAP = {
