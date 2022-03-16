@@ -499,6 +499,7 @@ class VariantGenes extends React.PureComponent {
     const { variant, genesById, mainGeneId, showMainGene, rnaSeqData } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
+    const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
 
     const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
       <GeneSearchLinkWithPopup location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
@@ -506,11 +507,13 @@ class VariantGenes extends React.PureComponent {
     if (geneIds.length < 6 || showAll) {
       return (
         <div>
-          {geneIds.filter(geneId => showMainGene || geneId !== mainGeneId).map(geneId => (
+          {genes.filter(({ geneId }) => showMainGene || geneId !== mainGeneId).sort(
+            (a, b) => a.startGrch38 - b.startGrch38,
+          ).map(gene => (
             <BaseVariantGene
-              key={geneId}
-              geneId={geneId}
-              gene={genesById[geneId]}
+              key={gene.geneId}
+              geneId={gene.geneId}
+              gene={gene}
               variant={variant}
               rnaSeqData={rnaSeqData}
               showInlineDetails={!mainGeneId}
@@ -522,7 +525,6 @@ class VariantGenes extends React.PureComponent {
       )
     }
 
-    const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
     const geneConsequences = [...(new Set(geneIds.map(
       geneId => (variant.transcripts[geneId][0] || {}).majorConsequence,
     ).filter(consequence => consequence).map(consequence => consequence.replace(/_/g, ' '))))].join(', ')
