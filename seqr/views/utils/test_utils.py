@@ -228,12 +228,6 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         },
-        'test_pm_user@test.com': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": False,
-            "canCompute": False
-        },
         'test_user_not_registered@test.com': {
             "accessLevel": "READER",
             "pending": True,
@@ -302,7 +296,13 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
-        }
+        },
+        'test_pm_user@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
     'workspace': {
         'bucketName': 'test_bucket'

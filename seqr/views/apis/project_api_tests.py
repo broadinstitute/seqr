@@ -12,7 +12,7 @@ from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshToke
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -21,7 +21,7 @@ DEMO_PROJECT_GUID = 'R0003_test'
 PROJECT_PAGE_RESPONSE_KEYS = {'projectsByGuid'}
 
 BASE_CREATE_PROJECT_JSON = {'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38'}
-WORKSPACE_CREATE_PROJECT_JSON = {'workspaceName': TEST_WORKSPACE_NAME, 'workspaceNamespace': TEST_WORKSPACE_NAMESPACE}
+WORKSPACE_CREATE_PROJECT_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNamespace': TEST_WORKSPACE_NAMESPACE}
 WORKSPACE_CREATE_PROJECT_JSON.update(BASE_CREATE_PROJECT_JSON)
 
 class ProjectAPITest(object):
@@ -56,7 +56,7 @@ class ProjectAPITest(object):
         self.assertEqual(new_project.genome_version, '38')
         self.assertEqual(new_project.created_by, self.pm_user)
         self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
-        expected_workspace_name = TEST_WORKSPACE_NAME if 'workspaceName' in self.CREATE_PROJECT_JSON else None
+        expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
         self.assertEqual(new_project.workspace_name, expected_workspace_name)
 
         project_guid = new_project.guid
@@ -414,7 +414,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_ws_access_level.assert_has_calls([
             mock.call(self.pm_user, 'bar', 'foo'),
-            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
+            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
         ])
 
     def test_project_page_data(self):
@@ -444,7 +444,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_ws_access_level.assert_has_calls([
             mock.call(self.pm_user, 'bar', 'foo'),
-            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
+            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
         ])
 
     def test_project_page_data(self):
