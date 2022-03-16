@@ -527,6 +527,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
         'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
             'sampleType': 'WES',
+            'contamination': None, 'mitoCn': None, 'hl': None,
         },
     })
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
@@ -568,6 +569,7 @@ PARSED_MULTI_INDEX_VARIANT = deepcopy(PARSED_VARIANTS[1])
 PARSED_MULTI_INDEX_VARIANT['familyGuids'].append('F000011_11')
 PARSED_MULTI_INDEX_VARIANT['genotypes']['I000015_na20885'] = {
     'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None, 'sampleType': 'WES',
+    'contamination': None, 'mitoCn': None, 'hl': None,
 }
 
 PARSED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
@@ -718,13 +720,22 @@ SV_MAPPING_FIELDS = [
     'gnomad_svs_Het',
     'gnomad_svs_ID',
 ]
-
+POPULATIONS = ['callset', 'exac', 'g1k', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_svs', 'sv_callset', 'topmed']
+MITO_POPULATIONS = ['gnomad_mito', 'helix']
+FREQUENCIES = ['AC', 'AF', 'AN', 'filter_AF', 'Hemi', 'Het', 'Hom', 'ID']
+MITO_FREQUENCIES = ['AC_het', 'AF_het', 'max_hl']
+MITO_MAPPING_FIELDS = {f'{dataset}_{freq_type}' for dataset in POPULATIONS + MITO_POPULATIONS for freq_type in MITO_FREQUENCIES}
+MITO_MAPPING_FIELDS.update({f'{dataset}_{freq_type}' for dataset in MITO_POPULATIONS for freq_type in FREQUENCIES})
+MITO_SOURCE_FIELDS = {'APOGEE_score', 'common_low_heteroplasmy', 'high_constraint_region', 'mitotip_trna_prediction',
+                      'mitomap_pathogenic', 'HmtVar_score', 'hap_defining_variant'}
 SOURCE_FIELDS = {
     'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
     'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
+SOURCE_FIELDS.update(MITO_MAPPING_FIELDS)
+SOURCE_FIELDS.update(MITO_SOURCE_FIELDS)
 SOURCE_FIELDS -= {
     'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het',
     'gnomad_genomes_FAF_AF',
@@ -1135,6 +1146,7 @@ class EsUtilsTest(TestCase):
         all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
         all_family_variant['genotypes']['I000004_hg00731'] = {
             'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None, 'sampleType': 'WES',
+            'contamination': None, 'hl': None, 'mitoCn': None,
         }
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
