@@ -34,6 +34,7 @@ const CreateProjectButton = React.memo(props => (
     onSubmit={props.updateProject}
     initialValues={DEFAULT_PROJECT}
     formFields={props.user.isAnvil ? ANVIL_PROJECT_FIELDS : PROJECT_FIELDS}
+    showErrorPanel
   />
 ))
 
