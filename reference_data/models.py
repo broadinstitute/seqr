@@ -244,7 +244,8 @@ class MGI(models.Model):
 class GenCC(models.Model):
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
+    hgnc_id = models.CharField(max_length=10)
     classifications = models.JSONField()
 
     class Meta:
-        json_fields = ['classifications']
+        json_fields = ['classifications', 'hgnc_id']

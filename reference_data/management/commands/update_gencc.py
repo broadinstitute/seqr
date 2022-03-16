@@ -36,6 +36,7 @@ class GenCCReferenceDataHandler(ReferenceDataHandler):
     def parse_record(record):
         yield {
             'gene_symbol': record['gene_symbol'],
+            'hgnc_id': record['gene_curie'],
             'classifications': [{title: record[field] for field, title in CLASSIFICATION_FIELDS.items()}]
         }
 

@@ -172,19 +172,28 @@ GeneDetailSection.propTypes = {
 }
 
 const GENE_DISEASE_DETAIL_SECTIONS = [
-  { // TODO link to site
+  {
     color: 'violet',
     description: 'GenCC',
     label: 'GENCC',
     showDetails: gene => gene.genCc?.classifications,
-    detailsDisplay: gene => gene.genCc.classifications.map(
-      ({ classification, disease, moi, date, submitter }) => (
-        <div key={submitter}>
-          <b>{submitter}</b>
-          {` (${date.split('-')[0]}): ${classification} for ${disease}`}
-          <i>{` (${moi})`}</i>
-        </div>
-      ),
+    detailsDisplay: gene => (
+      <List>
+        {gene.genCc.classifications.map(({ classification, disease, moi, date, submitter }) => (
+          <ListItemLink
+            key={submitter}
+            content={(
+              <span>
+                <b>{submitter}</b>
+                {` (${date.split('-')[0]}): ${classification} for ${disease}`}
+                <i>{` (${moi})`}</i>
+              </span>
+            )}
+            target="_blank"
+            href={`https://search.thegencc.org/genes/${gene.genCc.hgncId}`}
+          />
+        ))}
+      </List>
     ),
   },
   {
