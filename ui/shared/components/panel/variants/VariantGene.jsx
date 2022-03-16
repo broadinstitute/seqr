@@ -534,24 +534,26 @@ class VariantGenes extends React.PureComponent {
         <ButtonLink fontWeight="bold" size="large" onClick={this.showGenes}>{`${geneIds.length} Genes`}</ButtonLink>
         {geneConsequences}
         <VerticalSpacer height={10} />
-        <div>
-          {[OMIM_SECTION, ...GENE_DETAIL_SECTIONS].map(({ showDetails, detailsDisplay, ...sectionConfig }) => {
-            const sectionGenes = genes.filter(gene => showDetails(gene))
-            return (
-              <GeneDetailSection
-                key={sectionConfig.label}
-                details={sectionGenes.length > 0 && sectionGenes.map(gene => (
-                  <div key={gene.geneId}>
-                    <Header size="small" content={gene.geneSymbol} />
-                    {detailsDisplay(gene, rnaSeqData)}
-                    <VerticalSpacer height={5} />
-                  </div>
-                ))}
-                {...sectionConfig}
-              />
-            )
-          })}
-        </div>
+        {!mainGeneId && (
+          <div>
+            {[OMIM_SECTION, ...GENE_DETAIL_SECTIONS].map(({ showDetails, detailsDisplay, ...sectionConfig }) => {
+              const sectionGenes = genes.filter(gene => showDetails(gene))
+              return (
+                <GeneDetailSection
+                  key={sectionConfig.label}
+                  details={sectionGenes.length > 0 && sectionGenes.map(gene => (
+                    <div key={gene.geneId}>
+                      <Header size="small" content={gene.geneSymbol} />
+                      {detailsDisplay(gene, rnaSeqData)}
+                      <VerticalSpacer height={5} />
+                    </div>
+                  ))}
+                  {...sectionConfig}
+                />
+              )
+            })}
+          </div>
+        )}
         {geneSearchLink}
       </div>
     )

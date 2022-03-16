@@ -309,7 +309,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       )}
       { (svType || Object.keys(mainTranscript).length > 0) && <VerticalSpacer height={10} />}
       {mainGeneId && <VariantGenes mainGeneId={mainGeneId} showMainGene={showMainGene} variant={variant} />}
-      {mainGeneId && <VerticalSpacer height={10} />}
+      {(mainGeneId && Object.keys(variant.transcripts || {}).length > 1) && <VerticalSpacer height={10} />}
       <LargeText>
         <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
         <HorizontalSpacer width={10} />
