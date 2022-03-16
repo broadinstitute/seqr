@@ -31,7 +31,7 @@ class GenCCReferenceDataHandler(ReferenceDataHandler):
             'gene_symbol': record['gene_symbol'],
             'classifications': [{
                 k.replace('_title', ''): record[k] for k in
-                ['disease_title', 'classification_title', 'moi_title', 'submitter_title', 'submitted_run_date']
+                ['disease_title', 'classification_title', 'moi_title', 'submitter_title', 'submitted_run_date'] # TODO need to use submitted_as_date, rename field?
             }]
         }
 

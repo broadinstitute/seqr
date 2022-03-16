@@ -3,7 +3,8 @@ from collections import defaultdict
 from django.db.models import Q, prefetch_related_objects, Prefetch
 from django.db.models.functions import Length
 
-from reference_data.models import GeneInfo, GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, GeneCopyNumberSensitivity
+from reference_data.models import GeneInfo, GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, GeneCopyNumberSensitivity, \
+    GenCC
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_models, _get_empty_json_for_model, \
     get_json_for_gene_notes_by_gene_id
@@ -90,6 +91,7 @@ OMIM = 'omim'
 CONSTRAINT = 'constraint'
 CN_SENSITIVITY = 'cn_sensitivity'
 DBNSFP = 'dbnsfp'
+GENCC = 'gencc'
 PRIMATE_AI = 'primate_ai'
 MGI_FIELD = 'mgi'
 NOTES= 'notes'
@@ -97,6 +99,7 @@ VARIANT_GENE_DISPLAY_FIELDS = {
     OMIM: (Omim, _add_omim),
     CONSTRAINT: (GeneConstraint, None),
     CN_SENSITIVITY: (GeneCopyNumberSensitivity, _add_gene_model('genecopynumbersensitivity', 'cnSensitivity', dict)),
+    GENCC: (GenCC, _add_gene_model('gencc', 'genCc', dict)),
 }
 VARIANT_GENE_FIELDS = {
     DBNSFP: (dbNSFPGene, _add_dbnsfp),
