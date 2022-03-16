@@ -364,7 +364,7 @@ const GeneSearchLinkWithPopup = props => (
   />
 )
 
-export const getGeneConsequence = (geneId, variant) => {
+const getGeneConsequence = (geneId, variant) => {
   const geneTranscripts = variant.transcripts[geneId]
   return geneTranscripts && geneTranscripts.length > 0 &&
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -482,6 +482,7 @@ class VariantGenes extends React.PureComponent {
     mainGeneId: PropTypes.string,
     genesById: PropTypes.object.isRequired,
     rnaSeqData: PropTypes.object,
+    showMainGene: PropTypes.bool,
   }
 
   static defaultProps = {
@@ -495,7 +496,7 @@ class VariantGenes extends React.PureComponent {
   }
 
   render() {
-    const { variant, genesById, mainGeneId, rnaSeqData } = this.props
+    const { variant, genesById, mainGeneId, showMainGene, rnaSeqData } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
 
@@ -505,7 +506,7 @@ class VariantGenes extends React.PureComponent {
     if (geneIds.length < 6 || showAll) {
       return (
         <div>
-          {geneIds.filter(geneId => geneId !== mainGeneId).map(geneId => (
+          {geneIds.filter(geneId => showMainGene || geneId !== mainGeneId).map(geneId => (
             <BaseVariantGene
               key={geneId}
               geneId={geneId}
