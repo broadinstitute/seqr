@@ -7,6 +7,13 @@ from reference_data.models import GenCC
 
 logger = logging.getLogger(__name__)
 
+CLASSIFICATION_FIELDS = {
+    'disease_title': 'disease',
+    'classification_title': 'classification',
+    'moi_title': 'moi',
+    'submitter_title': 'submitter',
+    'submitted_as_date': 'date',
+}
 
 class GenCCReferenceDataHandler(ReferenceDataHandler):
 
@@ -29,10 +36,7 @@ class GenCCReferenceDataHandler(ReferenceDataHandler):
     def parse_record(record):
         yield {
             'gene_symbol': record['gene_symbol'],
-            'classifications': [{
-                k.replace('_title', ''): record[k] for k in
-                ['disease_title', 'classification_title', 'moi_title', 'submitter_title', 'submitted_run_date'] # TODO need to use submitted_as_date, rename field?
-            }]
+            'classifications': [{title: record[field] for field, title in CLASSIFICATION_FIELDS.items()}]
         }
 
     @staticmethod

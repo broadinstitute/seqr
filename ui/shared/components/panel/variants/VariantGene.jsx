@@ -178,7 +178,7 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     label: 'GENCC',
     showDetails: gene => gene.genCc?.classifications,
     detailsDisplay: gene => gene.genCc.classifications.map(
-      ({ classification, disease, moi, submitted_run_date: date, submitter }) => ( // TODO sort by date
+      ({ classification, disease, moi, date, submitter }) => (
         <div key={submitter}>
           <b>{submitter}</b>
           {` (${date.split('-')[0]}): ${classification} for ${disease}`}
