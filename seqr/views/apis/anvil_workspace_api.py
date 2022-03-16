@@ -28,7 +28,7 @@ from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
-from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_CLIENT_ID, AIRFLOW_WEBSERVER_URL
+from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -180,14 +180,13 @@ def create_project_from_workspace(request, namespace, name):
 
     # use airflow api to trigger AnVIL dags
     try:
-        _trigger_anvil_dags(project, data_path, request_json)
+        pipeline_dag = _trigger_data_loading(project, data_path, request_json)
         # Send a slack message to the slack channel
-        _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
     except Exception as e:
-        logger.error(e)
-        safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, str(e))
-
-    
+        logger.error(e, request.user)
+        _send_slack_msg_on_failure_trigger(e, project, pipeline_dag, request_json['sampleType'])
+        
+    _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user, pipeline_dag)
 
     if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
             datetime.strptime(ANVIL_LOADING_EMAIL_DATE, '%Y-%m-%d') <= datetime.now():
@@ -222,20 +221,15 @@ def _get_loading_project_path(project, sample_type):
     )
 
 
-def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
-    pipeline_dag = {
-        "active_projects": [project.guid],
-        "vcf_path": data_path,
-        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
-        "projects_to_run": [project.guid],
-    }
+def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user, pipeline_dag):
+    
     message_content = """
         *{user}* requested to load {sample_type} data ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
         {path} to seqr project <{base_url}project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to {ids_path}.  
   
-        {dag_name} is triggered with following:
+        DAG {dag_name} dag is triggered with following:
         ```{dag}```
         """.format(
         user=user.email,
@@ -254,7 +248,21 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
 
     safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
 
-def _trigger_anvil_dags(project, data_path, user_input):
+def _send_slack_msg_on_failure_trigger(e, project, pipeline_dag, sample_type):
+    message_content = """
+        ERROR triggering AnVIL loading for project {project_guid}: {e} 
+        
+        DAG {dag_name} should be triggered with following: 
+        ```{dag}```
+        """.formate(
+            project_guid = project.guid,
+            e = e,
+            dag_name = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
+            dag = json.dumps(pipeline_dag, indent=4)
+        )
+    safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, message_content)
+
+def _trigger_data_loading(project, data_path, user_input):
     genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=user_input['sampleType'])
 
     anvil_variables = _get_dag_variables(genome_test_type)
@@ -265,22 +273,21 @@ def _trigger_anvil_dags(project, data_path, user_input):
         "project_path": '{}v1'.format(_get_loading_project_path(project, user_input['sampleType'])),
         "projects_to_run": [project.guid],
     }
-    projects = anvil_variables["active_projects"]
-    updated_projects = updated_anvil_variables["active_projects"]
+    dag_projects = anvil_variables["active_projects"]
  
     _update_variables(genome_test_type, updated_anvil_variables)
 
     dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)    
-    _wait_for_dag_variable_update(projects, updated_projects, dag_id)
+    _wait_for_dag_variable_update(dag_id, project, dag_projects)
     
     _trigger_dag(dag_id)
     
-def _wait_for_dag_variable_update(projects, updated_projects, dag_id):
-    if set(projects) != set(updated_projects):
-        dag_task_ids = _get_task_ids(dag_id)
-        updated_task_ids = _get_task_ids(dag_id)
-        while(set(dag_task_ids) == set(updated_task_ids)):
-            updated_task_ids = _get_task_ids(dag_id)
+    return updated_anvil_variables
+    
+def _wait_for_dag_variable_update(dag_id, project, dag_projects):
+    updated_project = project.guid
+    while updated_project not in dag_projects: 
+        dag_projects = _get_task_ids(dag_id)
 
 def _get_dag_variables(variable_key):
     endpoint = 'variables/{}'.format(variable_key)
@@ -320,7 +327,7 @@ def _make_airflow_api_request(endpoint, method='GET', json=None, timeout=90, **k
 
     # Obtain an OpenID Connect (OIDC) token from metadata server or using service
     # account.
-    google_open_id_connect_token = id_token.fetch_id_token(Request(), AIRFLOW_CLIENT_ID)
+    google_open_id_connect_token = id_token.fetch_id_token(Request(), AIRFLOW_API_AUDIENCE)
     
     webserver_url = f'https://{AIRFLOW_WEBSERVER_URL}/api/v1/{endpoint}'
     resp = requests.request(
@@ -328,15 +335,8 @@ def _make_airflow_api_request(endpoint, method='GET', json=None, timeout=90, **k
         headers={'Authorization': 'Bearer {}'.format(
             google_open_id_connect_token)}, **kwargs)
 
-    if resp.status_code == 403:
-        raise Exception('Service account does not have permission to '
-                        'access the IAP-protected application.')
-    elif resp.status_code != 200:
-        raise Exception(
-            'Bad response from application: {!r} / {!r} / {!r}'.format(
-                resp.status_code, resp.headers, resp.text))
-    else:
-        return resp.json()
+    resp.raise_for_status()
+    return resp.json()
 
 
 
