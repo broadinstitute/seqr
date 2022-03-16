@@ -6,7 +6,6 @@ import { getLocusListIsLoading } from 'redux/selectors'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import { SaveSearchButton } from './SavedSearch'
 import VariantSearchFormContent from './VariantSearchFormContent'
-import { SEARCH_FORM_NAME } from '../constants'
 import { getIntitialSearch } from '../selectors'
 
 const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading }) => (
@@ -14,12 +13,11 @@ const VariantSearchForm = React.memo(({ history, initialSearch, contentLoading }
     <VariantSearchFormContainer
       history={history}
       initialValues={initialSearch}
-      form={SEARCH_FORM_NAME}
       loading={contentLoading}
     >
       <VariantSearchFormContent />
+      <SaveSearchButton />
     </VariantSearchFormContainer>
-    <SaveSearchButton />
   </div>
 ))
 

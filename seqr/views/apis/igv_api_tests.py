@@ -1,7 +1,7 @@
 import json
 import mock
 import responses
-import subprocess
+import subprocess # nosec
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse

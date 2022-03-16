@@ -15,8 +15,9 @@ REFERRER_EMAIL = 'test_user_collaborator@test.com'
 class ResendWelcomeEmailTest(TestCase):
     fixtures = ['users']
 
+    @classmethod
     @mock.patch('seqr.utils.communication_utils.send_welcome_email')
-    def test_command(self, mock_send_welcome_email):
+    def test_command(cls, mock_send_welcome_email):
         call_command('resend_welcome_email', '--email-address={}'.format(TEST_USER_EMAIL),
                      '--referrer={}'.format(REFERRER_EMAIL))
         user = User.objects.get(email=TEST_USER_EMAIL)

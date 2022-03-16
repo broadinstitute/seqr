@@ -1,5 +1,5 @@
-import { SubmissionError } from 'redux-form'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
@@ -28,10 +28,31 @@ export const updateEntity = (
       if (onSuccess) {
         onSuccess(responseJson, dispatch, getState)
       }
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
+}
+
+export const loadProjectChildEntities = (
+  projectGuid, entityType, dispatchType, receiveDispatchType,
+) => (dispatch, getState) => {
+  const { projectsByGuid } = getState()
+  const project = projectsByGuid[projectGuid]
+
+  if (!project[`${toCamelcase(entityType)}Loaded`]) {
+    dispatch({ type: dispatchType })
+    new HttpRequestHelper(`/api/project/${projectGuid}/get_${toSnakecase(entityType)}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (receiveDispatchType) {
+          dispatch({ type: receiveDispatchType, updatesById: responseJson })
+        }
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        if (receiveDispatchType) {
+          dispatch({ type: receiveDispatchType, updatesById: {} })
+        }
+      }).get()
+  }
 }
 
 export const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, dispatchOnReceive) => (

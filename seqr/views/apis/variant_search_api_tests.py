@@ -6,7 +6,7 @@ from django.db import transaction
 from django.urls.base import reverse
 from elasticsearch.exceptions import ConnectionTimeout, TransportError
 
-from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch, ProjectCategory
+from seqr.models import VariantSearchResults, LocusList, Project, VariantSearch
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.views.apis.variant_search_api import query_variants_handler, query_single_variant_handler, \
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
@@ -39,7 +39,7 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'createdBy': None,
 }]
 
-PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes'}
+PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded'}
 PROJECT_CONTEXT_FIELDS.update(PROJECT_FIELDS)
 
 PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
@@ -469,18 +469,6 @@ class VariantSearchAPITest(object):
         mock_get_variants.assert_called_with(result_model, sort='xpos', page=1, num_results=100,
                                              skip_genotype_filter=True, user=self.collaborator_user)
 
-        # Test local install (no demo category)
-        result_model.delete()
-        ProjectCategory.objects.get(name='Demo').delete()
-        expected_searched_families.update({'F000011_11', 'F000012_12'})
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allProjectFamilies': True, 'search': SEARCH
-        }))
-        self.assertEqual(response.status_code, 200)
-        result_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
-        self.assertSetEqual(expected_searched_families, {f.guid for f in result_model.families.all()})
-
-
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
         url = reverse(query_variants_handler, args=['abc'])
@@ -505,6 +493,11 @@ class VariantSearchAPITest(object):
         mock_get_variants.assert_called_with(
             VariantSearchResults.objects.get(search_hash=SEARCH_HASH), sort='xpos', page=1, num_results=100,
             skip_genotype_filter=False, user=self.collaborator_user)
+
+        # Test export disabled in demo projects
+        export_url = reverse(export_variants_handler, args=[SEARCH_HASH])
+        response = self.client.get(export_url)
+        self.assertEqual(response.status_code, 403)
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
@@ -746,14 +739,13 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         self.mock_list_workspaces.assert_has_calls(calls)
         self.mock_get_ws_access_level.assert_has_calls([
             mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo'),
         ])
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 3)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
         self.mock_get_ws_acl.assert_not_called()
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
-        assert_no_list_ws_has_al(self, 2, workspace_name='anvil-project 1000 Genomes Demo')
+        assert_no_list_ws_has_al(self, 3, workspace_name='anvil-project 1000 Genomes Demo')
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()

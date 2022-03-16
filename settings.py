@@ -3,7 +3,7 @@ import os
 import random
 import re
 import string
-import subprocess
+import subprocess # nosec
 
 from ssl import create_default_context
 
@@ -74,7 +74,7 @@ SECURE_BROWSER_XSS_FILTER = True
 
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
-CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://storage.googleapis.com') # google storage used by IGV
+CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://igv.org', 'https://storage.googleapis.com') # google storage used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
 CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com', 'data:')
 CSP_OBJECT_SRC = ("'none'")
@@ -301,7 +301,6 @@ API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
 POLICY_REQUIRED_URL = '/accept_policies'
 
-DEMO_PROJECT_CATEGORY = 'Demo'
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
 PM_USER_GROUP = os.environ.get('PM_USER_GROUP')
@@ -378,7 +377,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SEC
 LOGIN_URL = GOOGLE_LOGIN_REQUIRED_URL if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '/login'
 
 
-SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = not DEBUG
@@ -400,7 +399,7 @@ SERVICE_ACCOUNT_FOR_ANVIL = None
 
 if TERRA_API_ROOT_URL:
     SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
-                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0]
+                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if not SERVICE_ACCOUNT_FOR_ANVIL:
         # attempt to acquire a service account token
         if os.path.exists('/.config/service-account-key.json'):

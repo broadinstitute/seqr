@@ -4,12 +4,8 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 
-import { getProjectCategoriesByGuid } from 'redux/selectors'
 import { updateFilter } from '../reducers'
-import { getProjectFilter } from '../selectors'
-import {
-  SHOW_ALL,
-} from '../constants'
+import { getProjectFilter, getCategoryOptions } from '../selectors'
 
 const FilterContainer = styled.span`
   display: inline-block;
@@ -39,12 +35,7 @@ FilterSelector.propTypes = {
 
 const mapStateToProps = state => ({
   filter: getProjectFilter(state),
-  options: [
-    { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
-    ...Object.values(getProjectCategoriesByGuid(state)).map(
-      projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }),
-    ),
-  ],
+  options: getCategoryOptions(state),
 })
 
 const mapDispatchToProps = { onChange: (event, data) => updateFilter(data.value) }

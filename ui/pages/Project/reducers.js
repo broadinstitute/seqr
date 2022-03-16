@@ -1,13 +1,11 @@
 import { combineReducers } from 'redux'
-import { SubmissionError } from 'redux-form'
 
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_SAVED_VARIANTS, updateEntity, loadFamilyData } from 'redux/utils/reducerUtils'
+import { REQUEST_SAVED_VARIANTS, updateEntity, loadProjectChildEntities, loadFamilyData } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -44,33 +42,16 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   }
 }
 
-const loadProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
-  const { currentProjectGuid, projectsByGuid } = getState()
-  const project = projectsByGuid[currentProjectGuid]
-
-  if (!project[`${toCamelcase(entityType)}Loaded`]) {
-    dispatch({ type: dispatchType })
-    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_${toSnakecase(entityType)}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        if (receiveDispatchType) {
-          dispatch({ type: receiveDispatchType, updatesById: responseJson })
-        }
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        if (receiveDispatchType) {
-          dispatch({ type: receiveDispatchType, updatesById: {} })
-        }
-      }).get()
-  }
+const loadCurrentProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
+  const { currentProjectGuid } = getState()
+  return loadProjectChildEntities(currentProjectGuid, entityType, dispatchType, receiveDispatchType)(dispatch, getState)
 }
 
-export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
+export const loadFamilies = () => loadCurrentProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
 
-export const loadIndividuals = () => loadProjectChildEntities('individuals', REQUEST_INDIVIDUALS)
+export const loadIndividuals = () => loadCurrentProjectChildEntities('individuals', REQUEST_INDIVIDUALS)
 
-export const loadMmeSubmissions = () => loadProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
+export const loadMmeSubmissions = () => loadCurrentProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
 
 export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
@@ -171,8 +152,7 @@ export const updateFamilies = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-    },
-    (e) => { throw new SubmissionError({ _error: [e.message] }) }).post(values)
+    }).post(values)
 }
 
 export const updateIndividuals = values => (dispatch, getState) => {
@@ -186,14 +166,6 @@ export const updateIndividuals = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-    },
-    (e) => {
-      if (e.body && e.body.errors) {
-        throw new SubmissionError({ _error: e.body.errors })
-        // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-      } else {
-        throw new SubmissionError({ _error: [e.message] })
-      }
     }).post(values)
 }
 
@@ -201,14 +173,6 @@ export const updateIndividualsMetadata = ({ uploadedFileId }) => (dispatch, getS
   `/api/project/${getState().currentProjectGuid}/save_individuals_metadata_table/${uploadedFileId}`,
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-      // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
   },
 ).post()
 
@@ -219,14 +183,7 @@ export const addVariantsDataset = values => (dispatch, getState) => new HttpRequ
 
     // Clear all loaded variants and update the saved variant json. This should happen asynchronously
     unloadSavedVariants(dispatch, getState)
-    new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`).post()
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
+    new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`, () => {}).post()
   },
 ).post(values)
 
@@ -241,7 +198,9 @@ export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch, getState
     ).post({ ...update, ...values }),
   )).then(() => {
     if (errors.length) {
-      throw new SubmissionError({ _error: errors })
+      const err = new Error()
+      err.body = { errors }
+      throw err
     }
   })
 }
@@ -252,8 +211,7 @@ export const updateLocusLists = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${projectGuid}/${action}_locus_lists`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson } } })
-    },
-    (e) => { throw new SubmissionError({ _error: [e.message] }) }).post(values)
+    }).post(values)
 }
 
 export const updateCollaborator = values => updateEntity(
@@ -261,7 +219,7 @@ export const updateCollaborator = values => updateEntity(
 )
 
 export const updateAnalysisGroup = values => updateEntity(
-  values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid',
+  values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/analysis_groups`,
 )
 
 export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) => {
@@ -323,9 +281,6 @@ export const sendMmeContactEmail = values => dispatch => new HttpRequestHelper(
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post(values)
 
 export const updateProjectMmeContact = values => (dispatch, getState) => new HttpRequestHelper(
@@ -333,7 +288,6 @@ export const updateProjectMmeContact = values => (dispatch, getState) => new Htt
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => { throw new SubmissionError({ _error: [e.message] }) },
 ).post(values)
 
 // Table actions

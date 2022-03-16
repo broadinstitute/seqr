@@ -18,7 +18,7 @@ import DataLoader from '../../DataLoader'
 import { QueryParamsEditor } from '../../QueryParamEditor'
 import { HorizontalSpacer } from '../../Spacers'
 import ExportTableButton from '../../buttons/ExportTableButton'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import FormWrapper from '../../form/FormWrapper'
 import Variants from '../variants/Variants'
 import GeneBreakdown from './GeneBreakdown'
 
@@ -69,9 +69,9 @@ const BaseVariantSearchResultsContent = React.memo(({
       </Grid.Column>
       <Grid.Column width={11} floated="right" textAlign="right">
         {additionalDisplayEdit}
-        <ReduxFormWrapper
+        <FormWrapper
           onSubmit={onSubmit}
-          form="editSearchedVariantsDisplayTop"
+          modalName="editSearchedVariantsDisplayTop"
           initialValues={variantSearchDisplay}
           closeOnSuccess={false}
           submitOnChange
@@ -79,7 +79,7 @@ const BaseVariantSearchResultsContent = React.memo(({
           fields={fields}
         />
         <HorizontalSpacer width={10} />
-        <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />
+        {searchedVariantExportConfig && <ExportTableButton downloads={searchedVariantExportConfig} buttonText="Download" />}
         <HorizontalSpacer width={10} />
         <GeneBreakdown searchHash={searchHash} />
       </Grid.Column>
@@ -87,9 +87,9 @@ const BaseVariantSearchResultsContent = React.memo(({
     <DisplayVariants key="variants" displayVariants={displayVariants} compoundHetToggle={compoundHetToggle} />,
     <LargeRow key="bottomPagination">
       <Grid.Column width={11} floated="right" textAlign="right">
-        <ReduxFormWrapper
+        <FormWrapper
           onSubmit={onSubmit}
-          form="editSearchedVariantsDisplayBottom"
+          modalName="editSearchedVariantsDisplayBottom"
           initialValues={variantSearchDisplay}
           closeOnSuccess={false}
           submitOnChange

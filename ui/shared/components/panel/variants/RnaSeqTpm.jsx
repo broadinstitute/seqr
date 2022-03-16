@@ -51,13 +51,13 @@ const launchGtex = (geneId, tpms) => (gencodeId) => {
         boxplotData.push(...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
           { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
         )))
-      }).get({ tissueSiteDetailId: tissues.map(tissue => GTEX_TISSUES[tissue]).join(','), gencodeId }),
+      }, () => {}).get({ tissueSiteDetailId: tissues.map(tissue => GTEX_TISSUES[tissue]).join(','), gencodeId }),
     new HttpRequestHelper(`/api/rna_seq_expression/gene/${geneId}/tissues/${tissues.join(',')}`,
       (responseJson) => {
         boxplotData.push(...Object.entries(responseJson).map(([tissue, data]) => (
           { data, label: `*RDG - ${TISSUE_DISPLAY[tissue]}`, color: 'efefef' }
         )))
-      }).get(),
+      }, () => {}).get(),
   ]).then(() => {
     const boxplot = new Boxplot(boxplotData, false)
     boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })

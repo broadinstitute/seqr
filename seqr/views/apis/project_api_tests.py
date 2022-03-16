@@ -6,7 +6,8 @@ from django.urls.base import reverse
 
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
-    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals
+    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
+    project_analysis_groups
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
@@ -159,7 +160,8 @@ class ProjectAPITest(object):
 
         project_fields = {
             'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',
-            'workspaceName', 'workspaceNamespace', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount'
+            'workspaceName', 'workspaceNamespace', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
+            'analysisGroupsLoaded',
         }
         project_fields.update(PROJECT_FIELDS)
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -304,6 +306,22 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), INTERNAL_INDIVIDUAL_FIELDS)
+
+    def test_project_analysis_groups(self):
+        url = reverse(project_analysis_groups, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {'projectsByGuid', 'analysisGroupsByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'analysisGroupsLoaded': True}})
+        self.assertEqual(len(response_json['analysisGroupsByGuid']), 1)
+        self.assertSetEqual(
+            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
+        )
 
     def test_project_mme_submisssions(self):
         url = reverse(project_mme_submisssions, args=[PROJECT_GUID])

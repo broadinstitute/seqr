@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment, Message } from 'semantic-ui-react'
-import { SubmissionError } from 'redux-form'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -18,7 +17,8 @@ import {
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
-import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
@@ -100,13 +100,6 @@ const createProjectFromWorkspace = (namespace, name) => ({ uploadedFile, ...valu
   (responseJson) => {
     window.location.href = `/project/${responseJson.projectGuid}/project_page`
   },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
-  },
 ).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
 
 const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
@@ -123,8 +116,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
       </Message>
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
-    <ReduxFormWrapper
-      form="loadWorkspaceData"
+    <FormWrapper
       modalName="loadWorkspaceData"
       onSubmit={createProjectFromWorkspace(namespace, name)}
       confirmCloseIfNotSaved

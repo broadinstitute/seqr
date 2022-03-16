@@ -216,6 +216,11 @@ export const getSavedVariantExportConfig = createSelector(
   getSavedVariantTableState,
   (state, props) => props.match.params,
   (analysisGroupsByGuid, tagsByGuid, notesByGuid, project, tableState, params) => {
+    if (project && project.isDemo && !project.allUserDemo) {
+      // Do not allow downloads for demo projects
+      return null
+    }
+
     const familyId = params.familyGuid && params.familyGuid.split(/_(.+)/)[1]
     const analysisGroupName = (analysisGroupsByGuid[params.analysisGroupGuid] || {}).name
     const tagName = params.tag || tableState.categoryFilter || 'All'

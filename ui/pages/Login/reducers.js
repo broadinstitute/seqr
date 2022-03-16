@@ -1,4 +1,3 @@
-import { SubmissionError } from 'redux-form'
 import queryString from 'query-string'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -10,18 +9,11 @@ const redirectNext = () => {
 
 // Data actions
 
-export const login = values => () => new HttpRequestHelper(
-  '/api/login', redirectNext, (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
-).post(values)
+export const login = values => () => new HttpRequestHelper('/api/login', redirectNext).post(values)
 
 export const forgotPassword = values => () => new HttpRequestHelper(
   '/api/users/forgot_password',
   () => {},
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post(values)
 
 export const setPassword = values => () => new HttpRequestHelper(
@@ -30,13 +22,8 @@ export const setPassword = values => () => new HttpRequestHelper(
     // Redirect to home page
     window.location.href = window.location.origin
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post(values)
 
-export const updateUserPolicies = values => () => new HttpRequestHelper('/api/users/update_policies',
-  redirectNext,
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  }).post(values)
+export const updateUserPolicies = values => () => new HttpRequestHelper(
+  '/api/users/update_policies', redirectNext,
+).post(values)

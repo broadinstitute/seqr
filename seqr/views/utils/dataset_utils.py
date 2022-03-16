@@ -169,7 +169,7 @@ def match_sample_ids_to_sample_records(
         # create new Sample records for Individual records that matches
         new_samples = [
             Sample(
-                guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE],
+                guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE], # nosec
                 sample_id=sample_id,
                 sample_type=sample_type,
                 dataset_type=dataset_type,

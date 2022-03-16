@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import { reducer as formReducer, SubmissionError } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
@@ -15,7 +14,7 @@ import {
 import modalReducers from './utils/modalReducer'
 import {
   RECEIVE_DATA, REQUEST_PROJECTS, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES, REQUEST_SAVED_VARIANTS,
-  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity, loadFamilyData,
+  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity, loadFamilyData, loadProjectChildEntities,
 } from './utils/reducerUtils'
 
 /**
@@ -35,6 +34,7 @@ const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
+const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
 
 // action creators
 
@@ -66,15 +66,14 @@ export const loadUserOptions = familyGuid => (dispatch, getState) => {
 export const updateUser = values => dispatch => new HttpRequestHelper('/api/users/update',
   (responseJson) => {
     dispatch({ type: UPDATE_USER, updates: responseJson })
-  },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
   }).post(values)
 
 export const updateProject = (values) => {
   const actionSuffix = values.projectField ? `_project_${values.projectField}` : '_project'
   return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)
 }
+
+export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS)
 
 export const loadFamilyDetails = familyGuid => loadFamilyData(
   familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
@@ -90,9 +89,6 @@ export const updateFamily = (values) => {
   return dispatch => new HttpRequestHelper(`${urlBase}/update${familyField}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
 
@@ -101,9 +97,6 @@ export const updateIndividual = values => (dispatch) => {
   return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update${individualField}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { individualsByGuid: responseJson } })
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
 
@@ -264,9 +257,6 @@ const updateSavedVariant = (values, action = 'create') => (dispatch, getState) =
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post({ searchHash: getState().currentSearchHash, ...values })
 
 export const updateVariantNote = (values) => {
@@ -288,9 +278,6 @@ export const updateVariantMainTranscript = (variantGuid, transcriptId) => dispat
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post()
 
 export const updateLocusList = values => (dispatch) => {
@@ -308,9 +295,7 @@ export const updateLocusList = values => (dispatch) => {
       if (e.body && e.body.invalidLocusListItems) {
         error = `${error} Invalid genes/ intervals: ${e.body.invalidLocusListItems.join(', ')}`
       }
-      throw new SubmissionError({
-        _error: [error],
-      })
+      throw new Error(error)
     }).post(values)
 }
 
@@ -326,6 +311,7 @@ const rootReducer = combineReducers({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
+  analysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_DATA),
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
@@ -354,7 +340,6 @@ const rootReducer = combineReducers({
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USER_OPTIONS, RECEIVE_USER_OPTIONS),
   meta: zeroActionsReducer,
-  form: formReducer,
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

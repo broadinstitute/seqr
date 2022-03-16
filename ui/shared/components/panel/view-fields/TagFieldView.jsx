@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Popup, Form } from 'semantic-ui-react'
-import { Field } from 'redux-form'
+import { Field } from 'react-final-form'
 
 import { HorizontalSpacer } from '../../Spacers'
 import { ColoredLabel, ColoredOutlineLabel } from '../../StyledComponents'
@@ -44,7 +44,7 @@ const METADATA_FIELD_PROPS = {
     options: ['Sanger', 'Segregation', 'SV', 'Splicing'].map(value => ({ value })),
     placeholder: 'Select test types or add your own',
     format: val => (val || '').split(', ').filter(v => v),
-    normalize: val => (val || []).join(', '),
+    parse: val => (val || []).join(', '),
   },
 }
 
@@ -146,11 +146,7 @@ class TagFieldView extends React.PureComponent {
 
     const formFieldProps = {
       ...TAG_FIELD_PROPS,
-      normalize: (value, previousValue, allValues, previousAllValues) => value.map(
-        option => previousAllValues[field].find(
-          prevFieldValue => prevFieldValue.name === option,
-        ) || tagOptionsMap[option],
-      ),
+      parse: value => value.map(option => tagOptionsMap[option]),
       format: options => options.map(tag => tag.name),
     }
     if (validate) {

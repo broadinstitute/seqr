@@ -1,6 +1,6 @@
 // possible values
 export const SHOW_ALL = 'SHOW_ALL'
-export const SHOW_NEW = 'SHOW_NEW'
+export const SHOW_DEMO = 'SHOW_DEMO'
 
 export const SORT_BY_PROJECT_NAME = 'SORT_BY_PROJECT_NAME'
 export const SORT_BY_PROJECT_SAMPLES = 'SORT_BY_PROJECT_SAMPLES'

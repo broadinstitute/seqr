@@ -11,6 +11,7 @@ import LocusListTables from 'shared/components/table/LocusListTables'
 import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
+import { validators } from 'shared/components/form/FormHelpers'
 import Modal from 'shared/components/modal/Modal'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { updateLocusLists } from '../reducers'
@@ -86,7 +87,9 @@ const LOCUS_LIST_FIELDS = [{
   name: 'locusListGuids',
   component: LocusListTables,
   basicFields: true,
-  normalize: value => Object.keys(value || {}).filter(locusListGuid => value[locusListGuid]),
+  maxHeight: '500px',
+  validate: validators.requiredList,
+  parse: value => Object.keys(value || {}).filter(locusListGuid => value[locusListGuid]),
   format: value => (value || []).reduce((acc, locusListGuid) => ({ ...acc, [locusListGuid]: true }), {}),
 }]
 
@@ -107,12 +110,14 @@ const AddGeneLists = React.memo(({ project, onSubmit }) => (
   <UpdateButton
     modalTitle="Add Gene Lists"
     modalId={`add-gene-list-${project.projectGuid}`}
+    formMetaId={project.projectGuid}
     modalSize="large"
     buttonText="Add Gene List"
     editIconName="plus"
     formContainer={<LocustListsContainer project={project} />}
     onSubmit={onSubmit}
     formFields={LOCUS_LIST_FIELDS}
+    showErrorPanel
   />
 ))
 

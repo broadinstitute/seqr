@@ -2,7 +2,7 @@ import React from 'react'
 import { Form } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
-import { validators } from '../components/form/ReduxFormWrapper'
+import { validators } from '../components/form/FormHelpers'
 import {
   BooleanCheckbox,
   RadioGroup,
@@ -82,6 +82,8 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
 export const DATASET_TYPE_SV_CALLS = 'SV'
 
+export const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
+
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
 export const SAMPLE_TYPE_RNA = 'RNA'
@@ -114,6 +116,7 @@ export const FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE = 'Rncc'
 export const FAMILY_STATUS_CLOSED = 'C'
 export const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
 const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
+const FAMILY_STATUS_NO_DATA = 'N'
 
 export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_SOLVED, color: '#4CAF50', name: 'Solved' },
@@ -129,6 +132,7 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_CLOSED, color: '#9c0502', name: 'Closed, no longer under analysis' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
+  { value: FAMILY_STATUS_NO_DATA, color: '#646464', name: 'No data expected' },
 ]
 
 export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
@@ -185,9 +189,11 @@ export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
+export const FAMILY_FIELD_ANALYSIS_GROUPS = 'analysisGroups'
 
 export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
+  [FAMILY_FIELD_ANALYSIS_GROUPS]: 'Analysis Groups',
   [FAMILY_FIELD_ANALYSIS_STATUS]: 'Analysis Status',
   [FAMILY_FIELD_ASSIGNED_ANALYST]: 'Assigned Analyst',
   [FAMILY_FIELD_ANALYSED_BY]: 'Analysed By',
@@ -211,6 +217,7 @@ export const FAMILY_NOTES_FIELDS = [
 ]
 
 export const FAMILY_DETAIL_FIELDS = [
+  { id: FAMILY_FIELD_ANALYSIS_GROUPS },
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST },
@@ -893,6 +900,7 @@ const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
+const SORT_BY_SIZE = 'SIZE'
 
 export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
   user.isAnalyst || variant.familyGuids.some(
@@ -982,6 +990,11 @@ const VARIANT_SORT_OPTONS = [
       ) - Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
       )),
+  },
+  {
+    value: SORT_BY_SIZE,
+    text: 'Size',
+    comparator: (a, b) => ((a.pos - a.end) - (b.pos - b.end)),
   },
   {
     value: SORT_BY_TAGGED_DATE,

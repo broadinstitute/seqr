@@ -8,7 +8,6 @@ import { uploadRnaSeq } from '../reducers'
 import UploadFormPage from './UploadFormPage'
 
 const mapStateToProps = state => ({
-  formId: 'rnaSeq',
   fields: [
     {
       name: 'file',

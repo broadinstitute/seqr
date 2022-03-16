@@ -1,30 +1,32 @@
-
 #### Prerequisites
- - *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
+- *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
 
- - *Software:* 
-   - [docker](https://docs.docker.com/install/)
-     - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb  
-   - [docker-compose](https://docs.docker.com/compose/install/)       
-   - [gcloud](https://cloud.google.com/sdk/install)
+- *Software:* 
+  - [docker](https://docs.docker.com/install/)
+   
+    - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb
 
- - OS settings for elasticsearch:
-    - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
-       ```
-       echo '
-       vm.max_map_count=262144
-       ' | sudo tee -a /etc/sysctl.conf
-         
-       sudo sysctl -w vm.max_map_count=262144
-       ```
-       This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+  - [docker-compose](https://docs.docker.com/compose/install/)       
+   
+  - [gcloud](https://cloud.google.com/sdk/install)
+
+- OS settings for elasticsearch:
+  - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
+  ```bash
+  echo '
+     vm.max_map_count=262144
+  ' | sudo tee -a /etc/sysctl.conf
+      
+  sudo sysctl -w vm.max_map_count=262144
+  ```
+  This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
     
-    
+
 #### Starting seqr
 
 The steps below describe how to create a new empty seqr instance with a single Admin user account.
 
-```
+```bash
 SEQR_DIR=$(pwd)
 
 wget https://raw.githubusercontent.com/populationgenomics/seqr/master/docker-compose.yml
@@ -41,7 +43,7 @@ open http://localhost     # open the seqr landing page in your browser. Log in t
 
 Updating your local installation of seqr involves pulling the latest version of the seqr docker container, and then recreating the container.
 
-```
+```bash
 # run this from the directory containing your docker-compose.yml file
 docker-compose pull
 docker-compose up -d seqr
@@ -57,11 +59,12 @@ Google Dataproc makes it easy to start a spark cluster which can be used to para
 The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
 
 1. authenticate into your google cloud account.
-   ```
+   ```bash
    gcloud auth application-default login  
    ```
+
 1. upload your .vcf.gz callset to a google bucket
-   ```
+   ```bash
    GS_BUCKET=gs://your-bucket       # your google bucket
    GS_FILE_PATH=data/GRCh38         # the desired file path. Good to include build version and/ or sample type to directory structure
    FILENAME=your-callset.vcf.gz     # the local file you want to load  
@@ -70,14 +73,14 @@ The steps below describe how to annotate a callset and then load it into your on
    ```
    
 1. start a pipeline-runner container which has the necessary tools and environment for starting and submitting jobs to a Dataproc cluster.
-   ```
+   ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
    
 1. if you haven't already, upload reference data to your own google bucket. 
 This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
 This is expected to take a while
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
     
    docker-compose exec pipeline-runner copy_reference_data_to_gs.sh $BUILD_VERSION $GS_BUCKET
@@ -85,7 +88,7 @@ This is expected to take a while
    ``` 
    
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
    SAMPLE_TYPE=WES                  # can be WES or WGS
    INDEX_NAME=your-dataset-name     # the desired index name to output. Will be used later to link the data to the corresponding seqr project
@@ -104,7 +107,7 @@ The steps below describe how to annotate a callset and then load it into your on
 
 1. create a directory for your vcf files. docker-compose will mount this directory into the pipeline-runner container.
 
-   ```
+   ```bash
    mkdir ./data/input_vcfs/ 
     
    FILE_PATH=GRCh38                 # the desired file path. Good to include build version and/ or sample type to directory structure
@@ -114,14 +117,14 @@ The steps below describe how to annotate a callset and then load it into your on
    ```
 
 1. start a pipeline-runner container
-   ```
+   ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
    ```
    
 1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 
 This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
 This is expected to take a while
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
     
    docker-compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
@@ -129,7 +132,7 @@ This is expected to take a while
    ``` 
 
 1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
-   ```
+   ```bash
    BUILD_VERSION=38                 # can be 37 or 38
    SAMPLE_TYPE=WES                  # can be WES or WGS
    INDEX_NAME=your-dataset-name     # the desired index name to output. Will be used later to link the data to the corresponding seqr project
@@ -140,7 +143,7 @@ This is expected to take a while
    
    ``` 
 
-#### Adding a loaded dataset to a seqr project.
+#### Adding a loaded dataset to a seqr project
 
 After the dataset is loaded into elasticsearch, it can be added to your seqr project with these steps:
 
@@ -148,7 +151,6 @@ After the dataset is loaded into elasticsearch, it can be added to your seqr pro
 1. Click on Edit Datasets
 1. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
 
-
-#### Enable read viewing in the browser (optional): 
+#### Enable read viewing in the browser (optional)
 
 To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](https://github.com/populationgenomics/seqr/blob/master/deploy/READVIZ_SETUP.md)**      

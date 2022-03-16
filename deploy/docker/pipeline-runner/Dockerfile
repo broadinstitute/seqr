@@ -30,16 +30,18 @@ RUN install_packages default-jdk
 # install python3.7 (adds 800Mb)
 RUN apt-get update \
 	&& apt-get dist-upgrade -y \
-	&& apt-get install -y python-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev libssl-dev openssl libffi-dev
+	&& apt-get install -y --no-install-recommends python-smbus libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev libssl-dev openssl libffi-dev \
+	&& apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHON_VERSION="3.7.1"
 RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz \
 	&& tar xvf Python-${PYTHON_VERSION}.tar.xz \
-	&& rm Python-${PYTHON_VERSION}.tar.xz \
-	&& cd Python-${PYTHON_VERSION} \
-	&& ./configure --enable-optimizations \
-	&& make install \
-	&& make clean
+	&& rm Python-${PYTHON_VERSION}.tar.xz
+WORKDIR /Python-${PYTHON_VERSION}
+RUN ./configure --enable-optimizations \
+    && make install \
+    && make clean
 
 RUN install_packages python-pkg-resources
 
@@ -67,8 +69,8 @@ ENV SAMTOOLS_VERSION="1.9"
 RUN wget https://github.com/samtools/htslib/releases/download/${SAMTOOLS_VERSION}/htslib-${SAMTOOLS_VERSION}.tar.bz2 \
 	&& tar xjf htslib-${SAMTOOLS_VERSION}.tar.bz2 \
 	&& rm htslib-${SAMTOOLS_VERSION}.tar.bz2 \
-	&& cd htslib-${SAMTOOLS_VERSION} \
-	&& ./configure \
+WORKDIR htslib-${SAMTOOLS_VERSION}
+RUN ./configure \
 	&& make \
 	&& make install \
 	&& make clean
@@ -92,12 +94,12 @@ RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
 
 # install VEP
-RUN cd /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
+WORKDIR /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
 # clone and hail-elasticsearch-pipelines repo
 RUN git clone https://github.com/broadinstitute/hail-elasticsearch-pipelines.git
-RUN cd hail-elasticsearch-pipelines
+WORKDIR /hail-elasticsearch-pipelines
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
 RUN python3 -m pip install git+https://github.com/bw2/hail-utils.git
 
