@@ -5,6 +5,7 @@ from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
+from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
@@ -187,25 +188,30 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
-        # send request with a "families" attribute to provide a list of families
+        # Test errors
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'families': None}))
+        self.assertEqual(response.status_code, 400)
+
         req_values = {
             'families': [
                 {'familyGuid': FAMILY_GUID},
                 {'familyGuid': FAMILY_GUID2}
             ]
         }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
+
+        # Test success
+        MatchmakerSubmission.objects.update(deleted_date=datetime.now())
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID])
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID2])
         self.assertEqual(FamilyAnalysedBy.objects.count(), 0)
-
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'families': None}))
-        self.assertEqual(response.status_code, 400)
 
         # Test PM permission
         url = reverse(delete_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
