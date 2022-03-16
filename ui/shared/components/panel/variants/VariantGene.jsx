@@ -171,6 +171,14 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+const GENCC_COLORS = {
+  Definitive: '#276749',
+  Strong: '#38a169',
+  Moderate: '#68d391',
+  Supportive: '#63b3ed',
+  Limited: '#fc8181',
+}
+
 const GENE_DISEASE_DETAIL_SECTIONS = [
   {
     color: 'violet',
@@ -179,13 +187,16 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     showDetails: gene => gene.genCc?.classifications,
     detailsDisplay: gene => (
       <List>
-        {gene.genCc.classifications.map(({ classification, disease, moi, date, submitter }) => (
+        {gene.genCc.classifications.sort(
+          (a, b) => b.date.localeCompare(a.date),
+        ).map(({ classification, disease, moi, date, submitter }) => (
           <ListItemLink
             key={submitter}
             content={(
               <span>
+                <ColoredLabel horizontal size="mini" color={GENCC_COLORS[classification] || 'grey'} content={classification} />
                 <b>{submitter}</b>
-                {` (${date.split('-')[0]}): ${classification} for ${disease}`}
+                {` (${date.split('-')[0]}): ${disease}`}
                 <i>{` (${moi})`}</i>
               </span>
             )}
@@ -331,7 +342,7 @@ const getDetailSections = (configs, gene, compact, labelProps, rnaSeqData) => co
     { ...sectionConfig, detail: showDetails(gene, rnaSeqData) && detailsDisplay(gene, rnaSeqData) }),
 ).filter(({ detail }) => detail).map(({ detail, expandedDisplay, ...sectionConfig }) => (
   (expandedDisplay && !compact) ? (
-    <OmimSegments>
+    <OmimSegments key={sectionConfig.label}>
       <Segment color={sectionConfig.color}>
         <Label size="mini" color={sectionConfig.color} content={sectionConfig.expandedLabel} />
       </Segment>
