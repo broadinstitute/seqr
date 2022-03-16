@@ -18,7 +18,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_family_notes, _get_json_for_individuals
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required, \
-    check_workspace_perm
+    has_workspace_perm
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
@@ -52,8 +52,8 @@ def create_project_handler(request):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    if has_anvil:
-        check_workspace_perm(request.user, CAN_EDIT, request_json['workspaceNamespace'], request_json['workspaceName'])
+    if has_anvil and not has_workspace_perm(request.user, CAN_EDIT, request_json['workspaceNamespace'], request_json['workspaceName']):
+        return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
     project_args['description'] = request_json.get('description', '')
