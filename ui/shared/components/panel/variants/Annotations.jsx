@@ -338,7 +338,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       )}
       {cpxIntervals && cpxIntervals.length > 0 &&
       [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(
-        e => `${e.type}${e.chrom}-${e.start}-${e.end}`,
+        e => `${SVTYPE_LOOKUP[e.type] || e.type} ${e.chrom}${e.start ? `-${e.start}` : ''}${e.end !== e.start ? `-${e.end}` : ''}`,
       ).map(e => <div key={e}>{e}</div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
