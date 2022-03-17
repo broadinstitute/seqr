@@ -380,7 +380,7 @@ const GeneSearchLinkWithPopup = props => (
   />
 )
 
-export const getGeneConsequence = (geneId, variant) => {
+const getGeneConsequence = (geneId, variant) => {
   const geneTranscripts = variant.transcripts[geneId]
   return geneTranscripts && geneTranscripts.length > 0 &&
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
@@ -498,6 +498,7 @@ class VariantGenes extends React.PureComponent {
     mainGeneId: PropTypes.string,
     genesById: PropTypes.object.isRequired,
     rnaSeqData: PropTypes.object,
+    showMainGene: PropTypes.bool,
   }
 
   static defaultProps = {
@@ -511,9 +512,10 @@ class VariantGenes extends React.PureComponent {
   }
 
   render() {
-    const { variant, genesById, mainGeneId, rnaSeqData } = this.props
+    const { variant, genesById, mainGeneId, showMainGene, rnaSeqData } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
+    const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
 
     const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
       <GeneSearchLinkWithPopup location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
@@ -521,11 +523,13 @@ class VariantGenes extends React.PureComponent {
     if (geneIds.length < 6 || showAll) {
       return (
         <div>
-          {geneIds.filter(geneId => geneId !== mainGeneId).map(geneId => (
+          {genes.filter(({ geneId }) => showMainGene || geneId !== mainGeneId).sort(
+            (a, b) => a.startGrch38 - b.startGrch38,
+          ).map(gene => (
             <BaseVariantGene
-              key={geneId}
-              geneId={geneId}
-              gene={genesById[geneId]}
+              key={gene.geneId}
+              geneId={gene.geneId}
+              gene={gene}
               variant={variant}
               rnaSeqData={rnaSeqData}
               showInlineDetails={!mainGeneId}
@@ -537,7 +541,6 @@ class VariantGenes extends React.PureComponent {
       )
     }
 
-    const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
     const geneConsequences = [...(new Set(geneIds.map(
       geneId => (variant.transcripts[geneId][0] || {}).majorConsequence,
     ).filter(consequence => consequence).map(consequence => consequence.replace(/_/g, ' '))))].join(', ')
@@ -547,26 +550,28 @@ class VariantGenes extends React.PureComponent {
         <ButtonLink fontWeight="bold" size="large" onClick={this.showGenes}>{`${geneIds.length} Genes`}</ButtonLink>
         {geneConsequences}
         <VerticalSpacer height={10} />
-        <div>
-          {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
-            ({ showDetails, detailsDisplay, ...sectionConfig }) => {
-              const sectionGenes = genes.filter(gene => showDetails(gene))
-              return (
-                <GeneDetailSection
-                  key={sectionConfig.label}
-                  details={sectionGenes.length > 0 && sectionGenes.map(gene => (
-                    <div key={gene.geneId}>
-                      <Header size="small" content={gene.geneSymbol} />
-                      {detailsDisplay(gene, rnaSeqData)}
-                      <VerticalSpacer height={5} />
-                    </div>
-                  ))}
-                  {...sectionConfig}
-                />
-              )
-            },
-          )}
-        </div>
+        {!mainGeneId && (
+          <div>
+            {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
+              ({ showDetails, detailsDisplay, ...sectionConfig }) => {
+                const sectionGenes = genes.filter(gene => showDetails(gene))
+                return (
+                  <GeneDetailSection
+                    key={sectionConfig.label}
+                    details={sectionGenes.length > 0 && sectionGenes.map(gene => (
+                      <div key={gene.geneId}>
+                        <Header size="small" content={gene.geneSymbol} />
+                        {detailsDisplay(gene, rnaSeqData)}
+                        <VerticalSpacer height={5} />
+                      </div>
+                    ))}
+                    {...sectionConfig}
+                  />
+                )
+              },
+            )}
+          </div>
+        )}
         {geneSearchLink}
       </div>
     )
