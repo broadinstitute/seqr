@@ -180,12 +180,12 @@ def create_project_from_workspace(request, namespace, name):
 
     # use airflow api to trigger AnVIL dags
     try:
-        pipeline_dag = _trigger_data_loading(project, data_path, request_json)
-        # Send a slack message to the slack channel
+        pipeline_dag = _trigger_data_loading(project, data_path, request_json['sampleType'])
     except Exception as e:
         logger.error(e, request.user)
-        _send_slack_msg_on_failure_trigger(e, project, pipeline_dag, request_json['sampleType'])
-        
+        _send_slack_msg_on_failure_trigger(e, project, data_path, request_json['sampleType'])
+    
+    # Send a slack message to the slack channel    
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user, pipeline_dag)
 
     if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
@@ -229,7 +229,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user, p
   
         The sample IDs to load have been uploaded to {ids_path}.  
   
-        DAG {dag_name} dag is triggered with following:
+        DAG {dag_name} is triggered with following:
         ```{dag}```
         """.format(
         user=user.email,
@@ -248,13 +248,14 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user, p
 
     safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
 
-def _send_slack_msg_on_failure_trigger(e, project, pipeline_dag, sample_type):
+def _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type):
+    pipeline_dag = construct_dag_variables(project, data_path, sample_type)
     message_content = """
         ERROR triggering AnVIL loading for project {project_guid}: {e} 
         
         DAG {dag_name} should be triggered with following: 
         ```{dag}```
-        """.formate(
+        """.format(
             project_guid = project.guid,
             e = e,
             dag_name = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
@@ -262,41 +263,34 @@ def _send_slack_msg_on_failure_trigger(e, project, pipeline_dag, sample_type):
         )
     safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, message_content)
 
-def _trigger_data_loading(project, data_path, user_input):
-    genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=user_input['sampleType'])
+def _trigger_data_loading(project, data_path, sample_type):
+    genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=sample_type)
 
-    anvil_variables = _get_dag_variables(genome_test_type)
-    updated_anvil_variables = {
-        "active_projects": [project.guid],
-        "es_enable_export": 'true',
-        "vcf_path": data_path,
-        "project_path": '{}v1'.format(_get_loading_project_path(project, user_input['sampleType'])),
-        "projects_to_run": [project.guid],
-    }
-    dag_projects = anvil_variables["active_projects"]
+    updated_anvil_variables = construct_dag_variables(project, data_path, sample_type)
  
     _update_variables(genome_test_type, updated_anvil_variables)
 
     dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)    
-    _wait_for_dag_variable_update(dag_id, project, dag_projects)
+    _wait_for_dag_variable_update(dag_id, project)
     
     _trigger_dag(dag_id)
     
     return updated_anvil_variables
+
+def construct_dag_variables(project, data_path, sample_type):
+    dag_variables = {
+        "active_projects": [project.guid],
+        "vcf_path": data_path,
+        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
+        "projects_to_run": [project.guid],
+    }
+    return dag_variables
     
 def _wait_for_dag_variable_update(dag_id, project, dag_projects):
     updated_project = project.guid
-    while updated_project not in dag_projects: 
+    dag_projects = _get_task_ids(dag_id)
+    while updated_project not in ''.join(dag_projects): 
         dag_projects = _get_task_ids(dag_id)
-
-def _get_dag_variables(variable_key):
-    endpoint = 'variables/{}'.format(variable_key)
-    airflow_response = _make_airflow_api_request(endpoint, method='GET')
- 
-    val_str = airflow_response['value']
-    val_dict = json.loads(val_str)
-
-    return val_dict
 
 def _update_variables(key, val):
     endpoint = 'variables/{}'.format(key)
