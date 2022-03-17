@@ -227,7 +227,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response_json['familiesCount'], {'internal': 13, 'external': 1})
         self.assertDictEqual(
             response_json['sampleCountsByType'],
-            {'WES__VARIANTS': {'internal': 8}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 1}},
+            {'WES__VARIANTS': {'internal': 8}, 'WGS__MITO': {'external': 1}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 1}},
         )
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
