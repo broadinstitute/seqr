@@ -318,7 +318,7 @@ class EsSearch(object):
         if secondary_dataset_type:
             self.update_dataset_type(secondary_dataset_type, keep_previous=True)
 
-        if skip_genotype_filter:
+        if skip_genotype_filter and not inheritance_mode:
             return
 
         quality_filters_by_family = _quality_filters_by_family(

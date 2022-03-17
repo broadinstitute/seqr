@@ -11,7 +11,7 @@ import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
-import VariantGenes, { getGeneConsequence, LocusListLabels } from './VariantGene'
+import VariantGenes, { LocusListLabels } from './VariantGene'
 import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
 import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
 
@@ -220,7 +220,7 @@ const svSizeDisplay = (size) => {
   return `${(size / 1000000).toFixed(2) / 1}Mb`
 }
 
-const Annotations = React.memo(({ variant, mainGeneId }) => {
+const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
   const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
@@ -274,7 +274,6 @@ const Annotations = React.memo(({ variant, mainGeneId }) => {
           <Transcripts variant={variant} />
         </Modal>
       )}
-      {svType && mainGeneId && getGeneConsequence(mainGeneId, variant)}
       {svType && end && (
         <b>
           <HorizontalSpacer width={5} />
@@ -324,7 +323,7 @@ const Annotations = React.memo(({ variant, mainGeneId }) => {
         </div>
       )}
       { (svType || Object.keys(mainTranscript).length > 0) && <VerticalSpacer height={10} />}
-      {mainGeneId && <VariantGenes mainGeneId={mainGeneId} variant={variant} />}
+      {mainGeneId && <VariantGenes mainGeneId={mainGeneId} showMainGene={showMainGene} variant={variant} />}
       {(mainGeneId && Object.keys(variant.transcripts || {}).length > 1) && <VerticalSpacer height={10} />}
       <LargeText>
         <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
@@ -376,6 +375,7 @@ const Annotations = React.memo(({ variant, mainGeneId }) => {
 Annotations.propTypes = {
   variant: PropTypes.object,
   mainGeneId: PropTypes.string,
+  showMainGene: PropTypes.bool,
 }
 
 export default Annotations

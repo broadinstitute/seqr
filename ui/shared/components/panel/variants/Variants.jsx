@@ -133,7 +133,7 @@ VariantLayout.propTypes = {
   children: PropTypes.node,
 }
 
-const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, ...props }) => {
+const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, ...props }) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
   return (
     <VariantLayout
@@ -160,12 +160,13 @@ const Variant = React.memo(({ variant, mainGeneId, reads, showReads, dispatch, .
         </div>
       }
       bottomContent={reads}
+      isCompoundHet={isCompoundHet}
       {...props}
     >
       <Grid columns="equal">
         <Grid.Row>
           <Grid.Column>
-            <Annotations variant={variant} mainGeneId={variantMainGeneId} />
+            <Annotations variant={variant} mainGeneId={variantMainGeneId} showMainGene={isCompoundHet} />
           </Grid.Column>
           <Grid.Column><Predictions variant={variant} /></Grid.Column>
           <Grid.Column><Frequencies variant={variant} /></Grid.Column>

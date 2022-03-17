@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bzip2 \
     curl \
     gcc \
+    # git needed for the nodejs install
+    git \
     libc6-dev \
     libpq-dev \
-    nodejs \
-    npm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -20,22 +20,35 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+# install nodejs14 repo since debian is still on node 12.x
+RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
+# installs the nodejs and npm packages
+RUN apt-get install -y --no-install-recommends \
+    nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+# upgrade npm to v7 to fix lockfile resolution
+RUN npm install -g npm@7.24.2
+
 WORKDIR /opt
 
 COPY ./requirements.txt .
 
-# install seqr dependencies
+# install seqr python dependencies
 RUN pip install --no-cache-dir wheel && \
     pip install --no-cache-dir -r requirements.txt && \
     ln -s python3 /opt/venv/bin/python3.7
 
-WORKDIR /build
-
-COPY ./ui ./ui
-
+# install seqr nodejs dependencies
 WORKDIR /build/ui
-RUN npm ci && \
-    npm run build
+# Copy the package configs from the build context -> the temporary build container, for generating node_modules
+COPY ./ui/package.json .
+COPY ./ui/package-lock.json .
+RUN npm ci
+
+COPY ./ui/ .
+
+RUN npm run build
 
 FROM python:3.7-slim-bullseye as runtime
 

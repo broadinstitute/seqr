@@ -466,6 +466,12 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
 
+        # Test empty project
+        empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])
+        response = self.client.get(empty_project_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'rows': []})
+
         # Test non-broad analysts do not have access
         self.login_pm_user()
         response = self.client.get(url)
