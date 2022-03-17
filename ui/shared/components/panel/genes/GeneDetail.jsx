@@ -8,7 +8,7 @@ import { Grid, Popup, Loader } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
-import { SectionHeader } from '../../StyledComponents'
+import { SectionHeader, ColoredLabel } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
@@ -168,6 +168,26 @@ const STAT_DETAILS = [
   },
 ]
 
+const GENCC_COLORS = {
+  Definitive: '#276749',
+  Strong: '#38a169',
+  Moderate: '#68d391',
+  Supportive: '#63b3ed',
+  Limited: '#fc8181',
+}
+
+export const GenCC = ({ genCc }) => genCc.classifications.sort(
+  (a, b) => b.date.localeCompare(a.date),
+).map(({ classification, disease, moi, date, submitter }) => (
+  <div key={submitter}>
+    <ColoredLabel horizontal size="mini" minWidth="60px" color={GENCC_COLORS[classification] || 'grey'} content={classification} />
+    <b>{submitter}</b>
+    {` (${date.split('-')[0]}): `}
+    <a target="_blank" rel="noreferrer" href={`https://search.thegencc.org/genes/${genCc.hgncId}`}>{disease}</a>
+    <i>{` (${moi})`}</i>
+  </div>
+))
+
 const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
     return null
@@ -205,15 +225,17 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
             </span>
           ))}
         </div>
-      ) : <em>No disease associations</em>,
+      ) : <i>No disease associations</i>,
+    },
+    {
+      title: 'dbNSFP Details',
+      content: gene.diseaseDesc ? textWithLinks(gene.diseaseDesc) : <i>None</i>,
+    },
+    {
+      title: 'GenCC',
+      content: gene.genCc?.classifications ? <GenCC genCc={gene.genCc} /> : <i>Not Submitted</i>,
     },
   ]
-  if (gene.diseaseDesc) {
-    associationDetails.push({
-      title: 'dbNSFP Details',
-      content: textWithLinks(gene.diseaseDesc),
-    })
-  }
   const linkDetails = [
     gene.mimNumber ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.mimNumber}`, description: 'Database of Mendelian phenotypes' } : null,
     { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=(${[gene.geneSymbol, ...otherGeneNames].join(' OR ')})`, description: 'Search PubMed' },

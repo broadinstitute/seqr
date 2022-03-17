@@ -16,6 +16,7 @@ import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
+import { GenCC } from '../genes/GeneDetail'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -171,41 +172,13 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const GENCC_COLORS = {
-  Definitive: '#276749',
-  Strong: '#38a169',
-  Moderate: '#68d391',
-  Supportive: '#63b3ed',
-  Limited: '#fc8181',
-}
-
 const GENE_DISEASE_DETAIL_SECTIONS = [
   {
     color: 'violet',
     description: 'GenCC',
     label: 'GENCC',
     showDetails: gene => gene.genCc?.classifications,
-    detailsDisplay: gene => (
-      <List>
-        {gene.genCc.classifications.sort(
-          (a, b) => b.date.localeCompare(a.date),
-        ).map(({ classification, disease, moi, date, submitter }) => (
-          <ListItemLink
-            key={submitter}
-            content={(
-              <span>
-                <ColoredLabel horizontal size="mini" color={GENCC_COLORS[classification] || 'grey'} content={classification} />
-                <b>{submitter}</b>
-                {` (${date.split('-')[0]}): ${disease}`}
-                <i>{` (${moi})`}</i>
-              </span>
-            )}
-            target="_blank"
-            href={`https://search.thegencc.org/genes/${gene.genCc.hgncId}`}
-          />
-        ))}
-      </List>
-    ),
+    detailsDisplay: gene => (<GenCC genCc={gene.genCc} />),
   },
   {
     color: 'orange',
