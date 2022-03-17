@@ -1040,6 +1040,76 @@ PARSED_SV_WGS_VARIANT = {
     '_sort': [2049045387],
 }
 
+PARSED_MITO_VARIANT = {
+    '_sort': [25000010195],
+    'algorithms': None,
+    'alt': 'A',
+    'chrom': 'M',
+    'clinvar': {'alleleId': None, 'clinicalSignificance': ['Likely_pathogenic'], 'goldStars': None, 'variationId': None},
+    'commonLowHeteroplasmy': False,
+    'cpxIntervals': None,
+    'end': 10195,
+    'familyGuids': ['F000014_14'],
+    'genomeVersion': '38',
+    'genotypeFilters': '',
+    'genotypes':
+        {'I000018_na21234':
+             {'ab': None, 'ad': None, 'contamination': 0.0, 'dp': 5139.0, 'gq': 60.0, 'hl': 1.0,
+              'mitoCn': 319.03225806451616, 'numAlt': 2, 'pl': None, 'sampleId': 'MCAI043', 'sampleType': 'WGS'}},
+    'hgmd': {'accession': None, 'class': None},
+    'highConstraintRegion': True,
+    'liftedOverChrom': 'MT',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverPos': 10195,
+    'mainTranscriptId': 'ENST00000361227',
+    'mitomapPathogenic': None,
+    'numExon': None,
+    'originalAltAlleles': [],
+    'populations':
+        {'callset': {'ac': 0, 'ac_het': None, 'af': 0.0, 'af_het': None, 'an': 2520, 'filter_af': None, 'hemi': None,
+              'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'exac': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None, 'hemi': None,
+              'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'g1k': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None, 'hemi': None,
+                 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'gnomad_exomes': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+                           'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'gnomad_genomes': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+                            'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'gnomad_mito': {'ac': 0, 'ac_het': 0, 'af': 0.0, 'af_het': 0.0, 'an': 0, 'filter_af': None, 'hemi': 0,
+                         'het': 0, 'hom': 0, 'id': None,'max_hl': 0.0},
+         'gnomad_svs': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+                        'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'helix': {'ac': 0, 'ac_het': 0, 'af': 0.0, 'af_het': 0.0, 'an': 0, 'filter_af': None, 'hemi': 0, 'het': 0,
+                   'hom': 0, 'id': None, 'max_hl': 0.0},
+         'sv_callset': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+                        'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'topmed': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None, 'hemi': None,
+                    'het': None, 'hom': None, 'id': None, 'max_hl': None}},
+    'pos': 10195,
+    'predictions': {'HmtVarScore': 0.71, 'apogeeScore': 0.42, 'cadd': None, 'dann': None, 'eigen': None, 'fathmm': 'T',
+                    'gerp_rs': '5.07', 'hapDefiningVariant': None, 'metasvm': None, 'mitotipTrnaPrediction': None,
+                    'mpc': None, 'mut_taster': 'N', 'phastcons_100_vert': '0.958000', 'polyphen': None,
+                    'primate_ai': None, 'revel': None, 'sift': 'D', 'splice_ai': None, 'splice_ai_consequence': None,
+                    'strvctvre': None},
+    'ref': 'C',
+    'rsid': None,
+    'svType': None,
+    'svTypeDetail': None,
+    'transcripts': {'ENSG00000198840': [
+        {'aminoAcids': 'P/H', 'biotype': 'protein_coding', 'canonical': 1, 'category': 'missense', 'cdnaEnd': 137,
+         'cdnaStart': 137, 'codons': 'cCc/cAc', 'consequenceTerms': [
+            'missense_variant'],
+         'domains': ['Gene3D:1', 'ENSP_mappings:5xtc', 'ENSP_mappings:5xtd', 'Pfam:PF00507', 'PANTHER:PTHR11058',
+                     'PANTHER:PTHR11058'], 'geneId': 'ENSG00000198840', 'geneSymbol': 'MT-ND3', 'hgvs': 'p.Pro46His',
+         'hgvsc': 'ENST00000361227.2:c.137C>A', 'hgvsp': 'ENSP00000355206.2:p.Pro46His', 'lof': None, 'lofFilter': None,
+         'lofFlags': None, 'lofInfo': None, 'majorConsequence': 'missense_variant', 'majorConsequenceRank': 11,
+         'polyphenPrediction': 'probably_damaging', 'proteinId': 'ENSP00000355206', 'proteinStart': 46,
+         'siftPrediction': 'deleterious_low_confidence', 'transcriptId': 'ENST00000361227', 'transcriptRank': 0}]},
+    'variantId': 'M-10195-C-A',
+    'xpos': 25000010195
+}
+
 GOOGLE_API_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 GOOGLE_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 

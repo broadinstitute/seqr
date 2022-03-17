@@ -14,13 +14,15 @@ from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37
-from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT, TRANSCRIPT_2
+from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
+    PARSED_MITO_VARIANT, TRANSCRIPT_2
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
 SV_INDEX_NAME = 'test_index_sv'
 SV_WGS_INDEX_NAME = 'test_index_sv_wgs'
+MITO_WGS_INDEX_NAME = 'test_index_mito_wgs'
 INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
 ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
 SUB_INDICES = ['sub_index_1', 'sub_index_2']
@@ -451,6 +453,189 @@ ES_SV_WGS_VARIANT = {
     'matched_queries': {SV_WGS_INDEX_NAME: ['F000014_14']},
   }
 
+ES_MITO_WGS_VARIANT = {
+    "_source" : {
+      "genotypes" : [
+        {
+          "num_alt": 2,
+          "gq": 60.0,
+          "hl": 1.0,
+          "mito_cn": 319.03225806451616,
+          "contamination": 0.0,
+          "dp": 5139.0,
+          "sample_id": "MCAI043"
+        },
+      ],
+      "samples_gq_0_to_5" : [ ],
+      "samples_gq_5_to_10" : [ ],
+      "samples_gq_10_to_15" : [ ],
+      "samples_gq_15_to_20" : [ ],
+      "samples_gq_20_to_25" : [ ],
+      "samples_gq_25_to_30" : [ ],
+      "samples_gq_30_to_35" : [ ],
+      "samples_gq_35_to_40" : [ ],
+      "samples_gq_40_to_45" : [ ],
+      "samples_gq_45_to_50" : [ ],
+      "samples_gq_50_to_55" : [ ],
+      "samples_gq_55_to_60" : [ ],
+      "samples_gq_60_to_65" : [
+        "MCAI043"
+      ],
+      "samples_gq_65_to_70" : [ ],
+      "samples_gq_70_to_75" : [ ],
+      "samples_gq_75_to_80" : [ ],
+      "samples_gq_80_to_85" : [ ],
+      "samples_gq_85_to_90" : [ ],
+      "samples_gq_90_to_95" : [ ],
+      "samples_hl_0_to_5" : [ ],
+      "samples_hl_5_to_10" : [ ],
+      "samples_hl_10_to_15" : [ ],
+      "samples_hl_15_to_20" : [ ],
+      "samples_hl_20_to_25" : [ ],
+      "samples_hl_25_to_30" : [ ],
+      "samples_hl_30_to_35" : [ ],
+      "samples_hl_35_to_40" : [ ],
+      "samples_hl_40_to_45" : [ ],
+      "samples_no_call" : [ ],
+      "samples_num_alt_1" : [ ],
+      "samples_num_alt_2" : [ "MCAI043" ],
+      "AC" : 0,
+      "AC_het" : 1,
+      "AF" : 0.0,
+      "AF_het" : 3.968253968253968E-4,
+      "alt" : "A",
+      "AN" : 2520,
+      "clinvar_allele_id" : None,
+      "clinvar_clinical_significance" : ['Likely_pathogenic'],
+      "clinvar_gold_stars" : None,
+      "codingGeneIds" : [
+        "ENSG00000198840"
+      ],
+      "common_low_heteroplasmy" : False,
+      "contig" : "M",
+      "dbnsfp_SIFT_pred" : "D",
+      "dbnsfp_Polyphen2_HVAR_pred" : None,
+      "dbnsfp_MutationTaster_pred" : "N",
+      "dbnsfp_FATHMM_pred" : "T",
+      "dbnsfp_MetaSVM_pred" : None,
+      "dbnsfp_REVEL_score" : None,
+      "dbnsfp_GERP_RS" : "5.07",
+      "dbnsfp_phastCons100way_vertebrate" : "0.958000",
+      "dbnsfp_VEST4_score" : None,
+      "dbnsfp_fathmm_MKL_coding_pred" : None,
+      "dbnsfp_MutPred_score" : None,
+      "docId" : "M-10195-C-A",
+      "domains" : [
+        "ENSP_mappings:5xtc",
+        "ENSP_mappings:5xtd",
+        "Gene3D:1",
+        "PANTHER:PTHR11058",
+        "Pfam:PF00507"
+      ],
+      "end" : 10195,
+      "filters" : [ ],
+      "geneIds" : [
+        "ENSG00000198840"
+      ],
+      "gnomad_mito_AN" : None,
+      "gnomad_mito_AC" : None,
+      "gnomad_mito_AC_het" : None,
+      "gnomad_mito_AF" : None,
+      "gnomad_mito_AF_het" : None,
+      "gnomad_mito_max_hl" : None,
+      "hap_defining_variant" : False,
+      "helix_AF" : None,
+      "helix_AF_het" : None,
+      "helix_max_hl" : None,
+      "high_constraint_region" : True,
+      "HmtVar_score" : 0.71,
+      "mainTranscript_biotype" : "protein_coding",
+      "mainTranscript_canonical" : 1,
+      "mainTranscript_category" : "missense",
+      "mainTranscript_cdna_start" : 137,
+      "mainTranscript_cdna_end" : 137,
+      "mainTranscript_codons" : "cCc/cAc",
+      "mainTranscript_gene_id" : "ENSG00000198840",
+      "mainTranscript_gene_symbol" : "MT-ND3",
+      "mainTranscript_hgvs" : "p.Pro46His",
+      "mainTranscript_hgvsc" : "ENST00000361227.2:c.137C>A",
+      "mainTranscript_major_consequence" : "missense_variant",
+      "mainTranscript_major_consequence_rank" : 11,
+      "mainTranscript_transcript_id" : "ENST00000361227",
+      "mainTranscript_amino_acids" : "P/H",
+      "mainTranscript_domains" : "Gene3D:1,ENSP_mappings:5xtc,PANTHER:PTHR11058,ENSP_mappings:5xtd,Pfam:PF00507",
+      "mainTranscript_hgvsp" : "ENSP00000355206.2:p.Pro46His",
+      "mainTranscript_lof" : None,
+      "mainTranscript_lof_flags" : None,
+      "mainTranscript_lof_filter" : None,
+      "mainTranscript_lof_info" : None,
+      "mainTranscript_polyphen_prediction" : "probably_damaging",
+      "mainTranscript_protein_id" : "ENSP00000355206",
+      "mainTranscript_sift_prediction" : "deleterious_low_confidence",
+      "APOGEE_score" : 0.42,
+      "mitomap_pathogenic" : None,
+      "mitotip_trna_prediction" : None,
+      "pos" : 10195,
+      "ref" : "C",
+      "rg37_locus" : {
+        "contig" : "MT",
+        "position" : 10195
+      },
+      "rsid" : None,
+      "sortedTranscriptConsequences" : [
+        {
+          "biotype" : "protein_coding",
+          "canonical" : 1,
+          "cdna_start" : 137,
+          "cdna_end" : 137,
+          "codons" : "cCc/cAc",
+          "gene_id" : "ENSG00000198840",
+          "gene_symbol" : "MT-ND3",
+          "hgvsc" : "ENST00000361227.2:c.137C>A",
+          "hgvsp" : "ENSP00000355206.2:p.Pro46His",
+          "transcript_id" : "ENST00000361227",
+          "amino_acids" : "P/H",
+          "lof" : None,
+          "lof_filter" : None,
+          "lof_flags" : None,
+          "lof_info" : None,
+          "polyphen_prediction" : "probably_damaging",
+          "protein_id" : "ENSP00000355206",
+          "protein_start" : 46,
+          "sift_prediction" : "deleterious_low_confidence",
+          "consequence_terms" : [
+            "missense_variant"
+          ],
+          "domains" : [
+            "Gene3D:1",
+            "ENSP_mappings:5xtc",
+            "ENSP_mappings:5xtd",
+            "Pfam:PF00507",
+            "PANTHER:PTHR11058",
+            "PANTHER:PTHR11058"
+          ],
+          "major_consequence" : "missense_variant",
+          "category" : "missense",
+          "hgvs" : "p.Pro46His",
+          "major_consequence_rank" : 11,
+          "transcript_rank" : 0
+        }
+      ],
+      "start" : 10195,
+      "transcriptConsequenceTerms" : [
+        "missense_variant"
+      ],
+      "transcriptIds" : [
+        "ENST00000361227"
+      ],
+      "variantId" : "M-10195-C-A",
+      "xpos" : 25000010195,
+      "xstart" : 25000010195,
+      "xstop" : 25000010195
+    },
+    'matched_queries': {MITO_WGS_INDEX_NAME: ['F000014_14']},
+}
+
 OR2M3_COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
 transcripts = OR2M3_COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences']
 transcripts[0]['major_consequence'] = 'frameshift_variant'
@@ -495,6 +680,7 @@ INDEX_ES_VARIANTS = {
     SV_INDEX_NAME: [ES_SV_VARIANT],
     SV_WGS_INDEX_NAME: [ES_SV_WGS_VARIANT],
     NO_LIFT_38_INDEX_NAME: [BUILD_38_NO_LIFTOVER_ES_VARIANT],
+    MITO_WGS_INDEX_NAME: [ES_MITO_WGS_VARIANT],
 }
 INDEX_ES_VARIANTS.update({k: ES_VARIANTS for k in SUB_INDICES + SECOND_SUB_INDICES})
 
@@ -724,18 +910,18 @@ POPULATIONS = ['callset', 'exac', 'g1k', 'gnomad_exomes', 'gnomad_genomes', 'gno
 MITO_POPULATIONS = ['gnomad_mito', 'helix']
 FREQUENCIES = ['AC', 'AF', 'AN', 'filter_AF', 'Hemi', 'Het', 'Hom', 'ID']
 MITO_FREQUENCIES = ['AC_het', 'AF_het', 'max_hl']
-MITO_MAPPING_FIELDS = {f'{dataset}_{freq_type}' for dataset in POPULATIONS + MITO_POPULATIONS for freq_type in MITO_FREQUENCIES}
-MITO_MAPPING_FIELDS.update({f'{dataset}_{freq_type}' for dataset in MITO_POPULATIONS for freq_type in FREQUENCIES})
-MITO_SOURCE_FIELDS = {'APOGEE_score', 'common_low_heteroplasmy', 'high_constraint_region', 'mitotip_trna_prediction',
-                      'mitomap_pathogenic', 'HmtVar_score', 'hap_defining_variant'}
+MITO_CROSS_MAPPING_FIELDS = {f'{dataset}_{freq_type}' for dataset in POPULATIONS for freq_type in MITO_FREQUENCIES}
+MITO_MAPPING_FIELDS = {f'{dataset}_{freq_type}' for dataset in MITO_POPULATIONS for freq_type in FREQUENCIES + MITO_FREQUENCIES}
+MITO_MAPPING_FIELDS.update({'APOGEE_score', 'common_low_heteroplasmy', 'high_constraint_region', 'mitotip_trna_prediction',
+                      'mitomap_pathogenic', 'HmtVar_score', 'hap_defining_variant'})
 SOURCE_FIELDS = {
     'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
     'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
+SOURCE_FIELDS.update(MITO_CROSS_MAPPING_FIELDS)
 SOURCE_FIELDS.update(MITO_MAPPING_FIELDS)
-SOURCE_FIELDS.update(MITO_SOURCE_FIELDS)
 SOURCE_FIELDS -= {
     'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het',
     'gnomad_genomes_FAF_AF',
@@ -765,6 +951,10 @@ CORE_INDEX_METADATA = {
 INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
 INDEX_METADATA[SV_WGS_INDEX_NAME] = INDEX_METADATA[SV_INDEX_NAME]
+INDEX_METADATA[MITO_WGS_INDEX_NAME] = {
+        '_meta': {'genomeVersion': '38', 'datasetType': 'MITO'},
+        'properties': {field: {'type': 'keyword'} for field in MITO_MAPPING_FIELDS},
+    }
 
 ALL_INHERITANCE_QUERY = {
     'bool': {
@@ -1729,6 +1919,20 @@ class EsUtilsTest(TestCase):
                 '_name': 'F000014_14'
             }}
         ], index=SV_WGS_INDEX_NAME)
+
+    @urllib3_responses.activate
+    def test_mito_get_es_variants(self):
+        self.families = Family.objects.filter(guid='F000014_14')
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(self.families)
+
+        variants, _ = get_es_variants(results_model, num_results=2)
+        self.maxDiff = None
+        self.assertListEqual([v for v in variants if v['chrom'] == 'M'], [PARSED_MITO_VARIANT])
+
+        self.assertExecutedSearch(size=4, index=','.join([SV_WGS_INDEX_NAME, MITO_WGS_INDEX_NAME]))
 
     @urllib3_responses.activate
     def test_multi_dataset_get_es_variants(self):
