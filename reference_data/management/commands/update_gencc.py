@@ -21,10 +21,6 @@ class GenCCReferenceDataHandler(ReferenceDataHandler):
     url = 'https://search.thegencc.org/download/action/submissions-export-csv'
 
     @staticmethod
-    def parse_record(record):
-        raise NotImplementedError
-
-    @staticmethod
     def get_file_header(f):
         return [k.replace('"', '') for k in next(f).rstrip('\n\r').split(',')]
 
@@ -56,4 +52,3 @@ class GenCCReferenceDataHandler(ReferenceDataHandler):
 
 class Command(GeneCommand):
     reference_data_handler = GenCCReferenceDataHandler
-[{}]
