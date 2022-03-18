@@ -21,6 +21,8 @@ GENOTYPE_QUERY_MAP = {
     HAS_REF: '', # TODO find function for this
 }
 
+#  For production: constants should have their own file
+
 POPULATION_SUB_FIELDS = {
     'AF',
     'AC',
