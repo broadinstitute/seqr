@@ -30,6 +30,12 @@ POPULATION_SUB_FIELDS = {
     'Het',
 }
 POPULATIONS = {
+    'topmed': {'hemi': None,'het': None},
+    'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
+    'exac': {
+        'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
+    },
+    'gnomad_exomes': {'filter_AF':  'AF_POPMAX_OR_GLOBAL', 'het': None},
     'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
 }
 for pop_config in POPULATIONS.values():
@@ -56,13 +62,13 @@ ANNOTATION_FIELDS = {
     ),
     'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
     'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
-    # TODO populations and predictions
-    'populations': lambda r: hl.struct(**{
+    'populations': lambda r: hl.struct(callset=hl.struct(af=r.AF, ac=r.AC, an=r.AN), **{
         population: hl.struct(**{
             response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
             if field is not None
         }) for population, pop_config in POPULATIONS.items()}
     ),
+    # TODO predictions
     'transcripts': lambda r: r.sortedTranscriptConsequences.map(
         lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
             'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
