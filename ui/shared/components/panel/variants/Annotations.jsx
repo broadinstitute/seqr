@@ -275,7 +275,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
                 {algorithms && `Algorithms: ${algorithms}.`}
                 {bothsidesSupport && (
                   <div>
-                    Variant has read-level support for both sides of breakpoint
+                    Bothsides Support
                   </div>
                 )}
               </div>
