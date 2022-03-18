@@ -21,6 +21,20 @@ GENOTYPE_QUERY_MAP = {
     HAS_REF: '', # TODO find function for this
 }
 
+POPULATION_SUB_FIELDS = {
+    'AF',
+    'AC',
+    'AN',
+    'Hom',
+    'Hemi',
+    'Het',
+}
+POPULATIONS = {
+    'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL'},
+}
+for pop_config in POPULATIONS.values():
+    pop_config.update({field.lower(): field for field in POPULATION_SUB_FIELDS if field.lower() not in pop_config})
+
 CORE_FIELDS = ['pos', 'ref', 'alt', 'familyGuids', 'genotypes', 'hgmd', 'rsid', 'xpos']
 RENAME_FIELDS = {'contig': 'chrom'}
 ANNOTATION_FIELDS = {
@@ -42,12 +56,17 @@ ANNOTATION_FIELDS = {
     ),
     'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
     'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
+    # TODO populations and predictions
+    'populations': lambda r: hl.struct(**{
+        population: hl.struct(**{
+            response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
+        }) for population, pop_config in POPULATIONS.items()}
+    ),
     'transcripts': lambda r: r.sortedTranscriptConsequences.map(
         lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
             'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
             'lof', 'lof_flags', 'lof_filter', 'lof_info', 'transcript_id',
         ]})).group_by(lambda t: t.geneId),
-    # TODO populations and predictions
 }
 
 class HailSearch(object):
