@@ -23,7 +23,7 @@ class GeneUtilsTest(TestCase):
         self.assertSetEqual(set(json.keys()), gene_ids)
         self.assertSetEqual(set(json[GENE_ID].keys()), GENE_FIELDS)
 
-        fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity'}
+        fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc'}
         fields.update(GENE_FIELDS)
         json = get_genes_for_variant_display(gene_ids)
         self.assertSetEqual(set(json.keys()), gene_ids)
@@ -46,9 +46,11 @@ class GeneUtilsTest(TestCase):
         self.assertSetEqual(
             set(gene['omimPhenotypes'][0].keys()),
             {'mimNumber', 'phenotypeMimNumber', 'phenotypeDescription', 'phenotypeInheritance'})
+        self.assertSetEqual(set(gene['genCc'].keys()), {'hgncId', 'classifications'})
 
         sparse_gene = json['ENSG00000227232']
         self.assertIsNone(sparse_gene['primateAi'])
         self.assertDictEqual(sparse_gene['constraints'], {})
         self.assertDictEqual(sparse_gene['cnSensitivity'], {})
         self.assertListEqual(sparse_gene['omimPhenotypes'], [])
+        self.assertDictEqual(sparse_gene['genCc'], {})

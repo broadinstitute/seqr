@@ -16,6 +16,7 @@ import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
+import { GenCC } from '../genes/GeneDetail'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -171,30 +172,41 @@ GeneDetailSection.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const OMIM_SECTION = {
-  color: 'orange',
-  description: 'Disease Phenotypes',
-  label: 'IN OMIM',
-  compactLabel: 'OMIM Disease Phenotypes',
-  showDetails: gene => gene.omimPhenotypes.length > 0,
-  detailsDisplay: gene => (
-    <List>
-      {gene.omimPhenotypes.map(phenotype => (
-        <ListItemLink
-          key={phenotype.phenotypeDescription}
-          content={phenotype.phenotypeInheritance ? (
-            <span>
-              {phenotype.phenotypeDescription}
-              <i>{` (${phenotype.phenotypeInheritance})`}</i>
-            </span>
-          ) : phenotype.phenotypeDescription}
-          target="_blank"
-          href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
-        />
-      ))}
-    </List>
-  ),
-}
+const GENE_DISEASE_DETAIL_SECTIONS = [
+  {
+    color: 'violet',
+    description: 'GenCC',
+    label: 'GENCC',
+    showDetails: gene => gene.genCc?.classifications,
+    detailsDisplay: gene => (<GenCC genCc={gene.genCc} />),
+  },
+  {
+    color: 'orange',
+    description: 'Disease Phenotypes',
+    label: 'IN OMIM',
+    expandedLabel: 'OMIM',
+    compactLabel: 'OMIM Disease Phenotypes',
+    expandedDisplay: true,
+    showDetails: gene => gene.omimPhenotypes.length > 0,
+    detailsDisplay: gene => (
+      <List>
+        {gene.omimPhenotypes.map(phenotype => (
+          <ListItemLink
+            key={phenotype.phenotypeDescription}
+            content={phenotype.phenotypeInheritance ? (
+              <span>
+                {phenotype.phenotypeDescription}
+                <i>{` (${phenotype.phenotypeInheritance})`}</i>
+              </span>
+            ) : phenotype.phenotypeDescription}
+            target="_blank"
+            href={`https://www.omim.org/entry/${phenotype.phenotypeMimNumber}`}
+          />
+        ))}
+      </List>
+    ),
+  },
+]
 
 const RNA_SEQ_DETAIL_FIELDS = ['zScore', 'pValue', 'pAdjust']
 
@@ -282,6 +294,7 @@ const GENE_DETAIL_SECTIONS = [
 ]
 
 const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: true, compact: true })`
+  width: 100%;
   max-height: 6em;
   overflow-y: auto;
   display: inline-flex !important;
@@ -297,12 +310,20 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, containerStyle, rnaSeqData, ...labelProps },
-) => {
-  const geneDetails = GENE_DETAIL_SECTIONS.map(({ showDetails, detailsDisplay, ...sectionConfig }) => (
-    { ...sectionConfig, detail: showDetails(gene, rnaSeqData) && detailsDisplay(gene, rnaSeqData) }
-  )).filter(({ detail }) => detail).map(({ detail, ...sectionConfig }) => (
+const getDetailSections = (configs, gene, compact, labelProps, rnaSeqData) => configs.map(
+  ({ showDetails, detailsDisplay, ...sectionConfig }) => (
+    { ...sectionConfig, detail: showDetails(gene, rnaSeqData) && detailsDisplay(gene, rnaSeqData) }),
+).filter(({ detail }) => detail).map(({ detail, expandedDisplay, ...sectionConfig }) => (
+  (expandedDisplay && !compact) ? (
+    <OmimSegments key={sectionConfig.label}>
+      <Segment color={sectionConfig.color}>
+        <Label size="mini" color={sectionConfig.color} content={sectionConfig.expandedLabel} />
+      </Segment>
+      <Segment color={sectionConfig.color}>
+        {detail}
+      </Segment>
+    </OmimSegments>
+  ) : (
     <GeneDetailSection
       key={sectionConfig.label}
       compact={compact}
@@ -310,10 +331,15 @@ export const GeneDetails = React.memo((
       {...sectionConfig}
       {...labelProps}
     />
-  ))
+  )
+))
+
+export const GeneDetails = React.memo((
+  { gene, compact, showLocusLists, containerStyle, rnaSeqData, ...labelProps },
+) => {
+  const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, rnaSeqData)
   const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
   const showDivider = geneDetails.length > 0 && hasLocusLists
-  const omimDetails = OMIM_SECTION.showDetails(gene) && OMIM_SECTION.detailsDisplay(gene)
 
   return (
     <div style={containerStyle}>
@@ -330,18 +356,8 @@ export const GeneDetails = React.memo((
           />
         )
       }
-      {omimDetails && (compact ?
-        <GeneDetailSection compact details={omimDetails} {...OMIM_SECTION} {...labelProps} /> : (
-          <OmimSegments>
-            <Segment color={OMIM_SECTION.color}>
-              <Label size="mini" color={OMIM_SECTION.color} content="OMIM" />
-            </Segment>
-            <Segment color={OMIM_SECTION.color}>
-              {omimDetails}
-            </Segment>
-          </OmimSegments>
-        )
-      )}
+      <br />
+      {getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps)}
     </div>
   )
 })
@@ -536,22 +552,24 @@ class VariantGenes extends React.PureComponent {
         <VerticalSpacer height={10} />
         {!mainGeneId && (
           <div>
-            {[OMIM_SECTION, ...GENE_DETAIL_SECTIONS].map(({ showDetails, detailsDisplay, ...sectionConfig }) => {
-              const sectionGenes = genes.filter(gene => showDetails(gene))
-              return (
-                <GeneDetailSection
-                  key={sectionConfig.label}
-                  details={sectionGenes.length > 0 && sectionGenes.map(gene => (
-                    <div key={gene.geneId}>
-                      <Header size="small" content={gene.geneSymbol} />
-                      {detailsDisplay(gene, rnaSeqData)}
-                      <VerticalSpacer height={5} />
-                    </div>
-                  ))}
-                  {...sectionConfig}
-                />
-              )
-            })}
+            {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
+              ({ showDetails, detailsDisplay, ...sectionConfig }) => {
+                const sectionGenes = genes.filter(gene => showDetails(gene))
+                return (
+                  <GeneDetailSection
+                    key={sectionConfig.label}
+                    details={sectionGenes.length > 0 && sectionGenes.map(gene => (
+                      <div key={gene.geneId}>
+                        <Header size="small" content={gene.geneSymbol} />
+                        {detailsDisplay(gene, rnaSeqData)}
+                        <VerticalSpacer height={5} />
+                      </div>
+                    ))}
+                    {...sectionConfig}
+                  />
+                )
+              },
+            )}
           </div>
         )}
         {geneSearchLink}
