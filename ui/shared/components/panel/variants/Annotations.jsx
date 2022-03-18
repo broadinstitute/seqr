@@ -206,7 +206,7 @@ const svSizeDisplay = (size) => {
 }
 
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
-  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms } = variant
+  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms, bothsidesSupport } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -265,12 +265,21 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           {svSizeDisplay(end - pos)}
         </b>
       )}
-      {algorithms && (
+      {(algorithms || bothsidesSupport) && (
         <b>
           <HorizontalSpacer width={5} />
           <Popup
             trigger={<Icon name="help circle" />}
-            content={`Algorithms: ${algorithms}`}
+            content={
+              <div>
+                {algorithms && `Algorithms: ${algorithms}.`}
+                {bothsidesSupport && (
+                  <div>
+                    Bothsides Support
+                  </div>
+                )}
+              </div>
+            }
             position="top center"
           />
         </b>
