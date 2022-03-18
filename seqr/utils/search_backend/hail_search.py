@@ -41,6 +41,26 @@ POPULATIONS = {
 for pop_config in POPULATIONS.values():
     pop_config.update({field.lower(): field for field in POPULATION_SUB_FIELDS if field.lower() not in pop_config})
 
+PREDICTION_FIELDS_CONFIG = {}
+for path, pred_config in {
+    'cadd': {'PHRED': 'cadd'},
+    'dbnsfp': {
+        'FATHMM_pred': 'fathmm',
+        'GERP_RS': 'gerp_rs',
+        'MetaSVM_pred': 'metasvm',
+        'MutationTaster_pred': 'mutationtaster',
+        'phastCons100way_vertebrate': 'phastcons_100_vert',
+        'Polyphen2_HVAR_pred': 'polyphen',
+        'REVEL_score': 'revel',
+        'SIFT_pred': 'sift',
+    },
+    'eigen': {'Eigen_phred': 'eigen'},
+    'mpc': {'MPC': 'mpc'},
+    'primate_ai': {'score': 'primate_ai'},
+    'splice_ai': {'delta_score': 'splice_ai', 'splice_consequence': 'splice_ai_consequence'},
+}.items():
+    PREDICTION_FIELDS_CONFIG.update({prediction: (path, sub_path) for sub_path, prediction in pred_config.items()})
+
 CORE_FIELDS = ['pos', 'ref', 'alt', 'familyGuids', 'genotypes', 'hgmd', 'rsid', 'xpos']
 RENAME_FIELDS = {'contig': 'chrom'}
 ANNOTATION_FIELDS = {
@@ -68,7 +88,9 @@ ANNOTATION_FIELDS = {
             if field is not None
         }) for population, pop_config in POPULATIONS.items()}
     ),
-    # TODO predictions
+    'predictions': lambda r: hl.struct(**{
+        prediction: r[path[0]][path[1]] for prediction, path in PREDICTION_FIELDS_CONFIG.items()
+    }),
     'transcripts': lambda r: r.sortedTranscriptConsequences.map(
         lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
             'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
@@ -299,10 +321,10 @@ class HailSearch(object):
         collected = rows.take(num_results)
         hail_results = [_json_serialize(dict(row)) for row in collected]
 
-        # TODO format return values into correct dicts, potentially post-process compound hets
+        # TODO potentially post-process compound hets
         return hail_results
 
-# TODO should use custom json serializer
+# For production: should use custom json serializer
 def _json_serialize(result):
     if isinstance(result, list):
         return [_json_serialize(o) for o in result]
