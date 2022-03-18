@@ -394,6 +394,7 @@ ES_SV_VARIANT = {
       'samples': ['HG00731'],
       'sc': 7,
       'contig': '1',
+      'bothsides_support': True,
       'sortedTranscriptConsequences': [
         {
           'gene_id': 'ENSG00000228198'
@@ -686,6 +687,7 @@ MAPPING_FIELDS = [
     'topmed_ID',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
+    'bothsides_support',
 ]
 SV_MAPPING_FIELDS = [
     'start',
@@ -717,6 +719,7 @@ SV_MAPPING_FIELDS = [
     'gnomad_svs_filter_AF',
     'gnomad_svs_Het',
     'gnomad_svs_ID',
+    'bothsides_support',
 ]
 
 SOURCE_FIELDS = {
@@ -1729,6 +1732,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
+        self.maxDiff = None
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
@@ -2174,6 +2178,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
+        self.maxDiff = None
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
@@ -2559,7 +2564,7 @@ class EsUtilsTest(TestCase):
             'locus': {'rawItems': 'ENSG00000223972'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.filter(guid__in=['F000011_11', 'F000003_3', 'F000002_2', 'F000005_5']))
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
         self.assertExecutedSearch(
@@ -2567,6 +2572,38 @@ class EsUtilsTest(TestCase):
             filters=[{'terms': {'geneIds': ['ENSG00000223972']}}, ANNOTATION_QUERY],
             size=4,
         )
+
+        # test with inheritance override
+        search_model.search['inheritance'] = {'mode': 'any_affected'}
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+        get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        self.assertExecutedSearches([
+            dict(
+                filters=[
+                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    ANNOTATION_QUERY,
+                    {'bool': {
+                        'should': [
+                            {'terms': {'samples_num_alt_1': ['NA20885']}},
+                            {'terms': {'samples_num_alt_2': ['NA20885']}},
+                            {'terms': {'samples': ['NA20885']}},
+                        ]
+                    }}
+                ], start_index=0, size=2, index=SECOND_INDEX_NAME),
+            dict(
+                filters=[
+                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    ANNOTATION_QUERY,
+                    {'bool': {
+                        'should': [
+                            {'terms': {'samples_num_alt_1': ['HG00731', 'NA19675', 'NA20870']}},
+                            {'terms': {'samples_num_alt_2': ['HG00731', 'NA19675', 'NA20870']}},
+                            {'terms': {'samples': ['HG00731', 'NA19675', 'NA20870']}},
+                        ]
+                    }},
+                ], start_index=0, size=2, index=INDEX_NAME)
+        ])
 
     @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
     @mock.patch('seqr.utils.elasticsearch.es_search.LiftOver')

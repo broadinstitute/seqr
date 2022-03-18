@@ -10,17 +10,12 @@ from django.contrib.auth.models import User
 from settings import PM_USER_GROUP
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import user_is_pm
 from seqr.models import Individual
 
 logger = SeqrLogger(__name__)
 
-class ErrorsWarningsException(Exception):
-    def __init__(self, errors, warnings=None):
-        """Custom Exception to capture errors and warnings."""
-        Exception.__init__(self, str(errors))
-        self.errors = errors
-        self.warnings = warnings
 
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 

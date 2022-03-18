@@ -10,16 +10,18 @@ from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
-    ProjectCategory, FamilyNote
-from seqr.views.utils.json_utils import create_json_response
+    ProjectCategory, FamilyNote, CAN_EDIT
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
     get_json_for_family_notes, _get_json_for_individuals
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required
+    check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required, \
+    has_workspace_perm
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 from settings import ANALYST_PROJECT_CATEGORY
 
 
@@ -40,16 +42,21 @@ def create_project_handler(request):
     """
     request_json = json.loads(request.body)
 
-    missing_fields = [field for field in ['name', 'genomeVersion'] if not request_json.get(field)]
+    required_fields = ['name', 'genomeVersion']
+    has_anvil = is_anvil_authenticated(request.user)
+    if has_anvil:
+        required_fields += ['workspaceNamespace', 'workspaceName']
+
+    missing_fields = [field for field in required_fields if not request_json.get(field)]
     if missing_fields:
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    project_args = {
-        'name': request_json['name'],
-        'genome_version': request_json['genomeVersion'],
-        'description': request_json.get('description', ''),
-    }
+    if has_anvil and not has_workspace_perm(request.user, CAN_EDIT, request_json['workspaceNamespace'], request_json['workspaceName']):
+        return create_json_response({'error': 'Invalid Workspace'}, status=400)
+
+    project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
+    project_args['description'] = request_json.get('description', '')
 
     project = create_model_from_json(Project, project_args, user=request.user)
     if ANALYST_PROJECT_CATEGORY:
@@ -239,7 +246,7 @@ def _add_tag_type_counts(project, project_variant_tags):
     }
 
     tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
-        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('*'))
+        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
     for tag_type in project_variant_tags:
         current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
                                    counts['variant_tag_type__name'] == tag_type['name']]
