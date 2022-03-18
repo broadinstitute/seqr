@@ -735,6 +735,7 @@ PARSED_VARIANTS = [
     {
         'alt': 'T',
         'chrom': '1',
+        'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
         'cpxIntervals': None,
@@ -785,6 +786,7 @@ PARSED_VARIANTS = [
     {
         'alt': 'G',
         'chrom': '2',
+        'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000002_2', 'F000003_3'],
         'cpxIntervals': None,
@@ -850,6 +852,7 @@ PARSED_VARIANTS = [
 PARSED_SV_VARIANT = {
     'alt': None,
     'chrom': '1',
+    'bothsidesSupport': True,
     'familyGuids': ['F000002_2'],
     'cpxIntervals': None,
     'algorithms': None,
@@ -920,6 +923,7 @@ PARSED_SV_VARIANT = {
 PARSED_SV_WGS_VARIANT = {
     'alt': None,
     'chrom': '2',
+    'bothsidesSupport': None,
     'familyGuids': ['F000014_14'],
     'cpxIntervals': [{'chrom': '2', 'end': 3000, 'start': 1000, 'type': 'DUP'},
                      {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INV'}],

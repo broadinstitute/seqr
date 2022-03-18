@@ -394,6 +394,7 @@ ES_SV_VARIANT = {
       'samples': ['HG00731'],
       'sc': 7,
       'contig': '1',
+      'bothsides_support': True,
       'sortedTranscriptConsequences': [
         {
           'gene_id': 'ENSG00000228198'
@@ -686,6 +687,7 @@ MAPPING_FIELDS = [
     'topmed_ID',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
+    'bothsides_support',
 ]
 SV_MAPPING_FIELDS = [
     'start',
@@ -717,6 +719,7 @@ SV_MAPPING_FIELDS = [
     'gnomad_svs_filter_AF',
     'gnomad_svs_Het',
     'gnomad_svs_ID',
+    'bothsides_support',
 ]
 
 SOURCE_FIELDS = {
@@ -1729,6 +1732,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
+        self.maxDiff = None
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
@@ -2174,6 +2178,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
+        self.maxDiff = None
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
