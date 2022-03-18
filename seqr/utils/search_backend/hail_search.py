@@ -30,7 +30,7 @@ POPULATION_SUB_FIELDS = {
     'Het',
 }
 POPULATIONS = {
-    'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL'},
+    'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
 }
 for pop_config in POPULATIONS.values():
     pop_config.update({field.lower(): field for field in POPULATION_SUB_FIELDS if field.lower() not in pop_config})
@@ -60,6 +60,7 @@ ANNOTATION_FIELDS = {
     'populations': lambda r: hl.struct(**{
         population: hl.struct(**{
             response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
+            if field is not None
         }) for population, pop_config in POPULATIONS.items()}
     ),
     'transcripts': lambda r: r.sortedTranscriptConsequences.map(
