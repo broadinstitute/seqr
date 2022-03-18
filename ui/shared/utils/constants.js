@@ -51,11 +51,6 @@ export const EDITABLE_PROJECT_FIELDS = [
   PROJECT_DESC_FIELD,
 ]
 
-export const PROJECT_FIELDS = [
-  ...EDITABLE_PROJECT_FIELDS,
-  GENOME_VERSION_FIELD,
-]
-
 export const FILE_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
