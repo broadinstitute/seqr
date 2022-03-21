@@ -18,7 +18,7 @@ GENOTYPE_QUERY_MAP = {
     REF_ALT: 'is_het',
     ALT_ALT: 'is_hom_var',
     HAS_ALT: 'is_non_ref',
-    HAS_REF: '', # TODO find function for this
+    # HAS_REF: '', # TODO find function for this
 }
 
 #  For production: constants should have their own file
@@ -216,112 +216,70 @@ class HailSearch(object):
             self.ht = self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
-        if inheritance_filter or inheritance_mode:
-            self._filter_by_genotype_inheritance(inheritance_mode, inheritance_filter, quality_filter)
-        else:
-            # TODO actually implement for multiple families
-            for family_guid, samples_by_id in self.samples_by_family.items():
-                samples = list(samples_by_id.values())
-                sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
-                family_ht = sample_tables[0]
-                for ht in sample_tables[1:]:
-                    # TODO remove all samples in families where any sample is not passing the quality filters
-                    family_ht = family_ht.join(ht)
+        if inheritance_mode and inheritance_mode != ANY_AFFECTED:
+            inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
+        if inheritance_mode == ANY_AFFECTED:
+            # TODO implement comp het
+            raise NotImplementedError
+        if inheritance_mode == X_LINKED_RECESSIVE:
+            # TODO will need to filter by both inheritance and chromosome
+            raise NotImplementedError
+        if inheritance_mode == COMPOUND_HET:
+            # TODO implement comp het
+            raise NotImplementedError
+        if inheritance_mode == RECESSIVE:
+            # TODO should add an OR filter for variants with X-linked inheritance, and also trigger comp het
+            raise NotImplementedError
+
+        if inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
+            raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
+        # TODO actually implement for multiple families
+        for family_guid, samples_by_id in self.samples_by_family.items():
+            samples = list(samples_by_id.values())
+            sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
+
+            affected_status = self._family_individual_affected_status.get(family_guid)
+            individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
+
+            family_ht = None
+            for i, sample_ht in enumerate(sample_tables):
+                if inheritance_filter and inheritance_mode != ANY_AFFECTED:
+                    individual_guid = samples[i].individual.guid
+                    affected = affected_status[individual_guid]
+                    genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
+                    sample_ht = sample_ht.filter(getattr(sample_ht.GT, GENOTYPE_QUERY_MAP[genotype])())
+
+                # TODO remove all samples in families where any sample is not passing the quality filters
+
+                if family_ht is None:
+                    family_ht = sample_ht
+                else:
+                    family_ht = family_ht.join(sample_ht)
+
+            if not inheritance_filter:
+                #  filter so at least one family member has an alt allele
                 q = family_ht.GT.is_non_ref()
                 for i in range(1, len(sample_tables)):
                     q |= family_ht[f'GT_{i}'].is_non_ref()
                 family_ht = family_ht.filter(q)
 
-                family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
-                family_ht = family_ht.annotate(
-                    familyGuids=hl.literal([family_guid]),
-                    genotypes=hl.struct(**{sample.individual.guid: hl.struct(
-                        sampleId=hl.literal(sample.sample_id),
-                        numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
-                        gq=family_ht[f'GQ_{i}'],
-                        # TODO ab
-                    ) for i, sample in enumerate(samples)})).select('genotypes', 'familyGuids')
+            family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
+            family_ht = family_ht.annotate(
+                familyGuids=hl.literal([family_guid]),
+                genotypes=hl.struct(**{sample.individual.guid: hl.struct(
+                    sampleId=hl.literal(sample.sample_id),
+                    numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
+                    gq=family_ht[f'GQ_{i}'],
+                    # TODO ab
+                ) for i, sample in enumerate(samples)})).select('genotypes', 'familyGuids')
 
-                self.ht = self.ht.join(family_ht)
+            self.ht = self.ht.join(family_ht)
 
-            # all_samples = {}
-            # for samples_by_id in self.samples_by_family.values():
-            #     all_samples.update(samples_by_id)
-            # sample_individuals = hl.literal({s.sample_id: s.individual.guid for s in all_samples.values()})
-            # # TODO genotypes need to come from sample-specific tables
-            # self.mt = self.mt.filter_cols(hl.array(list(all_samples.keys())).contains(self.mt.s))
-            # self.mt = self.mt.annotate_rows(
-            #     familyGuids=hl.literal(list(self.samples_by_family.keys())), # TODO should base on match
-            #     genotypes=hl.agg.collect(hl.struct(
-            #         individualGuid=sample_individuals.get(self.mt.s),
-            #         sampleId=self.mt.s,
-            #         gq=self.mt.GQ,
-            #         numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
-            #         dp=self.mt.DP,
-            #
-            #     )).group_by(lambda g: g.individualGuid).map_values(lambda g: g[0]),
-            # )
-
-
-    def _filter_by_genotype_inheritance(self, inheritance_mode, inheritance_filter, quality_filter):
-        if inheritance_mode:
-            inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
-
-        for family_guid, samples_by_id in self.samples_by_family.items():
-            sample_ids = sorted(samples_by_id.keys())
-            sample_tables = [self._sample_table(sample_id) for sample_id in sample_ids]
-            running_join = sample_tables[0]
-            for ht in sample_tables[1:]:
-                running_join = running_join.join(ht, how="outer")
-
-            affected_status = self._family_individual_affected_status.get(family_guid)
-
-            if list(inheritance_filter.keys()) == ['affected']:
-                raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
-
-            individual_genotype_filter = inheritance_filter.get('genotype') or {}
-
-            if inheritance_mode == X_LINKED_RECESSIVE:
-                # TODO will need to filter by both inheritance and chromosome
-                raise NotImplementedError
-
-            family_samples_q = None
-            for i, (sample_id, sample) in enumerate(sorted(samples_by_id.items())):
-
-                individual_guid = sample.individual.guid
-                affected = affected_status[individual_guid]
-
-                genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
-                if genotype:
-                    #  TODO correct syntax?
-                    gt = running_join.getattr('GT' if i == 0 else 'GT_{}'.format(i))
-                    sample_q = gt.getattr(GENOTYPE_QUERY_MAP[genotype])()
-
-                    if quality_filter:
-                        # TODO filter by gq and/or ab
-                        # quality_filters format: dict with key min_qg/ min_ab and integer value value
-                        # ab is only relevant for hets -confirm will not filter ab for hom ref or hom alt calls
-                        raise NotImplementedError
-
-                    if not family_samples_q:
-                        family_samples_q = sample_q
-                    else:
-                        family_samples_q &= sample_q
-
-            if not family_samples_q:
-                raise InvalidSearchException('Invalid custom inheritance')
-
-            # For recessive search, should be hom recessive, x-linked recessive, or compound het
-            if inheritance_mode == RECESSIVE:
-                # TODO should add an OR filter for variants with X-linked inheritance
-                pass
-
-            # # TODO actually apply the filter - running_join.filter(family_samples_q) ?
-            raise NotImplementedError
 
     def _filter_compound_hets(self, quality_filter):
-        self._filter_by_genotype_inheritance(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
+        self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
         raise NotImplementedError
 
