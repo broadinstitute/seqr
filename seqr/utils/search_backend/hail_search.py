@@ -261,14 +261,14 @@ class HailSearch(object):
 
             # Filter if any matching genotypes for any affected or any inheritance search
             if not inheritance_filter:
-                q = None
-                for i, sample in enumerate(samples):
-                    if not inheritance_mode or affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED:
-                        sample_q = family_ht[f'GT_{i}'].is_non_ref()
-                        if q:
-                            q |= sample_q
-                        else:
-                            q = sample_q
+                non_ref_sample_indices = [
+                    i for i, sample in enumerate(samples)
+                    if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
+                ] if inheritance_mode == ANY_AFFECTED else range(len(samples))
+
+                q = family_ht[f'GT_{non_ref_sample_indices[0]}'].is_non_ref()
+                for i in non_ref_sample_indices[1:]:
+                    q |= family_ht[f'GT_{i}'].is_non_ref()
 
                 family_ht = family_ht.filter(q)
 
