@@ -142,8 +142,6 @@ class HailSearch(object):
         self._allowed_consequences = None
         self._sample_table_queries = {}
 
-        # TODO set up connection to MTs/ any external resources
-        #self.mt = hl.experimental.load_dataset("1000_Genomes_HighCov_autosomes", "NYGC_30x_phased", "GRCh38")
         self.ht = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt').rows()
 
     def _sample_table(self, sample):
@@ -152,7 +150,7 @@ class HailSearch(object):
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, **kwargs):
         # return EsSearch.process_previous_results(*args, **kwargs)
-        # TODO re-enable caching at some point, but not helpful for deevelopment
+        # TODO re-enable caching at some point, but not helpful for development
         return None, {'page': page, 'num_results': num_results}
 
     def sort(self, sort):
@@ -232,7 +230,7 @@ class HailSearch(object):
 
                 q = family_ht.GT.is_non_ref()
                 for i in range(1, len(sample_tables)):
-                    q |= family_ht['GT_{i}'].is_non_ref()
+                    q |= family_ht[f'GT_{i}'].is_non_ref()
                 family_ht = family_ht.filter(q)
 
                 family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
