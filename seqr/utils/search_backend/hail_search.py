@@ -265,6 +265,8 @@ class HailSearch(object):
                     i for i, sample in enumerate(samples)
                     if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
                 ] if inheritance_mode == ANY_AFFECTED else range(len(samples))
+                if not non_ref_sample_indices:
+                    raise InvalidSearchException('At least one affected individual must be included in "Any Affected" search')
 
                 q = family_ht[f'GT_{non_ref_sample_indices[0]}'].is_non_ref()
                 for i in non_ref_sample_indices[1:]:
