@@ -144,12 +144,10 @@ class HailSearch(object):
 
         # TODO set up connection to MTs/ any external resources
         #self.mt = hl.experimental.load_dataset("1000_Genomes_HighCov_autosomes", "NYGC_30x_phased", "GRCh38")
-        self.mt = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt')
+        self.ht = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt').rows()
 
-    def _sample_table(self, sample_id):
-        # TODO should implement way to map sample id to table name
-        # TODO actually connect to/ load tables
-        raise NotImplementedError
+    def _sample_table(self, sample):
+        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}')
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, **kwargs):
@@ -169,7 +167,7 @@ class HailSearch(object):
                 'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
         ]
 
-        self.mt = hl.filter_intervals(self.mt, parsed_intervals)
+        self.ht = hl.filter_intervals(self.ht, parsed_intervals)
 
     def filter_by_frequency(self, frequencies, **kwargs):
         freq_filters = {}
@@ -216,36 +214,57 @@ class HailSearch(object):
             # allowed_consequences: list of allowed VEP transcript_consequence
             # TODO actually apply filters, get variants with any transcript with a consequence in the allowed list -
             allowed_consequences_set = hl.set(allowed_consequences)
-            consequence_terms = self.mt.vep.transcript_consequences.flatmap(lambda tc: tc.consequence_terms)
-            self.mt = self.mt.filter_rows(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
+            consequence_terms = self.ht.vep.transcript_consequences.flatmap(lambda tc: tc.consequence_terms)
+            self.ht = self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
         if inheritance_filter or inheritance_mode:
             self._filter_by_genotype_inheritance(inheritance_mode, inheritance_filter, quality_filter)
         else:
-            all_samples = {}
-            for samples_by_id in self.samples_by_family.values():
-                all_samples.update(samples_by_id)
-            sample_individuals = hl.literal({s.sample_id: s.individual.guid for s in all_samples.values()})
-            # TODO genotypes need to come from sample-specific tables
-            self.mt = self.mt.filter_cols(hl.array(list(all_samples.keys())).contains(self.mt.s))
-            self.mt = self.mt.annotate_rows(
-                familyGuids=hl.literal(list(self.samples_by_family.keys())), # TODO should base on match
-                genotypes=hl.agg.collect(hl.struct(
-                    individualGuid=sample_individuals.get(self.mt.s),
-                    sampleId=self.mt.s,
-                    gq=self.mt.GQ,
-                    numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
-                    dp=self.mt.DP,
-                    # TODO ab
-                )).group_by(lambda g: g.individualGuid).map_values(lambda g: g[0]),
-            )
+            # TODO actually implement for multiple families
+            for family_guid, samples_by_id in self.samples_by_family.items():
+                samples = sorted(samples_by_id.values())
+                sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
+                family_ht = sample_tables[0]
+                for ht in sample_tables[1:]:
+                    # TODO remove all samples in families where any sample is not passing the quality filters
+                    family_ht = family_ht.join(ht)
 
-            # TODO remove all samples in families where any sample is not passing the quality filters
-            # - maybe should be part of _filter_by_genotype_inheritance if has quality filter?
+                q = family_ht.GT.is_non_ref()
+                for i in range(1, len(sample_tables)):
+                    q |= family_ht['GT_{i}'].is_non_ref()
+                family_ht = family_ht.filter(q)
 
-            # TODO remove rows where none of the remaining samples have alt alleles
-            # raise NotImplementedError
+                family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
+                family_ht = family_ht.annotate(
+                    familyGuids=hl.literal([family_guid]),
+                    genotypes=hl.struct(**{sample.individual.guid: hl.struct(
+                        sampleId=hl.literal(sample.sample_id),
+                        numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
+                        gq=family_ht[f'GQ_{i}'],
+                        # TODO ab
+                    ) for i, sample in enumerate(samples)})).select('genotypes', 'familyGuids')
+
+                self.ht = self.ht.join(family_ht)
+
+            # all_samples = {}
+            # for samples_by_id in self.samples_by_family.values():
+            #     all_samples.update(samples_by_id)
+            # sample_individuals = hl.literal({s.sample_id: s.individual.guid for s in all_samples.values()})
+            # # TODO genotypes need to come from sample-specific tables
+            # self.mt = self.mt.filter_cols(hl.array(list(all_samples.keys())).contains(self.mt.s))
+            # self.mt = self.mt.annotate_rows(
+            #     familyGuids=hl.literal(list(self.samples_by_family.keys())), # TODO should base on match
+            #     genotypes=hl.agg.collect(hl.struct(
+            #         individualGuid=sample_individuals.get(self.mt.s),
+            #         sampleId=self.mt.s,
+            #         gq=self.mt.GQ,
+            #         numAlt=hl.if_else(hl.is_defined(self.mt.GT), self.mt.GT.n_alt_alleles(), -1),
+            #         dp=self.mt.DP,
+            #
+            #     )).group_by(lambda g: g.individualGuid).map_values(lambda g: g[0]),
+            # )
+
 
     def _filter_by_genotype_inheritance(self, inheritance_mode, inheritance_filter, quality_filter):
         if inheritance_mode:
@@ -309,8 +328,7 @@ class HailSearch(object):
         raise NotImplementedError
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
-        rows = self.mt.rows()
-        rows = rows.annotate_globals(gv=hl.eval(rows.genomeVersion)).drop('genomeVersion') # prevents name collision with global
+        rows = self.ht.annotate_globals(gv=hl.eval(self.ht.genomeVersion)).drop('genomeVersion') # prevents name collision with global
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
         rows = rows.rename(RENAME_FIELDS)
         rows = rows.key_by('variantId')
