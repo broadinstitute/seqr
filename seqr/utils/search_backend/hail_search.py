@@ -116,7 +116,7 @@ class HailSearch(object):
         for s in samples.select_related('individual__family'):
             self.samples_by_family[s.individual.family.guid][s.sample_id] = s
 
-        self._family_individual_affected_status = {}
+        self._family_individual_affected_status = defaultdict(dict)
         if inheritance_search:
             skipped_families = []
             for family_guid, samples_by_id in self.samples_by_family.items():
