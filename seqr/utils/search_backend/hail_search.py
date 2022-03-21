@@ -147,7 +147,7 @@ class HailSearch(object):
         self.ht = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt').rows()
 
     def _sample_table(self, sample):
-        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}')
+        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht')
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, **kwargs):
