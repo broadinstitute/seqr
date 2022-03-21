@@ -216,12 +216,11 @@ class HailSearch(object):
             self.ht = self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
-        if inheritance_mode and inheritance_mode != ANY_AFFECTED:
+        if inheritance_mode == ANY_AFFECTED:
+            inheritance_filter = None
+        elif inheritance_mode:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-        if inheritance_mode == ANY_AFFECTED:
-            # TODO implement comp het
-            raise NotImplementedError
         if inheritance_mode == X_LINKED_RECESSIVE:
             # TODO will need to filter by both inheritance and chromosome
             raise NotImplementedError
@@ -245,7 +244,7 @@ class HailSearch(object):
 
             family_ht = None
             for i, sample_ht in enumerate(sample_tables):
-                if inheritance_filter and inheritance_mode != ANY_AFFECTED:
+                if inheritance_filter:
                     individual_guid = samples[i].individual.guid
                     affected = affected_status[individual_guid]
                     genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
@@ -258,14 +257,21 @@ class HailSearch(object):
                 else:
                     family_ht = family_ht.join(sample_ht)
 
+            family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
+
+            # Filter if any matching genotypes for any affected or any inheritance search
             if not inheritance_filter:
-                #  filter so at least one family member has an alt allele
-                q = family_ht.GT.is_non_ref()
-                for i in range(1, len(sample_tables)):
-                    q |= family_ht[f'GT_{i}'].is_non_ref()
+                q = None
+                for i, sample in enumerate(samples):
+                    if not inheritance_mode or affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED:
+                        sample_q = family_ht[f'GT_{i}'].is_non_ref()
+                        if q:
+                            q |= sample_q
+                        else:
+                            q = sample_q
+
                 family_ht = family_ht.filter(q)
 
-            family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
             family_ht = family_ht.annotate(
                 familyGuids=hl.literal([family_guid]),
                 genotypes=hl.struct(**{sample.individual.guid: hl.struct(
