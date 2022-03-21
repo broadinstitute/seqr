@@ -223,7 +223,7 @@ class HailSearch(object):
         else:
             # TODO actually implement for multiple families
             for family_guid, samples_by_id in self.samples_by_family.items():
-                samples = sorted(samples_by_id.values())
+                samples = list(samples_by_id.values())
                 sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
                 family_ht = sample_tables[0]
                 for ht in sample_tables[1:]:
