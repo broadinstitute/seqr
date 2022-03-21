@@ -224,7 +224,7 @@ SORT_FIELDS = {
         '_script': {
             'type': 'number',
             'script': {
-               'source': "doc['start'].value - doc['end'].value"
+               'source': "(doc.containsKey('svType') && doc['svType'].value == 'BND') ? -50 : doc['start'].value - doc['end'].value"
             }
         }
     }],
