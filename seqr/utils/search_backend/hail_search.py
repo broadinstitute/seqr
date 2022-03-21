@@ -224,11 +224,8 @@ class HailSearch(object):
         if inheritance_mode == X_LINKED_RECESSIVE:
             # TODO will need to filter by both inheritance and chromosome
             raise NotImplementedError
-        if inheritance_mode == COMPOUND_HET:
-            # TODO implement comp het
-            raise NotImplementedError
         if inheritance_mode == RECESSIVE:
-            # TODO should add an OR filter for variants with X-linked inheritance, and also trigger comp het
+            # TODO should add an OR filter for variants with X-linked inheritance
             raise NotImplementedError
 
         if inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
@@ -287,6 +284,7 @@ class HailSearch(object):
 
 
     def _filter_compound_hets(self, quality_filter):
+        # TODO _filter_by_genotype shouldn't modify self.ht
         self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
         raise NotImplementedError
