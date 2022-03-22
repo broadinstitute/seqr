@@ -190,8 +190,14 @@ class HailSearch(object):
         raise NotImplementedError
 
     def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, **kwargs):
+        # TODO secondary annotations
         if annotations:
             self._filter_by_annotations(annotations)
+
+        #  TODO quality pass filter
+        quality_filter = quality_filter or {}
+        # if quality_filter and quality_filter.get('vcf_filter') is not None:
+        #     self.filter(~Q('exists', field='filters'))
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
@@ -233,6 +239,10 @@ class HailSearch(object):
 
             family_ht = None
             for i, sample_ht in enumerate(sample_tables):
+                if quality_filter.get('min_qg'):
+                    sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
+                # TODO ab filter
+
                 if inheritance_filter:
                     individual = samples[i].individual
                     affected = affected_status[individual.guid]
@@ -303,8 +313,7 @@ class HailSearch(object):
     def _filter_compound_hets(self, quality_filter):
         comp_het_ht = self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
-        # raise NotImplementedError
-        pass
+        raise NotImplementedError
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
         rows = self.ht.annotate_globals(gv=hl.eval(self.ht.genomeVersion)).drop('genomeVersion') # prevents name collision with global
