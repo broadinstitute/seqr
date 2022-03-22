@@ -250,7 +250,7 @@ class HailSearch(object):
                 genotype_ht[f'genotypes_{i}'] for i in range(len(family_guids))
             ]).flatmap(lambda x: x).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         ).select('genotypes', 'familyGuids')
-        genotype_ht.describe()
+        logger.info(genotype_ht.describe())
 
         return genotype_ht
 
