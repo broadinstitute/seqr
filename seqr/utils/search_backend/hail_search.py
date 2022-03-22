@@ -231,6 +231,8 @@ class HailSearch(object):
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
         family_guids = sorted(self.samples_by_family.keys())
+
+
         for family_guid in family_guids:
             family_ht = self._get_filtered_family_table(family_guid, inheritance_mode, inheritance_filter, quality_filter)
             # TODO actually implement for multiple families
@@ -249,6 +251,8 @@ class HailSearch(object):
         family_ht = None
         for i, sample_ht in enumerate(sample_tables):
             if quality_filter.get('min_qg'):
+                #  TODO not working
+                logger.info(f'Filtering GQ: {quality_filter['min_gq']}')
                 sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
             # TODO ab filter
 
