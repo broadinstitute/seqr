@@ -432,6 +432,8 @@ ES_SV_WGS_VARIANT = {
       'algorithms': ['wham', 'manta'],
       'sc': 7,
       'contig': '2',
+      'rg37_locus': {'contig': '2', 'position': 49272526},
+      'rg37_locus_end': {'contig': '2', 'position': 49273037},
       'sortedTranscriptConsequences': [
         {
           'gene_symbol': 'OR4F5',
@@ -686,6 +688,8 @@ MAPPING_FIELDS = [
     'topmed_ID',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
+    'rg37_locus_end',
+    'xstop',
 ]
 SV_MAPPING_FIELDS = [
     'start',
@@ -733,7 +737,8 @@ SOURCE_FIELDS -= {
 FIELD_TYPE_MAP = {
     'cadd_PHRED': {'type': 'keyword'},
     'primate_ai_score': {'type': 'float'},
-    'rg37_locus': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}}
+    'rg37_locus': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}},
+    'rg37_locus_end': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}}
 }
 MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
 
