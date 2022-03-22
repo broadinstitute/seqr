@@ -231,15 +231,28 @@ class HailSearch(object):
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
         family_guids = sorted(self.samples_by_family.keys())
+        family_hts = [
+            self._get_filtered_family_table(family_guid, inheritance_mode, inheritance_filter, quality_filter)
+            for family_guid in family_guids
+        ]
 
+        genotype_ht = family_hts[0]
+        for family_ht in family_hts[1:]:
+            genotype_ht = genotype_ht.join(family_ht, how='outer')
+        genotype_ht = genotype_ht.rename({'genotypes': 'genotypes_0'})
 
-        for family_guid in family_guids:
-            family_ht = self._get_filtered_family_table(family_guid, inheritance_mode, inheritance_filter, quality_filter)
-            # TODO actually implement for multiple families
-            return self.ht.join(family_ht)
+        genotype_ht.annotate(
+            familyGuids=hl.array([
+                hl.if_else(hl.is_defined(genotype_ht[f'genotypes_{i}']), family_guid, hl.missing(hl.tstr))
+                for i, family_guid in enumerate(family_guids)
+            ]).filter(lambda x: hl.is_defined(x)),
+            genotypes=hl.array([
+                genotype_ht[f'genotypes_{i}'] for i in range(len(family_guids))
+            ]).flatmap(lambda x: x).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
+        ).select('genotypes', 'familyGuids')
 
-        # f.annotate(guids=hl.array([hl.if_else(hl.is_defined(f[f'gen_{i}']), k, hl.missing(hl.tstr)) for i, k in enumerate(['a', 'b'])]).filter(lambda x: hl.is_defined(x))).show()
-        # f.annotate(genotypes=hl.array([f[f'gen_{i}'] for i in range(2)]).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.sample_id).map_values(lambda x: x[0])).show()
+        return self.ht.join(genotype_ht)
+
 
     def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter):
         samples = list(self.samples_by_family[family_guid].values())
@@ -285,13 +298,13 @@ class HailSearch(object):
             family_ht = family_ht.filter(q)
 
         return family_ht.annotate(
-            familyGuids=hl.literal([family_guid]),
-            genotypes=hl.struct(**{sample.individual.guid: hl.struct(
+            genotypes=hl.array([hl.struct(
+                individualGuid=hl.literal(sample.individual.guid),
                 sampleId=hl.literal(sample.sample_id),
                 numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
                 gq=family_ht[f'GQ_{i}'],
                 # TODO ab
-            ) for i, sample in enumerate(samples)})).select('genotypes', 'familyGuids')
+            ) for i, sample in enumerate(samples)])).select('genotypes')
 
 
     @staticmethod
