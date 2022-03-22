@@ -7,21 +7,20 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
-    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, \
-    POPULATIONS # TODO may need different constants
+    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _annotations_filter
 
 logger = logging.getLogger(__name__)
 
-GENOTYPE_QUERY_MAP = {
-    REF_REF: 'is_hom_ref',
-    REF_ALT: 'is_het',
-    ALT_ALT: 'is_hom_var',
-    HAS_ALT: 'is_non_ref',
-    # HAS_REF: '', # TODO find function for this
-}
-
 #  For production: constants should have their own file
+
+GENOTYPE_QUERY_MAP = {
+    REF_REF: lambda gt: gt.is_hom_ref(),
+    REF_ALT: lambda gt: gt.is_het(),
+    ALT_ALT: lambda gt: gt.is_hom_var(),
+    HAS_ALT: lambda gt: gt.is_non_ref(),
+    HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
+}
 
 POPULATION_SUB_FIELDS = {
     'AF',
@@ -142,7 +141,7 @@ class HailSearch(object):
         self._allowed_consequences = None
         self._sample_table_queries = {}
 
-        self.ht = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt').rows()
+        self.ht = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt').rows() # TODO read_table?
 
     def _sample_table(self, sample):
         return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht')
@@ -245,7 +244,8 @@ class HailSearch(object):
                     individual_guid = samples[i].individual.guid
                     affected = affected_status[individual_guid]
                     genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
-                    sample_ht = sample_ht.filter(getattr(sample_ht.GT, GENOTYPE_QUERY_MAP[genotype])())
+                    gt_filter = GENOTYPE_QUERY_MAP[genotype](sample_ht.GT)
+                    sample_ht = sample_ht.filter(gt_filter)
 
                 # TODO remove all samples in families where any sample is not passing the quality filters
 
