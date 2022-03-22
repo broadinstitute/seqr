@@ -252,7 +252,7 @@ class HailSearch(object):
         for i, sample_ht in enumerate(sample_tables):
             if quality_filter.get('min_qg'):
                 #  TODO not working
-                logger.info(f'Filtering GQ: {quality_filter['min_gq']}')
+                logger.info(f'Filtering GQ: {quality_filter["min_gq"]}')
                 sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
             # TODO ab filter
 
