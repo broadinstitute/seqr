@@ -201,9 +201,10 @@ class HailSearch(object):
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             self._filter_compound_hets(quality_filter)
             if inheritance_mode == COMPOUND_HET:
+                self.ht = None
                 return
 
-        self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter)
+        self.ht = self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter)
 
     def _filter_by_annotations(self, annotations):
         _, allowed_consequences = _annotations_filter(annotations or {})
@@ -223,7 +224,6 @@ class HailSearch(object):
         if inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
-        # TODO actually implement for multiple families
         for family_guid, samples_by_id in self.samples_by_family.items():
             samples = list(samples_by_id.values())
             sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
@@ -237,20 +237,7 @@ class HailSearch(object):
                     individual = samples[i].individual
                     affected = affected_status[individual.guid]
                     genotype = individual_genotype_filter.get(individual.guid) or inheritance_filter.get(affected)
-
-                    if inheritance_mode == X_LINKED_RECESSIVE:
-                        sample_ht = hl.filter_intervals(
-                            sample_ht, [hl.parse_locus_interval('chrX', reference_genome='GRCh38')])
-                        if affected == Individual.AFFECTED_STATUS_UNAFFECTED \
-                                and individual.sex == Individual.SEX_MALE:
-                            genotype = REF_REF
-
-                    if inheritance_mode == RECESSIVE:
-                        # TODO should add an OR filter for variants with X-linked inheritance
-                        raise NotImplementedError
-
-                    gt_filter = GENOTYPE_QUERY_MAP[genotype](sample_ht.GT)
-                    sample_ht = sample_ht.filter(gt_filter)
+                    sample_ht = self._sample_inheritance_ht(sample_ht, inheritance_mode, individual, affected, genotype)
 
                 # TODO remove all samples in families where any sample is not passing the quality filters
 
@@ -285,14 +272,39 @@ class HailSearch(object):
                     # TODO ab
                 ) for i, sample in enumerate(samples)})).select('genotypes', 'familyGuids')
 
-            self.ht = self.ht.join(family_ht)
+            # TODO actually implement for multiple families
+            return self.ht.join(family_ht)
+
+
+    @staticmethod
+    def _sample_inheritance_ht(sample_ht, inheritance_mode, individual, affected, genotype):
+        gt_filter = GENOTYPE_QUERY_MAP[genotype](sample_ht.GT)
+
+        x_sample_ht = None
+        if inheritance_mode in {X_LINKED_RECESSIVE, RECESSIVE}:
+            x_sample_ht = hl.filter_intervals(
+                sample_ht, [hl.parse_locus_interval('chrX', reference_genome='GRCh38')])
+            if affected == Individual.AFFECTED_STATUS_UNAFFECTED and individual.sex == Individual.SEX_MALE:
+                genotype = REF_REF
+
+            x_gt_filter = GENOTYPE_QUERY_MAP[genotype](x_sample_ht.GT)
+            x_sample_ht = x_sample_ht.filter(x_gt_filter)
+            if inheritance_mode == X_LINKED_RECESSIVE:
+                return x_sample_ht
+
+        sample_ht = sample_ht.filter(gt_filter)
+
+        if x_sample_ht:
+            sample_ht = sample_ht.join(x_sample_ht, how='outer')
+
+        return sample_ht
 
 
     def _filter_compound_hets(self, quality_filter):
-        # TODO _filter_by_genotype shouldn't modify self.ht
-        self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
+        comp_het_ht = self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
-        raise NotImplementedError
+        # raise NotImplementedError
+        pass
 
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
         rows = self.ht.annotate_globals(gv=hl.eval(self.ht.genomeVersion)).drop('genomeVersion') # prevents name collision with global
