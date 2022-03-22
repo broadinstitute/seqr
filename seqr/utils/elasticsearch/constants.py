@@ -267,6 +267,7 @@ NESTED_FIELDS = {
 }
 
 GRCH38_LOCUS_FIELD = 'rg37_locus'
+XSTOP_FIELD = 'xstop'
 SPLICE_AI_FIELD = 'splice_ai'
 NEW_SV_FIELD = 'new_structural_variants'
 CORE_FIELDS_CONFIG = {
@@ -283,8 +284,8 @@ CORE_FIELDS_CONFIG = {
     'variantId': {},
     'xpos': {'format_value': int},
     GRCH38_LOCUS_FIELD: {},
-    'xstop':  {'format_value': int},
-    'rg37_locus_end': {'format_value': lambda locus: {'contig': locus.contig, 'position': locus.position} if locus else None},
+    XSTOP_FIELD:  {'format_value': int},
+    'rg37_locus_end': {'response_key': 'rg37LocusEnd', 'format_value': lambda locus: locus.to_dict()},
     'sv_type_detail': {'response_key': 'svTypeDetail'},
     'cpx_intervals': {
       'response_key': 'cpxIntervals',

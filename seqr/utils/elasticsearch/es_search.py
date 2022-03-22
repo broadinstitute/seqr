@@ -18,10 +18,10 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key
+    get_prediction_response_key, XSTOP_FIELD
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
-from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS
+from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 
 logger = SeqrLogger(__name__)
@@ -690,6 +690,7 @@ class EsSearch(object):
             result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
         self._parse_genome_versions(result, index_name, hit)
+        self._parse_transloc_xstop(result, index_name)
 
         populations = {
             population: _get_field_values(
@@ -823,6 +824,20 @@ class EsSearch(object):
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
         })
+
+    def _parse_transloc_xstop(self, result, index_name):
+        xstop = result.pop(XSTOP_FIELD, None)
+        if self.index_metadata[index_name]['genomeVersion'] != GENOME_VERSION_GRCh38 or\
+                self.index_metadata[index_name]['datasetType'] != Sample.DATASET_TYPE_SV_CALLS or\
+                self.index_metadata[index_name]['sampleType'] != Sample.SAMPLE_TYPE_WGS:
+            return
+        if xstop:
+            endChrom, end = get_chrom_pos(xstop)
+            if endChrom != result['chrom']:
+                result.update({
+                    'endChrom': endChrom,
+                    'end': end,
+                })
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:

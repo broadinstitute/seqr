@@ -1737,7 +1737,6 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
-        self.maxDiff = None
         self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
@@ -2183,7 +2182,6 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        self.maxDiff = None
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 

@@ -20,25 +20,14 @@ const LargeText = styled.div`
 `
 
 const TRANSLOCATION_SV = 'BND'
-const XCoorModular = 1e9
 
-const getXCoorChrom = (xCoordination) => {
-  const chrom = Math.floor(xCoordination / XCoorModular)
-  switch (chrom) {
-    case 23:
-      return 'X'
-    case 24:
-      return 'Y'
-    case 25:
-      return 'M'
-    default:
-      return chrom.toString()
-  }
-}
-
-const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
-  const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
-  const pos = parseInt(useLiftover ? variant.liftedOverPos : variant.pos, 10)
+const UcscBrowserLink = ({ variant, useLiftover, includeEnd, isEnd }) => {
+  const variantChrom = isEnd ? variant.endChrom : variant.chrom
+  const variantPos = isEnd ? variant.end : variant.pos
+  const liftedVariantChrom = isEnd ? variant.rg37LocusEnd?.contig : variant.liftedOverChrom
+  const liftedVariantPos = isEnd ? variant.rg37LocusEnd?.position : variant.liftedOverPos
+  const chrom = useLiftover ? liftedVariantChrom : variantChrom
+  const pos = parseInt(useLiftover ? liftedVariantPos : variantPos, 10)
   let genomeVersion = useLiftover ? variant.liftedOverGenomeVersion : variant.genomeVersion
   genomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
 
@@ -58,6 +47,7 @@ UcscBrowserLink.propTypes = {
   variant: PropTypes.object,
   useLiftover: PropTypes.bool,
   includeEnd: PropTypes.bool,
+  isEnd: PropTypes.bool,
 }
 
 const LOF_FILTER_MAP = {
@@ -223,7 +213,10 @@ const svSizeDisplay = (size) => {
 }
 
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
-  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms, bothsidesSupport } = variant
+  const {
+    rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms, bothsidesSupport,
+    endChrom,
+  } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -251,28 +244,6 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
     size: 'mini',
     hoverable: true,
   }
-
-  const targetLocus = svType === TRANSLOCATION_SV && variant.xstop && {
-    chrom: getXCoorChrom(variant.xstop),
-    pos: variant.xstop % XCoorModular,
-    genomeVersion: variant.genomeVersion,
-    ref: variant.ref,
-    end: variant.end,
-  }
-
-  const liftedTargetLocus = svType === TRANSLOCATION_SV && variant.rg37_locus_end && {
-    ...targetLocus,
-    liftedOverChrom: variant.rg37_locus_end.contig,
-    liftedOverPos: variant.rg37_locus_end.position,
-    liftedOverGenomeVersion: GENOME_VERSION_37,
-  }
-
-  const translocLink = (targetLoc, useLiftover) => targetLoc && (
-    <b>
-      ;&nbsp;
-      <UcscBrowserLink variant={targetLoc} useLiftover={useLiftover} />
-    </b>
-  )
 
   return (
     <div>
@@ -359,8 +330,13 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       {mainGeneId && <VariantGenes mainGeneId={mainGeneId} showMainGene={showMainGene} variant={variant} />}
       {(mainGeneId && Object.keys(variant.transcripts || {}).length > 1) && <VerticalSpacer height={10} />}
       <LargeText>
-        <b><UcscBrowserLink variant={variant} includeEnd={!!svType} /></b>
-        {translocLink(targetLocus)}
+        <b><UcscBrowserLink variant={variant} includeEnd={!!svType && !endChrom} /></b>
+        {endChrom && (
+          <span>
+            ;&nbsp
+            <b><UcscBrowserLink variant={variant} isEnd /></b>
+          </span>
+        )}
         <HorizontalSpacer width={10} />
         {variant.ref && (
           <span>
@@ -381,8 +357,13 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
         variant.liftedOverPos ? (
           <div>
             hg19:
-            <UcscBrowserLink variant={variant} useLiftover includeEnd={!!svType || !variant.ref} />
-            {translocLink(liftedTargetLocus, true)}
+            <UcscBrowserLink variant={variant} useLiftover includeEnd={(!!svType || !variant.ref) && !endChrom} />
+            {endChrom && (
+              <span>
+                ;&nbsp
+                <UcscBrowserLink variant={variant} isEnd />
+              </span>
+            )}
           </div>
         ) : <div>hg19: liftover failed</div>
       )}
