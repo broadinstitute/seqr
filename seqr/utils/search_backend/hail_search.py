@@ -220,13 +220,6 @@ class HailSearch(object):
         elif inheritance_mode:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-        if inheritance_mode == X_LINKED_RECESSIVE:
-            # TODO will need to filter by both inheritance and chromosome
-            raise NotImplementedError
-        if inheritance_mode == RECESSIVE:
-            # TODO should add an OR filter for variants with X-linked inheritance
-            raise NotImplementedError
-
         if inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
@@ -241,9 +234,21 @@ class HailSearch(object):
             family_ht = None
             for i, sample_ht in enumerate(sample_tables):
                 if inheritance_filter:
-                    individual_guid = samples[i].individual.guid
-                    affected = affected_status[individual_guid]
-                    genotype = individual_genotype_filter.get(individual_guid) or inheritance_filter.get(affected)
+                    individual = samples[i].individual
+                    affected = affected_status[individual.guid]
+                    genotype = individual_genotype_filter.get(individual.guid) or inheritance_filter.get(affected)
+
+                    if inheritance_mode == X_LINKED_RECESSIVE:
+                        sample_ht = hl.filter_intervals(
+                            sample_ht, [hl.parse_locus_interval('chrX', reference_genome='GRCh38')])
+                        if affected == Individual.AFFECTED_STATUS_UNAFFECTED \
+                                and individual.sex == Individual.SEX_MALE:
+                            genotype = REF_REF
+
+                    if inheritance_mode == RECESSIVE:
+                        # TODO should add an OR filter for variants with X-linked inheritance
+                        raise NotImplementedError
+
                     gt_filter = GENOTYPE_QUERY_MAP[genotype](sample_ht.GT)
                     sample_ht = sample_ht.filter(gt_filter)
 
