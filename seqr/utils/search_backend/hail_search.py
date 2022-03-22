@@ -230,60 +230,64 @@ class HailSearch(object):
         if inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
-        for family_guid, samples_by_id in self.samples_by_family.items():
-            samples = list(samples_by_id.values())
-            sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
-
-            affected_status = self._family_individual_affected_status.get(family_guid)
-            individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
-
-            family_ht = None
-            for i, sample_ht in enumerate(sample_tables):
-                if quality_filter.get('min_qg'):
-                    sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
-                # TODO ab filter
-
-                if inheritance_filter:
-                    individual = samples[i].individual
-                    affected = affected_status[individual.guid]
-                    genotype = individual_genotype_filter.get(individual.guid) or inheritance_filter.get(affected)
-                    sample_ht = self._sample_inheritance_ht(sample_ht, inheritance_mode, individual, affected, genotype)
-
-                # TODO remove all samples in families where any sample is not passing the quality filters
-
-                if family_ht is None:
-                    family_ht = sample_ht
-                else:
-                    family_ht = family_ht.join(sample_ht)
-
-            family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
-
-            # Filter if any matching genotypes for any affected or any inheritance search
-            if not inheritance_filter:
-                non_ref_sample_indices = [
-                    i for i, sample in enumerate(samples)
-                    if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
-                ] if inheritance_mode == ANY_AFFECTED else range(len(samples))
-                if not non_ref_sample_indices:
-                    raise InvalidSearchException('At least one affected individual must be included in "Any Affected" search')
-
-                q = family_ht[f'GT_{non_ref_sample_indices[0]}'].is_non_ref()
-                for i in non_ref_sample_indices[1:]:
-                    q |= family_ht[f'GT_{i}'].is_non_ref()
-
-                family_ht = family_ht.filter(q)
-
-            family_ht = family_ht.annotate(
-                familyGuids=hl.literal([family_guid]),
-                genotypes=hl.struct(**{sample.individual.guid: hl.struct(
-                    sampleId=hl.literal(sample.sample_id),
-                    numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
-                    gq=family_ht[f'GQ_{i}'],
-                    # TODO ab
-                ) for i, sample in enumerate(samples)})).select('genotypes', 'familyGuids')
-
+        family_guids = sorted(self.samples_by_family.keys())
+        for family_guid in family_guids:
+            family_ht = self._get_filtered_family_table(family_guid, inheritance_mode, inheritance_filter, quality_filter)
             # TODO actually implement for multiple families
             return self.ht.join(family_ht)
+
+        # f.annotate(guids=hl.array([hl.if_else(hl.is_defined(f[f'gen_{i}']), k, hl.missing(hl.tstr)) for i, k in enumerate(['a', 'b'])]).filter(lambda x: hl.is_defined(x))).show()
+        # f.annotate(genotypes=hl.array([f[f'gen_{i}'] for i in range(2)]).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.sample_id).map_values(lambda x: x[0])).show()
+
+    def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter):
+        samples = list(self.samples_by_family[family_guid].values())
+        sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
+
+        affected_status = self._family_individual_affected_status.get(family_guid)
+        individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
+
+        family_ht = None
+        for i, sample_ht in enumerate(sample_tables):
+            if quality_filter.get('min_qg'):
+                sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
+            # TODO ab filter
+
+            if inheritance_filter:
+                individual = samples[i].individual
+                affected = affected_status[individual.guid]
+                genotype = individual_genotype_filter.get(individual.guid) or inheritance_filter.get(affected)
+                sample_ht = self._sample_inheritance_ht(sample_ht, inheritance_mode, individual, affected, genotype)
+
+            if family_ht is None:
+                family_ht = sample_ht
+            else:
+                family_ht = family_ht.join(sample_ht)
+
+        family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
+
+        # Filter if any matching genotypes for any affected or any inheritance search
+        if not inheritance_filter:
+            non_ref_sample_indices = [
+                i for i, sample in enumerate(samples)
+                if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
+            ] if inheritance_mode == ANY_AFFECTED else range(len(samples))
+            if not non_ref_sample_indices:
+                raise InvalidSearchException('At least one affected individual must be included in "Any Affected" search')
+
+            q = family_ht[f'GT_{non_ref_sample_indices[0]}'].is_non_ref()
+            for i in non_ref_sample_indices[1:]:
+                q |= family_ht[f'GT_{i}'].is_non_ref()
+
+            family_ht = family_ht.filter(q)
+
+        return family_ht.annotate(
+            familyGuids=hl.literal([family_guid]),
+            genotypes=hl.struct(**{sample.individual.guid: hl.struct(
+                sampleId=hl.literal(sample.sample_id),
+                numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
+                gq=family_ht[f'GQ_{i}'],
+                # TODO ab
+            ) for i, sample in enumerate(samples)})).select('genotypes', 'familyGuids')
 
 
     @staticmethod
