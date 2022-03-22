@@ -210,7 +210,7 @@ class HailSearch(object):
                 self.ht = None
                 return
 
-        self.ht = self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter)
+        self.ht = self.ht.join(self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter))
 
     def _filter_by_annotations(self, annotations):
         _, allowed_consequences = _annotations_filter(annotations or {})
@@ -219,7 +219,7 @@ class HailSearch(object):
             # TODO actually apply filters, get variants with any transcript with a consequence in the allowed list -
             allowed_consequences_set = hl.set(allowed_consequences)
             consequence_terms = self.ht.vep.transcript_consequences.flatmap(lambda tc: tc.consequence_terms)
-            self.ht = self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
+            self.ht = self.ht.filter(self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))))
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
         if inheritance_mode == ANY_AFFECTED:
@@ -250,8 +250,9 @@ class HailSearch(object):
                 genotype_ht[f'genotypes_{i}'] for i in range(len(family_guids))
             ]).flatmap(lambda x: x).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         ).select('genotypes', 'familyGuids')
+        genotype_ht.describe()
 
-        return self.ht.join(genotype_ht)
+        return genotype_ht
 
 
     def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter):
@@ -267,6 +268,8 @@ class HailSearch(object):
                 #  TODO not working
                 logger.info(f'Filtering GQ: {quality_filter["min_gq"]}')
                 sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
+            else:
+                logger.info(f'No GQ filter: {quality_filter}')
             # TODO ab filter
 
             if inheritance_filter:
@@ -332,7 +335,7 @@ class HailSearch(object):
 
 
     def _filter_compound_hets(self, quality_filter):
-        comp_het_ht = self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
+        comp_het_genotypes_ht = self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
         raise NotImplementedError
 
