@@ -283,6 +283,8 @@ CORE_FIELDS_CONFIG = {
     'variantId': {},
     'xpos': {'format_value': int},
     GRCH38_LOCUS_FIELD: {},
+    'xstop':  {'format_value': int},
+    'rg37_locus_end': {'format_value': lambda locus: {'contig': locus.contig, 'position': locus.position} if locus else None},
     'sv_type_detail': {'response_key': 'svTypeDetail'},
     'cpx_intervals': {
       'response_key': 'cpxIntervals',

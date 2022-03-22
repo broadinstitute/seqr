@@ -704,7 +704,7 @@ class EsSearch(object):
 
         sorted_transcripts = [
             {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
-            for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
+            for transcript in hit.get(SORTED_TRANSCRIPTS_FIELD_KEY, [])
         ]
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:

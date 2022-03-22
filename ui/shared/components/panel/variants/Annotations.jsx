@@ -19,6 +19,23 @@ const LargeText = styled.div`
   font-size: 1.2em;
 `
 
+const TRANSLOCATION_SV = 'BND'
+const XCoorModular = 1e9
+
+const getXCoorChrom = (xCoordination) => {
+  const chrom = Math.floor(xCoordination / XCoorModular)
+  switch (chrom) {
+    case 23:
+      return 'X'
+    case 24:
+      return 'Y'
+    case 25:
+      return 'M'
+    default:
+      return chrom.toString()
+  }
+}
+
 const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
   const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
   const pos = parseInt(useLiftover ? variant.liftedOverPos : variant.pos, 10)
@@ -235,6 +252,28 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
     hoverable: true,
   }
 
+  const targetLocus = svType === TRANSLOCATION_SV && variant.xstop && {
+    chrom: getXCoorChrom(variant.xstop),
+    pos: variant.xstop % XCoorModular,
+    genomeVersion: variant.genomeVersion,
+    ref: variant.ref,
+    end: variant.end,
+  }
+
+  const liftedTargetLocus = svType === TRANSLOCATION_SV && variant.rg37_locus_end && {
+    ...targetLocus,
+    liftedOverChrom: variant.rg37_locus_end.contig,
+    liftedOverPos: variant.rg37_locus_end.position,
+    liftedOverGenomeVersion: GENOME_VERSION_37,
+  }
+
+  const translocLink = (targetLoc, useLiftover) => targetLoc && (
+    <b>
+      ;&nbsp;
+      <UcscBrowserLink variant={targetLoc} useLiftover={useLiftover} />
+    </b>
+  )
+
   return (
     <div>
       {(mainTranscript.majorConsequence || svType) && (
@@ -259,7 +298,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           <Transcripts variant={variant} />
         </Modal>
       )}
-      {svType && end && (
+      {svType && end && svType !== TRANSLOCATION_SV && (
         <b>
           <HorizontalSpacer width={5} />
           {svSizeDisplay(end - pos)}
@@ -311,7 +350,8 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       {mainGeneId && <VariantGenes mainGeneId={mainGeneId} showMainGene={showMainGene} variant={variant} />}
       {(mainGeneId && Object.keys(variant.transcripts || {}).length > 1) && <VerticalSpacer height={10} />}
       <LargeText>
-        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
+        <b><UcscBrowserLink variant={variant} includeEnd={!!svType} /></b>
+        {translocLink(targetLocus)}
         <HorizontalSpacer width={10} />
         {variant.ref && (
           <span>
@@ -332,13 +372,14 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
         variant.liftedOverPos ? (
           <div>
             hg19:
-            <UcscBrowserLink variant={variant} useLiftover includeEnd={!!variant.svType || !variant.ref} />
+            <UcscBrowserLink variant={variant} useLiftover includeEnd={!!svType || !variant.ref} />
+            {translocLink(liftedTargetLocus, true)}
           </div>
         ) : <div>hg19: liftover failed</div>
       )}
       {cpxIntervals && cpxIntervals.length > 0 &&
       [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(
-        e => `${SVTYPE_LOOKUP[e.type] || e.type} ${e.chrom}${e.start ? `-${e.start}` : ''}${e.end !== e.start ? `-${e.end}` : ''}`,
+        e => `${SVTYPE_LOOKUP[e.type] || e.type} ${e.chrom}-${e.start}-${e.end}`,
       ).map(e => <div key={e}>{e}</div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
