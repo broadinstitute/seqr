@@ -216,12 +216,10 @@ class HailSearch(object):
         self.ht = self.ht.join(self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter))
 
     def _filter_by_annotations(self, annotations):
-        _, allowed_consequences = _annotations_filter(annotations or {})
+        _, allowed_consequences = _annotations_filter(annotations or {}) # In production: use better shared helper
         if allowed_consequences:
-            # allowed_consequences: list of allowed VEP transcript_consequence
-            # TODO actually apply filters, get variants with any transcript with a consequence in the allowed list -
             allowed_consequences_set = hl.set(allowed_consequences)
-            consequence_terms = self.ht.vep.transcript_consequences.flatmap(lambda tc: tc.consequence_terms)
+            consequence_terms = self.ht.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
             self.ht = self.ht.filter(self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))))
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
