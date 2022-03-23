@@ -361,7 +361,7 @@ class HailSearch(object):
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
         raise NotImplementedError
 
-    def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
+    def search(self, page=1, num_results=100):
         rows = self.ht.annotate_globals(gv=hl.eval(self.ht.genomeVersion)).drop('genomeVersion') # prevents name collision with global
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
         rows = rows.key_by('variantId')
@@ -371,6 +371,7 @@ class HailSearch(object):
         self.previous_search_results['total_results'] = total_results
         logger.info(f'Total hits: {total_results}')
 
+        # TODO pagination
         collected = rows.take(num_results)
         hail_results = [_json_serialize(dict(row)) for row in collected]
 
