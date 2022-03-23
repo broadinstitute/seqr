@@ -159,7 +159,7 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
   }
   const { pos, end, genomeVersion, liftedOverPos, familyGuids = [] } = variant
   const locusListIntervals = familyGuids.reduce((acc, familyGuid) => ([
-    ...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]]), [])
+    ...acc, ...(locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid] || [])]), [])
   if (locusListIntervals.length < 1) {
     return null
   }
