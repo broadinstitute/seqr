@@ -171,6 +171,9 @@ class HailSearch(object):
         self.ht = hl.filter_intervals(self.ht, parsed_intervals)
 
     def filter_by_frequency(self, frequencies, pathogenicity=None):
+        #  UI bug causes sv freq filter to be added despite no SV data
+        frequencies.pop('sv_callset')
+
         # TODO pathogenicity override
 
         # In production: will not have callset frequency, may rename these fields
