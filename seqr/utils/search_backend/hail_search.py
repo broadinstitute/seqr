@@ -170,25 +170,37 @@ class HailSearch(object):
 
         self.ht = hl.filter_intervals(self.ht, parsed_intervals)
 
-    def filter_by_frequency(self, frequencies, **kwargs):
-        freq_filters = {}
+    def filter_by_frequency(self, frequencies, pathogenicity=None):
+        # TODO pathogenicity override
+        callset_filter = frequencies.pop('callset', None) # TODO callset filter
         for pop, freqs in sorted(frequencies.items()):
+            pop_filter = None
             if freqs.get('af') is not None:
-                filter_field = next(
-                    (field_key for field_key in POPULATIONS[pop]['filter_AF']
-                     if any(field_key in index_metadata['fields'] for index_metadata in self.index_metadata.values())),
-                    POPULATIONS[pop]['AF'])
-                freq_filters[filter_field] = freqs['af']
+                af_field = POPULATIONS[pop].get('filter_af') or POPULATIONS[pop]['af']
+                pop_filter = self.ht[pop][af_field] <= freqs['af']
             elif freqs.get('ac') is not None:
-                freq_filters[POPULATIONS[pop]['AC']] = freqs['ac']
+                ac_field = POPULATIONS[pop]['ac']
+                if ac_field:
+                    pop_filter = self.ht[pop][ac_field] <= freqs['ac']
 
             if freqs.get('hh') is not None:
-                freq_filters[POPULATIONS[pop]['Hom']] = freqs['hh']
-                freq_filters[POPULATIONS[pop]['Hemi']] = freqs['hh']
+                hom_field = POPULATIONS[pop]['hom']
+                hemi_field = POPULATIONS[pop]['hemi']
+                if hom_field:
+                    hh_filter = self.ht[pop][hom_field] <= freqs['hh']
+                    if pop_filter is None:
+                        pop_filter = hh_filter
+                    else:
+                        pop_filter &= hh_filter
+                if hemi_field:
+                    hh_filter = self.ht[pop][hemi_field] <= freqs['hh']
+                    if pop_filter is None:
+                        pop_filter = hh_filter
+                    else:
+                        pop_filter &= hh_filter
 
-        # freq_filters example: {'gnomad_genomes_AF_POPMAX_OR_GLOBAL': 0.001, 'AC': 3}
-        # TODO actually apply filters, get variants with freq <= specified value, or missing from data entirely
-        raise NotImplementedError
+            if pop_filter is not None:
+                self.ht = self.ht.filter(hl.is_missing(self.ht[pop]) | pop_filter)
 
     def filter_by_in_silico(self, in_silico_filters):
         raise NotImplementedError
