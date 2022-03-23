@@ -66,7 +66,7 @@ GENOTYPE_FIELDS = ['familyGuids', 'genotypes']
 CORE_FIELDS = ['hgmd', 'rsid', 'xpos']
 ANNOTATION_FIELDS = {
     'chrom': lambda r: r.locus.contig.replace("^chr", ""),
-    'pos': lambda r: r.locus.posiition,
+    'pos': lambda r: r.locus.position,
     'ref': lambda r: r.alleles[0],
     'alt': lambda r: r.alleles[1],
     'clinvar': lambda r: hl.struct(
