@@ -8,7 +8,6 @@ MAX_SEARCH_CLAUSES = 1024
 MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 XPOS_SORT_KEY = 'xpos'
-TRANSLOCATION_TYPE = 'BND'
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
@@ -225,7 +224,7 @@ SORT_FIELDS = {
         '_script': {
             'type': 'number',
             'script': {
-               'source': "(doc.containsKey('svType') && doc['svType'].value == TRANSLOCATION_TYPE) ? -50 : doc['start'].value - doc['end'].value"
+               'source': "(doc.containsKey('svType') && doc['svType'].value == 'BND') ? -50 : doc['start'].value - doc['end'].value"
             }
         }
     }],
