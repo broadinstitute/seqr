@@ -7,7 +7,7 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
-    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF
+    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, MAX_NO_LOCATION_COMP_HET_FAMILIES
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _annotations_filter
 
 logger = logging.getLogger(__name__)
@@ -193,8 +193,10 @@ class HailSearch(object):
     def filter_by_in_silico(self, in_silico_filters):
         raise NotImplementedError
 
-    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, **kwargs):
+    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None, has_location_filter=False, **kwargs):
+        #TODO pathogenicity
         if annotations:
+            # TODO splice_ai
             self._filter_by_annotations(annotations)
 
         quality_filter = quality_filter or {}
@@ -208,7 +210,7 @@ class HailSearch(object):
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             # TODO secondary annotations
-            self._filter_compound_hets(quality_filter)
+            self._filter_compound_hets(quality_filter, has_location_filter)
             if inheritance_mode == COMPOUND_HET:
                 self.ht = None
                 return
@@ -328,7 +330,11 @@ class HailSearch(object):
         return sample_ht
 
 
-    def _filter_compound_hets(self, quality_filter):
+    def _filter_compound_hets(self, quality_filter, has_location_filter):
+        if not has_location_filter and len(self.samples_by_family) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+            raise InvalidSearchException(
+                'Location must be specified to search for compound heterozygous variants across many families')
+
         comp_het_genotypes_ht = self._filter_by_genotype(COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter)
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
         raise NotImplementedError
