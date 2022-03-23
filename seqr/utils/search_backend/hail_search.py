@@ -194,7 +194,6 @@ class HailSearch(object):
         raise NotImplementedError
 
     def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, **kwargs):
-        # TODO secondary annotations
         if annotations:
             self._filter_by_annotations(annotations)
 
@@ -208,6 +207,7 @@ class HailSearch(object):
             inheritance_mode = None
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+            # TODO secondary annotations
             self._filter_compound_hets(quality_filter)
             if inheritance_mode == COMPOUND_HET:
                 self.ht = None
@@ -220,7 +220,7 @@ class HailSearch(object):
         if allowed_consequences:
             allowed_consequences_set = hl.set(allowed_consequences)
             consequence_terms = self.ht.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
-            self.ht = self.ht.filter(self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))))
+            self.ht = self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filter):
         if inheritance_mode == ANY_AFFECTED:
