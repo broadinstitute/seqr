@@ -91,7 +91,7 @@ export const analysisStatusIcon = (
       trigger={icon}
       content={
         <div>
-          {compact && value.text}
+          {compact && value.name}
           {analysisStatusLastModifiedDate && (
             <i>
               {compact && <br />}
