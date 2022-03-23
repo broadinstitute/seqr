@@ -62,9 +62,13 @@ for path, pred_config in {
 }.items():
     PREDICTION_FIELDS_CONFIG.update({prediction: (path, sub_path) for sub_path, prediction in pred_config.items()})
 
-CORE_FIELDS = ['pos', 'ref', 'alt', 'familyGuids', 'genotypes', 'hgmd', 'rsid', 'xpos']
-RENAME_FIELDS = {'contig': 'chrom'}
+GENOTYPE_FIELDS = ['familyGuids', 'genotypes']
+CORE_FIELDS = ['hgmd', 'rsid', 'xpos']
 ANNOTATION_FIELDS = {
+    'chrom': lambda r: r.locus.contig.replace("^chr", ""),
+    'pos': lambda r: r.locus.posiition,
+    'ref': lambda r: r.alleles[0],
+    'alt': lambda r: r.alleles[1],
     'clinvar': lambda r: hl.struct(
         clinicalSignificance=r.clinvar.clinical_significance,
         alleleId=r.clinvar.allele_id,
@@ -249,7 +253,7 @@ class HailSearch(object):
             genotypes=hl.array([
                 genotype_ht[f'genotypes_{i}'] for i in range(len(family_guids))
             ]).flatmap(lambda x: x).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
-        ).select('genotypes', 'familyGuids')
+        ).select(*GENOTYPE_FIELDS)
 
 
     def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter):
@@ -335,9 +339,8 @@ class HailSearch(object):
     def search(self, page=1, num_results=100, **kwargs): # List of dictionaries of results {pos, ref, alt}
         rows = self.ht.annotate_globals(gv=hl.eval(self.ht.genomeVersion)).drop('genomeVersion') # prevents name collision with global
         rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
-        rows = rows.rename(RENAME_FIELDS)
         rows = rows.key_by('variantId')
-        rows = rows.select(*CORE_FIELDS, *RENAME_FIELDS.values(), *ANNOTATION_FIELDS.keys())
+        rows = rows.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
         total_results = rows.count()
         self.previous_search_results['total_results'] = total_results
