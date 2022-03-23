@@ -172,7 +172,14 @@ class HailSearch(object):
 
     def filter_by_frequency(self, frequencies, pathogenicity=None):
         # TODO pathogenicity override
-        callset_filter = frequencies.pop('callset', None) # TODO callset filter
+
+        # In production: will not have callset frequency, may rename these fields
+        callset_filter = frequencies.pop('callset') or {}
+        if callset_filter.get('af') is not None:
+            self.ht = self.ht.filter(self.ht.AF <= callset_filter['af'])
+        if callset_filter.get('ac') is not None:
+            self.ht = self.ht.filter(self.ht.AC <= callset_filter['ac'])
+
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
             if freqs.get('af') is not None:
