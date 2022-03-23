@@ -200,7 +200,7 @@ class HailSearch(object):
 
         quality_filter = quality_filter or {}
         if quality_filter and quality_filter.get('vcf_filter') is not None:
-            self.ht = self.ht.filter(hl.is_missing(self.ht.filters))
+            self.ht = self.ht.filter(self.ht.filters.length() < 1)
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
