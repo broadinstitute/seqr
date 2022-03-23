@@ -198,10 +198,9 @@ class HailSearch(object):
         if annotations:
             self._filter_by_annotations(annotations)
 
-        #  TODO quality pass filter
         quality_filter = quality_filter or {}
-        # if quality_filter and quality_filter.get('vcf_filter') is not None:
-        #     self.filter(~Q('exists', field='filters'))
+        if quality_filter and quality_filter.get('vcf_filter') is not None:
+            self.ht = self.ht.filter(hl.is_missing(self.ht.filters))
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
