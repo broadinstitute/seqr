@@ -360,10 +360,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       {variant.highConstraintRegion && (
         <span>
           <HorizontalSpacer width={12} />
-          <Popup
-            trigger={<Label color="red" horizontal size="tiny">High Constraint Region</Label>}
-            content="The variant locate in one of the high constraint region"
-          />
+          <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
       )}
       <VerticalSpacer height={5} />

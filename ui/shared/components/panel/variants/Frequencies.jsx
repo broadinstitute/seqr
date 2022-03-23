@@ -184,12 +184,12 @@ const POPULATIONS = [
   },
   {
     field: 'gnomad_mito',
-    fieldTitle: 'gnomAD mitochondria',
+    fieldTitle: 'gnomAD mito',
     precision: 3,
   },
   {
     field: 'helix',
-    fieldTitle: 'Helix mitochondria',
+    fieldTitle: 'Helix mito',
     precision: 3,
   },
 ]
@@ -198,14 +198,14 @@ const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
   const freqContent = <div>{POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>
 
-  const hasAcPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac !== null)
+  const hasAcPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac)
   const hasGlobalAfPops = POPULATIONS.filter(pop => (
     populations[pop.field] && populations[pop.field].filter_af &&
     (populations[pop.field].filter_af !== populations[pop.field].af)))
   const hasHelpMessagePops = POPULATIONS.filter(
     pop => pop.helpMessage && populations[pop.field] && populations[pop.field].af !== null,
   )
-  const hasAcHetPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac_het !== null)
+  const hasAcHetPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac_het)
   const hasMaxHlPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].max_hl)
 
   return (
@@ -220,17 +220,20 @@ const Frequencies = React.memo(({ variant }) => {
           ))}
         </Popup.Content>
         {hasGlobalAfPops.length > 0 && hasAcPops.length > 0 && <VerticalSpacer height={5} />}
-        {(hasAcPops.length > 0 || hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Allele Counts" />}
+        {hasAcPops.length > 0 && <Popup.Header content="Allele Counts" />}
         <Popup.Content>
           {hasAcPops.map(pop => (
             <div key={pop.field}>
               {`${pop.fieldTitle}: ${populations[pop.field].ac} out of ${populations[pop.field].an}`}
             </div>
           ))}
+        </Popup.Content>
+        {(hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Heteroplasmic statistics" />}
+        <Popup.Content>
           {hasAcHetPops.map(pop => (
             <div key={pop.field}>
               {populations[pop.field].ac_het && `${pop.fieldTitle} heteroplasmic AF: 
-              ${populations[pop.field].af_het.toPrecision(pop.precision || 2)}
+              ${populations[pop.field].af_het?.toPrecision(pop.precision || 2)}
               ${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
             </div>
           ))}

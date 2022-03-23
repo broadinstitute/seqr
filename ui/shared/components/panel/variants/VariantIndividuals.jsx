@@ -152,13 +152,11 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
         content={
           <div>
             <b>Warning: </b>
-            {warning.split('\n').reduce((acc, message) => (acc ? (
-              <span>
-                {acc}
-                <br />
+            {typeof warning === 'string' ? warning : warning.reduce((acc, message) => ([...acc,
+              <span key={message}>
                 {message}
-              </span>
-            ) : message))}
+              </span>,
+            ]), [])}
           </div>
         }
       />
@@ -247,7 +245,10 @@ const genotypeDetails = (genotype, variant, genesById) => {
   ]
 }
 
-const addWarning = (warning, moreMessage) => (warning ? `${warning}.\n ${moreMessage}` : moreMessage)
+const addWarning = (warning, moreMessage) => {
+  const warnings = typeof warning === 'string' ? [warning] : warning
+  return (warnings ? [...warnings, moreMessage] : moreMessage)
+}
 
 const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
   if (!variant.genotypes) {
@@ -291,8 +292,6 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
     warning = addWarning(warning, lowHlWarning)
   }
 
-  const abOrHl = genotype.ab || genotype.hl
-
   let previousCall
   if (genotype.newCall) {
     previousCall = { content: 'New Call', hover: 'No overlap in previous callset', color: 'green' }
@@ -332,7 +331,9 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
           trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
         />
       )}
-      {`${genotype.gq || genotype.qs || '-'}${variant.svType ? '' : genotype.numAlt >= 0 && `, ${abOrHl ? abOrHl.toPrecision(2) : '-'}`}`}
+      {`${genotype.gq || genotype.qs || '-'}${
+        variant.svType ? '' : genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) :
+          `${genotype.hl ? genotype.hl.toPrecision(2) : '-'}`}`}`}
       {variant.genotypeFilters && (
         <small>
           <br />

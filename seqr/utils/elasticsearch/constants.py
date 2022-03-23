@@ -325,10 +325,10 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 MITO_PREDICTION_FIELDS_CONFIG = {
-    'APOGEE_score': {'response_key': 'apogeeScore'},
-    'hap_defining_variant': {'response_key': 'hapDefiningVariant', 'format_value': lambda k: 'Y' if k else None},
-    'mitotip_trna_prediction': {'response_key': 'mitotipTrnaPrediction'},
-    'HmtVar_score': {'response_key': 'HmtVarScore'},
+    'APOGEE_score': {'response_key': 'apogee'},
+    'hap_defining_variant': {'response_key': 'haplogroup_defining', 'format_value': lambda k: 'Y' if k else None},
+    'mitotip_trna_prediction': {'response_key': 'mitoTIP'},
+    'HmtVar_score': {'response_key': 'hmtVar'},
 }
 PREDICTION_FIELDS_CONFIG.update(MITO_PREDICTION_FIELDS_CONFIG)
 
