@@ -241,7 +241,7 @@ class HailSearch(object):
             genotype_ht = genotype_ht.join(family_ht, how='outer')
         genotype_ht = genotype_ht.rename({'genotypes': 'genotypes_0'})
 
-        genotype_ht.annotate(
+        return genotype_ht.annotate(
             familyGuids=hl.array([
                 hl.if_else(hl.is_defined(genotype_ht[f'genotypes_{i}']), family_guid, hl.missing(hl.tstr))
                 for i, family_guid in enumerate(family_guids)
@@ -250,9 +250,6 @@ class HailSearch(object):
                 genotype_ht[f'genotypes_{i}'] for i in range(len(family_guids))
             ]).flatmap(lambda x: x).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         ).select('genotypes', 'familyGuids')
-        logger.info(genotype_ht.describe())
-
-        return genotype_ht
 
 
     def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter):
