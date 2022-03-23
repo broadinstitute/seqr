@@ -99,7 +99,7 @@ ANNOTATION_FIELDS = {
     'transcripts': lambda r: r.sortedTranscriptConsequences.map(
         lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
             'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
-            'lof', 'lof_flags', 'lof_filter', 'lof_info', 'transcript_id',
+            'lof', 'lof_flags', 'lof_filter', 'lof_info', 'major_consequence', 'transcript_id',
         ]})).group_by(lambda t: t.geneId),
 }
 
