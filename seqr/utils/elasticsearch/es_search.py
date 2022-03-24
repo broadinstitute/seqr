@@ -82,6 +82,17 @@ class EsSearch(object):
         self._no_sample_filters = False
         self._any_affected_sample_filters = False
 
+    @staticmethod
+    def _parse_xstop(result):
+        xstop = result.pop(XSTOP_FIELD, None)
+        if xstop:
+            end_chrom, end = get_chrom_pos(xstop)
+            if end_chrom != result['chrom']:
+                result.update({
+                    'endChrom': end_chrom,
+                    'end': end,
+                })
+
     def _get_index_dataset_type(self, index):
         return self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
 
@@ -690,7 +701,7 @@ class EsSearch(object):
             result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
         self._parse_genome_versions(result, index_name, hit)
-        self._parse_transloc_xstop(result, index_name)
+        self._parse_xstop(result)
 
         populations = {
             population: _get_field_values(
@@ -824,16 +835,6 @@ class EsSearch(object):
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
         })
-
-    def _parse_transloc_xstop(self, result, index_name):
-        xstop = result.pop(XSTOP_FIELD, None)
-        if xstop:
-            endChrom, end = get_chrom_pos(xstop)
-            if endChrom != result['chrom'] or end != result['end']:
-                result.update({
-                    'endChrom': endChrom,
-                    'end': end,
-                })
 
     def _parse_compound_het_response(self, response):
         if len(response.aggregations.genes.buckets) > MAX_COMPOUND_HET_GENES:

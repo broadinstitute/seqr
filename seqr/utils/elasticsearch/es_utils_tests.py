@@ -428,7 +428,7 @@ ES_SV_WGS_VARIANT = {
       'xstart': 2049045387,
       'pos': 49045387,
       'svType': 'CPX',
-      'xstop': 2049045898,
+      'xstop': 20012345678,
       'variantId': 'prefix_19107_CPX',
       'algorithms': ['wham', 'manta'],
       'sc': 7,

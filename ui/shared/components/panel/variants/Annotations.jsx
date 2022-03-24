@@ -130,7 +130,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   }
 
   const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
-  if (variant.svType) {
+  if (variant.svType && !variant.endChrom) {
     seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
 
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
@@ -185,7 +185,7 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
     if ((variantPos >= interval.start) && (variantPos <= interval.end)) {
       return true
     }
-    if (end) {
+    if (end && !variant.endChrom) {
       const variantPosEnd = variantPos + (end - pos)
       return (variantPosEnd >= interval.start) && (variantPosEnd <= interval.end)
     }
