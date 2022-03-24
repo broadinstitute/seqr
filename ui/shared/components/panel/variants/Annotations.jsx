@@ -256,7 +256,7 @@ const svSizeDisplay = (size) => {
 
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
   const {
-    rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms, bothsidesSupport,
+    rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms, bothsidesSupport, sourceChrom,
     endChrom,
   } = variant
   const mainTranscript = getVariantMainTranscript(variant)
@@ -297,10 +297,16 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           trigger={
             <ButtonLink size={svType && 'big'}>
               {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && svTypeDetail && (
+              {svType && (svTypeDetail || sourceChrom) && (
                 <Popup
                   trigger={<Icon name="info circle" size="small" corner="top right" />}
-                  content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
+                  content={
+                    <div>
+                      {(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail || ''}
+                      {svTypeDetail && <br />}
+                      {sourceChrom && `Inserted from chr${sourceChrom}`}
+                    </div>
+                  }
                   position="top center"
                 />
               )}

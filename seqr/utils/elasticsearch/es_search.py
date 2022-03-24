@@ -87,11 +87,14 @@ class EsSearch(object):
         xstop = result.pop(XSTOP_FIELD, None)
         if xstop:
             end_chrom, end = get_chrom_pos(xstop)
-            if (end_chrom != result['chrom'] or end != result['end']) and result['svType'] != 'INS':
-                result.update({
-                    'endChrom': end_chrom,
-                    'end': end,
-                })
+            if end_chrom != result['chrom'] or end != result['end']:
+                if result['svType'] == 'INS':
+                    result['sourceChrom'] = end_chrom
+                else:
+                    result.update({
+                        'endChrom': end_chrom,
+                        'end': end,
+                    })
 
     def _get_index_dataset_type(self, index):
         return self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
