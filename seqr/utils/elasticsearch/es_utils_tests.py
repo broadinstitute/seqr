@@ -521,7 +521,7 @@ PARSED_SV_COMPOUND_HET_VARIANTS[0].update({
     'variantId': 'prefix_191011_DEL',
     'svType': 'DEL',
 })
-del PARSED_SV_COMPOUND_HET_VARIANTS[0]['sourceChrom']
+del PARSED_SV_COMPOUND_HET_VARIANTS[0]['svSourceDetail']
 PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000037183'] = [{'geneId': 'ENSG00000037183'}]
 for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
     gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})

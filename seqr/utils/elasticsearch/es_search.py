@@ -89,7 +89,7 @@ class EsSearch(object):
             end_chrom, end = get_chrom_pos(xstop)
             if end_chrom != result['chrom'] or end != result['end']:
                 if result['svType'] == 'INS':
-                    result['sourceChrom'] = end_chrom
+                    result['svSourceDetail'] = {'chrom': end_chrom}
                 else:
                     result.update({
                         'endChrom': end_chrom,

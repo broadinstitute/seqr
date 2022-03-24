@@ -918,7 +918,7 @@ PARSED_SV_VARIANT = {
     'end': 49045899,
     'svType': 'INS',
     'svTypeDetail': None,
-    'sourceChrom': '9',
+    'svSourceDetail': {'chrom': '9'},
     'numExon': 2,
     'rg37LocusEnd': None,
     '_sort': [1049045387],
