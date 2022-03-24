@@ -161,12 +161,16 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   }
 
   const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
-  if (variant.svType && !variant.endChrom) {
-    seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
+  if (variant.svType) {
+    if (variant.endChrom && variant.endChrom !== variant.chrom) {
+      seqrLinkProps.location = `${variant.chrom}:${variant.pos - 50}-${variant.pos + 50} ${variant.endChrom}:${variant.end - 50}-${variant.end + 50}`
+    } else {
+      seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
+    }
 
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
     if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
-      const endOffset = variant.end - variant.pos
+      const endOffset = variant.endChrom ? 0 : variant.end - variant.pos
       const start = useLiftover ? variant.liftedOverPos : variant.pos
       const region = `${variant.chrom}-${start}-${start + endOffset}`
       addDividedLink(links, 'gnomad', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
