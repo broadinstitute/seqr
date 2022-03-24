@@ -388,8 +388,8 @@ ES_SV_VARIANT = {
       'num_exon': 1,
       'pos': 49045487,
       'StrVCTVRE_score': 0.374,
-      'svType': 'DEL',
-      'xstop': 1049045898,
+      'svType': 'INS',
+      'xstop': 9049045898,
       'variantId': 'prefix_19107_DEL',
       'samples': ['HG00731'],
       'sc': 7,
@@ -475,6 +475,7 @@ ES_SV_COMP_HET_VARIANT['_source']['xstop'] = 1104943628
 ES_SV_COMP_HET_VARIANT['_source']['end'] = 104943628
 ES_SV_COMP_HET_VARIANT['_source']['num_exon'] = 2
 ES_SV_COMP_HET_VARIANT['_source']['variantId'] = 'prefix_191011_DEL'
+ES_SV_COMP_HET_VARIANT['_source']['svType'] = 'DEL'
 for gen in ES_SV_COMP_HET_VARIANT['_source']['genotypes']:
     gen.update({'start': None, 'end': None, 'num_exon': None})
     gen.pop('geneIds')
@@ -518,7 +519,9 @@ PARSED_SV_COMPOUND_HET_VARIANTS[0].update({
     'pos': 101343374,
     'end': 104943628,
     'variantId': 'prefix_191011_DEL',
+    'svType': 'DEL',
 })
+del PARSED_SV_COMPOUND_HET_VARIANTS[0]['sourceChrom']
 PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000037183'] = [{'geneId': 'ENSG00000037183'}]
 for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
     gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
