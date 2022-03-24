@@ -688,10 +688,6 @@ class EsSearch(object):
 
         family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, is_sv)
 
-        # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if is_sv and genotypes:
-            self._set_sv_genotype_coords(genotypes, hit)
-
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
             field_name: _get_field_values(hit, fields, lookup_field_prefix=field_name)
@@ -702,6 +698,10 @@ class EsSearch(object):
 
         self._parse_genome_versions(result, index_name, hit)
         self._parse_xstop(result)
+
+        # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
+        if is_sv and genotypes:
+            self._set_sv_genotype_coords(genotypes, result)
 
         populations = {
             population: _get_field_values(
@@ -721,8 +721,9 @@ class EsSearch(object):
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)
-        if hit.get('geneIds'):
-            transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in hit['geneIds']}
+        gene_ids = result.pop('geneIds', None)
+        if gene_ids:
+            transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in gene_ids}
 
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
@@ -786,25 +787,25 @@ class EsSearch(object):
         return family_guids, genotypes
 
     @classmethod
-    def _set_sv_genotype_coords(cls, genotypes, hit):
+    def _set_sv_genotype_coords(cls, genotypes, result):
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
         if any(not gen.get('isRef') for gen in genotypes.values()) and all(
                 (gen.get('isRef') or gen.get('start') or gen.get('end')) for gen in genotypes.values()):
             for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
                 gen_field = conf.get('genotype_field', field)
                 val = conf['select_val']([
-                    gen.get(gen_field) or hit.get(field) for gen in genotypes.values() if not gen.get('isRef')
+                    gen.get(gen_field) or result.get(field) for gen in genotypes.values() if not gen.get('isRef')
                 ])
-                if val != hit.get(field):
-                    hit[field] = val
-                    if field == 'start':
-                        hit['xpos'] = get_xpos(hit['contig'], val)
+                if val != result.get(field):
+                    result[field] = val
+                    if field == 'pos':
+                        result['xpos'] = get_xpos(result['chrom'], val)
 
             for gen in genotypes.values():
                 for field, conf in SV_SAMPLE_OVERRIDE_FIELD_CONFIGS.items():
                     gen_field = conf.get('genotype_field', field)
                     compare_func = conf.get('equal') or (lambda a, b: a == b)
-                    if compare_func(gen.get(gen_field), hit[field]):
+                    if compare_func(gen.get(gen_field), result.get(field)):
                         gen[gen_field] = None
 
     def _parse_genome_versions(self, result, index_name, hit):

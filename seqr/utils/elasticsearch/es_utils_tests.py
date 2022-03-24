@@ -471,6 +471,7 @@ MISSING_SAMPLE_ES_VARIANTS[1]['_source']['samples_num_alt_1'] = []
 ES_SV_COMP_HET_VARIANT = deepcopy(ES_SV_VARIANT)
 ES_SV_COMP_HET_VARIANT['_source']['xpos'] = 2101343374
 ES_SV_COMP_HET_VARIANT['_source']['start'] = 101343374
+ES_SV_COMP_HET_VARIANT['_source']['xstop'] = 1104943628
 ES_SV_COMP_HET_VARIANT['_source']['end'] = 104943628
 ES_SV_COMP_HET_VARIANT['_source']['num_exon'] = 2
 ES_SV_COMP_HET_VARIANT['_source']['variantId'] = 'prefix_191011_DEL'
@@ -1665,8 +1666,8 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=2)
-        self.assertListEqual(variants, [PARSED_SV_VARIANT])
 
+        self.assertListEqual(variants, [PARSED_SV_VARIANT])
         self.assertExecutedSearch(filters=[
             {'bool': {
                 'should': [

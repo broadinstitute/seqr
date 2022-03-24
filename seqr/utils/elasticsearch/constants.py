@@ -368,9 +368,9 @@ for pop_config in POPULATIONS.values():
             QUERY_FIELD_NAMES.append(pop_field)
 
 SV_SAMPLE_OVERRIDE_FIELD_CONFIGS = {
-    'start': {'select_val': min},
+    'pos': {'select_val': min, 'genotype_field': 'start'},
     'end': {'select_val': max},
-    'num_exon':{'select_val': max, 'genotype_field': 'numExon'},
+    'numExon':{'select_val': max},
     'geneIds': {
         'select_val': lambda gene_lists: set([gene_id for gene_list in gene_lists for gene_id in (gene_list or [])]),
         'equal': lambda a, b: set(a or []) == set(b or [])
