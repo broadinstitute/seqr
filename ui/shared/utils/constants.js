@@ -113,8 +113,10 @@ export const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
 const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
 const FAMILY_STATUS_NO_DATA = 'N'
 
-export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
+const DEPRECATED_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_SOLVED, color: '#4CAF50', name: 'Solved' },
+]
+export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE, color: '#4CAF50', name: 'Solved - known gene for phenotype' },
   { value: FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE, color: '#4CAF50', name: 'Solved - gene linked to different phenotype' },
   { value: FAMILY_STATUS_SOLVED_NOVEL_GENE, color: '#4CAF50', name: 'Solved - novel gene' },
@@ -129,8 +131,11 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
   { value: FAMILY_STATUS_NO_DATA, color: '#646464', name: 'No data expected' },
 ]
+export const ALL_FAMILY_ANALYSIS_STATUS_OPTIONS = [
+  ...DEPRECATED_FAMILY_ANALYSIS_STATUS_OPTIONS, ...SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
+]
 
-export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
   (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
 )
 

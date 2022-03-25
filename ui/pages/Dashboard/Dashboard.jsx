@@ -13,7 +13,7 @@ import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { InlineHeader, ColoredDiv } from 'shared/components/StyledComponents'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS, SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME } from 'shared/utils/constants'
+import { ALL_FAMILY_ANALYSIS_STATUS_OPTIONS, SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME } from 'shared/utils/constants'
 
 import CreateProjectButton from './components/CreateProjectButton'
 import FilterSelector from './components/FilterSelector'
@@ -147,7 +147,7 @@ const COLUMNS = [
       if (!project.analysisStatusCounts) {
         return null
       }
-      const statusData = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+      const statusData = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
         (acc, d) => (
           project.analysisStatusCounts[d.value] ?
             [...acc, { ...d, count: project.analysisStatusCounts[d.value] }] :
