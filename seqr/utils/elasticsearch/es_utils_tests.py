@@ -434,7 +434,7 @@ ES_SV_WGS_VARIANT = {
       'sc': 7,
       'contig': '2',
       'rg37_locus': {'contig': '2', 'position': 49272526},
-      'rg37_locus_end': {'contig': '2', 'position': 49273037},
+      'rg37_locus_end': {'contig': '20', 'position': 12326326},
       'sortedTranscriptConsequences': [
         {
           'gene_symbol': 'OR4F5',

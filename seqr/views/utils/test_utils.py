@@ -981,7 +981,7 @@ PARSED_SV_WGS_VARIANT = {
     'svType': 'CPX',
     'svTypeDetail': 'dupINV',
     'numExon': None,
-    'rg37LocusEnd': {'contig': '2', 'position': 49273037},
+    'rg37LocusEnd': {'contig': '20', 'position': 12326326},
     '_sort': [2049045387],
 }
 
