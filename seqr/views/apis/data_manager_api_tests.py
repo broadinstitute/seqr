@@ -222,7 +222,7 @@ TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
 
 EXPECTED_ERRORS = [
     'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
-    'test_index_mito_wgs does not exist and is used by project(s) Non-Analyst Project (1 samples)'
+    'test_index_mito_wgs does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)'
 ]
 
 SAMPLE_QC_DATA = [

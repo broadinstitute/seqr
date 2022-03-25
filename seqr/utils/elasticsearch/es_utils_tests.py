@@ -23,8 +23,8 @@ NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
 SV_INDEX_NAME = 'test_index_sv'
 SV_WGS_INDEX_NAME = 'test_index_sv_wgs'
 MITO_WGS_INDEX_NAME = 'test_index_mito_wgs'
-INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
-ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
+INDEX_ALIAS = '377e97bd791cf92a78296bc184e0976a'
+ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME, MITO_WGS_INDEX_NAME])}
 SUB_INDICES = ['sub_index_1', 'sub_index_2']
 SECOND_SUB_INDICES = ['sub_index_a', 'sub_index_b']
 
@@ -466,42 +466,13 @@ ES_MITO_WGS_VARIANT = {
           "mito_cn": 319.03225806451616,
           "contamination": 0.0,
           "dp": 5139.0,
-          "sample_id": "MCAI043"
+          "sample_id": "HG00733"
         },
       ],
-      "samples_gq_0_to_5" : [ ],
-      "samples_gq_5_to_10" : [ ],
-      "samples_gq_10_to_15" : [ ],
-      "samples_gq_15_to_20" : [ ],
-      "samples_gq_20_to_25" : [ ],
-      "samples_gq_25_to_30" : [ ],
-      "samples_gq_30_to_35" : [ ],
-      "samples_gq_35_to_40" : [ ],
-      "samples_gq_40_to_45" : [ ],
-      "samples_gq_45_to_50" : [ ],
-      "samples_gq_50_to_55" : [ ],
-      "samples_gq_55_to_60" : [ ],
       "samples_gq_60_to_65" : [
-        "MCAI043"
+        "HG00733"
       ],
-      "samples_gq_65_to_70" : [ ],
-      "samples_gq_70_to_75" : [ ],
-      "samples_gq_75_to_80" : [ ],
-      "samples_gq_80_to_85" : [ ],
-      "samples_gq_85_to_90" : [ ],
-      "samples_gq_90_to_95" : [ ],
-      "samples_hl_0_to_5" : [ ],
-      "samples_hl_5_to_10" : [ ],
-      "samples_hl_10_to_15" : [ ],
-      "samples_hl_15_to_20" : [ ],
-      "samples_hl_20_to_25" : [ ],
-      "samples_hl_25_to_30" : [ ],
-      "samples_hl_30_to_35" : [ ],
-      "samples_hl_35_to_40" : [ ],
-      "samples_hl_40_to_45" : [ ],
-      "samples_no_call" : [ ],
-      "samples_num_alt_1" : [ ],
-      "samples_num_alt_2" : [ "MCAI043" ],
+      "samples_num_alt_2" : [ "HG00733" ],
       "AC" : 0,
       "AC_het" : 1,
       "AF" : 0.0,
@@ -517,16 +488,10 @@ ES_MITO_WGS_VARIANT = {
       "common_low_heteroplasmy" : False,
       "contig" : "M",
       "dbnsfp_SIFT_pred" : "D",
-      "dbnsfp_Polyphen2_HVAR_pred" : None,
       "dbnsfp_MutationTaster_pred" : "N",
       "dbnsfp_FATHMM_pred" : "T",
-      "dbnsfp_MetaSVM_pred" : None,
-      "dbnsfp_REVEL_score" : None,
       "dbnsfp_GERP_RS" : "5.07",
       "dbnsfp_phastCons100way_vertebrate" : "0.958000",
-      "dbnsfp_VEST4_score" : None,
-      "dbnsfp_fathmm_MKL_coding_pred" : None,
-      "dbnsfp_MutPred_score" : None,
       "docId" : "M-10195-C-A",
       "domains" : [
         "ENSP_mappings:5xtc",
@@ -540,16 +505,16 @@ ES_MITO_WGS_VARIANT = {
       "geneIds" : [
         "ENSG00000198840"
       ],
-      "gnomad_mito_AN" : None,
-      "gnomad_mito_AC" : None,
-      "gnomad_mito_AC_het" : None,
-      "gnomad_mito_AF" : None,
-      "gnomad_mito_AF_het" : None,
-      "gnomad_mito_max_hl" : None,
+      "gnomad_mito_AN": 56421,
+      "gnomad_mito_AC": 1368,
+      "gnomad_mito_AC_het": 3,
+      "gnomad_mito_AF": 0.024246292,
+      "gnomad_mito_AF_het": 5.317169E-5,
+      "gnomad_mito_max_hl": 1.0,
       "hap_defining_variant" : False,
-      "helix_AF" : None,
-      "helix_AF_het" : None,
-      "helix_max_hl" : None,
+      "helix_AF": 0.0033268193,
+      "helix_AF_het": 4.081987E-5,
+      "helix_max_hl": 0.90441,
       "high_constraint_region" : True,
       "HmtVar_score" : 0.71,
       "mainTranscript_biotype" : "protein_coding",
@@ -568,16 +533,10 @@ ES_MITO_WGS_VARIANT = {
       "mainTranscript_amino_acids" : "P/H",
       "mainTranscript_domains" : "Gene3D:1,ENSP_mappings:5xtc,PANTHER:PTHR11058,ENSP_mappings:5xtd,Pfam:PF00507",
       "mainTranscript_hgvsp" : "ENSP00000355206.2:p.Pro46His",
-      "mainTranscript_lof" : None,
-      "mainTranscript_lof_flags" : None,
-      "mainTranscript_lof_filter" : None,
-      "mainTranscript_lof_info" : None,
       "mainTranscript_polyphen_prediction" : "probably_damaging",
       "mainTranscript_protein_id" : "ENSP00000355206",
       "mainTranscript_sift_prediction" : "deleterious_low_confidence",
       "APOGEE_score" : 0.42,
-      "mitomap_pathogenic" : None,
-      "mitotip_trna_prediction" : None,
       "pos" : 10195,
       "ref" : "C",
       "rg37_locus" : {
@@ -598,10 +557,6 @@ ES_MITO_WGS_VARIANT = {
           "hgvsp" : "ENSP00000355206.2:p.Pro46His",
           "transcript_id" : "ENST00000361227",
           "amino_acids" : "P/H",
-          "lof" : None,
-          "lof_filter" : None,
-          "lof_flags" : None,
-          "lof_info" : None,
           "polyphen_prediction" : "probably_damaging",
           "protein_id" : "ENSP00000355206",
           "protein_start" : 46,
@@ -720,7 +675,6 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
         'I000015_na20885': {
             'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None,
             'sampleType': 'WES',
-            'contamination': None, 'mitoCn': None, 'hl': None,
         },
     })
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
@@ -762,7 +716,6 @@ PARSED_MULTI_INDEX_VARIANT = deepcopy(PARSED_VARIANTS[1])
 PARSED_MULTI_INDEX_VARIANT['familyGuids'].append('F000011_11')
 PARSED_MULTI_INDEX_VARIANT['genotypes']['I000015_na20885'] = {
     'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None, 'sampleType': 'WES',
-    'contamination': None, 'mitoCn': None, 'hl': None,
 }
 
 PARSED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
@@ -959,14 +912,14 @@ CORE_INDEX_METADATA = {
         '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
     },
+    MITO_WGS_INDEX_NAME: {
+        '_meta': {'genomeVersion': '38', 'datasetType': 'MITO'},
+        'properties': {field: {'type': 'keyword'} for field in MITO_MAPPING_FIELDS},
+    },
 }
 INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
 INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
 INDEX_METADATA[SV_WGS_INDEX_NAME] = INDEX_METADATA[SV_INDEX_NAME]
-INDEX_METADATA[MITO_WGS_INDEX_NAME] = {
-        '_meta': {'genomeVersion': '38', 'datasetType': 'MITO'},
-        'properties': {field: {'type': 'keyword'} for field in MITO_MAPPING_FIELDS},
-    }
 
 ALL_INHERITANCE_QUERY = {
     'bool': {
@@ -1330,7 +1283,7 @@ class EsUtilsTest(TestCase):
         get_es_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
-            size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=9, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
     @urllib3_responses.activate
@@ -1340,7 +1293,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[1])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
-            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=3, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
         variant = get_single_es_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
@@ -1348,12 +1301,11 @@ class EsUtilsTest(TestCase):
         all_family_variant['familyGuids'] = ['F000002_2', 'F000003_3', 'F000005_5']
         all_family_variant['genotypes']['I000004_hg00731'] = {
             'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 88, 'pl': None, 'sampleType': 'WES',
-            'contamination': None, 'hl': None, 'mitoCn': None,
         }
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['1-248367227-TC-T']}}],
-            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=3, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
         with self.assertRaises(InvalidSearchException) as cm:
@@ -1476,17 +1428,17 @@ class EsUtilsTest(TestCase):
             cm.exception.info,
             {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]})
 
-        _set_cache('index_metadata__test_index,test_index_sv', None)
+        _set_cache(f'index_metadata__{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}', None)
         urllib3_responses.add(
-            urllib3_responses.GET, '/test_index,test_index_sv/_mapping', body=Exception('Connection error'))
+            urllib3_responses.GET, f'/{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}/_mapping', body=Exception('Connection error'))
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'test_index,test_index_sv - Error accessing index: Connection error')
+        self.assertEqual(str(cm.exception), 'test_index,test_index_mito_wgs,test_index_sv - Error accessing index: Connection error')
 
-        urllib3_responses.replace_json('/test_index,test_index_sv/_mapping', {})
+        urllib3_responses.replace_json(f'/{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}/_mapping', {})
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
+        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index_mito_wgs, test_index')
 
     @mock.patch('seqr.utils.elasticsearch.utils.MAX_VARIANTS')
     @urllib3_responses.activate
@@ -1933,20 +1885,6 @@ class EsUtilsTest(TestCase):
         ], index=SV_WGS_INDEX_NAME)
 
     @urllib3_responses.activate
-    def test_mito_get_es_variants(self):
-        self.families = Family.objects.filter(guid='F000014_14')
-        setup_responses()
-        search_model = VariantSearch.objects.create(search={})
-        results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(self.families)
-
-        variants, _ = get_es_variants(results_model, num_results=2)
-        self.maxDiff = None
-        self.assertListEqual([v for v in variants if v['chrom'] == 'M'], [PARSED_MITO_VARIANT])
-
-        self.assertExecutedSearch(size=4, index=','.join([SV_WGS_INDEX_NAME, MITO_WGS_INDEX_NAME]))
-
-    @urllib3_responses.activate
     def test_multi_dataset_get_es_variants(self):
         setup_responses()
 
@@ -1957,7 +1895,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
-        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
+        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS + [PARSED_MITO_VARIANT])
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
                 'Pathogenic', 'Pathogenic/Likely_pathogenic'
@@ -1965,6 +1903,7 @@ class EsUtilsTest(TestCase):
         }}
         self.assertExecutedSearches([
             dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
+            dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
             dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
 
@@ -2970,9 +2909,9 @@ class EsUtilsTest(TestCase):
 
         get_es_variants(results_model, num_results=2)
 
-        self.assertExecutedSearch(index=INDEX_ALIAS, size=6)
+        self.assertExecutedSearch(index=INDEX_ALIAS, size=8)
         self.assertDictEqual(urllib3_responses.call_request_json(index=0), {
-            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
+            'actions': [{'add': {'indices': [INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
 
     @urllib3_responses.activate
     def test_get_es_variants_search_index_alias(self):

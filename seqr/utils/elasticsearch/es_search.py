@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD
+    get_prediction_response_key, XSTOP_FIELD, MITO_GENOTYPE_FIELDS_CONFIG
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -688,8 +688,9 @@ class EsSearch(object):
         index_name = raw_hit.meta.index
         index_family_samples = self.samples_by_family_index[index_name]
         is_sv = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_SV_CALLS
+        is_mito = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_MITO_CALLS
 
-        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, is_sv)
+        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, is_sv, is_mito)
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -743,7 +744,7 @@ class EsSearch(object):
         })
         return result
 
-    def _parse_genotypes(self, raw_hit, hit, index_family_samples, is_sv):
+    def _parse_genotypes(self, raw_hit, hit, index_family_samples, is_sv, is_mito):
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
         elif self._return_all_queried_families:
@@ -768,7 +769,7 @@ class EsSearch(object):
                        for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
-        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
+        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else MITO_GENOTYPE_FIELDS_CONFIG if is_mito else GENOTYPE_FIELDS_CONFIG
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:

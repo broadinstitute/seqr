@@ -366,11 +366,13 @@ GENOTYPE_FIELDS_CONFIG = {
 GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SNP_QUALITY_FIELDS.keys()})
 MITO_GENOTYPE_FIELDS_CONFIG = {
+    'dp': {},
     'hl': {},
     'mito_cn': {},
     'contamination': {},
 }
-GENOTYPE_FIELDS_CONFIG.update(MITO_GENOTYPE_FIELDS_CONFIG)
+MITO_GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
+MITO_GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SHARED_QUALITY_FIELDS.keys()})
 SV_GENOTYPE_FIELDS_CONFIG = {
     'cn': {'format_value': int, 'default_value': -1},
     'end': {},
