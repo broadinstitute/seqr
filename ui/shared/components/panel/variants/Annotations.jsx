@@ -163,7 +163,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
   if (variant.svType) {
     if (variant.endChrom && variant.endChrom !== variant.chrom) {
-      seqrLinkProps.location = `${variant.chrom}:${variant.pos - 50}-${variant.pos + 50} ${variant.endChrom}:${variant.end - 50}-${variant.end + 50}`
+      seqrLinkProps.location = `${variant.chrom}:${variant.pos - 50}-${variant.pos + 50}`
     } else {
       seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
     }
