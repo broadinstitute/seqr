@@ -163,8 +163,10 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
             ] if add_project_category_guids_field else [],
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
             'canEdit': has_project_permissions(project, user, can_edit=True),
+            'userIsCreator': project.created_by == user,
         })
 
+    prefetch_related_objects(projects, 'created_by')
     if add_project_category_guids_field:
         prefetch_related_objects(projects, 'projectcategory_set')
 
