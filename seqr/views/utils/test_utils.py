@@ -782,6 +782,7 @@ PARSED_VARIANTS = [
         'svType': None,
         'svTypeDetail': None,
         'numExon': None,
+        'rg37LocusEnd': None,
         '_sort': [1248367227],
     },
     {
@@ -846,6 +847,7 @@ PARSED_VARIANTS = [
         'svType': None,
         'svTypeDetail': None,
         'numExon': None,
+        'rg37LocusEnd': None,
         '_sort': [2103343353],
     },
 ]
@@ -915,9 +917,11 @@ PARSED_SV_VARIANT = {
     'variantId': 'prefix_19107_DEL',
     'xpos': 1049045487,
     'end': 49045899,
-    'svType': 'DEL',
+    'svType': 'INS',
     'svTypeDetail': None,
+    'svSourceDetail': {'chrom': '9'},
     'numExon': 2,
+    'rg37LocusEnd': None,
     '_sort': [1049045387],
 }
 
@@ -973,10 +977,12 @@ PARSED_SV_WGS_VARIANT = {
     },
     'variantId': 'prefix_19107_CPX',
     'xpos': 2049045387,
-    'end': 49045898,
+    'end': 12345678,
+    'endChrom': '20',
     'svType': 'CPX',
     'svTypeDetail': 'dupINV',
     'numExon': None,
+    'rg37LocusEnd': {'contig': '20', 'position': 12326326},
     '_sort': [2049045387],
 }
 

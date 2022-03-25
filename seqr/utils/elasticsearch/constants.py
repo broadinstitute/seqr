@@ -267,6 +267,7 @@ NESTED_FIELDS = {
 }
 
 GRCH38_LOCUS_FIELD = 'rg37_locus'
+XSTOP_FIELD = 'xstop'
 SPLICE_AI_FIELD = 'splice_ai'
 NEW_SV_FIELD = 'new_structural_variants'
 CORE_FIELDS_CONFIG = {
@@ -283,6 +284,8 @@ CORE_FIELDS_CONFIG = {
     'variantId': {},
     'xpos': {'format_value': int},
     GRCH38_LOCUS_FIELD: {},
+    XSTOP_FIELD:  {'format_value': int},
+    'rg37_locus_end': {'response_key': 'rg37LocusEnd', 'format_value': lambda locus: locus.to_dict()},
     'sv_type_detail': {'response_key': 'svTypeDetail'},
     'cpx_intervals': {
       'response_key': 'cpxIntervals',
@@ -365,9 +368,9 @@ for pop_config in POPULATIONS.values():
             QUERY_FIELD_NAMES.append(pop_field)
 
 SV_SAMPLE_OVERRIDE_FIELD_CONFIGS = {
-    'start': {'select_val': min},
+    'pos': {'select_val': min, 'genotype_field': 'start'},
     'end': {'select_val': max},
-    'num_exon':{'select_val': max, 'genotype_field': 'numExon'},
+    'numExon':{'select_val': max},
     'geneIds': {
         'select_val': lambda gene_lists: set([gene_id for gene_list in gene_lists for gene_id in (gene_list or [])]),
         'equal': lambda a, b: set(a or []) == set(b or [])
