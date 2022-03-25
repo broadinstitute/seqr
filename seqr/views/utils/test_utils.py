@@ -427,6 +427,7 @@ PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
     'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd', 'isDemo', 'allUserDemo',
+    'userIsCreator',
 }
 
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
@@ -508,7 +509,7 @@ GENE_FIELDS = {
 }
 GENE_VARIANT_FIELDS = {
     'constraints', 'diseaseDesc', 'functionDesc', 'omimPhenotypes', 'mimNumber', 'geneNames', 'primateAi',
-    'cnSensitivity',
+    'cnSensitivity', 'genCc',
 }
 GENE_VARIANT_FIELDS.update(GENE_FIELDS)
 
@@ -735,6 +736,7 @@ PARSED_VARIANTS = [
     {
         'alt': 'T',
         'chrom': '1',
+        'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'commonLowHeteroplasmy': None,
         'highConstraintRegion': None,
@@ -790,11 +792,13 @@ PARSED_VARIANTS = [
         'svType': None,
         'svTypeDetail': None,
         'numExon': None,
+        'rg37LocusEnd': None,
         '_sort': [1248367227],
     },
     {
         'alt': 'G',
         'chrom': '2',
+        'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'commonLowHeteroplasmy': None,
         'highConstraintRegion': None,
@@ -882,6 +886,7 @@ PARSED_VARIANTS = [
         'svType': None,
         'svTypeDetail': None,
         'numExon': None,
+        'rg37LocusEnd': None,
         '_sort': [2103343353],
     },
 ]
@@ -889,6 +894,7 @@ PARSED_VARIANTS = [
 PARSED_SV_VARIANT = {
     'alt': None,
     'chrom': '1',
+    'bothsidesSupport': True,
     'familyGuids': ['F000002_2'],
     'cpxIntervals': None,
     'algorithms': None,
@@ -966,15 +972,18 @@ PARSED_SV_VARIANT = {
     'variantId': 'prefix_19107_DEL',
     'xpos': 1049045487,
     'end': 49045899,
-    'svType': 'DEL',
+    'svType': 'INS',
     'svTypeDetail': None,
+    'svSourceDetail': {'chrom': '9'},
     'numExon': 2,
+    'rg37LocusEnd': None,
     '_sort': [1049045387],
 }
 
 PARSED_SV_WGS_VARIANT = {
     'alt': None,
     'chrom': '2',
+    'bothsidesSupport': None,
     'familyGuids': ['F000014_14'],
     'cpxIntervals': [{'chrom': '2', 'end': 3000, 'start': 1000, 'type': 'DUP'},
                      {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INV'}],
@@ -1039,10 +1048,12 @@ PARSED_SV_WGS_VARIANT = {
     },
     'variantId': 'prefix_19107_CPX',
     'xpos': 2049045387,
-    'end': 49045898,
+    'end': 12345678,
+    'endChrom': '20',
     'svType': 'CPX',
     'svTypeDetail': 'dupINV',
     'numExon': None,
+    'rg37LocusEnd': {'contig': '20', 'position': 12326326},
     '_sort': [2049045387],
 }
 

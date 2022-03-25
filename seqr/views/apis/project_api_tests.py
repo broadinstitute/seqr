@@ -61,6 +61,7 @@ class ProjectAPITest(object):
 
         project_guid = new_project.guid
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {project_guid})
+        self.assertTrue(response.json()['projectsByGuid'][project_guid]['userIsCreator'])
 
         # update the project. genome version and workspace should not update
         update_project_url = reverse(update_project_handler, args=[project_guid])

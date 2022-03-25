@@ -1,7 +1,14 @@
 # _seqr_ Changes
 
 ## dev
+
+## 3/25/22
+* Update display for translocations
+
+## 3/18/22
 * Disallow deleting individuals in matchmaker (REQUIRES DB MIGRATION)
+* Add GenCC reference data (REQUIRES DB MIGRATION)
+* Update local pipeline to use latest clinvar
 
 ## 3/10/22
 * Return hom alt SNPs in trans with Deletions as compound hets

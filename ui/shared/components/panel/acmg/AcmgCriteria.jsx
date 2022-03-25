@@ -59,15 +59,16 @@ class AcmgCriteria extends React.PureComponent {
   }
 
   setCriteria(criteria) {
-    const newState = { criteria }
     if (criteria.length > 0) {
-      newState.score = getNewScoreValue(criteria)
+      const score = getNewScoreValue(criteria)
       const newCategory = CATEGORY_CONFIGS.find(
-        category => category.isThisClassification(newState.score) === true,
+        category => category.isThisClassification(score) === true,
       )
-      newState.classify = newCategory ? newCategory.classification : 'Benign'
+      const classify = newCategory ? newCategory.classification : 'Benign'
+      this.setState({ criteria, score, classify })
+    } else {
+      this.clearFields()
     }
-    this.setState(newState)
   }
 
   setFormWarning(warning) {

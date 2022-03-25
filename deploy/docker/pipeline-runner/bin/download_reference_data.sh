@@ -22,7 +22,7 @@ rm "${LOFTEE_FILE}"
 
 # download seqr reference data
 REF_DATA_HT=combined_reference_data_grch${BUILD_VERSION}.ht
-CLINVAR_HT=clinvar.GRCh${BUILD_VERSION}.2021-11-13.ht
+CLINVAR_HT=clinvar.GRCh${BUILD_VERSION}.ht
 mkdir -p "/seqr-reference-data/GRCh${BUILD_VERSION}/${REF_DATA_HT}"
 mkdir -p "/seqr-reference-data/GRCh${BUILD_VERSION}/${CLINVAR_HT}"
 cd "/seqr-reference-data/GRCh${BUILD_VERSION}"

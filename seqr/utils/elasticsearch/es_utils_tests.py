@@ -390,12 +390,13 @@ ES_SV_VARIANT = {
       'num_exon': 1,
       'pos': 49045487,
       'StrVCTVRE_score': 0.374,
-      'svType': 'DEL',
-      'xstop': 1049045898,
+      'svType': 'INS',
+      'xstop': 9049045898,
       'variantId': 'prefix_19107_DEL',
       'samples': ['HG00731'],
       'sc': 7,
       'contig': '1',
+      'bothsides_support': True,
       'sortedTranscriptConsequences': [
         {
           'gene_id': 'ENSG00000228198'
@@ -429,11 +430,13 @@ ES_SV_WGS_VARIANT = {
       'xstart': 2049045387,
       'pos': 49045387,
       'svType': 'CPX',
-      'xstop': 2049045898,
+      'xstop': 20012345678,
       'variantId': 'prefix_19107_CPX',
       'algorithms': ['wham', 'manta'],
       'sc': 7,
       'contig': '2',
+      'rg37_locus': {'contig': '2', 'position': 49272526},
+      'rg37_locus_end': {'contig': '20', 'position': 12326326},
       'sortedTranscriptConsequences': [
         {
           'gene_symbol': 'OR4F5',
@@ -653,9 +656,11 @@ MISSING_SAMPLE_ES_VARIANTS[1]['_source']['samples_num_alt_1'] = []
 ES_SV_COMP_HET_VARIANT = deepcopy(ES_SV_VARIANT)
 ES_SV_COMP_HET_VARIANT['_source']['xpos'] = 2101343374
 ES_SV_COMP_HET_VARIANT['_source']['start'] = 101343374
+ES_SV_COMP_HET_VARIANT['_source']['xstop'] = 1104943628
 ES_SV_COMP_HET_VARIANT['_source']['end'] = 104943628
 ES_SV_COMP_HET_VARIANT['_source']['num_exon'] = 2
 ES_SV_COMP_HET_VARIANT['_source']['variantId'] = 'prefix_191011_DEL'
+ES_SV_COMP_HET_VARIANT['_source']['svType'] = 'DEL'
 for gen in ES_SV_COMP_HET_VARIANT['_source']['genotypes']:
     gen.update({'start': None, 'end': None, 'num_exon': None})
     gen.pop('geneIds')
@@ -700,7 +705,9 @@ PARSED_SV_COMPOUND_HET_VARIANTS[0].update({
     'pos': 101343374,
     'end': 104943628,
     'variantId': 'prefix_191011_DEL',
+    'svType': 'DEL',
 })
+del PARSED_SV_COMPOUND_HET_VARIANTS[0]['svSourceDetail']
 PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000037183'] = [{'geneId': 'ENSG00000037183'}]
 for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
     gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
@@ -874,6 +881,9 @@ MAPPING_FIELDS = [
     'topmed_ID',
     'gnomad_genomes_FAF_AF',
     'rg37_locus',
+    'rg37_locus_end',
+    'xstop',
+    'bothsides_support',
 ]
 SV_MAPPING_FIELDS = [
     'start',
@@ -905,6 +915,7 @@ SV_MAPPING_FIELDS = [
     'gnomad_svs_filter_AF',
     'gnomad_svs_Het',
     'gnomad_svs_ID',
+    'bothsides_support',
 ]
 POPULATIONS = ['callset', 'exac', 'g1k', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_svs', 'sv_callset', 'topmed']
 MITO_POPULATIONS = ['gnomad_mito', 'helix']
@@ -930,7 +941,8 @@ SOURCE_FIELDS -= {
 FIELD_TYPE_MAP = {
     'cadd_PHRED': {'type': 'keyword'},
     'primate_ai_score': {'type': 'float'},
-    'rg37_locus': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}}
+    'rg37_locus': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}},
+    'rg37_locus_end': {'properties': {'contig': {'type': 'keyword'}, 'position': {'type': 'integer'}}}
 }
 MAPPING_PROPERTIES = {field: FIELD_TYPE_MAP.get(field, {'type': 'keyword'}) for field in MAPPING_FIELDS}
 
@@ -1859,8 +1871,8 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=2)
-        self.assertListEqual(variants, [PARSED_SV_VARIANT])
 
+        self.assertListEqual(variants, [PARSED_SV_VARIANT])
         self.assertExecutedSearch(filters=[
             {'bool': {
                 'should': [

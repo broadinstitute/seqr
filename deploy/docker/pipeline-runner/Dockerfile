@@ -42,6 +42,7 @@ WORKDIR /Python-${PYTHON_VERSION}
 RUN ./configure --enable-optimizations \
     && make install \
     && make clean
+WORKDIR /
 
 RUN install_packages python-pkg-resources
 
@@ -68,12 +69,13 @@ RUN wget https://repo1.maven.org/maven2/com/google/cloud/bigdataoss/gcs-connecto
 ENV SAMTOOLS_VERSION="1.9"
 RUN wget https://github.com/samtools/htslib/releases/download/${SAMTOOLS_VERSION}/htslib-${SAMTOOLS_VERSION}.tar.bz2 \
 	&& tar xjf htslib-${SAMTOOLS_VERSION}.tar.bz2 \
-	&& rm htslib-${SAMTOOLS_VERSION}.tar.bz2 \
+	&& rm htslib-${SAMTOOLS_VERSION}.tar.bz2
 WORKDIR htslib-${SAMTOOLS_VERSION}
 RUN ./configure \
 	&& make \
 	&& make install \
 	&& make clean
+WORKDIR /
 
 # install VEP dependencies
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm && chmod +x /usr/bin/cpanm
@@ -98,6 +100,7 @@ WORKDIR /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g al
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
 # clone and hail-elasticsearch-pipelines repo
+WORKDIR /
 RUN git clone https://github.com/broadinstitute/hail-elasticsearch-pipelines.git
 WORKDIR /hail-elasticsearch-pipelines
 RUN python3 -m pip install -r /hail-elasticsearch-pipelines/luigi_pipeline/requirements.txt
