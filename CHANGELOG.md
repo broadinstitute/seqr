@@ -2,6 +2,9 @@
 
 ## dev
 
+## 3/25/22
+* Update display for translocations
+
 ## 3/18/22
 * Disallow deleting individuals in matchmaker (REQUIRES DB MIGRATION)
 * Add GenCC reference data (REQUIRES DB MIGRATION)

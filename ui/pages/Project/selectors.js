@@ -1,7 +1,7 @@
 import { createSelector } from 'reselect'
 
 import {
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  ALL_FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
@@ -490,7 +490,7 @@ export const getAnalysisStatusCounts = createSelector(
       ...acc, [family.analysisStatus]: (acc[family.analysisStatus] || 0) + 1,
     }), {})
 
-    return FAMILY_ANALYSIS_STATUS_OPTIONS.map(
+    return ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.map(
       option => ({ ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   },

@@ -19,28 +19,73 @@ const LargeText = styled.div`
   font-size: 1.2em;
 `
 
-const UcscBrowserLink = ({ variant, useLiftover, includeEnd }) => {
-  const chrom = useLiftover ? variant.liftedOverChrom : variant.chrom
-  const pos = parseInt(useLiftover ? variant.liftedOverPos : variant.pos, 10)
-  let genomeVersion = useLiftover ? variant.liftedOverGenomeVersion : variant.genomeVersion
-  genomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
+const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) => {
+  const posInt = parseInt(pos, 10)
+  const ucscGenomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
 
-  const highlight = variant.ref && `hg${genomeVersion}.chr${chrom}:${pos}-${pos + (variant.ref.length - 1)}`
+  const highlight = refLength && `hg${ucscGenomeVersion}.chr${chrom}:${posInt}-${posInt + (refLength - 1)}`
   const highlightQ = highlight ? `highlight=${highlight}&` : ''
-  const endOffset = variant.end && variant.end - variant.pos
-  const position = getLocus(chrom, pos, 10, endOffset || 0)
+
+  const position = getLocus(chrom, posInt, 10, endOffset || 0)
 
   return (
-    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&${highlightQ}position=${position}`} target="_blank" rel="noreferrer">
-      {`${chrom}:${pos}${(includeEnd && endOffset) ? `-${pos + endOffset}` : ''}`}
+    <a href={`http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${ucscGenomeVersion}&${highlightQ}position=${position}`} target="_blank" rel="noreferrer">
+      {`${chrom}:${posInt}${endOffset ? `-${posInt + endOffset}` : ''}`}
     </a>
   )
 }
 
 UcscBrowserLink.propTypes = {
+  genomeVersion: PropTypes.string,
+  chrom: PropTypes.string,
+  pos: PropTypes.oneOf(PropTypes.string, PropTypes.number),
+  refLength: PropTypes.number,
+  endOffset: PropTypes.number,
+}
+
+const VariantPosition = ({ variant, svType, useLiftover }) => {
+  let { chrom, pos, end, endChrom, genomeVersion } = variant
+  const { ref, rg37LocusEnd } = variant
+
+  const showEndLocation = svType && endChrom
+  let endOffset = svType && !showEndLocation && end && end - pos
+
+  if (useLiftover) {
+    genomeVersion = variant.liftedOverGenomeVersion
+    chrom = variant.liftedOverChrom
+    pos = variant.liftedOverPos
+    if (rg37LocusEnd) {
+      endChrom = rg37LocusEnd.contig
+      end = rg37LocusEnd.position
+      endOffset = endOffset && end - pos
+    } else {
+      end = null
+    }
+  }
+
+  return (
+    <span>
+      <UcscBrowserLink
+        genomeVersion={genomeVersion}
+        chrom={chrom}
+        pos={pos}
+        refLength={ref && ref.length}
+        endOffset={endOffset}
+      />
+      {end && showEndLocation && (
+        <span>
+          ;&nbsp;
+          <UcscBrowserLink genomeVersion={genomeVersion} chrom={endChrom || chrom} pos={end} />
+        </span>
+      )}
+    </span>
+  )
+}
+
+VariantPosition.propTypes = {
   variant: PropTypes.object,
   useLiftover: PropTypes.bool,
-  includeEnd: PropTypes.bool,
+  svType: PropTypes.string,
 }
 
 const LOF_FILTER_MAP = {
@@ -117,11 +162,15 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
 
   const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
   if (variant.svType) {
-    seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
+    if (variant.endChrom && variant.endChrom !== variant.chrom) {
+      seqrLinkProps.location = `${variant.chrom}:${variant.pos - 50}-${variant.pos + 50}`
+    } else {
+      seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
+    }
 
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
     if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
-      const endOffset = variant.end - variant.pos
+      const endOffset = variant.endChrom ? 0 : variant.end - variant.pos
       const start = useLiftover ? variant.liftedOverPos : variant.pos
       const region = `${variant.chrom}-${start}-${start + endOffset}`
       addDividedLink(links, 'gnomad', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
@@ -159,7 +208,7 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
   }
   const { pos, end, genomeVersion, liftedOverPos, familyGuids = [] } = variant
   const locusListIntervals = familyGuids.reduce((acc, familyGuid) => ([
-    ...acc, ...locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid]]), [])
+    ...acc, ...(locusListIntervalsByProject[familiesByGuid[familyGuid].projectGuid] || [])]), [])
   if (locusListIntervals.length < 1) {
     return null
   }
@@ -171,7 +220,7 @@ const BaseVariantLocusListLabels = React.memo(({ locusListIntervalsByProject, fa
     if ((variantPos >= interval.start) && (variantPos <= interval.end)) {
       return true
     }
-    if (end) {
+    if (end && !variant.endChrom) {
       const variantPosEnd = variantPos + (end - pos)
       return (variantPosEnd >= interval.start) && (variantPosEnd <= interval.end)
     }
@@ -206,7 +255,10 @@ const svSizeDisplay = (size) => {
 }
 
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
-  const { rsid, svType, numExon, pos, end, svTypeDetail, cpxIntervals, algorithms, bothsidesSupport } = variant
+  const {
+    rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
+    endChrom,
+  } = variant
   const mainTranscript = getVariantMainTranscript(variant)
 
   const lofDetails = (mainTranscript.lof === 'LC' || mainTranscript.lofFlags === 'NAGNAG_SITE') ? [
@@ -245,10 +297,16 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           trigger={
             <ButtonLink size={svType && 'big'}>
               {svType ? (SVTYPE_LOOKUP[svType] || svType) : mainTranscript.majorConsequence.replace(/_/g, ' ')}
-              {svType && svTypeDetail && (
+              {svType && (svTypeDetail || svSourceDetail) && (
                 <Popup
                   trigger={<Icon name="info circle" size="small" corner="top right" />}
-                  content={(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail}
+                  content={
+                    <div>
+                      {(SVTYPE_DETAILS[svType] || {})[svTypeDetail] || svTypeDetail || ''}
+                      {svTypeDetail && <br />}
+                      {svSourceDetail && `Inserted from chr${svSourceDetail.chrom}`}
+                    </div>
+                  }
                   position="top center"
                 />
               )}
@@ -259,7 +317,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           <Transcripts variant={variant} />
         </Modal>
       )}
-      {svType && end && (
+      {svType && end && !endChrom && end !== pos && (
         <b>
           <HorizontalSpacer width={5} />
           {svSizeDisplay(end - pos)}
@@ -320,7 +378,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       {mainGeneId && <VariantGenes mainGeneId={mainGeneId} showMainGene={showMainGene} variant={variant} />}
       {(mainGeneId && Object.keys(variant.transcripts || {}).length > 1) && <VerticalSpacer height={10} />}
       <LargeText>
-        <b><UcscBrowserLink variant={variant} includeEnd={!!variant.svType} /></b>
+        <b><VariantPosition variant={variant} svType={svType} /></b>
         <HorizontalSpacer width={10} />
         {variant.ref && (
           <span>
@@ -341,13 +399,13 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
         variant.liftedOverPos ? (
           <div>
             hg19:
-            <UcscBrowserLink variant={variant} useLiftover includeEnd={!!variant.svType || !variant.ref} />
+            <VariantPosition variant={variant} svType={svType} useLiftover />
           </div>
         ) : <div>hg19: liftover failed</div>
       )}
       {cpxIntervals && cpxIntervals.length > 0 &&
       [<VerticalSpacer height={5} key="vspace" />, ...cpxIntervals.map(
-        e => `${e.type}${e.chrom}-${e.start}-${e.end}`,
+        e => `${SVTYPE_LOOKUP[e.type] || e.type} ${e.chrom}-${e.start}-${e.end}`,
       ).map(e => <div key={e}>{e}</div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
