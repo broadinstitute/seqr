@@ -116,6 +116,7 @@ class TagFieldView extends React.PureComponent {
     idField: PropTypes.string.isRequired,
     initialValues: PropTypes.object,
     tagOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
+    fieldValue: PropTypes.arrayOf(PropTypes.object),
     onSubmit: PropTypes.func.isRequired,
     displayMetadata: PropTypes.bool,
     popup: PropTypes.func,
@@ -157,8 +158,8 @@ class TagFieldView extends React.PureComponent {
   }
 
   fieldValues = () => {
-    const { field, initialValues } = this.props
-    return (initialValues || {})[field] || []
+    const { fieldValue, field, initialValues } = this.props
+    return fieldValue || (initialValues || {})[field] || []
   }
 
   tagSelectOptions = () => {
