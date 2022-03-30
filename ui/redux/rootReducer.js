@@ -88,7 +88,8 @@ export const updateFamily = (values) => {
   const familyField = values.familyField ? `_${values.familyField}` : ''
   return dispatch => new HttpRequestHelper(`${urlBase}/update${familyField}`,
     (responseJson) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
+      const updatesById = values.rawResponse ? responseJson : { familiesByGuid: responseJson }
+      dispatch({ type: RECEIVE_DATA, updatesById })
     }).post(values)
 }
 

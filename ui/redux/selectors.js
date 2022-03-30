@@ -86,7 +86,10 @@ export const getNotesByFamilyType = createSelector(
 export const getProjectAnalysisGroupOptions = createSelector(
   getAnalysisGroupsGroupedByProjectGuid,
   analysisGroupsByProject => Object.entries(analysisGroupsByProject).reduce(
-    (acc, [projectGuid, analysisGroupsByGuid]) => ({ ...acc, [projectGuid]: Object.values(analysisGroupsByGuid) }), {},
+    (acc, [projectGuid, analysisGroupsByGuid]) => ({
+      ...acc,
+      [projectGuid]: Object.values(analysisGroupsByGuid).sort((a, b) => a.name.localeCompare(b.name)),
+    }), {},
   ),
 )
 

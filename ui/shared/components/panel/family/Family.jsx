@@ -63,7 +63,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_ANALYSIS_GROUPS]: {
     canEdit: true,
     component: AnalysisGroups,
-    submitArgs: { familyField: 'analysis_groups' },
+    submitArgs: { familyField: 'analysis_groups', rawResponse: true },
     fieldDisplay: values => values.map(({ name }) => name).join(', '),
   },
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
