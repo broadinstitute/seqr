@@ -9,7 +9,7 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
-    family_variant_tag_summary
+    family_variant_tag_summary, update_family_analysis_groups
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
@@ -239,6 +239,20 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Collaborator User')
+
+    def test_update_family_analysis_groups(self):
+        url = reverse(update_family_analysis_groups, args=[FAMILY_GUID])
+        self.check_manager_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'analysisGroups': [
+            {'analysisGroupGuid': 'AG0000185_accepted', 'name': 'Accepted'}]}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertListEqual(list(response_json.keys()), ['analysisGroupsByGuid'])
+        self.assertSetEqual(set(response_json['analysisGroupsByGuid'].keys()), {'AG0000183_test_group', 'AG0000185_accepted'})
+        self.assertTrue(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000185_accepted']['familyGuids'])
+        self.assertFalse(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000183_test_group']['familyGuids'])
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
