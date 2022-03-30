@@ -20,7 +20,9 @@ DEMO_PROJECT_GUID = 'R0003_test'
 
 PROJECT_PAGE_RESPONSE_KEYS = {'projectsByGuid'}
 
-BASE_CREATE_PROJECT_JSON = {'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38'}
+BASE_CREATE_PROJECT_JSON = {
+    'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True, 'disableMme': True,
+}
 WORKSPACE_CREATE_PROJECT_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNamespace': TEST_WORKSPACE_NAMESPACE}
 WORKSPACE_CREATE_PROJECT_JSON.update(BASE_CREATE_PROJECT_JSON)
 
@@ -54,6 +56,8 @@ class ProjectAPITest(object):
         new_project = Project.objects.get(name='new_project')
         self.assertEqual(new_project.description, 'new project description')
         self.assertEqual(new_project.genome_version, '38')
+        self.assertTrue(new_project.is_demo)
+        self.assertFalse(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.pm_user)
         self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
         expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
@@ -103,6 +107,8 @@ class ProjectAPITest(object):
         new_project = Project.objects.get(name='new_project')
         self.assertEqual(new_project.description, 'new project description')
         self.assertEqual(new_project.genome_version, '38')
+        self.assertFalse(new_project.is_demo)
+        self.assertTrue(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.super_user)
         self.assertListEqual([], list(new_project.projectcategory_set.all()))
 
