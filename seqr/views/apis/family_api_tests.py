@@ -13,7 +13,7 @@ from seqr.views.apis.family_api import update_family_pedigree_image, update_fami
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
-from seqr.models import FamilyAnalysedBy
+from seqr.models import FamilyAnalysedBy, AnalysisGroup
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -253,6 +253,9 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json['analysisGroupsByGuid'].keys()), {'AG0000183_test_group', 'AG0000185_accepted'})
         self.assertTrue(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000185_accepted']['familyGuids'])
         self.assertFalse(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000183_test_group']['familyGuids'])
+
+        self.assertIsNotNone(AnalysisGroup.objects.get(guid='AG0000185_accepted').families.filter(guid=FAMILY_GUID).first())
+        self.assertIsNone(AnalysisGroup.objects.get(guid='AG0000183_test_group').families.filter(guid=FAMILY_GUID).first())
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
