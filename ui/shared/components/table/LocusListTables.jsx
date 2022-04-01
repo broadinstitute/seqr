@@ -10,7 +10,7 @@ import { UpdateLocusListButton, DeleteLocusListButton } from '../buttons/LocusLi
 import { SelectableTableFormInput } from './DataTable'
 import { VerticalSpacer } from '../Spacers'
 import {
-  LOCUS_LIST_FIELDS, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
+  LOCUS_LIST_FIELDS, LOCUS_LIST_NAME_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_CREATED_DATE_FIELD_NAME, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
   LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_IS_PUBLIC_FIELD_NAME, LOCUS_LIST_CURATOR_FIELD_NAME,
 } from '../../utils/constants'
 
@@ -33,7 +33,7 @@ const FIELD_LOOKUP = LOCUS_LIST_FIELDS.reduce(
   }), {},
 )
 
-const BASIC_FIELDS = [LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_NUM_ENTRIES_FIELD].map(
+const BASIC_FIELDS = [LOCUS_LIST_NAME_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_CREATED_DATE_FIELD_NAME, LOCUS_LIST_NUM_ENTRIES_FIELD].map(
   field => FIELD_LOOKUP[field],
 )
 
@@ -44,7 +44,7 @@ const NAME_WITH_LINK_FIELD = {
 
 const CORE_FIELDS = [
   NAME_WITH_LINK_FIELD,
-  ...[LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME].map(
+  ...[LOCUS_LIST_NUM_ENTRIES_FIELD, LOCUS_LIST_DESCRIPTION_FIELD, LOCUS_LIST_CREATED_DATE_FIELD_NAME, LOCUS_LIST_LAST_MODIFIED_FIELD_NAME].map(
     field => FIELD_LOOKUP[field],
   ), { name: 'numProjects', content: 'Projects', width: 1, format: null },
 ]
@@ -83,7 +83,8 @@ const LocusListTables = React.memo(
         <Header size="large" dividing content={`${name} Gene Lists`} />
         <SelectableTableFormInput
           idField="locusListGuid"
-          defaultSortColumn="name"
+          defaultSortColumn="createdDate"
+          defaultSortDescending
           columns={basicFields ? BASIC_FIELDS : tableFields}
           data={tableData[name]}
           getRowFilterVal={getLocusListFilterVal}
