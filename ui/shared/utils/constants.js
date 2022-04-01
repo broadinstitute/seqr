@@ -1221,7 +1221,7 @@ export const INHERITANCE_FILTER_OPTIONS = [
   {
     value: DE_NOVO_FILTER,
     text: 'De Novo/ Dominant',
-    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+    detail: 'Finds variants where all affected individuals have at least one alternate allele and all unaffected are homozygous reference.',
   },
   {
     value: ANY_AFFECTED,
