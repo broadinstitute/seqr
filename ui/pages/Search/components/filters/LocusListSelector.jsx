@@ -52,7 +52,7 @@ class BaseLocusListDropdown extends React.Component {
 
   render() {
     const { locusList, projectLocusListOptions } = this.props
-    const locusListGuid = locusList.locusListGuid || ""
+    const locusListGuid = locusList.locusListGuid || ''
     return (
       <div>
         <Dropdown
