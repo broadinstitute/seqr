@@ -272,16 +272,19 @@ export const getProjectTagTypeOptions = createSelector(
 export const getProjectVariantSavedByOptions = createSelector(
   getProjectFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  (familiesByGuid, variantDetailByFamilyVariant) => [null, ...Object.keys(familiesByGuid).reduce(
-    (acc, familyGuid) => new Set([
-      ...acc,
-      ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
-        ...variantAcc,
-        ...(tags || []).map(({ createdBy }) => createdBy),
-        ...(notes || []).map(({ createdBy }) => createdBy),
-      ]), []),
-    ]), new Set(),
-  )].map(value => ({ value })),
+  (familiesByGuid, variantDetailByFamilyVariant) => [
+    { value: null, text: 'View All' },
+    ...[...Object.keys(familiesByGuid).reduce(
+      (acc, familyGuid) => new Set([
+        ...acc,
+        ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
+          ...variantAcc,
+          ...(tags || []).map(({ createdBy }) => createdBy),
+          ...(notes || []).map(({ createdBy }) => createdBy),
+        ]), []),
+      ]), new Set(),
+    )].map(value => ({ value })),
+  ],
 )
 
 // Family table selectors

@@ -57,6 +57,9 @@ def create_project_handler(request):
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
     project_args['description'] = request_json.get('description', '')
+    project_args['is_demo'] = request_json.get('isDemo', False)
+    if request_json.get('disableMme'):
+        project_args['is_mme_enabled'] = False
 
     project = create_model_from_json(Project, project_args, user=request.user)
     if ANALYST_PROJECT_CATEGORY:

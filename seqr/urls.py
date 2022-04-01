@@ -19,6 +19,7 @@ from seqr.views.apis.family_api import \
     delete_families_handler, \
     update_family_assigned_analyst, \
     update_family_analysed_by, \
+    update_family_analysis_groups, \
     receive_families_table_handler, \
     update_family_pedigree_image, \
     create_family_note, \
@@ -173,6 +174,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
+    'family/(?P<family_guid>[\w.|-]+)/update_analysis_groups': update_family_analysis_groups,
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
     'family/(?P<family_guid>[\w.|-]+)/note/create': create_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,

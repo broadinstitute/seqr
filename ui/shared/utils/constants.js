@@ -216,11 +216,15 @@ export const FAMILY_NOTES_FIELDS = [
   { id: FAMILY_FIELD_MME_NOTES, noteType: 'M' },
 ]
 
-export const FAMILY_DETAIL_FIELDS = [
+export const FAMILY_MAIN_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_GROUPS },
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST },
+]
+
+export const FAMILY_DETAIL_FIELDS = [
+  ...FAMILY_MAIN_FIELDS,
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE },
   { id: FAMILY_FIELD_SUCCESS_STORY },
@@ -407,6 +411,7 @@ export const LOCUS_LIST_NAME_FIELD = 'name'
 export const LOCUS_LIST_NUM_ENTRIES_FIELD = 'numEntries'
 export const LOCUS_LIST_DESCRIPTION_FIELD = 'description'
 export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
+export const LOCUS_LIST_CREATED_DATE_FIELD_NAME = 'createdDate'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
 
@@ -427,6 +432,12 @@ export const LOCUS_LIST_FIELDS = [
     validate: value => (value ? undefined : 'Description is required'),
     width: 9,
     isEditable: true,
+  },
+  {
+    name: LOCUS_LIST_CREATED_DATE_FIELD_NAME,
+    label: 'Created Date',
+    width: 3,
+    fieldDisplay: createdDate => new Date(createdDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
   },
   {
     name: LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
@@ -1217,7 +1228,7 @@ export const INHERITANCE_FILTER_OPTIONS = [
   {
     value: DE_NOVO_FILTER,
     text: 'De Novo/ Dominant',
-    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+    detail: 'Finds variants where all affected individuals have at least one alternate allele and all unaffected are homozygous reference.',
   },
   {
     value: ANY_AFFECTED,
