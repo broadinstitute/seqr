@@ -12,7 +12,7 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
     ProjectCategory, FamilyNote, CAN_EDIT
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
-from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
     get_json_for_family_notes, _get_json_for_individuals
@@ -52,7 +52,7 @@ def create_project_handler(request):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    if has_anvil and not has_workspace_perm(request.user, CAN_EDIT, request_json['workspaceNamespace'], request_json['workspaceName']):
+    if has_anvil and not _is_valid_anvil_workspace(request_json, request.user):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
@@ -70,6 +70,12 @@ def create_project_handler(request):
             project.guid: _get_json_for_project(project, request.user)
         },
     })
+
+
+def _is_valid_anvil_workspace(request_json, user):
+    namespace = request_json.get('workspaceNamespace')
+    name = request_json.get('workspaceName')
+    return bool(name and namespace and has_workspace_perm(user, CAN_EDIT, namespace, name))
 
 
 @login_and_policies_required
@@ -109,6 +115,20 @@ def update_project_handler(request, project_guid):
             project.guid: _get_json_for_project(project, request.user)
         },
     })
+
+
+@pm_required
+def update_project_workspace(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+
+    request_json = json.loads(request.body)
+    if not _is_valid_anvil_workspace(request_json, request.user):
+        return create_json_response({'error': 'Invalid Workspace'}, status=400)
+
+    update_json = {k: v for k, v in request_json.items() if k in ['workspaceNamespace', 'workspaceName']}
+    update_model_from_json(project, update_json, request.user)
+
+    return create_json_response(_get_json_for_project(project, request.user))
 
 
 @login_and_policies_required
