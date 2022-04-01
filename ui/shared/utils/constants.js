@@ -51,6 +51,11 @@ export const EDITABLE_PROJECT_FIELDS = [
   PROJECT_DESC_FIELD,
 ]
 
+export const ANVIL_FIELDS = [
+  { name: 'workspaceNamespace', label: 'Workspace Namespace', validate: validators.required, width: 8, inline: true },
+  { name: 'workspaceName', label: 'Workspace Name', validate: validators.required, width: 8, inline: true },
+]
+
 export const FILE_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
