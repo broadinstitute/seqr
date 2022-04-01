@@ -75,12 +75,35 @@ const mapItemDispatchToProps = (dispatch, ownProps) => ({
 
 const LocusList = connect(mapStateToProps, mapItemDispatchToProps)(LocusListItem)
 
-export const GeneLists = React.memo(({ project }) => (project.locusListGuids || []).map(
-  locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
-))
+export class GeneLists extends React.PureComponent {
 
-GeneLists.propTypes = {
-  project: PropTypes.object.isRequired,
+  static propTypes = {
+    project: PropTypes.object.isRequired,
+  }
+
+  state = { showAll: false }
+
+  show = () => {
+    this.setState({ showAll: true })
+  }
+
+  render() {
+    const { project } = this.props
+    const { showAll } = this.state
+
+    const locusListGuids = project.locusListGuids || []
+    const locusListsToShow = showAll ? locusListGuids : locusListGuids.slice(0, 20)
+
+    return [
+      ...locusListsToShow.map(
+        locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
+      ),
+      locusListsToShow.length < locusListGuids.length ?
+        <ButtonLink key="show" padding="15px 0 0 0" color="grey" onClick={this.show}>Show More...</ButtonLink> :
+        null,
+    ]
+  }
+
 }
 
 const LOCUS_LIST_FIELDS = [{
