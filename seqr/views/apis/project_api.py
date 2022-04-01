@@ -5,6 +5,7 @@ APIs for updating project metadata, as well as creating or deleting projects
 import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Max
 from django.utils import timezone
 
@@ -119,6 +120,9 @@ def update_project_handler(request, project_guid):
 
 @pm_required
 def update_project_workspace(request, project_guid):
+    if not is_anvil_authenticated(request.user):
+        raise PermissionDenied()
+
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
