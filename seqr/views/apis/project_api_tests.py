@@ -347,7 +347,7 @@ class ProjectAPITest(object):
         response_keys = {'projectsByGuid', 'analysisGroupsByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'analysisGroupsLoaded': True}})
-        self.assertEqual(len(response_json['analysisGroupsByGuid']), 1)
+        self.assertEqual(len(response_json['analysisGroupsByGuid']), 2)
         self.assertSetEqual(
             set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
         )

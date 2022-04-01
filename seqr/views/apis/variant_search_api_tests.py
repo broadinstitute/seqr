@@ -72,7 +72,7 @@ EXPECTED_SEARCH_CONTEXT_RESPONSE = {
     },
     'projectsByGuid': {PROJECT_GUID: mock.ANY},
     'familiesByGuid': mock.ANY,
-    'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY},
+    'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY, 'AG0000185_accepted': mock.ANY},
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY, 'LL00005_retina_proteome': mock.ANY},
 }
 
