@@ -41,7 +41,7 @@ export const getVisibleProjects = createSelector(
 export const getCategoryOptions = createSelector(
   getProjectCategoriesByGuid,
   projectCategoriesByGuid => ([
-    { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
+    { value: SHOW_ALL, text: 'All project categories', key: SHOW_ALL },
     { value: SHOW_DEMO, text: 'Demo', key: SHOW_DEMO },
     ...Object.values(projectCategoriesByGuid).map(
       projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }),

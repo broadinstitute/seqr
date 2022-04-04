@@ -9,7 +9,7 @@ import { getProjectFilter, getCategoryOptions } from '../selectors'
 
 const FilterContainer = styled.span`
   display: inline-block;
-  min-width: 8em;
+  min-width: 14em;
   font-size: 12px;
 `
 
