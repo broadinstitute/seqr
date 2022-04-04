@@ -8,9 +8,9 @@ class EsGeneAggSearch(EsSearch):
     AGGREGATION_NAME = 'gene aggregation'
     CACHED_COUNTS_KEY = None
 
-    def search(self, **kwargs):
+    def search(self, *args, **kwargs):
         self._aggregate_by_gene()
-        return super(EsGeneAggSearch, self).search(**kwargs)
+        return super(EsGeneAggSearch, self).search(*args, **kwargs)
 
     def _aggregate_by_gene(self):
         searches = [self._search]

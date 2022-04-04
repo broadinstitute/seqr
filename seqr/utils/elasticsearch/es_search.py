@@ -220,21 +220,15 @@ class EsSearch(object):
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
         has_location_filter = genes or intervals or rs_ids or variant_ids
 
-        if custom_query:
-            if not isinstance(custom_query, list):
-                custom_query = [custom_query]
-            for q_dict in custom_query:
-                self._filter(Q(q_dict))
+        self._filter_custom(custom_query)
 
         if has_location_filter:
             self.filter_by_location(
                 genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=locus)
 
-        if frequencies:
-            self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
+        self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
 
-        if in_silico:
-            self._filter_by_in_silico(in_silico)
+        self._filter_by_in_silico(in_silico)
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self._filter(~Q('exists', field='filters'))
@@ -284,12 +278,22 @@ class EsSearch(object):
         self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family, secondary_dataset_type, skipped_sample_count)
 
 
+    def _filter_custom(self, custom_query):
+        if custom_query:
+            if not isinstance(custom_query, list):
+                custom_query = [custom_query]
+            for q_dict in custom_query:
+                self._filter(Q(q_dict))
+
     def _filter_by_in_silico(self, in_silico_filters):
-        in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
+        in_silico_filters = {k: v for k, v in (in_silico_filters or {}).items() if v is not None and len(v) != 0}
         if in_silico_filters:
             self._filter(_in_silico_filter(in_silico_filters))
 
     def _filter_by_frequency(self, frequencies, pathogenicity=None):
+        if not frequencies:
+            return
+
         clinvar_path_filters = [
             f for f in (pathogenicity or {}).get('clinvar', [])
             if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
