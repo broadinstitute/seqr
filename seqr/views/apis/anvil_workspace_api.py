@@ -242,7 +242,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         project_name=project.name,
         sample_type=sample_type,
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
-        dag_name = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
+        dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
         dag=json.dumps(pipeline_dag, indent=4),
     )
 
@@ -258,7 +258,7 @@ def _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type):
         """.format(
             project_guid = project.guid,
             e = e,
-            dag_name = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
+            dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
             dag = json.dumps(pipeline_dag, indent=4)
         )
     safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, message_content)
