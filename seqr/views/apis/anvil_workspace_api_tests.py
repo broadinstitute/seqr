@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 import mock
 from django.urls.base import reverse
+import responses
 
 from seqr.models import Project
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
@@ -44,6 +45,66 @@ REQUEST_BODY_NO_AGREE_ACCESS = deepcopy(REQUEST_BODY)
 REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 
 TEMP_PATH = '/temp_path/temp_filename'
+
+TEST_GUID = 'P00999'
+MOCK_TOKEN = 'mock token'
+MOCK_AIRFLOW_URL = 'http://testairflowserver'
+UPDATED_ANVIL_VARIABLES = {
+    "key": "AnVIL_WES",
+    "value": json.dumps({ 
+        "active_projects": [TEST_GUID], 
+        "vcf_path": "gs://test_bucket/test_path.vcf", 
+        "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1".format(guid=TEST_GUID), 
+        "projects_to_run": [TEST_GUID] })
+}
+
+DAG_TASKS_RESP = {
+    "tasks": [
+        {
+            "task_id": "create_dataproc_cluster",
+        },
+        {
+            "task_id": "pyspark_compute_project_R0006_test",
+        },
+        {
+            "task_id": "pyspark_compute_variants_AnVIL_WES",
+        },
+        {
+            "task_id": "pyspark_export_project_R0006_test",
+        },
+        {
+            "task_id": "scale_dataproc_cluster",
+        },
+        {
+            "task_id": "skip_compute_project_subset_R0006_test",
+        }
+        ],
+    "total_entries": 6
+}
+UPDATE_DAG_TASKS_RESP = {
+            "tasks": [
+                {
+                    "task_id": "create_dataproc_cluster",
+                },
+                {
+                    "task_id": f"pyspark_compute_project_{TEST_GUID}",
+                },
+                {
+                    "task_id": "pyspark_compute_variants_AnVIL_WES",
+                },
+                {
+                    "task_id": f"pyspark_export_project_{TEST_GUID}",
+                },
+                {
+                    "task_id": "scale_dataproc_cluster",
+                },
+                {
+                    "task_id": f"skip_compute_project_subset_{TEST_GUID}",
+                }
+                ],
+            "total_entries": 6
+        }
+
 
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
@@ -92,6 +153,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
         self.mock_get_ws_access_level.assert_not_called()
 
+    
+    @mock.patch('seqr.models.Project._compute_guid', lambda *args: TEST_GUID)
+    @mock.patch('seqr.views.apis.anvil_workspace_api.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)  
+    @mock.patch('seqr.views.apis.anvil_workspace_api.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
     @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
     @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', None)
     @mock.patch('seqr.views.apis.anvil_workspace_api.time')
@@ -105,10 +170,33 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
     @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
     @mock.patch('seqr.views.apis.anvil_workspace_api.tempfile.NamedTemporaryFile')
+    @responses.activate
     def test_create_project_from_workspace(self, mock_tempfile, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack,
                                            mock_send_email, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
                                            mock_utils_logger):
+        # Set up api responses
+        # update variables
+        responses.add(responses.PATCH, 
+                      '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL), 
+                      json={},
+                      status=200)
+        # get task id 
+        responses.add(responses.GET, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL), 
+                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
+                      json=DAG_TASKS_RESP,
+                      status=200)
+        
+        responses.add(responses.GET, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL), 
+                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
+                      json=UPDATE_DAG_TASKS_RESP, 
+                      status=200)
+        # trigger dag
+        responses.add(responses.POST, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL), 
+                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
+                      json={},
+                      status=200)
+
         # Requesting to load data from a workspace without an existing project
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
@@ -180,6 +268,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         # Test valid operation
+        responses.calls.reset()
         mock_time.reset_mock()
         mock_file_exist.reset_mock()
         mock_file_iter.reset_mock()
@@ -196,6 +285,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertListEqual(
             [project.genome_version, project.description, project.workspace_namespace, project.workspace_name],
             ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+        mock_api_logger.error.assert_not_called()
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
@@ -207,13 +297,40 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             TEMP_PATH, 'gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt'.format(guid=project.guid),
             user=self.manager_user
         )
+        
+        # Test triggering anvil dags
+        self.assertEqual(len(responses.calls), 4)
+        
+        # update variables
+        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
+        self.assertEquals(responses.calls[0].request.method, "PATCH")
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), UPDATED_ANVIL_VARIABLES)
+        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+    
+        # get task id
+        self.assertEqual(responses.calls[1].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[1].request.method, 'GET')
+        self.assertEqual(responses.calls[1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEqual(responses.calls[1].response.json(), DAG_TASKS_RESP)
+        
+        self.assertEqual(responses.calls[2].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[2].request.method, 'GET')
+        self.assertEqual(responses.calls[2].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEqual(responses.calls[2].response.json(), UPDATE_DAG_TASKS_RESP)
+        
+        # trigger dag
+        self.assertEqual(responses.calls[3].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[3].request.method, 'POST')
+        self.assertDictEqual(json.loads(responses.calls[3].request.body), {})
+        self.assertEqual(responses.calls[3].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+
         slack_message = """
         *test_user_manager@test.com* requested to load WES data (GRCh38) from AnVIL workspace *my-seqr-billing/anvil-no-project-workspace1* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*anvil-no-project-workspace1*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
   
-        DAG for the loading pipeline:
+        DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 is triggered with following:
         ```{{
     "active_projects": [
         "{guid}"
@@ -238,10 +355,42 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test saving ID file exception
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
+        # Test triggering dag exception
+        responses.add(responses.PATCH, 
+                      '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL), 
+                      body=UPDATED_ANVIL_VARIABLES,
+                      status=404)
+        
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
-        mock_api_logger.error.assert_called_with('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
-                      self.manager_user, detail=['HG00735', 'NA19675', 'NA19678'])
+          
+        mock_api_logger.error.assert_has_calls([
+            mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
+                      self.manager_user, detail=['HG00735', 'NA19675', 'NA19678']),
+            mock.call(f'404 Client Error: Not Found for url: {MOCK_AIRFLOW_URL}/api/v1/variables/AnVIL_WES', 
+                      self.manager_user)
+            ])
+        
+        slack_message_on_failure = """
+        ERROR triggering AnVIL loading for project {guid}: 404 Client Error: Not Found for url: {airflow_url}/api/v1/variables/AnVIL_WES 
+        
+        DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 should be triggered with following: 
+        ```{{
+            "active_projects": [
+                "{guid}"
+            ],
+            "vcf_path": "gs://test_bucket/test_path.vcf",
+            "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1",
+            "projects_to_run": [
+                "{guid}"
+            ]
+        }}```
+        """.formate(
+            guid=project.guid,
+            airflow_url = MOCK_AIRFLOW_URL
+        )
+        mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message_on_failure)
+
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
@@ -259,6 +408,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.datetime')
     @mock.patch('seqr.views.apis.anvil_workspace_api.send_html_email')
+    @responses.activate
     def test_create_project_from_workspace_loading_delay_email(
             self, mock_send_email, mock_datetime, mock_api_logger, mock_utils_logger):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -272,7 +422,6 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
         self.assertEqual(response.status_code, 200)
         mock_send_email.assert_not_called()
-        mock_api_logger.error.assert_not_called()
 
         # Remove created project to allow future requests
         project = Project.objects.get(
