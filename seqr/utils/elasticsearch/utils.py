@@ -112,6 +112,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
         previous_search_results=previous_search_results,
         inheritance_search=search.get('inheritance'),
         user=user,
+        sort=sort,
     )
 
     if search.get('customQuery'):
@@ -120,9 +121,6 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
             custom_q = [custom_q]
         for q_dict in custom_q:
             es_search.filter(Q(q_dict))
-
-    if sort:
-        es_search.sort(sort)
 
     if has_location_filter:
         es_search.filter_by_location(
@@ -141,9 +139,6 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
         pathogenicity=search.get('pathogenicity'), skip_genotype_filter=skip_genotype_filter,
         has_location_filter=has_location_filter)
-
-    if hasattr(es_search, 'aggregate_by_gene'):
-        es_search.aggregate_by_gene()
 
     variant_results = es_search.search(**search_kwargs)
 

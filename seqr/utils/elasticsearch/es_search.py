@@ -32,7 +32,7 @@ class EsSearch(object):
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
     def __init__(self, families, previous_search_results=None, inheritance_search=None,
-                 return_all_queried_families=False, user=None):
+                 return_all_queried_families=False, user=None, sort=None):
         from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
         self._client = get_es_client()
 
@@ -74,13 +74,16 @@ class EsSearch(object):
 
         self._search = Search()
         self._index_searches = defaultdict(list)
-        self._sort = None
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
         self._paired_index_comp_het = False
         self._no_sample_filters = False
         self._any_affected_sample_filters = False
+
+        self._sort = deepcopy(SORT_FIELDS.get(sort, [])) if sort else None
+        if self._sort:
+            self._sort_search(sort)
 
     @staticmethod
     def _parse_xstop(result):
@@ -176,9 +179,7 @@ class EsSearch(object):
         self._set_index_name()
         return self
 
-    def sort(self, sort):
-        self._sort = deepcopy(SORT_FIELDS.get(sort, []))
-
+    def _sort_search(self, sort):
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
         # Add parameters to scripts
