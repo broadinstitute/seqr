@@ -31,8 +31,7 @@ class EsSearch(object):
     AGGREGATION_NAME = 'compound het'
     CACHED_COUNTS_KEY = 'loaded_variant_counts'
 
-    def __init__(self, families, previous_search_results=None, inheritance_search=None,
-                 return_all_queried_families=False, user=None, sort=None):
+    def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
         from seqr.utils.elasticsearch.utils import get_es_client, InvalidIndexException, InvalidSearchException
         self._client = get_es_client()
 
@@ -44,13 +43,6 @@ class EsSearch(object):
         if len(self.samples_by_family_index) < 1:
             raise InvalidSearchException('No es index found for families {}'.format(
                 ', '.join([f.family_id for f in families])))
-
-        self._family_individual_affected_status = {}
-        self._skipped_sample_count = defaultdict(int)
-        if inheritance_search:
-            self._filter_families_for_inheritance(inheritance_search)
-            if len(self.samples_by_family_index) < 1:
-                raise InvalidSearchException('Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         self._indices = sorted(list(self.samples_by_family_index.keys()))
         self._set_index_metadata()
@@ -74,6 +66,7 @@ class EsSearch(object):
 
         self._search = Search()
         self._index_searches = defaultdict(list)
+        self._family_individual_affected_status = {}
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._filtered_variant_ids = None
@@ -137,12 +130,11 @@ class EsSearch(object):
                     self.samples_by_family_index[alias_index] = {}
                 self.samples_by_family_index[alias_index].update(alias_samples)
 
-    def _filter_families_for_inheritance(self, inheritance_search):
+    def _filter_families_for_inheritance(self, inheritance_filter, skipped_sample_count):
         for index, family_samples in list(self.samples_by_family_index.items()):
             index_skipped_families = []
             for family_guid, samples_by_id in family_samples.items():
-                individual_affected_status = _get_family_affected_status(
-                    samples_by_id, inheritance_search.get('filter') or {})
+                individual_affected_status = _get_family_affected_status(samples_by_id, inheritance_filter)
 
                 has_affected_samples = any(
                     aftd == Individual.AFFECTED_STATUS_AFFECTED for aftd in individual_affected_status.values()
@@ -150,7 +142,7 @@ class EsSearch(object):
                 if not has_affected_samples:
                     index_skipped_families.append(family_guid)
 
-                    self._skipped_sample_count[index] += len(samples_by_id)
+                    skipped_sample_count[index] += len(samples_by_id)
 
                 if family_guid not in self._family_individual_affected_status:
                     self._family_individual_affected_status[family_guid] = {}
@@ -336,6 +328,14 @@ class EsSearch(object):
         if skip_genotype_filter and not inheritance_mode:
             return
 
+        skipped_sample_count = defaultdict(int)
+        if inheritance:
+            self._filter_families_for_inheritance(inheritance_filter, skipped_sample_count)
+            if len(self.samples_by_family_index) < 1:
+                from seqr.utils.elasticsearch.utils import InvalidSearchException
+                raise InvalidSearchException(
+                    'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
         quality_filters_by_family = _quality_filters_by_family(
             quality_filter, self.samples_by_family_index, self._indices, new_svs=new_svs)
 
@@ -344,9 +344,9 @@ class EsSearch(object):
             if inheritance_mode == COMPOUND_HET:
                 return
 
-        self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family, secondary_dataset_type)
+        self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family, secondary_dataset_type, skipped_sample_count)
 
-    def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family, secondary_dataset_type):
+    def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family, secondary_dataset_type, skipped_sample_count):
         has_inheritance_filter = inheritance_filter or inheritance_mode
         all_sample_search = (not quality_filters_by_family) and (inheritance_mode == ANY_AFFECTED or not has_inheritance_filter)
         no_filter_indices = set()
@@ -361,7 +361,7 @@ class EsSearch(object):
             index_fields = self.index_metadata[index]['fields']
 
             if all_sample_search:
-                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + self._skipped_sample_count[index]
+                search_sample_count = sum(len(samples) for samples in family_samples_by_id.values()) + skipped_sample_count[index]
                 index_sample_count = Sample.objects.filter(elasticsearch_index=index, is_active=True).count()
                 if search_sample_count == index_sample_count:
                     if inheritance_mode == ANY_AFFECTED:

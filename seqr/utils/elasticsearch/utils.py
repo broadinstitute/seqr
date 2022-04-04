@@ -110,7 +110,6 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     es_search = es_search_cls(
         search_model.families.all(),
         previous_search_results=previous_search_results,
-        inheritance_search=search.get('inheritance'),
         user=user,
         sort=sort,
     )
