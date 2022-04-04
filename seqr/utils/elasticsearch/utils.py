@@ -119,7 +119,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
         if not isinstance(custom_q, list):
             custom_q = [custom_q]
         for q_dict in custom_q:
-            es_search.filter(Q(q_dict))
+            es_search._filter(Q(q_dict))
 
     if has_location_filter:
         es_search.filter_by_location(

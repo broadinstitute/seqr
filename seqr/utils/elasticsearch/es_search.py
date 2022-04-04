@@ -206,14 +206,14 @@ class EsSearch(object):
 
         self._search = self._search.sort(*self._sort)
 
-    def filter(self, new_filter):
+    def _filter(self, new_filter):
         self._search = self._search.filter(new_filter)
         return self
 
     def filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
         if in_silico_filters:
-            self.filter(_in_silico_filter(in_silico_filters))
+            self._filter(_in_silico_filter(in_silico_filters))
 
     def filter_by_frequency(self, frequencies, pathogenicity=None):
         clinvar_path_filters = [
@@ -244,7 +244,7 @@ class EsSearch(object):
         if path_override:
             q |= (_pathogenicity_filter({'clinvar': clinvar_path_filters}) & path_q)
 
-        self.filter(q)
+        self._filter(q)
 
     def _filter_by_annotations(self, annotations, additional_filters):
         dataset_type = None
@@ -258,13 +258,13 @@ class EsSearch(object):
             if annotation_filter:
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
                 consequences_filter |= annotation_filter
-            self.filter(consequences_filter)
+            self._filter(consequences_filter)
             self._allowed_consequences = allowed_consequences
             dataset_type = _dataset_type_for_annotations(annotations, new_svs=new_svs)
         elif new_svs:
             dataset_type = Sample.DATASET_TYPE_SV_CALLS
         elif annotation_filter:
-            self.filter(annotation_filter)
+            self._filter(annotation_filter)
 
         if dataset_type:
             self.update_dataset_type(dataset_type)
@@ -287,7 +287,7 @@ class EsSearch(object):
                         variant_id_genome_versions[lifted_variant_id] = lifted_genome_version
                         variant_ids.append(lifted_variant_id)
 
-        self.filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
+        self._filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
         if not (genes or intervals or rs_ids) and len({genome_version for genome_version in variant_id_genome_versions.values()}) > 1:
             self._filtered_variant_ids = variant_id_genome_versions
         return self
@@ -304,7 +304,7 @@ class EsSearch(object):
         splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
-            self.filter(~Q('exists', field='filters'))
+            self._filter(~Q('exists', field='filters'))
 
         new_svs = False
         annotations_secondary_search = None
