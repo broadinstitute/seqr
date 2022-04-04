@@ -11,6 +11,11 @@ const FilterContainer = styled.span`
   display: inline-block;
   min-width: 14em;
   font-size: 12px;
+
+  div.visible.menu.transition {
+    display: table !important;
+    border-top: solid 0.5px #96c8da !important;
+  }
 `
 
 const FilterSelector = React.memo(({ filter, options, onChange }) => (
