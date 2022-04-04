@@ -10,7 +10,7 @@ from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_pro
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
     TEST_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
-from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
+from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
@@ -46,7 +46,7 @@ REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 
 TEMP_PATH = '/temp_path/temp_filename'
 
-TEST_GUID = 'P00999'
+TEST_GUID=f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
 MOCK_TOKEN = 'mock token'
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
 UPDATED_ANVIL_VARIABLES = {
@@ -154,7 +154,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.mock_get_ws_access_level.assert_not_called()
 
     
-    @mock.patch('seqr.models.Project._compute_guid', lambda *args: TEST_GUID)
+    @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @mock.patch('seqr.views.apis.anvil_workspace_api.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)  
     @mock.patch('seqr.views.apis.anvil_workspace_api.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
     @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
@@ -179,7 +179,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # update variables
         responses.add(responses.PATCH, 
                       '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL), 
-                      json={},
+                      json={'test': 1},
                       status=200)
         # get task id 
         responses.add(responses.GET, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL), 
@@ -356,13 +356,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         # Test triggering dag exception
-        responses.add(responses.PATCH, 
+        responses.replace(responses.PATCH, 
                       '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL), 
-                      body=UPDATED_ANVIL_VARIABLES,
+                      json={'test': 2},
                       status=404)
         
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
+        project2 = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME2)
           
         mock_api_logger.error.assert_has_calls([
             mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
@@ -385,11 +386,32 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                 "{guid}"
             ]
         }}```
-        """.formate(
+        """.format(
             guid=project.guid,
             airflow_url = MOCK_AIRFLOW_URL
         )
-        mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message_on_failure)
+        mock_slack.assert_called_with(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message_on_failure)
+                
+        slack_message = """
+        *test_user_manager@test.com* requested to load WES data (GRCh38) from AnVIL workspace *my-seqr-billing/anvil-no-project-workspace2* at 
+        gs://test_bucket/test_path.vcf.gz to seqr project <http://testserver/project/{guid}/project_page|*anvil-no-project-workspace2*> (guid: {guid})  
+  
+        The sample IDs to load have been uploaded to gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
+  
+        DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 is triggered with following:
+        ```{{
+    "active_projects": [
+        "{guid}"
+    ],
+    "vcf_path": "gs://test_bucket/test_path.vcf.gz",
+    "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1",
+    "projects_to_run": [
+        "{guid}"
+    ]
+}}```
+        """.format(guid=project2.guid)
+        mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
+        mock_send_email.assert_not_called()
 
 
         # Test logged in locally
