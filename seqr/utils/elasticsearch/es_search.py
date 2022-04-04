@@ -226,23 +226,23 @@ class EsSearch(object):
                 genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=locus)
 
         if frequencies:
-            self.filter_by_frequency(frequencies, pathogenicity=pathogenicity)
+            self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
 
         if in_silico:
-            self.filter_by_in_silico(in_silico)
+            self._filter_by_in_silico(in_silico)
 
-        self.filter_by_annotation_and_genotype(
+        self._filter_by_annotation_and_genotype(
             inheritance, quality_filter=quality_filter,
             annotations=annotations, annotations_secondary=annotations_secondary,
             pathogenicity=pathogenicity, skip_genotype_filter=skip_genotype_filter,
             has_location_filter=has_location_filter)
 
-    def filter_by_in_silico(self, in_silico_filters):
+    def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
         if in_silico_filters:
             self._filter(_in_silico_filter(in_silico_filters))
 
-    def filter_by_frequency(self, frequencies, pathogenicity=None):
+    def _filter_by_frequency(self, frequencies, pathogenicity=None):
         clinvar_path_filters = [
             f for f in (pathogenicity or {}).get('clinvar', [])
             if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
@@ -319,7 +319,7 @@ class EsSearch(object):
             self._filtered_variant_ids = variant_id_genome_versions
         return self
 
-    def filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None, skip_genotype_filter=False, has_location_filter=False):
+    def _filter_by_annotation_and_genotype(self, inheritance, quality_filter=None, annotations=None, annotations_secondary=None, pathogenicity=None, skip_genotype_filter=False, has_location_filter=False):
         has_previous_compound_hets = self.previous_search_results.get('grouped_results')
 
         inheritance_mode = (inheritance or {}).get('mode')
