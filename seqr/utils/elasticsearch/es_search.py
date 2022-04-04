@@ -547,12 +547,12 @@ class EsSearch(object):
             }
         return INHERITANCE_FILTERS[COMPOUND_HET]
 
-    def search(self,  **kwargs):
+    def search(self, page=1, num_results=100):
         indices = self._indices
 
         logger.info('Searching in elasticsearch indices: {}'.format(', '.join(indices)), self._user)
 
-        is_single_search, search_kwargs = self._should_execute_single_search(**kwargs)
+        is_single_search, search_kwargs = self._should_execute_single_search(page=page, num_results=num_results)
 
         if is_single_search:
             return self._execute_single_search(**search_kwargs)

@@ -85,14 +85,16 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     return get_es_variants_for_variant_ids(families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
 
-def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, **kwargs):
+def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
     cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
     previous_search_results = safe_redis_get_json(cache_key) or {}
     total_results = previous_search_results.get('total_results')
 
-    previously_loaded_results, search_kwargs = es_search_cls.process_previous_results(previous_search_results, load_all=load_all, **kwargs)
+    previously_loaded_results, search_kwargs = es_search_cls.process_previous_results(previous_search_results, load_all=load_all, page=page, num_results=num_results)
     if previously_loaded_results is not None:
         return previously_loaded_results, previous_search_results.get('total_results')
+    page = search_kwargs.get('page', page)
+    num_results = search_kwargs.get('num_results', num_results)
 
     if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
         raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
@@ -123,9 +125,9 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     )
 
     if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
-        search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
+        num_results = len(variant_ids) + len(rs_ids)
 
-    variant_results = es_search.search(**search_kwargs)
+    variant_results = es_search.search(page=page, num_results=num_results)
 
     safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
 
