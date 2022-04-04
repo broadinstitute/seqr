@@ -76,7 +76,7 @@ class EsSearch(object):
 
         self._sort = deepcopy(SORT_FIELDS.get(sort, [])) if sort else None
         if self._sort:
-            self._sort_search(sort)
+            self._sort_variants(sort)
 
     @staticmethod
     def _parse_xstop(result):
@@ -176,7 +176,7 @@ class EsSearch(object):
         self._set_index_name()
         return self
 
-    def _sort_search(self, sort):
+    def _sort_variants(self, sort):
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
         # Add parameters to scripts
