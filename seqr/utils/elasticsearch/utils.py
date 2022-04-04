@@ -105,7 +105,6 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
     if invalid_items:
         raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
-    has_location_filter = genes or intervals or rs_ids or variant_ids
 
     es_search = es_search_cls(
         search_model.families.all(),
@@ -114,30 +113,17 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
         sort=sort,
     )
 
-    if search.get('customQuery'):
-        custom_q = search['customQuery']
-        if not isinstance(custom_q, list):
-            custom_q = [custom_q]
-        for q_dict in custom_q:
-            es_search._filter(Q(q_dict))
-
-    if has_location_filter:
-        es_search.filter_by_location(
-            genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=search['locus'])
-        if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
-            search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
-
-    if search.get('freqs'):
-        es_search.filter_by_frequency(search['freqs'], pathogenicity=search.get('pathogenicity'))
-
-    if search.get('in_silico'):
-        es_search.filter_by_in_silico(search['in_silico'])
-
-    es_search.filter_by_annotation_and_genotype(
-        search.get('inheritance'), quality_filter=search.get('qualityFilter'),
+    es_search.filter_variants(
+        inheritance=search.get('inheritance'), frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        pathogenicity=search.get('pathogenicity'), skip_genotype_filter=skip_genotype_filter,
-        has_location_filter=has_location_filter)
+        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
+        custom_query=search.get('customQuery'), locus=search.get('locus'),
+        genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
+        skip_genotype_filter=skip_genotype_filter,
+    )
+
+    if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
+        search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
 
     variant_results = es_search.search(**search_kwargs)
 

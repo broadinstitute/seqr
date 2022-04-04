@@ -210,6 +210,33 @@ class EsSearch(object):
         self._search = self._search.filter(new_filter)
         return self
 
+    def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
+                        frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
+                        quality_filter=None, custom_query=None, skip_genotype_filter=False):
+        has_location_filter = genes or intervals or rs_ids or variant_ids
+
+        if custom_query:
+            if not isinstance(custom_query, list):
+                custom_query = [custom_query]
+            for q_dict in custom_query:
+                self._filter(Q(q_dict))
+
+        if has_location_filter:
+            self.filter_by_location(
+                genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=locus)
+
+        if frequencies:
+            self.filter_by_frequency(frequencies, pathogenicity=pathogenicity)
+
+        if in_silico:
+            self.filter_by_in_silico(in_silico)
+
+        self.filter_by_annotation_and_genotype(
+            inheritance, quality_filter=quality_filter,
+            annotations=annotations, annotations_secondary=annotations_secondary,
+            pathogenicity=pathogenicity, skip_genotype_filter=skip_genotype_filter,
+            has_location_filter=has_location_filter)
+
     def filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
         if in_silico_filters:
