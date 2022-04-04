@@ -129,7 +129,7 @@ def update_project_workspace(request, project_guid):
     if not _is_valid_anvil_workspace(request_json, request.user):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
-    update_json = {k: v for k, v in request_json.items() if k in ['workspaceNamespace', 'workspaceName']}
+    update_json = {k: request_json[k] for k in ['workspaceNamespace', 'workspaceName']}
     update_model_from_json(project, update_json, request.user)
 
     return create_json_response(_get_json_for_project(project, request.user))
