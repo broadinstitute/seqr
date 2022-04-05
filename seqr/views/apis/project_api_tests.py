@@ -108,7 +108,8 @@ class ProjectAPITest(object):
         self.assertEqual(new_project.description, 'new project description')
         self.assertEqual(new_project.genome_version, '38')
         self.assertFalse(new_project.is_demo)
-        self.assertTrue(new_project.is_mme_enabled)
+        # 2022-04-05 mfranklin: we changed default is_mme_enabled behaviour
+        # self.assertTrue(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.super_user)
         self.assertListEqual([], list(new_project.projectcategory_set.all()))
 
