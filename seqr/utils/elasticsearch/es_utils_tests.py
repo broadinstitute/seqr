@@ -1806,9 +1806,7 @@ class EsUtilsTest(TestCase):
             'total_results': 1,
         })
 
-        annotation_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
-            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}}]}}
+        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}}
 
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
@@ -1836,9 +1834,7 @@ class EsUtilsTest(TestCase):
         self.assertIsNone(variants)
         self.assertEqual(total_results, 0)
 
-        annotation_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
-            {'terms': {'transcriptConsequenceTerms': ['intron']}}]}}
+        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}}
 
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
@@ -2087,10 +2083,7 @@ class EsUtilsTest(TestCase):
 
         get_es_variants(results_model, num_results=10)
 
-        annotation_secondary_query = {'bool': {'should': [
-            {'terms': {'transcriptConsequenceTerms': ['gCNV_DEL']}},
-            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}},
-        ]}}
+        annotation_secondary_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'gCNV_DEL']}}
 
         self.assertExecutedSearches([
             dict(
