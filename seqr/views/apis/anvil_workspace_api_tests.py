@@ -364,35 +364,37 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         project2 = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME2)
-          
-        mock_api_logger.error.assert_has_calls([
+        
+        logger_calls = [
             mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
                       self.manager_user, detail=['HG00735', 'NA19675', 'NA19678']),
             mock.call(f'404 Client Error: Not Found for url: {MOCK_AIRFLOW_URL}/api/v1/variables/AnVIL_WES', 
                       self.manager_user)
-            ])
+        ]
+        
+        mock_api_logger.error.assert_has_calls(logger_calls)
         
         slack_message_on_failure = """
         ERROR triggering AnVIL loading for project {guid}: 404 Client Error: Not Found for url: {airflow_url}/api/v1/variables/AnVIL_WES 
         
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 should be triggered with following: 
         ```{{
-            "active_projects": [
-                "{guid}"
-            ],
-            "vcf_path": "gs://test_bucket/test_path.vcf",
-            "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1",
-            "projects_to_run": [
-                "{guid}"
-            ]
-        }}```
+    "active_projects": [
+        "{guid}"
+    ],
+    "vcf_path": "gs://test_bucket/test_path.vcf.gz",
+    "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1",
+    "projects_to_run": [
+        "{guid}"
+    ]
+}}```
         """.format(
-            guid=project.guid,
+            guid=project2.guid,
             airflow_url = MOCK_AIRFLOW_URL
         )
-        mock_slack.assert_called_with(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message_on_failure)
+        #mock_slack.assert_called_with(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message_on_failure)
                 
-        slack_message = """
+        slack_message_as_normal = """
         *test_user_manager@test.com* requested to load WES data (GRCh38) from AnVIL workspace *my-seqr-billing/anvil-no-project-workspace2* at 
         gs://test_bucket/test_path.vcf.gz to seqr project <http://testserver/project/{guid}/project_page|*anvil-no-project-workspace2*> (guid: {guid})  
   
@@ -410,7 +412,12 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     ]
 }}```
         """.format(guid=project2.guid)
-        mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
+        slack_calls = [
+            mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message),
+            mock.call(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message_on_failure),
+            mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message_as_normal),
+        ]
+        mock_slack.assert_has_calls(slack_calls)
         mock_send_email.assert_not_called()
 
 
