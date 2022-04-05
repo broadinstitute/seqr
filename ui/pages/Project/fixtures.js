@@ -205,6 +205,7 @@ export const STATE_WITH_2_FAMILIES = {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
       individualId: 'NA19678',
+      displayName: 'NA19678',
       affected: 'N',
       caseReviewStatus: 'A',
       caseReviewStatusLastModifiedBy: null,
@@ -260,6 +261,7 @@ export const STATE_WITH_2_FAMILIES = {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
       individualId: 'NA19679',
+      displayName: 'NA19679_1',
       affected: 'N',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -271,7 +273,9 @@ export const STATE_WITH_2_FAMILIES = {
     I021476_na19678_2: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_2',
+      individualGuid: 'I021476_na19678_2',
       individualId: 'NA19678',
+      displayName: 'NA19678_2',
       affected: 'N',
       caseReviewStatus: 'A',
       caseReviewStatusLastModifiedBy: null,
@@ -311,6 +315,7 @@ export const STATE_WITH_2_FAMILIES = {
       datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
       datasetName: null,
       datasetType: "VARIANTS",
+      familyGuid: 'F011652_2',
       individualGuid: "I021476_na19678_2",
       loadedDate: "2018-03-13T13:25:21.551Z",
       projectGuid: "R0237_1000_genomes_demo",
@@ -394,6 +399,7 @@ export const STATE_WITH_2_FAMILIES = {
   },
   savedVariantTableState: { hideExcluded: true, recordsPerPage: 1 },
   projectSavedVariantsLoading: {},
+  familyDetailsLoading: {},
   savedVariantsByGuid: {
     SV0000004_116042722_r0390_1000: {
       alt: "T",

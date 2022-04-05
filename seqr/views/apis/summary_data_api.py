@@ -1,17 +1,12 @@
-from django.db.models import prefetch_related_objects, Q
-
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
     parse_mme_gene_variants, get_mme_metrics
 from matchmaker.models import MatchmakerSubmission
-from seqr.views.apis.saved_variant_api import _add_locus_lists
-from seqr.models import Family, LocusList, VariantTagType, SavedVariant, Individual,VariantFunctionalData
+from seqr.models import Family, VariantTagType, SavedVariant, RnaSeqTpm
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, get_json_for_saved_variants_with_tags, \
-    _get_json_for_models, get_json_for_matchmaker_submissions, get_json_for_projects, _get_json_for_families, \
-    get_json_for_locus_lists
+from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
-from seqr.views.utils.variant_utils import saved_variant_genes
+from seqr.views.utils.variant_utils import get_variants_response
 from settings import ANALYST_PROJECT_CATEGORY
 
 MAX_SAVED_VARIANTS = 10000
@@ -85,44 +80,17 @@ def saved_variants_page(request, tag):
     elif saved_variant_models.count() > MAX_SAVED_VARIANTS:
         return create_json_response({'error': 'Select a gene to filter variants'}, status=400)
 
-    prefetch_related_objects(saved_variant_models, 'family__project')
-    response_json = get_json_for_saved_variants_with_tags(saved_variant_models, add_details=True, include_missing_variants=True)
+    response_json = get_variants_response(
+        request, saved_variant_models, add_all_context=True, include_igv=False, add_locus_list_detail=True,
+        include_missing_variants=True, include_rna_seq=False,
+    )
 
-    project_models_by_guid = {variant.family.project.guid: variant.family.project for variant in saved_variant_models}
-    families = {variant.family for variant in saved_variant_models}
-    individuals = Individual.objects.filter(family__in=families)
-
-    saved_variants = list(response_json['savedVariantsByGuid'].values())
-    genes = saved_variant_genes(saved_variants)
-    locus_lists_by_guid = _add_locus_lists(list(project_models_by_guid.values()), genes, include_all_lists=True)
-
-    projects_json = get_json_for_projects(list(project_models_by_guid.values()), user=request.user, add_project_category_guids_field=False)
-
-    variant_tag_types = VariantTagType.objects.filter(Q(project__in=project_models_by_guid.values()) | Q(project__isnull=True))
-    prefetch_related_objects(variant_tag_types, 'project')
-    variant_tags_json = _get_json_for_models(variant_tag_types)
-    tag_projects = {vt.guid: vt.project.guid for vt in variant_tag_types if vt.project}
-
-    for project_json in projects_json:
-        project_guid = project_json['projectGuid']
-        project_variant_tags = [
-            vt for vt in variant_tags_json if tag_projects.get(vt['variantTagTypeGuid'], project_guid) == project_guid]
-        project_json.update({
-            'locusListGuids': list(locus_lists_by_guid.keys()),
-            'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order'] or 0),
-            'variantFunctionalTagTypes': VariantFunctionalData.FUNCTIONAL_DATA_TAG_TYPES,
-        })
-
-    families_json = _get_json_for_families(list(families), user=request.user, add_individual_guids_field=True)
-    individuals_json = _get_json_for_individuals(individuals, add_hpo_details=True, user=request.user)
-    for locus_list in get_json_for_locus_lists(LocusList.objects.filter(guid__in=locus_lists_by_guid.keys()), request.user):
-        locus_lists_by_guid[locus_list['locusListGuid']].update(locus_list)
-
-    response_json.update({
-        'genesById': genes,
-        'projectsByGuid': {project['projectGuid']: project for project in projects_json},
-        'familiesByGuid': {family['familyGuid']: family for family in families_json},
-        'individualsByGuid': {indiv['individualGuid']: indiv for indiv in individuals_json},
-        'locusListsByGuid': locus_lists_by_guid,
-    })
     return create_json_response(response_json)
+
+@login_and_policies_required
+def rna_seq_expression(request, gene, tissues):
+    response = {}
+    for tissue in tissues.split(','):
+        response[tissue] = list(RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene).values_list('tpm', flat=True))
+
+    return create_json_response(response)

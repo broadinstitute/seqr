@@ -10,7 +10,6 @@ import { getProjectFamiliesByGuid } from '../../selectors'
 
 const EditFamiliesForm = React.memo(props => (
   <EditRecordsForm
-    formName="editFamilies"
     modalName={props.modalName}
     idField="familyGuid"
     entityKey="families"

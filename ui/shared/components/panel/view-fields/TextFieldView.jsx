@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Loader } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { validators } from '../../form/ReduxFormWrapper'
+import { validators } from '../../form/FormHelpers'
 import { HorizontalSpacer } from '../../Spacers'
 import BaseFieldView from './BaseFieldView'
 

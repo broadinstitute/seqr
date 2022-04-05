@@ -84,10 +84,8 @@ const BulkUploadForm = React.memo(({
       </Table.Body>
     </NoBorderTable>
     <FileUploadField
-      clearTimeOut={0}
       dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
       url={url || `/api/project/${project.projectGuid}/upload_${name}_table`}
-      auto
       required
       name={FILE_FIELD_NAME}
       styles={UPLOADER_STYLES}

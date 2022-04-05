@@ -40,6 +40,7 @@ class HorizontalStackedBar extends React.PureComponent {
   static propTypes = {
     title: PropTypes.string.isRequired,
     data: PropTypes.arrayOf(PropTypes.object), // an array of objects with keys: name, count, color, percent
+    dataCounts: PropTypes.object, // optional map of name to count to use instead fo data count
     width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     height: PropTypes.number,
     linkPath: PropTypes.string,
@@ -53,25 +54,21 @@ class HorizontalStackedBar extends React.PureComponent {
 
   render() {
     const {
-      title, data, width, height, linkPath, sectionLinks, showAllPopupCategories, minPercent = 1,
+      title, data, dataCounts, width, height, linkPath, sectionLinks, showAllPopupCategories, minPercent = 1,
       noDataMessage = 'No Data', showPercent = true, showTotal = true,
     } = this.props
-    const total = data.reduce((acc, d) => acc + d.count, 0)
+    const total = (dataCounts ? Object.values(dataCounts) : data.map(({ count }) => count)).reduce(
+      (acc, count) => acc + count, 0,
+    )
 
     if (total === 0) {
       return <BarContainer width={width} height={height}>{noDataMessage}</BarContainer>
     }
 
-    const dataWithPercents = data.reduce(
-      (acc, d) => [
-        ...acc,
-        {
-          ...d,
-          percent: (100 * (d.count || 0)) / total,
-        },
-      ],
-      [],
-    )
+    const dataWithPercents = data.map((d) => {
+      const count = dataCounts ? dataCounts[d.name] : d.count
+      return { ...d, count: count || 0, percent: (100 * (count || 0)) / total }
+    })
     let currCategory = null
     const popupData = dataWithPercents.reduce((acc, d) => {
       if (d.count <= 0 && !showAllPopupCategories) {
@@ -119,7 +116,7 @@ class HorizontalStackedBar extends React.PureComponent {
                         <TableCell singleLine colSpan={d.header ? 3 : 1} disabled={Boolean(d.header)}>
                           {d.name}
                         </TableCell>
-                        {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toPrecision(2)}%)`}</TableCell>}
+                        {!d.header && <TableCell collapsing>{showPercent && `(${d.percent.toFixed(0)}%)`}</TableCell>}
                       </TableRow>
                     ))
                   }

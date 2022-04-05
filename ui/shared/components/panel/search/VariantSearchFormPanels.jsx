@@ -1,23 +1,18 @@
-/* eslint-disable react/destructuring-assignment */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { FormSection } from 'redux-form'
 import { Form, Accordion, Header, Segment, Grid, Icon, Loader } from 'semantic-ui-react'
 
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { ButtonLink } from 'shared/components/StyledComponents'
 import { Select, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
-import { configuredField, configuredFields } from 'shared/components/form/ReduxFormWrapper'
+import { configuredField, configuredFields } from 'shared/components/form/FormHelpers'
 import { VEP_GROUP_OTHER, SPLICE_AI_FIELD, SV_IN_SILICO_GROUP, NO_SV_IN_SILICO_GROUPS } from 'shared/utils/constants'
 
 import { FrequencyFilter, HeaderFrequencyFilter } from './FrequencyFilter'
 import {
   FREQUENCIES,
   IN_SILICO_FIELDS,
-  PATHOGENICITY_FIELDS,
-  PATHOGENICITY_FILTER_OPTIONS,
   HGMD_PATHOGENICITY_FIELDS,
   HGMD_PATHOGENICITY_FILTER_OPTIONS,
   ANY_PATHOGENICITY_FILTER,
@@ -37,6 +32,8 @@ import {
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
 
 const ToggleHeader = styled(Header).attrs({ size: 'huge', block: true })`
+  margin-top: 0px !important;
+
   .dropdown.icon {
     vertical-align: middle !important;
   }
@@ -96,23 +93,20 @@ const LeftAligned = styled.div`
 
 const LazyLabeledSlider = props => <React.Suspense fallback={<Loader />}><LabeledSlider {...props} /></React.Suspense>
 
-const JsonSelectPropsWithAll = (options, all) => ({
+export const JsonSelectPropsWithAll = (options, all) => ({
   component: Select,
   format: val => JSON.stringify(val) || JSON.stringify(all.value),
   parse: val => JSON.parse(val),
   options: options.map(({ value, ...option }) => ({ ...option, value: JSON.stringify(value) })),
 })
 
-const pathogenicityPanel = hasHgmdPermission => ({
+export const HGMD_PATHOGENICITY_PANEL = {
   name: 'pathogenicity',
-  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(hasHgmdPermission ? HGMD_PATHOGENICITY_FILTER_OPTIONS : PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
-  fields: hasHgmdPermission ? HGMD_PATHOGENICITY_FIELDS : PATHOGENICITY_FIELDS,
+  headerProps: { title: 'Pathogenicity', inputProps: JsonSelectPropsWithAll(HGMD_PATHOGENICITY_FILTER_OPTIONS, ANY_PATHOGENICITY_FILTER) },
+  fields: HGMD_PATHOGENICITY_FIELDS,
   fieldProps: { control: AlignedCheckboxGroup, format: val => val || [] },
   helpText: 'Filter by reported pathogenicity. This overrides the annotation filter, so variants will be returned if they have either the specified transcript consequence OR pathogenicity. This also overrides the frequency filter, so variants will be returned if they have either the specified frequency OR pathogenicity and frequency up to 0.05',
-})
-
-export const HGMD_PATHOGENICITY_PANEL = pathogenicityPanel(true)
-export const PATHOGENICITY_PANEL = pathogenicityPanel(false)
+}
 
 const IN_SILICO_SPLICING_FIELD = IN_SILICO_FIELDS.find(({ name }) => name === SPLICE_AI_FIELD)
 const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
@@ -160,7 +154,7 @@ export const annotationFieldLayout = (annotationGroups, hideOther) => fieldCompo
   ) : null,
 ].filter(fields => fields)
 
-const MAX_FREQ_COMPONENTS_PER_ROW = 6
+const MAX_FREQ_COMPONENTS_PER_ROW = 4
 
 // Layout the frequency filter fields into two rows.
 const freqFieldLayout = fieldComponents => (
@@ -235,7 +229,7 @@ const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps && (
         <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={stopPropagation}>
-          {configuredField({ ...inputProps, name })}
+          {configuredField({ ...inputProps, name: `search.${name}` })}
         </ToggleHeaderFieldColumn>
       )}
     </Grid.Row>
@@ -251,10 +245,10 @@ HeaderContent.propTypes = {
 
 const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout }) => {
   const fieldComponents = fields && configuredFields(
-    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field })) },
+    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field, name: `search.${name}.${field.name}` })) },
   )
   return (
-    <FormSection name={name}>
+    <div>
       {helpText && (
         <i>
           {helpText}
@@ -266,7 +260,7 @@ const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayo
         {fieldLayout ? fieldLayout(fieldComponents) : fieldComponents}
         <Form.Field width={2} />
       </Form.Group>
-    </FormSection>
+    </div>
   )
 })
 
@@ -319,43 +313,40 @@ class VariantSearchFormPanels extends React.PureComponent {
           </ButtonLink>
         </ExpandCollapseCategoryContainer>
         <VerticalSpacer height={10} />
-        <FormSection name="search">
-          <Accordion fluid exclusive={false}>
-            {panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
-              const isActive = !!active[name]
-              let attachedTitle = true
-              if (i === 0) {
-                attachedTitle = 'top'
-              } else if (i === panels.length - 1 && !isActive) {
-                attachedTitle = 'bottom'
-              }
-              return [
-                ...acc,
-                <Accordion.Title
-                  key={`${name}-title`}
-                  active={isActive}
-                  index={i}
-                  onClick={this.handleTitleClick(name)}
-                  as={ToggleHeader}
-                  attached={attachedTitle}
-                >
-                  <Icon name="dropdown" />
-                  <HeaderContent name={name} {...headerProps} />
-                </Accordion.Title>,
-                <Accordion.Content
-                  key={`${name}-content`}
-                  active={isActive}
-                  as={Segment}
-                  attached={i === panels.length - 1 ? 'bottom' : true}
-                  padded
-                  textAlign="center"
-                >
-                  <PanelContent name={name} {...panelContentProps} />
-                </Accordion.Content>,
-              ]
-            }, [])}
-          </Accordion>
-        </FormSection>
+        <Accordion fluid exclusive={false}>
+          {panels.reduce((acc, { name, headerProps, ...panelContentProps }, i) => {
+            const isActive = !!active[name]
+            let attachedTitle = true
+            if (i === 0) {
+              attachedTitle = 'top'
+            } else if (i === panels.length - 1 && !isActive) {
+              attachedTitle = 'bottom'
+            }
+            return [...acc,
+              <Accordion.Title
+                key={`${name}-title`}
+                active={isActive}
+                index={i}
+                onClick={this.handleTitleClick(name)}
+                as={ToggleHeader}
+                attached={attachedTitle}
+              >
+                <Icon name="dropdown" />
+                <HeaderContent name={name} {...headerProps} />
+              </Accordion.Title>,
+              <Accordion.Content
+                key={`${name}-content`}
+                active={isActive}
+                as={Segment}
+                attached={i === panels.length - 1 ? 'bottom' : true}
+                padded
+                textAlign="center"
+              >
+                <PanelContent name={name} {...panelContentProps} />
+              </Accordion.Content>,
+            ]
+          }, [])}
+        </Accordion>
       </div>
     )
   }

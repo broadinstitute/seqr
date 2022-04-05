@@ -4,7 +4,7 @@ import { Icon } from 'semantic-ui-react'
 
 import BaseFieldView from './BaseFieldView'
 import { BaseSemanticInput } from '../../form/Inputs'
-import { validators } from '../../form/ReduxFormWrapper'
+import { validators } from '../../form/FormHelpers'
 import { ButtonLink } from '../../StyledComponents'
 
 const RemovableInput = React.memo(({ removeField, itemComponent, ...props }) => React.createElement(
@@ -52,7 +52,7 @@ class ListFieldView extends React.PureComponent {
 
   fieldDisplay = (values) => {
     const { itemJoin, itemDisplay, itemKey } = this.props
-    return (itemJoin ? values.join(itemJoin) : values.map(
+    return (itemJoin ? values.join(itemJoin) : values.filter(val => val).map(
       value => <div key={itemKey ? itemKey(value) : value}>{itemDisplay ? itemDisplay(value) : value}</div>,
     ))
   }

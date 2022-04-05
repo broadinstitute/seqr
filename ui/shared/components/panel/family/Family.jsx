@@ -16,7 +16,8 @@ import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 import { InlineHeader } from '../../StyledComponents'
 import {
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
+  FAMILY_ANALYSIS_STATUS_LOOKUP,
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
@@ -28,8 +29,9 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
   FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
+  FAMILY_FIELD_ANALYSIS_GROUPS,
 } from '../../../utils/constants'
-import { FirstSample, AnalystEmailDropdown, AnalysedBy, analysisStatusIcon } from './FamilyFields'
+import { FirstSample, AnalystEmailDropdown, AnalysedBy, AnalysisGroups, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
 
 const ASSIGNED_ANALYST_EDIT_FIELDS = [
@@ -58,11 +60,18 @@ const getNoteField = noteType => ({
 })
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
+  [FAMILY_FIELD_ANALYSIS_GROUPS]: {
+    canEdit: true,
+    component: AnalysisGroups,
+    submitArgs: { familyField: 'analysis_groups', rawResponse: true },
+    fieldDisplay: values => values.map(({ name }) => name).join(', '),
+  },
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     canEdit: true,
     component: OptionFieldView,
-    tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
+    tagOptions: SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
+    tagOptionLookup: FAMILY_ANALYSIS_STATUS_LOOKUP,
     tagAnnotation: analysisStatusIcon,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {
@@ -174,14 +183,22 @@ class Family extends React.PureComponent {
       )
       leftContent = (
         <span>
-          {compact ? familyHeader : <div key="header">{familyHeader}</div>}
-          <PedigreeImagePanel
-            key="pedigree"
-            family={family}
-            disablePedigreeZoom={disablePedigreeZoom}
-            compact={compact}
-            isEditable={!disableEdit && project.canEdit}
-          />
+          {compact ? (
+            <span>
+              {familyHeader}
+              {`(${family.individualGuids.length})`}
+            </span>
+          ) : (
+            <div key="header">
+              {familyHeader}
+              <PedigreeImagePanel
+                key="pedigree"
+                family={family}
+                disablePedigreeZoom={disablePedigreeZoom}
+                isEditable={!disableEdit && project.canEdit}
+              />
+            </div>
+          )}
         </span>
       )
     }

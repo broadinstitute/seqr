@@ -1,11 +1,10 @@
 import json
-from django.utils import timezone
 
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, update_variant_samples, \
-    validate_index_metadata_and_get_elasticsearch_index_samples, load_mapping_file
+from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file, \
+    validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, \
@@ -56,34 +55,23 @@ def add_variants_dataset_handler(request, project_guid):
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
-    loaded_date = timezone.now()
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     try:
-        samples, included_families, matched_individual_ids = match_sample_ids_to_sample_records(
-            project=project,
+        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids, _ = match_and_update_samples(
+            projects=[project],
             user=request.user,
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
             dataset_type=dataset_type,
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-            loaded_date=loaded_date,
             raise_no_match_error=ignore_extra_samples,
             raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
         )
     except ValueError as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
-    activated_sample_guids, inactivated_sample_guids = update_variant_samples(
-        samples, request.user, elasticsearch_index, loaded_date, dataset_type, sample_type)
-
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
-
-    family_guids_to_update = [
-        family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
-    ]
-    Family.bulk_update(
-        request.user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
 
     if project_has_analyst_access(project):
         updated_individuals = {sample.individual_id for sample in updated_samples}
@@ -129,7 +117,7 @@ We have loaded {num_sample} samples from the AnVIL workspace <a href={anvil_url}
 
     response_json = _get_samples_json(updated_samples, inactivated_sample_guids, project_guid)
     response_json['familiesByGuid'] = {family_guid: {'analysisStatus': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}
-                                       for family_guid in family_guids_to_update}
+                                       for family_guid in updated_family_guids}
 
     return create_json_response(response_json)
 

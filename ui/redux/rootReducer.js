@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import { reducer as formReducer, SubmissionError } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
@@ -15,7 +14,7 @@ import {
 import modalReducers from './utils/modalReducer'
 import {
   RECEIVE_DATA, REQUEST_PROJECTS, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES, REQUEST_SAVED_VARIANTS,
-  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity,
+  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity, loadFamilyData, loadProjectChildEntities,
 } from './utils/reducerUtils'
 
 /**
@@ -34,6 +33,8 @@ const RECEIVE_USER_OPTIONS = 'RECEIVE_USER_OPTIONS'
 const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
+const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
+const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
 
 // action creators
 
@@ -46,8 +47,12 @@ export const fetchProjects = () => (dispatch) => {
     e => dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })).get()
 }
 
-export const loadUserOptions = analystsOnly => (dispatch) => {
-  const url = analystsOnly ? '/api/users/get_analyst_options' : '/api/users/get_options'
+export const loadUserOptions = familyGuid => (dispatch, getState) => {
+  let url = '/api/users/get_options'
+  if (familyGuid) {
+    const { projectGuid } = getState().familiesByGuid[familyGuid]
+    url = `${url}/${projectGuid}`
+  }
   dispatch({ type: REQUEST_USER_OPTIONS })
   new HttpRequestHelper(url,
     (responseJson) => {
@@ -58,20 +63,21 @@ export const loadUserOptions = analystsOnly => (dispatch) => {
     }).get()
 }
 
-export const loadAnalystOptions = () => loadUserOptions(true)
-
 export const updateUser = values => dispatch => new HttpRequestHelper('/api/users/update',
   (responseJson) => {
     dispatch({ type: UPDATE_USER, updates: responseJson })
-  },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
   }).post(values)
 
 export const updateProject = (values) => {
   const actionSuffix = values.projectField ? `_project_${values.projectField}` : '_project'
   return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)
 }
+
+export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS)
+
+export const loadFamilyDetails = familyGuid => loadFamilyData(
+  familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
+)
 
 export const updateFamily = (values) => {
   const urlBase = `/api/family/${values.familyGuid}`
@@ -82,10 +88,8 @@ export const updateFamily = (values) => {
   const familyField = values.familyField ? `_${values.familyField}` : ''
   return dispatch => new HttpRequestHelper(`${urlBase}/update${familyField}`,
     (responseJson) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
+      const updatesById = values.rawResponse ? responseJson : { familiesByGuid: responseJson }
+      dispatch({ type: RECEIVE_DATA, updatesById })
     }).post(values)
 }
 
@@ -94,9 +98,6 @@ export const updateIndividual = values => (dispatch) => {
   return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update${individualField}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { individualsByGuid: responseJson } })
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
 
@@ -202,14 +203,26 @@ export const loadSearchedVariants = (
   if (!sort) {
     sort = state.variantSearchDisplay.sort || SORT_BY_XPOS
   }
-  const apiQueryParams = { sort: sort.toLowerCase(), page }
+  const urlQueryParams = { sort: sort.toLowerCase(), page }
 
   // Update search table state and query params
   dispatch({ type: UPDATE_SEARCHED_VARIANT_DISPLAY, updates: { sort: sort.toUpperCase(), page } })
-  updateQueryParams(apiQueryParams)
+  updateQueryParams(urlQueryParams)
+
+  const apiQueryParams = { ...urlQueryParams, loadFamilyContext: true, loadProjectTagTypes: true }
+  const search = state.searchesByHash[searchHash]
+  if (search && search.projectFamilies && search.projectFamilies.length > 0) {
+    apiQueryParams.loadProjectTagTypes = search.projectFamilies.some(
+      ({ projectGuid }) => !state.projectsByGuid[projectGuid]?.variantTagTypes,
+    )
+    apiQueryParams.loadFamilyContext = search.projectFamilies.some(
+      ({ familyGuids }) => !familyGuids || familyGuids.some(
+        familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
+      ),
+    )
+  }
 
   const url = `/api/search/${searchHash}?${getUrlQueryString(apiQueryParams)}`
-  const search = state.searchesByHash[searchHash]
 
   // Fetch variants
   new HttpRequestHelper(url,
@@ -245,9 +258,6 @@ const updateSavedVariant = (values, action = 'create') => (dispatch, getState) =
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post({ searchHash: getState().currentSearchHash, ...values })
 
 export const updateVariantNote = (values) => {
@@ -269,9 +279,6 @@ export const updateVariantMainTranscript = (variantGuid, transcriptId) => dispat
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post()
 
 export const updateLocusList = values => (dispatch) => {
@@ -289,9 +296,7 @@ export const updateLocusList = values => (dispatch) => {
       if (e.body && e.body.invalidLocusListItems) {
         error = `${error} Invalid genes/ intervals: ${e.body.invalidLocusListItems.join(', ')}`
       }
-      throw new SubmissionError({
-        _error: [error],
-      })
+      throw new Error(error)
     }).post(values)
 }
 
@@ -302,14 +307,17 @@ const rootReducer = combineReducers({
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
+  familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
+  analysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_DATA),
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
   pagenesById: createObjectsByIdReducer(RECEIVE_DATA, 'pagenesById'),
+  rnaSeqDataByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'rnaSeqData'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
   hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),
   hpoTermsLoading: loadingReducer(REQUEST_HPO_TERMS, RECEIVE_HPO_TERMS),
@@ -333,7 +341,6 @@ const rootReducer = combineReducers({
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),
   userOptionsLoading: loadingReducer(REQUEST_USER_OPTIONS, RECEIVE_USER_OPTIONS),
   meta: zeroActionsReducer,
-  form: formReducer,
   variantSearchDisplay: createSingleObjectReducer(UPDATE_SEARCHED_VARIANT_DISPLAY, {
     sort: SORT_BY_XPOS,
     page: 1,

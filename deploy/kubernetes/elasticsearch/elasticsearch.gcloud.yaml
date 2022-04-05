@@ -8,7 +8,6 @@ metadata:
     deployment: {{ DEPLOY_TO }}
 spec:
   version: {{ ELASTICSEARCH_VERSION }}
-  image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch{{ DOCKER_IMAGE_TAG }}-{{ ELASTICSEARCH_VERSION }}
   auth:
     roles:
       - secretName: elasticsearch-secrets
@@ -54,6 +53,8 @@ spec:
             securityContext:
               privileged: true
             command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+          - name: install-plugins
+            command: ['sh', '-c', 'bin/elasticsearch-plugin install --batch repository-gcs']
         containers:
         - name: elasticsearch
           imagePullPolicy: {{ IMAGE_PULL_POLICY }}
@@ -98,6 +99,8 @@ spec:
             securityContext:
               privileged: true
             command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+          - name: install-plugins
+            command: ['sh', '-c', 'bin/elasticsearch-plugin install --batch repository-gcs']
         containers:
         - name: elasticsearch
           imagePullPolicy: {{ IMAGE_PULL_POLICY }}
@@ -145,6 +148,8 @@ spec:
           securityContext:
             privileged: true
           command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        - name: install-plugins
+          command: ['sh', '-c', 'bin/elasticsearch-plugin install --batch repository-gcs']
         containers:
         - name: elasticsearch
           imagePullPolicy: {{ IMAGE_PULL_POLICY }}
@@ -198,6 +203,8 @@ spec:
             securityContext:
               privileged: true
             command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+          - name: install-plugins
+            command: ['sh', '-c', 'bin/elasticsearch-plugin install --batch repository-gcs']
         containers:
         - name: elasticsearch
           imagePullPolicy: {{ IMAGE_PULL_POLICY }}

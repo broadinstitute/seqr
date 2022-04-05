@@ -6,11 +6,11 @@ from copy import deepcopy
 from datetime import datetime
 from django.urls.base import reverse
 
-from matchmaker.models import MatchmakerResult, MatchmakerContactNotes
+from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import MME_DISCLAIMER
 from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
-    update_mme_contact_note
+    update_mme_contact_note, update_mme_project_contact
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 INDIVIDUAL_GUID = 'I000001_na19675'
@@ -184,7 +184,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         invalid_url = reverse(get_individual_mme_matches, args=[INVALID_PROJECT_SUBMISSION_GUID])
         response = self.client.get(invalid_url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Matchmaker is not enabled')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
 
@@ -824,3 +824,30 @@ class MatchmakerAPITest(AuthenticationTestCase):
         models = MatchmakerContactNotes.objects.filter(institution='genedx')
         self.assertEqual(models.count(), 1)
         self.assertEqual(models.first().comments, 'test comment update')
+
+    def test_update_mme_project_contact(self):
+        url = reverse(update_mme_project_contact, args=['R0003_test'])
+        self.check_manager_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Contact is required'})
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'contact': 'UDNCC@hms.harvard.edu'
+        }))
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.maxDiff = None
+        self.assertDictEqual(response_json, {'mmeSubmissionsByGuid': {'MS000015_na20885': mock.ANY, 'MS000016_P0004515': mock.ANY}})
+
+        updated_submission = MatchmakerSubmission.objects.get(guid='MS000015_na20885')
+        self.assertEqual(updated_submission.contact_href, 'mailto:matchmaker@populationgenomics.org.au,UDNCC@hms.harvard.edu')
+
+        # test submission already with contact not updated
+        existing_submission = MatchmakerSubmission.objects.get(guid='MS000016_P0004515')
+        self.assertEqual(
+            existing_submission.contact_href,
+            'mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au,UDNCC@hms.harvard.edu'
+        )

@@ -1,8 +1,9 @@
 import json
 import os
 import random
+import re
 import string
-import subprocess
+import subprocess # nosec
 
 from ssl import create_default_context
 
@@ -31,7 +32,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Application definition
 INSTALLED_APPS = [
-    'seqr.apps.SuperuserAdminConfig',
+    'admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.messages',
@@ -61,23 +62,32 @@ MIDDLEWARE = [
     'seqr.utils.middleware.JsonErrorMiddleware',
 ]
 
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 ALLOWED_HOSTS = ['*']
 
 CSRF_COOKIE_NAME = 'csrf_token'
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 86400 # seconds in 1 day
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+SECURE_BROWSER_XSS_FILTER = True
 
 CSP_INCLUDE_NONCE_IN = ['script-src', 'style-src', 'style-src-elem']
 CSP_FONT_SRC = ('https://fonts.gstatic.com', 'data:', "'self'")
-CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://storage.googleapis.com') # google storage used by IGV
+CSP_CONNECT_SRC = ("'self'", 'https://gtexportal.org', 'https://www.google-analytics.com', 'https://igv.org', 'https://storage.googleapis.com') # google storage used by IGV
 CSP_SCRIPT_SRC = ("'self'", "'unsafe-eval'", 'https://www.googletagmanager.com')
-CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'data:')
+CSP_IMG_SRC = ("'self'", 'https://www.google-analytics.com', 'https://storage.googleapis.com', 'data:')
+CSP_OBJECT_SRC = ("'none'")
+CSP_BASE_URI = ("'none'")
 # IGV js injects CSS into the page head so there is no way to set nonce. Therefore, support hashed value of the CSS
-IGV_CSS1_HASH = "'sha256-mMr3XKHeuAZnT2THF0+nzpjf/J0GLygO9xHcQduGITY='"
-IGV_CSS2_HASH = "'sha256-/OhxYpMV/kE3A/RxJL4MplY3PG7a/Pxg3csCRBRyWeg='"
-CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
-CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'", IGV_CSS1_HASH, IGV_CSS2_HASH)
+IGV_CSS_HASHES = (
+    "'sha256-dUpUK4yXR60CNDI/4ZeR/kpSqQ3HmniKj/Z7Hw9ZNTA='",
+    "'sha256-s8l0U2/BsebhfOvm08Z+4w1MnftmnPeoOMbSi+f5hCI='",
+    "'sha256-T9widob1zmlNnk3NzLRUfXFToG7AkPTuLDXaKU2tc6c='",
+    "'sha256-ITHmamcImsZ/Je1xrdtDLZVvRSpj1Zokb6uHXORB824='",
+)
+CSP_STYLE_SRC = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
+CSP_STYLE_SRC_ELEM = ('https://fonts.googleapis.com', "'self'") + IGV_CSS_HASHES
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = False
@@ -139,9 +149,19 @@ TEMPLATES = [
     },
 ]
 
-GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
-MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
-MEDIA_URL = '/media/'
+# If specified, store data in the named GCS bucket and use the gcloud storage backend.
+# Else, fall back to a path on the local filesystem.
+GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
+if GCS_MEDIA_ROOT_BUCKET:
+    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+    GS_BUCKET_NAME = GCS_MEDIA_ROOT_BUCKET
+    GS_DEFAULT_ACL = 'publicRead'
+    MEDIA_ROOT = False
+    MEDIA_URL = 'https://storage.googleapis.com/{bucket_name}/'.format(bucket_name=GS_BUCKET_NAME)
+else:
+    GENERATED_FILES_DIR = os.path.join(os.environ.get('STATIC_MEDIA_DIR', BASE_DIR), 'generated_files')
+    MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR, 'media/')
+    MEDIA_URL = '/media/'
 
 LOGGING = {
     'version': 1,
@@ -281,7 +301,6 @@ API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
 POLICY_REQUIRED_URL = '/accept_policies'
 
-DEMO_PROJECT_CATEGORY = 'Demo'
 ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
 PM_USER_GROUP = os.environ.get('PM_USER_GROUP')
@@ -358,7 +377,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('SOCIAL_AUTH_GOOGLE_OAUTH2_SEC
 LOGIN_URL = GOOGLE_LOGIN_REQUIRED_URL if SOCIAL_AUTH_GOOGLE_OAUTH2_KEY else '/login'
 
 
-SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/'
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = not DEBUG
@@ -380,9 +399,19 @@ SERVICE_ACCOUNT_FOR_ANVIL = None
 
 if TERRA_API_ROOT_URL:
     SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
-                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0]
+                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if not SERVICE_ACCOUNT_FOR_ANVIL:
-        raise Exception('Error starting seqr - gcloud auth is not properly configured')
+        # attempt to acquire a service account token
+        if os.path.exists('/.config/service-account-key.json'):
+            auth_output = subprocess.run(['gcloud', 'auth', 'activate-service-account', '--key-file', '/.config/service-account-key.json'],  # nosec
+                                         capture_output=True, text=True).stderr
+
+            SERVICE_ACCOUNT_FOR_ANVIL = re.findall(r'\[(.*)\]', auth_output)[0]
+
+            if not SERVICE_ACCOUNT_FOR_ANVIL:
+                raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
+        else:
+            raise Exception('Error starting seqr - gcloud auth is not properly configured')
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)

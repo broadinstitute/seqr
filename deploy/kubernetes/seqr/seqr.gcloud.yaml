@@ -43,18 +43,13 @@ spec:
       - name: matchbox-secrets-volume
         secret:
           secretName: matchbox-secrets
-      - name: seqr-static-files
-        gcePersistentDisk:
-          # This disk must already exist.
-          pdName: {{ CLUSTER_NAME }}-seqr-static-files-disk
-          fsType: ext4
       # - name: elasticsearch-es-http-certs-public
       #   secret:
       #     secretName: elasticsearch-es-http-certs-public
       containers:
       - name: seqr-pod
         ports:
-        - containerPort: {{ SEQR_SERVICE_PORT }}
+        - containerPort: 8000
           protocol: TCP
         imagePullPolicy: {{ IMAGE_PULL_POLICY }}
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr{{ DOCKER_IMAGE_TAG }}
@@ -64,8 +59,6 @@ spec:
           readOnly: true
         - name: matchbox-secrets-volume
           mountPath: {{ MME_CONFIG_DIR }}
-        - name: seqr-static-files
-          mountPath: {{ STATIC_MEDIA_DIR }}
         # - name: elasticsearch-es-http-certs-public
         #   mountPath: "/elasticsearch-certs"
         #   readOnly: true
@@ -151,8 +144,6 @@ spec:
           value: "{{ KIBANA_SERVICE_HOSTNAME }}"
         - name: REDIS_SERVICE_HOSTNAME
           value: "{{ REDIS_SERVICE_HOSTNAME }}"
-        - name: SEQR_SERVICE_PORT
-          value: "{{ SEQR_SERVICE_PORT }}"
         - name: POSTGRES_SERVICE_PORT
           value: "{{ POSTGRES_SERVICE_PORT }}"
         - name: ELASTICSEARCH_SERVICE_PORT
@@ -165,12 +156,8 @@ spec:
           value: "{{ SEQR_GIT_BRANCH }}"
         - name: BASE_URL
           value: "https://{{ CLUSTER_HOSTNAME }}/"
-        - name: DATABASE_BACKUP_BUCKET
-          value: "{{ DATABASE_BACKUP_BUCKET }}"
         - name: RUN_CRON_JOBS
           value: "{{ RUN_CRON_JOBS }}"
-        - name: STATIC_MEDIA_DIR
-          value: "{{ STATIC_MEDIA_DIR }}"
         - name: MME_CONFIG_DIR
           value: "{{ MME_CONFIG_DIR }}"
         - name: TERRA_API_ROOT_URL
@@ -189,6 +176,8 @@ spec:
           value: "{{ ANALYST_USER_GROUP }}"
         - name: PM_USER_GROUP
           value: "{{ PM_USER_GROUP }}"
+        - name: GCS_MEDIA_ROOT_BUCKET
+          value: "{{ GCS_MEDIA_ROOT_BUCKET }}"
         readinessProbe:
           exec:
             command:

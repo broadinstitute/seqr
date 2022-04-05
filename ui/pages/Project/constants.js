@@ -35,7 +35,8 @@ import {
   INDIVIDUAL_FIELD_AFFECTED,
   INDIVIDUAL_FIELD_NOTES,
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  ALL_FAMILY_ANALYSIS_STATUS_OPTIONS,
+  FAMILY_ANALYSIS_STATUS_LOOKUP,
   INDIVIDUAL_FIELD_CONFIGS,
   SHOW_ALL,
   exportConfigForField,
@@ -118,16 +119,30 @@ const ANALYSIS_IN_PROGRESS_STATUSES = new Set([
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
 ])
 
-const caseReviewStatusFilter = status => individualsByGuid => family => family.individualGuids.map(
-  individualGuid => individualsByGuid[individualGuid],
-).some(individual => individual.caseReviewStatus === status)
+const getFamilyCaseReviewStatuses  = (family, individualsByGuid) => {
+  const statuses = family.individualGuids.map(
+    individualGuid => (individualsByGuid[individualGuid] || {}).caseReviewStatus,
+  ).filter(status => status)
+  return statuses.length ? statuses : family.caseReviewStatuses
+}
 
-const familyIsInReview = (family, individualsByGuid) => family.individualGuids.map(
-  individualGuid => individualsByGuid[individualGuid],
-).every(individual => individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW)
+const caseReviewStatusFilter = status => individualsByGuid => family => getFamilyCaseReviewStatuses(
+  family, individualsByGuid,
+).some(caseReviewStatus => caseReviewStatus === status)
+
+const familyIsInReview = (family, individualsByGuid) => getFamilyCaseReviewStatuses(family, individualsByGuid).every(
+  status => status === CASE_REVIEW_STATUS_IN_REVIEW,
+)
 
 const familyIsAssignedToMe = (family, user) => (
   family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
+
+const familyHasFeatures = (family, individualsByGuid) => {
+  const individuals = family.individualGuids.map(
+    individualGuid => individualsByGuid[individualGuid],
+  ).filter(individual => individual)
+  return individuals.length ? individuals.some(({ features }) => (features || []).length > 0) : family.hasFeatures
+}
 
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
 const IN_REVIEW_FAMILIES_FILTER = {
@@ -159,15 +174,13 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'Phenotypes Entered',
-    createFilter: individualsByGuid => family => (
-      family.individualGuids.some(individualGuid => (individualsByGuid[individualGuid].features || []).length > 0)),
+    createFilter: individualsByGuid => family => familyHasFeatures(family, individualsByGuid),
   },
   {
     value: SHOW_NO_PHENOTYPES_ENTERED,
     category: 'Data Status:',
     name: 'No Phenotypes Entered',
-    createFilter: individualsByGuid => family => (
-      family.individualGuids.every(individualGuid => (individualsByGuid[individualGuid].features || []).length < 1)),
+    createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
   },
   { ...ASSIGNED_TO_ME_FILTER, category: 'Analysed By:' },
   {
@@ -279,7 +292,7 @@ const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
 const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 const SORT_BY_ANALYSED_DATE = 'SORT_BY_ANALYSED_DATE'
 
-const FAMILY_ANALYSIS_STATUS_SORT_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+const FAMILY_ANALYSIS_STATUS_SORT_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
   (acc, { value }, i) => ({ ...acc, [value]: i.toString(36) }), {},
 )
 
@@ -292,15 +305,7 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_FAMILY_ADDED_DATE,
     name: 'Date Added',
-    createSortKeyGetter: individualsByGuid => family => family.individualGuids.map(
-      individualGuid => individualsByGuid[individualGuid],
-    ).reduce(
-      (acc, individual) => {
-        const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
-        return indivCreatedDate > acc ? indivCreatedDate : acc
-      },
-      '2000-01-01T01:00:00.000Z',
-    ),
+    createSortKeyGetter: () => family => family.createdDate,
   },
   {
     value: SORT_BY_DATA_LOADED_DATE,
@@ -333,15 +338,14 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,
     name: 'Date Review Status Changed',
-    createSortKeyGetter: individualsByGuid => family => family.individualGuids.map(
-      individualGuid => individualsByGuid[individualGuid],
-    ).reduce(
-      (acc, individual) => {
-        const indivCaseReviewStatusLastModifiedDate = individual.caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'
-        return indivCaseReviewStatusLastModifiedDate > acc ? indivCaseReviewStatusLastModifiedDate : acc
-      },
-      '2000-01-01T01:00:00.000Z',
-    ),
+    createSortKeyGetter: individualsByGuid => (family) => {
+      const lastModified = family.individualGuids.map(
+        individualGuid => (individualsByGuid[individualGuid] || {}).caseReviewStatusLastModifiedDate,
+      ).filter(status => status)
+      return lastModified.length ? lastModified.reduce(
+        (acc, status) => (status > acc ? status : acc), '2000-01-01T01:00:00.000Z',
+      ) : family.caseReviewStatusLastModified || '2000-01-01T01:00:00.000Z'
+    },
   },
 ]
 
@@ -359,7 +363,7 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
   [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
-    format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
+    format: status => (FAMILY_ANALYSIS_STATUS_LOOKUP[status] || {}).name,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
@@ -603,6 +607,6 @@ export const TAG_FORM_FIELD = {
   label: 'Tags',
   includeCategories: true,
   format: value => (value || []).map(({ name }) => name),
-  normalize: value => (value || []).map(name => ({ name })),
+  parse: value => (value || []).map(name => ({ name })),
   validate: value => (value && value.length ? undefined : 'Required'),
 }

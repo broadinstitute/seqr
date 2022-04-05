@@ -2,7 +2,7 @@ from requests.utils import quote
 
 import json
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from urllib.parse import unquote
 
@@ -11,11 +11,12 @@ from seqr.utils.communication_utils import send_welcome_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
+    get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions, \
     login_and_policies_required, login_active_required
 from seqr.views.utils.terra_api_utils import google_auth_enabled
-from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION, ANALYST_USER_GROUP
+from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 logger = SeqrLogger(__name__)
 
@@ -32,16 +33,14 @@ def get_all_collaborator_options(request):
         user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in collaborators
     })
 
-def _get_all_analysts():
-    return Group.objects.get(name=ANALYST_USER_GROUP).user_set.all()
 
 @login_and_policies_required
-def get_all_analyst_options(request):
-    analysts = {
-        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in _get_all_analysts()
-    }
-
-    return create_json_response(analysts)
+def get_project_collaborator_options(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    users = get_project_collaborators_by_username(
+        request.user, project, include_permissions=False, include_analysts=True, fields=USER_OPTION_FIELDS,
+    )
+    return create_json_response(users)
 
 
 def forgot_password(request):

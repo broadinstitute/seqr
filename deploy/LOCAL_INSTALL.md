@@ -1,30 +1,32 @@
-
 #### Prerequisites
- - *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
+- *Hardware:*  At least **16 Gb RAM**, **4 CPUs**, **50 Gb disk space**  
 
- - *Software:* 
-   - [docker](https://docs.docker.com/install/)
-     - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb  
-   - [docker-compose](https://docs.docker.com/compose/install/)       
-   - [gcloud](https://cloud.google.com/sdk/install)
+- *Software:* 
+  - [docker](https://docs.docker.com/install/)
+   
+    - under Preferences > Resources > Advanced set the memory limit to at least 12 Gb
 
- - OS settings for elasticsearch:
-    - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
-       ```
-       echo '
-       vm.max_map_count=262144
-       ' | sudo tee -a /etc/sysctl.conf
-         
-       sudo sysctl -w vm.max_map_count=262144
-       ```
-       This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
+  - [docker-compose](https://docs.docker.com/compose/install/)       
+   
+  - [gcloud](https://cloud.google.com/sdk/install)
+
+- OS settings for elasticsearch:
+  - **Linux only:** elasticsearch needs [higher-than-default virtual memory settings](https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html). To adjust this, run   
+  ```bash
+  echo '
+     vm.max_map_count=262144
+  ' | sudo tee -a /etc/sysctl.conf
+      
+  sudo sysctl -w vm.max_map_count=262144
+  ```
+  This will prevent elasticsearch start up error: `max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]`
     
-    
+
 #### Starting seqr
 
 The steps below describe how to create a new empty seqr instance with a single Admin user account.
 
-```
+```bash
 SEQR_DIR=$(pwd)
 
 wget https://raw.githubusercontent.com/populationgenomics/seqr/master/docker-compose.yml
@@ -36,35 +38,20 @@ docker-compose exec seqr python manage.py createsuperuser  # create a seqr Admin
 
 open http://localhost     # open the seqr landing page in your browser. Log in to seqr using the email and password from the previous step
 ```
+
+#### Updating seqr
+
+Updating your local installation of seqr involves pulling the latest version of the seqr docker container, and then recreating the container.
+
+```bash
+# run this from the directory containing your docker-compose.yml file
+docker-compose pull
+docker-compose up -d seqr
+
+docker-compose logs -f seqr  # (optional) continuously print seqr logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs. 
+```
    
 #### Annotating and loading VCF callsets 
-
-##### Initial Setup
-
-Before loading data to seqr, you first need to download reference files provided by the seqr team.
-This is a one-time setup requirment - for all subsequent loading jobs you should re-use the downloaded files
-
-1. Authenticate into your google cloud account.
-
-   ```
-   gcloud auth application-default login  
-   ```
-   
-1. Download full reference data set. You can choose to only download for GRCh37 or GRCh38 depending on your data
-    
-    ```
-    # download GRCh37
-    mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh37
-    cd ${SEQR_DIR}/data/seqr-reference-data/GRCh37
-    gsutil -m cp -r gs://seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht .
-    gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh37.2020-06-15.ht .
-        
-    # download GRCh38
-    mkdir -p ${SEQR_DIR}/data/seqr-reference-data/GRCh38
-    cd ${SEQR_DIR}/data/seqr-reference-data/GRCh38
-    gsutil -m cp -r gs://seqr-reference-data/GRCh38/all_reference_data/combined_reference_data_grch38.ht .
-    gsutil -m cp -r gs://seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht .
-    ```
 
 ##### Option #1: annotate on a Google Dataproc cluster, then load in to an on-prem seqr instance 
 
@@ -72,168 +59,98 @@ Google Dataproc makes it easy to start a spark cluster which can be used to para
 The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
 
 1. authenticate into your google cloud account.
-   ```
+   ```bash
    gcloud auth application-default login  
    ```
-1. upload your .vcf.gz callset to a google bucket - for example `gs://your-bucket/data/GRCh38/your-callset.vcf.gz`
 
-1. if you haven't already, upload the reference data you downloaded above to your own google bucket -
-   for example, `gs://your-bucket/reference_data/GRCh38/all_reference_data/combined_reference_data_grch38.ht`
-
-1. start an elasticsearch container.
-   ```
-   docker-compose up -d elasticsearch
-   docker-compose logs -f elasticsearch  # (optional) continuously print elasticsearch logs to see when it is done starting up or if there are any errors. Type Ctrl-C to exit from the logs.
-   curl localhost:9200   # (optional) once the container is done starting up, this should print a JSON message indicating elasticsearch is running and ready to accept requests. 
-   ```
+1. upload your .vcf.gz callset to a google bucket
+   ```bash
+   GS_BUCKET=gs://your-bucket       # your google bucket
+   GS_FILE_PATH=data/GRCh38         # the desired file path. Good to include build version and/ or sample type to directory structure
+   FILENAME=your-callset.vcf.gz     # the local file you want to load  
     
+   gsutil cp $FILENAME $GS_BUCKET/$GS_FILE_PATH
+   ```
+   
 1. start a pipeline-runner container which has the necessary tools and environment for starting and submitting jobs to a Dataproc cluster.
-   ```
-   SEQR_DIR=$(pwd)
-   
-   wget https://raw.githubusercontent.com/populationgenomics/seqr/master/docker-compose.yml
-   
+   ```bash
    docker-compose up -d pipeline-runner            # start the pipeline-runner container 
-   docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
    ```
-1. in the pipeline-runner shell, use the hailctl utility to start a Dataproc cluster (adjust the arguments as needed, particularly `--vep GRCh38` vs. `GRCh37`), submit the annotation job, and when that's done, load the annotated dataset into your local elasticsearch instance.
-   ```
-   cd /hail-elasticsearch-pipelines/luigi_pipeline
+   
+1. if you haven't already, upload reference data to your own google bucket. 
+This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
+This is expected to take a while
+   ```bash
+   BUILD_VERSION=38                 # can be 37 or 38
     
-   # create dataproc cluster
-   hailctl dataproc start \
-       --pkgs luigi,google-api-python-client \
-       --zone us-central1-b \
-       --vep GRCh38 \
-       --max-idle 30m \
-       --num-workers 2 \
-       --num-preemptible-workers 12 \
-       seqr-loading-cluster
-    
-   # submit annotation job to dataproc cluster
-   hailctl dataproc submit seqr-loading-cluster \
-       seqr_loading.py --pyfiles "lib,../hail_scripts" \
-       SeqrVCFToMTTask --local-scheduler \
-            --source-paths gs://your-bucket/data/GRCh38/your-callset.vcf.gz \
-            --dest-path gs://your-bucket/data/GRCh38/your-callset.mt \
-            --genome-version 38 \
-            --sample-type WES \
-            --reference-ht-path  gs://your-bucket/reference_data/GRCh38/all_reference_data/combined_reference_data_grch38.ht \
-            --clinvar-ht-path gs://your-bucket/reference_data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht
-    
-   gcloud dataproc jobs list    # run this to get the dataproc job id
-   gcloud dataproc jobs wait ce9fcc69a5034522b3ea2cb8e83c444d   # view jobs logs and wait for the job to complete
-    
-   # load the annotated dataset into your local elasticsearch instance
-   python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-        --dest-path gs://your-bucket/data/GRCh38/your-callset.mt \
-        --es-host elasticsearch  \
-        --es-index your-callset-name
+   docker-compose exec pipeline-runner copy_reference_data_to_gs.sh $BUILD_VERSION $GS_BUCKET
+   
    ``` 
-  
-  
+   
+1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
+   ```bash
+   BUILD_VERSION=38                 # can be 37 or 38
+   SAMPLE_TYPE=WES                  # can be WES or WGS
+   INDEX_NAME=your-dataset-name     # the desired index name to output. Will be used later to link the data to the corresponding seqr project
+    
+   INPUT_FILE_PATH=/${GS_FILE_PATH}/${FILENAME}  
+    
+   docker-compose exec pipeline-runner load_data_dataproc.sh $BUILD_VERSION $SAMPLE_TYPE $INDEX_NAME $GS_BUCKET $INPUT_FILE_PATH
+   
+   ``` 
+   
 ##### Option #2: annotate and load on-prem
 
 Annotating a callset with VEP and reference data can be very slow - as slow as several variants / sec per CPU, so although it is possible to run the pipeline on a single machine, it is recommended to use multiple machines.
 
-To annotate a callset on-prem, first download VEP and other reference data. You should only do this the 
-first time you load data- for subsequent runs you should re-use these downloaded files.
-If all your data is on GRCh38 (or GRCh37), then download the data only for that genome version. 
+The steps below describe how to annotate a callset and then load it into your on-prem elasticsearch instance.
 
-The total download size is ~180Gb per genome version.
+1. create a directory for your vcf files. docker-compose will mount this directory into the pipeline-runner container.
 
-```
-# authenticate to your gcloud account so you can download public reference data
-gcloud auth application-default login  
+   ```bash
+   mkdir ./data/input_vcfs/ 
     
-# download VEP reference data
-mkdir -p ${SEQR_DIR}/data/vep_data/homo_sapiens
-cd ${SEQR_DIR}/data/vep_data
-curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh37.tar.gz | tar xzf - &   # for the VEP GRCh37 cache
-curl -L http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/homo_sapiens_vep_99_GRCh38.tar.gz | tar xzf - &   # for the VEP GRCh38 cache (can have both the GRCh37 and GRCh38 caches at the same time)
+   FILE_PATH=GRCh38                 # the desired file path. Good to include build version and/ or sample type to directory structure
+   FILENAME=your-callset.vcf.gz     # the local file you want to load. vcfs should be bgzip'ed
     
-#  download loftee reference data
-mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
-cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh37/
-gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh37.tar | tar xf  - & 
+   cp $FILENAME ./data/input_vcfs/$FILE_PATH
+   ```
+
+1. start a pipeline-runner container
+   ```bash
+   docker-compose up -d pipeline-runner            # start the pipeline-runner container 
+   ```
+   
+1. if you haven't already, download VEP and other reference data to the docker image's mounted directories. 
+This should be done once per build version, and does not need to be repeated for subsequent loading jobs.
+This is expected to take a while
+   ```bash
+   BUILD_VERSION=38                 # can be 37 or 38
     
-mkdir -p ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
-cd ${SEQR_DIR}/data/vep_data/loftee_data/GRCh38/
-gsutil cat gs://seqr-reference-data/vep_data/loftee-beta/GRCh38.tar | tar xf  - & 
-```
+   docker-compose exec pipeline-runner download_reference_data.sh $BUILD_VERSION
+   
+   ``` 
 
-Then run the following commands to annotate your callset and load it into elasticsearch:
-
-```
-# create a directory for your vcf files. docker-compose will mount this directory into the pipeline-runner container.
-mkdir ./data/input_vcfs/ 
-cp your-callset.vcf.gz ./data/input_vcfs/GRCh3<7-8>      # vcfs should be bgzip'ed
- 
-docker-compose up -d pipeline-runner            # start the pipeline-runner container 
-docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
+1. run the loading command in the pipeline-runner container. Adjust the arguments as needed
+   ```bash
+   BUILD_VERSION=38                 # can be 37 or 38
+   SAMPLE_TYPE=WES                  # can be WES or WGS
+   INDEX_NAME=your-dataset-name     # the desired index name to output. Will be used later to link the data to the corresponding seqr project
     
-# for GRCh38 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
-python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-    --reference-ht-path /seqr_reference_data/combined_reference_data_grch38.ht \
-    --clinvar-ht-path /seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht \
-    --vep-config-json-path /vep85-GRCh38-loftee-gcloud.json \
-    --es-host elasticsearch \
-    --es-index-min-num-shards 3 \
-    --sample-type WES \
-    --es-index your-dataset-name \
-    --genome-version 38 \
-    --source-paths  /input_vcfs/GRCh38/your-callset.vcf.gz \
-    --dest-path /input_vcfs/GRCh38/your-callset.mt
+   INPUT_FILE_PATH=${FILE_PATH}/${FILENAME}  
     
-# for GRCh37 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
-python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-    --reference-ht-path /seqr-reference-data/GRCh37/all_reference_data/combined_reference_data_grch37.ht \
-    --clinvar-ht-path /seqr-reference-data/GRCh37/clinvar/clinvar.GRCh37.2020-06-15.ht \
-    --vep-config-json-path /vep85-GRCh37-loftee-gcloud.json \
-    --es-host elasticsearch \
-    --es-index-min-num-shards 3 \
-    --sample-type WES \
-    --es-index your-dataset-name \
-    --genome-version 37 \
-    --source-paths /input_vcfs/GRCh37/your-callset.vcf.gz \  
-    --dest-path /input_vcfs/GRCh37/your-callset.mt 
-```
+   docker-compose exec pipeline-runner load_data.sh $BUILD_VERSION $SAMPLE_TYPE $INDEX_NAME $INPUT_FILE_PATH
+   
+   ``` 
 
-To run annotation and database loading as 2 separate steps, use the following commands instead of the `SeqrMTToESTask` command above:
-
-```
-    docker-compose exec pipeline-runner /bin/bash   # open a shell inside the pipeline-runner container (analogous to ssh'ing into a remote machine)
-    
-    SeqrVCFToMTTask --local-scheduler   
-   # for GRCh38 callsets, run a command like the one below inside the pipeline-runner container to annotate and load your dataset into elasticsearch
-   python3 -m seqr_loading SeqrVCFToMTTask --local-scheduler \
-       --reference-ht-path /seqr_reference_data/combined_reference_data_grch38.ht \
-       --clinvar-ht-path /seqr-reference-data/GRCh38/clinvar/clinvar.GRCh38.2020-06-15.ht \
-       --vep-config-json-path /vep85-GRCh38-loftee-gcloud.json \
-       --sample-type WES \
-       --genome-version 38 \
-       --source-paths /input_vcfs/GRCh38/your-callset.vcf.gz \  
-       --dest-path /input_vcfs/GRCh38/your-callset.mt
- 
-    # load the annotated dataset into your local elasticsearch instance
-   python3 -m seqr_loading SeqrMTToESTask --local-scheduler \
-        --dest-path /input_vcfs/GRCh38/your-callset.mt \
-        --genome-version 38 \
-        --es-host elasticsearch  \
-        --es-index your-callset-name
-```
-
-
-
-#### Adding a loaded dataset to a seqr project.
+#### Adding a loaded dataset to a seqr project
 
 After the dataset is loaded into elasticsearch, it can be added to your seqr project with these steps:
 
 1. Go to the project page
-2. Click on Edit Datasets
-3. Enter the elasticsearch index name (set via the `--es-index` arg at loading time), and submit the form.
+1. Click on Edit Datasets
+1. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time), and submit the form.
 
-
-#### Enable read viewing in the browser (optional): 
+#### Enable read viewing in the browser (optional)
 
 To make .bam/.cram files viewable in the browser through igv.js, see **[ReadViz Setup Instructions](https://github.com/populationgenomics/seqr/blob/master/deploy/READVIZ_SETUP.md)**      

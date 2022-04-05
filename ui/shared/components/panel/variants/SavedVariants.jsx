@@ -47,7 +47,7 @@ class SavedVariants extends React.PureComponent {
     discoveryFilters: PropTypes.arrayOf(PropTypes.object),
     loading: PropTypes.bool,
     error: PropTypes.string,
-    variantsToDisplay: PropTypes.arrayOf(PropTypes.object),
+    variantsToDisplay: PropTypes.arrayOf(PropTypes.any),
     totalVariantsCount: PropTypes.number,
     filteredVariantsCount: PropTypes.number,
     variantExportConfig: PropTypes.arrayOf(PropTypes.object),
@@ -101,7 +101,7 @@ class SavedVariants extends React.PureComponent {
 
     return (
       <Grid stackable>
-        {tableSummaryComponent && React.createElement(tableSummaryComponent, {
+        {tableSummaryComponent && !loading && React.createElement(tableSummaryComponent, {
           familyGuid: variantGuid ? ((variantsToDisplay[0] || {}).familyGuids || [])[0] : familyGuid,
           ...tableState,
         })}
@@ -130,7 +130,7 @@ class SavedVariants extends React.PureComponent {
               <HorizontalSpacer width={10} />
               {hasHiddenFilters && <ButtonLink content="more" icon="sort amount down" onClick={this.showAllFilters} />}
               {hasHiddenFilters && <HorizontalSpacer width={10} />}
-              <ExportTableButton downloads={variantExportConfig} />
+              {variantExportConfig && <ExportTableButton downloads={variantExportConfig} />}
             </Grid.Column>
           </ControlsRow>
         )}

@@ -38,6 +38,10 @@ class ReferenceDataHandler(object):
     def get_file_header(f):
         return next(f).rstrip('\n\r').split('\t')
 
+    @staticmethod
+    def get_file_iterator(f):
+        return tqdm(f, unit=' records')
+
     def get_gene_for_record(self, record):
         gene_id = record.pop('gene_id', None)
         gene_symbol = record.pop('gene_symbol', None)
@@ -67,6 +71,7 @@ def update_records(reference_data_handler, file_path=None):
     Args:
         file_path (str): optional local file path. If not specified, or the path doesn't exist, the table will be downloaded.
     """
+    logger.info('Updating {}'.format(reference_data_handler))
 
     if not file_path or not os.path.isfile(file_path):
         file_path = download_file(reference_data_handler.url)
@@ -84,8 +89,8 @@ def update_records(reference_data_handler, file_path=None):
         with open_file(file_path, open_mode) as f:
             header_fields = reference_data_handler.get_file_header(f)
 
-            for line in tqdm(f, unit=" records"):
-                record = dict(zip(header_fields, line.rstrip('\r\n').split('\t')))
+            for line in reference_data_handler.get_file_iterator(f):
+                record = dict(zip(header_fields, line if isinstance(line, list) else line.rstrip('\r\n').split('\t')))
                 for record in reference_data_handler.parse_record(record):
                     if record is None:
                         continue

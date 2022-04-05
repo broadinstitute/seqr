@@ -105,6 +105,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
     if invalid_items:
         raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
+    has_location_filter = genes or intervals or rs_ids or variant_ids
 
     es_search = es_search_cls(
         search_model.families.all(),
@@ -123,7 +124,7 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     if sort:
         es_search.sort(sort)
 
-    if genes or intervals or rs_ids or variant_ids:
+    if has_location_filter:
         es_search.filter_by_location(
             genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=search['locus'])
         if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
@@ -138,7 +139,8 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
     es_search.filter_by_annotation_and_genotype(
         search.get('inheritance'), quality_filter=search.get('qualityFilter'),
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        pathogenicity=search.get('pathogenicity'), skip_genotype_filter=skip_genotype_filter)
+        pathogenicity=search.get('pathogenicity'), skip_genotype_filter=skip_genotype_filter,
+        has_location_filter=has_location_filter)
 
     if hasattr(es_search, 'aggregate_by_gene'):
         es_search.aggregate_by_gene()

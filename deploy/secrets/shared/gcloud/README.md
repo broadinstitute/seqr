@@ -10,6 +10,6 @@ The key provided below is generated using a temporary google account created jus
 To create your own key file, see instructions @ https://cloud.google.com/dataproc/docs/concepts/connectors/install-storage-connector
 
 It can be created by:
- 1) Go to https://console.developers.google.com/apis/credentials
- 2) In the "Create credentials" drop-down, select "Service account key"
- 3) Select "Compute Engine default service account" and Key type "JSON"
+1) Go to https://console.developers.google.com/apis/credentials
+1) In the "Create credentials" drop-down, select "Service account key"
+1) Select "Compute Engine default service account" and Key type "JSON"

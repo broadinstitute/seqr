@@ -187,12 +187,11 @@ class PedigreeInfoUtilsTest(TestCase):
             ])
         self.assertEqual(
             mock_email.call_args.kwargs['body'],
-            """User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:
-    
-    SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.
-    
-    test.csv is the original merged pedigree-sample-manifest file that the user uploaded.
-    """)
+            '\n'.join([
+                'User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.This email has 2 attached files:',
+                '    ', '    SK-3QVD.xlsx is the sample manifest file in a format that can be sent to GP.', '    ',
+                '    test.csv is the original merged pedigree-sample-manifest file that the user uploaded.', '    ',
+            ]))
         mock_email.return_value.attach_alternative.assert_called_with(
             """User test_pm_user@test.com just uploaded pedigree info to 1kg project n\xe5me with uni\xe7\xf8de.<br />This email has 2 attached files:<br />
     <br />

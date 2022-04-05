@@ -6,12 +6,12 @@ from django.core.management.base import CommandError
 
 
 class UpdateMgiTest(ReferenceDataCommandTestCase):
-    URL = 'http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt'
+    URL = 'https://storage.googleapis.com/seqr-reference-data/mgi/HMD_HumanPhenotype.rpt.txt'
     DATA = [
-        'A1BG	  1	11167	yes	A1bg	  MGI:2152878		\n',
-        'A1CF	  29974	16363	yes	A1cf	  MGI:1917115	  MP:0005367 MP:0005370 MP:0005385 MP:0010768 MP:0005369 MP:0005376 MP:0005384 MP:0005378\n',
-        'A2M	  2	37248	yes	A2m	  MGI:2449119\n',
-        'A3GALT2	  127550	16326	yes	A3galt2	  MGI:2685279\n',
+        'A1BG	  1	11167	  MGI:2152878		\n',
+        'A1CF	  29974	16363	  MGI:1917115	  MP:0005367 MP:0005370 MP:0005385 MP:0010768 MP:0005369 MP:0005376 MP:0005384 MP:0005378\n',
+        'A2M	  2	37248	  MGI:2449119\n',
+        'A3GALT2	  127550	16326	  MGI:2685279\n',
     ]
 
     def test_update_mgi_command(self):

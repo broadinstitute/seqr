@@ -1,7 +1,7 @@
 import { createSelector } from 'reselect'
 
 import {
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  ALL_FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
@@ -17,8 +17,8 @@ import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/str
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveVariantSampleByFamily, getTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getIndividualsByFamily, getNotesByFamilyType,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getTagTypesByProject,
+  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants,
 } from 'redux/selectors'
 
@@ -45,8 +45,17 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 
 export const getProjectGuid = state => state.currentProjectGuid
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
+export const getProjectOverviewIsLoading = state => state.projectOverviewLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
+export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading
+export const getFamiliesLoading = state => state.familiesLoading.isLoading
+export const getFamilyVariantSummaryLoading = state => state.familyVariantSummaryLoading.isLoading
+export const getIndivdualsLoading = state => state.individualsLoading.isLoading
+export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
+export const getSamplesLoading = state => state.samplesLoading.isLoading
+export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
+export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -90,7 +99,9 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
 
 export const getProjectAnalysisGroupIndividualsCount = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).reduce((acc, family) => acc + family.individualGuids.length, 0),
+  familiesByGuid => Object.values(familiesByGuid).reduce(
+    (acc, family) => acc + (family.individualGuids || []).length, 0,
+  ),
 )
 
 export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
@@ -121,35 +132,35 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
   }, {}),
 )
 
-export const getProjectAnalysisGroupMmeSubmissions = createSelector(
+export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
   getMmeSubmissionsByGuid,
   getProjectAnalysisGroupFamiliesByGuid,
-  getIndividualsByFamily,
-  (submissionsByGuid, familiesByGuid, individualsByFamily) => Object.keys(familiesByGuid).reduce((acc, familyGuid) => ([
-    ...acc,
-    ...(individualsByFamily[familyGuid] || []).map(individual => (
-      individual.mmeSubmissionGuid && submissionsByGuid[individual.mmeSubmissionGuid]
-    )).filter(submission => submission),
-  ]), []),
-)
-
-export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
-  getProjectAnalysisGroupMmeSubmissions,
-  getProjectAnalysisGroupFamiliesByGuid,
-  getIndividualsByGuid,
   getGenesById,
   getNotesByFamilyType,
-  (submissions, familiesByGuid, individualsByGuid, genesById, notesByFamilyType) => submissions.map((submission) => {
-    const individual = individualsByGuid[submission.individualGuid]
-    return {
-      mmeNotes: (notesByFamilyType[individual.familyGuid] || {}).M,
-      familyName: familiesByGuid[individual.familyGuid].displayName,
-      familyGuid: individual.familyGuid,
-      projectGuid: individual.projectGuid,
-      geneSymbols: (submission.geneIds || []).map(geneId => (genesById[geneId] || {}).geneSymbol || geneId),
-      ...submission,
-    }
-  }),
+  (submissionsByGuid, familiesByGuid, genesById, notesByFamilyType) => {
+    const individualFamilies = Object.values(familiesByGuid).reduce((acc, family) => ({
+      ...acc,
+      ...family.individualGuids.reduce((acc2, individualGuid) => ({ ...acc2, [individualGuid]: family }), {}),
+    }), {})
+
+    return Object.values(submissionsByGuid).reduce((acc, submission) => {
+      const family = individualFamilies[submission.individualGuid]
+      return family ? [...acc, {
+        mmeNotes: (notesByFamilyType[family.familyGuid] || {}).M,
+        familyName: family.displayName,
+        familyGuid: family.familyGuid,
+        projectGuid: family.projectGuid,
+        geneSymbols: (submission.geneIds || []).map(geneId => (genesById[geneId] || {}).geneSymbol || geneId),
+        ...submission,
+      }] : acc
+    }, [])
+  },
+)
+
+export const getProjectTagTypes = createSelector(
+  getProjectGuid,
+  getTagTypesByProject,
+  (projectGuid, tagTypesByProject) => tagTypesByProject[projectGuid] || [],
 )
 
 export const getTaggedVariantsByFamily = createSelector(
@@ -183,6 +194,47 @@ export const getTaggedVariantsByFamilyType = createSelector(
       return { ...acc2, [isSv]: accSvVals }
     }, {}),
   }), {}),
+)
+
+export const getSavedVariantTagTypeCountsByFamily = createSelector(
+  getTaggedVariantsByFamily,
+  variantsByFamily => Object.entries(variantsByFamily).reduce(
+    (acc, [familyGuid, variants]) => ({
+      ...acc,
+      [familyGuid]: variants.reduce((acc2, { tags }) => {
+        const counts = {}
+        tags.forEach(({ name }) => {
+          if (!counts[name]) {
+            counts[name] = acc2[name] || 0
+          }
+          counts[name] += 1
+        })
+        return { ...acc2, ...counts }
+      }, {}),
+    }), {},
+  ),
+)
+
+export const getSavedVariantTagTypeCounts = createSelector(
+  getVariantTagsByGuid,
+  variantTagsByGuid => Object.values(variantTagsByGuid).reduce(
+    (acc, { name }) => ({ ...acc, [name]: (acc[name] || 0) + 1 }), {},
+  ),
+)
+
+export const getAnalysisGroupTagTypeCounts = createSelector(
+  getCurrentAnalysisGroup,
+  getFamilyTagTypeCounts,
+  (analysisGroup, familyTagTypeCounts) => (analysisGroup ? analysisGroup.familyGuids.reduce(
+    (acc, familyGuid) => Object.entries(familyTagTypeCounts[familyGuid] || {}).reduce((acc2, [tagType, count]) => (
+      { ...acc2, [tagType]: count + (acc2[tagType] || 0) }
+    ), acc), {},
+  ) : {}),
+)
+
+export const getTagTypeCounts = createSelector(
+  getProjectTagTypes,
+  tagTypes => tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
 )
 
 export const getVariantUniqueId = (
@@ -220,16 +272,19 @@ export const getProjectTagTypeOptions = createSelector(
 export const getProjectVariantSavedByOptions = createSelector(
   getProjectFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  (familiesByGuid, variantDetailByFamilyVariant) => [null, ...Object.keys(familiesByGuid).reduce(
-    (acc, familyGuid) => new Set([
-      ...acc,
-      ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
-        ...variantAcc,
-        ...(tags || []).map(({ createdBy }) => createdBy),
-        ...(notes || []).map(({ createdBy }) => createdBy),
-      ]), []),
-    ]), new Set(),
-  )].map(value => ({ value })),
+  (familiesByGuid, variantDetailByFamilyVariant) => [
+    { value: null, text: 'View All' },
+    ...[...Object.keys(familiesByGuid).reduce(
+      (acc, familyGuid) => new Set([
+        ...acc,
+        ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
+          ...variantAcc,
+          ...(tags || []).map(({ createdBy }) => createdBy),
+          ...(notes || []).map(({ createdBy }) => createdBy),
+        ]), []),
+      ]), new Set(),
+    )].map(value => ({ value })),
+  ],
 )
 
 // Family table selectors
@@ -259,23 +314,21 @@ const hasFamilySearch = createSelector(
   familiesSearch => !!familiesSearch,
 )
 
-const getFamilySearchFields = (family, individualsByGuid) => ([
+const getFamilySearchFields = family => ([
   family.displayName, family.familyId, (family.assignedAnalyst || {}).fullName, (family.assignedAnalyst || {}).email,
   ...family.analysedBy.map(({ createdBy }) => `${createdBy.fullName}${createdBy.email}`),
-  ...family.individualGuids.map(individualGuid => (individualsByGuid[individualGuid].features || []).map(feature => feature.label).join(';')),
 ])
 
 const getFamiliesBySearchString = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  getIndividualsByGuid,
   hasFamilySearch,
-  (familiesByGuid, individualsByGuid, shouldSearch) => {
+  (familiesByGuid, shouldSearch) => {
     if (!shouldSearch) {
       return null
     }
 
     return Object.values(familiesByGuid).reduce((acc, family) => (
-      { ...acc, [getFamilySearchFields(family, individualsByGuid).join(';').toLowerCase()]: family }), {})
+      { ...acc, [getFamilySearchFields(family).join(';').toLowerCase()]: family }), {})
   },
 )
 
@@ -316,7 +369,8 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   getFamiliesSortOrder,
   getFamiliesSortDirection,
   (visibleFamilies, individualsByGuid, samplesByFamily, familiesSortOrder, familiesSortDirection) => {
-    if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
+    if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder] ||
+      visibleFamilies.some(({ familyId }) => !familyId)) { // families have been loaded without any core fields
       return visibleFamilies
     }
 
@@ -346,15 +400,27 @@ const getFamiliesExportData = createSelector(
   }], []),
 )
 
+const getSamplesByIndividual = createSelector(
+  getSamplesByGuid,
+  samplesByGuid => Object.values(samplesByGuid).reduce((acc, sample) => {
+    if (!acc[sample.individualGuid]) {
+      acc[sample.individualGuid] = []
+    }
+    acc[sample.individualGuid].push(sample)
+    return acc
+  }, {}),
+)
+
 const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
-  getSamplesByGuid,
-  (families, individualsByFamily, samplesByGuid) => families.reduce((acc, family) => [
+  getSamplesByIndividual,
+  (families, individualsByFamily, samplesByIndividual) => families.reduce((acc, family) => [
     ...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_HAS_DATA_FIELD]: individual.sampleGuids.some(sampleGuid => samplesByGuid[sampleGuid].isActive),
+      [INDIVIDUAL_HAS_DATA_FIELD]: (
+        samplesByIndividual[individual.individualGuid] || []).some(({ isActive }) => isActive),
     }))], []),
 )
 
@@ -366,7 +432,7 @@ const getSamplesExportData = createSelector(
     ...acc, ...(samplesByFamily[family.familyGuid] || []).map(sample => ({
       ...sample,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid].individualId,
+      [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid]?.individualId,
     }))], []),
 )
 
@@ -427,7 +493,7 @@ export const getAnalysisStatusCounts = createSelector(
       ...acc, [family.analysisStatus]: (acc[family.analysisStatus] || 0) + 1,
     }), {})
 
-    return FAMILY_ANALYSIS_STATUS_OPTIONS.map(
+    return ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.map(
       option => ({ ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   },
@@ -544,19 +610,6 @@ export const getCollaborators = createSelector(
   project => project.collaborators,
 )
 
-// analyst option selectors (add project collaborators to analysts)
-export const getAnalystOptions = createSelector(
-  getCollaborators,
-  getUserOptionsByUsername,
-  (collaborators, usersOptionsByUsername) => {
-    const analyst = Object.values(usersOptionsByUsername).filter(user => user.isAnalyst)
-    const uniqueCollaborators = collaborators.filter(collaborator => !collaborator.isAnalyst)
-    return [...uniqueCollaborators, ...analyst].map(
-      user => ({ key: user.username, value: user.username, text: user.displayName ? `${user.displayName} (${user.email})` : user.email }),
-    )
-  },
-)
-
 export const getPageHeaderFamily = createSelector(
   getProjectFamiliesByGuid,
   (state, props) => props.match.params.breadcrumbId,
@@ -585,7 +638,7 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
     }
     if (breadcrumb === 'family_page') {
       const breadcrumbIdSections = [{
-        content: `Family: ${family.displayName}`,
+        content: `Family: ${family.displayName || ''}`,
         link: `/project/${project.projectGuid}/family_page/${family.familyGuid}`,
       }]
       if (match.params.breadcrumbIdSection) {
@@ -594,7 +647,7 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
       return breadcrumbIdSections
     }
     if (breadcrumb === 'analysis_group') {
-      return [{ content: `Analysis Group: ${analysisGroup.name}`, link: match.url }]
+      return [{ content: `Analysis Group: ${analysisGroup.name || ''}`, link: match.url }]
     }
     if (breadcrumb === 'saved_variants') {
       const { variantPage, tag } = match.params
@@ -603,12 +656,12 @@ export const getPageHeaderBreadcrumbIdSections = createSelector(
       if (variantPage === 'variant') {
         breadcrumbIdSections.push({ content: 'Variant', link: match.url })
       } else if (variantPage === 'family') {
-        breadcrumbIdSections.push({ content: `Family: ${family.displayName}`, link: `${path}/family/${family.familyGuid}` })
+        breadcrumbIdSections.push({ content: `Family: ${family.displayName || ''}`, link: `${path}/family/${family.familyGuid}` })
         if (tag) {
           breadcrumbIdSections.push({ content: tag, link: `${path}/family/${family.familyGuid}/${tag}` })
         }
       } else if (variantPage === 'analysis_group') {
-        breadcrumbIdSections.push({ content: `Analysis Group: ${analysisGroup.name}`, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}` })
+        breadcrumbIdSections.push({ content: `Analysis Group: ${analysisGroup.name || ''}`, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}` })
         if (tag) {
           breadcrumbIdSections.push({ content: tag, link: `${path}/analysis_group/${analysisGroup.analysisGroupGuid}/${tag}` })
         }
@@ -638,8 +691,8 @@ export const getPageHeaderEntityLinks = createSelector(
   getPageHeaderAnalysisGroup,
   (state, props) => getSearchType(props.match.params),
   getProjectAnalysisGroupFamiliesByGuid,
-  getHasActiveVariantSampleByFamily,
-  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveVariantSampleByFamilyGuid) => {
+  getHasActiveSearchableSampleByFamily,
+  (project, family, analysisGroup, searchType, familiesByGuid, hasActiveSearchableSampleByFamilyGuid) => {
     if (!project) {
       return null
     }
@@ -652,7 +705,9 @@ export const getPageHeaderEntityLinks = createSelector(
     }
 
     const familiesToConsider = searchType === 'family' ? [family.familyGuid] : Object.keys(familiesByGuid)
-    const disabled = familiesToConsider.every(familyGuid => !hasActiveVariantSampleByFamilyGuid[familyGuid])
+    const disabled = familiesToConsider.every(
+      familyGuid => !(hasActiveSearchableSampleByFamilyGuid[familyGuid] || {}).isSearchable,
+    )
     const entityLinks = [{
       to: `/variant_search/${searchType}/${searchId}`,
       content: `${snakecaseToTitlecase(searchType)} Variant Search`,

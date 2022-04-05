@@ -25,6 +25,8 @@ class Command(BaseCommand):
         parser.add_argument('args', nargs='*', help='only check paths in these project name(s)')
 
     def handle(self, *args, **options):
+        logger.info('checking bam/cram paths')
+
         samples = (IgvSample.objects.filter(
             individual__family__project__name__in=args
         ) if args else IgvSample.objects.all()).filter(

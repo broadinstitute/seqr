@@ -3,12 +3,13 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
-import { VEP_GROUP_SV } from 'shared/utils/constants'
+import { VEP_GROUP_SV, ANY_AFFECTED } from 'shared/utils/constants'
+import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from '../panel/search/constants'
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
   buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType,
-  familyGuids, projectFamilies, inheritanceMode, ...props
+  familyGuids, familyGuid, ...props
 }) => <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
 SearchResultsLink.propTypes = {
@@ -18,10 +19,9 @@ SearchResultsLink.propTypes = {
   variantId: PropTypes.string,
   genomeVersion: PropTypes.string,
   svType: PropTypes.string,
+  familyGuid: PropTypes.string,
   familyGuids: PropTypes.arrayOf(PropTypes.string),
-  projectFamilies: PropTypes.arrayOf(PropTypes.object),
   openSearchResults: PropTypes.func,
-  inheritanceMode: PropTypes.string,
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
@@ -33,12 +33,10 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
       },
     }
     if (ownProps.svType) {
-      search.annotations = { [VEP_GROUP_SV]: [ownProps.svType] }
+      search.annotations = { [VEP_GROUP_SV]: [ownProps.svType, `gCNV_${ownProps.svType}`] }
     }
-    if (ownProps.inheritanceMode) {
-      search.inheritance = { mode: ownProps.inheritanceMode }
-    }
-    const projectFamilies = ownProps.familyGuids ? [{ familyGuids: ownProps.familyGuids }] : ownProps.projectFamilies
+    const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
+    const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
       { allProjectFamilies: !projectFamilies, projectFamilies, search },
       resultsLink => window.open(resultsLink, '_blank'),
@@ -46,4 +44,15 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
   },
 })
 
-export default connect(null, mapDispatchToProps)(SearchResultsLink)
+const ConnectedSearchResultsLink = connect(null, mapDispatchToProps)(SearchResultsLink)
+
+export default ConnectedSearchResultsLink
+
+const INITIAL_GENE_SEARCH = {
+  inheritance: { mode: ANY_AFFECTED },
+  freqs: FREQUENCIES.filter(({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY).reduce(
+    (acc, { name }) => ({ ...acc, [name]: { af: 0.1 } }), {},
+  ),
+}
+
+export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />

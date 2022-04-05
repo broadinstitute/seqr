@@ -1,10 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Popup } from 'semantic-ui-react'
+import { Popup, Divider } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { GENOME_VERSION_37, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
+import { GNOMAD_SV_CRITERIA_MESSAGE, SV_CALLSET_CRITERIA_MESSAGE } from '../search/constants'
 
 const FreqValue = styled.span`
   color: black;
@@ -141,7 +142,7 @@ gnomadLink.propTypes = {
 }
 
 const POPULATIONS = [
-  { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'SC' },
+  { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
   { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' },
   { field: 'g1k', fieldTitle: '1kg WGS' },
   {
@@ -179,6 +180,7 @@ const POPULATIONS = [
     precision: 3,
     urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org' },
     queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_sv_r2_1' },
+    helpMessage: GNOMAD_SV_CRITERIA_MESSAGE,
   },
 ]
 
@@ -190,10 +192,13 @@ const Frequencies = React.memo(({ variant }) => {
   const hasGlobalAfPops = POPULATIONS.filter(pop => (
     populations[pop.field] && populations[pop.field].filter_af &&
     (populations[pop.field].filter_af !== populations[pop.field].af)))
+  const hasHelpMessagePops = POPULATIONS.filter(
+    pop => pop.helpMessage && populations[pop.field] && populations[pop.field].af !== null,
+  )
 
   return (
-    (hasAcPops.length || hasGlobalAfPops.length) ? (
-      <Popup position="top center" flowing trigger={freqContent}>
+    (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops) ? (
+      <Popup position="top center" wide="very" trigger={freqContent}>
         {hasGlobalAfPops.length > 0 && <Popup.Header content="Global AFs" />}
         <Popup.Content>
           {hasGlobalAfPops.map(pop => (
@@ -211,6 +216,14 @@ const Frequencies = React.memo(({ variant }) => {
             </div>
           ))}
         </Popup.Content>
+        {hasHelpMessagePops.map(pop => (
+          <Popup.Content key={pop.field}>
+            <Divider />
+            <i>
+              {pop.helpMessage}
+            </i>
+          </Popup.Content>
+        ))}
       </Popup>
     ) : freqContent
   )

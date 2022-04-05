@@ -1,5 +1,4 @@
 import { combineReducers } from 'redux'
-import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleValueReducer, createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -8,6 +7,7 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
+const RECEIVE_RNA_SEQ_UPLOAD_STATS = 'RECEIVE_RNA_SEQ_UPLOAD_STATS'
 const REQUEST_ALL_USERS = 'REQUEST_ALL_USERS'
 const RECEIVE_ALL_USERS = 'RECEIVE_ALL_USERS'
 
@@ -39,38 +39,39 @@ export const loadAllUsers = () => (dispatch, getState) => {
     }).get()
 }
 
-export const uploadQcPipelineOutput = values => dispatch => new HttpRequestHelper(
-  '/api/data_management/upload_qc_pipeline_output',
+const submitRequest = (urlPath, receiveDataAction, values) => dispatch => new HttpRequestHelper(
+  `/api/data_management/${urlPath}`,
   (responseJson) => {
-    dispatch({ type: RECEIVE_PIPELINE_UPLOAD_STATS, newValue: responseJson })
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
+    dispatch({ type: receiveDataAction, newValue: responseJson })
   },
 ).post(values)
 
-export const deleteEsIndex = index => dispatch => new HttpRequestHelper(
-  '/api/data_management/delete_index',
-  (responseJson) => {
-    dispatch({ type: RECEIVE_ELASTICSEARCH_STATUS, updates: responseJson })
+export const uploadQcPipelineOutput = values => submitRequest(
+  'upload_qc_pipeline_output', RECEIVE_PIPELINE_UPLOAD_STATS, values,
+)
+
+export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
+
+export const uploadRnaSeq = ({ file, ...values }) => dispatch => new HttpRequestHelper(
+  `/api/data_management/update_rna_seq/${file.uploadedFileId}`,
+  ({ info, warnings, sampleGuids }) => {
+    let numLoaded = 0
+    return Promise.all(sampleGuids.map(sampleGuid => new HttpRequestHelper(
+      `/api/data_management/load_rna_seq_sample/${sampleGuid}`,
+      () => { numLoaded += 1 },
+      e => warnings.push(`Error loading ${sampleGuid}: ${e.body && e.body.error ? e.body.error : e.message}`),
+    ).get())).then(() => {
+      info.push(`Successfully loaded data for ${numLoaded} RNA-seq samples`)
+      dispatch({ type: RECEIVE_RNA_SEQ_UPLOAD_STATS, newValue: { info, warnings } })
+    })
   },
-  (e) => {
-    if (e.body && e.body.error) {
-      throw new SubmissionError({ _error: [e.body.error] })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
-  },
-).post({ index })
+).post(values)
 
 export const reducers = {
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
   elasticsearchStatus: createSingleObjectReducer(RECEIVE_ELASTICSEARCH_STATUS),
   qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),
+  rnaSeqUploadStats: createSingleValueReducer(RECEIVE_RNA_SEQ_UPLOAD_STATS, {}),
   allUsers: createSingleValueReducer(RECEIVE_ALL_USERS, [], 'users'),
   allUsersLoading: loadingReducer(REQUEST_ALL_USERS, RECEIVE_ALL_USERS),
 }

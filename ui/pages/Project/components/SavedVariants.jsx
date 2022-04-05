@@ -22,6 +22,7 @@ import { TAG_FORM_FIELD } from '../constants'
 import { loadSavedVariants, updateSavedVariantTable } from '../reducers'
 import {
   getCurrentProject, getProjectTagTypeOptions, getTaggedVariantsByFamily, getProjectVariantSavedByOptions,
+  getSavedVariantTagTypeCounts, getSavedVariantTagTypeCountsByFamily,
 } from '../selectors'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
 import SelectSavedVariantsTable, { TAG_COLUMN, VARIANT_POS_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
@@ -58,10 +59,8 @@ const FILTER_FIELDS = [
 ]
 const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
 
-const BASE_FORM_ID = '-linkVariants'
-
 const mapVariantLinkStateToProps = (state, ownProps) => {
-  const familyGuid = ownProps.meta.form.split(BASE_FORM_ID)[0]
+  const familyGuid = ownProps.meta.data.formId
   return {
     data: getTaggedVariantsByFamily(state)[familyGuid],
     familyGuid,
@@ -86,8 +85,6 @@ const LINK_VARIANT_FIELDS = [
       VARIANT_POS_COLUMN,
       TAG_COLUMN,
     ],
-    // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
-    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
     validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
   },
 ]
@@ -95,7 +92,8 @@ const LINK_VARIANT_FIELDS = [
 const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
   <UpdateButton
     modalTitle="Link Saved Variants"
-    modalId={`${familyGuid}${BASE_FORM_ID}`}
+    modalId={`${familyGuid}-linkVariants`}
+    formMetaId={familyGuid}
     buttonText="Link Variants"
     editIconName="linkify"
     size="medium"
@@ -127,12 +125,13 @@ class BaseProjectSavedVariants extends React.PureComponent {
     match: PropTypes.object,
     project: PropTypes.object,
     analysisGroup: PropTypes.object,
+    tagTypeCounts: PropTypes.object,
     updateTableField: PropTypes.func,
     loadProjectSavedVariants: PropTypes.func,
   }
 
   getUpdateTagUrl = (newTag) => {
-    const { project, analysisGroup, match, updateTableField } = this.props
+    const { project, match, updateTableField } = this.props
     const categoryOptions = [...new Set(
       project.variantTagTypes.map(type => type.category).filter(category => category),
     )]
@@ -141,7 +140,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     updateTableField('categoryFilter')(isCategory ? newTag : null)
     return getSavedVariantsLinkPath({
       project,
-      analysisGroup,
+      analysisGroupGuid: match.params.analysisGroupGuid,
       tag: !isCategory && newTag !== ALL_FILTER && newTag,
       familyGuid: match.params.familyGuid,
     })
@@ -165,9 +164,9 @@ class BaseProjectSavedVariants extends React.PureComponent {
   }
 
   tagOptions = () => {
-    const { project, analysisGroup, match } = this.props
+    const { project, match } = this.props
     let currCategory = null
-    return project.variantTagTypes.reduce((acc, vtt) => {
+    return (project.variantTagTypes || []).reduce((acc, vtt) => {
       if (vtt.category !== currCategory) {
         currCategory = vtt.category
         if (vtt.category) {
@@ -189,7 +188,11 @@ class BaseProjectSavedVariants extends React.PureComponent {
       value: ALL_FILTER,
       text: 'All Saved',
       content: (
-        <LabelLink to={getSavedVariantsLinkPath({ project, analysisGroup, familyGuid: match.params.familyGuid })}>
+        <LabelLink
+          to={getSavedVariantsLinkPath({
+            project, analysisGroupGuid: match.params.analysisGroupGuid, familyGuid: match.params.familyGuid,
+          })}
+        >
           All Saved
         </LabelLink>
       ),
@@ -198,14 +201,15 @@ class BaseProjectSavedVariants extends React.PureComponent {
   }
 
   tableSummary = (summaryProps) => {
-    const { project, analysisGroup } = this.props
+    const { project, tagTypeCounts, match } = this.props
     return (
       <Grid.Row>
         <Grid.Column width={16}>
           <VariantTagTypeBar
             height={30}
             project={project}
-            analysisGroup={analysisGroup}
+            analysisGroupGuid={match.params.analysisGroupGuid}
+            tagTypeCounts={tagTypeCounts}
             {...summaryProps}
           />
         </Grid.Column>
@@ -239,6 +243,9 @@ class BaseProjectSavedVariants extends React.PureComponent {
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   analysisGroup: getAnalysisGroupsByGuid(state)[ownProps.match.params.analysisGroupGuid],
+  tagTypeCounts: ownProps.match.params.familyGuid ?
+    getSavedVariantTagTypeCountsByFamily(state)[ownProps.match.params.familyGuid] :
+    getSavedVariantTagTypeCounts(state, ownProps),
 })
 
 const mapDispatchToProps = dispatch => ({
