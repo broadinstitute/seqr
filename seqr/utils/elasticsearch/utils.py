@@ -1,6 +1,5 @@
 from datetime import timedelta
 import elasticsearch
-from elasticsearch_dsl import Q
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
