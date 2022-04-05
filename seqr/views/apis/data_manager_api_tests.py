@@ -257,14 +257,20 @@ SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE = [
     "03133B_2	UNKNOWN	[]	Standard Germline Exome v5	nfe	[]\n",
 ]
 
-SAMPLE_SV_QC_DATA = [
-    "sample	lt100_raw_calls	lt10_highQS_rare_calls\n",
-    "RP-123_MANZ_1169_DNA_v1_Exome_GCP	FALSE	TRUE\n",
-    "RP-123_NA_v1_Exome_GCP	TRUE	FALSE\n",
-    "RP-123_NA19675_1_v1_Exome_GCP	TRUE	TRUE\n",
-    "RP-123_NA19678_v1_Exome_GCP	TRUE	FALSE\n",
-    "RP-123_HG00732_v1_Exome_GCP	FALSE	TRUE\n",
-    "RP-123_HG00733_v1_Exome_GCP	FALSE	FALSE\n",
+SAMPLE_SV_WES_QC_DATA = [
+    b'sample	lt100_raw_calls	lt10_highQS_rare_calls\n',
+    b'RP-123_MANZ_1169_DNA_v1_Exome_GCP	FALSE	TRUE\n',
+    b'RP-123_NA_v1_Exome_GCP	TRUE	FALSE\n',
+    b'RP-123_NA19675_1_v1_Exome_GCP	TRUE	TRUE\n',
+    b'RP-123_NA19678_v1_Exome_GCP	TRUE	FALSE\n',
+    b'RP-123_HG00732_v1_Exome_GCP	FALSE	TRUE\n',
+    b'RP-123_HG00733_v1_Exome_GCP	FALSE	FALSE\n',
+]
+
+SAMPLE_SV_WGS_QC_DATA = [
+    b'sample	expected_num_calls\n',
+    b'NA21234	FALSE\n',
+    b'NA19678	FALSE\n',
 ]
 
 RNA_SAMPLE_GUID = 'S000150_na19675_d2'
@@ -358,135 +364,121 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, "DELETE")
 
-    # @mock.patch("seqr.views.apis.data_manager_api.file_iter")
-    # def test_upload_qc_pipeline_output(self, mock_file_iter):
-    #     url = reverse(
-    #         upload_qc_pipeline_output,
-    #     )
-    #     self.check_data_manager_login(url)
 
-    #     request_data = json.dumps(
-    #         {
-    #             "file": "gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv"
-    #         }
-    #     )
-
-    #     # Test missing columns
-    #     mock_file_iter.return_value = ["", ""]
-    #     response = self.client.post(
-    #         url, content_type="application/json", data=request_data
-    #     )
-    #     self.assertEqual(response.status_code, 400)
-    #     self.assertEqual(
-    #         response.reason_phrase,
-    #         'The following required columns are missing: seqr_id, data_type, filter_flags, qc_metrics_filters, qc_pop'
-    #     )
-
-    #     # Test no data type error
-    #     mock_file_iter.return_value = SAMPLE_QC_DATA_NO_DATA_TYPE
-    #     response = self.client.post(
-    #         url, content_type="application/json", data=request_data
-    #     )
-    #     self.assertEqual(response.status_code, 400)
-    #     self.assertEqual(response.reason_phrase, "No data type detected")
-
-    #     # Test multiple data types error
-    #     mock_file_iter.return_value = SAMPLE_QC_DATA_MORE_DATA_TYPE
-    #     response = self.client.post(
-    #         url, content_type="application/json", data=request_data
-    #     )
-    #     self.assertEqual(response.status_code, 400)
-    #     self.assertEqual(
-    #         response.reason_phrase, "Multiple data types detected: wes ,wgs"
-    #     )
-
-    #     # Test unexpected data type error
-    #     mock_file_iter.return_value = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
-    #     response = self.client.post(
-    #         url, content_type="application/json", data=request_data
-    #     )
-    #     self.assertEqual(response.status_code, 400)
-    #     self.assertEqual(
-    #         response.reason_phrase,
-    #         'Unexpected data type detected: "unknown" (should be "exome" or "genome")',
-    #     )
-
-    #     # Test normal functions
-    #     mock_file_iter.return_value = SAMPLE_QC_DATA
-    #     response = self.client.post(
-    #         url, content_type="application/json", data=request_data
-    #     )
-    #     self.assertEqual(response.status_code, 200)
-    #     response_json = response.json()
-    #     self.assertSetEqual(set(response_json.keys()), {"info", "errors", "warnings"})
-    #     self.assertListEqual(
-    #         response_json["info"],
-    #         [
-    #             "Parsed 6 exome samples",
-    #             "Found and updated matching seqr individuals for 4 samples",
-    #         ],
-    #     )
-    #     self.assertListEqual(
-    #         response_json["warnings"],
-    #         [
-    #             "The following 1 samples were added to multiple individuals: NA19678 (2)",
-    #             "The following 2 samples were skipped: MANZ_1169_DNA, NA",
-    #             "The following filter flags have no known corresponding value and were not saved: not_real_flag",
-    #             "The following population platform filters have no known corresponding value and were not saved: not_real_filter",
-    #         ],
-    #     )
-
-    #     indiv = Individual.objects.get(id=1)
-    #     self.assertIsNone(indiv.filter_flags)
-    #     self.assertDictEqual(
-    #         indiv.pop_platform_filters,
-    #         {
-    #             "n_deletion": "10898",
-    #             "n_snp": "127706",
-    #             "r_insertion_deletion": "1.2572E+00",
-    #             "r_ti_tv": "1.8292E+00",
-    #             "n_insertion": "13701",
-    #         },
-    #     )
-    #     self.assertEqual(indiv.population, "AMR")
-
-    #     indiv = Individual.objects.get(id=2)
-    #     self.assertDictEqual(indiv.filter_flags, {"coverage_exome": "8.1446E+01"})
-    #     self.assertDictEqual(indiv.pop_platform_filters, {"n_insertion": "6857"})
-    #     self.assertEqual(indiv.population, "SAS")
-
-    #     indiv = Individual.objects.get(id=12)
-    #     self.assertDictEqual(indiv.filter_flags, {"coverage_exome": "8.1446E+01"})
-    #     self.assertDictEqual(indiv.pop_platform_filters, {"n_insertion": "6857"})
-    #     self.assertEqual(indiv.population, "SAS")
-
-    #     indiv = Individual.objects.get(id=5)
-    #     self.assertDictEqual(indiv.filter_flags, {"chimera": "5.0841E+00"})
-    #     self.assertDictEqual(
-    #         indiv.pop_platform_filters,
-    #         {"n_insertion": "29507", "r_insertion_deletion": "1.343E+00"},
-    #     )
-    #     self.assertEqual(indiv.population, "NFE")
-
-    #     indiv = Individual.objects.get(id=6)
-    #     self.assertDictEqual(indiv.filter_flags, {"contamination": "2.79E+00"})
-    #     self.assertDictEqual(
-    #         indiv.pop_platform_filters,
-    #         {"n_insertion": "38051", "r_insertion_deletion": "1.8064E+00"},
-    #     )
-    #     self.assertEqual(indiv.population, "OTH")
-
-    # Don't have access to seqr-datasets
-    # @mock.patch('seqr.views.apis.data_manager_api.file_iter')
-    # def test_upload_sv_qc(self, mock_file_iter):
+    # 2022-04-05 mfranklin: disabled because we don't have access to gs://seqr-datasets/
+    # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    # def test_upload_qc_pipeline_output(self, mock_subprocess):
     #     url = reverse(upload_qc_pipeline_output, )
     #     self.check_data_manager_login(url)
+    #
+    #     request_data = json.dumps({
+    #         'file': ' gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'
+    #     })
+    #
+    #     # Test missing file
+    #     mock_does_file_exist = mock.MagicMock()
+    #     mock_subprocess.side_effect = [mock_does_file_exist]
+    #     mock_does_file_exist.wait.return_value = 1
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 400)
+    #     self.assertListEqual(
+    #         response.json()['errors'],
+    #         [
+    #             'File not found: gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'])
+    #
+    #     # Test missing columns
+    #     mock_does_file_exist.wait.return_value = 0
+    #     mock_file_iter = mock.MagicMock()
+    #     mock_file_iter.stdout = [b'', b'']
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 400)
+    #     self.assertEqual(
+    #         response.reason_phrase,
+    #         'The following required columns are missing: seqr_id, data_type, filter_flags, qc_metrics_filters, qc_pop')
+    #
+    #     # Test no data type error
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     mock_file_iter.stdout = SAMPLE_QC_DATA_NO_DATA_TYPE
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 400)
+    #     self.assertEqual(response.reason_phrase, 'No data type detected')
+    #
+    #     # Test multiple data types error
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     mock_file_iter.stdout = SAMPLE_QC_DATA_MORE_DATA_TYPE
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 400)
+    #     self.assertEqual(response.reason_phrase, 'Multiple data types detected: wes ,wgs')
+    #
+    #     # Test unexpected data type error
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     mock_file_iter.stdout = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 400)
+    #     self.assertEqual(response.reason_phrase,
+    #                      'Unexpected data type detected: "unknown" (should be "exome" or "genome")')
+    #
+    #     # Test normal functions
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     mock_file_iter.stdout = SAMPLE_QC_DATA
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 200)
+    #     response_json = response.json()
+    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
+    #     self.assertListEqual(response_json['info'], [
+    #         'Parsed 6 exome samples',
+    #         'Found and updated matching seqr individuals for 4 samples'
+    #     ])
+    #     self.assertListEqual(response_json['warnings'], [
+    #         'The following 1 samples were added to multiple individuals: NA19678 (2)',
+    #         'The following 2 samples were skipped: MANZ_1169_DNA, NA',
+    #         'The following filter flags have no known corresponding value and were not saved: not_real_flag',
+    #         'The following population platform filters have no known corresponding value and were not saved: not_real_filter'
+    #     ])
+    #
+    #     indiv = Individual.objects.get(id=1)
+    #     self.assertIsNone(indiv.filter_flags)
+    #     self.assertDictEqual(indiv.pop_platform_filters,
+    #                          {'n_deletion': '10898', 'n_snp': '127706', 'r_insertion_deletion': '1.2572E+00',
+    #                           'r_ti_tv': '1.8292E+00', 'n_insertion': '13701'})
+    #     self.assertEqual(indiv.population, 'AMR')
+    #
+    #     indiv = Individual.objects.get(id=2)
+    #     self.assertDictEqual(indiv.filter_flags, {'coverage_exome': '8.1446E+01'})
+    #     self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '6857'})
+    #     self.assertEqual(indiv.population, 'SAS')
+    #
+    #     indiv = Individual.objects.get(id=12)
+    #     self.assertDictEqual(indiv.filter_flags, {'coverage_exome': '8.1446E+01'})
+    #     self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '6857'})
+    #     self.assertEqual(indiv.population, 'SAS')
+    #
+    #     indiv = Individual.objects.get(id=5)
+    #     self.assertDictEqual(indiv.filter_flags, {'chimera': '5.0841E+00'})
+    #     self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '29507', 'r_insertion_deletion': '1.343E+00'})
+    #     self.assertEqual(indiv.population, 'NFE')
+    #
+    #     indiv = Individual.objects.get(id=6)
+    #     self.assertDictEqual(indiv.filter_flags, {'contamination': '2.79E+00'})
+    #     self.assertDictEqual(indiv.pop_platform_filters, {'n_insertion': '38051', 'r_insertion_deletion': '1.8064E+00'})
+    #     self.assertEqual(indiv.population, 'OTH')
 
+    # 2022-04-05 mfranklin: disabled because we don't have access to gs://seqr-datasets/
+    # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    # def test_upload_sv_qc(self, mock_subprocess):
+    #     url = reverse(upload_qc_pipeline_output, )
+    #     self.check_data_manager_login(url)
+    #
     #     request_data = json.dumps({
     #         'file': 'gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/sv/sv_sample_metadata.tsv'
     #     })
-
-    #     mock_file_iter.return_value = SAMPLE_SV_QC_DATA
+    #
+    #     mock_does_file_exist = mock.MagicMock()
+    #     mock_does_file_exist.wait.return_value = 0
+    #     mock_file_iter = mock.MagicMock()
+    #     mock_file_iter.stdout = SAMPLE_SV_WES_QC_DATA
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
     #     response = self.client.post(url, content_type='application/json', data=request_data)
     #     self.assertEqual(response.status_code, 200)
     #     response_json = response.json()
@@ -496,14 +488,31 @@ class DataManagerAPITest(AuthenticationTestCase):
     #         'Found and updated matching seqr individuals for 4 samples'
     #     ])
     #     self.assertListEqual(response_json['warnings'], ['The following 2 samples were skipped: MANZ_1169_DNA, NA'])
-
+    #
     #     self.assertIsNone(Individual.objects.get(individual_id='NA19675_1').sv_flags)
     #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
     #     self.assertListEqual(Individual.objects.get(individual_id='HG00732').sv_flags, ['raw_calls:_>100'])
     #     self.assertListEqual(
     #         Individual.objects.get(individual_id='HG00733').sv_flags,
-    #         ['raw_calls:_>100', 'high_QS_rare_calls:_>10'])
+    #         ['high_QS_rare_calls:_>10', 'raw_calls:_>100'])
+    #
+    #     # Test genome data
+    #     mock_file_iter.stdout = SAMPLE_SV_WGS_QC_DATA
+    #     mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
+    #     response = self.client.post(url, content_type='application/json', data=request_data)
+    #     self.assertEqual(response.status_code, 200)
+    #     response_json = response.json()
+    #     self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
+    #     self.assertListEqual(response_json['info'], [
+    #         'Parsed 2 SV samples',
+    #         'Found and updated matching seqr individuals for 1 samples'
+    #     ])
+    #     self.assertListEqual(response_json['warnings'], ['The following 1 samples were skipped: NA19678'])
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA21234').sv_flags, ['outlier_num._calls'])
+    #     # Should not overwrite existing QC flags
+    #     self.assertListEqual(Individual.objects.get(individual_id='NA19678').sv_flags, ['high_QS_rare_calls:_>10'])
 
+    @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
     @mock.patch(
         "seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD", "abc123"
     )

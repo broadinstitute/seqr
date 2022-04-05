@@ -10,11 +10,12 @@ import {
   getUserOptionsIsLoading,
   getHasActiveSearchableSampleByFamily,
   getUserOptions,
+  getProjectAnalysisGroupOptions,
   getAnalysisGroupsByFamily,
   getAnalysisGroupIsLoading,
 } from 'redux/selectors'
 
-import BaseFieldView from '../view-fields/BaseFieldView'
+import TagFieldView from '../view-fields/TagFieldView'
 import Sample from '../sample'
 import { ColoredIcon } from '../../StyledComponents'
 import { Select } from '../../form/Inputs'
@@ -91,7 +92,7 @@ export const analysisStatusIcon = (
       trigger={icon}
       content={
         <div>
-          {compact && value.text}
+          {compact && value.name}
           {analysisStatusLastModifiedDate && (
             <i>
               {compact && <br />}
@@ -144,7 +145,7 @@ AnalysedBy.propTypes = {
 
 const BaseAnalysisGroups = React.memo(({ load, loading, ...props }) => (
   <DataLoader load={load} loading={loading} content>
-    <BaseFieldView {...props} />
+    <TagFieldView {...props} />
   </DataLoader>
 ))
 
@@ -156,6 +157,7 @@ BaseAnalysisGroups.propTypes = {
 const mapGroupsStateToProps = (state, ownProps) => ({
   fieldValue: getAnalysisGroupsByFamily(state)[ownProps.initialValues.familyGuid],
   loading: getAnalysisGroupIsLoading(state),
+  tagOptions: getProjectAnalysisGroupOptions(state)[ownProps.initialValues.projectGuid] || [],
 })
 
 const mapGroupsDispatchToProps = (dispatch, ownProps) => ({

@@ -16,7 +16,8 @@ import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 import { InlineHeader } from '../../StyledComponents'
 import {
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
+  FAMILY_ANALYSIS_STATUS_LOOKUP,
   FAMILY_FIELD_ANALYSIS_STATUS,
   FAMILY_FIELD_ASSIGNED_ANALYST,
   FAMILY_FIELD_ANALYSED_BY,
@@ -60,15 +61,17 @@ const getNoteField = noteType => ({
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_ANALYSIS_GROUPS]: {
-    canEdit: false,
+    canEdit: true,
     component: AnalysisGroups,
+    submitArgs: { familyField: 'analysis_groups', rawResponse: true },
     fieldDisplay: values => values.map(({ name }) => name).join(', '),
   },
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     canEdit: true,
     component: OptionFieldView,
-    tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
+    tagOptions: SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
+    tagOptionLookup: FAMILY_ANALYSIS_STATUS_LOOKUP,
     tagAnnotation: analysisStatusIcon,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: {

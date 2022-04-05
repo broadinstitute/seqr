@@ -1,7 +1,7 @@
 import { createSelector } from 'reselect'
 
 import {
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  ALL_FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
@@ -272,16 +272,19 @@ export const getProjectTagTypeOptions = createSelector(
 export const getProjectVariantSavedByOptions = createSelector(
   getProjectFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  (familiesByGuid, variantDetailByFamilyVariant) => [null, ...Object.keys(familiesByGuid).reduce(
-    (acc, familyGuid) => new Set([
-      ...acc,
-      ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
-        ...variantAcc,
-        ...(tags || []).map(({ createdBy }) => createdBy),
-        ...(notes || []).map(({ createdBy }) => createdBy),
-      ]), []),
-    ]), new Set(),
-  )].map(value => ({ value })),
+  (familiesByGuid, variantDetailByFamilyVariant) => [
+    { value: null, text: 'View All' },
+    ...[...Object.keys(familiesByGuid).reduce(
+      (acc, familyGuid) => new Set([
+        ...acc,
+        ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
+          ...variantAcc,
+          ...(tags || []).map(({ createdBy }) => createdBy),
+          ...(notes || []).map(({ createdBy }) => createdBy),
+        ]), []),
+      ]), new Set(),
+    )].map(value => ({ value })),
+  ],
 )
 
 // Family table selectors
@@ -490,7 +493,7 @@ export const getAnalysisStatusCounts = createSelector(
       ...acc, [family.analysisStatus]: (acc[family.analysisStatus] || 0) + 1,
     }), {})
 
-    return FAMILY_ANALYSIS_STATUS_OPTIONS.map(
+    return ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.map(
       option => ({ ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   },

@@ -3,7 +3,9 @@ APIs for retrieving, updating, creating, and deleting Individual records
 """
 from collections import defaultdict
 
+from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json, \
     update_model_from_json
 from seqr.views.utils.pedigree_info_utils import JsonConstants
@@ -147,8 +149,17 @@ def delete_individuals(project, individual_guids, user):
     individuals_to_delete = Individual.objects.filter(
         family__project=project, guid__in=individual_guids)
 
-    Sample.bulk_delete(user, individual__family__project=project, individual__guid__in=individual_guids)
-    IgvSample.bulk_delete(user, individual__family__project=project, individual__guid__in=individual_guids)
+    submission_individuals = individuals_to_delete.filter(
+        matchmakersubmission__isnull=False, matchmakersubmission__deleted_date__isnull=True,
+    ).values_list('individual_id', flat=True)
+    if submission_individuals:
+        raise ErrorsWarningsException([
+            f'Unable to delete individuals with active MME submission: {", ".join(submission_individuals)}'])
+
+    Sample.bulk_delete(user, individual__in=individuals_to_delete)
+    IgvSample.bulk_delete(user, individual__in=individuals_to_delete)
+    MatchmakerResult.bulk_delete(user, submission__individual__in=individuals_to_delete, submission__deleted_date__isnull=False)
+    MatchmakerSubmission.bulk_delete(user, individual__in=individuals_to_delete, deleted_date__isnull=False)
 
     families = {individual.family for individual in individuals_to_delete}
 

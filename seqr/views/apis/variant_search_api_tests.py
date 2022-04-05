@@ -72,7 +72,7 @@ EXPECTED_SEARCH_CONTEXT_RESPONSE = {
     },
     'projectsByGuid': {PROJECT_GUID: mock.ANY},
     'familiesByGuid': mock.ANY,
-    'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY},
+    'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY, 'AG0000185_accepted': mock.ANY},
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY, 'LL00005_retina_proteome': mock.ANY},
 }
 
@@ -351,7 +351,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
-        gene_fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity'}
+        gene_fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc'}
         gene_fields.update(GENE_FIELDS)
         self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
 
