@@ -221,6 +221,14 @@ export const updateLocusLists = values => (dispatch, getState) => {
     }).post(values)
 }
 
+export const updateAnvilWorkspace = values => (dispatch, getState) => {
+  const projectGuid = getState().currentProjectGuid
+  return new HttpRequestHelper(`/api/project/${projectGuid}/update_workspace`,
+    (responseJson) => {
+      dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson } } })
+    }).post(values)
+}
+
 export const updateCollaborator = values => updateEntity(
   values, RECEIVE_DATA, null, 'username', null, state => `/api/project/${state.currentProjectGuid}/collaborators`,
 )
