@@ -259,14 +259,7 @@ class EsSearch(object):
                     self.update_dataset_type(comp_het_dataset_type)
                 return
 
-        pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
-        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
-        if pathogenicity_filter and splice_ai_filter:
-            annotation_override_filter = _or_filters([pathogenicity_filter, splice_ai_filter])
-        else:
-            annotation_override_filter = pathogenicity_filter or splice_ai_filter
-
-        dataset_type = self._filter_by_annotations(annotations, annotation_override_filter, new_svs)
+        dataset_type = self._filter_by_annotations(annotations, pathogenicity, splice_ai, new_svs)
 
         if skip_genotype_filter and not inheritance_mode:
             return
@@ -322,8 +315,16 @@ class EsSearch(object):
 
         self._filter(q)
 
-    def _filter_by_annotations(self, annotations, annotation_override_filter, new_svs):
+    def _filter_by_annotations(self, annotations, pathogenicity, splice_ai, new_svs):
         dataset_type = None
+
+        pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
+        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
+        if pathogenicity_filter and splice_ai_filter:
+            annotation_override_filter = _or_filters([pathogenicity_filter, splice_ai_filter])
+        else:
+            annotation_override_filter = pathogenicity_filter or splice_ai_filter
+
         if self._allowed_consequences:
             consequences_filter = _annotations_filter(self._allowed_consequences)
 
