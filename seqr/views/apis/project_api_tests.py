@@ -7,7 +7,7 @@ from django.urls.base import reverse
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace
+    project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
@@ -383,6 +383,26 @@ class ProjectAPITest(object):
         self.assertSetEqual(
             set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
         )
+
+    def test_project_family_notes(self):
+        url = reverse(project_family_notes, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {'projectsByGuid', 'familyNotesByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'familyNotesLoaded': True}})
+        self.assertEqual(len(response_json['familyNotesByGuid']), 3)
+        self.assertSetEqual(
+            set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS
+        )
+
+        # Test empty project
+        empty_url = reverse(project_family_notes, args=[EMPTY_PROJECT_GUID])
+        self._check_empty_project(empty_url, response_keys, 'familyNotesLoaded')
 
     def test_project_mme_submisssions(self):
         url = reverse(project_mme_submisssions, args=[PROJECT_GUID])

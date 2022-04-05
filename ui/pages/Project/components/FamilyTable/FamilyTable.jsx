@@ -15,7 +15,7 @@ import {
   getVisibleFamiliesInSortedOrder, getFamiliesLoading, getProjectOverviewIsLoading, getProjectExportUrls,
   getIndivdualsLoading,
 } from '../../selectors'
-import { loadFamilies, loadIndividuals } from '../../reducers'
+import { loadFamilies, loadProjectExportData } from '../../reducers'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
@@ -167,13 +167,13 @@ FamilyTable.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
   loading: getFamiliesLoading(state) || getProjectOverviewIsLoading(state),
-  exportDataLoading: getIndivdualsLoading(state),
+  exportDataLoading: getFamiliesLoading(state) || getIndivdualsLoading(state),
   exportUrls: getProjectExportUrls(state, ownProps),
 })
 
 const mapDispatchToProps = {
   load: loadFamilies,
-  loadExportData: loadIndividuals,
+  loadExportData: loadProjectExportData,
 }
 
 export default withRouter(connect(mapStateToProps, mapDispatchToProps)(FamilyTable))

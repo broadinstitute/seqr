@@ -53,6 +53,13 @@ export const loadIndividuals = () => loadCurrentProjectChildEntities('individual
 
 export const loadMmeSubmissions = () => loadCurrentProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
 
+const loadFamilyNotes = () => loadCurrentProjectChildEntities('family notes', REQUEST_FAMILIES, RECEIVE_FAMILIES)
+
+export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
+  loadIndividuals()(dispatch, getState),
+  loadFamilyNotes()(dispatch, getState),
+])
+
 export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
   const project = projectsByGuid[currentProjectGuid]

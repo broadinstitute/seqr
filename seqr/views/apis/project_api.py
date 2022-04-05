@@ -235,6 +235,16 @@ def project_analysis_groups(request, project_guid):
     })
 
 @login_and_policies_required
+def project_family_notes(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project), is_analyst=False)
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'familyNotesLoaded': True}},
+        'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
+    })
+
+@login_and_policies_required
 def project_mme_submisssions(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     models = MatchmakerSubmission.objects.filter(individual__family__project=project)
