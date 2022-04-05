@@ -8,7 +8,11 @@ class EsGeneAggSearch(EsSearch):
     AGGREGATION_NAME = 'gene aggregation'
     CACHED_COUNTS_KEY = None
 
-    def aggregate_by_gene(self):
+    def search(self, *args, **kwargs):
+        self._aggregate_by_gene()
+        return super(EsGeneAggSearch, self).search(*args, **kwargs)
+
+    def _aggregate_by_gene(self):
         searches = [self._search]
         for index_searches in self._index_searches.values():
             searches += [index_search for index_search in index_searches]
@@ -95,6 +99,8 @@ class EsGeneAggSearch(EsSearch):
             variants = next(iter(group.values()))
             gene_id = next(iter(group))
             if gene_id and gene_id != 'null':
+                if gene_id not in gene_counts:
+                    gene_counts[gene_id] = {'total': 0, 'families': defaultdict(int)}
                 gene_counts[gene_id]['total'] += len(variants)
                 for family_guid in variants[0]['familyGuids']:
                     gene_counts[gene_id]['families'][family_guid] += len(variants)
