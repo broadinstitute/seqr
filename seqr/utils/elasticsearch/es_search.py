@@ -370,9 +370,7 @@ class EsSearch(object):
         all_sample_search = (not quality_filters_by_family) and (inheritance_mode == ANY_AFFECTED or not has_inheritance_filter)
         no_filter_indices = set()
 
-        indices = self._indices
-
-        for index in indices:
+        for index in self._indices:
             family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
 
@@ -455,6 +453,12 @@ class EsSearch(object):
             from seqr.utils.elasticsearch.utils import InvalidSearchException
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
+        if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
+                                           for family_samples_by_id in self.samples_by_family_index.values()):
+            from seqr.utils.elasticsearch.utils import InvalidSearchException
+            raise InvalidSearchException(
+                'Location must be specified to search for compound heterozygous variants across many families')
+
         comp_het_consequences = set(self._allowed_consequences)
         dataset_type = _dataset_type_for_annotations(annotations)
         if annotations_secondary:
@@ -466,33 +470,53 @@ class EsSearch(object):
 
         comp_het_search = self._search.filter(_annotations_filter(comp_het_consequences))
 
-        indices = set(self.indices_by_dataset_type[dataset_type] if dataset_type else self._indices)
+        comp_het_qs_by_index = defaultdict(list)
+        if dataset_type or len(self._indices) <= 1:
+            indices = self.indices_by_dataset_type[dataset_type] if dataset_type else self._indices
+            for index in sorted(indices, reverse=True):
+                family_samples_by_id = self.samples_by_family_index[index]
+                index_fields = self.index_metadata[index]['fields']
 
+                for family_guid, samples_by_id in sorted(family_samples_by_id.items()):
+                    affected_status = self._family_individual_affected_status[family_guid]
+                    family_samples_q = _family_genotype_inheritance_filter(
+                        COMPOUND_HET, INHERITANCE_FILTERS[COMPOUND_HET], samples_by_id, affected_status, index_fields,
+                    )
+                    samples_q = _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
+                    comp_het_qs_by_index[index].append(samples_q)
+        else:
+            self._get_paired_indices_comp_het_queries(comp_het_qs_by_index, quality_filters_by_family)
+
+        for index, compound_het_qs in comp_het_qs_by_index.items():
+            comp_het_qs_list = [
+                compound_het_qs[:MAX_SEARCH_CLAUSES], compound_het_qs[MAX_SEARCH_CLAUSES:]
+            ] if len(compound_het_qs) > MAX_SEARCH_CLAUSES else [compound_het_qs]
+            for compound_het_q in comp_het_qs_list:
+                compound_het_search = comp_het_search.filter(_or_filters(compound_het_q))
+                compound_het_search.aggs.bucket(
+                    'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES + 1
+                ).metric(
+                    'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
+                )
+                self._index_searches[index].append(compound_het_search)
+
+        return dataset_type
+
+    def _get_paired_indices_comp_het_queries(self, comp_het_qs_by_index, quality_filters_by_family):
         paired_index_families = defaultdict(dict)
-        if len(indices) > 1:
-            sv_indices = [
-                index for index in self.indices_by_dataset_type[Sample.DATASET_TYPE_SV_CALLS] if index in indices
-            ]
-            variant_indices = [
-                index for index in self.indices_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] if index in indices
-            ]
-            if sv_indices and variant_indices:
-                for sv_index in sv_indices:
-                    sv_families = set(self.samples_by_family_index[sv_index].keys())
-                    for var_index in variant_indices:
-                        overlapping_families = sv_families & set(self.samples_by_family_index[var_index].keys())
-                        if overlapping_families:
-                            paired_index_families[sv_index].update({var_index: overlapping_families})
-                            paired_index_families[var_index].update({sv_index: overlapping_families})
-
-        if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
-                                       for family_samples_by_id in self.samples_by_family_index.values()):
-            from seqr.utils.elasticsearch.utils import InvalidSearchException
-            raise InvalidSearchException('Location must be specified to search for compound heterozygous variants across many families')
+        sv_indices = self.indices_by_dataset_type[Sample.DATASET_TYPE_SV_CALLS]
+        variant_indices = self.indices_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]
+        if sv_indices and variant_indices:
+            for sv_index in sv_indices:
+                sv_families = set(self.samples_by_family_index[sv_index].keys())
+                for var_index in variant_indices:
+                    overlapping_families = sv_families & set(self.samples_by_family_index[var_index].keys())
+                    if overlapping_families:
+                        paired_index_families[sv_index].update({var_index: overlapping_families})
+                        paired_index_families[var_index].update({sv_index: overlapping_families})
 
         seen_paired_indices = set()
-        comp_het_qs_by_index = defaultdict(list)
-        for index in sorted(indices, reverse = True):
+        for index in sorted(self._indices, reverse=True):
             family_samples_by_id = self.samples_by_family_index[index]
             index_fields = self.index_metadata[index]['fields']
             seen_paired_indices.add(index)
@@ -527,21 +551,6 @@ class EsSearch(object):
 
                 samples_q = _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_family)
                 comp_het_qs_by_index[family_index].append(samples_q)
-
-        for index, compound_het_qs in comp_het_qs_by_index.items():
-            comp_het_qs_list = [
-                compound_het_qs[:MAX_SEARCH_CLAUSES], compound_het_qs[MAX_SEARCH_CLAUSES:]
-            ] if len(compound_het_qs) > MAX_SEARCH_CLAUSES else [compound_het_qs]
-            for compound_het_q in comp_het_qs_list:
-                compound_het_search = comp_het_search.filter(_or_filters(compound_het_q))
-                compound_het_search.aggs.bucket(
-                    'genes', 'terms', field='geneIds', min_doc_count=2, size=MAX_COMPOUND_HET_GENES + 1
-                ).metric(
-                    'vars_by_gene', 'top_hits', size=100, sort=self._sort, _source=QUERY_FIELD_NAMES
-                )
-                self._index_searches[index].append(compound_het_search)
-
-        return dataset_type
 
     def _comp_het_inheritance_filter(self, index, has_paired_index):
         if has_paired_index and self._get_index_dataset_type(index) == Sample.DATASET_TYPE_VARIANT_CALLS:
