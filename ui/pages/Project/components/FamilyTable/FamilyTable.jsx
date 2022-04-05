@@ -67,6 +67,10 @@ class FamilyTableRow extends React.PureComponent {
     const showFamilyDetails = showDetails === null ? initialShowDetails : showDetails
     return (
       <Table.Row>
+        <Table.Cell collapsing verticalAlign="top">
+          {detailFields && noDetailFields &&
+            <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
+        </Table.Cell>
         <OverflowCell>
           <Visibility fireOnMount onOnScreen={this.handleOnScreen}>
             {isVisible && (
@@ -79,8 +83,6 @@ class FamilyTableRow extends React.PureComponent {
                 fields={showFamilyDetails ? detailFields : noDetailFields}
                 compact={!showFamilyDetails}
                 disableEdit={!showFamilyDetails}
-                annotation={detailFields && noDetailFields &&
-                <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
               />
             )}
           </Visibility>
@@ -121,7 +123,7 @@ const FamilyTable = React.memo(({
       />
       <HorizontalSpacer width={45} />
     </ExportContainer>
-    <Table padded fixed attached="top">
+    <Table compact fixed attached="top">
       <TableHeaderRow
         fields={noDetailFields}
         tableName={tableName}
@@ -129,7 +131,7 @@ const FamilyTable = React.memo(({
         analysisGroupGuid={props.match.params.analysisGroupGuid}
       />
     </Table>
-    <Table celled striped padded fixed attached="bottom">
+    <Table striped compact attached="bottom">
       <Table.Body>
         {loading && <TableLoading />}
         {!loading && (visibleFamilies.length > 0 ? visibleFamilies.map(family => (
