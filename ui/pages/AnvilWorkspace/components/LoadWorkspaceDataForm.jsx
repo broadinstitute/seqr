@@ -71,7 +71,7 @@ const UPLOAD_PEDIGREE_FIELD = {
 const AGREE_CHECKBOX = {
   name: 'agreeSeqrAccess',
   component: BooleanCheckbox,
-  label: 'By submitting this form I agree to grant seqr access to the data in the associated workspace',
+  label: 'By proceeding with seqr loading, I agree to grant seqr access to the data in this workspace',
   validate: validators.required,
 }
 
