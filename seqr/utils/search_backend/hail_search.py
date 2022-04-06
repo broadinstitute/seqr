@@ -261,8 +261,7 @@ class HailSearch(object):
         in_silico_q = None
         missing_in_silico_q = None
         for in_silico, value in in_silico_filters.items():
-            score_path = PREDICTION_FIELDS_CONFIG[in_silico]
-            ht_value = self.ht[score_path[0]][score_path[1]]
+            ht_value = self._get_in_silico_ht_field(in_silico)
             try:
                 score_filter = ht_value >= float(value)
             except ValueError:
@@ -281,16 +280,31 @@ class HailSearch(object):
 
         self.ht = self.ht.filter(in_silico_q | missing_in_silico_q)
 
+    def _get_in_silico_ht_field(self, in_silico):
+        score_path = PREDICTION_FIELDS_CONFIG[in_silico]
+        return self.ht[score_path[0]][score_path[1]]
+
     def _filter_by_annotations(self, pathogenicity, splice_ai):
-        if self._allowed_consequences:
-            self.ht = self._get_filtered_transcript_consequences(self._allowed_consequences)
-        elif pathogenicity or splice_ai:
+        annotation_filters = []
+        if pathogenicity:
             raise NotImplementedError  # TODO
+        if splice_ai:
+            annotation_filters.append(self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(splice_ai))
+        if self._allowed_consequences:
+            annotation_filters.append(self._get_filtered_transcript_consequences(self._allowed_consequences))
+
+        if not annotation_filters:
+            return
+        annotation_filter = annotation_filters[0]
+        for af in annotation_filters[1:]:
+            annotation_filter |= af
+
+        self.ht = self.ht.filter(annotation_filter)
 
     def _get_filtered_transcript_consequences(self, allowed_consequences):
         allowed_consequences_set = hl.set(allowed_consequences)
         consequence_terms = self.ht.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
-        return self.ht.filter(consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct)))
+        return consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))
 
     def _annotate_filtered_genotypes(self, inheritance_mode, inheritance_filter, quality_filter):
         self.ht = self.ht.join(self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter))
@@ -416,7 +430,7 @@ class HailSearch(object):
             self._allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
 
-        comp_het_ht = self._get_filtered_transcript_consequences(comp_het_consequences)
+        comp_het_ht = self.ht.filter(self._get_filtered_transcript_consequences(comp_het_consequences))
         comp_het_ht = comp_het_ht.join(self._filter_by_genotype(
             inheritance_mode=COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter,
         ))
