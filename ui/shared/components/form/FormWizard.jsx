@@ -52,14 +52,19 @@ class FormWizard extends React.PureComponent {
     const { pageIndex } = this.state
     const nextPageIndex = pageIndex + 1
 
-    if (nextPageIndex === pages.length) {
-      onSubmit(values, form, callback).then(
-        () => callback(),
-        e => callback({ errors: e.body?.errors || [e.body?.error] || [e.message] }),
-      )
-    } else {
+    const navigateNextPage = () => {
       this.setState({ pageIndex: nextPageIndex })
       callback()
+    }
+
+    const handleAsyncError = e => callback({ errors: e.body?.errors || [e.body?.error] || [e.message] })
+
+    if (nextPageIndex === pages.length) {
+      onSubmit(values).then(() => callback(), handleAsyncError)
+    } else if (pages[pageIndex].onSubmit) {
+      pages[pageIndex].onSubmit(values).then(navigateNextPage, handleAsyncError)
+    } else {
+      navigateNextPage()
     }
   }
 
