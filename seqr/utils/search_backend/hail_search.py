@@ -254,7 +254,8 @@ class HailSearch(object):
                 self.ht = self.ht.filter(hl.is_missing(self.ht[pop]) | pop_filter)
 
     def _filter_by_in_silico(self, in_silico_filters):
-        raise NotImplementedError # TODO
+        if in_silico_filters:
+            raise NotImplementedError # TODO
 
     def _filter_by_annotations(self, pathogenicity, splice_ai):
         if self._allowed_consequences:
