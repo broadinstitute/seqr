@@ -81,6 +81,7 @@ class FormWrapper extends React.PureComponent {
     submitButtonText: PropTypes.string,
     submitButtonIcon: PropTypes.string,
     successMessage: PropTypes.string,
+    hideButtonSuccessStatus: PropTypes.bool,
 
     /* Submit the form whenever values change rather than with a submit button */
     submitOnChange: PropTypes.bool,
@@ -182,12 +183,12 @@ class FormWrapper extends React.PureComponent {
   }) => {
     const {
       submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, submitButtonIcon,
-      onSubmitSucceeded, noModal, liveValidate,
+      onSubmitSucceeded, noModal, liveValidate, hideButtonSuccessStatus,
     } = this.props
 
     const currentFormSubmitFailed = submitFailed && !dirtySinceLastSubmit
     let saveStatus = NONE
-    if (submitSucceeded) {
+    if (submitSucceeded && !hideButtonSuccessStatus) {
       saveStatus = SUCCEEDED
     } else if (currentFormSubmitFailed) {
       saveStatus = ERROR

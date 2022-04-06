@@ -35,10 +35,11 @@ class FormWizard extends React.PureComponent {
 
     return (
       <FormWrapper
-        showErrorPanel
         {...props}
         {...formProps}
         fields={fields}
+        showErrorPanel
+        hideButtonSuccessStatus
       />
     )
   }
