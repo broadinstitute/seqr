@@ -105,6 +105,8 @@ class FormWrapper extends React.PureComponent {
     /* Call if submit succeeded */
     onSubmitSucceeded: PropTypes.func,
 
+    onCancel: PropTypes.func,
+
     setModalConfirm: PropTypes.func,
 
     /* Optional submission error generated outside the form */
@@ -183,7 +185,7 @@ class FormWrapper extends React.PureComponent {
   }) => {
     const {
       submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, submitButtonIcon,
-      onSubmitSucceeded, noModal, liveValidate, hideButtonStatus,
+      onCancel, noModal, liveValidate, hideButtonStatus,
     } = this.props
 
     const currentFormSubmitFailed = submitFailed && !dirtySinceLastSubmit
@@ -214,7 +216,7 @@ class FormWrapper extends React.PureComponent {
           submitButtonIcon={submitButtonIcon}
           saveStatus={saveStatus}
           saveErrorMessage={saveErrorMessage}
-          handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
+          handleClose={onCancel || (noModal ? null : this.handleUnconfirmedClose)}
         />
       ),
     ]
