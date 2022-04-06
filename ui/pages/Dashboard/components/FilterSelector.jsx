@@ -8,7 +8,7 @@ import { updateFilter } from '../reducers'
 import { getProjectFilter, getCategoryOptions } from '../selectors'
 
 const FilterContainer = styled.span`
- display: inline-block;
+  display: inline-block;
 `
 
 const FilterSelector = React.memo(({ filter, options, onChange }) => (
