@@ -254,8 +254,27 @@ class HailSearch(object):
                 self.ht = self.ht.filter(hl.is_missing(self.ht[pop]) | pop_filter)
 
     def _filter_by_in_silico(self, in_silico_filters):
-        if in_silico_filters:
-            raise NotImplementedError # TODO
+        in_silico_filters = {k: v for k, v in (in_silico_filters or {}).items() if v is not None and len(v) != 0}
+        if not in_silico_filters:
+            return
+
+        in_silico_q = None
+        for in_silico, value in in_silico_filters.items():
+            score_path = PREDICTION_FIELDS_CONFIG[in_silico]
+            ht_value = self.ht[score_path[0]][score_path[1]]
+            try:
+                score_filter = ht_value >= float(value)
+            except ValueError:
+                score_filter = ht_value.startswith(value)
+
+            score_filter |= hl.is_missing(ht_value)
+
+            if in_silico_q is None:
+                in_silico_q = score_filter
+            else:
+                in_silico_q |= score_filter
+
+        self.ht = self.ht.filter(in_silico_q)
 
     def _filter_by_annotations(self, pathogenicity, splice_ai):
         if self._allowed_consequences:
