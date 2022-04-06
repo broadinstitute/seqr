@@ -259,6 +259,7 @@ class HailSearch(object):
             return
 
         in_silico_q = None
+        missing_in_silico_q = None
         for in_silico, value in in_silico_filters.items():
             score_path = PREDICTION_FIELDS_CONFIG[in_silico]
             ht_value = self.ht[score_path[0]][score_path[1]]
@@ -267,14 +268,18 @@ class HailSearch(object):
             except ValueError:
                 score_filter = ht_value.startswith(value)
 
-            score_filter |= hl.is_missing(ht_value)
-
             if in_silico_q is None:
                 in_silico_q = score_filter
             else:
                 in_silico_q |= score_filter
 
-        self.ht = self.ht.filter(in_silico_q)
+            missing_score_filter = hl.is_missing(ht_value)
+            if missing_in_silico_q is None:
+                missing_in_silico_q = missing_score_filter
+            else:
+                missing_in_silico_q &= missing_score_filter
+
+        self.ht = self.ht.filter(in_silico_q | missing_in_silico_q)
 
     def _filter_by_annotations(self, pathogenicity, splice_ai):
         if self._allowed_consequences:
