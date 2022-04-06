@@ -79,6 +79,7 @@ class FormWrapper extends React.PureComponent {
     showErrorPanel: PropTypes.bool,
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
+    submitButtonIcon: PropTypes.string,
     successMessage: PropTypes.string,
 
     /* Submit the form whenever values change rather than with a submit button */
@@ -180,8 +181,8 @@ class FormWrapper extends React.PureComponent {
     dirty, dirtySinceLastSubmit,
   }) => {
     const {
-      submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, onSubmitSucceeded,
-      noModal, liveValidate,
+      submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, submitButtonIcon,
+      onSubmitSucceeded, noModal, liveValidate,
     } = this.props
 
     const currentFormSubmitFailed = submitFailed && !dirtySinceLastSubmit
@@ -209,6 +210,7 @@ class FormWrapper extends React.PureComponent {
           key="buttonPanel"
           cancelButtonText={cancelButtonText}
           submitButtonText={submitButtonText}
+          submitButtonIcon={submitButtonIcon}
           saveStatus={saveStatus}
           saveErrorMessage={saveErrorMessage}
           handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}

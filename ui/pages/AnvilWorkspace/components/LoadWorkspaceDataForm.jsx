@@ -122,9 +122,10 @@ const LoadWorkspaceDataForm = React.memo(({ params }) => (
     </Segment>
     <FormWizard
       onSubmit={createProjectFromWorkspace}
+      pages={FORM_WIZARD_PAGES}
       initialValues={params}
       size="small"
-      pages={FORM_WIZARD_PAGES}
+      noModal
     />
     <p>
       Need help? please submit &nbsp;

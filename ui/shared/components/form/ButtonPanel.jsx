@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 
-import { Button } from 'semantic-ui-react'
+import { Button, Icon } from 'semantic-ui-react'
 import RequestStatus from '../panel/RequestStatus'
 
 const ContainerDiv = styled.div`
@@ -25,6 +25,7 @@ class ButtonPanel extends React.PureComponent {
   static propTypes = {
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
+    submitButtonIcon: PropTypes.string,
     saveStatus: PropTypes.string,
     saveErrorMessage: PropTypes.string,
     handleClose: PropTypes.func,
@@ -32,7 +33,9 @@ class ButtonPanel extends React.PureComponent {
   }
 
   render() {
-    const { handleClose, cancelButtonText, handleSave, submitButtonText, saveStatus, saveErrorMessage } = this.props
+    const {
+      handleClose, cancelButtonText, handleSave, submitButtonText, submitButtonIcon, saveStatus, saveErrorMessage,
+    } = this.props
     return (
       <ContainerDiv>
         {handleClose && (
@@ -42,6 +45,7 @@ class ButtonPanel extends React.PureComponent {
         )}
         <StyledButton tabIndex={0} onClick={handleSave} type="submit" color="blue">
           {submitButtonText || 'Submit'}
+          {submitButtonIcon && <Icon name={submitButtonIcon} />}
         </StyledButton>
         <StyledRequestStatus status={saveStatus} errorMessage={saveErrorMessage} />
       </ContainerDiv>
