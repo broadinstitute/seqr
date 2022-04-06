@@ -41,18 +41,26 @@ class FormWizard extends React.PureComponent {
   static propTypes = {
     onSubmit: PropTypes.func.isRequired,
     size: PropTypes.string,
-    fields: PropTypes.arrayOf(PropTypes.object), // eslint-disable-line react/no-unused-prop-types
+    pages: PropTypes.arrayOf(PropTypes.object),
     initialValues: PropTypes.object,
   }
 
-  state = { }
+  state = { pageIndex: 0 }
 
   handledOnSubmit = (values, form, callback) => {
-    const { onSubmit } = this.props
-    onSubmit(values, form, callback)?.then(
-      () => callback(),
-      e => callback({ errors: e.body?.errors || [e.body?.error] || [e.message] }),
-    )
+    const { onSubmit, pages } = this.props
+    const { pageIndex } = this.state
+    const nextPageIndex = pageIndex + 1
+
+    if (nextPageIndex === pages.length) {
+      onSubmit(values, form, callback).then(
+        () => callback(),
+        e => callback({ errors: e.body?.errors || [e.body?.error] || [e.message] }),
+      )
+    } else {
+      this.setState({ pageIndex: nextPageIndex })
+      callback()
+    }
   }
 
   renderSubmissionErrors = ({ hasSubmitErrors, hasValidationErrors, errors, submitErrors, submitFailed }) => {
@@ -66,9 +74,12 @@ class FormWizard extends React.PureComponent {
   }
 
   render() {
-    const { size, initialValues } = this.props
+    const { pages, size, initialValues } = this.props
+    const { pageIndex } = this.state
 
-    const fieldComponents = configuredFields(this.props)
+    const isFinalPage = pageIndex === pages.length - 1
+    const page = pages[pageIndex]
+    const fieldComponents = configuredFields(page)
 
     return (
       <FinalForm
@@ -85,7 +96,14 @@ class FormWizard extends React.PureComponent {
           >
             {fieldComponents}
             <FormSpy subscription={SUBMISSION_ERROR_PANEL_SUBSCRIPTION} render={this.renderSubmissionErrors} />
-            <Button tabIndex={0} type="submit" primary floated="right" content="Submit" />
+            <Button
+              type="submit"
+              primary
+              floated="right"
+              icon={!isFinalPage && 'angle double right'}
+              labelPosition={!isFinalPage && 'right'}
+              content={isFinalPage ? 'Submit' : 'Next'}
+            />
           </StyledForm>
         )}
       </FinalForm>

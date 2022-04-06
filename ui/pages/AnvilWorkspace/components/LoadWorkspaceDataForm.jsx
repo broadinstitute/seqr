@@ -93,8 +93,10 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const FORM_FIELDS = [
-  DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX,
+const FORM_WIZARD_PAGES = [
+  { fields: [AGREE_CHECKBOX] },
+  { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD] },
+  { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
 
 const createProjectFromWorkspace = (namespace, name) => ({ uploadedFile, ...values }) => new HttpRequestHelper(
@@ -121,7 +123,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
     <FormWizard
       onSubmit={createProjectFromWorkspace(namespace, name)}
       size="small"
-      fields={FORM_FIELDS}
+      pages={FORM_WIZARD_PAGES}
     />
     <p>
       Need help? please submit &nbsp;
