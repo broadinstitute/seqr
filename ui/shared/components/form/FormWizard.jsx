@@ -39,7 +39,7 @@ class FormWizard extends React.PureComponent {
         {...formProps}
         fields={fields}
         showErrorPanel
-        hideButtonSuccessStatus
+        hideButtonStatus
       />
     )
   }
