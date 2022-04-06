@@ -213,7 +213,7 @@ class HailSearch(object):
             return
 
         #  UI bug causes sv freq filter to be added despite no SV data
-        frequencies.pop('sv_callset')
+        frequencies.pop('sv_callset', None)
 
         # TODO pathogenicity override
 
