@@ -99,17 +99,17 @@ const FORM_WIZARD_PAGES = [
   { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const createProjectFromWorkspace = (namespace, name) => ({ uploadedFile, ...values }) => new HttpRequestHelper(
+const createProjectFromWorkspace = ({ namespace, name, uploadedFile, ...values }) => new HttpRequestHelper(
   `/api/create_project_from_workspace/submit/${namespace}/${name}`,
   (responseJson) => {
     window.location.href = `/project/${responseJson.projectGuid}/project_page`
   },
 ).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
 
-const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
+const LoadWorkspaceDataForm = React.memo(({ params }) => (
   <div>
     <Header size="large" textAlign="center">
-      {`Load data to seqr from AnVIL Workspace "${namespace}/${name}"`}
+      {`Load data to seqr from AnVIL Workspace "${params.namespace}/${params.name}"`}
     </Header>
     <Segment basic textAlign="center">
       <Message info compact>
@@ -121,7 +121,8 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
     <FormWizard
-      onSubmit={createProjectFromWorkspace(namespace, name)}
+      onSubmit={createProjectFromWorkspace}
+      initialValues={params}
       size="small"
       pages={FORM_WIZARD_PAGES}
     />
@@ -137,8 +138,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
 ))
 
 LoadWorkspaceDataForm.propTypes = {
-  namespace: PropTypes.string.isRequired,
-  name: PropTypes.string.isRequired,
+  params: PropTypes.object.isRequired,
 }
 
 export default LoadWorkspaceDataForm
