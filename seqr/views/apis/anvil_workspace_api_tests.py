@@ -353,7 +353,6 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          .format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test saving ID file exception
-        mock_slack.reset_mock()
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         # Test triggering dag exception
