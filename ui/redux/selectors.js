@@ -10,10 +10,12 @@ export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid
 export const getFamilyNotesByGuid = state => state.familyNotesByGuid
+export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
+export const getAnalysisGroupIsLoading = state => state.analysisGroupsLoading.isLoading
 export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getVariantTagsByGuid = state => state.variantTagsByGuid
 export const getVariantNotesByGuid = state => state.variantNotesByGuid
@@ -47,14 +49,6 @@ export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownL
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
 
-export const getAnnotationSecondary = (state) => {
-  try {
-    return !!state.form.variantSearch.values.search.inheritance.annotationSecondary
-  } catch (err) {
-    return false
-  }
-}
-
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {
     acc[entity.projectGuid] = {}
@@ -87,6 +81,26 @@ export const getNotesByFamilyType = createSelector(
     acc[note.familyGuid][note.noteType].push(note)
     return acc
   }, {}),
+)
+
+export const getProjectAnalysisGroupOptions = createSelector(
+  getAnalysisGroupsGroupedByProjectGuid,
+  analysisGroupsByProject => Object.entries(analysisGroupsByProject).reduce(
+    (acc, [projectGuid, analysisGroupsByGuid]) => ({
+      ...acc,
+      [projectGuid]: Object.values(analysisGroupsByGuid).sort((a, b) => a.name.localeCompare(b.name)),
+    }), {},
+  ),
+)
+
+export const getAnalysisGroupsByFamily = createSelector(
+  getAnalysisGroupsByGuid,
+  analysisGroupsByGuid => Object.values(analysisGroupsByGuid).reduce(
+    (acc, analysisGroup) => analysisGroup.familyGuids.reduce(
+      (familyAcc, familyGuid) => ({ ...familyAcc, [familyGuid]: [...(familyAcc[familyGuid] || []), analysisGroup] }),
+      acc,
+    ), {},
+  ),
 )
 
 export const getIndividualsByFamily = createSelector(
@@ -157,17 +171,38 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
   }, {}),
 )
 
-export const getSignificantRnaSeqDataByFamilyGene = createSelector(
+export const getRnaSeqDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
   (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
     (acc, [individualGuid, rnaSeqData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData).reduce((acc2, [geneId, data]) => (data.isSignificant ?
-        { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
-      ), acc[familyGuid] || {})
+      acc[familyGuid] = {
+        significantOutliers: Object.entries(rnaSeqData.outliers || {}).reduce(
+          (acc2, [geneId, data]) => (data.isSignificant ?
+            { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
+          ), acc[familyGuid]?.significantOutliers || {},
+        ),
+        tpms: Object.entries(rnaSeqData.tpms || {}).reduce(
+          (acc2, [geneId, data]) => ({ ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } }),
+          acc[familyGuid]?.tpms || {},
+        ),
+      }
       return acc
     }, {},
+  ),
+)
+
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesGroupedByProjectGuid,
+  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
+    (acc, { projectGuid, datasetTypes }) => ({
+      ...acc,
+      [projectGuid]: datasetTypes || [...new Set(Object.values(samplesByProjectGuid[projectGuid] || {}).filter(
+        ({ isActive, elasticsearchIndex }) => isActive && elasticsearchIndex,
+      ).map(({ datasetType }) => datasetType))],
+    }), {},
   ),
 )
 
@@ -271,6 +306,7 @@ export const getParsedLocusList = createSelector(
       locusList.items.sort(compareObjects('display'))
       locusList.rawItems = locusList.items.map(({ display }) => display).join(', ')
     }
+
     return locusList
   },
 )
@@ -305,10 +341,21 @@ export const getDisplayVariants = createSelector(
 
 export const getSearchedVariantExportConfig = createSelector(
   getCurrentSearchHash,
-  searchHash => [{
-    name: 'Variant Search Results',
-    url: `/api/search/${searchHash}/download`,
-  }],
+  getCurrentSearchParams,
+  getProjectsByGuid,
+  (searchHash, searchParams, projectsByGuid) => {
+    const { projectFamilies } = searchParams || {}
+    if ((projectFamilies || []).some(
+      ({ projectGuid }) => projectsByGuid[projectGuid]?.isDemo && !projectsByGuid[projectGuid].allUserDemo,
+    )) {
+      // Do not allow downloads for demo projects
+      return null
+    }
+    return [{
+      name: 'Variant Search Results',
+      url: `/api/search/${searchHash}/download`,
+    }]
+  },
 )
 
 export const getSearchGeneBreakdownValues = createSelector(
@@ -353,12 +400,14 @@ export const getLocusListIntervalsByChromProject = createSelector(
 )
 
 export const getLocusListTableData = createSelector(
-  (state, props) => props.omitLocusLists,
+  (state, props) => props.meta && props.meta.data && props.meta.data.formId,
+  getProjectsByGuid,
   getLocusListsWithGenes,
-  (omitLocusLists, locusListsByGuid) => {
+  (omitProjectGuid, projectsByGuid, locusListsByGuid) => {
     let data = Object.values(locusListsByGuid)
-    if (omitLocusLists) {
-      data = data.filter(locusList => !omitLocusLists.includes(locusList.locusListGuid))
+    if (omitProjectGuid) {
+      const { locusListGuids = [] } = projectsByGuid[omitProjectGuid] || {}
+      data = data.filter(locusList => !locusListGuids.includes(locusList.locusListGuid))
     }
 
     return data.reduce((acc, locusList) => {

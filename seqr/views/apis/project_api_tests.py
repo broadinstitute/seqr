@@ -6,12 +6,13 @@ from django.urls.base import reverse
 
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
-    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals
+    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
+    project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, SAMPLE_FIELDS, \
     FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
-    CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
+    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -19,7 +20,16 @@ DEMO_PROJECT_GUID = 'R0003_test'
 
 PROJECT_PAGE_RESPONSE_KEYS = {'projectsByGuid'}
 
+BASE_CREATE_PROJECT_JSON = {
+    'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True, 'disableMme': True,
+}
+WORKSPACE_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNamespace': TEST_WORKSPACE_NAMESPACE}
+WORKSPACE_CREATE_PROJECT_JSON = deepcopy(WORKSPACE_JSON)
+WORKSPACE_CREATE_PROJECT_JSON.update(BASE_CREATE_PROJECT_JSON)
+
 class ProjectAPITest(object):
+    CREATE_PROJECT_JSON = WORKSPACE_CREATE_PROJECT_JSON
+    REQUIRED_FIELDS = ['name', 'genomeVersion', 'workspaceNamespace', 'workspaceName']
 
     @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -28,41 +38,50 @@ class ProjectAPITest(object):
         self.check_pm_login(create_project_url)
 
         # check validation of bad requests
-        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps({'bad_json': None}))
+        response = self.client.post(create_project_url, content_type='application/json',
+                                    data=json.dumps({'bad_json': None}))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Field(s) "name, genomeVersion" are required')
+        self.assertEqual(response.json()['error'], f'Field(s) "{", ".join(self.REQUIRED_FIELDS)}" are required')
 
-        # send valid request to create project
-        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(
-            {'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38'}
-        ))
+        if 'workspaceName' in self.CREATE_PROJECT_JSON:
+            project_json = {'workspaceName': 'foo', 'workspaceNamespace': 'bar'}
+            project_json.update(BASE_CREATE_PROJECT_JSON)
+            response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(project_json))
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json()['error'], 'Invalid Workspace')
+
+        response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(self.CREATE_PROJECT_JSON))
         self.assertEqual(response.status_code, 200)
 
         # check that project was created
         new_project = Project.objects.get(name='new_project')
         self.assertEqual(new_project.description, 'new project description')
         self.assertEqual(new_project.genome_version, '38')
+        self.assertTrue(new_project.is_demo)
+        self.assertFalse(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.pm_user)
         self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
+        expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
+        self.assertEqual(new_project.workspace_name, expected_workspace_name)
 
         project_guid = new_project.guid
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {project_guid})
+        self.assertTrue(response.json()['projectsByGuid'][project_guid]['userIsCreator'])
 
-        # update the project
+        # update the project. genome version and workspace should not update
         update_project_url = reverse(update_project_handler, args=[project_guid])
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
-            {'description': 'updated project description'}
+            {'description': 'updated project description', 'genomeVersion': '37', 'workspaceName': 'test update name'}
         ))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['projectsByGuid'][project_guid]['description'], 'updated project description')
-        self.assertEqual(Project.objects.get(guid=project_guid).description, 'updated project description')
-
-        # genome version should not update
-        response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
-            {'genomeVersion': '37'}
-        ))
-        self.assertEqual(response.json()['projectsByGuid'][project_guid]['genomeVersion'], '38')
-        self.assertEqual(Project.objects.get(guid=project_guid).genome_version, '38')
+        updated_json = response.json()['projectsByGuid'][project_guid]
+        self.assertEqual(updated_json['description'], 'updated project description')
+        self.assertEqual(updated_json['genomeVersion'], '38')
+        self.assertEqual(updated_json['workspaceName'], expected_workspace_name)
+        updated_project = Project.objects.get(guid=project_guid)
+        self.assertEqual(updated_project.description, 'updated project description')
+        self.assertEqual(updated_project.genome_version, '38')
+        self.assertEqual(updated_project.workspace_name, expected_workspace_name)
 
         # delete the project
         delete_project_url = reverse(delete_project_handler, args=[project_guid])
@@ -89,10 +108,43 @@ class ProjectAPITest(object):
         new_project = Project.objects.get(name='new_project')
         self.assertEqual(new_project.description, 'new project description')
         self.assertEqual(new_project.genome_version, '38')
+        self.assertFalse(new_project.is_demo)
+        self.assertTrue(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.super_user)
         self.assertListEqual([], list(new_project.projectcategory_set.all()))
 
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {new_project.guid})
+
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    def test_update_project_workspace(self):
+        url = reverse(update_project_workspace, args=[PROJECT_GUID])
+        self.check_pm_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Invalid Workspace')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'workspaceName': 'foo', 'workspaceNamespace': 'bar'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Invalid Workspace')
+
+        update_json = {'genomeVersion': '38', 'description': 'updated project description'}
+        update_json.update(WORKSPACE_JSON)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(update_json))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), PROJECT_FIELDS)
+
+        self.assertEqual(response_json['workspaceName'], TEST_NO_PROJECT_WORKSPACE_NAME2)
+        self.assertEqual(response_json['workspaceNamespace'], TEST_WORKSPACE_NAMESPACE)
+        self.assertEqual(response_json['genomeVersion'], '37')
+        self.assertNotEqual(response_json['description'], 'updated project description')
+
+        project = Project.objects.get(guid=PROJECT_GUID)
+        self.assertEqual(project.workspace_name, TEST_NO_PROJECT_WORKSPACE_NAME2)
+        self.assertEqual(project.workspace_namespace, TEST_WORKSPACE_NAMESPACE)
 
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
@@ -159,7 +211,8 @@ class ProjectAPITest(object):
 
         project_fields = {
             'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',
-            'workspaceName', 'workspaceNamespace', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount'
+            'workspaceName', 'workspaceNamespace', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
+            'analysisGroupsLoaded',
         }
         project_fields.update(PROJECT_FIELDS)
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -184,13 +237,21 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['locusListsByGuid'].values())).keys()), LOCUS_LIST_FIELDS)
         self.assertSetEqual(
-            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()),
-            {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
+            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
         )
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
             'F000002_2': {'Excluded': 1, 'Known gene for phenotype': 1},
         })
+
+        # Test compound het counts
+        comp_het_url = reverse(project_overview, args=[DEMO_PROJECT_GUID])
+        response = self.client.get(comp_het_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json()['familyTagTypeCounts'],
+            {'F000011_11': {'Tier 1 - Novel gene and phenotype': 1}},
+        )
 
         # Test empty project
         empty_url = reverse(project_overview, args=[EMPTY_PROJECT_GUID])
@@ -206,6 +267,7 @@ class ProjectAPITest(object):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 401)
             self.assertEqual(response.json()['error'], '/login')
+
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
@@ -306,6 +368,42 @@ class ProjectAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), INTERNAL_INDIVIDUAL_FIELDS)
 
+    def test_project_analysis_groups(self):
+        url = reverse(project_analysis_groups, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {'projectsByGuid', 'analysisGroupsByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'analysisGroupsLoaded': True}})
+        self.assertEqual(len(response_json['analysisGroupsByGuid']), 2)
+        self.assertSetEqual(
+            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
+        )
+
+    def test_project_family_notes(self):
+        url = reverse(project_family_notes, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {'projectsByGuid', 'familyNotesByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'familyNotesLoaded': True}})
+        self.assertEqual(len(response_json['familyNotesByGuid']), 3)
+        self.assertSetEqual(
+            set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS
+        )
+
+        # Test empty project
+        empty_url = reverse(project_family_notes, args=[EMPTY_PROJECT_GUID])
+        self._check_empty_project(empty_url, response_keys, 'familyNotesLoaded')
+
     def test_project_mme_submisssions(self):
         url = reverse(project_mme_submisssions, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
@@ -358,7 +456,16 @@ LOCAL_COLLAB = {
 class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = BASE_COLLABORATORS
+    CREATE_PROJECT_JSON = BASE_CREATE_PROJECT_JSON
+    REQUIRED_FIELDS = ['name', 'genomeVersion']
     HAS_EMPTY_PROJECT = True
+
+    def test_update_project_workspace(self):
+        url = reverse(update_project_workspace, args=[PROJECT_GUID])
+        # For non-AnVIL seqr, updating workspace should always fail
+        self.login_pm_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(WORKSPACE_JSON))
+        self.assertEqual(response.status_code, 403)
 
 
 # Test for permissions from AnVIL only
@@ -371,7 +478,10 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         super(AnvilProjectAPITest, self).test_create_update_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
+        self.mock_get_ws_access_level.assert_has_calls([
+            mock.call(self.pm_user, 'bar', 'foo'),
+            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
+        ])
 
     def test_project_page_data(self):
         super(AnvilProjectAPITest, self).test_project_page_data()
@@ -383,10 +493,10 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 3)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 10)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 9)
 
 # Test for permissions from AnVIL and local
 class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
@@ -398,7 +508,10 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         super(MixProjectAPITest, self).test_create_update_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
+        self.mock_get_ws_access_level.assert_has_calls([
+            mock.call(self.pm_user, 'bar', 'foo'),
+            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
+        ])
 
     def test_project_page_data(self):
         super(MixProjectAPITest, self).test_project_page_data()
@@ -410,7 +523,7 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 3)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 7)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)

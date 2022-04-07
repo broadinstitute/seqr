@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import DocumentTitle from 'react-document-title'
+import useTitle from 'react-use/lib/useTitle'
 import { NavLink } from 'react-router-dom'
 import styled from 'styled-components'
 import { Grid, Breadcrumb, Popup, Icon, Header, Menu } from 'semantic-ui-react'
@@ -29,8 +29,10 @@ const BreadcrumbContainer = styled.div`
   }
 `
 
+export const useSeqrTitle = title => useTitle(`seqr: ${snakecaseToTitlecase(title)}`)
+
 const PageHeaderLayout = React.memo(({
-  entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, header, entityLinkPath, entityGuidLinkPath,
+  entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, entityLinkPath, entityGuidLinkPath,
   entityLinks, button, description,
 }) => {
   let breadcrumbSections = [
@@ -75,9 +77,12 @@ const PageHeaderLayout = React.memo(({
     }, [],
   )
 
+  const mainTitle = title || entity
+  const subTitle = breadcrumbIdSections?.length ? breadcrumbIdSections[breadcrumbIdSections.length - 1].content : null
+  useSeqrTitle(`${mainTitle}${(subTitle && subTitle !== mainTitle) ? ` - ${subTitle}` : ''}`)
+
   return (
     <PageHeaderRow>
-      <DocumentTitle key="title" title={header || `${breadcrumb || 'seqr'}: ${title || snakecaseToTitlecase(entity)}`} />
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <BreadcrumbContainer>
@@ -115,7 +120,6 @@ PageHeaderLayout.propTypes = {
   breadcrumbId: PropTypes.string,
   breadcrumbIdSections: PropTypes.arrayOf(PropTypes.object),
   title: PropTypes.string,
-  header: PropTypes.string,
   entityLinkPath: PropTypes.string,
   entityGuidLinkPath: PropTypes.string,
   entityLinks: PropTypes.arrayOf(PropTypes.object),
@@ -125,22 +129,26 @@ PageHeaderLayout.propTypes = {
 
 export default PageHeaderLayout
 
-export const SimplePageHeader = ({ page, pages }) => ([
-  <Menu attached key="submenu">
-    <Menu.Item key="title">
-      <Header size="medium">
-        <HorizontalSpacer width={90} />
-        {`${snakecaseToTitlecase(page)} Pages:`}
-      </Header>
-    </Menu.Item>
-    {pages.map(
-      ({ path }) => <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
-    )}
-  </Menu>,
-  <VerticalSpacer height={20} key="spacer" />,
-])
+export const SimplePageHeader = ({ page, pages, subPage }) => {
+  useSeqrTitle(subPage || page)
+  return [
+    <Menu attached key="submenu">
+      <Menu.Item key="title">
+        <Header size="medium">
+          <HorizontalSpacer width={90} />
+          {`${snakecaseToTitlecase(page)} Pages:`}
+        </Header>
+      </Menu.Item>
+      {pages.map(
+        ({ path }) => <Menu.Item key={path} as={NavLink} to={`/${page}/${path}`}>{snakecaseToTitlecase(path)}</Menu.Item>,
+      )}
+    </Menu>,
+    <VerticalSpacer height={20} key="spacer" />,
+  ]
+}
 
 SimplePageHeader.propTypes = {
   page: PropTypes.string,
   pages: PropTypes.arrayOf(PropTypes.object),
+  subPage: PropTypes.string,
 }

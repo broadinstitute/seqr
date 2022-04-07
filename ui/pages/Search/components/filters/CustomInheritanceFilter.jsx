@@ -1,27 +1,31 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Table, Header, Popup } from 'semantic-ui-react'
+import { FormSpy } from 'react-final-form'
+import { Table, Header, Popup, Loader } from 'semantic-ui-react'
 
-import { getIndividualsByGuid } from 'redux/selectors'
+import { loadFamilyDetails } from 'redux/rootReducer'
+import { getFamiliesByGuid, getIndividualsByGuid, getFamilyDetailsLoading } from 'redux/selectors'
+import DataLoader from 'shared/components/DataLoader'
 import { Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import { AFFECTED, UNAFFECTED, AFFECTED_OPTIONS } from 'shared/utils/constants'
 import { NUM_ALT_OPTIONS } from '../../constants'
-import { getSingleInputFamily } from '../../selectors'
 
 const CUSTOM_FILTERS = [
   { filterField: 'affected', options: AFFECTED_OPTIONS },
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
 ]
 
-const CustomInheritanceFilter = React.memo(({ value, onChange, family, individualsByGuid }) => {
-  if (!family) {
-    return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
-  }
+const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, individualsByGuid }) => {
+  const individuals = (family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).filter(
+    individual => individual,
+  )
 
-  const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
+  if (!family.individualGuids || family.individualGuids.length !== individuals.length) {
+    return <Loader />
+  }
 
   const parentGenotypes = {}
   if (value.father) {
@@ -92,16 +96,53 @@ const CustomInheritanceFilter = React.memo(({ value, onChange, family, individua
   )
 })
 
-const mapStateToProps = state => ({
-  family: getSingleInputFamily(state),
-  individualsByGuid: getIndividualsByGuid(state),
-})
-
-CustomInheritanceFilter.propTypes = {
+CustomInheritanceFilterContent.propTypes = {
   value: PropTypes.object,
   onChange: PropTypes.func,
   family: PropTypes.object,
   individualsByGuid: PropTypes.object,
 }
 
-export default connect(mapStateToProps)(CustomInheritanceFilter)
+const CustomInheritanceFilter = React.memo(({ load, loading, family, ...props }) => {
+  if (!family) {
+    return <Header disabled content="Custom inheritance search is disabled for multi-family searches" />
+  }
+  return (
+    <DataLoader load={load} contentId={family.familyGuid} content={family && family.detailsLoaded} loading={loading}>
+      <CustomInheritanceFilterContent family={family} {...props} />
+    </DataLoader>
+  )
+})
+
+const mapStateToProps = (state, ownProps) => ({
+  family: getFamiliesByGuid(state)[ownProps.familyGuid],
+  individualsByGuid: getIndividualsByGuid(state),
+  loading: !!getFamilyDetailsLoading(state)[ownProps.familyGuid],
+})
+
+const mapDispatchToProps = {
+  load: loadFamilyDetails,
+}
+
+CustomInheritanceFilter.propTypes = {
+  load: PropTypes.func,
+  family: PropTypes.object,
+  loading: PropTypes.bool,
+}
+
+const ConnectedCustomInheritanceFilter = connect(mapStateToProps, mapDispatchToProps)(CustomInheritanceFilter)
+
+const SUBSCRIPTION = { values: true }
+
+const getSingleFamlilyGuid = projectFamilies => (
+  (projectFamilies && projectFamilies.length === 1 && (projectFamilies[0].familyGuids || []).length === 1) ?
+    projectFamilies[0].familyGuids[0] : null
+)
+
+export default props => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => (
+      <ConnectedCustomInheritanceFilter {...props} familyGuid={getSingleFamlilyGuid(values.projectFamilies)} />
+    )}
+  </FormSpy>
+)

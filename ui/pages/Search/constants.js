@@ -7,8 +7,6 @@ export const getSelectedAnalysisGroups = (analysisGroupsByGuid, familyGuids) => 
   analysisGroupsByGuid,
 ).filter(group => group.familyGuids.every(familyGuid => familyGuids.includes(familyGuid)))
 
-export const SEARCH_FORM_NAME = 'variantSearch'
-
 const REF_REF = 'ref_ref'
 const HAS_REF = 'has_ref'
 const REF_ALT = 'ref_alt'

@@ -1,13 +1,11 @@
 import { combineReducers } from 'redux'
-import { SubmissionError } from 'redux-form'
 
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_SAVED_VARIANTS, updateEntity } from 'redux/utils/reducerUtils'
+import { REQUEST_SAVED_VARIANTS, updateEntity, loadProjectChildEntities, loadFamilyData } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -23,7 +21,6 @@ const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
-const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
 const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
 const REQUEST_INDIVIDUALS = 'REQUEST_INDIVIDUALS'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
@@ -45,33 +42,23 @@ export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   }
 }
 
-const loadProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
-  const { currentProjectGuid, projectsByGuid } = getState()
-  const project = projectsByGuid[currentProjectGuid]
-
-  if (!project[`${toCamelcase(entityType)}Loaded`]) {
-    dispatch({ type: dispatchType })
-    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_${toSnakecase(entityType)}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        if (receiveDispatchType) {
-          dispatch({ type: receiveDispatchType, updatesById: responseJson })
-        }
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        if (receiveDispatchType) {
-          dispatch({ type: receiveDispatchType, updatesById: {} })
-        }
-      }).get()
-  }
+const loadCurrentProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
+  const { currentProjectGuid } = getState()
+  return loadProjectChildEntities(currentProjectGuid, entityType, dispatchType, receiveDispatchType)(dispatch, getState)
 }
 
-export const loadFamilies = () => loadProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
+export const loadFamilies = () => loadCurrentProjectChildEntities('families', REQUEST_FAMILIES, RECEIVE_FAMILIES)
 
-export const loadIndividuals = () => loadProjectChildEntities('individuals', REQUEST_INDIVIDUALS)
+export const loadIndividuals = () => loadCurrentProjectChildEntities('individuals', REQUEST_INDIVIDUALS)
 
-export const loadMmeSubmissions = () => loadProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
+export const loadMmeSubmissions = () => loadCurrentProjectChildEntities('mme submissions', REQUEST_MME_SUBMISSIONS)
+
+const loadFamilyNotes = () => loadCurrentProjectChildEntities('family notes', REQUEST_FAMILIES, RECEIVE_FAMILIES)
+
+export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
+  loadIndividuals()(dispatch, getState),
+  loadFamilyNotes()(dispatch, getState),
+])
 
 export const loadProjectOverview = () => (dispatch, getState) => {
   const { currentProjectGuid, projectsByGuid } = getState()
@@ -87,33 +74,6 @@ export const loadProjectOverview = () => (dispatch, getState) => {
       }).get()
   }
 }
-
-const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, dispatchOnReceive) => (
-  dispatch, getState,
-) => {
-  const { familiesByGuid } = getState()
-  const family = familiesByGuid[familyGuid]
-  if (!family || !family[detailField]) {
-    dispatch({ type: dispatchType, updates: { [familyGuid]: true } })
-    new HttpRequestHelper(`/api/family/${familyGuid}/${urlPath}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        if (dispatchOnReceive) {
-          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
-        }
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-        if (dispatchOnReceive) {
-          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
-        }
-      }).get()
-  }
-}
-
-export const loadFamilyDetails = familyGuid => loadFamilyData(
-  familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
-)
 
 export const loadFamilyVariantSummary = familyGuid => loadFamilyData(
   familyGuid, 'discoveryTags', 'variant_tag_summary', REQUEST_FAMILY_VARIANT_SUMMARY,
@@ -154,7 +114,8 @@ export const loadSavedVariants = ({ familyGuids, variantGuid, tag }) => (dispatc
     loadFamilyContext: !(expectedFamilyGuids || []).length || expectedFamilyGuids.some(
       familyGuid => !state.familiesByGuid[familyGuid]?.detailsLoaded,
     ),
-    loadProjectContext: !state.projectsByGuid[projectGuid].variantTagTypes,
+    loadProjectTagTypes: !state.projectsByGuid[projectGuid].variantTagTypes,
+    includeLocusLists: !state.projectsByGuid[projectGuid].locusListGuids,
   }
   if (familyGuids) {
     params.families = familyGuids.join(',')
@@ -198,8 +159,7 @@ export const updateFamilies = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-    },
-    (e) => { throw new SubmissionError({ _error: [e.message] }) }).post(values)
+    }).post(values)
 }
 
 export const updateIndividuals = values => (dispatch, getState) => {
@@ -213,14 +173,6 @@ export const updateIndividuals = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-    },
-    (e) => {
-      if (e.body && e.body.errors) {
-        throw new SubmissionError({ _error: e.body.errors })
-        // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-      } else {
-        throw new SubmissionError({ _error: [e.message] })
-      }
     }).post(values)
 }
 
@@ -228,14 +180,6 @@ export const updateIndividualsMetadata = ({ uploadedFileId }) => (dispatch, getS
   `/api/project/${getState().currentProjectGuid}/save_individuals_metadata_table/${uploadedFileId}`,
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-      // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
   },
 ).post()
 
@@ -246,14 +190,7 @@ export const addVariantsDataset = values => (dispatch, getState) => new HttpRequ
 
     // Clear all loaded variants and update the saved variant json. This should happen asynchronously
     unloadSavedVariants(dispatch, getState)
-    new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`).post()
-  },
-  (e) => {
-    if (e.body && e.body.errors) {
-      throw new SubmissionError({ _error: e.body.errors })
-    } else {
-      throw new SubmissionError({ _error: [e.message] })
-    }
+    new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/update_saved_variant_json`, () => {}).post()
   },
 ).post(values)
 
@@ -268,7 +205,9 @@ export const addIGVDataset = ({ mappingFile, ...values }) => (dispatch, getState
     ).post({ ...update, ...values }),
   )).then(() => {
     if (errors.length) {
-      throw new SubmissionError({ _error: errors })
+      const err = new Error()
+      err.body = { errors }
+      throw err
     }
   })
 }
@@ -279,8 +218,15 @@ export const updateLocusLists = values => (dispatch, getState) => {
   return new HttpRequestHelper(`/api/project/${projectGuid}/${action}_locus_lists`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson } } })
-    },
-    (e) => { throw new SubmissionError({ _error: [e.message] }) }).post(values)
+    }).post(values)
+}
+
+export const updateAnvilWorkspace = values => (dispatch, getState) => {
+  const projectGuid = getState().currentProjectGuid
+  return new HttpRequestHelper(`/api/project/${projectGuid}/update_workspace`,
+    (responseJson) => {
+      dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson } } })
+    }).post(values)
 }
 
 export const updateCollaborator = values => updateEntity(
@@ -288,7 +234,7 @@ export const updateCollaborator = values => updateEntity(
 )
 
 export const updateAnalysisGroup = values => updateEntity(
-  values, RECEIVE_DATA, `/api/project/${values.projectGuid}/analysis_groups`, 'analysisGroupGuid',
+  values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/analysis_groups`,
 )
 
 export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) => {
@@ -316,7 +262,7 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
   const data = getState().rnaSeqDataByIndividual[individualGuid]
   // If variants were loaded for the individual, the significant gene data will be loaded but not all the needed data
-  if (!data || Object.values(data).every(({ isSignificant }) => isSignificant)) {
+  if (!data?.outliers || Object.values(data.outliers).every(({ isSignificant }) => isSignificant)) {
     dispatch({ type: REQUEST_RNA_SEQ_DATA })
     new HttpRequestHelper(`/api/individual/${individualGuid}/rna_seq_data`,
       (responseJson) => {
@@ -350,9 +296,6 @@ export const sendMmeContactEmail = values => dispatch => new HttpRequestHelper(
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => {
-    throw new SubmissionError({ _error: [e.message] })
-  },
 ).post(values)
 
 export const updateProjectMmeContact = values => (dispatch, getState) => new HttpRequestHelper(
@@ -360,7 +303,6 @@ export const updateProjectMmeContact = values => (dispatch, getState) => new Htt
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-  (e) => { throw new SubmissionError({ _error: [e.message] }) },
 ).post(values)
 
 // Table actions
@@ -381,7 +323,6 @@ export const reducers = {
   familyTagTypeCounts: createObjectsByIdReducer(RECEIVE_DATA, 'familyTagTypeCounts'),
   savedVariantFamilies: createSingleObjectReducer(RECEIVE_SAVED_VARIANT_FAMILIES),
   familiesLoading: loadingReducer(REQUEST_FAMILIES, RECEIVE_FAMILIES),
-  familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
   familyVariantSummaryLoading: loadingReducer(REQUEST_FAMILY_VARIANT_SUMMARY, RECEIVE_DATA),
   individualsLoading: loadingReducer(REQUEST_INDIVIDUALS, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),

@@ -4,8 +4,10 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 
+import { loadFamilyDetails } from 'redux/rootReducer'
 import {
   getFamiliesByGuid,
+  getFamilyDetailsLoading,
   getSortedIndividualsByFamily,
   getGenesById,
   getHasActiveSearchableSampleByFamily,
@@ -17,9 +19,9 @@ import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 
-import { loadFamilyDetails, loadFamilyVariantSummary } from '../reducers'
+import { loadFamilyVariantSummary } from '../reducers'
 import {
-  getCurrentProject, getFamilyDetailsLoading, getFamilyVariantSummaryLoading, getFamilyTagTypeCounts,
+  getCurrentProject, getFamilyVariantSummaryLoading, getFamilyTagTypeCounts,
 } from '../selectors'
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'

@@ -1,12 +1,11 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  dir: 'deploy/docker/seqr'
-  args: [ 'build', '.', '-t', 'seqr:$COMMIT_SHA' ]
-- name: 'gcr.io/cloud-builders/docker'
-  dir: 'deploy/docker/seqr'
-  args: [ 'tag', 'seqr:$COMMIT_SHA', 'gcr.io/seqr-project/seqr:$COMMIT_SHA']
+- name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --destination=gcr.io/seqr-project/seqr:${COMMIT_SHA}
+  - --destination=gcr.io/seqr-project/seqr:${_CUSTOM_BRANCH_TAG}
+  - --destination=gcr.io/seqr-project/seqr:latest
+  - --dockerfile=deploy/docker/seqr/Dockerfile
+  - --cache=true
+  - --cache-ttl=168h
 
-images:
-  - 'gcr.io/seqr-project/seqr:$COMMIT_SHA'
-
-timeout: 900s
+timeout: 1800s

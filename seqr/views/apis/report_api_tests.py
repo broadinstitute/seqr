@@ -206,6 +206,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 class ReportAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
 
+    @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_seqr_stats(self, mock_analyst_group):
@@ -220,10 +221,14 @@ class ReportAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'individualCount', 'familyCount', 'sampleCountByType'})
-        self.assertEqual(response_json['individualCount'], 18)
-        self.assertEqual(response_json['familyCount'], 14)
-        self.assertDictEqual(response_json['sampleCountByType'], {'WES': 8, 'WGS': 1, 'RNA': 1})
+        self.assertSetEqual(set(response_json.keys()), {'projectsCount', 'individualsCount', 'familiesCount', 'sampleCountsByType'})
+        self.assertEqual(response_json['projectsCount'], {'internal': 3, 'external': 1})
+        self.assertEqual(response_json['individualsCount'], {'internal': 17, 'external': 1})
+        self.assertEqual(response_json['familiesCount'], {'internal': 13, 'external': 1})
+        self.assertDictEqual(
+            response_json['sampleCountsByType'],
+            {'WES__VARIANTS': {'internal': 8}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 1}},
+        )
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -305,20 +310,18 @@ class ReportAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User has insufficient permission')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'test_user does not have sufficient permissions for Non-Analyst Project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_google_authenticated.return_value = True
 
         responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
@@ -399,8 +402,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.login_pm_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -413,20 +415,18 @@ class ReportAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'User has insufficient permission')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'test_user does not have sufficient permissions for Non-Analyst Project')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual( response.json()['error'], 'Permission Denied')
         mock_google_authenticated.return_value = True
 
         # Test invalid airtable responses
@@ -466,9 +466,14 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
 
+        # Test empty project
+        empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])
+        response = self.client.get(empty_project_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'rows': []})
+
         # Test non-broad analysts do not have access
         self.login_pm_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(
-            response.json()['error'], 'Error: To access airtable user must login with Google authentication.')
+        self.assertEqual(response.json()['error'], 'Permission Denied')

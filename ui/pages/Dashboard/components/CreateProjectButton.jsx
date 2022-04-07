@@ -4,11 +4,25 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { updateProject } from 'redux/rootReducer'
-import { PROJECT_FIELDS, GENOME_VERSION_37 } from 'shared/utils/constants'
+import { getUser } from 'redux/selectors'
+import { EDITABLE_PROJECT_FIELDS, GENOME_VERSION_FIELD, GENOME_VERSION_38, ANVIL_FIELDS } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
+import { BooleanCheckbox } from 'shared/components/form/Inputs'
+
+const PROJECT_FIELDS = [
+  ...EDITABLE_PROJECT_FIELDS,
+  GENOME_VERSION_FIELD,
+  { name: 'isDemo', label: 'Demo Project', component: BooleanCheckbox, inline: true },
+  { name: 'disableMme', label: 'Disable Matchmaker', component: BooleanCheckbox, inline: true },
+]
+
+const ANVIL_PROJECT_FIELDS = [
+  ...PROJECT_FIELDS,
+  ...ANVIL_FIELDS,
+]
 
 const DEFAULT_PROJECT = {
-  genomeVersion: GENOME_VERSION_37,
+  genomeVersion: GENOME_VERSION_38,
 }
 
 const CreateProjectButton = React.memo(props => (
@@ -20,16 +34,22 @@ const CreateProjectButton = React.memo(props => (
     modalId="createProject"
     onSubmit={props.updateProject}
     initialValues={DEFAULT_PROJECT}
-    formFields={PROJECT_FIELDS}
+    formFields={props.user.isAnvil ? ANVIL_PROJECT_FIELDS : PROJECT_FIELDS}
+    showErrorPanel
   />
 ))
 
 CreateProjectButton.propTypes = {
   updateProject: PropTypes.func.isRequired,
+  user: PropTypes.object,
 }
+
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
 
 const mapDispatchToProps = {
   updateProject,
 }
 
-export default connect(null, mapDispatchToProps)(CreateProjectButton)
+export default connect(mapStateToProps, mapDispatchToProps)(CreateProjectButton)

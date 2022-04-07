@@ -1,6 +1,5 @@
+# seqr
 
-seqr
-====
 ![Unit Tests](https://github.com/broadinstitute/seqr/workflows/Unit%20Tests/badge.svg?branch=master) | ![Local Install Tests](https://github.com/broadinstitute/seqr/workflows/local%20install%20tests/badge.svg?branch=master)
 
 seqr is a web-based tool for rare disease genomics.
@@ -23,13 +22,13 @@ The seqr production instance runs on Google Kubernetes Engine (GKE) and data is 
 On-prem installs can be created using docker-compose:
 **[Local installs using docker-compose](deploy/LOCAL_INSTALL.md)**  
 
+To set up seqr for local development, see instructions **[here](deploy/LOCAL_DEVELOPMENT_INSTALL.md)**  
 
 ## Updating / Migrating an older seqr Instance	
 
 For notes on how to update an older instance, see  	
 
 [Update/Migration Instructions](deploy/MIGRATE.md)
-
 
 ## Contributing to seqr
 
@@ -46,15 +45,18 @@ For larger features, feel free to discuss your ideas or approach in our
 
 To contribute code:
 
-* Submit a GitHub pull request against the master branch.
-* Break your work into small, single-purpose patches whenever possible. 
+- Submit a GitHub pull request against the master branch.
+
+- Break your work into small, single-purpose patches whenever possible. 
 However, do not break apart features to the point that they are not functional 
 (i.e. updates that require changes to both front end and backend code should be submitted as a single change)
-* For larger features, add a detailed description to the pull request to explain the changes and your approach
-* Make sure that your code passes all our tests and style linting
-* Add unit tests for all new python code you've written
+
+- For larger features, add a detailed description to the pull request to explain the changes and your approach
+
+- Make sure that your code passes all our tests and style linting
+
+- Add unit tests for all new python code you've written
 
 We tend to do fairly close readings of pull requests, and you may get a lot of comments.
 
 Thank you for getting involved!
-

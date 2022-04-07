@@ -59,10 +59,8 @@ const FILTER_FIELDS = [
 ]
 const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
 
-const BASE_FORM_ID = '-linkVariants'
-
 const mapVariantLinkStateToProps = (state, ownProps) => {
-  const familyGuid = ownProps.meta.form.split(BASE_FORM_ID)[0]
+  const familyGuid = ownProps.meta.data.formId
   return {
     data: getTaggedVariantsByFamily(state)[familyGuid],
     familyGuid,
@@ -87,8 +85,6 @@ const LINK_VARIANT_FIELDS = [
       VARIANT_POS_COLUMN,
       TAG_COLUMN,
     ],
-    // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
-    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
     validate: value => (Object.keys(value || {}).length > 1 ? undefined : 'Multiple variants required'),
   },
 ]
@@ -96,7 +92,8 @@ const LINK_VARIANT_FIELDS = [
 const BaseLinkSavedVariants = ({ familyGuid, onSubmit }) => (
   <UpdateButton
     modalTitle="Link Saved Variants"
-    modalId={`${familyGuid}${BASE_FORM_ID}`}
+    modalId={`${familyGuid}-linkVariants`}
+    formMetaId={familyGuid}
     buttonText="Link Variants"
     editIconName="linkify"
     size="medium"

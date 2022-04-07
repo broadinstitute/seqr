@@ -56,7 +56,7 @@ ReactDOM.render(
           <Route path="/login" component={Login} />
           <Route path="/accept_policies" component={AcceptPolicies} />
           <React.Suspense fallback={<Loader />}>
-            {PUBLIC_ROUTES.map(props => <Route {...props} />)}
+            {PUBLIC_ROUTES.map(props => <Route key={props.path} {...props} />)}
           </React.Suspense>
           <Route component={Error404} />
         </Switch>

@@ -1,7 +1,7 @@
 import { createSelector } from 'reselect'
 
 import {
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  ALL_FAMILY_ANALYSIS_STATUS_OPTIONS,
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
@@ -50,7 +50,6 @@ export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoadi
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
-export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getFamilyVariantSummaryLoading = state => state.familyVariantSummaryLoading.isLoading
 export const getIndivdualsLoading = state => state.individualsLoading.isLoading
 export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isLoading
@@ -100,7 +99,9 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
 
 export const getProjectAnalysisGroupIndividualsCount = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).reduce((acc, family) => acc + family.individualGuids.length, 0),
+  familiesByGuid => Object.values(familiesByGuid).reduce(
+    (acc, family) => acc + (family.individualGuids || []).length, 0,
+  ),
 )
 
 export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
@@ -271,16 +272,19 @@ export const getProjectTagTypeOptions = createSelector(
 export const getProjectVariantSavedByOptions = createSelector(
   getProjectFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  (familiesByGuid, variantDetailByFamilyVariant) => [null, ...Object.keys(familiesByGuid).reduce(
-    (acc, familyGuid) => new Set([
-      ...acc,
-      ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
-        ...variantAcc,
-        ...(tags || []).map(({ createdBy }) => createdBy),
-        ...(notes || []).map(({ createdBy }) => createdBy),
-      ]), []),
-    ]), new Set(),
-  )].map(value => ({ value })),
+  (familiesByGuid, variantDetailByFamilyVariant) => [
+    { value: null, text: 'View All' },
+    ...[...Object.keys(familiesByGuid).reduce(
+      (acc, familyGuid) => new Set([
+        ...acc,
+        ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
+          ...variantAcc,
+          ...(tags || []).map(({ createdBy }) => createdBy),
+          ...(notes || []).map(({ createdBy }) => createdBy),
+        ]), []),
+      ]), new Set(),
+    )].map(value => ({ value })),
+  ],
 )
 
 // Family table selectors
@@ -365,7 +369,8 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   getFamiliesSortOrder,
   getFamiliesSortDirection,
   (visibleFamilies, individualsByGuid, samplesByFamily, familiesSortOrder, familiesSortDirection) => {
-    if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
+    if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder] ||
+      visibleFamilies.some(({ familyId }) => !familyId)) { // families have been loaded without any core fields
       return visibleFamilies
     }
 
@@ -488,7 +493,7 @@ export const getAnalysisStatusCounts = createSelector(
       ...acc, [family.analysisStatus]: (acc[family.analysisStatus] || 0) + 1,
     }), {})
 
-    return FAMILY_ANALYSIS_STATUS_OPTIONS.map(
+    return ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.map(
       option => ({ ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   },

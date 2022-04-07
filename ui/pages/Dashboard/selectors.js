@@ -1,13 +1,16 @@
 import { createSelector } from 'reselect'
 
 import { getProjectsByGuid, getProjectCategoriesByGuid } from 'redux/selectors'
-import { SHOW_ALL } from './constants'
+import { SHOW_ALL, SHOW_DEMO } from './constants'
 
 export const getProjectFilter = state => state.projectsTableState.filter
 
 export const createProjectFilter = (projectsByGuid, projectFilter) => (projectGuid) => {
   if (projectFilter === SHOW_ALL) {
     return true
+  }
+  if (projectFilter === SHOW_DEMO) {
+    return projectsByGuid[projectGuid].isDemo
   }
   return projectsByGuid[projectGuid].projectCategoryGuids.indexOf(projectFilter) > -1
 }
@@ -33,4 +36,15 @@ export const getVisibleProjects = createSelector(
       return { ...project, projectCategories }
     })
   },
+)
+
+export const getCategoryOptions = createSelector(
+  getProjectCategoriesByGuid,
+  projectCategoriesByGuid => ([
+    { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
+    { value: SHOW_DEMO, text: 'Demo', key: SHOW_DEMO },
+    ...Object.values(projectCategoriesByGuid).map(
+      projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }),
+    ),
+  ]),
 )

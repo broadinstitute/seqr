@@ -1,13 +1,11 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Segment } from 'semantic-ui-react'
 import { launch } from 'gtex-d3/src/GeneExpressionViolinPlot'
 import 'gtex-d3/css/violin.css'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import GtexLauncher, { GTEX_HOST } from './GtexLauncher'
 
-const GtexContainer = styled(Segment)`
+const GtexContainer = styled.div`
   #gene-expression-plot-toolbar {
     margin-left: 100px;
     margin-top: 20px;
@@ -104,7 +102,6 @@ const DIMENSIONS = {
   h: 400,
 }
 
-const GTEX_HOST = 'https://gtexportal.org/rest/v1/'
 const URLS = {
   geneExp: `${GTEX_HOST}expression/geneExpression?gencodeId=`,
   tissue: `${GTEX_HOST}dataset/tissueInfo?format=json`,
@@ -116,27 +113,8 @@ const launchGtex = (geneId) => {
   launch(GTEX_CONTAINER_ID, `${GTEX_CONTAINER_ID}-tooltip`, geneId, '', URLS, MARGINS, DIMENSIONS)
 }
 
-class Gtex extends React.PureComponent {
-
-  static propTypes = {
-    geneId: PropTypes.string.isRequired,
-  }
-
-  componentDidMount() {
-    const { geneId } = this.props
-    new HttpRequestHelper(`${GTEX_HOST}reference/gene`,
-      (responseJson) => {
-        launchGtex(responseJson.gene[0].gencodeId)
-      },
-      () => {
-        launchGtex(geneId)
-      }).get({ format: 'json', geneId })
-  }
-
-  render() {
-    return <GtexContainer id={GTEX_CONTAINER_ID} />
-  }
-
-}
-
-export default Gtex
+export default props => (
+  <GtexContainer>
+    <GtexLauncher containerId={GTEX_CONTAINER_ID} launchGtex={launchGtex} {...props} />
+  </GtexContainer>
+)

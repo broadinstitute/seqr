@@ -19,6 +19,7 @@ from seqr.views.apis.family_api import \
     delete_families_handler, \
     update_family_assigned_analyst, \
     update_family_analysed_by, \
+    update_family_analysis_groups, \
     receive_families_table_handler, \
     update_family_pedigree_image, \
     create_family_note, \
@@ -115,7 +116,7 @@ from seqr.views.apis.report_api import \
     get_cmg_projects, \
     sample_metadata_export, \
     seqr_stats
-from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, rna_seq_expression
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -124,7 +125,8 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
     igv_genomes_proxy
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
-    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals
+    project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
+    project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
 from matchmaker.views import external_api
@@ -172,6 +174,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_assigned_analyst': update_family_assigned_analyst,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
+    'family/(?P<family_guid>[\w.|-]+)/update_analysis_groups': update_family_analysis_groups,
     'family/(?P<family_guid>[\w.|-]+)/update_pedigree_image': update_family_pedigree_image,
     'family/(?P<family_guid>[\w.|-]+)/note/create': create_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,
@@ -182,13 +185,16 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
     'project/(?P<project_guid>[^/]+)/get_families': project_families,
     'project/(?P<project_guid>[^/]+)/get_individuals': project_individuals,
+    'project/(?P<project_guid>[^/]+)/get_family_notes': project_family_notes,
     'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
+    'project/(?P<project_guid>[^/]+)/get_analysis_groups': project_analysis_groups,
     'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
 
     'project/create_project': create_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,
     'project/(?P<project_guid>[^/]+)/delete_project': delete_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
+    'project/(?P<project_guid>[^/]+)/update_workspace': update_project_workspace,
 
     'project/(?P<project_guid>[^/]+)/saved_variants/(?P<variant_guids>[^/]+)?': saved_variant_data,
 
@@ -292,6 +298,8 @@ api_endpoints = {
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
 
+    'rna_seq_expression/gene/(?P<gene>[^/]+)/tissues/(?P<tissues>[^/]+)': rna_seq_expression,
+
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
     'matchmaker/v1/match': external_api.mme_match_proxy,
@@ -335,10 +343,17 @@ urlpatterns += [
 urlpatterns += [
     url(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),
     url(r'^admin/', admin.site.urls),
-    url(r'^media/(?P<path>.*)$', django.views.static.serve, {
-        'document_root': MEDIA_ROOT,
-    }),
 ]
+
+# The /media urlpattern is not needed if we are storing static media in a GCS bucket,
+# so this logic disables it in that case. If we want to serve media from a local filepath
+# instead, set MEDIA_ROOT in settings.py to that local path, and then this urlpattern will be enabled.
+if MEDIA_ROOT:
+    urlpatterns += [
+        url(r'^media/(?P<path>.*)$', django.views.static.serve, {
+            'document_root': MEDIA_ROOT,
+        }),
+    ]
 
 urlpatterns += [
     url('', include('social_django.urls')),

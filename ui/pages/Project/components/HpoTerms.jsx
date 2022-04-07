@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Field } from 'redux-form'
+import { Field } from 'react-final-form'
 import { Form, Header, Accordion, Icon, Tab } from 'semantic-ui-react'
 
 import { RadioGroup } from 'shared/components/form/Inputs'
@@ -122,7 +122,7 @@ const HpoTermDetails = React.memo(({ value, name, icon, toggleShowDetails, showD
         name={`${name}.qualifiers`}
         component={HpoQualifiers}
         format={formatQualifiers}
-        normalize={normalizeQualifiers}
+        parse={normalizeQualifiers}
       />,
       <Form.Group key="notes">
         <Field name={`${name}.notes`} placeholder="Comments" component={Form.Input} width={16} />

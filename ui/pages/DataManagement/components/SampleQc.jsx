@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
 
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 
 import { getQcUploadStats } from '../selectors'
 import { uploadQcPipelineOutput } from '../reducers'
@@ -16,7 +16,6 @@ const UPLOAD_FIELDS = [
 ]
 
 const mapStateToProps = state => ({
-  formId: 'sampleQc',
   fields: UPLOAD_FIELDS,
   uploadStats: getQcUploadStats(state),
 })
