@@ -130,25 +130,6 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 )
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'APP_DIRS': True,
-        'DIRS': [
-            os.path.join(BASE_DIR, 'ui/dist'),
-        ],
-        'OPTIONS': {
-            'context_processors': [
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',  # required for admin template
-                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
-                'social_django.context_processors.backends',  # required for social_auth, same for below
-                'social_django.context_processors.login_redirect',
-            ],
-        },
-    },
-]
-
 # If specified, store data in the named GCS bucket and use the gcloud storage backend.
 # Else, fall back to a path on the local filesystem.
 GCS_MEDIA_ROOT_BUCKET = os.environ.get('GCS_MEDIA_ROOT_BUCKET')
@@ -255,6 +236,10 @@ ANYMAIL = {
     "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
 }
 
+TEMPLATE_DIRS = [
+    os.path.join(BASE_DIR, 'ui/dist'),
+]
+
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
 if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
@@ -277,6 +262,24 @@ else:
     HIJACK_DISPLAY_WARNING = True
     HIJACK_ALLOW_GET_REQUESTS = True
     HIJACK_LOGIN_REDIRECT_URL = '/'
+    TEMPLATE_DIRS.append('ui')
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+        'DIRS': TEMPLATE_DIRS,
+        'OPTIONS': {
+            'context_processors': [
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',  # required for admin template
+                'django.template.context_processors.request',   # must be enabled in DjangoTemplates (TEMPLATES) in order to use the admin navigation sidebar
+                'social_django.context_processors.backends',  # required for social_auth, same for below
+                'social_django.context_processors.login_redirect',
+            ],
+        },
+    },
+]
 
 #########################################################
 #  seqr specific settings
