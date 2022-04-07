@@ -145,7 +145,12 @@ const FamilyTable = React.memo(({
           />
         )) : <EmptyTableRow tableName={tableName} />)}
       </Table.Body>
-      <Table.Footer><Table.Row><Table.HeaderCell /></Table.Row></Table.Footer>
+      <Table.Footer>
+        <Table.Row>
+          <Table.HeaderCell />
+          <Table.HeaderCell />
+        </Table.Row>
+      </Table.Footer>
     </Table>
   </DataLoader>
 ))
