@@ -7,7 +7,8 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
-    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, MAX_NO_LOCATION_COMP_HET_FAMILIES, SPLICE_AI_FIELD
+    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, MAX_NO_LOCATION_COMP_HET_FAMILIES, SPLICE_AI_FIELD, \
+    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status
 
 logger = logging.getLogger(__name__)
@@ -194,7 +195,9 @@ class HailSearch(object):
         self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
 
     def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
-        # TODO rs_ids/variant_ids, location_filter.get('excludeLocations')
+        if rs_ids or variant_ids:
+            raise NotImplementedError # TODO rs_ids/variant_ids, location_filter.get('excludeLocations')
+
         parsed_intervals = [
             hl.parse_locus_interval(interval, reference_genome="GRCh38") for interval in
             ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
@@ -215,7 +218,8 @@ class HailSearch(object):
         #  UI bug causes sv freq filter to be added despite no SV data
         frequencies.pop('sv_callset', None)
 
-        # TODO pathogenicity override
+        if pathogenicity:
+            raise NotImplementedError # TODO pathogenicity override
 
         # In production: will not have callset frequency, may rename these fields
         callset_filter = frequencies.pop('callset') or {}
@@ -286,8 +290,9 @@ class HailSearch(object):
 
     def _filter_by_annotations(self, pathogenicity, splice_ai):
         annotation_filters = []
-        if pathogenicity:
-            raise NotImplementedError  # TODO
+        pathogenicity_filter = self._get_pathogenicity_filter(pathogenicity)
+        if pathogenicity_filter:
+            annotation_filters.append(pathogenicity_filter)
         if splice_ai:
             annotation_filters.append(self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(splice_ai))
         if self._allowed_consequences:
@@ -305,6 +310,29 @@ class HailSearch(object):
         allowed_consequences_set = hl.set(allowed_consequences)
         consequence_terms = self.ht.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
         return consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))
+
+    def _get_pathogenicity_filter(self, pathogenicity):
+        pathogenicity = pathogenicity or {}
+        clinvar_filters = pathogenicity.get('clinvar', [])
+        hgmd_filters = pathogenicity.get('hgmd', [])
+
+        pathogenicity_filter = None
+        clinvar_clinical_significance_terms = set()
+        for clinvar_filter in clinvar_filters:
+            clinvar_clinical_significance_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
+        if clinvar_clinical_significance_terms:
+            allowed_significances = hl.set(clinvar_clinical_significance_terms)
+            pathogenicity_filter = allowed_significances.contains(self.ht.clinvar.clinical_significance)
+
+        hgmd_classes = set()
+        for hgmd_filter in hgmd_filters:
+            hgmd_classes.update(HGMD_CLASS_MAP.get(hgmd_filter, []))
+        if hgmd_classes:
+            allowed_classes = hl.set(hgmd_classes)
+            hgmd_filter = allowed_classes.contains(self.ht.hgmd['class'])
+            pathogenicity_filter = hgmd_filter if pathogenicity_filter is None else pathogenicity_filter | hgmd_filter
+
+        return pathogenicity_filter
 
     def _annotate_filtered_genotypes(self, inheritance_mode, inheritance_filter, quality_filter):
         self.ht = self.ht.join(self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter))
