@@ -291,7 +291,7 @@ class HailSearch(object):
     def _filter_by_annotations(self, pathogenicity, splice_ai):
         annotation_filters = []
         pathogenicity_filter = self._get_pathogenicity_filter(pathogenicity)
-        if pathogenicity_filter:
+        if pathogenicity_filter is not None:
             annotation_filters.append(pathogenicity_filter)
         if splice_ai:
             annotation_filters.append(self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(splice_ai))
