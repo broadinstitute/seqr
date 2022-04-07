@@ -1,5 +1,4 @@
 import React from 'react'
-import DocumentTitle from 'react-document-title'
 import PropTypes from 'prop-types'
 import { Message, Segment } from 'semantic-ui-react'
 
@@ -26,7 +25,6 @@ WorkspaceAccessError.propTypes = {
 
 const LoadWorkspaceData = ({ match }) => (
   <div>
-    <DocumentTitle title="seqr: load anvil data" />
     <LoadWorkspaceDataForm
       namespace={match.params.namespace}
       name={match.params.name}

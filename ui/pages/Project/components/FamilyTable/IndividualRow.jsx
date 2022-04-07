@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Field } from 'redux-form'
+import { Field } from 'react-final-form'
 import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
@@ -116,7 +116,7 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const ShowRnaSeqOutliers = ({ sample, ...props }) => (sample ? (
+const ShowRnaSeqOutliers = ({ sample, hasRnaOutlierData, ...props }) => (hasRnaOutlierData ? (
   <Modal
     modalName={`OUTRIDER-${sample.sampleId}`}
     title={`RNA-Seq OUTRIDER: ${sample.sampleId}`}
@@ -129,6 +129,7 @@ const ShowRnaSeqOutliers = ({ sample, ...props }) => (sample ? (
 ) : null)
 
 ShowRnaSeqOutliers.propTypes = {
+  hasRnaOutlierData: PropTypes.bool,
   sample: PropTypes.object,
 }
 
@@ -173,6 +174,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
     <ShowRnaSeqOutliers
       familyGuid={individual.familyGuid}
       sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
+      hasRnaOutlierData={individual.hasRnaOutlierData}
     />
   </div>
 ))
@@ -281,7 +283,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     subFieldsLookup: {
       deathYear: {
         format: val => (val === 0 ? 0 : (val || -1)),
-        normalize: val => (val < 0 ? null : val),
+        parse: val => (val < 0 ? null : val),
         includeAlive: true,
       },
     },

@@ -13,9 +13,9 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
-    get_json_for_matchmaker_submissions
+    get_json_for_matchmaker_submissions, get_json_for_analysis_groups
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 
@@ -39,6 +39,11 @@ def family_page_data(request, family_guid):
 
     add_families_context(response, [family], project.guid, request.user, is_analyst, has_case_review_perm)
     response['familiesByGuid'][family_guid]['detailsLoaded'] = True
+
+    outlier_samples = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqoutlier=None)
+    for sample in outlier_samples:
+        individual_guid = response['samplesByGuid'][sample.guid]['individualGuid']
+        response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
@@ -276,6 +281,28 @@ def update_family_pedigree_image(request, family_guid):
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
+    })
+
+
+@login_and_policies_required
+def update_family_analysis_groups(request, family_guid):
+    family = Family.objects.get(guid=family_guid)
+    project = family.project
+    check_project_permissions(project, request.user, can_edit=True)
+
+    request_json = json.loads(request.body)
+    analysis_group_guids = {ag['analysisGroupGuid'] for ag in request_json.get('analysisGroups', [])}
+    update_groups = AnalysisGroup.objects.filter(guid__in=analysis_group_guids)
+
+    all_groups = set(family.analysisgroup_set.all())
+    all_groups.update(update_groups)
+
+    family.analysisgroup_set.set(update_groups)
+
+    return create_json_response({
+        'analysisGroupsByGuid': {
+            ag['analysisGroupGuid']: ag for ag in get_json_for_analysis_groups(list(all_groups), project_guid=project.guid)
+        },
     })
 
 

@@ -156,8 +156,8 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 3
     MANAGER_VARIANT_GUID = None
 
-    def test_mme_details(self):
-        super(AnvilSummaryDataAPITest, self).test_mme_details()
+    def test_mme_details(self, *args):
+        super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
 
     def test_saved_variants_page(self):
@@ -173,8 +173,8 @@ class MixSummaryDataAPITest(MixAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
-    def test_mme_details(self):
-        super(MixSummaryDataAPITest, self).test_mme_details()
+    def test_mme_details(self, *args):
+        super(MixSummaryDataAPITest, self).test_mme_details(*args)
         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
 
     def test_saved_variants_page(self):

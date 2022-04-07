@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
 import { loadSampleMetadata } from '../reducers'
 import { getSampleMetadataLoading, getSampleMetadataLoadingError, getSampleMetadataRows, getSampleMetadataColumns } from '../selectors'
@@ -25,9 +25,8 @@ const FIELDS = [
 ]
 
 const SampleMetadataFilters = React.memo(({ load }) => (
-  <ReduxFormWrapper
+  <FormWrapper
     onSubmit={load}
-    form="sampleMetadataFilters"
     fields={FIELDS}
     noModal
     inline

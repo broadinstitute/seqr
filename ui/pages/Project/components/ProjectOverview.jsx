@@ -10,7 +10,7 @@ import { getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
@@ -18,10 +18,11 @@ import { ButtonLink, HelpIcon } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
-  DATASET_TYPE_SV_CALLS,
+  DATASET_TITLE_LOOKUP,
   ANVIL_URL,
+  ANVIL_FIELDS,
 } from 'shared/utils/constants'
-import { updateProjectMmeContact, loadMmeSubmissions } from '../reducers'
+import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } from '../reducers'
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
@@ -37,8 +38,6 @@ import EditDatasetsButton from './EditDatasetsButton'
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
 `
-
-const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
 
 const FAMILY_SIZE_LABELS = {
   0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,
@@ -145,7 +144,7 @@ const MatchmakerSubmissionOverview = connect(
 
 const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
-    .map(family => Math.min(family.individualGuids.length, 5))
+    .map(family => Math.min((family.individualGuids || []).length, 5))
     .reduce((acc, familySize) => (
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
     ), {})
@@ -304,15 +303,25 @@ const mapDatasetStateToProps = (state, ownProps) => ({
 
 const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)
 
-const Anvil = React.memo(({ project, user }) => (
-  project.workspaceName && user.isAnvil && (
+const Anvil = React.memo(({ project, user, onSubmit }) => (
+  (project.workspaceName || user.isPm) && user.isAnvil && (
     <DetailSection
       title="AnVIL Workspace"
-      content={
+      content={project.workspaceName ? (
         <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank" rel="noreferrer">
           {project.workspaceName}
         </a>
-      }
+      ) : 'None'}
+      button={user.isPm && (
+        <UpdateButton
+          onSubmit={onSubmit}
+          formFields={ANVIL_FIELDS}
+          initialValues={project}
+          modalTitle="Edit AnVIL Workspace"
+          modalId="editAnvilWorkspace"
+          buttonText="Edit Workspace"
+        />
+      )}
     />
   )
 ))
@@ -320,13 +329,18 @@ const Anvil = React.memo(({ project, user }) => (
 Anvil.propTypes = {
   project: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
+  onSubmit: PropTypes.func,
 }
 
 const mapAnvilStateToProps = state => ({
   user: getUser(state),
 })
 
-const AnvilOverview = connect(mapAnvilStateToProps)(Anvil)
+const mapAnvilDispatchToProps = {
+  onSubmit: updateAnvilWorkspace,
+}
+
+const AnvilOverview = connect(mapAnvilStateToProps, mapAnvilDispatchToProps)(Anvil)
 
 const AnalysisStatus = React.memo(({ analysisStatusCounts }) => (
   <DetailSection
@@ -357,8 +371,9 @@ const ProjectOverview = React.memo(({ familiesLoading, ...props }) => (
       <DatasetOverview {...props} />
     </Grid.Column>
     <Grid.Column width={6}>
-      <AnvilOverview {...props} />
       {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <AnalysisStatusOverview {...props} />}
+      <VerticalSpacer height={10} />
+      <AnvilOverview {...props} />
     </Grid.Column>
   </Grid>
 ))

@@ -35,7 +35,8 @@ import {
   INDIVIDUAL_FIELD_AFFECTED,
   INDIVIDUAL_FIELD_NOTES,
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
-  FAMILY_ANALYSIS_STATUS_OPTIONS,
+  ALL_FAMILY_ANALYSIS_STATUS_OPTIONS,
+  FAMILY_ANALYSIS_STATUS_LOOKUP,
   INDIVIDUAL_FIELD_CONFIGS,
   SHOW_ALL,
   exportConfigForField,
@@ -291,7 +292,7 @@ const SORT_BY_REVIEW_STATUS_CHANGED_DATE = 'REVIEW_STATUS_CHANGED_DATE'
 const SORT_BY_ANALYSIS_STATUS = 'SORT_BY_ANALYSIS_STATUS'
 const SORT_BY_ANALYSED_DATE = 'SORT_BY_ANALYSED_DATE'
 
-const FAMILY_ANALYSIS_STATUS_SORT_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+const FAMILY_ANALYSIS_STATUS_SORT_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
   (acc, { value }, i) => ({ ...acc, [value]: i.toString(36) }), {},
 )
 
@@ -362,7 +363,7 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
   [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
-    format: status => (FAMILY_ANALYSIS_STATUS_OPTIONS.find(option => option.value === status) || {}).name,
+    format: status => (FAMILY_ANALYSIS_STATUS_LOOKUP[status] || {}).name,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
@@ -606,6 +607,6 @@ export const TAG_FORM_FIELD = {
   label: 'Tags',
   includeCategories: true,
   format: value => (value || []).map(({ name }) => name),
-  normalize: value => (value || []).map(name => ({ name })),
+  parse: value => (value || []).map(name => ({ name })),
   validate: value => (value && value.length ? undefined : 'Required'),
 }

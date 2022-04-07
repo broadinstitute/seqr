@@ -15,11 +15,18 @@ import traceback
 from seqr.utils.elasticsearch.utils import InvalidIndexException, InvalidSearchException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.pedigree_info_utils import ErrorsWarningsException
 from seqr.views.utils.terra_api_utils import TerraAPIException
 from settings import DEBUG, LOGIN_URL
 
 logger = SeqrLogger()
+
+
+class ErrorsWarningsException(Exception):
+    def __init__(self, errors, warnings=None):
+        """Custom Exception to capture errors and warnings."""
+        Exception.__init__(self, str(errors))
+        self.errors = errors
+        self.warnings = warnings
 
 
 EXCEPTION_ERROR_MAP = {
@@ -96,6 +103,10 @@ class JsonErrorMiddleware(MiddlewareMixin):
         detail = getattr(exception, 'info', None)
         if isinstance(detail, dict):
             exception_json['detail'] = detail
+
+        if isinstance(exception, PermissionDenied):
+            logger.warning('PermissionDenied: {}'.format(exception_json['error']), request.user)
+            exception_json['error'] = 'Permission Denied'
 
         if request.path.startswith('/api'):
             return create_json_response(exception_json, status=status)

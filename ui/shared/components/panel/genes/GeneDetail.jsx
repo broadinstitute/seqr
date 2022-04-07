@@ -8,7 +8,7 @@ import { Grid, Popup, Loader } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
-import { SectionHeader } from '../../StyledComponents'
+import { SectionHeader, ColoredLabel } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
@@ -168,6 +168,26 @@ const STAT_DETAILS = [
   },
 ]
 
+const GENCC_COLORS = {
+  Definitive: '#276749',
+  Strong: '#38a169',
+  Moderate: '#68d391',
+  Supportive: '#63b3ed',
+  Limited: '#fc8181',
+}
+
+export const GenCC = ({ genCc }) => genCc.classifications.sort(
+  (a, b) => b.date.localeCompare(a.date),
+).map(({ classification, disease, moi, date, submitter }) => (
+  <div key={submitter}>
+    <ColoredLabel horizontal size="mini" minWidth="60px" color={GENCC_COLORS[classification] || 'grey'} content={classification} />
+    <b>{submitter}</b>
+    {` (${date.split('-')[0]}): `}
+    <a target="_blank" rel="noreferrer" href={`https://search.thegencc.org/genes/${genCc.hgncId}`}>{disease}</a>
+    <i>{` (${moi})`}</i>
+  </div>
+))
+
 const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
     return null
@@ -205,15 +225,17 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
             </span>
           ))}
         </div>
-      ) : <em>No disease associations</em>,
+      ) : <i>No disease associations</i>,
+    },
+    {
+      title: 'dbNSFP Details',
+      content: gene.diseaseDesc ? textWithLinks(gene.diseaseDesc) : <i>None</i>,
+    },
+    {
+      title: 'GenCC',
+      content: gene.genCc?.classifications ? <GenCC genCc={gene.genCc} /> : <i>Not Submitted</i>,
     },
   ]
-  if (gene.diseaseDesc) {
-    associationDetails.push({
-      title: 'dbNSFP Details',
-      content: textWithLinks(gene.diseaseDesc),
-    })
-  }
   const linkDetails = [
     gene.mimNumber ? { title: 'OMIM', link: `http://www.omim.org/entry/${gene.mimNumber}`, description: 'Database of Mendelian phenotypes' } : null,
     { title: 'PubMed', link: `http://www.ncbi.nlm.nih.gov/pubmed/?term=(${[gene.geneSymbol, ...otherGeneNames].join(' OR ')})`, description: 'Search PubMed' },
@@ -224,7 +246,9 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
     { title: 'Monarch', link: `http://monarchinitiative.org/gene/ENSEMBL:${gene.geneId}`, description: 'Cross-species gene and phenotype resource' },
     { title: 'Decipher', link: `https://decipher.sanger.ac.uk/gene/${gene.geneId}/overview/protein-genomic-info`, description: 'DatabasE of genomiC varIation and Phenotype in Humans using Ensembl Resources' },
     { title: 'UniProt', link: `http://www.uniprot.org/uniprot/?random=true&query=${gene.geneId}+AND+reviewed:yes+AND+organism:9606`, description: 'Protein sequence and functional information' },
+    { title: 'Geno2MP', link: `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${gene.geneSymbol}/gene/0/0/0`, description: 'Genotype to Mendelian Phenotype' },
     { title: 'gnomAD', link: `https://gnomad.broadinstitute.org/gene/${gene.geneId}?dataset=gnomad_r3`, description: 'Genome Aggregation Database' },
+    { title: 'primAD', link: `http://primad.basespace.illumina.com/gene/${gene.geneSymbol}?dataset=gnomad_r3`, description: 'Primate Genome Aggregation Database' },
     gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
     gene.mgiMarkerId ? { title: 'IMPC', link: `https://www.mousephenotype.org/data/genes/${gene.mgiMarkerId}`, description: 'International Mouse Phenotyping Consortium' } : null,
     { title: 'ClinVar', link: `https://www.ncbi.nlm.nih.gov/clinvar?term=${gene.geneSymbol}[gene]`, description: 'Aggregated information about human genomic variation' },

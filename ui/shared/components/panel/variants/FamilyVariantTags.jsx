@@ -19,7 +19,7 @@ import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
 import FamilyLink from '../../buttons/FamilyLink'
-import { StyledForm } from '../../form/ReduxFormWrapper'
+import { StyledForm } from '../../form/FormHelpers'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -120,7 +120,7 @@ ShortcutTags.propTypes = {
   dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
 }
 
-const validateTags = tags => (tags.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
+const validateTags = tags => (tags?.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
   'Only 1 Discovery Tag can be added' : undefined
 )
 
@@ -312,15 +312,15 @@ const mapStateToProps = (state, ownProps) => {
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  dispatchUpdateVariantNote: (updates) => {
-    dispatch(updateVariantNote({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
-  },
-  dispatchUpdateFamilyVariantTags: (updates) => {
-    dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
-  },
-  dispatchUpdateFamilyVariantFunctionalTags: (updates) => {
-    dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }, 'functional_data'))
-  },
+  dispatchUpdateVariantNote: updates => dispatch(
+    updateVariantNote({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }),
+  ),
+  dispatchUpdateFamilyVariantTags: updates => dispatch(
+    updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }),
+  ),
+  dispatchUpdateFamilyVariantFunctionalTags: updates => dispatch(
+    updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }, 'functional_data'),
+  ),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyVariantTags)

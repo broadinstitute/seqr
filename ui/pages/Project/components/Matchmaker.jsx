@@ -5,8 +5,10 @@ import { Link } from 'react-router-dom'
 import { Header, Icon, Popup, Label, Grid } from 'semantic-ui-react'
 import styled from 'styled-components'
 
+import { loadFamilyDetails } from 'redux/rootReducer'
 import {
   getIndividualsByGuid, getSortedIndividualsByFamily, getUser, getMmeSubmissionsByGuid, getFamiliesByGuid,
+  getFamilyDetailsLoading,
 } from 'redux/selectors'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
@@ -27,7 +29,6 @@ import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
-  loadFamilyDetails,
 } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
@@ -37,7 +38,6 @@ import {
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
   getVariantUniqueId,
-  getFamilyDetailsLoading,
 } from '../selectors'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 
@@ -77,7 +77,7 @@ const GENOTYPE_FIELDS = [
 ]
 
 const mapGenotypesStateToProps = (state, ownProps) => {
-  const individualGuid = ownProps.meta.form.split('_-_')[0]
+  const individualGuid = ownProps.meta.data.formId
   const { familyGuid } = state.individualsByGuid[individualGuid]
   return {
     data: getIndividualTaggedVariants(state, { individualGuid }),
@@ -116,7 +116,7 @@ BaseEditPhenotypesTable.propTypes = {
 }
 
 const mapPhenotypeStateToProps = (state, ownProps) => ({
-  individual: getIndividualsByGuid(state)[ownProps.meta.form.split('_-_')[0]],
+  individual: getIndividualsByGuid(state)[ownProps.meta.data.formId],
 })
 
 const EditPhenotypesTable = connect(mapPhenotypeStateToProps)(BaseEditPhenotypesTable)
@@ -131,7 +131,7 @@ const SUBMISSION_EDIT_FIELDS = [
     idField: 'variantId',
     columns: GENOTYPE_FIELDS,
     includeSelectedRowData: true,
-    normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : Object.values(val || {}).filter(v => v)),
+    parse: val => Object.values(val || {}).filter(v => v),
     format: value => (value || []).reduce(
       (acc, variant) => ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {},
     ),
@@ -363,6 +363,24 @@ const DISPLAY_FIELDS = [
   },
 ]
 
+const UpdateMmeSubmissionButton = ({ individual, action, ...props }) => (
+  <UpdateButton
+    modalSize="large"
+    modalTitle={`${action} Submission for ${individual.displayName}`}
+    modalId={`${individual.individualGuid}_-_${action}MmeSubmission`}
+    formMetaId={individual.individualGuid}
+    confirmDialog={`Are you sure you want to ${action === 'Create' ? 'submit this individual' : 'update this submission'}?`}
+    formFields={SUBMISSION_EDIT_FIELDS}
+    showErrorPanel
+    {...props}
+  />
+)
+
+UpdateMmeSubmissionButton.propTypes = {
+  individual: PropTypes.object.isRequired,
+  action: PropTypes.string,
+}
+
 const BaseMatchmakerIndividual = React.memo((
   { loading, load, searchMme, individual, onSubmit, defaultMmeSubmission, mmeResults, mmeSubmission },
 ) => (
@@ -399,17 +417,13 @@ const BaseMatchmakerIndividual = React.memo((
           icon={<Icon name="warning sign" color="orange" />}
           subheader={
             <div className="sub header">
-              <UpdateButton
+              <UpdateMmeSubmissionButton
+                action="Create"
+                individual={individual}
                 initialValues={defaultMmeSubmission}
                 buttonText="Submit to Matchmaker"
                 editIconName=" "
-                modalSize="large"
-                modalTitle={`Create Submission for ${individual.displayName}`}
-                modalId={`${individual.individualGuid}_-_createMmeSubmission`}
-                confirmDialog="Are you sure you want to submit this individual?"
-                formFields={SUBMISSION_EDIT_FIELDS}
                 onSubmit={onSubmit}
-                showErrorPanel
               />
             </div>
           }
@@ -427,17 +441,13 @@ const BaseMatchmakerIndividual = React.memo((
             content="Search for New Matches"
           />
           | &nbsp; &nbsp;
-          <UpdateButton
+          <UpdateMmeSubmissionButton
+            action="Update"
+            individual={individual}
             disabled={loading}
             buttonText="Update Submission"
-            modalSize="large"
-            modalTitle={`Update Submission for ${individual.displayName}`}
-            modalId={`${individual.individualGuid}_-_updateMmeSubmission`}
-            confirmDialog="Are you sure you want to update this submission?"
             initialValues={mmeSubmission}
-            formFields={SUBMISSION_EDIT_FIELDS}
             onSubmit={onSubmit}
-            showErrorPanel
           />
           | &nbsp; &nbsp;
           <DeleteButton

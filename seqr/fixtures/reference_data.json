@@ -1031,6 +1031,30 @@
         "percentile_25": 0.587214291096
     }
 },
+{
+    "model": "reference_data.gencc",
+    "pk": 1,
+    "fields": {
+        "gene": 1,
+        "hgnc_id": "HGNC:943",
+        "classifications": [
+            {
+                "classification": "Strong",
+                "date": "7/29/19 19:04",
+                "disease": "dystonia 16",
+                "moi": "Autosomal recessive",
+                "submitter": "Laboratory for Molecular Medicine"
+            },
+            {
+                "classification": "Supportive",
+                "date": "9/14/21 0:00",
+                "disease": "dystonia 16",
+                "moi": "Autosomal recessive",
+                "submitter": "Orphanet"
+            }
+        ]
+    }
+},
     {
     "model": "reference_data.geneconstraint",
     "pk": 1,

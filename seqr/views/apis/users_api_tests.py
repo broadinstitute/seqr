@@ -77,7 +77,7 @@ class UsersAPITest(object):
 
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Adding collaborators directly in seqr is disabled. Users can be managed from the associated AnVIL workspace')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
@@ -213,7 +213,7 @@ class UsersAPITest(object):
     def _test_password_auth_disabled(self, url):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Username/ password authentication is disabled')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.apis.users_api.SEQR_TOS_VERSION')
     @mock.patch('seqr.views.apis.users_api.SEQR_PRIVACY_VERSION')
@@ -316,12 +316,12 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     def _test_set_password(self, set_password_url, password): # pylint: disable=arguments-differ
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
             {'userToken': 'invalid'}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
             {'userToken': quote_plus(password)}))
@@ -362,7 +362,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
-    def test_create_project_collaborator(self):
+    def test_create_project_collaborator(self, *args):
         # Creating project collaborators is only allowed in non-anvil projects, so it always fails for the AnVIL only case
         create_url = reverse(create_project_collaborator, args=[NON_ANVIL_PROJECT_GUID])
         self.check_manager_login(create_url)

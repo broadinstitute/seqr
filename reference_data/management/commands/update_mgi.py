@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class MGIReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = MGI
-    url = "http://www.informatics.jax.org/downloads/reports/HMD_HumanPhenotype.rpt"
+    url = "https://storage.googleapis.com/seqr-reference-data/mgi/HMD_HumanPhenotype.rpt.txt"
 
     def __init__(self, **kwargs):
         if dbNSFPGene.objects.count() == 0:
@@ -22,20 +22,21 @@ class MGIReferenceDataHandler(ReferenceDataHandler):
 
     @staticmethod
     def get_file_header(f):
-        return ['gene_symbol', 'entrez_gene_id', 'homologene_id', '?', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
+        return ['gene_symbol', 'entrez_gene_id', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
 
     @staticmethod
     def parse_record(record):
         yield {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
 
     def get_gene_for_record(self, record):
-        gene = self.entrez_id_to_gene.get(record.pop('entrez_gene_id'))
-        if gene:
-            del record['gene_symbol']
-            return gene
+        entrez_gene = self.entrez_id_to_gene.get(record.pop('entrez_gene_id'))
 
-        return super(MGIReferenceDataHandler, self).get_gene_for_record(record)
-
+        try:
+            return super(MGIReferenceDataHandler, self).get_gene_for_record(record)
+        except ValueError as e:
+            if entrez_gene:
+                return entrez_gene
+            raise e
 
 class Command(GeneCommand):
     reference_data_handler = MGIReferenceDataHandler

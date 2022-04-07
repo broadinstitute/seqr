@@ -1,19 +1,18 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { FormSpy } from 'react-final-form'
 import styled from 'styled-components'
 
 import DataLoader from 'shared/components/DataLoader'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import { Select, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { saveSearch, loadSavedSearches } from '../reducers'
 import {
-  getSearchInput,
   getSavedSearchesByGuid,
   getSavedSearchesIsLoading,
   getSavedSearchesLoadingError,
-  getCurrentSavedSearch,
   getSavedSearchOptions,
 } from '../selectors'
 
@@ -30,51 +29,70 @@ const FormButtonContainer = styled.div`
   bottom: 10px;
 `
 
-const SaveSearch = React.memo(({ search, savedSearch, onSubmit }) => (
+const SUBSCRIPTION = { values: true }
+
+const CurrentSavedSearchProvider = ({ element, ...props }) => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => {
+      const currentSavedSearch = values.search && Object.values(props.savedSearchesByGuid).find(
+        ({ search }) => search === values.search,
+      )
+      return React.createElement(element, { currentSavedSearch, search: values.search, ...props })
+    }}
+  </FormSpy>
+)
+
+CurrentSavedSearchProvider.propTypes = {
+  savedSearchesByGuid: PropTypes.object,
+  element: PropTypes.object,
+}
+
+const SaveSearch = React.memo(({ search, currentSavedSearch, onSubmit }) => (
   <FormButtonContainer>
     <UpdateButton
-      formFields={savedSearch ? EXISTING_SAVED_SEARCH_FIELDS : SAVED_SEARCH_FIELDS}
+      formFields={currentSavedSearch ? EXISTING_SAVED_SEARCH_FIELDS : SAVED_SEARCH_FIELDS}
       onSubmit={onSubmit}
-      initialValues={savedSearch || search}
+      initialValues={currentSavedSearch || search}
       disabled={!search}
       modalId="saveSearch"
-      modalTitle={savedSearch ? 'Edit Saved Search' : 'Save Search'}
-      buttonText={savedSearch ? 'Edit Saved Search' : 'Save Search'}
-      editIconName={savedSearch ? 'write' : 'save'}
+      modalTitle={currentSavedSearch ? 'Edit Saved Search' : 'Save Search'}
+      buttonText={currentSavedSearch ? 'Edit Saved Search' : 'Save Search'}
+      editIconName={currentSavedSearch ? 'write' : 'save'}
     />
   </FormButtonContainer>
 ))
 
 SaveSearch.propTypes = {
   search: PropTypes.object,
-  savedSearch: PropTypes.object,
+  currentSavedSearch: PropTypes.object,
   onSubmit: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
-  search: getSearchInput(state),
-  savedSearch: getCurrentSavedSearch(state),
+  savedSearchesByGuid: getSavedSearchesByGuid(state),
 })
 
 const mapDispatchToProps = {
   onSubmit: saveSearch,
 }
 
-export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(SaveSearch)
+export const SaveSearchButton = connect(mapStateToProps, mapDispatchToProps)(props => (
+  <CurrentSavedSearchProvider {...props} element={SaveSearch} />
+))
 
 const selectSearch = (onChange, savedSearchesByGuid) => val => onChange(
   savedSearchesByGuid[val] ? savedSearchesByGuid[val].search : {},
 )
 
 const SavedSearches = React.memo((
-  { options, savedSearchesByGuid, selectedSearch, load, loading, errorMessage, onChange },
+  { options, savedSearchesByGuid, currentSavedSearch, load, loading, errorMessage, onChange },
 ) => (
   <DataLoader load={load} errorMessage={errorMessage} loading={false} content>
     <Select
       includeCategories
       loading={loading}
       placeholder="Select a Saved Search"
-      value={(selectedSearch || {}).savedSearchGuid}
+      value={(currentSavedSearch || {}).savedSearchGuid}
       onChange={selectSearch(onChange, savedSearchesByGuid)}
       options={options}
     />
@@ -84,7 +102,7 @@ const SavedSearches = React.memo((
 SavedSearches.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
   savedSearchesByGuid: PropTypes.object,
-  selectedSearch: PropTypes.object,
+  currentSavedSearch: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
   errorMessage: PropTypes.string,
@@ -94,7 +112,6 @@ SavedSearches.propTypes = {
 const mapDropdownStateToProps = state => ({
   options: getSavedSearchOptions(state),
   savedSearchesByGuid: getSavedSearchesByGuid(state),
-  selectedSearch: getCurrentSavedSearch(state),
   loading: getSavedSearchesIsLoading(state),
   errorMessage: getSavedSearchesLoadingError(state),
 })
@@ -103,4 +120,6 @@ const mapDropdownDispatchToProps = {
   load: loadSavedSearches,
 }
 
-export const SavedSearchDropdown = connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(SavedSearches)
+export const SavedSearchDropdown = connect(mapDropdownStateToProps, mapDropdownDispatchToProps)(props => (
+  <CurrentSavedSearchProvider {...props} element={SavedSearches} />
+))

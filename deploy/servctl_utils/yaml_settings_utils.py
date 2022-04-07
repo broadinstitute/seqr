@@ -15,7 +15,7 @@ def _parse_jinja_template(jinja_template_path, template_variables):
         try:
             jinja_template_contents = jinja_template_file.read()
             yaml_string = jinja2.Template(jinja_template_contents).render(template_variables)
-        except TypeError as e:
+        except TypeError:
             raise ValueError('unable to render file: %(e)s' % locals())
 
     return yaml_string
@@ -45,8 +45,8 @@ def load_settings(settings_file_paths, settings=None):
         yaml_string = _parse_jinja_template(settings_path, template_variables=settings)
 
         try:
-            settings_from_this_file = yaml.load(yaml_string)
-        except yaml.parser.ParserError as e:
+            settings_from_this_file = yaml.load(yaml_string) # nosec
+        except yaml.parser.ParserError:
             raise ValueError('Unable to parse yaml file %(settings_path)s: %(e)s' % locals())
 
         if not settings_from_this_file:
@@ -89,7 +89,7 @@ def process_jinja_template(input_base_dir, relative_file_path, template_variable
             ostream.write(yaml_string)
     except Exception as e:
         logger.error("Couldn't write out %s" % relative_file_path)
-        raise
+        raise e
 
     #os.chmod(output_file_path, 0x777)
     logger.info("-- wrote out %s" % output_file_path)

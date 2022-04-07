@@ -5,11 +5,13 @@ import { Table, Checkbox, Pagination, Form } from 'semantic-ui-react'
 
 import { compareObjects } from '../../utils/sortUtils'
 import ExportTableButton from '../buttons/ExportTableButton'
-import { configuredField } from '../form/ReduxFormWrapper'
+import { configuredField } from '../form/FormHelpers'
 import TableLoading from './TableLoading'
 
 const TableContainer = styled.div`
   overflow-x: ${props => (props.horizontalScroll ? 'scroll' : 'inherit')};
+  overflow-y: auto;
+  max-height: ${props => (props.maxHeight || 'inherit')};
 `
 
 const RightAligned = styled.span`
@@ -59,6 +61,7 @@ class DataTable extends React.PureComponent {
     footer: PropTypes.node,
     rowsPerPage: PropTypes.number,
     horizontalScroll: PropTypes.bool,
+    maxHeight: PropTypes.string,
     fixedWidth: PropTypes.bool,
     downloadTableType: PropTypes.string,
     downloadFileName: PropTypes.string,
@@ -159,7 +162,7 @@ class DataTable extends React.PureComponent {
     const {
       data = [], defaultSortColumn, defaultSortDescending, idField, columns, selectRows, selectedRows = {},
       loading, emptyContent, footer, rowsPerPage, horizontalScroll, downloadFileName, downloadTableType, downloadAlign,
-      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, ...tableProps
+      fixedWidth, includeSelectedRowData, filterContainer, getRowFilterVal, loadingProps = {}, maxHeight, ...tableProps
     } = this.props
     const { column, direction, activePage, filter } = this.state
     const sortedDirection = direction || (defaultSortDescending ? DESCENDING : ASCENDING)
@@ -215,7 +218,7 @@ class DataTable extends React.PureComponent {
     const rowSummary = `${((activePage - 1) * rowsPerPage) + 1}-${Math.min(activePage * rowsPerPage, totalRows)}`
 
     return (
-      <TableContainer horizontalScroll={horizontalScroll}>
+      <TableContainer horizontalScroll={horizontalScroll} maxHeight={maxHeight}>
         {!hasFooter && (filterContainer ? React.createElement(filterContainer, {}, filterInput) : filterInput)}
         {exportConfig &&
           <RightAligned topAlign={downloadAlign}><ExportTableButton downloads={exportConfig} /></RightAligned>}

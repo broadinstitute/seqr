@@ -9,7 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, prefetch_related_objects
+from django.db.models import Max
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -18,15 +18,14 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file_content
+from seqr.views.utils.dataset_utils import load_rna_seq, load_mapping_file_content
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, Project, RnaSeqOutlier
+from seqr.models import Sample, Individual, RnaSeqOutlier
 
-from settings import ELASTICSEARCH_SERVER, KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, DEMO_PROJECT_CATEGORY, \
-    ANALYST_PROJECT_CATEGORY
+from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
 logger = SeqrLogger(__name__)
 
@@ -40,9 +39,12 @@ def elasticsearch_status(request):
         _get_es_meta(client, 'allocation', ['node', 'shards', 'disk.avail', 'disk.used', 'disk.percent'])
     }
 
-    for node in  _get_es_meta(
-            client, 'nodes', ['name', 'heap.percent'], filter_rows=lambda node: node['name'] in disk_status):
-        disk_status[node.pop('name')].update(node)
+    node_stats = {}
+    for node in  _get_es_meta(client, 'nodes', ['name', 'heap.percent']):
+        if node['name'] in disk_status:
+            disk_status[node.pop('name')].update(node)
+        else:
+            node_stats[node['name'] ] = node
 
     indices, seqr_index_projects = _get_es_indices(client)
 
@@ -53,7 +55,7 @@ def elasticsearch_status(request):
     return create_json_response({
         'indices': indices,
         'diskStats': list(disk_status.values()),
-        'elasticsearchHost': ELASTICSEARCH_SERVER,
+        'nodeStats': list(node_stats.values()),
         'errors': errors,
     })
 
@@ -112,7 +114,7 @@ def delete_index(request):
         projects = {
             sample.individual.family.project.name for sample in active_index_samples.select_related('individual__family__project')
         }
-        return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=403)
+        return create_json_response({'error': 'Index "{}" is still used by: {}'.format(index, ', '.join(projects))}, status=400)
 
     client = get_es_client()
     client.indices.delete(index)
@@ -147,7 +149,7 @@ def upload_qc_pipeline_output(request):
         dataset_type=dataset_type,
     ).exclude(
         individual__family__project__name__in=EXCLUDE_PROJECTS
-    ).exclude(individual__family__project__projectcategory__name=DEMO_PROJECT_CATEGORY)
+    ).exclude(individual__family__project__is_demo=True)
 
     sample_individuals = {
         agg['sample_id']: agg['individuals'] for agg in
@@ -173,7 +175,7 @@ def upload_qc_pipeline_output(request):
     if missing_sample_ids:
         individuals = Individual.objects.filter(individual_id__in=missing_sample_ids).exclude(
             family__project__name__in=EXCLUDE_PROJECTS).exclude(
-            family__project__projectcategory__name=DEMO_PROJECT_CATEGORY).filter(
+            family__project__is_demo=True).filter(
             sample__sample_type=Sample.SAMPLE_TYPE_WES if data_type == 'exome' else Sample.SAMPLE_TYPE_WGS).distinct()
         individual_db_ids_by_id = defaultdict(list)
         for individual in individuals:
@@ -216,14 +218,23 @@ def upload_qc_pipeline_output(request):
         'info': info,
     })
 
+SV_WES_FALSE_FLAGS = {'lt100_raw_calls': 'raw_calls:_>100', 'lt10_highQS_rare_calls': 'high_QS_rare_calls:_>10'}
+SV_WGS_FALSE_FLAGS = {'expected_num_calls': 'outlier_num._calls'}
+SV_FALSE_FLAGS = {}
+SV_FALSE_FLAGS.update(SV_WES_FALSE_FLAGS)
+SV_FALSE_FLAGS.update(SV_WGS_FALSE_FLAGS)
 
 def _parse_raw_qc_records(json_records):
-    # Parse SV QC
-    if all(field in json_records[0] for field in ['sample', 'lt100_raw_calls', 'lt10_highQS_rare_calls']):
+    # Parse SV WES QC
+    if all(field in json_records[0] for field in ['sample'] + list(SV_WES_FALSE_FLAGS.keys())):
         records_by_sample_id = {
             re.search('(\d+)_(?P<sample_id>.+)_v\d_Exome_GCP', record['sample']).group('sample_id'): record
             for record in json_records}
         return Sample.DATASET_TYPE_SV_CALLS, 'exome', records_by_sample_id
+
+    # Parse SV WGS QC
+    if all(field in json_records[0] for field in ['sample'] + list(SV_WGS_FALSE_FLAGS.keys())):
+        return Sample.DATASET_TYPE_SV_CALLS, 'genome', {record['sample']: record for record in json_records}
 
     # Parse regular variant QC
     missing_columns = [field for field in ['seqr_id', 'data_type', 'filter_flags', 'qc_metrics_filters', 'qc_pop']
@@ -293,18 +304,13 @@ def _update_individuals_variant_qc(json_records, data_type, warnings, user):
 
 
 def _update_individuals_sv_qc(json_records, user):
-    inidividuals_by_qc = defaultdict(list)
+    inidividuals_by_qc_flags = defaultdict(list)
     for record in json_records:
-        inidividuals_by_qc[(record['lt100_raw_calls'], record['lt10_highQS_rare_calls'])] += record['individual_ids']
+        flags = tuple(sorted(flag for field, flag in SV_FALSE_FLAGS.items() if record.get(field) == 'FALSE'))
+        inidividuals_by_qc_flags[flags] += record['individual_ids']
 
-    for raw_flags, indiv_ids in inidividuals_by_qc.items():
-        lt100_raw_calls, lt10_highQS_rare_calls = raw_flags
-        sv_flags = []
-        if lt100_raw_calls == 'FALSE':
-            sv_flags.append('raw_calls:_>100')
-        if lt10_highQS_rare_calls == 'FALSE':
-            sv_flags.append('high_QS_rare_calls:_>10')
-        Individual.bulk_update(user, {'sv_flags': sv_flags or None}, id__in=indiv_ids)
+    for flags, indiv_ids in inidividuals_by_qc_flags.items():
+        Individual.bulk_update(user, {'sv_flags': list(flags) or None}, id__in=indiv_ids)
 
 
 FILTER_FLAG_COL_MAP = {
@@ -361,7 +367,7 @@ def update_rna_seq(request, upload_file_id):
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
     try:
-        samples_to_load, info, warnings = load_rna_seq(
+        samples_to_load, info, warnings = load_rna_seq_outlier(
             file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
@@ -379,79 +385,19 @@ def update_rna_seq(request, upload_file_id):
         'sampleGuids': [s.guid for s in samples_to_load.keys()],
     })
 
-def load_rna_seq(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    sample_id_to_individual_id_mapping = {}
+def _parse_outlier_row(row):
+    yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_COLUMNS.items()}
+
+def _validate_outlier_header(header):
+    missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header])
+    if missing_cols:
+        raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
+
+def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    sample_id_to_individual_id_mapping = None
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
-
-    samples_by_id = defaultdict(dict)
-    with gzip.open(file_path, 'rt') as f:
-        header = _parse_tsv_row(next(f))
-
-        header_index_map = {key: i for i, key in enumerate(header)}
-        missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header_index_map])
-        if missing_cols:
-            raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
-
-        for line in f:
-            row = _parse_tsv_row(line)
-            sample_id = row[header_index_map['sampleID']]
-            row_dict = {mapped_key: row[header_index_map[key]] for key, mapped_key in RNA_COLUMNS.items()}
-            gene_id = row_dict['gene_id']
-            existing_data = samples_by_id[sample_id].get(gene_id)
-            if existing_data and existing_data != row_dict:
-                raise ValueError(f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
-            samples_by_id[sample_id][gene_id] = row_dict
-
-    message = f'Parsed {len(samples_by_id)} RNA-seq samples'
-    info = [message]
-    logger.info(message, user)
-
-    samples, _, _, inactivated_sample_guids, _, remaining_sample_ids = match_and_update_samples(
-        projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
-        user=user,
-        sample_ids=samples_by_id.keys(),
-        data_source=file_path.split('/')[-1].split('_-_')[-1],
-        sample_type=Sample.SAMPLE_TYPE_RNA,
-        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
-    )
-
-    # Delete old data
-    to_delete = RnaSeqOutlier.objects.filter(sample__guid__in=inactivated_sample_guids)
-    if to_delete:
-        logger.info(f'delete {len(to_delete)} RnaSeqOutliers', user, db_update={
-            'dbEntity': 'RnaSeqOutlier', 'numEntities': len(to_delete), 'parentEntityIds': inactivated_sample_guids, 'updateType': 'bulk_delete',
-        })
-        to_delete.delete()
-
-    loaded_sample_ids = set(RnaSeqOutlier.objects.values_list('sample_id', flat=True).distinct())
-    samples_to_load = {
-        sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
-    }
-
-    prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
-    projects = {sample.individual.family.project.name for sample in samples_to_load}
-    project_names = ', '.join(sorted(projects))
-    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
-    info.append(message)
-    logger.info(message, user)
-
-    warnings = []
-    if remaining_sample_ids:
-        skipped_samples = ', '.join(sorted(remaining_sample_ids))
-        message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
-        warnings.append(message)
-        logger.warning(message, user)
-    if loaded_sample_ids:
-        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
-        warnings.append(message)
-        logger.warning(message, user)
-
-    return samples_to_load, info, warnings
-
-def _parse_tsv_row(row):
-    return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
+    return load_rna_seq(RnaSeqOutlier, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
 
 def _get_upload_file_path(uploaded_file_id):
     upload_directory = get_temp_upload_directory()

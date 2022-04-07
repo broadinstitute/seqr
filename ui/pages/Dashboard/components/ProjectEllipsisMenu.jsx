@@ -54,7 +54,7 @@ const ProjectEllipsisMenu = React.memo((props) => {
       <Dropdown.Divider key="divider1" />,
     )
   }
-  if (props.user.isDataManager) {
+  if (props.project.userIsCreator) {
     menuItems.push(
       <Dropdown.Divider key="divider2" />,
       <DeleteButton
@@ -81,13 +81,10 @@ const ProjectEllipsisMenu = React.memo((props) => {
 export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }
 
 ProjectEllipsisMenu.propTypes = {
-  user: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
   updateProject: PropTypes.func.isRequired,
 }
 
-const mapStateToProps = state => ({ user: state.user })
-
 const mapDispatchToProps = { updateProject }
 
-export default connect(mapStateToProps, mapDispatchToProps)(ProjectEllipsisMenu)
+export default connect(null, mapDispatchToProps)(ProjectEllipsisMenu)
