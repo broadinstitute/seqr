@@ -266,7 +266,7 @@ class EsSearch(object):
 
         self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family, skipped_sample_count)
 
-        if annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
+        if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
             self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
 
     def _filter_custom(self, custom_query):
