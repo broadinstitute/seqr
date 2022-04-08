@@ -5,9 +5,8 @@ import { connect } from 'react-redux'
 
 import { updateProject } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
-import { EDITABLE_PROJECT_FIELDS, GENOME_VERSION_FIELD, GENOME_VERSION_38 } from 'shared/utils/constants'
+import { EDITABLE_PROJECT_FIELDS, GENOME_VERSION_FIELD, GENOME_VERSION_38, ANVIL_FIELDS } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
 const PROJECT_FIELDS = [
@@ -19,8 +18,7 @@ const PROJECT_FIELDS = [
 
 const ANVIL_PROJECT_FIELDS = [
   ...PROJECT_FIELDS,
-  { name: 'workspaceNamespace', label: 'Workspace Namespace', validate: validators.required, width: 8, inline: true },
-  { name: 'workspaceName', label: 'Workspace Name', validate: validators.required, width: 8, inline: true },
+  ...ANVIL_FIELDS,
 ]
 
 const DEFAULT_PROJECT = {
