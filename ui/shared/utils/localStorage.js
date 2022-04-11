@@ -8,7 +8,9 @@ export const saveState = (label, state) => {
     const serializedState = JSON.stringify(state)
     localStorage.setItem(label, serializedState)
   } catch (err) {
-    // Ignore write errors.
+    console.warn(err) // eslint-disable-line no-console
+    // clear existing state, as most common reason for failure is out of memory
+    localStorage.removeItem(label)
   }
 }
 
@@ -25,6 +27,7 @@ export const loadState = (label) => {
     }
     return JSON.parse(serializedState)
   } catch (err) {
+    console.warn(err) // eslint-disable-line no-console
     return undefined
   }
 }
