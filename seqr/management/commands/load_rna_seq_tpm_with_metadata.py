@@ -22,7 +22,8 @@ class Command(BaseCommand):
         parser.add_argument('--mapping-file')
         parser.add_argument('--ignore-extra-samples', action='store_true')
 
-    def _validate_header(self, header):
+    @classmethod
+    def _validate_header(cls, header):
         missing_cols = [col for col in HEADER_COLS if col not in header]
         if missing_cols:
             raise ValueError(f'Invalid file: missing columns {", ".join(missing_cols)}')
