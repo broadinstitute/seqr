@@ -153,11 +153,16 @@ class EsSearch(object):
 
             if not self.samples_by_family_index[index]:
                 del self.samples_by_family_index[index]
+                dataset_type = self._get_index_dataset_type(index)
+                self.indices_by_dataset_type[dataset_type].remove(index)
 
-        if len(self.samples_by_family_index) < 1:
+        self._indices = sorted(list(self.samples_by_family_index.keys()))
+
+        if len( self._indices) < 1:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
 
     def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
