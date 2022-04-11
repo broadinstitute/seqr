@@ -526,9 +526,9 @@ const VEP_SV_TYPES = [
     value: 'DUP',
   },
   {
-    description: 'A translocation variant',
+    description: 'A chromosomal translocation',
     text: 'Translocation',
-    value: 'BND',
+    value: 'CTX',
   },
   {
     description: 'A copy number polymorphism variant',
@@ -541,11 +541,6 @@ const VEP_SV_TYPES = [
     value: 'CPX',
   },
   {
-    description: 'A reciprocal chromosomal translocation',
-    text: 'Reciprocal Translocation',
-    value: 'CTX',
-  },
-  {
     description: 'A large insertion',
     text: 'Insertion',
     value: 'INS',
@@ -554,6 +549,11 @@ const VEP_SV_TYPES = [
     description: 'A large inversion',
     text: 'Inversion',
     value: 'INV',
+  },
+  {
+    description: 'An unresolved structural event',
+    text: 'Breakend',
+    value: 'BND',
   },
 ]
 
