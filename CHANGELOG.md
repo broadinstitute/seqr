@@ -2,6 +2,9 @@
 
 ## dev
 
+## 4/11/22
+* Remove pre-built static assets (REQUIRES IMAGE UPDATE)
+
 ## 3/25/22
 * Update display for translocations
 
