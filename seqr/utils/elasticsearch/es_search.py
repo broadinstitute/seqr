@@ -163,7 +163,6 @@ class EsSearch(object):
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
-
     def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
         if keep_previous:
