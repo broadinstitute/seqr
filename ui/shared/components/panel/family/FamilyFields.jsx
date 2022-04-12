@@ -154,9 +154,9 @@ BaseAnalysedBy.propTypes = {
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  onSubmit: dataType => () => {
-    dispatch(updateFamily({ dataType, familyGuid: ownProps.familyGuid, familyField: 'analysed_by' }))
-  },
+  onSubmit: dataType => () => dispatch(
+    updateFamily({ dataType, familyGuid: ownProps.familyGuid, familyField: 'analysed_by' }),
+  ),
 })
 
 export const AnalysedBy = connect(null, mapDispatchToProps)(BaseAnalysedBy)
