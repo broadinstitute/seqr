@@ -212,7 +212,7 @@ class HailSearch(object):
         #         'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
         # ]
         parsed_intervals = [
-            hl.Interval(hl.parse_locus(start, reference_genome="GRCh38"), hl.parse_locus(end, reference_genome="GRCh38"))
+            hl.Struct(start=start, end=end)
             for start, end in [(
                 '{chrom}:{start}'.format(**interval), '{chrom}:{end}'.format(**interval)
             ) for interval in intervals or []] + [(
