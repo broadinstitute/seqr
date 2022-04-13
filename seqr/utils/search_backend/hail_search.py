@@ -224,7 +224,7 @@ class HailSearch(object):
 
         self._load_table(intervals=parsed_intervals)
 
-        self.ht = hl.filter_intervals(self.ht, parsed_intervals)
+        # self.ht = hl.filter_intervals(self.ht, parsed_intervals)
 
     def _filter_custom(self, custom_query):
         if custom_query:
