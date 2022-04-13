@@ -131,9 +131,10 @@ class HailSearch(object):
         self.ht = None
 
     def _load_table(self, intervals=None):
+        #  In production: should have a Table and use read_table
         self.ht = hl.read_matrix_table(
             f'/hail_datasets/{self._data_source}.mt', _intervals=intervals, _filter_intervals=bool(intervals)
-        ).rows()  # TODO read_table?
+        ).rows()
 
     def _sample_table(self, sample):
         return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht')
@@ -211,16 +212,24 @@ class HailSearch(object):
         #         # long-term we should check project to get correct genome version
         #         'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
         # ]
-        parsed_intervals = [
-            hl.Interval(hl.Struct(contig=i['chrom'], position=i['start']), hl.Struct(contig=i['chrom'], position=i['end']))
-            for i in (intervals or [])+ [(
-                # In production: we should check project to get correct genome version
-                {'chrom': gene['chromGrch38'], 'start': gene['startGrch38'], 'end': gene['endGrch38']}
-            ) for gene in (genes or {}).values()]
-        ]
+
+        # parsed_intervals = [
+        #     hl.Interval(hl.Struct(contig=i['chrom'], position=i['start']), hl.Struct(contig=i['chrom'], position=i['end']))
+        #     for i in (intervals or [])+ [(
+        #         # In production: we should check project to get correct genome version
+        #         {'chrom': gene['chromGrch38'], 'start': gene['startGrch38'], 'end': gene['endGrch38']}
+        #     ) for gene in (genes or {}).values()]
+        # ]
         # t = hl.expr.impute_type(parsed_intervals)
         # pt = t.element_type.point_type
         # logger.info(pt)
+
+        parsed_intervals = [
+            hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in
+            ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+                # long-term we should check project to get correct genome version
+                'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
+        ]
 
         self._load_table(intervals=parsed_intervals)
 
