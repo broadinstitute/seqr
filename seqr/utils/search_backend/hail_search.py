@@ -8,7 +8,7 @@ from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, MAX_NO_LOCATION_COMP_HET_FAMILIES, SPLICE_AI_FIELD, \
-    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP
+    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, PATH_FREQ_OVERRIDE_CUTOFF
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status
 
 logger = logging.getLogger(__name__)
@@ -218,14 +218,23 @@ class HailSearch(object):
         #  UI bug causes sv freq filter to be added despite no SV data
         frequencies.pop('sv_callset', None)
 
-        if pathogenicity:
-            raise NotImplementedError # TODO pathogenicity override
+        clinvar_path_filters = [
+            f for f in (pathogenicity or {}).get('clinvar', [])
+            if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
+        ]
+        has_path_override = bool(clinvar_path_filters) and any(
+                freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
+        if has_path_override:
+            path_q = self._get_pathogenicity_filter({'clinvar': clinvar_path_filters})
 
         # In production: will not have callset frequency, may rename these fields
         callset_filter = frequencies.pop('callset') or {}
         if callset_filter.get('af') is not None:
-            self.ht = self.ht.filter(self.ht.AF <= callset_filter['af'])
-        if callset_filter.get('ac') is not None:
+            callset_f = self.ht.AF <= callset_filter['af']
+            if has_path_override and callset_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                callset_f |= (path_q & self.ht.AF <= PATH_FREQ_OVERRIDE_CUTOFF)
+            self.ht = self.ht.filter(callset_f)
+        elif callset_filter.get('ac') is not None:
             self.ht = self.ht.filter(self.ht.AC <= callset_filter['ac'])
 
         for pop, freqs in sorted(frequencies.items()):
@@ -233,6 +242,8 @@ class HailSearch(object):
             if freqs.get('af') is not None:
                 af_field = POPULATIONS[pop].get('filter_af') or POPULATIONS[pop]['af']
                 pop_filter = self.ht[pop][af_field] <= freqs['af']
+                if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
+                    pop_filter |= (path_q & self.ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
             elif freqs.get('ac') is not None:
                 ac_field = POPULATIONS[pop]['ac']
                 if ac_field:
