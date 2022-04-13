@@ -217,7 +217,7 @@ class HailSearch(object):
                 '{chrom}:{start}'.format(**interval), '{chrom}:{end}'.format(**interval)
             ) for interval in intervals or []] + [(
                 # long-term we should check project to get correct genome version
-                'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene), 'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene)
+                'chr{chromGrch38}:{startGrch38}'.format(**gene), 'chr{chromGrch38}:{endGrch38}'.format(**gene)
             ) for gene in (genes or {}).values()]
         ]
         t = hl.expr.impute_type(parsed_intervals)
