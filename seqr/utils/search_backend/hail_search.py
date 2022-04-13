@@ -212,15 +212,13 @@ class HailSearch(object):
         #         'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
         # ]
         parsed_intervals = [
-            hl.Struct(start=start, end=end)
-            for start, end in [(
-                '{chrom}:{start}'.format(**interval), '{chrom}:{end}'.format(**interval)
-            ) for interval in intervals or []] + [(
-                # long-term we should check project to get correct genome version
-                'chr{chromGrch38}:{startGrch38}'.format(**gene), 'chr{chromGrch38}:{endGrch38}'.format(**gene)
+            hl.Interval(hl.Struct(contig=i['chrom'], position=i['start']), hl.Struct(contig=i['chrom'], position=i['end']))
+            for i in (intervals or [])+ [(
+                # In production: we should check project to get correct genome version
+                {'chrom': gene['chromGrch38'], 'start': gene['startGrch38'], 'end': gene['endGrch38']}
             ) for gene in (genes or {}).values()]
         ]
-        t = hl.expr.impute_type(parsed_intervals)
+        # t = hl.expr.impute_type(parsed_intervals)
         # pt = t.element_type.point_type
         # logger.info(pt)
 
