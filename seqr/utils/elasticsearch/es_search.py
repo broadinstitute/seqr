@@ -158,7 +158,7 @@ class EsSearch(object):
 
         self._indices = sorted(list(self.samples_by_family_index.keys()))
 
-        if len( self._indices) < 1:
+        if len(self._indices) < 1:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
