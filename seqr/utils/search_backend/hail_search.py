@@ -205,11 +205,20 @@ class HailSearch(object):
         if rs_ids or variant_ids:
             raise NotImplementedError # TODO rs_ids/variant_ids, location_filter.get('excludeLocations')
 
+        # parsed_intervals = [
+        #     hl.parse_locus_interval(interval, reference_genome="GRCh38") for interval in
+        #     ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+        #         # long-term we should check project to get correct genome version
+        #         'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
+        # ]
         parsed_intervals = [
-            hl.parse_locus_interval(interval, reference_genome="GRCh38") for interval in
-            ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+            hl.Interval(hl.parse_locus(start, reference_genome="GRCh38"), hl.parse_locus(end, reference_genome="GRCh38"))
+            for start, end in [(
+                '{chrom}:{start}'.format(**interval), '{chrom}:{end}'.format(**interval)
+            ) for interval in intervals or []] + [(
                 # long-term we should check project to get correct genome version
-                'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
+                'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene), 'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene)
+            ) for gene in (genes or {}).values()]
         ]
         t = hl.expr.impute_type(parsed_intervals)
         pt = t.element_type.point_type
