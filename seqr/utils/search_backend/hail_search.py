@@ -221,8 +221,8 @@ class HailSearch(object):
             ) for gene in (genes or {}).values()]
         ]
         t = hl.expr.impute_type(parsed_intervals)
-        pt = t.element_type.point_type
-        logger.info(pt)
+        # pt = t.element_type.point_type
+        # logger.info(pt)
 
         self._load_table(intervals=parsed_intervals)
 
