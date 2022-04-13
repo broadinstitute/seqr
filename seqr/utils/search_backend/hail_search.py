@@ -203,37 +203,19 @@ class HailSearch(object):
         self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
 
     def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
-        if rs_ids or variant_ids:
-            raise NotImplementedError # TODO rs_ids/variant_ids, location_filter.get('excludeLocations')
-
-        # parsed_intervals = [
-        #     hl.parse_locus_interval(interval, reference_genome="GRCh38") for interval in
-        #     ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-        #         # long-term we should check project to get correct genome version
-        #         'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
-        # ]
-
-        # parsed_intervals = [
-        #     hl.Interval(hl.Struct(contig=i['chrom'], position=i['start']), hl.Struct(contig=i['chrom'], position=i['end']))
-        #     for i in (intervals or [])+ [(
-        #         # In production: we should check project to get correct genome version
-        #         {'chrom': gene['chromGrch38'], 'start': gene['startGrch38'], 'end': gene['endGrch38']}
-        #     ) for gene in (genes or {}).values()]
-        # ]
-        # t = hl.expr.impute_type(parsed_intervals)
-        # pt = t.element_type.point_type
-        # logger.info(pt)
-
-        parsed_intervals = [
-            hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in
-            ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-                # long-term we should check project to get correct genome version
-                'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
-        ]
+        parsed_intervals = None
+        if genes or parsed_intervals:
+            parsed_intervals = [
+                hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in
+                ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+                    # long-term we should check project to get correct genome version
+                    'chr{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
+            ]
 
         self._load_table(intervals=parsed_intervals)
 
-        # self.ht = hl.filter_intervals(self.ht, parsed_intervals)
+        if rs_ids or variant_ids:
+            raise NotImplementedError  # TODO rs_ids/variant_ids, location_filter.get('excludeLocations')
 
     def _filter_custom(self, custom_query):
         if custom_query:
