@@ -114,7 +114,7 @@ class HailSearch(object):
         if len(data_sources) > 1:
             raise InvalidSearchException(
                 f'Search is only enabled on a single data source, requested {", ".join(data_sources)}')
-        data_source = data_sources.pop()
+        self._data_source = data_sources.pop()
 
         for s in samples.select_related('individual__family'):
             self.samples_by_family[s.individual.family.guid][s.sample_id] = s
@@ -128,7 +128,12 @@ class HailSearch(object):
         self._allowed_consequences_secondary = None
         self._sample_table_queries = {}
 
-        self.ht = hl.read_matrix_table(f'/hail_datasets/{data_source}.mt').rows() # TODO read_table?
+        self.ht = None
+
+    def _load_table(self, intervals=None):
+        self.ht = hl.read_matrix_table(
+            f'/hail_datasets/{self._data_source}.mt', _intervals=intervals, _filter_intervals=bool(intervals)
+        ).rows()  # TODO read_table?
 
     def _sample_table(self, sample):
         return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht')
@@ -149,6 +154,8 @@ class HailSearch(object):
         if has_location_filter:
             self.filter_by_location(
                 genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=locus)
+        else:
+            self._load_table()
 
         self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
 
@@ -204,6 +211,7 @@ class HailSearch(object):
                 # long-term we should check project to get correct genome version
                 'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
         ]
+        self._load_table(intervals=parsed_intervals)
 
         self.ht = hl.filter_intervals(self.ht, parsed_intervals)
 
@@ -482,6 +490,9 @@ class HailSearch(object):
         raise NotImplementedError
 
     def search(self, page=1, num_results=100):
+        if not self.ht:
+            raise InvalidSearchException('Filters must be applied before search')
+
         total_results = self.ht.count()
 
         rows = self.ht.annotate_globals(gv=hl.eval(self.ht.genomeVersion)).drop('genomeVersion') # prevents name collision with global
