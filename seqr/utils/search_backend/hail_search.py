@@ -211,6 +211,10 @@ class HailSearch(object):
                 # long-term we should check project to get correct genome version
                 'chr{chromGrch38}:{startGrch38}-chr{chromGrch38}:{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
         ]
+        t = hl.expr.impute_type(parsed_intervals)
+        pt = t.element_type.point_type
+        logger.info(pt)
+
         self._load_table(intervals=parsed_intervals)
 
         self.ht = hl.filter_intervals(self.ht, parsed_intervals)
