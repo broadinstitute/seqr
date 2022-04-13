@@ -228,7 +228,7 @@ class HailSearch(object):
             path_q = self._get_pathogenicity_filter({'clinvar': clinvar_path_filters})
 
         # In production: will not have callset frequency, may rename these fields
-        callset_filter = frequencies.pop('callset') or {}
+        callset_filter = frequencies.pop('callset', {}) or {}
         if callset_filter.get('af') is not None:
             callset_f = self.ht.AF <= callset_filter['af']
             if has_path_override and callset_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
