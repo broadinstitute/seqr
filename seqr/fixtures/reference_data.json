@@ -1060,7 +1060,7 @@
     "pk": 1,
     "fields": {
         "gene": 1,
-        "haploinsufficiency": "No Evidence for Haploinsufficiency",
+        "haploinsufficiency": "No Evidence",
         "triplosensitivity": "",
         "href": "https://dosage.clinicalgenome.org/clingen_gene.cgi?sym="
     }
