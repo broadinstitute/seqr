@@ -47,7 +47,7 @@ REQUEST_BODY_NO_AGREE_ACCESS['agreeSeqrAccess'] = False
 TEMP_PATH = '/temp_path/temp_filename'
 
 TEST_GUID=f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
-MOCK_TOKEN = 'mock_openid_bearer' # nosec 
+MOCK_TOKEN = 'mock_openid_bearer' # nosec
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
 UPDATED_ANVIL_VARIABLES = {
     "key": "AnVIL_WES",
@@ -299,7 +299,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             TEMP_PATH, 'gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/base/{guid}_ids.txt'.format(guid=project.guid),
             user=self.manager_user
         )
-        
+
         # Test triggering anvil dags
         self.assertEqual(len(responses.calls), 4)
         
@@ -355,11 +355,12 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          .format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME))
 
         # Test saving ID file exception
+        responses.calls.reset()
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         # Test triggering dag exception
         responses.replace(responses.PATCH,
-                      '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL), 
+                      '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL),
                       json={'Error': '404 Client Error'},
                       status=404)
         
@@ -395,9 +396,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             airflow_url = MOCK_AIRFLOW_URL
         )
         mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
-        responses.calls.reset()
         mock_send_email.assert_not_called()
-        self.assertEqual(len(responses.calls), 0)
+        self.assertEqual(len(responses.calls), 1)
 
 
         # Test logged in locally
