@@ -104,7 +104,6 @@ def create_project_from_workspace(request, namespace, name):
     """
     # Validate that the current user has logged in through google and has sufficient permissions
     workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
-      
     projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if projects:
         error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
@@ -187,7 +186,7 @@ def create_project_from_workspace(request, namespace, name):
         logger.error(str(e), request.user)
         _send_slack_msg_on_failure_trigger(e, project, data_path, request_json['sampleType'])
     
-    # Send a slack message to the slack channel    
+    # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
 
     if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
@@ -272,7 +271,7 @@ def _trigger_data_loading(project, data_path, sample_type):
  
     _update_variables(genome_test_type, updated_anvil_variables)
 
-    dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)    
+    dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
     _wait_for_dag_variable_update(dag_id, project)
     
     _trigger_dag(dag_id)
@@ -291,7 +290,7 @@ def _construct_dag_variables(project, data_path, sample_type):
 def _wait_for_dag_variable_update(dag_id, project):
     updated_project = project.guid
     dag_projects = _get_task_ids(dag_id)
-    while updated_project not in ''.join(dag_projects): 
+    while updated_project not in ''.join(dag_projects):
         dag_projects = _get_task_ids(dag_id)
 
 def _update_variables(key, val):
@@ -304,7 +303,7 @@ def _update_variables(key, val):
     _make_airflow_api_request(endpoint, method='PATCH', json=json_data)
 
 def _get_task_ids(dag_id):
-    endpoint = 'dags/{}/tasks'.format(dag_id)  
+    endpoint = 'dags/{}/tasks'.format(dag_id)
     airflow_response = _make_airflow_api_request(endpoint, method='GET')
 
     tasks = airflow_response['tasks']
@@ -313,7 +312,7 @@ def _get_task_ids(dag_id):
     
 
 def _trigger_dag(dag_id):
-    endpoint = 'dags/{}/dagRuns'.format(dag_id) 
+    endpoint = 'dags/{}/dagRuns'.format(dag_id)
     _make_airflow_api_request(endpoint, method='POST', json={})
 
 
