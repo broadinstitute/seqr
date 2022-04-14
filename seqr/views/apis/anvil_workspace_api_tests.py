@@ -398,7 +398,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
         mock_send_email.assert_not_called()
         self.assertEqual(len(responses.calls), 1)
-
+        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
+        self.assertEquals(responses.calls[0].request.method, "PATCH")
+        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEquals(responses.calls[0].response.json(), {'Error': '404 Client Error'})
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
