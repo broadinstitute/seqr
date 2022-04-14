@@ -16,7 +16,7 @@ import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../Sty
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
-import { GenCC } from '../genes/GeneDetail'
+import { GenCC, ClingenLabel } from '../genes/GeneDetail'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -147,24 +147,9 @@ const mapLocusListStateToProps = state => ({
 
 export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
-const CLINGEN_LABEL_PROPS = {
-  'No Evidence': { color: 'grey' },
-  'Little Evidence': { color: 'blue' },
-  'Emerging Evidence': { color: 'olive' },
-  'Sufficient Evidence': { color: 'green' },
-  'Gene Associated with Autosomal Recessive Phenotype': {
-    color: 'green',
-    basic: true,
-    content: 'Gene Associated with AR Phenotype',
-  },
-  'Dosage Sensitivity Unlikely': { color: 'grey', basic: true },
-}
-
 const ClinGenRow = ({ value, label, href }) => (
   <Table.Row>
-    <Table.Cell textAlign="right">
-      <Label horizontal size="mini" content={value} {...CLINGEN_LABEL_PROPS[value]} />
-    </Table.Cell>
+    <Table.Cell textAlign="right"><ClingenLabel value={value} /></Table.Cell>
     <Table.Cell><a target="_blank" rel="noreferrer" href={href}>{label}</a></Table.Cell>
   </Table.Row>
 )
