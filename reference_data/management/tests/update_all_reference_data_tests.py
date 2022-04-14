@@ -18,7 +18,7 @@ def mgi_exception():
 
 SKIP_ARGS = [
     '--skip-gencode', '--skip-dbnsfp-gene', '--skip-gene-constraint', '--skip-primate-ai', '--skip-mgi', '--skip-hpo',
-    '--skip-gene-cn-sensitivity',
+    '--skip-gene-cn-sensitivity', '--skip-gencc', '--skip-clingen',
 ]
 
 class UpdateAllReferenceDataTest(TestCase):
@@ -33,6 +33,12 @@ class UpdateAllReferenceDataTest(TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('reference_data.management.commands.update_gene_constraint.GeneConstraintReferenceDataHandler', lambda: 'gene_constraint')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.management.commands.update_gencc.GenCCReferenceDataHandler', lambda: 'gencc')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.management.commands.update_clingen.ClinGenReferenceDataHandler', lambda: 'clingen')
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -85,12 +91,14 @@ class UpdateAllReferenceDataTest(TestCase):
         self.mock_omim.assert_called_with('test_key')
         self.mock_cached_omim.assert_not_called()
 
-        self.assertEqual(self.mock_update_records.call_count, 4)
+        self.assertEqual(self.mock_update_records.call_count, 6)
         calls = [
             mock.call('omim'),
             mock.call('dbnsfp_gene'),
             mock.call('gene_constraint'),
             mock.call('gene_cn_sensitivity'),
+            mock.call('gencc'),
+            mock.call('clingen'),
         ]
         self.mock_update_records.assert_has_calls(calls)
 
@@ -98,7 +106,7 @@ class UpdateAllReferenceDataTest(TestCase):
 
         calls = [
             mock.call('Done'),
-            mock.call('Updated: gencode, omim, dbnsfp_gene, gene_constraint, gene_cn_sensitivity, hpo'),
+            mock.call('Updated: gencode, omim, dbnsfp_gene, gene_constraint, gene_cn_sensitivity, gencc, clingen, hpo'),
             mock.call('Failed to Update: primate_ai, mgi')
         ]
         self.mock_logger.info.assert_has_calls(calls)
