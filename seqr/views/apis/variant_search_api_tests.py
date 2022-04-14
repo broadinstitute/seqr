@@ -12,7 +12,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
+    MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
     VARIANT_NOTE_FIELDS, TAG_FIELDS
 
@@ -351,9 +351,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json.keys()), {'searchGeneBreakdown', 'genesById'})
         self.assertDictEqual(response_json['searchGeneBreakdown'], {SEARCH_HASH: gene_counts})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000227232', 'ENSG00000268903'})
-        gene_fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc'}
-        gene_fields.update(GENE_FIELDS)
-        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
+        self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), GENE_VARIANT_DISPLAY_FIELDS)
 
         # Test compound hets
         mock_get_variants.side_effect = _get_compound_het_es_variants
