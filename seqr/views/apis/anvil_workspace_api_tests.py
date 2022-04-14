@@ -10,7 +10,7 @@ from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_pro
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
     TEST_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME, TEST_NO_PROJECT_WORKSPACE_NAME2
 from seqr.views.utils.terra_api_utils import remove_token, TerraAPIException, TerraRefreshTokenFailedException
-from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
+from settings import SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 LOAD_SAMPLE_DATA = [
     ["Family ID", "Individual ID", "Previous Individual ID", "Paternal ID", "Maternal ID", "Sex", "Affected Status",
@@ -178,7 +178,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # update variables
         responses.add(responses.PATCH,
                       '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL), 
-                      json={'test': 1},
+                      json={'key': 'AnVIL_WES', 'value': 'updated variables'},
                       status=200)
         # get task id
         responses.add(responses.GET, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
@@ -362,7 +362,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test triggering dag exception
         responses.replace(responses.PATCH,
                       '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL), 
-                      json={'test': 2},
+                      json={'Error': '404 Client Error'},
                       status=404)
         
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
@@ -415,12 +415,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     ]
 }}```
         """.format(guid=project2.guid)
-        slack_calls = [
-            mock.call(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, slack_message_on_failure),
-            mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message_as_normal),
-        ]
-        mock_slack.assert_has_calls(slack_calls)
+        mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
+        responses.calls.reset()
         mock_send_email.assert_not_called()
+        self.assertEqual(len(responses.calls), 0)
 
 
         # Test logged in locally

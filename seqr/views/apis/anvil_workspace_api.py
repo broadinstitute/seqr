@@ -28,7 +28,7 @@ from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
-from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
+from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -180,12 +180,8 @@ def create_project_from_workspace(request, namespace, name):
                      detail=sample_ids)
 
     # use airflow api to trigger AnVIL dags
-    try:
-        _trigger_data_loading(project, data_path, request_json['sampleType'])
-    except Exception as e:
-        logger.error(str(e), request.user)
-        _send_slack_msg_on_failure_trigger(e, project, data_path, request_json['sampleType'])
-    
+    _trigger_data_loading(project, data_path, request_json['sampleType'], request)
+        
     # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
 
@@ -262,21 +258,24 @@ def _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type):
             dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
             dag = json.dumps(pipeline_dag, indent=4)
         )
-    safe_post_to_slack(SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, message_content)
+    safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message_content)
 
-def _trigger_data_loading(project, data_path, sample_type):
-    genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=sample_type)
+def _trigger_data_loading(project, data_path, sample_type, request):
+    try:    
+        genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=sample_type)
 
-    updated_anvil_variables = _construct_dag_variables(project, data_path, sample_type)
- 
-    _update_variables(genome_test_type, updated_anvil_variables)
-
-    dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
-    _wait_for_dag_variable_update(dag_id, project)
+        updated_anvil_variables = _construct_dag_variables(project, data_path, sample_type)
     
-    _trigger_dag(dag_id)
-    
-    return updated_anvil_variables
+        _update_variables(genome_test_type, updated_anvil_variables)
+
+        dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
+        _wait_for_dag_variable_update(dag_id, project)
+        
+        _trigger_dag(dag_id)
+    except Exception as e:
+        logger.error(str(e), request.user)
+        _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type)
+
 
 def _construct_dag_variables(project, data_path, sample_type):
     dag_variables = {
