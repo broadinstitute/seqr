@@ -21,6 +21,6 @@ class UpdateClinGenTest(ReferenceDataCommandTestCase):
         self.assertEqual(ClinGen.objects.count(), 2)
         record = ClinGen.objects.get(gene__gene_id='ENSG00000186092')
         self.assertEqual(record.haploinsufficiency, 'Gene Associated with Autosomal Recessive Phenotype')
-        self.assertEqual(record.triplosensitivity, 'No Evidence for Triplosensitivity')
+        self.assertEqual(record.triplosensitivity, 'No Evidence')
         self.assertEqual(record.href, 'https://dosage.clinicalgenome.org/clingen_gene.cgi?sym=OR4F5&subject=')
 

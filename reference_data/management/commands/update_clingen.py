@@ -29,8 +29,8 @@ class ClinGenReferenceDataHandler(ReferenceDataHandler):
     def parse_record(record):
         yield {
             'gene_symbol': record['gene_symbol'],
-            'haploinsufficiency': record['haploinsufficiency'],
-            'triplosensitivity': record['triplosensitivity'],
+            'haploinsufficiency': record['haploinsufficiency'].replace(' for Haploinsufficiency', ''),
+            'triplosensitivity': record['triplosensitivity'].replace(' for Triplosensitivity', ''),
             'href': record['online_report'],
         }
 
