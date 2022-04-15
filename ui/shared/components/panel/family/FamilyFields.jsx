@@ -131,17 +131,17 @@ const BaseAnalysedBy = React.memo(({ analysedByList, compact, onSubmit }) => {
     )
   }
 
-  return ANALYSED_BY_TYPES.map(typeConfig => (
-    <div key={typeConfig[0]}>
-      <b>{`${typeConfig[1]}: `}</b>
-      {(analysedByType[typeConfig[0]] || []).map(
+  return ANALYSED_BY_TYPES.map(([type, typeDisplay]) => (
+    <div key={type}>
+      <b>{`${typeDisplay}: `}</b>
+      {(analysedByType[type] || []).map(
         analysedBy => `${analysedBy.createdBy} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
       ).join(', ')}
       &nbsp;&nbsp;
       <DispatchRequestButton
         buttonContent={<Icon link size="small" name="plus" />}
-        onSubmit={onSubmit(typeConfig[0])}
-        confirmDialog={`Are you sure you want to add that you analysed this family for ${typeConfig[1]} data?`}
+        onSubmit={onSubmit(type)}
+        confirmDialog={`Are you sure you want to add that you analysed this family for ${typeDisplay} data?`}
       />
     </div>
   ))
