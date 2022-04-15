@@ -121,11 +121,11 @@ const CLINGEN_LABEL_PROPS = {
   'Emerging Evidence': { color: 'olive' },
   'Sufficient Evidence': { color: 'green' },
   'Gene Associated with Autosomal Recessive Phenotype': {
-    color: 'green',
+    color: 'grey',
     basic: true,
     content: 'Gene Associated with AR Phenotype',
   },
-  'Dosage Sensitivity Unlikely': { color: 'grey', basic: true },
+  'Dosage Sensitivity Unlikely': { color: 'black', basic: true },
 }
 
 export const ClingenLabel = ({ value }) => <Label horizontal size="mini" content={value} {...CLINGEN_LABEL_PROPS[value]} />
