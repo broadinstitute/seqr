@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add ClinGen reference data (REQUIRES DB MIGRATION)
 
 ## 4/11/22
 * Remove pre-built static assets (REQUIRES IMAGE UPDATE)
