@@ -71,7 +71,7 @@ export const updateAllProjectSavedVariantTable = updates => (
   { type: UPDATE_ALL_PROJECT_SAVED_VARIANT_TABLE_STATE, updates })
 
 export const updateExternalAnalysis = values => dispatch => new HttpRequestHelper(
-  '/api/update_analysis_status',
+  '/api/summary_data/update_analysed_by',
   (responseJson) => {
     dispatch({ type: RECEIVE_EXTERNAL_ANALYSIS_UPLOAD_STATS, newValue: responseJson })
   },
