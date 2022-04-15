@@ -123,7 +123,7 @@ def bulk_update_family_analysed_by(request):
         prefetch_related_objects(families, 'project')
         family_models_set = {(f.family_id, f.project.name) for f in families}
         requested_family_set = {(row['family'], row['project']) for row in families_data}
-        missing_families = ', '.join([f'{fam[0]} ({fam[1]})' for fam in requested_family_set - family_models_set])
+        missing_families = ', '.join([f'{fam[0]} ({fam[1]})' for fam in sorted(requested_family_set - family_models_set)])
         warnings.append(f'No match found for the following families: {missing_families}')
 
     analysed_by_models = [
