@@ -1,3 +1,4 @@
+import React from 'react'
 import { connect } from 'react-redux'
 
 import { validators } from 'shared/components/form/FormHelpers'
@@ -20,7 +21,14 @@ const UPLOAD_FIELDS = [
   {
     name: 'familiesFile',
     component: FileUploadField,
-    dropzoneLabel: 'Drag-drop or click here to upload analysed families',
+    dropzoneLabel: (
+      <div>
+        Drag-drop or click here to upload analysed families
+        <br />
+        <br />
+        File should include a &quot;Project&quot; and a &quot;Family&quot; column
+      </div>
+    ),
     validate: validateUploadedFile,
   },
 ]
