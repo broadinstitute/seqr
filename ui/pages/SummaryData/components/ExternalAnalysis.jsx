@@ -3,11 +3,11 @@ import { connect } from 'react-redux'
 import { validators } from 'shared/components/form/FormHelpers'
 import { Select } from 'shared/components/form/Inputs'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
+import UploadFormPage from 'shared/components/page/UploadFormPage'
 import { FAMILY_ANALYSED_BY_DATA_TYPES } from 'shared/utils/constants'
 
 import { getExternalAnalysisUploadStats } from '../selectors'
 import { updateExternalAnalysis } from '../reducers'
-import UploadFormPage from '../../DataManagement/components/UploadFormPage' // TODO should be shared
 
 const UPLOAD_FIELDS = [
   {
