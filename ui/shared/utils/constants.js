@@ -144,6 +144,15 @@ export const FAMILY_ANALYSIS_STATUS_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.
   (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
 )
 
+export const SNP_DATA_TYPE = 'SNP'
+export const FAMILY_ANALYSED_BY_DATA_TYPES = [
+  [SNP_DATA_TYPE, 'WES/WGS'],
+  ['SV', 'gCNV/SV'],
+  ['RNA', 'RNAseq'],
+  ['MT', 'Mitochondrial'],
+  ['STR', 'STR'],
+]
+
 // SUCCESS STORY
 
 const FAMILY_SUCCESS_STORY_NOVEL_DISCOVERY = 'N'

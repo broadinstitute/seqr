@@ -1,0 +1,37 @@
+import { connect } from 'react-redux'
+
+import { validators } from 'shared/components/form/FormHelpers'
+import { Select } from 'shared/components/form/Inputs'
+import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
+import { FAMILY_ANALYSED_BY_DATA_TYPES } from 'shared/utils/constants'
+
+import { getExternalAnalysisUploadStats } from '../selectors'
+import { updateExternalAnalysis } from '../reducers'
+import UploadFormPage from '../../DataManagement/components/UploadFormPage' // TODO should be shared
+
+const UPLOAD_FIELDS = [
+  {
+    name: 'dataType',
+    label: 'Data Type',
+    component: Select,
+    options: FAMILY_ANALYSED_BY_DATA_TYPES.map(([value, text]) => ({ value, text })),
+    validate: validators.required,
+  },
+  {
+    name: 'familiesFile',
+    component: FileUploadField,
+    dropzoneLabel: 'Drag-drop or click here to upload analysed families',
+    validate: validateUploadedFile,
+  },
+]
+
+const mapStateToProps = state => ({
+  fields: UPLOAD_FIELDS,
+  uploadStats: getExternalAnalysisUploadStats(state),
+})
+
+const mapDispatchToProps = {
+  onSubmit: updateExternalAnalysis,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(UploadFormPage)

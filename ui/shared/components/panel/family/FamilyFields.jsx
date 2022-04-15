@@ -14,6 +14,7 @@ import {
   getAnalysisGroupsByFamily,
   getAnalysisGroupIsLoading,
 } from 'redux/selectors'
+import { SNP_DATA_TYPE, FAMILY_ANALYSED_BY_DATA_TYPES } from 'shared/utils/constants'
 
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -109,29 +110,20 @@ export const analysisStatusIcon = (
   )
 }
 
-const SNP_TYPE = 'SNP'
-const ANALYSED_BY_TYPES = [
-  [SNP_TYPE, 'WES/WGS'],
-  ['SV', 'gCNV/SV'],
-  ['RNA', 'RNAseq'],
-  ['MT', 'Mitochondrial'],
-  ['STR', 'STR'],
-]
-
 const BaseAnalysedBy = React.memo(({ analysedByList, compact, onSubmit }) => {
   const analysedByType = analysedByList.reduce(
     (acc, analysedBy) => ({ ...acc, [analysedBy.dataType]: [...(acc[analysedBy.dataType] || []), analysedBy] }), {},
   )
 
   if (compact) {
-    return [...(analysedByType[SNP_TYPE] || []).reduce(
+    return [...(analysedByType[SNP_DATA_TYPE] || []).reduce(
       (acc, { createdBy }) => acc.add(createdBy), new Set(),
     )].map(
       analysedByUser => <NoWrap key={analysedByUser}>{analysedByUser}</NoWrap>,
     )
   }
 
-  return ANALYSED_BY_TYPES.map(([type, typeDisplay]) => (
+  return FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => (
     <div key={type}>
       <b>{`${typeDisplay}: `}</b>
       {(analysedByType[type] || []).map(

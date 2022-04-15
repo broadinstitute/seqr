@@ -13,6 +13,7 @@ import Matchmaker from './components/Matchmaker'
 import SavedVariants from './components/SavedVariants'
 import GeneInfoSearch from './components/GeneInfoSearch'
 import LocusLists from './components/LocusLists'
+import ExternalAnalysis from './components/ExternalAnalysis'
 
 const GenePage = ({ match }) => (
   match.params.geneId ? <GeneDetail geneId={match.params.geneId} /> : <GeneInfoSearch />
@@ -32,6 +33,7 @@ const SUMMARY_DATA_PAGES = [
 const ANALYST_SUMMARY_DATA_PAGES = [
   ...SUMMARY_DATA_PAGES,
   { path: 'success_story', params: '/:successStoryTypes?', component: SuccessStory },
+  { path: 'external_analysis', component: ExternalAnalysis },
 ]
 
 const BaseSummaryDataPageHeader = ({ user, match }) => (
