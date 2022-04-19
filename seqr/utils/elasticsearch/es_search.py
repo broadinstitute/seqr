@@ -153,8 +153,12 @@ class EsSearch(object):
 
             if not self.samples_by_family_index[index]:
                 del self.samples_by_family_index[index]
+                dataset_type = self._get_index_dataset_type(index)
+                self.indices_by_dataset_type[dataset_type].remove(index)
 
-        if len(self.samples_by_family_index) < 1:
+        self._indices = sorted(list(self.samples_by_family_index.keys()))
+
+        if len(self._indices) < 1:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
@@ -266,7 +270,7 @@ class EsSearch(object):
 
         self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filters_by_family, skipped_sample_count)
 
-        if annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
+        if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
             self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
 
     def _filter_custom(self, custom_query):
