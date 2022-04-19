@@ -209,7 +209,7 @@ class HailSearch(object):
         if genes or intervals:
             self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'))
         elif variant_ids:
-            self._filter_by_variants(variant_ids)
+            self._filter_by_variant_ids(variant_ids)
 
     def _filter_by_intervals(self, genes, intervals, exclude_locations):
         if exclude_locations:
@@ -227,8 +227,14 @@ class HailSearch(object):
         self._load_table(intervals=parsed_intervals)
 
 
-    def _filter_by_variants(self, variant_ids):
+    def _filter_by_variant_ids(self, variant_ids):
+        variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
         # In production: if supporting multi-genome-version search, need to lift and re-filter variants
+        intervals = [
+            hl.eval(hl.parse_locus_interval(f'[chr{chrom}:{pos}-{pos}]', reference_genome='GRCh38'))
+            for chrom, pos, _, _ in variant_ids
+        ]
+        self._load_table(intervals=intervals)
         raise NotImplementedError  # TODO
 
     def _filter_custom(self, custom_query):
