@@ -437,16 +437,25 @@ class VariantSearchAPITest(object):
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertDictEqual(response_json, {
+        empty_search_response = {
             'searchedVariants': [], 'search': {
                 'search': SEARCH,
                 'projectFamilies': [],
                 'totalResults': 0,
-        }})
+        }}
+        self.assertDictEqual(response_json, empty_search_response)
         results_model = VariantSearchResults.objects.get(search_hash=SEARCH_HASH)
         mock_get_variants.assert_called_with(results_model, sort='xpos', page=1, num_results=100, skip_genotype_filter=True, user=self.no_access_user)
 
-        results_model.delete()
+        VariantSearchResults.objects.filter(search_hash=SEARCH_HASH).delete()
+        self.login_data_manager_user()
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'allProjectFamilies': True, 'search': SEARCH
+        }))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), empty_search_response)
+
+        VariantSearchResults.objects.filter(search_hash=SEARCH_HASH).delete()
         self.login_collaborator()
         expected_searched_families = {
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',

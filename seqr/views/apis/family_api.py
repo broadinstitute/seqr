@@ -250,7 +250,8 @@ def update_family_analysed_by(request, family_guid):
     # analysed_by can be edited by anyone with access to the project
     check_project_permissions(family.project, request.user, can_edit=False)
 
-    create_model_from_json(FamilyAnalysedBy, {'family': family}, request.user)
+    request_json = json.loads(request.body)
+    create_model_from_json(FamilyAnalysedBy, {'family': family, 'data_type': request_json['dataType']}, request.user)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)

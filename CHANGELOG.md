@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add data type to family analysed by (REQUIRES DB MIGRATION)
 * Add ClinGen reference data (REQUIRES DB MIGRATION)
 
 ## 4/11/22
