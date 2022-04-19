@@ -1,5 +1,4 @@
 from django.db import models
-from django.contrib.postgres import fields as postgres_fields
 
 #  Allow adding the custom json_fields and internal_json_fields to the model Meta
 # (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
@@ -19,7 +18,8 @@ class ReferenceDataRouter(object):
     """
     A router to control all database operations on reference data models
     """
-    def db_for_read(self, model, **hints):
+    @classmethod
+    def db_for_read(cls, model, **hints):
         """
         Attempts to read reference_data models go to reference_data_db.
         """
@@ -27,7 +27,8 @@ class ReferenceDataRouter(object):
             return 'reference_data'
         return None
 
-    def db_for_write(self, model, **hints):
+    @classmethod
+    def db_for_write(cls, model, **hints):
         """
         Attempts to write reference_data models go to reference_data_db.
         """
@@ -35,7 +36,8 @@ class ReferenceDataRouter(object):
             return 'reference_data'
         return None
 
-    def allow_relation(self, obj1, obj2, **hints):
+    @classmethod
+    def allow_relation(cls, obj1, obj2, **hints):
         """
         Allow relations if a model in the reference_data app is involved.
         """
@@ -44,7 +46,8 @@ class ReferenceDataRouter(object):
            return True
         return None
 
-    def allow_migrate(self, db, app_label, model_name=None, **hints):
+    @classmethod
+    def allow_migrate(cls, db, app_label, model_name=None, **hints):
         """
         Make sure the reference_data app only appears in the 'reference_data_db'
         database.
@@ -236,3 +239,24 @@ class MGI(models.Model):
     class Meta:
         unique_together = ('gene', 'marker_id')
         json_fields = ['marker_id']
+
+
+class GenCC(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    hgnc_id = models.CharField(max_length=10)
+    classifications = models.JSONField()
+
+    class Meta:
+        json_fields = ['classifications', 'hgnc_id']
+
+
+class ClinGen(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    haploinsufficiency = models.TextField()
+    triplosensitivity = models.TextField()
+    href = models.TextField()
+
+    class Meta:
+        json_fields = ['haploinsufficiency', 'triplosensitivity', 'href']

@@ -10,7 +10,7 @@ import DeleteButton from '../../buttons/DeleteButton'
 import UpdateButton from '../../buttons/UpdateButton'
 import { HorizontalSpacer } from '../../Spacers'
 import { ButtonLink } from '../../StyledComponents'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import FormWrapper from '../../form/FormWrapper'
 
 const FieldValue = styled.div`
   padding-bottom: ${props => (props.compact ? 0 : '15px')}; 
@@ -91,7 +91,8 @@ class BaseFieldView extends React.PureComponent {
     }
 
     if (formFields || formFieldProps) {
-      const fieldModalId = `edit-${this.getFieldId() || 'new'}-${field}-${modalId}`
+      const fieldId = this.getFieldId()
+      const fieldModalId = `edit_-_${fieldId || 'new'}_-_${field}_-_${modalId}`
       return showInLine ? (
         <span key="edit">
           {showInLineButton ? (
@@ -104,13 +105,13 @@ class BaseFieldView extends React.PureComponent {
             />
           ) : (
             <Segment compact>
-              <ReduxFormWrapper
+              <FormWrapper
                 noModal
                 inline
                 key="edit"
                 onSubmit={onSubmit}
                 onSubmitSucceeded={this.toggleButtonVisibility}
-                form={fieldModalId}
+                modalName={fieldModalId}
                 initialValues={initialValues}
                 fields={formFields || this.getFormFields()}
                 showErrorPanel={showErrorPanel}
@@ -124,6 +125,7 @@ class BaseFieldView extends React.PureComponent {
           key="edit"
           modalTitle={modalTitle}
           modalId={fieldModalId}
+          formMetaId={fieldId}
           modalSize={modalSize}
           trigger={modalTrigger}
           buttonText={editLabel}

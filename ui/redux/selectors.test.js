@@ -5,6 +5,8 @@ import {
   getVariantTagNotesByFamilyVariants,
   getSearchGeneBreakdownValues,
   getTagTypesByProject,
+  getUserOptions,
+  getRnaSeqDataByFamilyGene,
 } from './selectors'
 import {FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
 
@@ -39,4 +41,57 @@ test('getTagTypesByProject', () => {
   expect(getTagTypesByProject(STATE, {})).toEqual(
     { R0237_1000_genomes_demo: [] },
   )
+})
+
+test('getUserOptions', () => {
+  const options = getUserOptions(STATE_WITH_2_FAMILIES)
+  expect(Object.keys(options).length).toEqual(7)
+  expect(options[1]).toEqual({ key: '4MW8vPtmHG', value: '4MW8vPtmHG', text: 'Mekdes (mgetaneh@broadinstitute.org)'})
+})
+
+const RNA_SEQ_STATE = {
+  rnaSeqDataByIndividual: {
+    I021476_na19678_1: {
+      outliers: {
+        ENSG00000228198: { isSignificant: true, pValue: 0.0004 },
+        ENSG00000164458: { isSignificant: true, pValue: 0.0073 },
+      },
+      tpms: { ENSG00000228198: { tpm: 1.03 } },
+    },
+    I021474_na19679_1: {
+      outliers: {
+        ENSG00000228198: { isSignificant: true, pValue: 0.01 },
+        ENSG00000164458: { isSignificant: false, pValue: 0.73 },
+      },
+      tpms: { ENSG00000164458: { tpm: 17.8 } },
+    },
+    I021476_na19678_2: { outliers: { ENSG00000228198: { isSignificant: true, pValue: 0.0214 } } },
+  },
+  ...STATE_WITH_2_FAMILIES,
+}
+
+test('getRnaSeqDataByFamilyGene', () => {
+  expect(getRnaSeqDataByFamilyGene(RNA_SEQ_STATE)).toEqual({
+    F011652_1: {
+      significantOutliers: {
+        ENSG00000228198: {
+          NA19678: { isSignificant: true, pValue: 0.0004 },
+          NA19679_1: { isSignificant: true, pValue: 0.01 },
+        },
+        ENSG00000164458: {
+          NA19678: { isSignificant: true, pValue: 0.0073 },
+        },
+      },
+      tpms: {
+        ENSG00000228198: { NA19678: { tpm: 1.03 } },
+        ENSG00000164458: { NA19679_1: { tpm: 17.8 } },
+      },
+    },
+    F011652_2: {
+      significantOutliers: {
+        ENSG00000228198: { NA19678_2: { isSignificant: true, pValue: 0.0214 } },
+      },
+      tpms: {},
+    },
+  })
 })

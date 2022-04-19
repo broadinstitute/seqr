@@ -39,7 +39,7 @@ class RedisUtilsTest(TestCase):
         mock_logger.warning.assert_not_called()
         mock_logger.error.assert_called_with('Unable to connect to redis host localhost: invalid redis')
 
-    def test_safe_redis_set_json(self, mock_redis, mock_logger):
+    def test_safe_redis_set_json(self, mock_redis, mock_logger): # pylint: disable=no-self-use
         safe_redis_set_json('test_key', {'a': 1})
         mock_redis.return_value.set.assert_called_with('test_key', '{"a": 1}')
         mock_redis.return_value.expire.assert_not_called()

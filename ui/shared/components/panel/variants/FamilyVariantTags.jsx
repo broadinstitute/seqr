@@ -14,11 +14,12 @@ import {
   getVariantId,
 } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
+import AcmgModal from '../acmg/AcmgModal'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
 import FamilyLink from '../../buttons/FamilyLink'
-import { StyledForm } from '../../form/ReduxFormWrapper'
+import { StyledForm } from '../../form/FormHelpers'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -115,11 +116,11 @@ const ShortcutTags = React.memo(({ variantTagNotes, dispatchUpdateFamilyVariantT
 })
 
 ShortcutTags.propTypes = {
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
 }
 
-const validateTags = tags => (tags.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
+const validateTags = tags => (tags?.filter(({ category }) => category === DISCOVERY_CATEGORY_NAME).length > 1 ?
   'Only 1 Discovery Tag can be added' : undefined
 )
 
@@ -145,7 +146,7 @@ const VariantTagField = React.memo(({ variantTagNotes, variantId, fieldName, fam
 ))
 
 VariantTagField.propTypes = {
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   fieldName: PropTypes.string.isRequired,
   variantId: PropTypes.string.isRequired,
   family: PropTypes.object.isRequired,
@@ -170,7 +171,7 @@ const VariantLink = React.memo(({ variant, variantTagNotes, family }) => (
 
 VariantLink.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   family: PropTypes.object.isRequired,
 }
 
@@ -245,6 +246,10 @@ const FamilyVariantTags = React.memo(({
             )}
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
+            {variant.variantGuid && !Array.isArray(variant) &&
+              <AcmgModal variant={variant} familyGuid={family.familyGuid} /> }
+          </Table.Cell>
+          <Table.Cell collapsing textAlign="right">
             {(!Array.isArray(variant) || variantTagNotes) &&
               <VariantLink variant={variant} variantTagNotes={variantTagNotes} family={family} />}
           </Table.Cell>
@@ -253,7 +258,7 @@ const FamilyVariantTags = React.memo(({
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Notes:</TagTitle>
           </Table.Cell>
-          <Table.Cell colSpan={isCompoundHet ? 2 : 3}>
+          <Table.Cell colSpan={isCompoundHet ? 3 : 4}>
             <NoteListFieldView
               initialValues={variantTagNotes}
               modalId={family.familyGuid}
@@ -276,7 +281,7 @@ const FamilyVariantTags = React.memo(({
 
 FamilyVariantTags.propTypes = {
   variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
-  variantTagNotes: PropTypes.object.isRequired,
+  variantTagNotes: PropTypes.object,
   variantId: PropTypes.string.isRequired,
   family: PropTypes.object.isRequired,
   projectTagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -307,15 +312,15 @@ const mapStateToProps = (state, ownProps) => {
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  dispatchUpdateVariantNote: (updates) => {
-    dispatch(updateVariantNote({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
-  },
-  dispatchUpdateFamilyVariantTags: (updates) => {
-    dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }))
-  },
-  dispatchUpdateFamilyVariantFunctionalTags: (updates) => {
-    dispatch(updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }, 'functional_data'))
-  },
+  dispatchUpdateVariantNote: updates => dispatch(
+    updateVariantNote({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }),
+  ),
+  dispatchUpdateFamilyVariantTags: updates => dispatch(
+    updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }),
+  ),
+  dispatchUpdateFamilyVariantFunctionalTags: updates => dispatch(
+    updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }, 'functional_data'),
+  ),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyVariantTags)

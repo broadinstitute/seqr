@@ -16,7 +16,7 @@ import { getIndividualsByFamily } from 'redux/selectors'
 import { openModal } from 'redux/utils/modalReducer'
 import { INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX, AFFECTED } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import FormWrapper from '../../form/FormWrapper'
 import { BooleanCheckbox, InlineToggle, RadioGroup, YearSelector } from '../../form/Inputs'
 import Modal from '../../modal/Modal'
 import { NoBorderTable, FontAwesomeIconsContainer, ButtonLink } from '../../StyledComponents'
@@ -280,9 +280,9 @@ class BasePedigreeImage extends React.PureComponent {
         </NoBorderTable>
         <div ref={this.setContainerElement} id={this.containerId} />
         <Modal title={(editIndividual.data || {}).label} modalName={EDIT_INDIVIDUAL_MODAL_ID}>
-          <ReduxFormWrapper
+          <FormWrapper
             onSubmit={editIndividual.save}
-            form={EDIT_INDIVIDUAL_MODAL_ID}
+            modalName={EDIT_INDIVIDUAL_MODAL_ID}
             initialValues={editIndividual.data}
             fields={EDIT_INDIVIDUAL_FIELDS}
             submitButtonText="Update"
@@ -312,9 +312,9 @@ const PedigreeError = () => <Icon name="picture" />
 const SafePedigreeImage = props => (
   <ErrorBoundary FallbackComponent={PedigreeError}><PedigreeImage {...props} /></ErrorBoundary>)
 
-const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePedigreeZoom }) => {
+const PedigreeImagePanel = React.memo(({ family, isEditable, disablePedigreeZoom }) => {
   const hasPedImage = family.pedigreeImage || family.pedigreeDataset || family.individualGuids.length > 1
-  if (!hasPedImage && (!isEditable || compact)) {
+  if (!hasPedImage && !isEditable) {
     return null
   }
 
@@ -322,7 +322,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
     <SafePedigreeImage
       family={family}
       disablePedigreeZoom={disablePedigreeZoom}
-      maxHeight={compact ? '35' : '150'}
+      maxHeight="150"
     />
   )
   if (disablePedigreeZoom) {
@@ -335,12 +335,7 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
       modalName={modalId}
       title={`Family ${family.displayName}`}
       trigger={
-        image ? (
-          <span>
-            {compact && `(${family.individualGuids.length}) `}
-            {image}
-          </span>
-        ) : <ButtonLink content="Edit Pedigree Image" icon="edit" />
+        image || <ButtonLink content="Edit Pedigree Image" icon="edit" />
       }
     >
       <Segment basic textAlign="center">
@@ -372,7 +367,6 @@ const PedigreeImagePanel = React.memo(({ family, isEditable, compact, disablePed
 PedigreeImagePanel.propTypes = {
   family: PropTypes.object.isRequired,
   disablePedigreeZoom: PropTypes.bool,
-  compact: PropTypes.bool,
   isEditable: PropTypes.bool,
 }
 

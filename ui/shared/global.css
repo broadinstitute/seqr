@@ -1,11 +1,5 @@
-/*
-div {
-  border: 1px solid red;
-}
-*/
-
 body {
-  font-family: 'Lato';
+  font-family: Lato, sans-serif;
   font-weight: 300;
   color: #111;
 }
@@ -14,24 +8,10 @@ body {
   height: 100%;
 }
 
-.clickable {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -khtml-user-select: none;
-  -ms-user-select: none;
-  cursor: pointer;
-  outline: none;
-}
-
 .ui.icon.input {
   padding: 3px 5px;
   width: 100%;
   max-width: 350px;
-}
-
-.ui.search .prompt {
-  border: 1px solid #85B7D9;
-  border-radius: .35rem !important;
 }
 
 .ui.search .ui.input input {
@@ -58,7 +38,7 @@ body {
 }
 
 .ui.search .results .message .header {
-  color: #333333;
+  color: #333;
   font-weight: 400;
 }
 
@@ -80,4 +60,3 @@ body {
 .ui-dialog.ui-widget {
   z-index: 2000 !important; /* csslint allow: important */
 }
-

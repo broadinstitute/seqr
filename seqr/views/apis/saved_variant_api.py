@@ -1,25 +1,24 @@
 import logging
 import json
-from collections import defaultdict
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    LocusList, LocusListInterval, LocusListGene, Family, GeneNote
+    Family, GeneNote
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id, \
-    _get_json_for_models, get_json_for_discovery_tags
+    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    user_is_analyst, login_and_policies_required
+    login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
-    get_variant_key, saved_variant_genes
+    get_variants_response
 
 
 logger = logging.getLogger(__name__)
 
+INCLUDE_LOCUS_LISTS_PARAM = 'includeLocusLists'
 
 @login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
@@ -38,20 +37,8 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         get_note_only = bool(request.GET.get('includeNoteVariants'))
         variant_query = variant_query.filter(varianttag__isnull=get_note_only).distinct()
 
-    response = get_json_for_saved_variants_with_tags(variant_query, add_details=True)
-
-    discovery_tags = None
-    if user_is_analyst(request.user):
-        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
-        response.update(discovery_response)
-
-    variants = list(response['savedVariantsByGuid'].values())
-    genes = saved_variant_genes(variants)
-    response['locusListsByGuid'] = _add_locus_lists([project], genes)
-
-    if discovery_tags:
-        _add_discovery_tags(variants, discovery_tags)
-    response['genesById'] = genes
+    add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
+    response = get_variants_response(request, variant_query, add_locus_list_detail=add_locus_list_detail)
 
     return create_json_response(response)
 
@@ -135,10 +122,13 @@ def create_variant_note_handler(request, variant_guids):
     }
 
     if save_as_gene_note:
-        main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json['mainTranscriptId']
-        gene_id = next(
-            (gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
-             if any(t['transcriptId'] == main_transcript_id for t in transcripts)), None) if main_transcript_id else None
+        main_transcript_id = saved_variants[0].selected_main_transcript_id or saved_variants[0].saved_variant_json.get('mainTranscriptId')
+        if main_transcript_id:
+            gene_id = next(
+                gene_id for gene_id, transcripts in saved_variants[0].saved_variant_json['transcripts'].items()
+                if any(t['transcriptId'] == main_transcript_id for t in transcripts))
+        else:
+            gene_id = next(gene_id for gene_id in sorted(saved_variants[0].saved_variant_json['transcripts']))
         create_model_from_json(GeneNote, {'note': request_json.get('note'), 'gene_id': gene_id}, request.user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user)[gene_id],
@@ -337,35 +327,3 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
     update_model_from_json(saved_variant, {'selected_main_transcript_id': transcript_id}, request.user)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
-
-
-def _add_locus_lists(projects, genes, include_all_lists=False):
-    locus_lists = LocusList.objects.filter(projects__in=projects)
-
-    if include_all_lists:
-        locus_lists_by_guid = {locus_list.guid: {'intervals': []} for locus_list in locus_lists}
-    else:
-        locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
-    intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)
-    for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
-        locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
-
-    for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list', 'palocuslistgene'):
-        gene_json = genes[locus_list_gene.gene_id]
-        locus_list_guid = locus_list_gene.locus_list.guid
-        gene_json['locusListGuids'].append(locus_list_guid)
-        if hasattr(locus_list_gene, 'palocuslistgene'):
-            if not gene_json.get('locusListConfidence'):
-                gene_json['locusListConfidence'] = {}
-            gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
-
-    return locus_lists_by_guid
-
-
-def _add_discovery_tags(variants, discovery_tags):
-    for variant in variants:
-        tags = discovery_tags.get(get_variant_key(**variant))
-        if tags:
-            if not variant.get('discoveryTags'):
-                variant['discoveryTags'] = []
-            variant['discoveryTags'] += [tag for tag in tags if tag['savedVariant']['familyGuid'] not in variant['familyGuids']]

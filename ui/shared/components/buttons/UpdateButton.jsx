@@ -2,12 +2,13 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { ButtonLink } from '../StyledComponents'
-import ReduxFormWrapper from '../form/ReduxFormWrapper'
+import FormWrapper from '../form/FormWrapper'
 import Modal from '../modal/Modal'
 
 const UpdateButton = React.memo(({
   onSubmit, initialValues, formFields, modalTitle, modalId, buttonText, editIconName, size, modalSize, showErrorPanel,
   disabled, confirmDialog, submitButtonText, buttonFloated, trigger, formContainer = <div />, modalPopup,
+  decorators, formMetaId,
 }) => (
   <Modal
     title={modalTitle}
@@ -27,14 +28,16 @@ const UpdateButton = React.memo(({
   >
     {React.cloneElement(formContainer, {
       children: (
-        <ReduxFormWrapper
+        <FormWrapper
           onSubmit={onSubmit}
-          form={modalId}
+          modalName={modalId}
           initialValues={initialValues}
           fields={formFields}
           showErrorPanel={showErrorPanel}
           confirmDialog={confirmDialog}
           submitButtonText={submitButtonText}
+          decorators={decorators}
+          formMetaId={formMetaId}
           confirmCloseIfNotSaved
         />
       ),
@@ -59,7 +62,9 @@ UpdateButton.propTypes = {
   size: PropTypes.string,
   modalSize: PropTypes.string,
   confirmDialog: PropTypes.string,
+  formMetaId: PropTypes.string,
   trigger: PropTypes.node,
+  decorators: PropTypes.arrayOf(PropTypes.func),
 }
 
 export default UpdateButton

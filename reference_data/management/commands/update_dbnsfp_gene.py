@@ -26,7 +26,6 @@ EXCLUDE_FIELDS = (
     'SORVA_LOF', 'Essential_gene', 'chr', 'MIM', 'OMIM', 'RVIS_percentile_EVS', 'RVIS_EVS', 'HIPred',
 )
 
-
 class DbNSFPReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = dbNSFPGene

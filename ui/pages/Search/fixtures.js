@@ -27,6 +27,7 @@ export const STATE = {
   multiProjectSearchContextLoading: { isLoading: false },
   searchGeneBreakdownLoading: { isLoading: false },
   locusListLoading: { isLoading: false },
+  familyDetailsLoading: { isLoading: false },
   currentSearchHash: SEARCH_HASH,
   searchesByHash: { [SEARCH_HASH]: SEARCH },
   searchGeneBreakdown: { [SEARCH_HASH]: {[GENE_ID]: { total: 3, families: { [FAMILY_GUID]: 2 }}} },
@@ -152,8 +153,7 @@ export const STATE = {
   samplesByGuid: {
     S2310658_wal_mc16200_mc16203: {
       createdDate: "2018-03-30T11:50:40.079Z",
-      datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
-      datasetName: null,
+      elasticsearchIndex: "CMG_MYOSEQ",
       datasetType: "VARIANTS",
       individualGuid: "I021476_na19678",
       loadedDate: "2018-03-13T13:25:21.551Z",
@@ -165,8 +165,7 @@ export const STATE = {
     },
     S2310657_wal_mc16200_mc16203: {
       createdDate: "2018-03-30T11:50:40.079Z",
-      datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
-      datasetName: null,
+      elasticsearchIndex: "CMG_MYOSEQ",
       datasetType: "SV",
       individualGuid: "I021476_na19678",
       loadedDate: "2018-03-13T13:25:21.551Z",
@@ -178,8 +177,7 @@ export const STATE = {
     },
     S2310656_wal_mc16200_mc16203: {
       createdDate: "2018-03-30T11:50:40.079Z",
-      datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
-      datasetName: null,
+      elasticsearchIndex: "CMG_MYOSEQ",
       datasetType: "VARIANTS",
       individualGuid: "I021476_na19678",
       loadedDate: "2018-03-13T13:25:21.551Z",
@@ -189,7 +187,19 @@ export const STATE = {
       isActive: false,
       sampleType: "WES",
     },
-
+    S2310659_wal_mc16200_mc16203: {
+      createdDate: "2018-03-30T11:50:40.079Z",
+      elasticsearchIndex: null,
+      datasetName: null,
+      datasetType: "VARIANTS",
+      individualGuid: "I021476_na19678",
+      loadedDate: "2018-03-13T13:25:21.551Z",
+      projectGuid: PROJECT_GUID,
+      sampleGuid: "S2310656_wal_mc16200_mc16203",
+      sampleId: "WAL_MC16200_MC16203",
+      isActive: true,
+      sampleType: "RNA",
+    },
   },
   analysisGroupsByGuid: {
     [ANALYSIS_GROUP_GUID]: {

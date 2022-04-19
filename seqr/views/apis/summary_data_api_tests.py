@@ -1,9 +1,11 @@
 from datetime import datetime
 from django.urls.base import reverse
+import json
 import mock
 
-from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page
+from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, bulk_update_family_analysed_by
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+from seqr.models import FamilyAnalysedBy
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -22,7 +24,7 @@ EXPECTED_MME_DETAILS_METRICS = {
 
 SAVED_VARIANT_RESPONSE_KEYS = {
     'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
-    'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid',
+    'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid', 'familyNotesByGuid',
 }
 
 
@@ -137,6 +139,47 @@ class SummaryDataAPITest(object):
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
+    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
+    def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file, mock_analyst_group):
+        url = reverse(bulk_update_family_analysed_by)
+        self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
+
+        mock_load_uploaded_file.return_value = [['foo', 'bar']]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(
+            {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Project and Family columns are required')
+
+        mock_load_uploaded_file.return_value = [
+            ['Project', 'Family ID'],
+            ['1kg project n\u00e5me with uni\u00e7\u00f8de', '1'],
+            ['Test Reprocessed Project', '12'],
+            ['Test Reprocessed Project', 'not_a_family'],
+            ['not_a_project', '2'],
+        ]
+        created_time = datetime.now()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(
+            {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
+        self.assertDictEqual(response.json(), {
+            'warnings': [
+                'No match found for the following families: 2 (not_a_project), not_a_family (Test Reprocessed Project)'
+            ],
+            'info': ['Updated "analysed by" for 2 families'],
+        })
+
+        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=created_time)
+        self.assertEqual(len(models), 2)
+        self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
+        self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
+
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -144,19 +187,11 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
 
-def assert_has_expected_calls(self, users, access_level_call=False):
+def assert_has_expected_calls(self, users):
     calls = [mock.call(user) for user in users]
     self.mock_list_workspaces.assert_has_calls(calls)
     self.mock_get_ws_acl.assert_not_called()
-    if access_level_call:
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo'),
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-        ], any_order=True)
-    else:
-        self.mock_get_ws_access_level.assert_not_called()
+    self.mock_get_ws_access_level.assert_not_called()
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
@@ -164,15 +199,15 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 3
     MANAGER_VARIANT_GUID = None
 
-    def test_mme_details(self):
-        super(AnvilSummaryDataAPITest, self).test_mme_details()
+    def test_mme_details(self, *args):
+        super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
 
     def test_saved_variants_page(self):
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
-        ], access_level_call=True)
+        ])
 
 
 # Test for permissions from AnVIL and local
@@ -181,8 +216,8 @@ class MixSummaryDataAPITest(MixAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
-    def test_mme_details(self):
-        super(MixSummaryDataAPITest, self).test_mme_details()
+    def test_mme_details(self, *args):
+        super(MixSummaryDataAPITest, self).test_mme_details(*args)
         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
 
     def test_saved_variants_page(self):

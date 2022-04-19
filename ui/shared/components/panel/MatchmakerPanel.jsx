@@ -17,7 +17,7 @@ const SequenceContainer = styled.div`
   max-width: 100px;
   display: inline-block;
   text-overflow: ellipsis;
-  overflow-x: hidden;
+  overflow-x: clip;
   vertical-align: bottom;
   padding-left: 5px;
   padding-right: 5px;

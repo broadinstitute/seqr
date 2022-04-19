@@ -14,7 +14,7 @@ import {
   VARIANT_TAGGED_DATE_FIELD,
   SHOW_ALL,
 } from 'shared/utils/constants'
-import { StyledForm } from 'shared/components/form/ReduxFormWrapper'
+import { StyledForm } from 'shared/components/form/FormHelpers'
 import AwesomeBar from 'shared/components/page/AwesomeBar'
 import SavedVariants from 'shared/components/panel/variants/SavedVariants'
 import { HorizontalSpacer } from 'shared/components/Spacers'

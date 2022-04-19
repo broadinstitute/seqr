@@ -9,10 +9,10 @@ import { InlineHeader, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 
 const ProjectFilterContent = React.memo((
-  { project, removeField, projectSamples, value, dispatch, filterInputComponent, ...props },
+  { project, removeField, projectHasSamples, value, dispatch, filterInputComponent, ...props },
 ) => {
   let filterInput
-  if (Object.values(projectSamples || {}).some(sample => sample.isActive)) {
+  if (projectHasSamples) {
     filterInput = filterInputComponent ? React.createElement(filterInputComponent, { ...props, value }) : null
   } else {
     filterInput = (
@@ -43,7 +43,7 @@ ProjectFilterContent.propTypes = {
   project: PropTypes.object,
   value: PropTypes.object,
   removeField: PropTypes.func,
-  projectSamples: PropTypes.object,
+  projectHasSamples: PropTypes.bool,
   dispatch: PropTypes.func,
   filterInputComponent: PropTypes.elementType,
 }

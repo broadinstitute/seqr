@@ -1,11 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { FormSpy } from 'react-final-form'
 
-import { configuredField } from 'shared/components/form/ReduxFormWrapper'
+import { configuredField } from 'shared/components/form/FormHelpers'
 import { AddProjectButton } from 'shared/components/panel/search/ProjectsField'
 import { ButtonLink } from 'shared/components/StyledComponents'
-import { getInputProjectsCount } from '../../selectors'
 import { loadProjectGroupContext } from '../../reducers'
 import ProjectFamiliesFilter from './ProjectFamiliesFilter'
 
@@ -49,8 +49,12 @@ class AllProjectFamiliesField extends React.PureComponent {
 
 }
 
-const mapAllProjectFamiliesFieldStateToProps = state => ({
-  numProjects: getInputProjectsCount(state),
-})
+const SUBSCRIPTION = { values: true }
 
-export default connect(mapAllProjectFamiliesFieldStateToProps)(AllProjectFamiliesField)
+export default props => (
+  <FormSpy subscription={SUBSCRIPTION}>
+    {({ values }) => (
+      <AllProjectFamiliesField {...props} numProjects={(values.projectFamilies || []).length} />
+    )}
+  </FormSpy>
+)

@@ -3,7 +3,7 @@ from django.test import TestCase
 
 from seqr.utils.gene_utils import get_gene, get_genes, get_genes_for_variant_display, get_genes_for_variants, \
     get_genes_with_detail
-from seqr.views.utils.test_utils import GENE_FIELDS, GENE_DETAIL_FIELDS, GENE_VARIANT_FIELDS
+from seqr.views.utils.test_utils import GENE_FIELDS, GENE_DETAIL_FIELDS, GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS
 
 GENE_ID = 'ENSG00000223972'
 
@@ -23,11 +23,9 @@ class GeneUtilsTest(TestCase):
         self.assertSetEqual(set(json.keys()), gene_ids)
         self.assertSetEqual(set(json[GENE_ID].keys()), GENE_FIELDS)
 
-        fields = {'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity'}
-        fields.update(GENE_FIELDS)
         json = get_genes_for_variant_display(gene_ids)
         self.assertSetEqual(set(json.keys()), gene_ids)
-        self.assertSetEqual(set(json[GENE_ID].keys()), fields)
+        self.assertSetEqual(set(json[GENE_ID].keys()), GENE_VARIANT_DISPLAY_FIELDS)
 
         json = get_genes_for_variants(gene_ids)
         self.assertSetEqual(set(json.keys()), gene_ids)
@@ -46,9 +44,13 @@ class GeneUtilsTest(TestCase):
         self.assertSetEqual(
             set(gene['omimPhenotypes'][0].keys()),
             {'mimNumber', 'phenotypeMimNumber', 'phenotypeDescription', 'phenotypeInheritance'})
+        self.assertSetEqual(set(gene['genCc'].keys()), {'hgncId', 'classifications'})
+        self.assertSetEqual(set(gene['clinGen'].keys()), {'haploinsufficiency', 'triplosensitivity', 'href'})
 
         sparse_gene = json['ENSG00000227232']
         self.assertIsNone(sparse_gene['primateAi'])
         self.assertDictEqual(sparse_gene['constraints'], {})
         self.assertDictEqual(sparse_gene['cnSensitivity'], {})
         self.assertListEqual(sparse_gene['omimPhenotypes'], [])
+        self.assertDictEqual(sparse_gene['genCc'], {})
+        self.assertIsNone(sparse_gene['clinGen'])

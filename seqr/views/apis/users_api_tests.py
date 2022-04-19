@@ -10,7 +10,7 @@ from urllib.parse import quote_plus
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_all_analyst_options, update_policies, update_user
+    get_project_collaborator_options, update_policies, update_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, USER_FIELDS
 
@@ -19,6 +19,7 @@ PROJECT_GUID = 'R0001_1kg'
 NON_ANVIL_PROJECT_GUID = 'R0002_empty'
 USERNAME = 'test_user_collaborator'
 USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isAnalyst'}
+ANALYST_USERNAME = 'test_user'
 
 TOS_VERSION = 2.2
 PRIVACY_VERSION = 1.1
@@ -26,19 +27,33 @@ PRIVACY_VERSION = 1.1
 class UsersAPITest(object):
     USERNAME = USERNAME
 
-    @mock.patch('seqr.views.apis.users_api.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
-    def test_get_all_analyst_options(self):
-        get_all_analyst_url = reverse(get_all_analyst_options)
-        self.check_require_login(get_all_analyst_url)
-        response = self.client.get(get_all_analyst_url)
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP')
+    def test_get_project_collaborator_options(self, mock_analyst_group):
+        url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        if hasattr(self, 'mock_get_ws_acl'):
+            self.mock_get_ws_acl.reset_mock()
+            self.mock_get_ws_access_level.reset_mock()
+
+        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        all_analyst_usernames = list(response_json.keys())
-        first_analyst_user = response_json[all_analyst_usernames[0]]
+        self.assertSetEqual(set(response_json.keys()), self.COLLABORATOR_NAMES)
+        self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
 
-        self.assertSetEqual(set(first_analyst_user), USER_OPTION_FIELDS)
-        self.assertTrue(first_analyst_user['isAnalyst'])
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        users = {ANALYST_USERNAME, 'test_pm_user'}
+        users.update(self.COLLABORATOR_NAMES)
+        self.assertSetEqual(set(response_json.keys()), users)
+        self.assertSetEqual(set(response_json[ANALYST_USERNAME].keys()), USER_OPTION_FIELDS)
+        self.assertTrue(response_json[ANALYST_USERNAME]['isAnalyst'])
 
     def test_get_all_collaborator_options(self):
         url = reverse(get_all_collaborator_options)
@@ -62,7 +77,7 @@ class UsersAPITest(object):
 
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Adding collaborators directly in seqr is disabled. Users can be managed from the associated AnVIL workspace')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
@@ -198,7 +213,7 @@ class UsersAPITest(object):
     def _test_password_auth_disabled(self, url):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Username/ password authentication is disabled')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.apis.users_api.SEQR_TOS_VERSION')
     @mock.patch('seqr.views.apis.users_api.SEQR_PRIVACY_VERSION')
@@ -301,12 +316,12 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     def _test_set_password(self, set_password_url, password): # pylint: disable=arguments-differ
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
             {'userToken': 'invalid'}))
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Not authorized to update password')
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps(
             {'userToken': quote_plus(password)}))
@@ -335,13 +350,19 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         super(AnvilUsersAPITest, self).test_get_all_collaborator_options()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
 
-    def test_get_all_analyst_options(self):
-        super(AnvilUsersAPITest, self).test_get_all_analyst_options()
+    def test_get_project_collaborator_options(self, *args, **kwargs):
+        super(AnvilUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
+        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.mock_get_ws_acl.assert_called_with(
+            self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
+        self.mock_get_ws_access_level.assert_called_with(
+            self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
-    def test_create_project_collaborator(self):
+    def test_create_project_collaborator(self, *args):
         # Creating project collaborators is only allowed in non-anvil projects, so it always fails for the AnVIL only case
         create_url = reverse(create_project_collaborator, args=[NON_ANVIL_PROJECT_GUID])
         self.check_manager_login(create_url)
@@ -391,11 +412,15 @@ class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
         super(MixUsersAPITest, self).test_get_all_collaborator_options()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
 
-    def test_get_all_analyst_options(self):
-        super(MixUsersAPITest, self).test_get_all_analyst_options()
+    def test_get_project_collaborator_options(self, *args, **kwargs):
+        super(MixUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
+        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.mock_get_ws_acl.assert_called_with(
+            self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
 
     def test_create_project_collaborator(self, *args, **kwargs):
         super(MixUsersAPITest, self).test_create_project_collaborator(*args, **kwargs)

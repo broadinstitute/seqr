@@ -16,9 +16,9 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
-    get_json_for_matchmaker_submission
+    get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, analyst_required, \
-    has_project_permissions, login_and_policies_required
+    has_project_permissions, login_and_policies_required, get_project_and_check_permissions
 
 from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
@@ -347,6 +347,26 @@ def send_mme_contact_email(request, matchmaker_result_guid):
 
     return create_json_response({
         'mmeResultsByGuid': {matchmaker_result_guid: {'matchStatus': _get_json_for_model(result)}},
+    })
+
+
+@login_and_policies_required
+def update_mme_project_contact(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+
+    request_json = json.loads(request.body)
+    contact = (request_json.get('contact') or '').strip()
+    if not contact:
+        return create_json_response({'error': 'Contact is required'}, status=400)
+
+    submissions = MatchmakerSubmission.objects.filter(individual__family__project=project).exclude(
+        contact_href__contains=contact)
+    for submission in submissions:
+        submission.contact_href = f'{submission.contact_href},{contact}' if submission.contact_href else contact
+        submission.save()
+
+    return create_json_response({
+        'mmeSubmissionsByGuid': {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(submissions)},
     })
 
 

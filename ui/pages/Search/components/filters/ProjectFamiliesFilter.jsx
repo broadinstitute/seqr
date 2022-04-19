@@ -9,7 +9,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid,
   getFamiliesByGuid,
   getAnalysisGroupsByGuid,
-  getSamplesGroupedByProjectGuid,
+  getProjectDatasetTypes,
 } from 'redux/selectors'
 import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { ProjectFilter } from 'shared/components/panel/search/ProjectsField'
@@ -116,7 +116,7 @@ const mapStateToProps = (state, ownProps) => ({
   analysisGroupOptions: getAnalysisGroupOptions(state, ownProps),
   projectAnalysisGroupsByGuid: getAnalysisGroupsGroupedByProjectGuid(state)[ownProps.value.projectGuid] || {},
   project: getProjectsByGuid(state)[ownProps.value.projectGuid],
-  projectSamples: getSamplesGroupedByProjectGuid(state)[ownProps.value.projectGuid],
+  projectHasSamples: (getProjectDatasetTypes(state)[ownProps.value.projectGuid] || []).length > 0,
   loading: getSearchContextIsLoading(state),
   filterInputComponent: ProjectFamiliesFilterInput,
 })

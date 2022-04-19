@@ -11,6 +11,7 @@ class OptionFieldView extends React.PureComponent {
     initialValues: PropTypes.object.isRequired,
     tagOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
     tagAnnotation: PropTypes.func,
+    tagOptionLookup: PropTypes.object,
     additionalEditFields: PropTypes.arrayOf(PropTypes.object),
     formFieldProps: PropTypes.object,
     fieldDisplay: PropTypes.func,
@@ -18,14 +19,15 @@ class OptionFieldView extends React.PureComponent {
   }
 
   fieldDisplay = (value) => {
-    const { tagAnnotation, compact, initialValues } = this.props
-    const valueConfig = this.tagSelectOptions().find(option => option.value === value) || {}
+    const { tagAnnotation, tagOptionLookup, compact, initialValues } = this.props
+    const valueConfig = (
+      tagOptionLookup ? tagOptionLookup[value] : this.tagSelectOptions().find(option => option.value === value)) || {}
 
     const annotation = tagAnnotation ? tagAnnotation(valueConfig, compact, initialValues) : null
     return (
       <span>
         {annotation}
-        {compact && annotation ? '' : valueConfig.text }
+        {compact && annotation ? '' : (valueConfig.text || valueConfig.name) }
       </span>
     )
   }

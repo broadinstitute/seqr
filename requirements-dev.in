@@ -1,0 +1,9 @@
+-c requirements.txt # use the generated reqs as a constraint
+coverage<5.2
+django-compressor
+django-debug-toolbar<3.3  # https://github.com/jazzband/django-debug-toolbar
+mock                      # mock objects for unit tests
+pip-tools                 # tool for managing our python dependency tree
+responses                 # mock HTTP responses for unit tests
+urllib3-mock              # mock urllib3 for tests
+Jinja2                    # jinja templates are used by servctl k8s deployment scripts

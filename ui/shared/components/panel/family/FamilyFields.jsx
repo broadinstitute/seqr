@@ -1,21 +1,27 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Popup } from 'semantic-ui-react'
+import { Popup, Icon } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadAnalystOptions } from 'redux/rootReducer'
+import { loadUserOptions, loadProjectAnalysisGroups, updateFamily } from 'redux/rootReducer'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
-  getHasActiveVariantSampleByFamily,
+  getHasActiveSearchableSampleByFamily,
+  getUserOptions,
+  getProjectAnalysisGroupOptions,
+  getAnalysisGroupsByFamily,
+  getAnalysisGroupIsLoading,
 } from 'redux/selectors'
+import { SNP_DATA_TYPE, FAMILY_ANALYSED_BY_DATA_TYPES } from 'shared/utils/constants'
 
+import DispatchRequestButton from '../../buttons/DispatchRequestButton'
+import TagFieldView from '../view-fields/TagFieldView'
 import Sample from '../sample'
 import { ColoredIcon } from '../../StyledComponents'
 import { Select } from '../../form/Inputs'
 import DataLoader from '../../DataLoader'
-import { getAnalystOptions } from '../../../../pages/Project/selectors'
 
 const NoWrap = styled.div`
   white-space: nowrap;
@@ -37,7 +43,7 @@ BaseFirstSample.propTypes = {
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
   firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.familyGuid] || {}).isActive,
 })
 
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
@@ -65,12 +71,12 @@ BaseAnalystEmailDropdown.propTypes = {
 
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
-  options: getAnalystOptions(state),
+  options: getUserOptions(state),
 })
 
-const mapDropdownDispatchToProps = {
-  load: loadAnalystOptions,
-}
+const mapDropdownDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadUserOptions(ownProps.meta.data.formId)),
+})
 
 export const AnalystEmailDropdown = connect(
   mapDropdownStateToProps, mapDropdownDispatchToProps,
@@ -88,7 +94,7 @@ export const analysisStatusIcon = (
       trigger={icon}
       content={
         <div>
-          {compact && value.text}
+          {compact && value.name}
           {analysisStatusLastModifiedDate && (
             <i>
               {compact && <br />}
@@ -104,37 +110,68 @@ export const analysisStatusIcon = (
   )
 }
 
-const formatAnalysedByList = analysedByList => analysedByList.map(
-  analysedBy => `${analysedBy.createdBy.displayName || analysedBy.createdBy.email} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
-).join(', ')
+const BaseAnalysedBy = React.memo(({ analysedByList, compact, onSubmit }) => {
+  const analysedByType = analysedByList.reduce(
+    (acc, analysedBy) => ({ ...acc, [analysedBy.dataType]: [...(acc[analysedBy.dataType] || []), analysedBy] }), {},
+  )
 
-export const AnalysedBy = React.memo(({ analysedByList, compact }) => {
   if (compact) {
-    return [...analysedByList.reduce(
-      (acc, analysedBy) => acc.add(analysedBy.createdBy.displayName || analysedBy.createdBy.email), new Set(),
+    return [...(analysedByType[SNP_DATA_TYPE] || []).reduce(
+      (acc, { createdBy }) => acc.add(createdBy), new Set(),
     )].map(
       analysedByUser => <NoWrap key={analysedByUser}>{analysedByUser}</NoWrap>,
     )
   }
-  const analystUsers = analysedByList.filter(analysedBy => analysedBy.createdBy.isAnalyst)
-  const externalUsers = analysedByList.filter(analysedBy => !analysedBy.createdBy.isAnalyst)
-  return [
-    analystUsers.length > 0 ? (
-      <div key="analyst">
-        <b>CMG Analysts:</b>
-        {formatAnalysedByList(analystUsers)}
-      </div>
-    ) : null,
-    externalUsers.length > 0 ? (
-      <div key="ext">
-        <b>External Collaborators:</b>
-        {formatAnalysedByList(externalUsers)}
-      </div>
-    ) : null,
-  ]
+
+  return FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => (
+    <div key={type}>
+      <b>{`${typeDisplay}: `}</b>
+      {(analysedByType[type] || []).map(
+        analysedBy => `${analysedBy.createdBy} (${new Date(analysedBy.lastModifiedDate).toLocaleDateString()})`,
+      ).join(', ')}
+      &nbsp;&nbsp;
+      <DispatchRequestButton
+        buttonContent={<Icon link size="small" name="plus" />}
+        onSubmit={onSubmit(type)}
+        confirmDialog={`Are you sure you want to add that you analysed this family for ${typeDisplay} data?`}
+      />
+    </div>
+  ))
 })
 
-AnalysedBy.propTypes = {
+BaseAnalysedBy.propTypes = {
   analysedByList: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
+  onSubmit: PropTypes.func,
 }
+
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: dataType => () => dispatch(
+    updateFamily({ dataType, familyGuid: ownProps.familyGuid, familyField: 'analysed_by' }),
+  ),
+})
+
+export const AnalysedBy = connect(null, mapDispatchToProps)(BaseAnalysedBy)
+
+const BaseAnalysisGroups = React.memo(({ load, loading, ...props }) => (
+  <DataLoader load={load} loading={loading} content>
+    <TagFieldView {...props} />
+  </DataLoader>
+))
+
+BaseAnalysisGroups.propTypes = {
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+}
+
+const mapGroupsStateToProps = (state, ownProps) => ({
+  fieldValue: getAnalysisGroupsByFamily(state)[ownProps.initialValues.familyGuid],
+  loading: getAnalysisGroupIsLoading(state),
+  tagOptions: getProjectAnalysisGroupOptions(state)[ownProps.initialValues.projectGuid] || [],
+})
+
+const mapGroupsDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadProjectAnalysisGroups(ownProps.initialValues.projectGuid)),
+})
+
+export const AnalysisGroups = connect(mapGroupsStateToProps, mapGroupsDispatchToProps)(BaseAnalysisGroups)
