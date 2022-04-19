@@ -148,15 +148,18 @@ class HailSearch(object):
     def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
-        has_location_filter = genes or intervals or rs_ids or variant_ids
+        has_location_filter = genes or intervals or variant_ids
 
         self._filter_custom(custom_query)
 
         if has_location_filter:
-            self.filter_by_location(
-                genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=locus)
+            self.filter_by_location(genes=genes, intervals=intervals, variant_ids=variant_ids, locus=locus)
         else:
             self._load_table()
+
+        if rs_ids:
+            # TODO confirm okay to make variant ids and rs_ids mutually exclusive searches
+            raise NotImplementedError  # TODO rs_ids
 
         self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
 
@@ -202,7 +205,16 @@ class HailSearch(object):
 
         self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
 
-    def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
+    def filter_by_location(self, genes=None, intervals=None, variant_ids=None, locus=None):
+        if genes or intervals:
+            self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'))
+        elif variant_ids:
+            self._filter_by_variants(variant_ids)
+
+    def _filter_by_intervals(self, genes, intervals, exclude_locations):
+        if exclude_locations:
+            raise NotImplementedError  # TODO
+
         parsed_intervals = None
         if genes or parsed_intervals:
             parsed_intervals = [
@@ -214,11 +226,15 @@ class HailSearch(object):
 
         self._load_table(intervals=parsed_intervals)
 
-        if rs_ids or variant_ids:
-            raise NotImplementedError  # TODO rs_ids/variant_ids, location_filter.get('excludeLocations')
+
+    def _filter_by_variants(self, variant_ids):
+        # In production: if supporting multi-genome-version search, need to lift and re-filter variants
+        raise NotImplementedError  # TODO
 
     def _filter_custom(self, custom_query):
         if custom_query:
+            # In production: should either remove the "custom search" functionality,
+            # or should come up with a simple json -> hail query parsing here
             raise NotImplementedError
 
     def _filter_by_frequency(self, frequencies, pathogenicity=None):
