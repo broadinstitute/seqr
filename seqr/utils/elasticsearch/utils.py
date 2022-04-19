@@ -100,14 +100,17 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
 
     search = search_model.variant_search.search
 
+    rs_ids = None
+    variant_ids = None
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
-    rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
-    if invalid_items:
-        raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
-    if rs_ids and variant_ids:
-        raise InvalidSearchException('Invalid variant notation: found both variant IDs and rsIDs')
+    if not (genes or intervals):
+        rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
+        if invalid_items:
+            raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
+        if rs_ids and variant_ids:
+            raise InvalidSearchException('Invalid variant notation: found both variant IDs and rsIDs')
 
     es_search = es_search_cls(
         search_model.families.all(),
@@ -125,8 +128,8 @@ def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, sk
         skip_genotype_filter=skip_genotype_filter,
     )
 
-    if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
-        num_results = len(variant_ids) + len(rs_ids)
+    if variant_ids:
+        num_results = len(variant_ids)
 
     variant_results = es_search.search(page=page, num_results=num_results)
 

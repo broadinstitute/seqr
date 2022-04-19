@@ -230,8 +230,7 @@ class EsSearch(object):
             self._filter(_location_filter(genes, intervals, locus))
         elif variant_ids:
             self.filter_by_variant_ids(variant_ids, locus=locus)
-
-        if rs_ids:
+        elif rs_ids:
             self._filter(Q('terms', rsid=rs_ids))
 
         self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
