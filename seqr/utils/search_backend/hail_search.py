@@ -158,8 +158,7 @@ class HailSearch(object):
             self._load_table()
 
         if rs_ids:
-            # TODO confirm okay to make variant ids and rs_ids mutually exclusive searches
-            raise NotImplementedError  # TODO rs_ids
+            self.ht = self.ht.filter(hl.set(rs_ids).contains(self.ht.rsid))
 
         self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
 
@@ -212,9 +211,6 @@ class HailSearch(object):
             self._filter_by_variant_ids(variant_ids)
 
     def _filter_by_intervals(self, genes, intervals, exclude_locations):
-        if exclude_locations:
-            raise NotImplementedError  # TODO
-
         parsed_intervals = None
         if genes or parsed_intervals:
             parsed_intervals = [
@@ -224,7 +220,11 @@ class HailSearch(object):
                     'chr{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
             ]
 
-        self._load_table(intervals=parsed_intervals)
+        if exclude_locations:
+            self._load_table()
+            self.ht = hl.filter_intervals(self.ht, parsed_intervals, keep=False)
+        else:
+            self._load_table(intervals=parsed_intervals)
 
     def _filter_by_variant_ids(self, variant_ids):
         # In production: support SV variant IDs?
