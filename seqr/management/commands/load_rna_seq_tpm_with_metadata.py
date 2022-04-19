@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 
 from seqr.models import RnaSeqTpm
 from seqr.views.utils.file_utils import parse_file
-from seqr.views.apis.data_manager_api import load_rna_seq, load_mapping_file_content
+from seqr.views.utils.dataset_utils import load_rna_seq, load_mapping_file_content
 
 from seqr.management.commands.load_rna_seq_tpm import TISSUE_TYPE_MAP, REVERSE_TISSUE_TYPE, GENE_ID_COL
 
