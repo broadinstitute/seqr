@@ -2,10 +2,10 @@ import { connect } from 'react-redux'
 
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
+import UploadFormPage from 'shared/components/page/UploadFormPage'
 
 import { getRnaSeqUploadStats } from '../selectors'
 import { uploadRnaSeq } from '../reducers'
-import UploadFormPage from './UploadFormPage'
 
 const mapStateToProps = state => ({
   fields: [

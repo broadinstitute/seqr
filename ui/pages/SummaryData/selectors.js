@@ -5,3 +5,4 @@ export const getMmeLoading = state => state.mmeLoading.isLoading
 export const getMmeLoadingError = state => state.mmeLoading.errorMessage
 export const getMmeMetrics = state => state.mmeMetrics
 export const getMmeSubmissions = state => state.mmeSubmissions
+export const getExternalAnalysisUploadStats = state => state.externalAnalysisUploadStats

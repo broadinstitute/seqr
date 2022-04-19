@@ -129,7 +129,7 @@ export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_KNOWN_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - known gene for phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - gene linked to different phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE, color: '#CDDC39', name: 'Strong candidate - novel gene' },
-  { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#CDDC39', name: 'Reviewed, currently pursuing candidates' },
+  { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#92DCB9', name: 'Reviewed, currently pursuing candidates' },
   { value: FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE, color: '#EF5350', name: 'Reviewed, no clear candidate' },
   { value: FAMILY_STATUS_CLOSED, color: '#9c0502', name: 'Closed, no longer under analysis' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
@@ -143,6 +143,15 @@ export const ALL_FAMILY_ANALYSIS_STATUS_OPTIONS = [
 export const FAMILY_ANALYSIS_STATUS_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
   (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
 )
+
+export const SNP_DATA_TYPE = 'SNP'
+export const FAMILY_ANALYSED_BY_DATA_TYPES = [
+  [SNP_DATA_TYPE, 'WES/WGS'],
+  ['SV', 'gCNV/SV'],
+  ['RNA', 'RNAseq'],
+  ['MT', 'Mitochondrial'],
+  ['STR', 'STR'],
+]
 
 // SUCCESS STORY
 

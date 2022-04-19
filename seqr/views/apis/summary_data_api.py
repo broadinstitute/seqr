@@ -1,7 +1,13 @@
+from datetime import datetime
+from django.db.models import Q, prefetch_related_objects
+import json
+from random import randint
+
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_submissions, parse_mme_features, \
     parse_mme_gene_variants, get_mme_metrics
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Family, VariantTagType, SavedVariant, RnaSeqTpm
+from seqr.models import Family, VariantTagType, SavedVariant, RnaSeqTpm, FamilyAnalysedBy
+from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
@@ -94,3 +100,41 @@ def rna_seq_expression(request, gene, tissues):
         response[tissue] = list(RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene).values_list('tpm', flat=True))
 
     return create_json_response(response)
+
+
+@analyst_required
+def bulk_update_family_analysed_by(request):
+    request_json = json.loads(request.body)
+    data_type =request_json['dataType']
+    family_upload_data = load_uploaded_file(request_json['familiesFile']['uploadedFileId'])
+    header = [col.split()[0].lower() for col in family_upload_data[0]]
+    if not ('project' in header and 'family' in header):
+        return create_json_response({'error': 'Project and Family columns are required'}, status=400)
+    families_data = [dict(zip(header, row)) for row in family_upload_data[1:]]
+
+    family_qs = [Q(family_id=row['family'], project__name=row['project']) for row in families_data]
+    family_filter_q = family_qs[0]
+    for f_q in family_qs[1:]:
+        family_filter_q |= f_q
+    families = Family.objects.filter(family_filter_q)
+
+    warnings = []
+    if len(families) < len(families_data):
+        prefetch_related_objects(families, 'project')
+        family_models_set = {(f.family_id, f.project.name) for f in families}
+        requested_family_set = {(row['family'], row['project']) for row in families_data}
+        missing_families = ', '.join([f'{fam[0]} ({fam[1]})' for fam in sorted(requested_family_set - family_models_set)])
+        warnings.append(f'No match found for the following families: {missing_families}')
+
+    analysed_by_models = [
+        FamilyAnalysedBy(family=family, data_type=data_type, last_modified_date=datetime.now())
+        for family in families
+    ]
+    for ab in analysed_by_models:
+        ab.guid = f'FAB{randint(10**5, 10**6)}_{ab}'[:FamilyAnalysedBy.MAX_GUID_SIZE] # nosec
+    FamilyAnalysedBy.bulk_create(request.user, analysed_by_models)
+
+    return create_json_response({
+        'warnings': warnings,
+        'info': [f'Updated "analysed by" for {len(families)} families'],
+    })

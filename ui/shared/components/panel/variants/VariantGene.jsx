@@ -12,11 +12,11 @@ import {
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
+import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
-import { GenCC } from '../genes/GeneDetail'
+import { GenCC, ClingenLabel } from '../genes/GeneDetail'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -147,6 +147,19 @@ const mapLocusListStateToProps = state => ({
 
 export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
 
+const ClinGenRow = ({ value, label, href }) => (
+  <Table.Row>
+    <Table.Cell textAlign="right"><ClingenLabel value={value} /></Table.Cell>
+    <Table.Cell><a target="_blank" rel="noreferrer" href={href}>{label}</a></Table.Cell>
+  </Table.Row>
+)
+
+ClinGenRow.propTypes = {
+  value: PropTypes.string,
+  label: PropTypes.string,
+  href: PropTypes.string,
+}
+
 const GeneDetailSection = React.memo(({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
   if (!details && !showEmpty) {
     return null
@@ -179,6 +192,20 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     label: 'GENCC',
     showDetails: gene => gene.genCc?.classifications,
     detailsDisplay: gene => (<GenCC genCc={gene.genCc} />),
+  },
+  {
+    color: 'purple',
+    description: 'ClinGen Dosage Sensitivity',
+    label: 'ClinGen',
+    showDetails: gene => gene.clinGen,
+    detailsDisplay: gene => (
+      <NoBorderTable basic="very" compact="very">
+        {gene.clinGen.haploinsufficiency &&
+          <ClinGenRow value={gene.clinGen.haploinsufficiency} href={gene.clinGen.href} label="Haploinsufficiency" />}
+        {gene.clinGen.triplosensitivity &&
+          <ClinGenRow value={gene.clinGen.triplosensitivity} href={gene.clinGen.href} label="Triplosensitivity" />}
+      </NoBorderTable>
+    ),
   },
   {
     color: 'orange',
