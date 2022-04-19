@@ -222,13 +222,17 @@ class EsSearch(object):
     def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
-        has_location_filter = genes or intervals or rs_ids or variant_ids
+        has_location_filter = genes or intervals
 
         self._filter_custom(custom_query)
 
         if has_location_filter:
-            self.filter_by_location(
-                genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=locus)
+            self._filter(_location_filter(genes, intervals, locus))
+        elif variant_ids:
+            self.filter_by_variant_ids(variant_ids, locus=locus)
+
+        if rs_ids:
+            self._filter(Q('terms', rsid=rs_ids))
 
         self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
 
@@ -347,7 +351,7 @@ class EsSearch(object):
 
         return dataset_type
 
-    def filter_by_location(self, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None):
+    def filter_by_variant_ids(self, variant_ids, locus=None):
         genome_version = locus and locus.get('genomeVersion')
         variant_id_genome_versions = {variant_id: genome_version for variant_id in variant_ids or []}
         if variant_id_genome_versions and genome_version:
@@ -364,8 +368,8 @@ class EsSearch(object):
                         variant_id_genome_versions[lifted_variant_id] = lifted_genome_version
                         variant_ids.append(lifted_variant_id)
 
-        self._filter(_location_filter(genes, intervals, rs_ids, variant_ids, locus))
-        if not (genes or intervals or rs_ids) and len({genome_version for genome_version in variant_id_genome_versions.values()}) > 1:
+        self._filter(Q('terms', variantId=variant_ids))
+        if len({genome_version for genome_version in variant_id_genome_versions.values()}) > 1:
             self._filtered_variant_ids = variant_id_genome_versions
         return self
 
@@ -1392,8 +1396,12 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
     return Q('bool', must=sample_queries, _name=family_guid)
 
 
-def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
+def _location_filter(genes, intervals, location_filter):
     q = None
+
+    if genes:
+        q = Q('terms', geneIds=list(genes.keys()))
+
     if intervals:
         for interval in intervals:
             if interval.get('offset'):
@@ -1417,19 +1425,6 @@ def _location_filter(genes, intervals, rs_ids, variant_ids, location_filter):
                 q |= interval_q
             else:
                 q = interval_q
-
-    filters = [
-        {'geneIds': list((genes or {}).keys())},
-        {'rsid': rs_ids},
-        {'variantId': variant_ids},
-    ]
-    filters = [f for f in filters if next(iter(f.values()))]
-    if filters:
-        location_q = _build_or_filter('terms', filters)
-        if q:
-            q |= location_q
-        else:
-            q = location_q
 
     if location_filter and location_filter.get('excludeLocations'):
         return ~q
