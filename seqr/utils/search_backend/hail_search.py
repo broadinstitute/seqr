@@ -226,8 +226,8 @@ class HailSearch(object):
 
         self._load_table(intervals=parsed_intervals)
 
-
     def _filter_by_variant_ids(self, variant_ids):
+        # In production: support SV variant IDs?
         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
         # In production: if supporting multi-genome-version search, need to lift and re-filter variants
         intervals = [
@@ -235,7 +235,16 @@ class HailSearch(object):
             for chrom, pos, _, _ in variant_ids
         ]
         self._load_table(intervals=intervals)
-        raise NotImplementedError  # TODO
+
+        if len(variant_ids) == 1:
+            self.ht = self.ht.filter(self.ht.alleles==[variant_ids[0][2], variant_ids[0][3]])
+        else:
+            id_q = self._variant_id_q(*variant_ids[0])
+            for variant_id in variant_ids[1:]:
+                id_q |= self._variant_id_q(*variant_id)
+
+    def _variant_id_q(self, chrom, pos, ref, alt):
+        return (self.ht.locus==hl.locus(f'chr{chrom}', pos, reference_genome='GRCh38')) & (self.ht.alleles==[ref, alt])
 
     def _filter_custom(self, custom_query):
         if custom_query:
