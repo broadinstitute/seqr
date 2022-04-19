@@ -215,12 +215,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = None
         return pedigree_image
 
-    analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP) if ANALYST_USER_GROUP else [])
     def _process_result(result, family):
-        result['analysedBy'] = [{
-            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isAnalyst': ab.created_by in analyst_users},
-            'lastModifiedDate': ab.last_modified_date,
-        } for ab in family.familyanalysedby_set.all()]
+        result['analysedBy'] = _get_json_for_models(family.familyanalysedby_set.all(), user=user, is_analyst=is_analyst)
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
