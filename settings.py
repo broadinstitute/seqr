@@ -237,7 +237,7 @@ ANYMAIL = {
 }
 
 TEMPLATE_DIRS = [
-    os.path.join(BASE_DIR, 'ui/dist'),
+    os.path.join(BASE_DIR, 'static', 'ui/dist'),
 ]
 
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
