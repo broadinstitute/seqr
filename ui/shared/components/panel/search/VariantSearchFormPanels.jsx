@@ -27,6 +27,7 @@ import {
   HIGH_IMPACT_GROUPS_SPLICE,
   MODERATE_IMPACT_GROUPS,
   SV_GROUPS,
+  LOCUS_FIELD_NAME,
 } from './constants'
 
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
@@ -213,7 +214,7 @@ export const FREQUENCY_PANEL = {
 }
 
 export const LOCATION_PANEL = {
-  name: 'locus',
+  name: LOCUS_FIELD_NAME,
   headerProps: { title: 'Location' },
   fields: LOCATION_FIELDS,
   fieldLayout: locationFieldLayout,
