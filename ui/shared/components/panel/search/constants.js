@@ -2,7 +2,7 @@ import React from 'react'
 import { Form } from 'semantic-ui-react'
 import styled from 'styled-components'
 import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
-import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
@@ -23,7 +23,7 @@ import {
   VEP_GROUP_SV_NEW,
 } from 'shared/utils/constants'
 
-import { LocusListItemsFilter } from './LocusListItemsFilter'
+import LocusListItemsFilter from './LocusListItemsFilter'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
@@ -349,15 +349,28 @@ const SV_FREQUENCIES = [
 
 export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
+export const LOCUS_FIELD_NAME = 'locus'
+export const PANEL_APP_FIELD_NAME = 'panelAppItems'
 export const LOCATION_FIELDS = [
   {
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
     component: LocusListItemsFilter,
-    rows: 8,
-    width: 7,
+    width: 16,
+    shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
   },
+  ...['green', 'amber', 'red', 'none'].map(color => ({ // TODO constant
+    key: color,
+    name: `${PANEL_APP_FIELD_NAME}.${color}`,
+    iconColor: color,
+    label: color === 'none' ? 'Genes' : `${camelcaseToTitlecase(color)} Genes`,
+    labelHelp: 'A list of genes, can be separated by commas or whitespace',
+    component: LocusListItemsFilter,
+    inline: true,
+    width: 4,
+    shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
+  })),
   {
     name: 'rawVariantItems',
     label: 'Variants',
@@ -365,14 +378,14 @@ export const LOCATION_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'TextArea',
     rows: 8,
-    width: 4,
+    width: 16,
   },
   {
     name: 'excludeLocations',
     component: BooleanCheckbox,
     label: 'Exclude locations',
     labelHelp: 'Search for variants not in the specified genes/ intervals',
-    width: 3,
+    width: 5,
   },
 ]
 
