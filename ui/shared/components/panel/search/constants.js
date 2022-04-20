@@ -364,7 +364,7 @@ export const LOCATION_FIELDS = [
     width: 7,
     shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
   },
-  ...PANEL_APP_COLORS.map(color => ({ // TODO constant
+  ...PANEL_APP_COLORS.map(color => ({
     key: color,
     name: `${PANEL_APP_FIELD_NAME}.${color}`,
     iconColor: color,
