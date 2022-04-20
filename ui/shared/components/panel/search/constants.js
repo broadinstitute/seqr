@@ -21,6 +21,7 @@ import {
   PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
   VEP_GROUP_SV_NEW,
+  PANEL_APP_CONFIDENCE_LEVELS,
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
@@ -351,6 +352,9 @@ export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
 export const LOCUS_FIELD_NAME = 'locus'
 export const PANEL_APP_FIELD_NAME = 'panelAppItems'
+const PANEL_APP_COLORS = [...new Set(
+  Object.entries(PANEL_APP_CONFIDENCE_LEVELS).sort((a, b) => b[0] - a[0]).map(config => config[1]),
+)]
 export const LOCATION_FIELDS = [
   {
     name: LOCUS_LIST_ITEMS_FIELD.name,
@@ -360,7 +364,7 @@ export const LOCATION_FIELDS = [
     width: 7,
     shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
   },
-  ...['green', 'amber', 'red', 'none'].map(color => ({ // TODO constant
+  ...PANEL_APP_COLORS.map(color => ({ // TODO constant
     key: color,
     name: `${PANEL_APP_FIELD_NAME}.${color}`,
     iconColor: color,

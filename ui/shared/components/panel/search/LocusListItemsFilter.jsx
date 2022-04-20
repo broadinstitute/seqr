@@ -4,16 +4,13 @@ import { FormSpy } from 'react-final-form'
 
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
 import { ColoredIcon } from 'shared/components/StyledComponents'
-import { PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } from 'shared/utils/constants'
+import { PANEL_APP_CONFIDENCE_LEVELS, PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_CONFIDENCE_LEVEL_COLORS } from 'shared/utils/constants'
 
-const PA_ICON_PROPS = Object.entries({ 1: 'red', 2: 'amber', 3: 'green' }).reduce((acc, [confidence, color]) => ({ // TODO constant
-  ...acc,
-  [color]: {
-    name: 'circle',
-    title: PANEL_APP_CONFIDENCE_DESCRIPTION[confidence],
-    color: PANEL_APP_CONFIDENCE_LEVEL_COLORS[confidence],
-  },
-}), {})
+const PA_ICON_PROPS = Object.entries(PANEL_APP_CONFIDENCE_LEVELS).reduce((acc, [confidence, colorKey]) => {
+  const color = PANEL_APP_CONFIDENCE_LEVEL_COLORS[confidence]
+  return color ?
+    { ...acc, [colorKey]: { name: 'circle', color, title: PANEL_APP_CONFIDENCE_DESCRIPTION[confidence] } } : acc
+}, {})
 
 const SUBSCRIPTION = { values: true }
 
