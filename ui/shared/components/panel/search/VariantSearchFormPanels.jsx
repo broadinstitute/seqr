@@ -174,6 +174,17 @@ const freqFieldLayout = fieldComponents => (
   </Form.Field>
 )
 
+const locationFieldLayout = fieldComponents => ([
+  <Form.Field key="genes" width={9}>
+    {fieldComponents[0]}
+    <VerticalSpacer height={10} />
+    {fieldComponents[2]}
+  </Form.Field>,
+  <Form.Field key="variants" width={5}>
+    {fieldComponents[1]}
+  </Form.Field>,
+])
+
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
@@ -204,6 +215,7 @@ export const LOCATION_PANEL = {
   name: 'locus',
   headerProps: { title: 'Location' },
   fields: LOCATION_FIELDS,
+  fieldLayout: locationFieldLayout,
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
 }
 

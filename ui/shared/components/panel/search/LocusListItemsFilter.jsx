@@ -50,7 +50,8 @@ const PanelAppItemsFilter = ({ color, value, onChange, ...props }) => {
     <BaseSemanticInput
       {...props}
       inputType="TextArea"
-      width={3}
+      width={4}
+      inline
       label={iconLabel}
       value={value[color]}
       onChange={onChangeInner}

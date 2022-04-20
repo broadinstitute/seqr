@@ -356,7 +356,7 @@ export const LOCATION_FIELDS = [
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
     component: LocusListItemsFilter,
     rows: 8,
-    width: 7,
+    width: 16,
   },
   {
     name: 'rawVariantItems',
@@ -365,14 +365,14 @@ export const LOCATION_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'TextArea',
     rows: 8,
-    width: 4,
+    width: 16,
   },
   {
     name: 'excludeLocations',
     component: BooleanCheckbox,
     label: 'Exclude locations',
     labelHelp: 'Search for variants not in the specified genes/ intervals',
-    width: 3,
+    width: 5,
   },
 ]
 
