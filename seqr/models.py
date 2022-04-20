@@ -347,18 +347,26 @@ class Family(ModelWithGUID):
         audit_fields = {'analysis_status'}
 
 
-# TODO should be an ArrayField directly on family once family fields have audit trail (https://github.com/broadinstitute/seqr-private/issues/449)
 class FamilyAnalysedBy(ModelWithGUID):
+    DATA_TYPE_CHOICES = (
+        ('SNP', 'WES/WGS'),
+        ('SV', 'gCNV/SV'),
+        ('RNA', 'RNAseq'),
+        ('MT', 'Mitochondrial'),
+        ('STR', 'STR'),
+    )
+
     family = models.ForeignKey(Family, on_delete=models.CASCADE)
+    data_type = models.CharField(max_length=3, choices=DATA_TYPE_CHOICES)
 
     def __unicode__(self):
-        return '{}_{}'.format(self.family.guid, self.created_by)
+        return '{}_{}_{}'.format(self.family.guid, self.created_by, self.data_type)
 
     def _compute_guid(self):
         return 'FAB%06d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        json_fields = ['last_modified_date', 'created_by']
+        json_fields = ['last_modified_date', 'created_by', 'data_type']
 
 
 class FamilyNote(ModelWithGUID):

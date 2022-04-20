@@ -189,14 +189,14 @@ def _get_analyst_projects():
     return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
 
 
-def get_project_guids_user_can_view(user):
+def get_project_guids_user_can_view(user, limit_data_manager=False):
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:
         return project_guids
 
     is_data_manager = user_is_data_manager(user)
-    if is_data_manager:
+    if is_data_manager and not limit_data_manager:
         projects = Project.objects.all()
     else:
         projects = get_local_access_projects(user)

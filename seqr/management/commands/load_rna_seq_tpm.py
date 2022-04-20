@@ -84,7 +84,7 @@ class Command(BaseCommand):
         gene_id = row.pop(GENE_ID_COL)
         if any(tpm for tpm in row.values() if tpm != '0.0'):
             for sample_id, tpm in row.items():
-                if not sample_id.startswith('GTEX'):
+                if tpm != '0.0' and not sample_id.startswith('GTEX'):
                     yield sample_id, {GENE_ID_COL: gene_id, 'tpm': tpm}
 
     def handle(self, *args, **options):
