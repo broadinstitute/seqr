@@ -174,14 +174,15 @@ const freqFieldLayout = fieldComponents => (
   </Form.Field>
 )
 
+const VARIANT_FIELD_INDEX = 5 // TODO compute
 const locationFieldLayout = fieldComponents => ([
   <Form.Field key="genes" width={9}>
-    {fieldComponents[0]}
+    {fieldComponents.slice(0, VARIANT_FIELD_INDEX)}
     <VerticalSpacer height={10} />
-    {fieldComponents[2]}
+    {fieldComponents[VARIANT_FIELD_INDEX + 1]}
   </Form.Field>,
   <Form.Field key="variants" width={5}>
-    {fieldComponents[1]}
+    {fieldComponents[VARIANT_FIELD_INDEX]}
   </Form.Field>,
 ])
 
