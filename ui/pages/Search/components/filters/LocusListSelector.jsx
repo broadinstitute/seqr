@@ -27,11 +27,10 @@ class BaseLocusListDropdown extends React.Component {
 
     if (prevProps.locusList.rawItems !== locusList.rawItems) {
       const { locusListGuid } = locusList
-      let panelAppItems
 
       if (locusList.paLocusList) {
         const CONFIDENCE_COLORS = { 0: 'none', 1: 'red', 2: 'amber', 3: 'green', 4: 'green' } // TODO constant
-        panelAppItems = locusList.items?.reduce((acc, item) => {
+        const panelAppItems = locusList.items?.reduce((acc, item) => {
           const color = CONFIDENCE_COLORS[item.pagene?.confidenceLevel || 0]
           if (color in acc) {
             acc[color] = [acc[color], item.display].filter(val => val).join(', ')

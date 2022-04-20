@@ -10,14 +10,13 @@ import { LOCUS_LIST_ITEMS_FIELD } from 'shared/utils/constants'
 
 import { LOCUS_FIELD_NAME, PANEL_APP_FIELD_NAME } from './constants'
 
-const SEARCH_LOCUS_FIELD_NAME = `search.${LOCUS_FIELD_NAME}`
-const GENE_ITEMS_LOCUS_FIELD_NAME = `${SEARCH_LOCUS_FIELD_NAME}.${LOCUS_LIST_ITEMS_FIELD.name}`
-const PANEL_APP_LOCUS_FIELD_NAME = `${SEARCH_LOCUS_FIELD_NAME}.${PANEL_APP_FIELD_NAME}`
 const DECORATORS = [
   createDecorator({
-    field: PANEL_APP_LOCUS_FIELD_NAME,
+    field: `search.${LOCUS_FIELD_NAME}.${PANEL_APP_FIELD_NAME}`,
     updates: {
-      [GENE_ITEMS_LOCUS_FIELD_NAME]: locusValue => locusValue && toUniqueCsvString(Object.values(locusValue)),
+      [`search.${LOCUS_FIELD_NAME}.${LOCUS_LIST_ITEMS_FIELD.name}`]: locusValue => (
+        locusValue && toUniqueCsvString(Object.values(locusValue))
+      ),
     },
   }),
 ]

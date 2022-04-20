@@ -357,7 +357,7 @@ export const LOCATION_FIELDS = [
     label: LOCUS_LIST_ITEMS_FIELD.label,
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
     component: LocusListItemsFilter,
-    width: 16,
+    width: 7,
     shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
   },
   ...['green', 'amber', 'red', 'none'].map(color => ({ // TODO constant
@@ -367,8 +367,7 @@ export const LOCATION_FIELDS = [
     label: color === 'none' ? 'Genes' : `${camelcaseToTitlecase(color)} Genes`,
     labelHelp: 'A list of genes, can be separated by commas or whitespace',
     component: LocusListItemsFilter,
-    inline: true,
-    width: 4,
+    width: 2,
     shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
   })),
   {
@@ -378,14 +377,14 @@ export const LOCATION_FIELDS = [
     component: BaseSemanticInput,
     inputType: 'TextArea',
     rows: 8,
-    width: 16,
+    width: 4,
   },
   {
     name: 'excludeLocations',
     component: BooleanCheckbox,
     label: 'Exclude locations',
     labelHelp: 'Search for variants not in the specified genes/ intervals',
-    width: 5,
+    width: 3,
   },
 ]
 
