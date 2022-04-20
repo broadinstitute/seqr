@@ -371,7 +371,8 @@ export const LOCATION_FIELDS = [
     label: color === 'none' ? 'Genes' : `${camelcaseToTitlecase(color)} Genes`,
     labelHelp: 'A list of genes, can be separated by commas or whitespace',
     component: LocusListItemsFilter,
-    width: 2,
+    inline: true,
+    width: 4,
     shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
   })),
   {

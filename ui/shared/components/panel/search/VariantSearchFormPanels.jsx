@@ -179,7 +179,7 @@ const VARIANT_FIELD_INDEX = 5 // TODO compute
 const locationFieldLayout = fieldComponents => ([
   <Form.Field key="genes" width={9}>
     {fieldComponents.slice(0, VARIANT_FIELD_INDEX)}
-    <VerticalSpacer height={10} />
+    <VerticalSpacer height={15} />
     {fieldComponents[VARIANT_FIELD_INDEX + 1]}
   </Form.Field>,
   <Form.Field key="variants" width={5}>
