@@ -175,18 +175,6 @@ const freqFieldLayout = fieldComponents => (
   </Form.Field>
 )
 
-const VARIANT_FIELD_INDEX = 5 // TODO compute
-const locationFieldLayout = fieldComponents => ([
-  <Form.Field key="genes" width={9}>
-    {fieldComponents.slice(0, VARIANT_FIELD_INDEX)}
-    <VerticalSpacer height={15} />
-    {fieldComponents[VARIANT_FIELD_INDEX + 1]}
-  </Form.Field>,
-  <Form.Field key="variants" width={5}>
-    {fieldComponents[VARIANT_FIELD_INDEX]}
-  </Form.Field>,
-])
-
 export const ANNOTATION_PANEL = {
   name: 'annotations',
   headerProps: { title: 'Annotations', inputProps: JsonSelectPropsWithAll(ANNOTATION_FILTER_OPTIONS, ALL_ANNOTATION_FILTER_DETAILS) },
@@ -217,7 +205,7 @@ export const LOCATION_PANEL = {
   name: LOCUS_FIELD_NAME,
   headerProps: { title: 'Location' },
   fields: LOCATION_FIELDS,
-  fieldLayout: locationFieldLayout,
+  fieldLayout: fieldComponents => <Form.Field>{fieldComponents}</Form.Field>,
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
 }
 

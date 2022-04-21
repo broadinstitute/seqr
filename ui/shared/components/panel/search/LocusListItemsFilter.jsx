@@ -19,6 +19,7 @@ const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, fil
     {({ values }) => (!shouldShow || shouldShow(values?.search?.locus || {})) && createElement(
       filterComponent || BaseSemanticInput, {
         inputType: 'TextArea',
+        inline: true,
         rows: 8,
         label: (
           PA_ICON_PROPS[iconColor] ? (
