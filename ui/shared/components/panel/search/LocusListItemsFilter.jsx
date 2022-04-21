@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import React from 'react'
+import React, { createElement } from 'react'
 import { FormSpy } from 'react-final-form'
 
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
@@ -14,21 +14,23 @@ const PA_ICON_PROPS = Object.entries(PANEL_APP_CONFIDENCE_LEVELS).reduce((acc, [
 
 const SUBSCRIPTION = { values: true }
 
-const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, ...props }) => (
+const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, filterComponent, ...props }) => (
   <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => (shouldShow(values?.search?.locus || {})) && (
-      <BaseSemanticInput
-        inputType="TextArea"
-        rows={8}
-        label={PA_ICON_PROPS[iconColor] ? (
-          <label>
-            <ColoredIcon {...PA_ICON_PROPS[iconColor]} />
-            {label}
-          </label>
-        ) : label}
-        disabled={shouldDisable(values?.search?.locus || {})}
-        {...props}
-      />
+    {({ values }) => (!shouldShow || shouldShow(values?.search?.locus || {})) && createElement(
+      filterComponent || BaseSemanticInput, {
+        inputType: 'TextArea',
+        rows: 8,
+        label: (
+          PA_ICON_PROPS[iconColor] ? (
+            <label>
+              <ColoredIcon {...PA_ICON_PROPS[iconColor]} />
+              {label}
+            </label>
+          ) : label
+        ),
+        disabled: shouldDisable(values?.search?.locus || {}),
+        ...props,
+      },
     )}
   </FormSpy>
 )
@@ -36,8 +38,9 @@ const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, ...
 LocusListItemsFilter.propTypes = {
   label: PropTypes.node,
   iconColor: PropTypes.string,
-  shouldShow: PropTypes.func.isRequired,
   shouldDisable: PropTypes.func.isRequired,
+  shouldShow: PropTypes.func,
+  filterComponent: PropTypes.elementType,
 }
 
 export default LocusListItemsFilter

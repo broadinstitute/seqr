@@ -384,15 +384,16 @@ export const LOCATION_FIELDS = [
     labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants can be represented by rsID or in the form <chrom>-<pos>-<ref>-<alt>',
     component: LocusListItemsFilter,
     width: 16,
-    shouldShow: () => true,
     shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
   },
   {
     name: 'excludeLocations',
-    component: BooleanCheckbox,
+    component: LocusListItemsFilter,
+    filterComponent: BooleanCheckbox,
     label: 'Exclude locations',
     labelHelp: 'Search for variants not in the specified genes/ intervals',
     width: 5,
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
   },
 ]
 
