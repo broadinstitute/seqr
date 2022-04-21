@@ -353,6 +353,7 @@ MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL = 'matchmaker_seqr_match'
 
 SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL = 'seqr-data-loading'
 SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL = 'anvil-data-loading'
+SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL = 'seqr_loading_notifications'
 
 #########################################################
 #  Social auth specific settings
@@ -395,6 +396,9 @@ TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECO
 TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
 
 SERVICE_ACCOUNT_FOR_ANVIL = None
+
+AIRFLOW_API_AUDIENCE = os.environ.get('AIRFLOW_API_AUDIENCE')
+AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
 
 if TERRA_API_ROOT_URL:
     SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
