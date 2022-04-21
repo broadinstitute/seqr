@@ -148,17 +148,19 @@ class HailSearch(object):
     def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
-        has_location_filter = genes or intervals or variant_ids
-
-        self._filter_custom(custom_query)
+        has_location_filter = genes or intervals
 
         if has_location_filter:
-            self.filter_by_location(genes=genes, intervals=intervals, variant_ids=variant_ids, locus=locus)
+            self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'))
+        elif variant_ids:
+            self.filter_by_variant_ids(variant_ids)
         else:
             self._load_table()
 
         if rs_ids:
             self.ht = self.ht.filter(hl.set(rs_ids).contains(self.ht.rsid))
+
+        self._filter_custom(custom_query)
 
         self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
 
@@ -204,29 +206,7 @@ class HailSearch(object):
 
         self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
 
-    def filter_by_location(self, genes=None, intervals=None, variant_ids=None, locus=None):
-        if genes or intervals:
-            self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'))
-        elif variant_ids:
-            self._filter_by_variant_ids(variant_ids)
-
-    def _filter_by_intervals(self, genes, intervals, exclude_locations):
-        parsed_intervals = None
-        if genes or parsed_intervals:
-            parsed_intervals = [
-                hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in
-                ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-                    # long-term we should check project to get correct genome version
-                    'chr{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
-            ]
-
-        if exclude_locations:
-            self._load_table()
-            self.ht = hl.filter_intervals(self.ht, parsed_intervals, keep=False)
-        else:
-            self._load_table(intervals=parsed_intervals)
-
-    def _filter_by_variant_ids(self, variant_ids):
+    def filter_by_variant_ids(self, variant_ids):
         # In production: support SV variant IDs?
         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
         # In production: if supporting multi-genome-version search, need to lift and re-filter variants
@@ -245,6 +225,22 @@ class HailSearch(object):
 
     def _variant_id_q(self, chrom, pos, ref, alt):
         return (self.ht.locus==hl.locus(f'chr{chrom}', pos, reference_genome='GRCh38')) & (self.ht.alleles==[ref, alt])
+
+    def _filter_by_intervals(self, genes, intervals, exclude_locations):
+        parsed_intervals = None
+        if genes or parsed_intervals:
+            parsed_intervals = [
+                hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in
+                ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+                    # long-term we should check project to get correct genome version
+                    'chr{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
+            ]
+
+        if exclude_locations:
+            self._load_table()
+            self.ht = hl.filter_intervals(self.ht, parsed_intervals, keep=False)
+        else:
+            self._load_table(intervals=parsed_intervals)
 
     def _filter_custom(self, custom_query):
         if custom_query:
