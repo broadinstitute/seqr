@@ -284,7 +284,7 @@ def _construct_dag_variables(project, data_path, sample_type):
         "projects_to_run": [project.guid],
     }
     return dag_variables
-    
+
 def _wait_for_dag_variable_update(dag_id, project):
     updated_project = project.guid
     dag_projects = _get_task_ids(dag_id)
