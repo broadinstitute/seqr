@@ -363,20 +363,20 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                       '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL),
                       json={'Error': '404 Client Error'},
                       status=404)
-        
+
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         project2 = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME2)
-        
+
         logger_calls = [
             mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
                       self.manager_user, detail=['HG00735', 'NA19675', 'NA19678']),
             mock.call(f'404 Client Error: Not Found for url: {MOCK_AIRFLOW_URL}/api/v1/variables/AnVIL_WES',
                       self.manager_user)
         ]
-        
+
         mock_api_logger.error.assert_has_calls(logger_calls)
-        
+
         slack_message_on_failure = """
         ERROR triggering AnVIL loading for project {guid}: 404 Client Error: Not Found for url: {airflow_url}/api/v1/variables/AnVIL_WES 
         
