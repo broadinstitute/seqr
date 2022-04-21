@@ -242,7 +242,7 @@ TEMPLATE_DIRS = [
 ]
 
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE')
-if DEPLOYMENT_TYPE in {'prod', 'dev', 'prototype'}:
+if DEPLOYMENT_TYPE in {'prod', 'dev'}:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DEBUG = False
