@@ -110,7 +110,7 @@ class HailSearch(object):
         self.samples_by_family = defaultdict(dict)
         samples = Sample.objects.filter(is_active=True, individual__family__in=families)
 
-        data_sources = {s.elasticsearch_index for s in samples}
+        data_sources = {s.elasticsearch_index for s in samples} # In production: should use a different model field
         if len(data_sources) > 1:
             raise InvalidSearchException(
                 f'Search is only enabled on a single data source, requested {", ".join(data_sources)}')
@@ -137,6 +137,7 @@ class HailSearch(object):
         ).rows()
 
     def _sample_table(self, sample):
+        # In production: should use a different model field
         return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht')
 
     @classmethod
