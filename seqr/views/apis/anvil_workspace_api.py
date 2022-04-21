@@ -269,7 +269,7 @@ def _trigger_data_loading(project, data_path, sample_type, request):
 
         dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
         _wait_for_dag_variable_update(dag_id, project)
-        
+
         _trigger_dag(dag_id)
     except Exception as e:
         logger.error(str(e), request.user)
