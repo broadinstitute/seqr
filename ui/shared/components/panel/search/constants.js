@@ -1,7 +1,7 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
 import styled from 'styled-components'
-import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
+import { RadioGroup, BooleanCheckbox, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -352,6 +352,7 @@ export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
 export const LOCUS_FIELD_NAME = 'locus'
 export const PANEL_APP_FIELD_NAME = 'panelAppItems'
+const VARIANT_FIELD_NAME = 'rawVariantItems'
 const PANEL_APP_COLORS = [...new Set(
   Object.entries(PANEL_APP_CONFIDENCE_LEVELS).sort((a, b) => b[0] - a[0]).map(config => config[1]),
 )]
@@ -363,6 +364,7 @@ export const LOCATION_FIELDS = [
     component: LocusListItemsFilter,
     width: 16,
     shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
   },
   ...PANEL_APP_COLORS.map(color => ({
     key: color,
@@ -374,15 +376,16 @@ export const LOCATION_FIELDS = [
     inline: true,
     width: 4,
     shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
   })),
   {
-    name: 'rawVariantItems',
+    name: VARIANT_FIELD_NAME,
     label: 'Variants',
     labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants can be represented by rsID or in the form <chrom>-<pos>-<ref>-<alt>',
-    component: BaseSemanticInput,
-    inputType: 'TextArea',
-    rows: 8,
+    component: LocusListItemsFilter,
     width: 16,
+    shouldShow: () => true,
+    shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
   },
   {
     name: 'excludeLocations',

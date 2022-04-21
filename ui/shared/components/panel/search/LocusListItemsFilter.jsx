@@ -14,9 +14,9 @@ const PA_ICON_PROPS = Object.entries(PANEL_APP_CONFIDENCE_LEVELS).reduce((acc, [
 
 const SUBSCRIPTION = { values: true }
 
-const LocusListItemsFilter = ({ shouldShow, iconColor, label, ...props }) => (
+const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, ...props }) => (
   <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => shouldShow(values?.search?.locus || {}) && (
+    {({ values }) => (shouldShow(values?.search?.locus || {})) && (
       <BaseSemanticInput
         inputType="TextArea"
         rows={8}
@@ -26,6 +26,7 @@ const LocusListItemsFilter = ({ shouldShow, iconColor, label, ...props }) => (
             {label}
           </label>
         ) : label}
+        disabled={shouldDisable(values?.search?.locus || {})}
         {...props}
       />
     )}
@@ -33,9 +34,10 @@ const LocusListItemsFilter = ({ shouldShow, iconColor, label, ...props }) => (
 )
 
 LocusListItemsFilter.propTypes = {
-  label: PropTypes.string,
+  label: PropTypes.node,
   iconColor: PropTypes.string,
-  shouldShow: PropTypes.func,
+  shouldShow: PropTypes.func.isRequired,
+  shouldDisable: PropTypes.func.isRequired,
 }
 
 export default LocusListItemsFilter
