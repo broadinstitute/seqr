@@ -307,7 +307,7 @@ def _get_task_ids(dag_id):
     tasks = airflow_response['tasks']
     task_ids = [task_dict['task_id'] for task_dict in tasks]
     return task_ids
-    
+
 
 def _trigger_dag(dag_id):
     endpoint = 'dags/{}/dagRuns'.format(dag_id)

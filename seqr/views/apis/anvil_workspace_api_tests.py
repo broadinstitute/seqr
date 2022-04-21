@@ -319,7 +319,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(responses.calls[2].request.method, 'GET')
         self.assertEqual(responses.calls[2].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
         self.assertEqual(responses.calls[2].response.json(), UPDATE_DAG_TASKS_RESP)
-        
+
         # trigger dag
         self.assertEqual(responses.calls[3].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
         self.assertEqual(responses.calls[3].request.method, 'POST')
