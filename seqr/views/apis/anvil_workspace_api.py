@@ -318,7 +318,7 @@ def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
     # Obtain an OpenID Connect (OIDC) token from metadata server or using service
     # account.
     google_open_id_connect_token = id_token.fetch_id_token(Request(), AIRFLOW_API_AUDIENCE)
-    
+
     webserver_url = f'{AIRFLOW_WEBSERVER_URL}/api/v1/{endpoint}'
     resp = requests.request(
         method, webserver_url,
