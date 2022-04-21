@@ -302,7 +302,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
         # Test triggering anvil dags
         self.assertEqual(len(responses.calls), 4)
-        
+
         # update variables
         self.assertEqual(responses.calls[0].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
         self.assertEquals(responses.calls[0].request.method, "PATCH")
@@ -401,7 +401,6 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(responses.calls[0].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
         self.assertEquals(responses.calls[0].request.method, "PATCH")
         self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-        self.assertEquals(responses.calls[0].response.json(), {'Error': '404 Client Error'})
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed

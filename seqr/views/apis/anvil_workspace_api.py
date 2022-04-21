@@ -264,7 +264,7 @@ def _trigger_data_loading(project, data_path, sample_type, request):
         genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=sample_type)
 
         updated_anvil_variables = _construct_dag_variables(project, data_path, sample_type)
-    
+
         _update_variables(genome_test_type, updated_anvil_variables)
 
         dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
