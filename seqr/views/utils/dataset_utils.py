@@ -3,6 +3,7 @@ import gzip
 from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
+from tqdm import tqdm
 import random
 
 from seqr.models import Sample, Individual, Family, Project
@@ -305,7 +306,7 @@ def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping,
         header = _parse_tsv_row(next(f))
         validate_header(header)
 
-        for line in f:
+        for line in tqdm(f, unit=' rows'):
             row = dict(zip(header, _parse_tsv_row(line)))
             for sample_id, row_dict in parse_row(row):
                 gene_id = row_dict['gene_id']

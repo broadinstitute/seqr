@@ -1265,13 +1265,17 @@ export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
   4: 'Green, highest level of confidence; a gene from 3 or 4 sources.',
 }
 
-export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = {
+export const PANEL_APP_CONFIDENCE_LEVELS = {
   0: 'none',
-  1: VARIANT_ICON_COLORS.red,
-  2: VARIANT_ICON_COLORS.amber,
-  3: VARIANT_ICON_COLORS.green,
-  4: VARIANT_ICON_COLORS.green,
+  1: 'red',
+  2: 'amber',
+  3: 'green',
+  4: 'green',
 }
+
+export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = Object.entries(PANEL_APP_CONFIDENCE_LEVELS).reduce(
+  (acc, [confidence, color]) => ({ ...acc, [confidence]: VARIANT_ICON_COLORS[color] }), {},
+)
 
 // Users
 

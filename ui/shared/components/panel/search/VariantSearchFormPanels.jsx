@@ -27,6 +27,7 @@ import {
   HIGH_IMPACT_GROUPS_SPLICE,
   MODERATE_IMPACT_GROUPS,
   SV_GROUPS,
+  LOCUS_FIELD_NAME,
 } from './constants'
 
 const LabeledSlider = React.lazy(() => import('./LabeledSlider'))
@@ -201,9 +202,10 @@ export const FREQUENCY_PANEL = {
 }
 
 export const LOCATION_PANEL = {
-  name: 'locus',
+  name: LOCUS_FIELD_NAME,
   headerProps: { title: 'Location' },
   fields: LOCATION_FIELDS,
+  fieldLayout: fieldComponents => <Form.Field>{fieldComponents}</Form.Field>,
   helpText: 'Filter by variant location. Entries can be either gene symbols (e.g. CFTR) or intervals in the form <chrom>:<start>-<end> (e.g. 4:6935002-87141054) or separated by tab. Variant entries can be either rsIDs (e.g. rs61753695) or variants in the form <chrom>-<pos>-<ref>-<alt> (e.g. 4-88047328-C-T). Entries can be separated by commas or whitespace.',
 }
 

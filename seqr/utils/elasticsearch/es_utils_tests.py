@@ -1227,7 +1227,22 @@ class EsUtilsTest(TestCase):
             str(cm.exception),
             'Location must be specified to search for compound heterozygous variants across many families')
 
-        search_model.search['locus'] = {'rawItems': 'DDX11L1'}
+        search_model.search['locus'] = {'rawVariantItems': 'chr2-A-C'}
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model, sort='cadd', num_results=2)
+        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
+
+        search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model, sort='cadd', num_results=2)
+        self.assertEqual(str(cm.exception), 'Invalid variant notation: found both variant IDs and rsIDs')
+
+        search_model.search['locus']['rawItems'] = 'chr27:1234-5678,2:40-400000000, ENSG00012345'
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model, sort='cadd', num_results=2)
+        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
+
+        search_model.search['locus']['rawItems'] = 'DDX11L1'
         search_model.save()
         with self.assertRaises(InvalidSearchException) as cm:
             get_es_variants(results_model)
@@ -1370,23 +1385,10 @@ class EsUtilsTest(TestCase):
             'in_silico': {'cadd': '11.5', 'sift': 'D'},
             'inheritance': {'mode': 'de_novo'},
             'customQuery': {'term': {'customFlag': 'flagVal'}},
+            'locus': {'rawItems': 'DDX11L1, chr2:1234-5678, chr7:100-10100%10', 'excludeLocations': True},
         })
+
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
-
-        # Test invalid locations
-        search_model.search['locus'] = {'rawItems': 'chr27:1234-5678,2:40-400000000, ENSG00012345', 'rawVariantItems': 'chr2-A-C'}
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid genes/intervals: chr27:1234-5678, chr2:40-400000000, ENSG00012345')
-
-        search_model.search['locus']['rawItems'] = 'DDX11L1, chr2:1234-5678, chr7:100-10100%10'
-        with self.assertRaises(InvalidSearchException) as cm:
-            get_es_variants(results_model, sort='cadd', num_results=2)
-        self.assertEqual(str(cm.exception), 'Invalid variants: chr2-A-C')
-        search_model.search['locus']['rawVariantItems'] = 'rs9876,chr2-1234-A-C'
-
-        # Test successful search
-        search_model.search['locus']['excludeLocations'] = True
         results_model.families.set(self.families)
         variants, total_results = get_es_variants(results_model, sort='cadd', num_results=2)
 
@@ -1403,12 +1405,10 @@ class EsUtilsTest(TestCase):
                         {'bool': {'must': [
                             {'range': {'xpos': {'lte': 2000001234}}},
                             {'range': {'xstop': {'gte': 2000005678}}}]}},
+                        {'terms': {'geneIds': ['ENSG00000223972']}},
                         {'bool': {'must': [
                             {'range': {'xpos': {'gte': 7000000001, 'lte': 7000001100}}},
                             {'range': {'xstop': {'gte': 7000009100, 'lte': 7000011100}}}]}},
-                        {'terms': {'geneIds': ['ENSG00000223972']}},
-                        {'terms': {'rsid': ['rs9876']}},
-                        {'terms': {'variantId': ['2-1234-A-C']}},
                     ]
                 }
             },
@@ -1708,6 +1708,7 @@ class EsUtilsTest(TestCase):
             'annotations': {'structural': ['DUP', 'CPX']},
             'qualityFilter': {'min_gq_sv': 20},
             'inheritance': {'mode': 'de_novo'},
+            'locus': {'rawVariantItems': 'rs9876'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1716,6 +1717,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, [PARSED_SV_WGS_VARIANT])
 
         self.assertExecutedSearch(filters=[
+            {'terms': {'rsid': ['rs9876']}},
             {'terms': {'transcriptConsequenceTerms': ['CPX', 'DUP']}},
             {'bool': {
                 'must': [{'term': {'samples': 'NA21234'}},
