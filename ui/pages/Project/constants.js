@@ -94,8 +94,6 @@ const SHOW_ASSIGNED_TO_ME_IN_REVIEW = 'SHOW_ASSIGNED_TO_ME_IN_REVIEW'
 const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'
 const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
 const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
-const SHOW_ANALYSED_BY_CMG = 'SHOW_ANALYSED_BY_CMG'
-const SHOW_NOT_ANALYSED_BY_CMG = 'SHOW_NOT_ANALYSED_BY_CMG'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 const SHOW_CLOSED = 'SHOW_CLOSED'
@@ -187,27 +185,17 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Analysed By Me',
-    createFilter: (individualsByGuid, user) => family => (
-      family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email)),
+    createFilter: (individualsByGuid, user) => family => family.analysedBy.some(
+      analysedBy => analysedBy.createdBy === (user.displayName || user.email),
+    ),
   },
   {
     value: SHOW_NOT_ANALYSED_BY_ME,
     category: 'Analysed By:',
     name: 'Not Analysed By Me',
-    createFilter: (individualsByGuid, user) => family => (
-      !family.analysedBy.map(analysedBy => analysedBy.createdBy.email).includes(user.email)),
-  },
-  {
-    value: SHOW_ANALYSED_BY_CMG,
-    category: 'Analysed By:',
-    name: 'Analysed By CMG',
-    createFilter: () => family => family.analysedBy.some(analysedBy => analysedBy.createdBy.isAnalyst),
-  },
-  {
-    value: SHOW_NOT_ANALYSED_BY_CMG,
-    category: 'Analysed By:',
-    name: 'Not Analysed By CMG',
-    createFilter: () => family => family.analysedBy.every(analysedBy => !analysedBy.createdBy.isAnalyst),
+    createFilter: (individualsByGuid, user) => family => family.analysedBy.every(
+      analysedBy => analysedBy.createdBy !== (user.displayName || user.email),
+    ),
   },
   {
     value: SHOW_ANALYSED,
@@ -366,7 +354,7 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
     format: status => (FAMILY_ANALYSIS_STATUS_LOOKUP[status] || {}).name,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
-  [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy.fullName || o.createdBy.email).join(',') },
+  [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy).join(',') },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
   ...FAMILY_NOTES_FIELDS.reduce((acc, { id }) => ({ ...acc, [id]: { format: formatNotes } }), {}),
 }).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})

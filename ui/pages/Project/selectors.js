@@ -316,7 +316,7 @@ const hasFamilySearch = createSelector(
 
 const getFamilySearchFields = family => ([
   family.displayName, family.familyId, (family.assignedAnalyst || {}).fullName, (family.assignedAnalyst || {}).email,
-  ...family.analysedBy.map(({ createdBy }) => `${createdBy.fullName}${createdBy.email}`),
+  ...family.analysedBy.map(({ createdBy }) => createdBy),
 ])
 
 const getFamiliesBySearchString = createSelector(

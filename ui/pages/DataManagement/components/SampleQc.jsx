@@ -1,10 +1,10 @@
 import { connect } from 'react-redux'
 
 import { validators } from 'shared/components/form/FormHelpers'
+import UploadFormPage from 'shared/components/page/UploadFormPage'
 
 import { getQcUploadStats } from '../selectors'
 import { uploadQcPipelineOutput } from '../reducers'
-import UploadFormPage from './UploadFormPage'
 
 const UPLOAD_FIELDS = [
   {

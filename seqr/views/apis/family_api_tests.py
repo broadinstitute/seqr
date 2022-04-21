@@ -233,12 +233,14 @@ class FamilyAPITest(AuthenticationTestCase):
         self.check_collaborator_login(url)
 
         # send request
-        response = self.client.post(url)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'dataType': 'SV'}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Collaborator User')
+        self.assertEqual(len(response_json[FAMILY_GUID]['analysedBy']), 2)
+        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][1]['createdBy'], 'Test Collaborator User')
+        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][1]['dataType'], 'SV')
 
     def test_update_family_analysis_groups(self):
         url = reverse(update_family_analysis_groups, args=[FAMILY_GUID])
