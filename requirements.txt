@@ -305,10 +305,7 @@ tqdm==4.62.3
     #   -r requirements.in
     #   hail
 typing-extensions==4.1.1
-    # via
-    #   aiohttp
-    #   asgiref
-    #   yarl
+    # via aiohttp
 urllib3==1.26.8
     # via
     #   botocore
