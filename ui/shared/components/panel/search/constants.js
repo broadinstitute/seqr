@@ -2,7 +2,7 @@ import React from 'react'
 import { Form } from 'semantic-ui-react'
 import styled from 'styled-components'
 import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
-import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
@@ -21,9 +21,10 @@ import {
   PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
   VEP_GROUP_SV_NEW,
+  PANEL_APP_CONFIDENCE_LEVELS,
 } from 'shared/utils/constants'
 
-import { LocusListItemsFilter } from './LocusListItemsFilter'
+import LocusListItemsFilter from './LocusListItemsFilter'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
@@ -349,15 +350,30 @@ const SV_FREQUENCIES = [
 
 export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
+export const LOCUS_FIELD_NAME = 'locus'
+export const PANEL_APP_FIELD_NAME = 'panelAppItems'
+const PANEL_APP_COLORS = [...new Set(
+  Object.entries(PANEL_APP_CONFIDENCE_LEVELS).sort((a, b) => b[0] - a[0]).map(config => config[1]),
+)]
 export const LOCATION_FIELDS = [
   {
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
     component: LocusListItemsFilter,
-    rows: 8,
     width: 7,
+    shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
   },
+  ...PANEL_APP_COLORS.map(color => ({
+    key: color,
+    name: `${PANEL_APP_FIELD_NAME}.${color}`,
+    iconColor: color,
+    label: color === 'none' ? 'Genes' : `${camelcaseToTitlecase(color)} Genes`,
+    labelHelp: 'A list of genes, can be separated by commas or whitespace',
+    component: LocusListItemsFilter,
+    width: 2,
+    shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
+  })),
   {
     name: 'rawVariantItems',
     label: 'Variants',

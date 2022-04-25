@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 import { Dropdown } from 'shared/components/form/Inputs'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
+import { PANEL_APP_CONFIDENCE_LEVELS } from 'shared/utils/constants'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
 class BaseLocusListDropdown extends React.Component {
@@ -27,21 +28,17 @@ class BaseLocusListDropdown extends React.Component {
 
     if (prevProps.locusList.rawItems !== locusList.rawItems) {
       const { locusListGuid } = locusList
-      let { rawItems } = locusList
 
       if (locusList.paLocusList) {
-        const CONFIDENCE_COLORS = { 0: 'none', 1: 'red', 2: 'amber', 3: 'green', 4: 'green' }
-        rawItems = locusList.items?.reduce((acc, item) => {
-          const color = CONFIDENCE_COLORS[item.pagene?.confidenceLevel || 0]
-          if (color in acc) {
-            acc[color] = [acc[color], item.display].filter(val => val).join(', ')
-          }
-
-          return acc
-        }, { green: '', amber: '', red: '', none: '' })
+        const panelAppItems = locusList.items?.reduce((acc, item) => {
+          const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
+          return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
+        }, {})
+        onChange({ locusListGuid, panelAppItems })
+      } else {
+        const { rawItems } = locusList
+        onChange({ locusListGuid, rawItems })
       }
-
-      onChange({ locusListGuid, rawItems })
     }
   }
 
