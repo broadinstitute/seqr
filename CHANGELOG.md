@@ -1,6 +1,11 @@
 # _seqr_ Changes
 
 ## dev
+
+## 4/25/22
+* Trigger airflow DAG on AnVIL loading request
+
+## 4/19/22
 * Add data type to family analysed by (REQUIRES DB MIGRATION)
 * Add ClinGen reference data (REQUIRES DB MIGRATION)
 
