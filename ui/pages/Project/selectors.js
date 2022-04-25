@@ -296,9 +296,9 @@ export const getFamiliesFilter = createSelector(
   getFamiliesTableState,
   familyTableState => familyTableState.familiesFilter || SHOW_ALL,
 )
-export const getFamiliesSearch = createSelector(
+const getFamiliesSearch = createSelector(
   getFamiliesTableState,
-  familyTableState => familyTableState.familiesSearch,
+  familyTableState => (familyTableState.familiesSearch || '').toLowerCase(),
 )
 export const getFamiliesSortOrder = createSelector(
   getFamiliesTableState,
