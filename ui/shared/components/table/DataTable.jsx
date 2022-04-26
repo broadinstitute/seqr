@@ -10,7 +10,7 @@ import TableLoading from './TableLoading'
 
 const TableContainer = styled.div`
   overflow-x: ${props => (props.horizontalScroll ? 'scroll' : 'inherit')};
-  overflow-y: auto;
+  overflow-y: inherit;
   max-height: ${props => (props.maxHeight || 'inherit')};
 `
 
