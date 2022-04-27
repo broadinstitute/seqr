@@ -1,5 +1,4 @@
 from collections import defaultdict
-from django.db.models import prefetch_related_objects, Prefetch
 import logging
 import redis
 
