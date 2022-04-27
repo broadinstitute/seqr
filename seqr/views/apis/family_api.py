@@ -44,6 +44,8 @@ def family_page_data(request, family_guid):
     for sample in outlier_samples:
         individual_guid = response['samplesByGuid'][sample.guid]['individualGuid']
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
+    if sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqtpm=None):
+        response['familiesByGuid'][family_guid]['hasRnaTpmData'] = True
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}

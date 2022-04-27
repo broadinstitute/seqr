@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListsByGuid, getRnaSeqDataByFamilyGene } from 'redux/selectors'
+import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
   PANEL_APP_CONFIDENCE_DESCRIPTION,
@@ -17,6 +17,7 @@ import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
 import { GenCC, ClingenLabel } from '../genes/GeneDetail'
+import { getRnaSeqOutilerDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -291,7 +292,7 @@ const GENE_DETAIL_SECTIONS = [
     color: 'pink',
     description: 'RNA-Seq Outlier',
     label: 'RNA-Seq',
-    showDetails: (gene, rnaSeqData) => rnaSeqData?.significantOutliers && rnaSeqData.significantOutliers[gene.geneId],
+    showDetails: (gene, rnaSeqData) => rnaSeqData && rnaSeqData[gene.geneId],
     detailsDisplay: (gene, rnaSeqData) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
@@ -305,7 +306,7 @@ const GENE_DETAIL_SECTIONS = [
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {Object.entries(rnaSeqData.significantOutliers[gene.geneId]).map(([individual, data]) => (
+            {Object.entries(rnaSeqData[gene.geneId]).map(([individual, data]) => (
               <Table.Row key={individual}>
                 <Table.HeaderCell>{individual}</Table.HeaderCell>
                 {RNA_SEQ_DETAIL_FIELDS.map(
@@ -414,7 +415,7 @@ const getGeneConsequence = (geneId, variant) => {
 }
 
 const BaseVariantGene = React.memo((
-  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, rnaSeqData },
+  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, rnaSeqData },
 ) => {
   const geneConsequence = getGeneConsequence(geneId, variant)
 
@@ -486,14 +487,14 @@ const BaseVariantGene = React.memo((
     <div>
       {geneSummary}
       {!showInlineDetails && geneDetails}
-      {rnaSeqData?.tpms && rnaSeqData.tpms[gene.geneId] && (
+      {hasRnaTpmData && (
         <Modal
           trigger={<Button basic compact color="blue" size="mini" content="Show Gene Expression" />}
           title={`${gene.geneSymbol} Expression`}
           modalName={`${variant.variantId}-${gene.geneId}-tpm`}
         >
           <React.Suspense fallback={<Loader />}>
-            <RnaSeqTpm geneId={geneId} tpms={rnaSeqData.tpms[gene.geneId]} />
+            <RnaSeqTpm geneId={geneId} familyGuid={variant.familyGuids[0]} />
           </React.Suspense>
         </Modal>
       )}
@@ -508,12 +509,14 @@ BaseVariantGene.propTypes = {
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
+  hasRnaTpmData: PropTypes.bool,
   rnaSeqData: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.geneId],
-  rnaSeqData: getRnaSeqDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+  hasRnaTpmData: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.hasRnaTpmData,
+  rnaSeqData: getRnaSeqOutilerDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
 })
 
 export const VariantGene = connect(mapStateToProps)(BaseVariantGene)
@@ -608,7 +611,7 @@ class VariantGenes extends React.PureComponent {
 
 const mapAllGenesStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
-  rnaSeqData: getRnaSeqDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+  rnaSeqData: getRnaSeqOutilerDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
 })
 
 export default connect(mapAllGenesStateToProps)(VariantGenes)
