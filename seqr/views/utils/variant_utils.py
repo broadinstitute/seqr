@@ -129,17 +129,6 @@ def _get_rna_seq_outliers(gene_ids, families):
     for data in outlier_data:
         data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
 
-    # TODO add endpoint
-    # tpm_data = _get_json_for_models(
-    #     RnaSeqTpm.objects.filter(gene_id__in=gene_ids, sample__individual__family__in=families),
-    #     nested_fields=[
-    #         {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
-    #         {'fields': ('sample', 'tissue_type')},
-    #     ]
-    # )
-    # for data in tpm_data:
-    #     data_by_individual_gene[data.pop('individualGuid')]['tpms'][data['geneId']] = data
-
     return data_by_individual_gene
 
 

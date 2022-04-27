@@ -9,7 +9,7 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
-    family_variant_tag_summary, update_family_analysis_groups
+    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
@@ -473,3 +473,16 @@ class FamilyAPITest(AuthenticationTestCase):
         response = self.client.post(delete_note_url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'familyNotesByGuid': {new_note_guid: None}})
+
+    def test_get_family_rna_seq_data(self):
+        url = reverse(get_family_rna_seq_data, args=[FAMILY_GUID, 'ENSG00000135953'])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'M': {
+                'individualData': {'NA19675_1': 8.38},
+                'rdgData': [8.38, 1.01],
+            }
+        })

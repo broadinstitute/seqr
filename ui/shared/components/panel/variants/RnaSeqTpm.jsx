@@ -38,39 +38,40 @@ const PLOT_OPTIONS = {
   yAxisUnit: 'TPM',
 }
 
-const launchGtex = (geneId, tpms) => (gencodeId) => {
-  const tissues = [...new Set(Object.values(tpms).map(({ sampleTissueType }) => sampleTissueType))]
-  const boxplotData = Object.entries(tpms).map(([individual, { tpm }]) => ({ label: individual, data: [tpm] }))
+const launchGtex = (geneId, familyGuid) => (gencodeId) => {
+  new HttpRequestHelper(`/api/family/${familyGuid}/rna_seq_data/${geneId}`,
+    (responseJson) => {
+      const boxplotData = Object.entries(responseJson).reduce((acc, [tissue, { rdgData, individualData }]) => ([
+        ...acc,
+        { label: `*RDG - ${TISSUE_DISPLAY[tissue]}`, color: 'efefef', data: rdgData },
+        ...Object.entries(individualData).map(([individual, tpm]) => ({ label: individual, data: [tpm] })),
+      ]), [])
 
-  const numEntries = (tissues.length * 2) + boxplotData.length
-  const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numEntries * 80)
+      const tissues = Object.keys(responseJson)
+      const gtexTissuesId = tissues.map(tissue => GTEX_TISSUES[tissue]).join(',')
+      const numEntries = (tissues.length * 2) + boxplotData.length
+      const marginRight = PLOT_WIDTH - PLOT_MARGIN_LEFT - (numEntries * 80)
 
-  Promise.all([
-    new HttpRequestHelper(`${GTEX_HOST}expression/geneExpression`,
-      (responseJson) => {
-        boxplotData.push(...responseJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
-          { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
-        )))
-      }, () => {}).get({ tissueSiteDetailId: tissues.map(tissue => GTEX_TISSUES[tissue]).join(','), gencodeId }),
-    new HttpRequestHelper(`/api/rna_seq_expression/gene/${geneId}/tissues/${tissues.join(',')}`,
-      (responseJson) => {
-        boxplotData.push(...Object.entries(responseJson).map(([tissue, data]) => (
-          { data, label: `*RDG - ${TISSUE_DISPLAY[tissue]}`, color: 'efefef' }
-        )))
-      }, () => {}).get(),
-  ]).then(() => {
-    const boxplot = new Boxplot(boxplotData, false)
-    boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
-  })
+      new HttpRequestHelper(`${GTEX_HOST}expression/geneExpression`,
+        (gtexJson) => {
+          boxplotData.push(...gtexJson.geneExpression.map(({ data, tissueSiteDetailId }) => (
+            { data, label: `*GTEx - ${TISSUE_DISPLAY[GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]}`, color: 'efefef' }
+          )))
+        },
+        () => {}).get({ tissueSiteDetailId: gtexTissuesId, gencodeId }).then(() => {
+        const boxplot = new Boxplot(boxplotData, false)
+        boxplot.render(GTEX_CONTAINER_ID, { ...PLOT_OPTIONS, marginRight })
+      })
+    }, () => {}).get()
 }
 
-const RnaSeqTpm = ({ geneId, tpms }) => (
-  <GtexLauncher geneId={geneId} containerId={GTEX_CONTAINER_ID} launchGtex={launchGtex(geneId, tpms)} />
+const RnaSeqTpm = ({ geneId, familyGuid }) => (
+  <GtexLauncher geneId={geneId} containerId={GTEX_CONTAINER_ID} launchGtex={launchGtex(geneId, familyGuid)} />
 )
 
 RnaSeqTpm.propTypes = {
   geneId: PropTypes.string.isRequired,
-  tpms: PropTypes.object,
+  familyGuid: PropTypes.string.isRequired,
 }
 
 export default RnaSeqTpm

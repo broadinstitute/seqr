@@ -2,6 +2,7 @@
 APIs used to retrieve and modify Individual fields
 """
 import json
+from collections import defaultdict
 from django.contrib.auth.models import User
 from django.db.models import Count
 
@@ -13,9 +14,9 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
-    get_json_for_matchmaker_submissions, get_json_for_analysis_groups
+    get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_models
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 
@@ -401,3 +402,21 @@ def delete_family_note(request, family_guid, note_guid):
         request, FamilyNote, family_guid, note_guid, parent_field='family__guid',
         get_response_json=lambda: {'familyNotesByGuid': {note_guid: None}},
     )
+
+@login_and_policies_required
+def get_family_rna_seq_data(request, family_guid, gene_id):
+    family = Family.objects.get(guid=family_guid)
+    check_project_permissions(family.project, request.user)
+
+    response = defaultdict(lambda: {'individualData': {}})
+    tpm_data = RnaSeqTpm.objects.filter(
+        gene_id=gene_id, sample__individual__family=family).prefetch_related('sample', 'sample__individual')
+    for tpm in tpm_data:
+        indiv = tpm.sample.individual
+        response[tpm.sample.tissue_type]['individualData'][indiv.display_name or indiv.individual_id] = tpm.tpm
+
+    for tissue in response.keys():
+        response[tissue]['rdgData'] = list(
+            RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene_id).values_list('tpm', flat=True))
+
+    return create_json_response(response)

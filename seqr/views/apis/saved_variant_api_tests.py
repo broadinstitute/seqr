@@ -168,10 +168,6 @@ class SavedVariantAPITest(object):
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
             }},
-            # 'tpms': { TODO
-            #     'ENSG00000135953': {
-            #         'geneId': 'ENSG00000135953', 'tpm': 8.38, 'sampleTissueType': 'M',
-            # }},
         }})
 
         # include project tag types
