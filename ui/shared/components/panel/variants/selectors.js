@@ -186,10 +186,13 @@ export const getSavedVariantTotalPages = createSelector(
 const getSavedVariantExportData = createSelector(
   getPairedFilteredSavedVariants,
   getFamiliesByGuid,
-  (pairedVariants, familiesByGuid) => pairedVariants.reduce(
+  getProjectsByGuid,
+  (pairedVariants, familiesByGuid, projectsByGuid) => pairedVariants.reduce(
     (acc, variant) => (Array.isArray(variant) ? acc.concat(variant) : [...acc, variant]), [],
   ).map(({ genotypes, ...variant }) => ({
     ...variant,
+    project: projectsByGuid[familiesByGuid[variant.familyGuids[0]].projectGuid].name,
+    family: familiesByGuid[variant.familyGuids[0]].displayName,
     genotypes: Object.keys(genotypes).filter(
       indGuid => variant.familyGuids.some(familyGuid => familiesByGuid[familyGuid].individualGuids.includes(indGuid)),
     ).reduce((acc, indGuid) => ({ ...acc, [indGuid]: genotypes[indGuid] }), {}),

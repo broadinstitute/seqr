@@ -154,7 +154,8 @@ LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
-                          add_locus_list_detail=False, include_rna_seq=True, include_missing_variants=False):
+                          add_locus_list_detail=False, include_rna_seq=True, include_missing_variants=False,
+                          include_project_name=False):
     response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, include_missing_variants=include_missing_variants)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
@@ -184,7 +185,10 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     response['genesById'] = genes
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
-        response['projectsByGuid'] = {project.guid: {'projectGuid': project.guid} for project in projects}
+        project_fields = {'projectGuid': lambda p: p.guid}
+        if include_project_name:
+            project_fields['name'] = lambda p: p.name
+        response['projectsByGuid'] = {project.guid: {k: v(project) for k, v in project_fields.items()} for project in projects}
         add_project_tag_types(response['projectsByGuid'])
 
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':

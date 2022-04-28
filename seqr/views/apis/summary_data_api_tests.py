@@ -123,6 +123,10 @@ class SummaryDataAPITest(object):
         if self.MANAGER_VARIANT_GUID:
             expected_variant_guids.add(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
+        self.assertSetEqual(
+            set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
+            {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'},
+        )
 
         # Test analyst behavior
         self.login_analyst_user()
