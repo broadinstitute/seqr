@@ -131,7 +131,7 @@ def _get_rna_seq_outliers(gene_ids, families):
     return data_by_individual_gene
 
 
-def _add_family_rna_tpm(families_by_guid):
+def _add_family_has_rna_tpm(families_by_guid):
     tpm_families = RnaSeqTpm.objects.filter(
         sample__individual__family__guid__in=families_by_guid.keys()
     ).values_list('sample__individual__family__guid', flat=True).distinct()
@@ -192,6 +192,6 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), families)
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
-            _add_family_rna_tpm(families_by_guid)
+            _add_family_has_rna_tpm(families_by_guid)
 
     return response
