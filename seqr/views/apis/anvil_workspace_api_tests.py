@@ -49,6 +49,29 @@ TEMP_PATH = '/temp_path/temp_filename'
 TEST_GUID=f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
 MOCK_TOKEN = 'mock_openid_bearer' # nosec
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
+
+DAG_RUNS = {
+    'dag_runs': [
+        {'conf': {}, 
+         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1', 
+         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00', 
+         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00', 
+         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00', 
+         'state': 'success'}
+    ]
+}
+
+DAG_RUNS_RUNNING = {
+    'dag_runs': [
+        {'conf': {}, 
+         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1', 
+         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00', 
+         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00', 
+         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00', 
+         'state': 'running'}
+    ]
+}
+
 UPDATED_ANVIL_VARIABLES = {
     "key": "AnVIL_WES",
     "value": json.dumps({
@@ -173,23 +196,33 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
                                            mock_utils_logger):
         # Set up api responses
+        # check dag running state
+        responses.add(responses.GET,
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
+                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
+                      json=DAG_RUNS,
+                      status=200)
         # update variables
         responses.add(responses.PATCH,
                       '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL),
+                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json={'key': 'AnVIL_WES', 'value': 'updated variables'},
                       status=200)
         # get task id
-        responses.add(responses.GET, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
+        responses.add(responses.GET, 
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
                       headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json=DAG_TASKS_RESP,
                       status=200)
         # get task id again if the response of the previous requset didn't include the updated guid
-        responses.add(responses.GET, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
+        responses.add(responses.GET, 
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
                       headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json=UPDATE_DAG_TASKS_RESP,
                       status=200)
         # trigger dag
-        responses.add(responses.POST, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
+        responses.add(responses.POST, 
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
                       headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json={},
                       status=200)
@@ -301,30 +334,36 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         )
 
         # Test triggering anvil dags
-        self.assertEqual(len(responses.calls), 4)
+        self.assertEqual(len(responses.calls), 5)
+        # check dag running state
+        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[0].request.method, "GET")
+        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEqual(responses.calls[0].response.json(), DAG_RUNS)
+
 
         # update variables
-        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
-        self.assertEquals(responses.calls[0].request.method, "PATCH")
-        self.assertDictEqual(json.loads(responses.calls[0].request.body), UPDATED_ANVIL_VARIABLES)
-        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEqual(responses.calls[1].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[1].request.method, "PATCH")
+        self.assertDictEqual(json.loads(responses.calls[1].request.body), UPDATED_ANVIL_VARIABLES)
+        self.assertEqual(responses.calls[1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
 
         # get task id
-        self.assertEqual(responses.calls[1].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[1].request.method, 'GET')
-        self.assertEqual(responses.calls[1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-        self.assertEqual(responses.calls[1].response.json(), DAG_TASKS_RESP)
-
         self.assertEqual(responses.calls[2].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
         self.assertEqual(responses.calls[2].request.method, 'GET')
         self.assertEqual(responses.calls[2].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
-        self.assertEqual(responses.calls[2].response.json(), UPDATE_DAG_TASKS_RESP)
+        self.assertEqual(responses.calls[2].response.json(), DAG_TASKS_RESP)
+
+        self.assertEqual(responses.calls[3].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[3].request.method, 'GET')
+        self.assertEqual(responses.calls[3].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEqual(responses.calls[3].response.json(), UPDATE_DAG_TASKS_RESP)
 
         # trigger dag
-        self.assertEqual(responses.calls[3].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
-        self.assertEqual(responses.calls[3].request.method, 'POST')
-        self.assertDictEqual(json.loads(responses.calls[3].request.body), {})
-        self.assertEqual(responses.calls[3].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEqual(responses.calls[4].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[4].request.method, 'POST')
+        self.assertDictEqual(json.loads(responses.calls[4].request.body), {})
+        self.assertEqual(responses.calls[4].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
 
         slack_message = """
         *test_user_manager@test.com* requested to load WES data (GRCh38) from AnVIL workspace *my-seqr-billing/anvil-no-project-workspace1* at 
@@ -359,10 +398,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
         mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
         # Test triggering dag exception
-        responses.replace(responses.PATCH,
-                      '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL),
-                      json={'Error': '404 Client Error'},
-                      status=404)
+        responses.replace(responses.GET,
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
+                      json=DAG_RUNS_RUNNING)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
@@ -371,14 +409,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         logger_calls = [
             mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
                       self.manager_user, detail=['HG00735', 'NA19675', 'NA19678']),
-            mock.call(f'404 Client Error: Not Found for url: {MOCK_AIRFLOW_URL}/api/v1/variables/AnVIL_WES',
+            mock.call('seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.',
                       self.manager_user)
         ]
 
         mock_api_logger.error.assert_has_calls(logger_calls)
 
         slack_message_on_failure = """
-        ERROR triggering AnVIL loading for project {guid}: 404 Client Error: Not Found for url: {airflow_url}/api/v1/variables/AnVIL_WES 
+        ERROR triggering AnVIL loading for project {guid}: seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again. 
         
         DAG seqr_vcf_to_es_AnVIL_WES_v0.0.1 should be triggered with following: 
         ```{{
@@ -398,9 +436,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
         mock_send_email.assert_not_called()
         self.assertEqual(len(responses.calls), 1)
-        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/variables/AnVIL_WES'.format(MOCK_AIRFLOW_URL))
-        self.assertEquals(responses.calls[0].request.method, "PATCH")
+        self.assertEqual(responses.calls[0].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
+        self.assertEqual(responses.calls[0].request.method, "GET")
         self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+        self.assertEqual(responses.calls[0].response.json(), DAG_RUNS_RUNNING)
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
