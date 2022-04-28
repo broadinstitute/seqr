@@ -52,11 +52,11 @@ MOCK_AIRFLOW_URL = 'http://testairflowserver'
 
 DAG_RUNS = {
     'dag_runs': [
-        {'conf': {}, 
-         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1', 
-         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00', 
-         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00', 
-         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00', 
+        {'conf': {},
+         'dag_id': 'seqr_vcf_to_es_AnVIL_WGS_v0.0.1',
+         'dag_run_id': 'manual__2022-04-28T11:51:22.735124+00:00',
+         'end_date': None, 'execution_date': '2022-04-28T11:51:22.735124+00:00',
+         'external_trigger': True, 'start_date': '2022-04-28T11:51:25.626176+00:00',
          'state': 'success'}
     ]
 }
@@ -209,7 +209,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                       json={'key': 'AnVIL_WES', 'value': 'updated variables'},
                       status=200)
         # get task id
-        responses.add(responses.GET, 
+        responses.add(responses.GET,
                       '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
                       headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json=DAG_TASKS_RESP,
@@ -221,7 +221,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                       json=UPDATE_DAG_TASKS_RESP,
                       status=200)
         # trigger dag
-        responses.add(responses.POST, 
+        responses.add(responses.POST,
                       '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
                       headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json={},
