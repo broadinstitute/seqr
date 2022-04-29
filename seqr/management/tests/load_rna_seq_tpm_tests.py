@@ -2,11 +2,9 @@
 import mock
 
 from django.core.management import call_command
-from django.urls.base import reverse
 
 from seqr.models import Sample, RnaSeqTpm, RnaSeqOutlier
 from seqr.views.utils.test_utils import AuthenticationTestCase
-from seqr.views.apis.summary_data_api import rna_seq_expression
 
 RNA_FILE_ID = 'all_tissue_tpms.tsv.gz'
 MAPPING_FILE_ID = 'mapping.tsv'
@@ -25,6 +23,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
         # Test database models
         existing_sample = Sample.objects.get(individual_id=1, sample_type='RNA')
+        existing_sample2 = Sample.objects.get(individual_id=17, sample_type='RNA')
         self.assertEqual(existing_sample.guid, EXISTING_SAMPLE_GUID)
         self.assertEqual(existing_sample.sample_id, 'NA19675_D2')
         self.assertTrue(existing_sample.is_active)
@@ -40,8 +39,8 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(new_sample.tissue_type, 'WB')
 
         models = RnaSeqTpm.objects.all()
-        self.assertEqual(models.count(), 3)
-        self.assertSetEqual({model.sample for model in models}, {existing_sample, new_sample})
+        self.assertEqual(models.count(), 4)
+        self.assertSetEqual({model.sample for model in models}, {existing_sample, existing_sample2, new_sample})
         self.assertEqual(models.get(sample=existing_sample, gene_id='ENSG00000240361').tpm, 12.6)
         self.assertEqual(models.get(sample=new_sample, gene_id='ENSG00000233750').tpm, 6.04)
 
@@ -50,17 +49,6 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])
         mock_logger.warning.assert_not_called()
-
-        # Test TPM expression API
-        url = reverse(rna_seq_expression, args=['ENSG00000233750', 'F,M,WB'])
-        self.check_require_login(url)
-        response = self.client.get(url, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'F': [],
-            'M': [1.04],
-            'WB': [6.04],
-        })
 
     @mock.patch('seqr.management.commands.load_rna_seq_tpm.logger')
     @mock.patch('seqr.management.commands.load_rna_seq_tpm.open')

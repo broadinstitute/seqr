@@ -93,14 +93,6 @@ def saved_variants_page(request, tag):
 
     return create_json_response(response_json)
 
-@login_and_policies_required
-def rna_seq_expression(request, gene, tissues):
-    response = {}
-    for tissue in tissues.split(','):
-        response[tissue] = list(RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene).values_list('tpm', flat=True))
-
-    return create_json_response(response)
-
 
 @analyst_required
 def bulk_update_family_analysed_by(request):

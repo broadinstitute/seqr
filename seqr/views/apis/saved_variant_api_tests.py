@@ -168,10 +168,6 @@ class SavedVariantAPITest(object):
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
             }},
-            'tpms': {
-                'ENSG00000135953': {
-                    'geneId': 'ENSG00000135953', 'tpm': 8.38, 'sampleTissueType': 'M',
-            }},
         }})
 
         # include project tag types
@@ -207,7 +203,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
-        family_fields = {'individualGuids'}
+        family_fields = {'individualGuids', 'hasRnaTpmData'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
         individual_fields = {'igvSampleGuids'}

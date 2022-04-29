@@ -63,7 +63,7 @@ EXPECTED_SEARCH_RESPONSE = {
         'VFD0000025_1248367227_r0390_10': mock.ANY, 'VFD0000026_1248367227_r0390_10': mock.ANY,
     },
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
-    'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'tpms': {}}},
+    'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
 }
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
@@ -127,6 +127,10 @@ class VariantSearchAPITest(object):
 
         family_fields = {'individualGuids'}
         family_fields.update(FAMILY_FIELDS)
+        if len(response_json['familiesByGuid']) > 1:
+            self.assertSetEqual(set(response_json['familiesByGuid']['F000002_2'].keys()), family_fields)
+
+        family_fields.add('hasRnaTpmData')
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
 
         self.assertEqual(len(response_json['individualsByGuid']), len(response_json['familiesByGuid'])*3)
