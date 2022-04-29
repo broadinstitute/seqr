@@ -55,6 +55,7 @@ class BaseLocusListDropdown extends React.Component {
         <Dropdown
           inline
           selection
+          search
           label="Gene List"
           value={locusListGuid}
           onChange={this.onChange}
