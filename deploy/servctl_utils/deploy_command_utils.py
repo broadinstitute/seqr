@@ -200,7 +200,8 @@ def deploy_seqr(settings):
 
     if settings['BUILD_DOCKER_IMAGES']:
         if settings['DEPLOY_TO'] == 'prototype':
-            docker_build('seqr', settings, use_default_tags=False)
+            docker_build(
+                'seqr', settings, custom_build_args=['-f deploy/docker/seqr/Dockerfile'], docker_path='.', use_default_tags=False)
             if settings['ONLY_PUSH_TO_REGISTRY']:
                 return
         else:
@@ -345,7 +346,7 @@ def create_namespace(settings):
     run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
-def docker_build(component_label, settings, custom_build_args=(), use_default_tags=True):
+def docker_build(component_label, settings, custom_build_args=(), docker_path=None, use_default_tags=True):
     params = dict(settings)   # make a copy before modifying
     params["COMPONENT_LABEL"] = component_label
     params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s" % params
@@ -364,9 +365,9 @@ def docker_build(component_label, settings, custom_build_args=(), use_default_ta
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
     else:
-        docker_build_command = ""
-        docker_build_command += "docker build deploy/docker/%(COMPONENT_LABEL)s/ "
-        docker_build_command += (" ".join(custom_build_args) + " ")
+        docker_build_command = "docker build "
+        docker_build_command += docker_path or "deploy/docker/%(COMPONENT_LABEL)s/"
+        docker_build_command += ( " " + " ".join(custom_build_args) + " ")
         if settings["FORCE_BUILD_DOCKER_IMAGES"]:
             docker_build_command += "--no-cache "
 
