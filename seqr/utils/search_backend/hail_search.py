@@ -500,8 +500,7 @@ class HailSearch(object):
             from seqr.utils.elasticsearch.utils import InvalidSearchException
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
-        if not has_location_filter and any(len(family_samples_by_id) > MAX_NO_LOCATION_COMP_HET_FAMILIES
-                                           for family_samples_by_id in self.samples_by_family_index.values()):
+        if not has_location_filter and len(self.samples_by_family) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
