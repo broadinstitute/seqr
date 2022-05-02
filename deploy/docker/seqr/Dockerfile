@@ -1,4 +1,4 @@
-FROM python:3.7-slim-bullseye
+FROM python:3.7-slim-bullseye as build
 
 LABEL maintainer="Broad TGG"
 
@@ -8,20 +8,65 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
     curl \
-    emacs \
     gcc \
+    # git needed for the nodejs install
+    git \
+    libc6-dev \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# install nodejs14 repo since debian is still on node 12.x
+RUN curl -fsSL https://deb.nodesource.com/setup_14.x | bash -
+# installs the nodejs and npm packages
+RUN apt-get install -y --no-install-recommends \
+    nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+# upgrade npm to v7 to fix lockfile resolution
+RUN npm install -g npm@7.24.2
+
+WORKDIR /opt
+
+COPY ./requirements.txt .
+
+# install seqr python dependencies
+RUN pip install --no-cache-dir wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
+    ln -s python3 /opt/venv/bin/python3.7
+
+# install seqr nodejs dependencies
+WORKDIR /build/ui
+# Copy the package configs from the build context -> the temporary build container, for generating node_modules
+COPY ./ui/package.json .
+COPY ./ui/package-lock.json .
+RUN npm ci
+
+COPY ./ui/ .
+
+RUN npm run build
+
+FROM python:3.7-slim-bullseye as runtime
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    cron \
+    curl \
+    emacs \
     git \
     gnupg \
     htop \
     less \
-    libc6-dev \
     libpq-dev \
     nano \
-    xterm \
     postgresql-client \
     procps \
-    default-jdk \
     redis-tools \
+    xterm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,29 +78,26 @@ RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /e
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
-ARG DISABLE_CACHE=1
-ARG SEQR_REPO=https://github.com/broadinstitute/seqr
-ARG SEQR_GIT_BRANCH=master
-
-# update seqr repo
-RUN git clone -q --branch $SEQR_GIT_BRANCH $SEQR_REPO
+COPY --from=build /opt/venv /opt/venv
 
 WORKDIR /seqr
+COPY . .
+COPY --from=build /build/ui/dist /seqr/ui/dist
 
-# install seqr dependencies
-RUN pip install --no-cache-dir wheel && pip install --no-cache-dir -r requirements.txt
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+RUN ./manage.py collectstatic --no-input
 
 EXPOSE 8000
 
 ENV TERM=xterm
 
-COPY readiness_probe /
-COPY bin/*.sh /usr/local/bin/
-COPY gitconfig /root/.gitconfig
-COPY config/*.py ./
-COPY bashrc /root/.bashrc
+COPY deploy/docker/seqr/readiness_probe /
+COPY deploy/docker/seqr/bin/*.sh /usr/local/bin/
+COPY deploy/docker/seqr/config/*.py ./
+COPY deploy/docker/seqr/bashrc /root/.bashrc
 
-COPY entrypoint.sh /
+COPY deploy/docker/seqr/entrypoint.sh /
 
 CMD [ "/entrypoint.sh" ]
