@@ -199,9 +199,14 @@ def deploy_seqr(settings):
     print_separator("seqr")
 
     if settings['BUILD_DOCKER_IMAGES']:
-        raise Exception("seqr image docker builds via servctl have been deprecated. Please ensure that your desired "
-                        "build has been produced via Cloudbuild and GCR, and then run the deployment without the "
-                        "docker build flag.")
+        if settings['DEPLOY_TO'] == 'prototype':
+            docker_build('seqr', settings, use_default_tags=False)
+            if settings['ONLY_PUSH_TO_REGISTRY']:
+                return
+        else:
+            raise Exception("seqr image docker builds via servctl have been deprecated. Please ensure that your desired "
+                            "build has been produced via Cloudbuild and GCR, and then run the deployment without the "
+                            "docker build flag.")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
@@ -340,7 +345,7 @@ def create_namespace(settings):
     run("kubectl config set-context $(kubectl config current-context) --namespace=%(NAMESPACE)s" % settings)
 
 
-def docker_build(component_label, settings, custom_build_args=()):
+def docker_build(component_label, settings, custom_build_args=(), use_default_tags=True):
     params = dict(settings)   # make a copy before modifying
     params["COMPONENT_LABEL"] = component_label
     params["DOCKER_IMAGE_NAME"] = "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s" % params
@@ -349,7 +354,7 @@ def docker_build(component_label, settings, custom_build_args=()):
         "",
         ":latest",
         ":%(TIMESTAMP)s" % settings,
-        ])
+        ]) if use_default_tags else set()
 
     if settings.get("DOCKER_IMAGE_TAG"):
         docker_tags.add(params["DOCKER_IMAGE_TAG"])
