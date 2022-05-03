@@ -66,11 +66,3 @@ def delete_all(deployment_target):
         "deploy/kubernetes/shared-settings.yaml",
         "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
     ], settings)
-
-def get_disk_names(disk, settings):
-    num_disks = settings.get('{}_NUM_DISKS'.format(disk.upper().replace('-', '_'))) or 1
-    return [
-        '{cluster_name}-{disk}-disk{suffix}'.format(
-            cluster_name=settings['CLUSTER_NAME'], disk=disk, suffix='-{}'.format(i + 1) if num_disks > 1 else '')
-    for i in range(num_disks)]
-
