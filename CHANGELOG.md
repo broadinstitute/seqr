@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add db indices for RNAseq outlier models (REQUIRES DB MIGRATION)
 
 ## 4/25/22
 * Trigger airflow DAG on AnVIL loading request
