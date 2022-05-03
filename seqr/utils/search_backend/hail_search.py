@@ -129,6 +129,7 @@ class HailSearch(object):
         self._sample_table_queries = {}
 
         self.ht = None
+        self._comp_het_ht = None
 
     def _load_table(self, intervals=None):
         #  In production: should have a Table and use read_table
@@ -399,9 +400,17 @@ class HailSearch(object):
         if inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
+        family_filter = None
+        if inheritance_mode == COMPOUND_HET:
+            family_filter =self._filter_comp_het_family
+        elif inheritance_mode == ANY_AFFECTED:
+            family_filter =self._filter_any_affected_family
+        elif not inheritance_filter:
+            family_filter = self._filter_non_ref_family
+
         family_guids = sorted(self.samples_by_family.keys())
         family_hts = [
-            self._get_filtered_family_table(family_guid, inheritance_mode, inheritance_filter, quality_filter)
+            self._get_filtered_family_table(family_guid, inheritance_mode, inheritance_filter, quality_filter, family_filter)
             for family_guid in family_guids
         ]
 
@@ -421,7 +430,7 @@ class HailSearch(object):
         ).select(*GENOTYPE_FIELDS)
 
 
-    def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter):
+    def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter, family_filter=None):
         samples = list(self.samples_by_family[family_guid].values())
         sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
 
@@ -447,20 +456,10 @@ class HailSearch(object):
 
         family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
 
-        # Filter if any matching genotypes for any affected or any inheritance search
-        if not inheritance_filter:
-            non_ref_sample_indices = [
-                i for i, sample in enumerate(samples)
-                if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
-            ] if inheritance_mode == ANY_AFFECTED else range(len(samples))
-            if not non_ref_sample_indices:
-                raise InvalidSearchException('At least one affected individual must be included in "Any Affected" search')
-
-            q = family_ht[f'GT_{non_ref_sample_indices[0]}'].is_non_ref()
-            for i in non_ref_sample_indices[1:]:
-                q |= family_ht[f'GT_{i}'].is_non_ref()
-
-            family_ht = family_ht.filter(q)
+        if family_filter:
+            family_filter_q = family_filter(family_ht, samples, affected_status)
+            if family_filter_q:
+                family_ht = family_ht.filter(family_filter_q)
 
         return family_ht.annotate(
             genotypes=hl.array([hl.struct(
@@ -495,6 +494,38 @@ class HailSearch(object):
 
         return sample_ht
 
+    def _filter_any_affected_family(self, family_ht, samples, affected_status):
+        affected_sample_indices = [
+            i for i, sample in enumerate(samples)
+            if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
+        ]
+        if not affected_sample_indices:
+            raise InvalidSearchException(
+                'At least one affected individual must be included in "Any Affected" search')
+
+        return self._family_has_genotype(family_ht, affected_sample_indices, HAS_ALT)
+
+    def _filter_non_ref_family(self, family_ht, samples, affected_status):
+        return self._family_has_genotype(family_ht, range(len(samples)), HAS_ALT)
+
+    def _filter_comp_het_family(self, family_ht, samples, affected_status):
+        unaffected_sample_indices = [
+            i for i, sample in enumerate(samples)
+            if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_UNAFFECTED
+        ]
+        if len(unaffected_sample_indices) < 2:
+            return None
+
+        return self._family_has_genotype(family_ht, unaffected_sample_indices, REF_REF)
+
+    @staticmethod
+    def _family_has_genotype(family_ht, indices, expected_gt):
+        gt_filter = GENOTYPE_QUERY_MAP[expected_gt]
+        q = gt_filter(family_ht[f'GT_{indices[0]}'])
+        for i in indices[1:]:
+            q |= gt_filter(family_ht[f'GT_{i}'])
+        return q
+
     def _filter_compound_hets(self, annotations_secondary, quality_filter, has_location_filter):
         if not self._allowed_consequences:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
@@ -515,10 +546,10 @@ class HailSearch(object):
             inheritance_mode=COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter,
         ))
 
-        comp_het_ht = self._format_results(comp_het_ht)
+        self._comp_het_ht = self._format_results(comp_het_ht)
 
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
-        raise NotImplementedError
+
 
     @staticmethod
     def _format_results(ht):
@@ -529,6 +560,11 @@ class HailSearch(object):
         return results.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
     def search(self, page=1, num_results=100):
+        is_comp_het = bool(self._comp_het_ht)
+        if is_comp_het:
+            # TODO actually return merged comp het/ regular variants
+            self.ht = self._comp_het_ht
+
         if not self.ht:
             raise InvalidSearchException('Filters must be applied before search')
 
@@ -536,9 +572,12 @@ class HailSearch(object):
         self.previous_search_results['total_results'] = total_results
         logger.info(f'Total hits: {total_results}')
 
-        results = self._format_results(self.ht)
+        if is_comp_het:
+            results_ht = self.ht
+        else:
+            results_ht = self._format_results(self.ht)
         # TODO page, self._sort
-        collected = results.take(num_results)
+        collected = results_ht.take(num_results)
         hail_results = [_json_serialize(dict(row)) for row in collected]
 
         # TODO potentially post-process compound hets
