@@ -74,8 +74,18 @@ def run(command,
     p.wait()
 
     output = log_buffer.getvalue()
+
     if p.returncode not in ok_return_codes:
-        if ignore_all_errors or (errors_to_ignore and any([error_to_ignore in str(output) for error_to_ignore in errors_to_ignore])):
+        should_ignore = False
+        if ignore_all_errors:
+            should_ignore = True
+        elif errors_to_ignore:
+            should_ignore = all(
+                any([error_to_ignore in error for error_to_ignore in errors_to_ignore])
+                for error in  str(output.strip()).split('\n')
+            )
+
+        if should_ignore:
             return None
         else:
             raise RuntimeError(output)
