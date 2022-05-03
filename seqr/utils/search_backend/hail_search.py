@@ -70,14 +70,14 @@ ANNOTATION_FIELDS = {
     'pos': lambda r: r.locus.position,
     'ref': lambda r: r.alleles[0],
     'alt': lambda r: r.alleles[1],
-    'clinvar': lambda r: hl.struct(
+    'clinvar': lambda r: hl.struct( # In production - format in main HT
         clinicalSignificance=r.clinvar.clinical_significance,
         alleleId=r.clinvar.allele_id,
         goldStars=r.clinvar.gold_stars,
     ),
-    'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),
+    'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT
     'genomeVersion': lambda r: hl.eval(r.gv),
-    'liftedOverGenomeVersion': lambda r: hl.if_else(
+    'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
         hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
     ),
     'liftedOverChrom': lambda r: hl.if_else(
@@ -87,7 +87,7 @@ ANNOTATION_FIELDS = {
         hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
     ),
     'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
-    'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]),
+    'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
     'populations': lambda r: hl.struct(callset=hl.struct(af=r.AF, ac=r.AC, an=r.AN), **{
         population: hl.struct(**{
             response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
@@ -515,25 +515,30 @@ class HailSearch(object):
             inheritance_mode=COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter,
         ))
 
+        comp_het_ht = self._format_results(comp_het_ht)
+
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
         raise NotImplementedError
+
+    @staticmethod
+    def _format_results(ht):
+        results = ht.annotate_globals(gv=hl.eval(ht.genomeVersion)).drop(
+            'genomeVersion')  # prevents name collision with global
+        results = results.annotate(**{k: v(results) for k, v in ANNOTATION_FIELDS.items()})
+        results = results.key_by('variantId')
+        return results.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
     def search(self, page=1, num_results=100):
         if not self.ht:
             raise InvalidSearchException('Filters must be applied before search')
 
         total_results = self.ht.count()
-
-        rows = self.ht.annotate_globals(gv=hl.eval(self.ht.genomeVersion)).drop('genomeVersion') # prevents name collision with global
-        rows = rows.annotate(**{k: v(rows) for k, v in ANNOTATION_FIELDS.items()})
-        rows = rows.key_by('variantId')
-        rows = rows.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
-
         self.previous_search_results['total_results'] = total_results
         logger.info(f'Total hits: {total_results}')
 
+        results = self._format_results(self.ht)
         # TODO page, self._sort
-        collected = rows.take(num_results)
+        collected = results.take(num_results)
         hail_results = [_json_serialize(dict(row)) for row in collected]
 
         # TODO potentially post-process compound hets
