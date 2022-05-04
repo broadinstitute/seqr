@@ -40,6 +40,9 @@ export const getSavedVariantTableState = state => (
 
 const matchingVariants = (variants, matchFunc) => variants.filter(o => (Array.isArray(o) ? o : [o]).some(matchFunc))
 
+// sorts manual variants to top of list, as manual variants are missing all populations
+const sortCompHet = (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0)
+
 export const getPairedSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   (state, props) => props.match.params,
@@ -82,13 +85,23 @@ export const getPairedSelectedSavedVariants = createSelector(
       )].filter(varGuid => selectedVariantsByGuid[varGuid])
 
       if (variantCompoundHetGuids.length) {
-        const unseenGuids = variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid))
-        const compHet = [variant, ...unseenGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(
-          // sorts manual variants to top of list, as manual variants are missing all populations
-          (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0),
-        )
-        acc.push(compHet)
+        let unseenGuids = variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid))
         seenCompoundHets.push(variant.variantGuid, ...unseenGuids)
+
+        if (unseenGuids.length > 1) {
+          // check if variant is part of multiple distinct comp het pairs or a single MNV with 3+ linked variants
+          const pairVariant = selectedVariantsByGuid[unseenGuids[0]]
+          const separateGuids = unseenGuids.slice(1).filter(varGuid => !(
+            pairVariant.tagGuids.some(t => selectedVariantsByGuid[varGuid].tagGuids.includes(t)) ||
+            pairVariant.noteGuids.some(n => selectedVariantsByGuid[varGuid].noteGuids.includes(n))))
+          if (separateGuids.length) {
+            acc.push([variant, ...separateGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(sortCompHet))
+            unseenGuids = unseenGuids.filter(varGuid => !separateGuids.includes(varGuid))
+          }
+        }
+
+        const compHet = [variant, ...unseenGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(sortCompHet)
+        acc.push(compHet)
         return acc
       }
 
