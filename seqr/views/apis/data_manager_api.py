@@ -1,5 +1,6 @@
 import base64
 from collections import defaultdict
+from datetime import datetime
 import gzip
 import json
 import os
@@ -336,7 +337,6 @@ RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 
 
 @data_manager_required
 def update_rna_seq(request):
-    # TODO performance
     request_json = json.loads(request.body)
 
     file_path = request_json['file']
@@ -355,13 +355,15 @@ def update_rna_seq(request):
         return create_json_response({'error': str(e)}, status=400)
 
     # Save sample data for loading
-    for sample, sample_data in samples_to_load.items():
-        with gzip.open(_get_sample_data_file_path(sample.guid), 'wt') as f:
-            json.dump(sample_data, f)
+    file_name = f'rna_sample_data__{datetime.now().isoformat()}.json.gz'
+    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'wt') as f:
+        for sample, sample_data in samples_to_load.items():
+            f.write(f'{sample.guid}\t\t{json.dumps(sample_data)}\n')
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
+        'fileName': file_name,
         'sampleGuids': [s.guid for s in samples_to_load.keys()],
     })
 
@@ -379,19 +381,15 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
     return load_rna_seq(RnaSeqOutlier, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
 
-def _get_sample_data_file_path(sample_guid):
-    upload_directory = get_temp_upload_directory()
-    return os.path.join(upload_directory, f'rna_sample_data__{sample_guid}.json.gz')
-
 @data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
     sample = Sample.objects.get(guid=sample_guid)
     logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
 
-    sample_file = _get_sample_data_file_path(sample_guid)
-    with gzip.open(sample_file, 'rt') as f:
-        data_by_gene = json.load(f)
-    os.remove(sample_file)
+    file_name = json.loads(request.body)['fileName']
+    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'rt') as f:
+        row = next(line for line in f if line.split('\t\t')[0] == sample_guid)
+        data_by_gene = json.loads(row.split('\t\t')[1])
 
     models = RnaSeqOutlier.objects.bulk_create([RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
     logger.info(f'create {len(models)} RnaSeqOutliers', request.user, db_update={
