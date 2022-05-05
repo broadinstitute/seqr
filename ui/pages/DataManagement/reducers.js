@@ -52,8 +52,8 @@ export const uploadQcPipelineOutput = values => submitRequest(
 
 export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
 
-export const uploadRnaSeq = ({ file, ...values }) => dispatch => new HttpRequestHelper(
-  `/api/data_management/update_rna_seq/${file.uploadedFileId}`,
+export const uploadRnaSeq = values => dispatch => new HttpRequestHelper(
+  '/api/data_management/update_rna_seq',
   ({ info, warnings, sampleGuids }) => {
     let numLoaded = 0
     return Promise.all(sampleGuids.map(sampleGuid => new HttpRequestHelper(

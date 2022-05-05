@@ -1,6 +1,7 @@
 import { connect } from 'react-redux'
 
-import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
+import { validators } from 'shared/components/form/FormHelpers'
+import FileUploadField from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
 import UploadFormPage from 'shared/components/page/UploadFormPage'
 
@@ -11,10 +12,9 @@ const mapStateToProps = state => ({
   fields: [
     {
       name: 'file',
-      component: FileUploadField,
-      dropzoneLabel: 'Drag-drop or click here to upload RNA-Seq Outlier Data',
-      validate: validateUploadedFile,
-      url: '/api/data_management/upload_rna_seq',
+      label: 'RNA-seq data',
+      placeholder: 'gs:// Google bucket path',
+      validate: validators.required,
     },
     {
       name: 'mappingFile',

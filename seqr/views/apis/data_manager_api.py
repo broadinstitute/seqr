@@ -1,6 +1,5 @@
 import base64
 from collections import defaultdict
-from datetime import datetime
 import gzip
 import json
 import os
@@ -333,34 +332,16 @@ EXCLUDE_PROJECTS = [
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 
-@data_manager_required
-def receive_rna_seq_table(request):
-    if len(request.FILES) != 1:
-        return create_json_response({'errors': [f'Received {len(request.FILES)} files instead of 1']}, status=400)
-
-    stream = next(iter(request.FILES.values()))
-    filename = stream._name
-    if not filename.endswith('.tsv.gz'):
-        return create_json_response({'errors': [f'Invalid file extension for {filename}: expected ".tsv.gz"']}, status=400)
-
-    # save gzipped data to temporary file
-    uploaded_file_id = f'tmp_-_{datetime.now().isoformat()}_-_{request.user}_-_{filename}'
-    serialized_file_path = _get_upload_file_path(uploaded_file_id)
-    with open(serialized_file_path, 'wb') as f:
-        f.write(stream.read())
-
-    return create_json_response({
-        'uploadedFileId': uploaded_file_id,
-        'info': [f'Loaded gzipped file {filename}'],
-    })
-
 RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
 
 @data_manager_required
-def update_rna_seq(request, upload_file_id):
-    file_path = _get_upload_file_path(upload_file_id)
-
+def update_rna_seq(request):
     request_json = json.loads(request.body)
+
+    file_path = request_json['file']
+    if not does_file_exist(file_path, user=request.user):
+        return create_json_response({'errors': ['File not found: {}'.format(file_path)]}, status=400)
+
     mapping_file = None
     uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
     if uploaded_mapping_file_id:
@@ -371,8 +352,6 @@ def update_rna_seq(request, upload_file_id):
             file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
-
-    os.remove(file_path)
 
     # Save sample data for loading
     for sample, sample_data in samples_to_load.items():
@@ -399,13 +378,9 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
     return load_rna_seq(RnaSeqOutlier, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
 
-def _get_upload_file_path(uploaded_file_id):
-    upload_directory = get_temp_upload_directory()
-    return os.path.join(upload_directory, uploaded_file_id)
-
 def _get_sample_data_file_path(sample_guid):
     upload_directory = get_temp_upload_directory()
-    return os.path.join(upload_directory, 'rna_sample_data', f'{sample_guid}.json.gz')
+    return os.path.join(upload_directory, f'rna_sample_data__{sample_guid}.json.gz')
 
 @data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):

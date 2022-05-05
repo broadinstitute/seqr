@@ -302,19 +302,19 @@ def _parse_tsv_row(row):
 
 def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, parse_row, validate_header):
     samples_by_id = defaultdict(dict)
-    with gzip.open(file_path, 'rt') as f:
-        header = _parse_tsv_row(next(f))
-        validate_header(header)
+    f = file_iter(file_path)
+    header = _parse_tsv_row(next(f))
+    validate_header(header)
 
-        for line in tqdm(f, unit=' rows'):
-            row = dict(zip(header, _parse_tsv_row(line)))
-            for sample_id, row_dict in parse_row(row):
-                gene_id = row_dict['gene_id']
-                existing_data = samples_by_id[sample_id].get(gene_id)
-                if existing_data and existing_data != row_dict:
-                    raise ValueError(
-                        f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
-                samples_by_id[sample_id][gene_id] = row_dict
+    for line in tqdm(f, unit=' rows'):
+        row = dict(zip(header, _parse_tsv_row(line)))
+        for sample_id, row_dict in parse_row(row):
+            gene_id = row_dict['gene_id']
+            existing_data = samples_by_id[sample_id].get(gene_id)
+            if existing_data and existing_data != row_dict:
+                raise ValueError(
+                    f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
+            samples_by_id[sample_id][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
@@ -341,7 +341,7 @@ def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping,
         })
         to_delete.delete()
 
-    loaded_sample_ids = set(model_cls.objects.values_list('sample_id', flat=True).distinct())
+    loaded_sample_ids = set(model_cls.objects.values_list('sample_id', flat=True).distinct()) # TODO should only skip sample loaded form the current file
     samples_to_load = {
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
@@ -360,7 +360,7 @@ def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping,
         warnings.append(message)
         logger.warning(message, user)
     if loaded_sample_ids:
-        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
+        message = f'Skipped loading for {len(loaded_sample_ids)} already loaded from this file'
         warnings.append(message)
         logger.warning(message, user)
 
