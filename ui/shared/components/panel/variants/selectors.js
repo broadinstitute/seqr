@@ -69,13 +69,13 @@ export const getPairedSelectedSavedVariants = createSelector(
     }
 
     const selectedVariantsByGuid = variants.reduce((acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
-    const seenCompoundHets = []
+    const seenPairedGuids = []
     let pairedVariants = variants.reduce((acc, variant) => {
-      if (seenCompoundHets.includes(variant.variantGuid)) {
+      if (seenPairedGuids.includes(variant.variantGuid)) {
         return acc
       }
 
-      const variantCompoundHetGuids = [...[
+      const variantPairGuids = [...[
         ...variant.tagGuids.map(t => tagsByGuid[t].variantGuids),
         ...variant.noteGuids.map(n => notesByGuid[n].variantGuids),
       ].filter(variantGuids => variantGuids.length > 1).reduce(
@@ -84,24 +84,23 @@ export const getPairedSelectedSavedVariants = createSelector(
         ]), new Set(),
       )].filter(varGuid => selectedVariantsByGuid[varGuid])
 
-      if (variantCompoundHetGuids.length) {
-        let unseenGuids = variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid))
-        seenCompoundHets.push(variant.variantGuid, ...unseenGuids)
+      if (variantPairGuids.length) {
+        let unseenPairedGuids = variantPairGuids.filter(varGuid => !seenPairedGuids.includes(varGuid))
+        seenPairedGuids.push(variant.variantGuid, ...unseenPairedGuids)
 
-        if (unseenGuids.length > 1) {
+        if (unseenPairedGuids.length > 1) {
           // check if variant is part of multiple distinct comp het pairs or a single MNV with 3+ linked variants
-          const pairVariant = selectedVariantsByGuid[unseenGuids[0]]
-          const separateGuids = unseenGuids.slice(1).filter(varGuid => !(
+          const pairVariant = selectedVariantsByGuid[unseenPairedGuids[0]]
+          const separateGuids = unseenPairedGuids.slice(1).filter(varGuid => !(
             pairVariant.tagGuids.some(t => selectedVariantsByGuid[varGuid].tagGuids.includes(t)) ||
             pairVariant.noteGuids.some(n => selectedVariantsByGuid[varGuid].noteGuids.includes(n))))
           if (separateGuids.length) {
             acc.push([variant, ...separateGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(sortCompHet))
-            unseenGuids = unseenGuids.filter(varGuid => !separateGuids.includes(varGuid))
+            unseenPairedGuids = unseenPairedGuids.filter(varGuid => !separateGuids.includes(varGuid))
           }
         }
 
-        const compHet = [variant, ...unseenGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(sortCompHet)
-        acc.push(compHet)
+        acc.push([variant, ...unseenPairedGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(sortCompHet))
         return acc
       }
 
