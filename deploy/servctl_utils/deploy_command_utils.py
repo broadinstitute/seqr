@@ -5,7 +5,6 @@ import os
 from pprint import pformat
 import time
 
-from deploy.servctl_utils.other_command_utils import get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
@@ -114,7 +113,11 @@ def deploy_elasticsearch(settings):
 
     # create persistent volumes
     pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
-    disk_names = get_disk_names('es-data', settings)
+    num_disks = settings['ES_DATA_NUM_PODS']
+    disk_names = [
+        '{cluster_name}-es-data-disk{suffix}'.format(
+            cluster_name=settings['CLUSTER_NAME'], suffix='-{}'.format(i + 1) if num_disks > 1 else '')
+        for i in range(num_disks)]
     for disk_name in disk_names:
         volume_settings = {'DISK_NAME': disk_name}
         volume_settings.update(settings)
