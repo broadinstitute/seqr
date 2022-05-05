@@ -336,6 +336,7 @@ RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 
 
 @data_manager_required
 def update_rna_seq(request):
+    # TODO performance
     request_json = json.loads(request.body)
 
     file_path = request_json['file']
