@@ -31,30 +31,13 @@ class Command(BaseCommand):
             with open(options['mapping_file']) as f:
                 mapping_file = parse_file(options['mapping_file'], f)
 
-        sample_id_to_tissue_type = {}
         samples_to_load, _, _ = load_rna_seq_tpm(
-            options['input_file'], sample_id_to_tissue_type, mapping_file=mapping_file,
-            ignore_extra_samples=options['ignore_extra_samples'])
+            options['input_file'], mapping_file=mapping_file, ignore_extra_samples=options['ignore_extra_samples'])
 
-        invalid_tissues = {}
         for sample, data_by_gene in samples_to_load.items():
-            tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
-            if not sample.tissue_type:
-                sample.tissue_type = tissue_type
-                sample.save()
-            elif sample.tissue_type != tissue_type:
-                invalid_tissues[sample] = tissue_type
-                continue
-
             models = RnaSeqTpm.objects.bulk_create(
                 [RnaSeqTpm(sample=sample, **data) for data in data_by_gene.values()], batch_size=1000)
             logger.info(f'create {len(models)} RnaSeqTpm for {sample.sample_id}')
-
-        if invalid_tissues:
-            message = ', '.join([
-                f'{sample.sample_id} ({REVERSE_TISSUE_TYPE[expected_tissue]} to {REVERSE_TISSUE_TYPE[sample.tissue_type]})'
-                for sample, expected_tissue in invalid_tissues.items()])
-            logger.warning(f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {message}')
 
         logger.info('DONE')
 

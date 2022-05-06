@@ -21,6 +21,7 @@ const mapStateToProps = state => ({
       label: 'Data Type',
       component: Select,
       options: ['Outlier', 'TPM'].map(text => ({ text, value: text.toLowerCase() })),
+      validate: validators.required,
     },
     {
       name: 'ignoreExtraSamples',

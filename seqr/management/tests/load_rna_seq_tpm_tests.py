@@ -12,14 +12,15 @@ EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
 
 EXPECTED_MISMATCHED_TISSUE_WARNING = 'Skipped data loading for the following 1 samples due to mismatched tissue type: NA19678_D1 (fibroblasts to whole_blood)'
 
-@mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-@mock.patch('seqr.utils.file_utils.gzip.open')
 class LoadRnaSeqTest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.utils.file_utils.gzip.open')
+    @mock.patch('seqr.views.utils.dataset_utils.logger')
     @mock.patch('seqr.management.commands.load_rna_seq_tpm.logger')
     @mock.patch('seqr.management.commands.load_rna_seq_tpm.open')
-    def test_command(self, mock_open, mock_logger, mock_gzip_open):
+    def test_command(self, mock_open, mock_logger, mock_utils_logger, mock_gzip_open):
         mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
         mock_gzip_file.__iter__.return_value = [
             '',
@@ -89,9 +90,12 @@ class LoadRnaSeqTest(AuthenticationTestCase):
             mock.call('create 2 RnaSeqTpm for NA19675_D2'),
             mock.call('create 1 RnaSeqTpm for NA19678_D1'),
         ])
-        mock_logger.warning.assert_not_called()
+        mock_utils_logger.warning.assert_has_calls([
+            mock.call('Skipped loading for the following 1 unmatched samples: NA19677', None),
+            mock.call('Skipped loading for 1 already loaded from this file', None),
+        ])
 
         # Test fails on mismatched tissue
         mock_gzip_file.__iter__.return_value[6] = 'NA19678_D1\tENSG00000233750\t6.04\tfibroblasts\n'
         call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
-        mock_logger.warning.assert_called_with(EXPECTED_MISMATCHED_TISSUE_WARNING)
+        mock_utils_logger.warning.assert_called_with(EXPECTED_MISMATCHED_TISSUE_WARNING, None)

@@ -68,7 +68,7 @@ export const uploadRnaSeq = values => (dispatch) => {
         numLoaded += 1
       },
       e => warnings.push(`Error loading ${sampleGuid}: ${e.body && e.body.error ? e.body.error : e.message}`),
-    ).post({ fileName }))).then(() => {
+    ).post({ fileName, dataType: values.dataType }))).then(() => {
       info.push(`Successfully loaded data for ${numLoaded} RNA-seq samples`)
       dispatch({ type: RECEIVE_RNA_SEQ_UPLOAD_STATS, newValue: { info, warnings } })
     })

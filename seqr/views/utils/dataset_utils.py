@@ -305,6 +305,15 @@ TPM_COL = 'TPM'
 TISSUE_COL = 'tissue'
 TPM_HEADER_COLS = [SAMPLE_ID_COL, GENE_ID_COL, TPM_COL, TISSUE_COL]
 
+TISSUE_TYPE_MAP = {
+    'whole_blood': 'WB',
+    'fibroblasts': 'F',
+    'muscle': 'M',
+    'lymphocytes': 'L',
+}
+
+REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
+
 def _parse_outlier_row(row, **kwargs):
     yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_OUTLIER_COLUMNS.items()}
 
@@ -327,11 +336,31 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
         RnaSeqOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_outlier_row, expected_columns,
     )
 
-def load_rna_seq_tpm(file_path, sample_id_to_tissue_type, user=None, mapping_file=None, ignore_extra_samples=False):
-    return _load_rna_seq(
+def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    sample_id_to_tissue_type = {}
+    samples_to_load, info, warnings = _load_rna_seq(
         RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
         additional_data=sample_id_to_tissue_type,
     )
+
+    invalid_tissues = {}
+    for sample, data_by_gene in samples_to_load.items():
+        tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
+        if not sample.tissue_type:
+            sample.tissue_type = tissue_type
+            sample.save()
+        elif sample.tissue_type != tissue_type:
+            invalid_tissues[sample] = tissue_type
+
+    if invalid_tissues:
+        mismatch = ', '.join([
+            f'{sample.sample_id} ({REVERSE_TISSUE_TYPE[expected_tissue]} to {REVERSE_TISSUE_TYPE[sample.tissue_type]})'
+            for sample, expected_tissue in invalid_tissues.items()])
+        message = f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {mismatch}'
+        warnings.append(message)
+        logger.warning(message, user)
+
+    return samples_to_load, info, warnings
 
 def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns, additional_data=None):
     sample_id_to_individual_id_mapping = None

@@ -18,12 +18,12 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, RnaSeqOutlier
+from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -334,10 +334,16 @@ EXCLUDE_PROJECTS = [
 ]
 
 
+RNA_DATA_TYPE_CONFIGS = {
+    'outlier': {'load_func': load_rna_seq_outlier, 'model_class': RnaSeqOutlier},
+    'tpm': {'load_func': load_rna_seq_tpm, 'model_class': RnaSeqTpm},
+}
+
 @data_manager_required
 def update_rna_seq(request):
     request_json = json.loads(request.body)
 
+    data_type = request_json['dataType']
     file_path = request_json['file']
     if not does_file_exist(file_path, user=request.user):
         return create_json_response({'errors': ['File not found: {}'.format(file_path)]}, status=400)
@@ -348,13 +354,14 @@ def update_rna_seq(request):
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
     try:
-        samples_to_load, info, warnings = load_rna_seq_outlier(
+        load_func = RNA_DATA_TYPE_CONFIGS[data_type]['load_func']
+        samples_to_load, info, warnings = load_func(
             file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
     # Save sample data for loading
-    file_name = f'rna_sample_data__{datetime.now().isoformat()}.json.gz'
+    file_name = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}.json.gz'
     with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'wt') as f:
         for sample, sample_data in samples_to_load.items():
             f.write(f'{sample.guid}\t\t{json.dumps(sample_data)}\n')
@@ -372,14 +379,17 @@ def load_rna_seq_sample_data(request, sample_guid):
     sample = Sample.objects.get(guid=sample_guid)
     logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
 
-    file_name = json.loads(request.body)['fileName']
+    request_json = json.loads(request.body)
+    file_name = request_json['fileName']
+    data_type = request_json['dataType']
     with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'rt') as f:
         row = next(line for line in f if line.split('\t\t')[0] == sample_guid)
         data_by_gene = json.loads(row.split('\t\t')[1])
 
-    models = RnaSeqOutlier.objects.bulk_create([RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
-    logger.info(f'create {len(models)} RnaSeqOutliers', request.user, db_update={
-        'dbEntity': 'RnaSeqOutlier', 'numEntities': len(models), 'parentEntityIds': [sample_guid], 'updateType': 'bulk_create',
+    model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
+    models = model_cls.objects.bulk_create([model_cls(sample=sample, **data) for data in data_by_gene.values()])
+    logger.info(f'create {len(models)} {model_cls.__name__}', request.user, db_update={
+        'dbEntity': model_cls.__name__, 'numEntities': len(models), 'parentEntityIds': [sample_guid], 'updateType': 'bulk_create',
     })
 
     return create_json_response({'success': True})
