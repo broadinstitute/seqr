@@ -346,7 +346,7 @@ def update_rna_seq(request):
     data_type = request_json['dataType']
     file_path = request_json['file']
     if not does_file_exist(file_path, user=request.user):
-        return create_json_response({'errors': ['File not found: {}'.format(file_path)]}, status=400)
+        return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
 
     mapping_file = None
     uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')

@@ -92,7 +92,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         ])
         mock_utils_logger.warning.assert_has_calls([
             mock.call('Skipped loading for the following 1 unmatched samples: NA19677', None),
-            mock.call('Skipped loading for 1 already loaded from this file', None),
+            mock.call('Skipped loading for 1 samples already loaded from this file', None),
         ])
 
         # Test fails on mismatched tissue

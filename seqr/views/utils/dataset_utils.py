@@ -438,7 +438,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         warnings.append(message)
         logger.warning(message, user)
     if loaded_sample_ids:
-        message = f'Skipped loading for {len(loaded_sample_ids)} already loaded from this file'
+        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
         warnings.append(message)
         logger.warning(message, user)
 
