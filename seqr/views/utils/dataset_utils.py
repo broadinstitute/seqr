@@ -303,6 +303,7 @@ SAMPLE_ID_COL = 'sample_id'
 GENE_ID_COL = 'gene_id'
 TPM_COL = 'TPM'
 TISSUE_COL = 'tissue'
+INDIV_ID_COL = 'individual_id'
 TPM_HEADER_COLS = [SAMPLE_ID_COL, GENE_ID_COL, TPM_COL, TISSUE_COL]
 
 TISSUE_TYPE_MAP = {
@@ -328,7 +329,11 @@ def _parse_tpm_row(row, additional_data=None):
             raise ValueError(f'Mismatched tissue types for sample {sample_id}: {prev_tissue}, {tissue}')
         additional_data[sample_id] = tissue
 
-        yield sample_id, {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL]}
+        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL]}
+        if INDIV_ID_COL in row:
+            parsed[INDIV_ID_COL] = row[INDIV_ID_COL]
+
+        yield sample_id, parsed
 
 def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
     expected_columns = ['sampleID'] + list(RNA_OUTLIER_COLUMNS.keys())
@@ -363,7 +368,7 @@ def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_sampl
     return samples_to_load, info, warnings
 
 def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns, additional_data=None):
-    sample_id_to_individual_id_mapping = None
+    sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
         
@@ -382,6 +387,11 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             if existing_data and existing_data != row_dict:
                 raise ValueError(
                     f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
+
+            indiv_id = row_dict.pop(INDIV_ID_COL, None)
+            if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
+                sample_id_to_individual_id_mapping[sample_id] = indiv_id
+
             samples_by_id[sample_id][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
