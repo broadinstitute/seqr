@@ -406,14 +406,11 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         project2 = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME2)
 
-        logger_calls = [
-            mock.call('Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
-                      self.manager_user, detail=['HG00735', 'NA19675', 'NA19678']),
-            mock.call('seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.',
-                      self.manager_user)
-        ]
-
-        mock_api_logger.error.assert_has_calls(logger_calls)
+        mock_api_logger.error.assert_called_with(
+            'Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
+            self.manager_user, detail=['HG00735', 'NA19675', 'NA19678'])
+        mock_api_logger.warning.assert_called_with(
+            'seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.', self.manager_user)
 
         slack_message_on_failure = """
         ERROR triggering AnVIL loading for project {guid}: seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again. 
