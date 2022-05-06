@@ -13,11 +13,52 @@ EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
 EXPECTED_MISMATCHED_TISSUE_WARNING = 'Skipped data loading for the following 1 samples due to mismatched tissue type: NA19678_D1 (fibroblasts to whole_blood)'
 
 @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-@mock.patch('seqr.views.utils.dataset_utils.gzip.open')
+@mock.patch('seqr.utils.file_utils.gzip.open')
 class LoadRnaSeqTest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    def _assert_expected_command_results(self, mock_logger):
+    @mock.patch('seqr.management.commands.load_rna_seq_tpm.logger')
+    @mock.patch('seqr.management.commands.load_rna_seq_tpm.open')
+    def test_command(self, mock_open, mock_logger, mock_gzip_open):
+        mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
+        mock_gzip_file.__iter__.return_value = [
+            '',
+            'NA19675_D2\tENSG00000240361\t12.6\t\n',
+            'NA19678_D1\tENSG00000240361\t0.0\twhole_blood\n',
+            'NA19677\tENSG00000240361\t0.0\tinvalid\n',
+            'GTEX-001\tENSG00000240361\t3.1\tinvalid\n',
+            'NA19675_D2\tENSG00000233750\t1.04\tmuscle\n',
+            'NA19678_D1\tENSG00000233750\t 6.04\twhole_blood\n',
+            'NA19677\tENSG00000233750\t5.31\tmuscle\n',
+            'GTEX-001\tENSG00000233750\t7.8\tmuscle\n',
+        ]
+
+        with self.assertRaises(ValueError) as e:
+            call_command('load_rna_seq_tpm', RNA_FILE_ID)
+        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) sample_id, gene_id, TPM, tissue')
+
+        mock_gzip_file.__iter__.return_value[0] = 'sample_id\tgene_id\tTPM\ttissue\n'
+        with self.assertRaises(ValueError) as e:
+            call_command('load_rna_seq_tpm', RNA_FILE_ID)
+        self.assertEqual(str(e.exception), 'Sample NA19675_D2 has no tissue type')
+
+        mock_gzip_file.__iter__.return_value[1] = 'NA19675_D2\tENSG00000240361\t12.6\tfibroblasts\n'
+        with self.assertRaises(ValueError) as e:
+            call_command('load_rna_seq_tpm', RNA_FILE_ID)
+        self.assertEqual(str(e.exception), 'Mismatched tissue types for sample NA19675_D2: fibroblasts, muscle')
+
+        mock_gzip_file.__iter__.return_value[1] = 'NA19675_D2\tENSG00000240361\t12.6\tmuscle\n'
+        with self.assertRaises(ValueError) as e:
+            call_command('load_rna_seq_tpm', RNA_FILE_ID)
+        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19677, NA19678_D1')
+
+        mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19678_D1\tNA19678']
+        with self.assertRaises(ValueError) as e:
+            call_command('load_rna_seq_tpm', RNA_FILE_ID, '--mapping-file', MAPPING_FILE_ID)
+        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19677')
+
+        call_command('load_rna_seq_tpm', RNA_FILE_ID, '--mapping-file', MAPPING_FILE_ID, '--ignore-extra-samples')
+
         # Existing outlier data should be unchanged
         self.assertEqual(RnaSeqOutlier.objects.count(), 3)
 
@@ -50,107 +91,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         ])
         mock_logger.warning.assert_not_called()
 
-    @mock.patch('seqr.management.commands.load_rna_seq_tpm.logger')
-    @mock.patch('seqr.management.commands.load_rna_seq_tpm.open')
-    def test_command(self, mock_open, mock_logger, mock_gzip_open):
-        mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
-        mock_gzip_file.__next__.return_value = ''
-        mock_gzip_file.__iter__.return_value = [
-            'ENSG00000240361\t12.6\t0.0\t13.0\t3.1\n',
-            'ENSG00000233750\t1.04\t6.04\t5.31\t7.8\n',
-            'ENSG00000233750\t0.0\t0.0\t0.0\t0.0\n',
-        ]
-
-        mock_open.return_value.__enter__.return_value.__iter__.return_value = ['sample_id']
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID, MAPPING_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid mapping file: missing column(s) imputed tissue, indiv (seqr)')
-
-        mock_open.return_value.__enter__.return_value.__iter__.return_value = [
-            'sample_id\tindiv (seqr)\timputed tissue',
-            'NA19675_D2\tNA19675_1\tmuscle',
-            'NA19678_D1\tNA19678\twhole_blood',
-            'NA19678_D2\tNA19678\tfibroblasts',
-            'NA19679\tNA19679_1\tmuscle',
-            'NA19676\t\t',
-        ]
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID, MAPPING_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid file: missing column gene_id')
-
-        mock_gzip_file.__next__.return_value = 'gene_id\tNA19675_D2\tNA19678_D1\tNA19678_D2\tNA19676\tNA19679\tGTEX-001\n'
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID, MAPPING_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to load data for the following individuals with multiple samples: NA19678 (NA19678_D1, NA19678_D2)')
-
-        mock_gzip_file.__next__.return_value = 'gene_id\tNA19675_D2\tNA19678_D1\tNA19676\tNA19679\tGTEX-001\n'
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID, MAPPING_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to load data for the following samples with no tissue type: NA19676')
-
-        mock_gzip_file.__next__.return_value = 'gene_id\tNA19675_D2\tNA19678_D1\tNA19679\tGTEX-001\n'
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm', RNA_FILE_ID, MAPPING_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19679')
-
-        call_command('load_rna_seq_tpm', RNA_FILE_ID, MAPPING_FILE_ID, '--ignore-extra-samples')
-
-        self._assert_expected_command_results(mock_logger)
-
         # Test fails on mismatched tissue
-        mock_open.return_value.__enter__.return_value.__iter__.return_value[2] = 'NA19678_D1\tNA19678\tfibroblasts'
-        call_command('load_rna_seq_tpm', 'new_file.tsv.gz', MAPPING_FILE_ID, '--ignore-extra-samples')
+        mock_gzip_file.__iter__.return_value[6] = 'NA19678_D1\tENSG00000233750\t6.04\tfibroblasts\n'
+        call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
         mock_logger.warning.assert_called_with(EXPECTED_MISMATCHED_TISSUE_WARNING)
-
-    @mock.patch('seqr.management.commands.load_rna_seq_tpm_with_metadata.logger')
-    @mock.patch('seqr.management.commands.load_rna_seq_tpm_with_metadata.open')
-    def test_with_metadata_command(self, mock_open, mock_logger, mock_gzip_open):
-        mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
-        mock_gzip_file.__next__.return_value = ''
-        mock_gzip_file.__iter__.return_value = [
-            'NA19675_D2\tENSG00000240361\t12.6\t\n',
-            'NA19678_D1\tENSG00000240361\t0.0\twhole_blood\n',
-            'NA19677\tENSG00000240361\t0.0\tinvalid\n',
-            'GTEX-001\tENSG00000240361\t3.1\tinvalid\n',
-            'NA19675_D2\tENSG00000233750\t1.04\tmuscle\n',
-            'NA19678_D1\tENSG00000233750\t 6.04\twhole_blood\n',
-            'NA19677\tENSG00000233750\t5.31\tmuscle\n',
-            'GTEX-001\tENSG00000233750\t7.8\tmuscle\n',
-        ]
-
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm_with_metadata', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid file: missing columns sample_id, gene_id, TPM, tissue')
-
-        mock_gzip_file.__next__.return_value = 'sample_id\tgene_id\tTPM\ttissue\n'
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm_with_metadata', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Sample NA19675_D2 has no tissue type')
-
-        mock_gzip_file.__iter__.return_value[0] = 'NA19675_D2\tENSG00000240361\t12.6\tfibroblasts\n'
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm_with_metadata', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Mismatched tissue types for sample NA19675_D2: fibroblasts, muscle')
-
-        mock_gzip_file.__iter__.return_value[0] = 'NA19675_D2\tENSG00000240361\t12.6\tmuscle\n'
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm_with_metadata', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19677, NA19678_D1')
-
-        mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19678_D1\tNA19678']
-        with self.assertRaises(ValueError) as e:
-            call_command('load_rna_seq_tpm_with_metadata', RNA_FILE_ID, '--mapping-file', MAPPING_FILE_ID)
-        self.assertEqual(str(e.exception), 'Unable to find matches for the following samples: NA19677')
-
-        call_command('load_rna_seq_tpm_with_metadata', RNA_FILE_ID, '--mapping-file', MAPPING_FILE_ID,
-                     '--ignore-extra-samples')
-
-        self._assert_expected_command_results(mock_logger)
-
-        # Test fails on mismatched tissue
-        mock_gzip_file.__iter__.return_value[5] = 'NA19678_D1\tENSG00000233750\t6.04\tfibroblasts\n'
-        call_command('load_rna_seq_tpm_with_metadata', 'new_file.tsv.gz', '--ignore-extra-samples')
-        mock_logger.warning.assert_called_with(EXPECTED_MISMATCHED_TISSUE_WARNING)
-
-
-

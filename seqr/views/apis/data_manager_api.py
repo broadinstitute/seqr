@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq, load_mapping_file_content
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
@@ -333,7 +333,6 @@ EXCLUDE_PROJECTS = [
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 
-RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
 
 @data_manager_required
 def update_rna_seq(request):
@@ -367,19 +366,6 @@ def update_rna_seq(request):
         'sampleGuids': [s.guid for s in samples_to_load.keys()],
     })
 
-def _parse_outlier_row(row):
-    yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_COLUMNS.items()}
-
-def _validate_outlier_header(header):
-    missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header])
-    if missing_cols:
-        raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
-
-def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    sample_id_to_individual_id_mapping = None
-    if mapping_file:
-        sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
-    return load_rna_seq(RnaSeqOutlier, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
 
 @data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):

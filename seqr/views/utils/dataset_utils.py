@@ -1,12 +1,11 @@
 import elasticsearch_dsl
-import gzip
 from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 from tqdm import tqdm
 import random
 
-from seqr.models import Sample, Individual, Family, Project
+from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
@@ -295,20 +294,60 @@ def match_and_update_samples(
 
     return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update, remaining_sample_ids
 
-
 def _parse_tsv_row(row):
     return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
 
+RNA_OUTLIER_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
 
-def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, parse_row, validate_header):
+SAMPLE_ID_COL = 'sample_id'
+GENE_ID_COL = 'gene_id'
+TPM_COL = 'TPM'
+TISSUE_COL = 'tissue'
+TPM_HEADER_COLS = [SAMPLE_ID_COL, GENE_ID_COL, TPM_COL, TISSUE_COL]
+
+def _parse_outlier_row(row, **kwargs):
+    yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_OUTLIER_COLUMNS.items()}
+
+def _parse_tpm_row(row, additional_data=None):
+    sample_id = row[SAMPLE_ID_COL]
+    if row[TPM_COL] != '0.0' and not sample_id.startswith('GTEX'):
+        prev_tissue = additional_data.get(sample_id)
+        tissue = row[TISSUE_COL]
+        if not tissue:
+            raise ValueError(f'Sample {sample_id} has no tissue type')
+        if prev_tissue and prev_tissue != tissue:
+            raise ValueError(f'Mismatched tissue types for sample {sample_id}: {prev_tissue}, {tissue}')
+        additional_data[sample_id] = tissue
+
+        yield sample_id, {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL]}
+
+def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    expected_columns = ['sampleID'] + list(RNA_OUTLIER_COLUMNS.keys())
+    return _load_rna_seq(
+        RnaSeqOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_outlier_row, expected_columns,
+    )
+
+def load_rna_seq_tpm(file_path, sample_id_to_tissue_type, user=None, mapping_file=None, ignore_extra_samples=False):
+    return _load_rna_seq(
+        RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
+        additional_data=sample_id_to_tissue_type,
+    )
+
+def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns, additional_data=None):
+    sample_id_to_individual_id_mapping = None
+    if mapping_file:
+        sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
+        
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path)
     header = _parse_tsv_row(next(f))
-    validate_header(header)
+    missing_cols = [col for col in expected_columns if col not in header]
+    if missing_cols:
+        raise ValueError(f'Invalid file: missing column(s) {", ".join(missing_cols)}')
 
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
-        for sample_id, row_dict in parse_row(row):
+        for sample_id, row_dict in parse_row(row, additional_data=additional_data):
             gene_id = row_dict['gene_id']
             existing_data = samples_by_id[sample_id].get(gene_id)
             if existing_data and existing_data != row_dict:
