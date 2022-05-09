@@ -538,8 +538,8 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     @mock.patch('seqr.views.utils.dataset_utils.logger')
-    def _test_update_rna_seq(self, model_cls, data_type, header, optional_headers,
-                             loaded_data_row, new_data, parsed_file_data, initial_model_count, num_deleted,
+    def _test_update_rna_seq(self, model_cls, data_type, header, optional_headers, loaded_data_row, new_data,
+                             parsed_file_data, num_parsed_samples, initial_model_count, extra_warnings,
                              mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file, mock_os, mock_datetime):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
@@ -617,24 +617,27 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         info = [
-            'Parsed 2 RNA-seq samples',
+            f'Parsed {num_parsed_samples} RNA-seq samples',
             'Attempted data loading for 1 RNA-seq samples in the following 1 projects: 1kg project nåme with uniçøde',
         ]
         warnings = ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
+        if extra_warnings:
+            warnings = extra_warnings + warnings
         file_name = RNA_FILENAME_TEMPLATE.format(data_type)
         response_json = response.json()
         self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [mock.ANY], 'fileName': file_name})
         mock_logger.info.assert_has_calls(
             [mock.call(info_log, self.data_manager_user) for info_log in info] + [
-                mock.call(f'delete {num_deleted} {model_cls.__name__}s', self.data_manager_user, db_update={
-                    'dbEntity': model_cls.__name__, 'numEntities': num_deleted, 'parentEntityIds': [RNA_SAMPLE_GUID], 'updateType': 'bulk_delete',
+                mock.call(f'delete {initial_model_count} {model_cls.__name__}s', self.data_manager_user, db_update={
+                    'dbEntity': model_cls.__name__, 'numEntities': initial_model_count, 'parentEntityIds': mock.ANY, 'updateType': 'bulk_delete',
                 }),
             ], any_order=True
         )
+        self.assertTrue(RNA_SAMPLE_GUID in mock_logger.info.call_args_list[1].kwargs['db_update']['parentEntityIds'])
         mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
 
         # test database models are correct
-        self.assertEqual(model_cls.objects.count(), initial_model_count - num_deleted)
+        self.assertEqual(model_cls.objects.count(), 0)
         rna_samples = Sample.objects.filter(individual_id=1, sample_type='RNA')
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
@@ -662,11 +665,11 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D2', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
             ],
-            RNA_OUTLIER_SAMPLE_DATA, 3, 3,
+            RNA_OUTLIER_SAMPLE_DATA, 2, 3, None,
         )
 
     def test_update_rna_seq_tpm(self):
-        # TODO test tpm specific edge cases
+        #  TODO mapping file/ individual_id_col tests
         self._test_update_rna_seq(
             RnaSeqTpm, 'tpm',
             ['sample_id', 'gene_id', 'individual_id', 'tissue', 'TPM'], ['individual_id'],
@@ -674,9 +677,13 @@ class DataManagerAPITest(AuthenticationTestCase):
             [
                 ['NA19675_D2', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
                 ['NA19675_D2', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
+                ['NA19675_D2', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                ['NA20889', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
                 ['NA19675_D3', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+                ['GTEX_001', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
             ],
-            RNA_TPM_SAMPLE_DATA, 2, 1,
+            RNA_TPM_SAMPLE_DATA, 3, 2,
+            ['Skipped data loading for the following 1 samples due to mismatched tissue type: NA20889 (fibroblasts to muscle)'],
         )
 
 

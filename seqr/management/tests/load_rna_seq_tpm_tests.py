@@ -97,4 +97,4 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         # Test fails on mismatched tissue
         mock_gzip_file.__iter__.return_value[6] = 'NA19678_D1\tENSG00000233750\t6.04\tfibroblasts\n'
         call_command('load_rna_seq_tpm', 'new_file.tsv.gz', '--ignore-extra-samples')
-        mock_utils_logger.warning.assert_called_with(EXPECTED_MISMATCHED_TISSUE_WARNING, None)
+        mock_utils_logger.warning.assert_any_call(EXPECTED_MISMATCHED_TISSUE_WARNING, None)

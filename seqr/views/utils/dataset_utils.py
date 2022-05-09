@@ -336,19 +336,7 @@ def _parse_tpm_row(row, additional_data=None):
 
         yield sample_id, parsed
 
-def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    expected_columns = ['sampleID'] + list(RNA_OUTLIER_COLUMNS.keys())
-    return _load_rna_seq(
-        RnaSeqOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_outlier_row, expected_columns,
-    )
-
-def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    sample_id_to_tissue_type = {}
-    samples_to_load, info, warnings = _load_rna_seq(
-        RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
-        additional_data=sample_id_to_tissue_type,
-    )
-
+def _check_invalid_tissues(samples_to_load, sample_id_to_tissue_type, warnings):
     invalid_tissues = {}
     for sample, data_by_gene in samples_to_load.items():
         tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
@@ -364,11 +352,24 @@ def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_sampl
             for sample, expected_tissue in invalid_tissues.items()])
         message = f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {mismatch}'
         warnings.append(message)
-        logger.warning(message, user)
 
-    return samples_to_load, info, warnings
+    return {sample: data for sample, data in samples_to_load.items() if sample not in invalid_tissues}
 
-def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns, additional_data=None):
+def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    expected_columns = ['sampleID'] + list(RNA_OUTLIER_COLUMNS.keys())
+    return _load_rna_seq(
+        RnaSeqOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_outlier_row, expected_columns,
+    )
+
+def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    sample_id_to_tissue_type = {}
+    return _load_rna_seq(
+        RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
+        additional_data=sample_id_to_tissue_type, validate_samples=_check_invalid_tissues,
+    )
+
+def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
+                  additional_data=None, validate_samples=None):
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -425,6 +426,10 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
 
+    warnings = []
+    if validate_samples:
+        samples_to_load = validate_samples(samples_to_load, additional_data, warnings)
+
     prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
     projects = {sample.individual.family.project.name for sample in samples_to_load}
     project_names = ', '.join(sorted(projects))
@@ -432,15 +437,15 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     info.append(message)
     logger.info(message, user)
 
-    warnings = []
     if remaining_sample_ids:
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
         message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
         warnings.append(message)
-        logger.warning(message, user)
     if loaded_sample_ids:
         message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
         warnings.append(message)
-        logger.warning(message, user)
+
+    for warning in warnings:
+        logger.warning(warning, user)
 
     return samples_to_load, info, warnings
