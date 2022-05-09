@@ -304,7 +304,7 @@ GENE_ID_COL = 'gene_id'
 TPM_COL = 'TPM'
 TISSUE_COL = 'tissue'
 INDIV_ID_COL = 'individual_id'
-TPM_HEADER_COLS = [SAMPLE_ID_COL, GENE_ID_COL, TPM_COL, TISSUE_COL]
+TPM_HEADER_COLS = [SAMPLE_ID_COL, GENE_ID_COL, TISSUE_COL, TPM_COL]
 
 TISSUE_TYPE_MAP = {
     'whole_blood': 'WB',
@@ -410,7 +410,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     )
 
     # Delete old data
-    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
+    to_delete = model_cls.objects.exclude(sample__data_source=data_source)
     if to_delete:
         prefetch_related_objects(to_delete, 'sample')
         logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
@@ -419,7 +419,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         })
         to_delete.delete()
 
-    loaded_sample_ids = set(model_cls.objects.values_list('sample_id', flat=True).distinct()) # TODO should only skip sample loaded form the current file
+    loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     samples_to_load = {
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
