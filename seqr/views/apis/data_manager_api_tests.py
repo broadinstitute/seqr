@@ -272,6 +272,8 @@ SAMPLE_GENE_DATA = {
     'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'p_value': '0.064', 'p_adjust': '0.0000057', 'z_score': '7.8'},
 }
 RNA_SAMPLE_DATA = [f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_DATA)}\n']
+PARSED_RNA_OUTLIER_FILENAME = 'rna_sample_data__outlier__2020-04-15T00:00:00.json.gz'
+
 
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -626,9 +628,8 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Attempted data loading for 1 RNA-seq samples in the following 1 projects: 1kg project nåme with uniçøde',
         ]
         warnings = ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
-        file_name = 'rna_sample_data__outlier__2020-04-15T00:00:00.json.gz'
         response_json = response.json()
-        self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [mock.ANY], 'fileName': file_name})
+        self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [mock.ANY], 'fileName': PARSED_RNA_OUTLIER_FILENAME})
         mock_logger.info.assert_has_calls(
             [mock.call(info_log, self.data_manager_user) for info_log in info] + [
                 mock.call('delete 3 RnaSeqOutliers', self.data_manager_user, db_update={
@@ -653,7 +654,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         # test correct file interactions
         mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
-        mock_open.assert_called_with(file_name, 'wt')
+        mock_open.assert_called_with(PARSED_RNA_OUTLIER_FILENAME, 'wt')
         self.assertListEqual(mock_writes, RNA_SAMPLE_DATA)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
@@ -662,12 +663,14 @@ class DataManagerAPITest(AuthenticationTestCase):
     def test_load_rna_seq_outlier_sample_data(self, mock_logger, mock_open, mock_os):
         RnaSeqOutlier.objects.all().delete()
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
-        mock_open.return_value.__enter__.return_value.read.return_value = RNA_SAMPLE_DATA
+        mock_open.return_value.__enter__.return_value.__iter__.return_value = RNA_SAMPLE_DATA
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_SAMPLE_GUID])
         self.check_data_manager_login(url)
 
-        response = self.client.post(url)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'fileName': PARSED_RNA_OUTLIER_FILENAME, 'dataType': 'outlier',
+        }))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'success': True})
 
@@ -679,13 +682,11 @@ class DataManagerAPITest(AuthenticationTestCase):
             {'geneId': 'ENSG00000233750', 'pAdjust': 0.0000057, 'pValue': 0.064, 'zScore': 7.8,'isSignificant': True},
         ])
 
-        file_name = f'rna_sample_data/{RNA_SAMPLE_GUID}.json.gz'
-        mock_open.assert_called_with(file_name, 'rt')
-        mock_os.remove.assert_called_with(file_name)
+        mock_open.assert_called_with(PARSED_RNA_OUTLIER_FILENAME, 'rt')
 
         mock_logger.info.assert_has_calls([
             mock.call('Loading outlier data for NA19675_D2', self.data_manager_user),
-            mock.call('create 2 RnaSeqOutliers', self.data_manager_user, db_update={
+            mock.call('create 2 RnaSeqOutlier', self.data_manager_user, db_update={
                 'dbEntity': 'RnaSeqOutlier', 'numEntities': 2, 'parentEntityIds': [RNA_SAMPLE_GUID], 'updateType': 'bulk_create',
             }),
         ])
