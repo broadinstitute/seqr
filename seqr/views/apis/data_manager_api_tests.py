@@ -678,7 +678,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D2', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
                 ['NA19675_D2', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
                 ['NA19675_D2', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
-                ['NA20889', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
+                ['NA20889_D1', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
                 ['NA19675_D3', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
                 ['GTEX_001', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
             ],
