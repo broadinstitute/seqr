@@ -155,6 +155,7 @@ def match_sample_ids_to_sample_records(
 
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
+        matched_individual_ids.update({i.id for i in sample_id_to_individual_record.values()})
         remaining_sample_ids -= set(sample_id_to_individual_record.keys())
         if raise_no_match_error and len(remaining_sample_ids) == len(sample_ids):
             raise ValueError(
@@ -399,7 +400,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     logger.info(message, user)
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
-    samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
+    samples, matched_individual_ids, _, _, _, remaining_sample_ids = match_and_update_samples(
         projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
         user=user,
         sample_ids=samples_by_id.keys(),
@@ -410,7 +411,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     )
 
     # Delete old data
-    to_delete = model_cls.objects.exclude(sample__data_source=data_source)
+    to_delete = model_cls.objects.filter(sample__individual_id__in=matched_individual_ids).exclude(sample__data_source=data_source)
     if to_delete:
         prefetch_related_objects(to_delete, 'sample')
         logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
