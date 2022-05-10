@@ -551,6 +551,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'liftedOverGenomeVersion': '37',
         'liftedOverPos': variant['pos'] - 10,
         'liftedOverChrom': variant['chrom'],
+        'selectedMainTranscriptId': None,
     })
 
 PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
@@ -560,13 +561,17 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION:
         'liftedOverGenomeVersion': '37',
         'liftedOverPos': variant['pos'] - 10,
         'liftedOverChrom': variant['chrom'],
+        'selectedMainTranscriptId': None,
     })
 
-PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_NO_CONSEQUENCE_FILTER_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1]['selectedMainTranscriptId'] = None
+
+PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
 for var in PARSED_NO_SORT_VARIANTS:
     del var['_sort']
 
-PARSED_CADD_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_CADD_VARIANTS = deepcopy(PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
 PARSED_CADD_VARIANTS[0]['_sort'][0] = -25.9
 PARSED_CADD_VARIANTS[1]['_sort'][0] = maxsize
 
@@ -1743,7 +1748,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
-        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
+        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
                 'Pathogenic', 'Pathogenic/Likely_pathogenic'

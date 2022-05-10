@@ -776,11 +776,19 @@ class EsSearch(object):
 
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
+        selected_main_transcript_id = None
+        if main_transcript_id and self._allowed_consequences and sorted_transcripts[0].get('majorConsequence') not in self._allowed_consequences:
+            selected_main_transcript_id = next((
+                t.get('transcriptId') for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences), None)
+            if not selected_main_transcript_id and self._allowed_consequences_secondary:
+                selected_main_transcript_id = next((
+                    t for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary), None)
 
         result.update({
             'familyGuids': sorted(family_guids),
             'genotypes': genotypes,
             'mainTranscriptId': main_transcript_id,
+            'selectedMainTranscriptId': selected_main_transcript_id,
             'populations': populations,
             'predictions': _get_field_values(
                 hit, PREDICTION_FIELDS_CONFIG, format_response_key=get_prediction_response_key
