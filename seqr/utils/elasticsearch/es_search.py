@@ -777,7 +777,7 @@ class EsSearch(object):
         main_transcript_id = sorted_transcripts[0]['transcriptId'] \
             if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
         selected_main_transcript_id = None
-        if self._allowed_consequences and sorted_transcripts[0].get('majorConsequence') not in self._allowed_consequences:
+        if main_transcript_id and self._allowed_consequences and sorted_transcripts[0].get('majorConsequence') not in self._allowed_consequences:
             selected_main_transcript_id = next((
                 t.get('transcriptId') for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences), None)
             if not selected_main_transcript_id and self._allowed_consequences_secondary:
