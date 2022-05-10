@@ -157,7 +157,7 @@ class FormWrapper extends React.PureComponent {
     }
     onSubmit(values, form, callback)?.then(
       () => callback(),
-      e => callback({ errors: e.body?.errors || [e.body?.error] || [e.message] }),
+      e => callback({ errors: e.body?.errors || (e.body?.error ? [e.body.error] : null) || [e.message] }),
     )
   }
 
