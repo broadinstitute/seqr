@@ -92,6 +92,27 @@ def anvil_workspace_page(request, namespace, name):
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
 @anvil_auth_and_policies_required
+def grant_workspace_access(request, namespace, name):
+    # Validate that the current user has logged in through google and has sufficient permissions
+    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
+    projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
+    if projects:
+        error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
+        return create_json_response({'error': error}, status=400, reason=error)
+
+    request_json = json.loads(request.body)
+    if not request_json.get('agreeSeqrAccess'):
+        error = 'Must agree to grant seqr access to the data in the associated workspace.'
+        return create_json_response({'error': error}, status=400, reason=error)
+
+    # Add the seqr service account to the corresponding AnVIL workspace
+    added_account_to_workspace = add_service_account(request.user, namespace, name)
+    if added_account_to_workspace:
+        _wait_for_service_account_access(request.user, namespace, name)
+
+    return create_json_response({'success': True})
+
+@anvil_auth_and_policies_required
 def create_project_from_workspace(request, namespace, name):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
@@ -102,13 +123,6 @@ def create_project_from_workspace(request, namespace, name):
     :return the projectsByGuid with the new project json
 
     """
-    # Validate that the current user has logged in through google and has sufficient permissions
-    workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
-    projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
-    if projects:
-        error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
-        return create_json_response({'error': error}, status=400, reason=error)
-
     # Validate all the user inputs from the post body
     request_json = json.loads(request.body)
 
@@ -117,16 +131,8 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    if not request_json.get('agreeSeqrAccess'):
-        error = 'Must agree to grant seqr access to the data in the associated workspace.'
-        return create_json_response({'error': error}, status=400, reason=error)
-
-    # Add the seqr service account to the corresponding AnVIL workspace
-    added_account_to_workspace = add_service_account(request.user, namespace, name)
-    if added_account_to_workspace:
-        _wait_for_service_account_access(request.user, namespace, name)
-
     # Validate the data path
+    workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=request_json['dataPath'].lstrip('/'))
     if not data_path.endswith(VCF_FILE_EXTENSIONS):

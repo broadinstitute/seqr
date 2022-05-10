@@ -93,15 +93,21 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const createProjectFromWorkspace = ({ namespace, name, uploadedFile, ...values }) => new HttpRequestHelper(
-  `/api/create_project_from_workspace/submit/${namespace}/${name}`,
+const postWorkspaceValues = (path, formatVals, onSuccess) => ({ namespace, name, ...values }) => new HttpRequestHelper(
+  `/api/create_project_from_workspace/${namespace}/${name}/${path}`,
+  onSuccess,
+).post(formatVals ? formatVals(values) : values)
+
+const createProjectFromWorkspace = postWorkspaceValues(
+  'submit',
+  ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }),
   (responseJson) => {
     window.location.href = `/project/${responseJson.projectGuid}/project_page`
   },
-).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
+)
 
 const FORM_WIZARD_PAGES = [
-  { fields: [AGREE_CHECKBOX] },
+  { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') },
   { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD] },
   { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
