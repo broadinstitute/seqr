@@ -77,6 +77,7 @@ def remove_token(user):
 
 
 def is_anvil_authenticated(user):
+    return True # TODO testing code, remove
     if not anvil_enabled():
         return False
 
@@ -248,6 +249,7 @@ def add_service_account(user, workspace_namespace, workspace_name):
     :param workspace_name: name of the workspace on AnVIL. The name will also be used as the name of project in seqr
     :return: True if service account was added, False if it was already associated with the workspace
     """
+    return False # TODO testing code, remove
     if has_service_account_access(user, workspace_namespace, workspace_name):
         return False
     acl = [
