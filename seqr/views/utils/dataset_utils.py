@@ -372,7 +372,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
-        
+
     samples_by_id = defaultdict(dict)
     f = file_iter(file_path)
     header = _parse_tsv_row(next(f))
