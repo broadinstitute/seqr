@@ -539,7 +539,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     @mock.patch('seqr.views.utils.dataset_utils.logger')
     def _test_update_rna_seq(self, model_cls, data_type, header, optional_headers, loaded_data_row, new_data,
-                             parsed_file_data, num_parsed_samples, initial_model_count, extra_warnings,
+                             parsed_file_data, num_parsed_samples, initial_model_count, deleted_count, extra_warnings,
                              mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file, mock_os, mock_datetime):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
@@ -628,8 +628,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [mock.ANY], 'fileName': file_name})
         mock_logger.info.assert_has_calls(
             [mock.call(info_log, self.data_manager_user) for info_log in info] + [
-                mock.call(f'delete {initial_model_count} {model_cls.__name__}s', self.data_manager_user, db_update={
-                    'dbEntity': model_cls.__name__, 'numEntities': initial_model_count, 'parentEntityIds': mock.ANY, 'updateType': 'bulk_delete',
+                mock.call(f'delete {deleted_count} {model_cls.__name__}s', self.data_manager_user, db_update={
+                    'dbEntity': model_cls.__name__, 'numEntities': deleted_count, 'parentEntityIds': mock.ANY, 'updateType': 'bulk_delete',
                 }),
             ], any_order=True
         )
@@ -637,7 +637,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
 
         # test database models are correct
-        self.assertEqual(model_cls.objects.count(), 0)
+        self.assertEqual(model_cls.objects.count(), initial_model_count - deleted_count)
         rna_samples = Sample.objects.filter(individual_id=1, sample_type='RNA')
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
@@ -665,11 +665,10 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D2', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
             ],
-            RNA_OUTLIER_SAMPLE_DATA, 2, 3, None,
+            RNA_OUTLIER_SAMPLE_DATA, 2, 3, 3, None,
         )
 
     def test_update_rna_seq_tpm(self):
-        #  TODO mapping file/ individual_id_col tests
         self._test_update_rna_seq(
             RnaSeqTpm, 'tpm',
             ['sample_id', 'gene_id', 'individual_id', 'tissue', 'TPM'], ['individual_id'],
@@ -682,7 +681,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
                 ['GTEX_001', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
             ],
-            RNA_TPM_SAMPLE_DATA, 3, 2,
+            RNA_TPM_SAMPLE_DATA, 3, 2, 1,
             ['Skipped data loading for the following 1 samples due to mismatched tissue type: NA20889 (fibroblasts to muscle)'],
         )
 

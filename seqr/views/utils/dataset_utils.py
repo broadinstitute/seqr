@@ -155,7 +155,6 @@ def match_sample_ids_to_sample_records(
 
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
-        matched_individual_ids.update({i.id for i in sample_id_to_individual_record.values()})
         remaining_sample_ids -= set(sample_id_to_individual_record.keys())
         if raise_no_match_error and len(remaining_sample_ids) == len(sample_ids):
             raise ValueError(
@@ -336,9 +335,9 @@ def _parse_tpm_row(row, additional_data=None):
 
         yield sample_id, parsed
 
-def _check_invalid_tissues(samples_to_load, sample_id_to_tissue_type, warnings):
+def _check_invalid_tissues(samples, sample_id_to_tissue_type, warnings):
     invalid_tissues = {}
-    for sample, data_by_gene in samples_to_load.items():
+    for sample in samples:
         tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
         if not sample.tissue_type:
             sample.tissue_type = tissue_type
@@ -353,7 +352,7 @@ def _check_invalid_tissues(samples_to_load, sample_id_to_tissue_type, warnings):
         message = f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {mismatch}'
         warnings.append(message)
 
-    return {sample: data for sample, data in samples_to_load.items() if sample not in invalid_tissues}
+    return [sample for sample in samples if sample not in invalid_tissues]
 
 def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
     expected_columns = ['sampleID'] + list(RNA_OUTLIER_COLUMNS.keys())
@@ -401,7 +400,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     logger.info(message, user)
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
-    samples, matched_individual_ids, _, _, _, remaining_sample_ids = match_and_update_samples(
+    samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
         projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
         user=user,
         sample_ids=samples_by_id.keys(),
@@ -411,8 +410,13 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
     )
 
+    warnings = []
+    if validate_samples:
+        samples = validate_samples(samples, additional_data, warnings)
+
     # Delete old data
-    to_delete = model_cls.objects.filter(sample__individual_id__in=matched_individual_ids).exclude(sample__data_source=data_source)
+    individual_db_ids = {s.individual_id for s in samples}
+    to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
     if to_delete:
         prefetch_related_objects(to_delete, 'sample')
         logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
@@ -425,10 +429,6 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     samples_to_load = {
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
-
-    warnings = []
-    if validate_samples:
-        samples_to_load = validate_samples(samples_to_load, additional_data, warnings)
 
     prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
     projects = {sample.individual.family.project.name for sample in samples_to_load}
