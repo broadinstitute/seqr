@@ -210,7 +210,7 @@ ANVIL_WORKSPACES = [{
     'workspace_name': TEST_WORKSPACE_NAME,
     'public': False,
     'acl': {
-        'test_user_manager@test.com': {
+        'Test_User_Manager@test.com': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": True,
@@ -329,10 +329,11 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
     acl = wss[0]['acl'] if wss else {}
+    user_acl = next((v for k, v in acl.items() if user.email.lower() == k.lower()), None)
     access_level = {
-        'accessLevel': acl[user.email]['accessLevel'],
-        'canShare': acl[user.email]['canShare'],
-    } if user.email in acl.keys() else {}
+        'accessLevel': user_acl['accessLevel'],
+        'canShare': user_acl['canShare'],
+    } if user_acl else {}
     if meta_fields and 'workspace.bucketName' in meta_fields:
         access_level['workspace'] = {'bucketName': wss[0]['workspace']['bucketName']}
     return access_level
@@ -346,7 +347,7 @@ def get_workspaces_side_effect(user):
                 'namespace': ws['workspace_namespace'],
                 'name': ws['workspace_name']
             }
-        } for ws in ANVIL_WORKSPACES if user.email in ws['acl'].keys()
+        } for ws in ANVIL_WORKSPACES if any(user.email.lower() == k.lower() for k in ws['acl'].keys())
     ]
 
 

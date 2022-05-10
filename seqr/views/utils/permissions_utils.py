@@ -145,7 +145,7 @@ def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):
     for email in workspace_acl.keys():
         permission_level = _map_anvil_seqr_permission(workspace_acl[email])
         if permission_level:
-            permission_levels.update({email: permission_level})
+            permission_levels.update({email.lower(): permission_level})
     return permission_levels
 
 

@@ -88,18 +88,10 @@ def saved_variants_page(request, tag):
 
     response_json = get_variants_response(
         request, saved_variant_models, add_all_context=True, include_igv=False, add_locus_list_detail=True,
-        include_missing_variants=True, include_rna_seq=False,
+        include_missing_variants=True, include_rna_seq=False, include_project_name=True,
     )
 
     return create_json_response(response_json)
-
-@login_and_policies_required
-def rna_seq_expression(request, gene, tissues):
-    response = {}
-    for tissue in tissues.split(','):
-        response[tissue] = list(RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene).values_list('tpm', flat=True))
-
-    return create_json_response(response)
 
 
 @analyst_required

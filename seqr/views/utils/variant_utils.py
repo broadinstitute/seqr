@@ -118,7 +118,7 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analy
 
 
 def _get_rna_seq_outliers(gene_ids, families):
-    data_by_individual_gene = defaultdict(lambda: {'outliers': {}, 'tpms': {}})
+    data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
 
     outlier_data = get_json_for_rna_seq_outliers(
         RnaSeqOutlier.objects.filter(
@@ -128,17 +128,15 @@ def _get_rna_seq_outliers(gene_ids, families):
     for data in outlier_data:
         data_by_individual_gene[data.pop('individualGuid')]['outliers'][data['geneId']] = data
 
-    tpm_data = _get_json_for_models(
-        RnaSeqTpm.objects.filter(gene_id__in=gene_ids, sample__individual__family__in=families),
-        nested_fields=[
-            {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},
-            {'fields': ('sample', 'tissue_type')},
-        ]
-    )
-    for data in tpm_data:
-        data_by_individual_gene[data.pop('individualGuid')]['tpms'][data['geneId']] = data
-
     return data_by_individual_gene
+
+
+def _add_family_has_rna_tpm(families_by_guid):
+    tpm_families = RnaSeqTpm.objects.filter(
+        sample__individual__family__guid__in=families_by_guid.keys()
+    ).values_list('sample__individual__family__guid', flat=True).distinct()
+    for family_guid in tpm_families:
+        families_by_guid[family_guid]['hasRnaTpmData'] = True
 
 
 def _add_discovery_tags(variants, discovery_tags):
@@ -154,7 +152,8 @@ LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
-                          add_locus_list_detail=False, include_rna_seq=True, include_missing_variants=False):
+                          add_locus_list_detail=False, include_rna_seq=True, include_missing_variants=False,
+                          include_project_name=False):
     response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, include_missing_variants=include_missing_variants)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
@@ -176,15 +175,15 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     response['locusListsByGuid'] = _add_locus_lists(
         projects, genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
 
-    if include_rna_seq:
-        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), families)
-
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
-        response['projectsByGuid'] = {project.guid: {'projectGuid': project.guid} for project in projects}
+        project_fields = {'projectGuid': lambda p: p.guid}
+        if include_project_name:
+            project_fields['name'] = lambda p: p.name
+        response['projectsByGuid'] = {project.guid: {k: v(project) for k, v in project_fields.items()} for project in projects}
         add_project_tag_types(response['projectsByGuid'])
 
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
@@ -192,5 +191,11 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
+
+    if include_rna_seq:
+        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), families)
+        families_by_guid = response.get('familiesByGuid')
+        if families_by_guid:
+            _add_family_has_rna_tpm(families_by_guid)
 
     return response

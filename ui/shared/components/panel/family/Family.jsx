@@ -84,6 +84,7 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
     component: BaseFieldView,
+    showEmptyValues: true,
     fieldDisplay: (analysedByList, compact, familyGuid) => (
       <AnalysedBy analysedByList={analysedByList} compact={compact} familyGuid={familyGuid} />
     ),

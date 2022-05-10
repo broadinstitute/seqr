@@ -1012,6 +1012,8 @@ class RnaSeqOutlier(DeletableSampleMetadataModel):
 
         json_fields = ['gene_id', 'p_value', 'p_adjust', 'z_score']
 
+        indexes = [models.Index(fields=['gene_id']), models.Index(fields=['p_adjust'])]
+
 
 class RnaSeqTpm(DeletableSampleMetadataModel):
     tpm = models.FloatField()

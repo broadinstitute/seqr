@@ -262,19 +262,28 @@ def _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type):
 def _trigger_data_loading(project, data_path, sample_type, request):
     try:
         genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=sample_type)
-
-        updated_anvil_variables = _construct_dag_variables(project, data_path, sample_type)
-
-        _update_variables(genome_test_type, updated_anvil_variables)
-
         dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
+
+        _check_dag_running_state(dag_id)
+        updated_anvil_variables = _construct_dag_variables(project, data_path, sample_type)
+        _update_variables(genome_test_type, updated_anvil_variables)
         _wait_for_dag_variable_update(dag_id, project)
 
         _trigger_dag(dag_id)
     except Exception as e:
-        logger.error(str(e), request.user)
+        logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
+        logger_call(str(e), request.user)
         _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type)
 
+class DagRunningException(Exception):
+    pass
+
+def _check_dag_running_state(dag_id):
+    endpoint = 'dags/{}/dagRuns'.format(dag_id)
+    resp = _make_airflow_api_request(endpoint, method='GET')
+    lastest_dag_runs = resp['dag_runs'][-1]
+    if lastest_dag_runs['state'] == 'running':
+        raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
 def _construct_dag_variables(project, data_path, sample_type):
     dag_variables = {

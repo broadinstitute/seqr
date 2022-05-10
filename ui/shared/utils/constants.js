@@ -52,8 +52,22 @@ export const EDITABLE_PROJECT_FIELDS = [
 ]
 
 export const ANVIL_FIELDS = [
-  { name: 'workspaceNamespace', label: 'Workspace Namespace', validate: validators.required, width: 8, inline: true },
-  { name: 'workspaceName', label: 'Workspace Name', validate: validators.required, width: 8, inline: true },
+  {
+    name: 'workspaceNamespace',
+    label: 'Workspace Namespace',
+    placeholder: 'AnVIL workspace name before the /',
+    validate: validators.required,
+    width: 8,
+    inline: true,
+  },
+  {
+    name: 'workspaceName',
+    label: 'Workspace Name',
+    placeholder: 'AnVIL workspace name after the /',
+    validate: validators.required,
+    width: 8,
+    inline: true,
+  },
 ]
 
 export const FILE_FORMATS = [
@@ -129,7 +143,7 @@ export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_KNOWN_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - known gene for phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - gene linked to different phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE, color: '#CDDC39', name: 'Strong candidate - novel gene' },
-  { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#92DCB9', name: 'Reviewed, currently pursuing candidates' },
+  { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#EB9F38', name: 'Reviewed, currently pursuing candidates' },
   { value: FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE, color: '#EF5350', name: 'Reviewed, no clear candidate' },
   { value: FAMILY_STATUS_CLOSED, color: '#9c0502', name: 'Closed, no longer under analysis' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
@@ -1194,7 +1208,8 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
-  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
+  { header: 'project' },
+  { header: 'family' },
   { header: 'tags', getVal: (variant, tagsByGuid) => variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid].name).join('|') },
   { header: 'classification', getVal: variant => (variant.acmgClassification ? `${variant.acmgClassification.score}, ${variant.acmgClassification.classify}, ${variant.acmgClassification.criteria}` : '') },
   {
@@ -1265,13 +1280,17 @@ export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
   4: 'Green, highest level of confidence; a gene from 3 or 4 sources.',
 }
 
-export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = {
+export const PANEL_APP_CONFIDENCE_LEVELS = {
   0: 'none',
-  1: VARIANT_ICON_COLORS.red,
-  2: VARIANT_ICON_COLORS.amber,
-  3: VARIANT_ICON_COLORS.green,
-  4: VARIANT_ICON_COLORS.green,
+  1: 'red',
+  2: 'amber',
+  3: 'green',
+  4: 'green',
 }
+
+export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = Object.entries(PANEL_APP_CONFIDENCE_LEVELS).reduce(
+  (acc, [confidence, color]) => ({ ...acc, [confidence]: VARIANT_ICON_COLORS[color] }), {},
+)
 
 // Users
 
