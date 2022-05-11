@@ -96,7 +96,8 @@ RUN /usr/bin/cpanm --notest DBD::SQLite
 RUN /usr/bin/cpanm --notest  List::MoreUtils
 
 # install VEP
-WORKDIR /ensembl-vep-release-${VEP_VERSION} && perl INSTALL.pl -a ap -n -l -g all
+WORKDIR /ensembl-vep-release-${VEP_VERSION}
+RUN perl INSTALL.pl -a ap -n -l -g all
 RUN ln -s /ensembl-vep-release-${VEP_VERSION}/vep /vep
 
 # clone and hail-elasticsearch-pipelines repo

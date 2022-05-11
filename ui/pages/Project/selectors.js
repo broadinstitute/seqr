@@ -296,9 +296,9 @@ export const getFamiliesFilter = createSelector(
   getFamiliesTableState,
   familyTableState => familyTableState.familiesFilter || SHOW_ALL,
 )
-export const getFamiliesSearch = createSelector(
+const getFamiliesSearch = createSelector(
   getFamiliesTableState,
-  familyTableState => familyTableState.familiesSearch,
+  familyTableState => (familyTableState.familiesSearch || '').toLowerCase(),
 )
 export const getFamiliesSortOrder = createSelector(
   getFamiliesTableState,
@@ -316,7 +316,7 @@ const hasFamilySearch = createSelector(
 
 const getFamilySearchFields = family => ([
   family.displayName, family.familyId, (family.assignedAnalyst || {}).fullName, (family.assignedAnalyst || {}).email,
-  ...family.analysedBy.map(({ createdBy }) => `${createdBy.fullName}${createdBy.email}`),
+  ...family.analysedBy.map(({ createdBy }) => createdBy),
 ])
 
 const getFamiliesBySearchString = createSelector(

@@ -26,6 +26,7 @@ from seqr.views.apis.family_api import \
     update_family_note, \
     delete_family_note, \
     family_page_data, \
+    get_family_rna_seq_data, \
     family_variant_tag_summary
 
 from seqr.views.apis.individual_api import \
@@ -116,7 +117,8 @@ from seqr.views.apis.report_api import \
     get_cmg_projects, \
     sample_metadata_export, \
     seqr_stats
-from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, rna_seq_expression
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, \
+    bulk_update_family_analysed_by
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -126,7 +128,7 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups
+    project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace
 from matchmaker.views import external_api
@@ -179,12 +181,14 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/note/create': create_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/delete': delete_family_note,
+    'family/(?P<family_guid>[\w.|-]+)/rna_seq_data/(?P<gene_id>[\w.|-]+)': get_family_rna_seq_data,
 
     'dashboard': dashboard_page_data,
 
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
     'project/(?P<project_guid>[^/]+)/get_families': project_families,
     'project/(?P<project_guid>[^/]+)/get_individuals': project_individuals,
+    'project/(?P<project_guid>[^/]+)/get_family_notes': project_family_notes,
     'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
     'project/(?P<project_guid>[^/]+)/get_analysis_groups': project_analysis_groups,
     'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
@@ -193,6 +197,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,
     'project/(?P<project_guid>[^/]+)/delete_project': delete_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
+    'project/(?P<project_guid>[^/]+)/update_workspace': update_project_workspace,
 
     'project/(?P<project_guid>[^/]+)/saved_variants/(?P<variant_guids>[^/]+)?': saved_variant_data,
 
@@ -295,8 +300,7 @@ api_endpoints = {
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
-
-    'rna_seq_expression/gene/(?P<gene>[^/]+)/tissues/(?P<tissues>[^/]+)': rna_seq_expression,
+    'summary_data/update_analysed_by': bulk_update_family_analysed_by,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs

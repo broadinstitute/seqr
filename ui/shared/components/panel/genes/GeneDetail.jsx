@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Grid, Popup, Loader } from 'semantic-ui-react'
+import { Grid, Popup, Loader, Label } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
@@ -115,6 +115,54 @@ ScoreDetails.propTypes = {
   rankDescription: PropTypes.string,
 }
 
+const CLINGEN_LABEL_PROPS = {
+  'No Evidence': { color: 'grey' },
+  'Little Evidence': { color: 'blue' },
+  'Emerging Evidence': { color: 'olive' },
+  'Sufficient Evidence': { color: 'green' },
+  'Gene Associated with Autosomal Recessive Phenotype': {
+    color: 'grey',
+    basic: true,
+    content: 'Gene Associated with AR Phenotype',
+  },
+  'Dosage Sensitivity Unlikely': { color: 'black', basic: true },
+}
+
+export const ClingenLabel = ({ value }) => <Label horizontal size="mini" content={value} {...CLINGEN_LABEL_PROPS[value]} />
+
+ClingenLabel.propTypes = {
+  value: PropTypes.string,
+}
+
+const DosageSensitivity = ({ gene, clingenField, scoreFields, sensitivityType, threshold }) => (
+  <div>
+    {gene.clinGen && gene.clinGen[clingenField] && (
+      <div>
+        <a target="_blank" rel="noreferrer" href={gene.clinGen.href}><b>ClinGen: </b></a>
+        <ClingenLabel value={gene.clinGen[clingenField]} />
+      </div>
+    )}
+    <ScoreDetails
+      scores={gene.cnSensitivity}
+      fields={scoreFields}
+      rankDescription="intolerant of LoF mutations"
+      note={`These are a score under development by the Talkowski lab that predict whether a gene is ${sensitivityType}
+      based on large chromosomal microarray data set analysis. Scores >${threshold} are considered to have high
+      likelihood to be ${sensitivityType}.`}
+    />
+  </div>
+)
+
+DosageSensitivity.propTypes = {
+  clingenField: PropTypes.string,
+  scoreFields: PropTypes.arrayOf(PropTypes.object),
+  sensitivityType: PropTypes.string,
+  threshold: PropTypes.string,
+  gene: PropTypes.object,
+}
+
+const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHI-score' }]
+const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTS-score' }]
 const STAT_DETAILS = [
   { title: 'Coding Size', content: gene => `${((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2)}kb` },
   {
@@ -150,21 +198,27 @@ const STAT_DETAILS = [
   },
   {
     title: 'Haploinsufficient',
-    scoreField: 'cnSensitivity',
-    fields: [{ field: 'phi', label: 'pHI-score' }],
-    rankDescription: 'intolerant of LoF mutations',
-    note: 'These are a score under development by the Talkowski lab that predict whether a gene is haploinsufficient ' +
-    'based on large chromosomal microarray data set analysis. Scores >0.84 are considered to have high likelihood to ' +
-    'be haploinsufficient.',
+    content: gene => (
+      <DosageSensitivity
+        gene={gene}
+        clingenField="haploinsufficiency"
+        scoreFields={HAPLOINSUFFICIENT_FIELDS}
+        sensitivityType="haploinsufficient"
+        threshold="0.84"
+      />
+    ),
   },
   {
     title: 'Triplosensitive',
-    scoreField: 'cnSensitivity',
-    fields: [{ field: 'pts', label: 'pTS-score' }],
-    rankDescription: 'intolerant of LoF mutations',
-    note: 'These are a score under development by the Talkowski lab that predict whether a gene is triplosensitive ' +
-    'based on large chromosomal microarray dataset analysis. Scores >0.993 are considered to have high likelihood to ' +
-    'be triplosensitive.',
+    content: gene => (
+      <DosageSensitivity
+        gene={gene}
+        clingenField="triplosensitivity"
+        scoreFields={TRIPLOSENSITIVE_FIELDS}
+        sensitivityType="triplosensitive"
+        threshold="0.993"
+      />
+    ),
   },
 ]
 
@@ -251,6 +305,7 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
     { title: 'primAD', link: `http://primad.basespace.illumina.com/gene/${gene.geneSymbol}?dataset=gnomad_r3`, description: 'Primate Genome Aggregation Database' },
     gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
     gene.mgiMarkerId ? { title: 'IMPC', link: `https://www.mousephenotype.org/data/genes/${gene.mgiMarkerId}`, description: 'International Mouse Phenotyping Consortium' } : null,
+    gene.clinGen ? { title: 'ClinGen', link: gene.clinGen.href, description: 'ClinGen Dosage Sensitivity' } : null,
     { title: 'ClinVar', link: `https://www.ncbi.nlm.nih.gov/clinvar?term=${gene.geneSymbol}[gene]`, description: 'Aggregated information about human genomic variation' },
     user.isAnalyst ? { title: 'HGMD', link: `https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/gene.php?gene=${gene.geneSymbol}`, description: 'Human Gene Mutation Database ' } : null,
   ]

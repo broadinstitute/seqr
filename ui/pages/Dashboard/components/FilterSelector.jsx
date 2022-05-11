@@ -9,14 +9,11 @@ import { getProjectFilter, getCategoryOptions } from '../selectors'
 
 const FilterContainer = styled.span`
   display: inline-block;
-  min-width: 8em;
-  font-size: 12px;
 `
 
 const FilterSelector = React.memo(({ filter, options, onChange }) => (
   <FilterContainer>
     <Form.Select
-      fluid
       name="filterSelector"
       value={filter}
       onChange={onChange}

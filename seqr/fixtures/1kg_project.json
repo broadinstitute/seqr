@@ -376,7 +376,7 @@
     "fields": {
         "guid": "FAB000001_1",
         "created_date": "2021-07-22T19:27:08.563Z",
-        "created_by": 12,
+        "created_by": 13,
         "last_modified_date": null,
         "family": 1
     }
@@ -1203,6 +1203,25 @@
     }
 },
 {
+    "model": "seqr.sample",
+    "pk": 151,
+    "fields": {
+        "guid": "S000151_na20889",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 17,
+        "sample_type": "RNA",
+        "dataset_type": "VARIANTS",
+        "sample_id": "NA20889",
+        "is_active": true,
+        "elasticsearch_index":null,
+        "tissue_type": "M",
+        "data_source": "muscle_samples.tsv.gz",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
+    }
+},
+{
     "model": "seqr.rnaseqoutlier",
     "pk": 1,
     "fields": {
@@ -1242,6 +1261,15 @@
         "sample": 150,
         "gene_id": "ENSG00000135953",
         "tpm": 8.38
+    }
+},
+{
+    "model": "seqr.rnaseqtpm",
+    "pk": 4,
+    "fields": {
+        "sample": 151,
+        "gene_id": "ENSG00000135953",
+        "tpm": 1.01
     }
 },
 {

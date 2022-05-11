@@ -86,7 +86,10 @@ def _get_or_create_results_model(search_hash, search_context, user):
             families = Family.objects.filter(guid__in=all_families)
         elif _is_all_project_family_search(search_context):
             omit_projects = [p.guid for p in Project.objects.filter(is_demo=True).only('guid')]
-            project_guids = [project_guid for project_guid in get_project_guids_user_can_view(user) if project_guid not in omit_projects]
+            project_guids = [
+                project_guid for project_guid in get_project_guids_user_can_view(user, limit_data_manager=True)
+                if project_guid not in omit_projects
+            ]
             families = Family.objects.filter(project__guid__in=project_guids)
         elif search_context.get('projectGuids'):
             families = Family.objects.filter(project__guid__in=search_context['projectGuids'])

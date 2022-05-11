@@ -5,6 +5,7 @@ import {
   getPairedSelectedSavedVariants,
   getVisibleSortedSavedVariants,
   getPairedFilteredSavedVariants,
+  getRnaSeqOutilerDataByFamilyGene,
 } from './selectors'
 
 test('getPairedSelectedSavedVariants', () => {
@@ -71,3 +72,40 @@ test('getVisibleSortedSavedVariants', () => {
   expect(savedVariants.length).toEqual(1)
   expect(savedVariants[0].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
 })
+
+const RNA_SEQ_STATE = {
+  rnaSeqDataByIndividual: {
+    I021476_na19678_1: {
+      outliers: {
+        ENSG00000228198: { isSignificant: true, pValue: 0.0004 },
+        ENSG00000164458: { isSignificant: true, pValue: 0.0073 },
+      },
+    },
+    I021474_na19679_1: {
+      outliers: {
+        ENSG00000228198: { isSignificant: true, pValue: 0.01 },
+        ENSG00000164458: { isSignificant: false, pValue: 0.73 },
+      },
+    },
+    I021476_na19678_2: { outliers: { ENSG00000228198: { isSignificant: true, pValue: 0.0214 } } },
+  },
+  ...STATE_WITH_2_FAMILIES,
+}
+
+test('getRnaSeqOutilerDataByFamilyGene', () => {
+  expect(getRnaSeqOutilerDataByFamilyGene(RNA_SEQ_STATE)).toEqual({
+    F011652_1: {
+      ENSG00000228198: {
+        NA19678: { isSignificant: true, pValue: 0.0004 },
+        NA19679_1: { isSignificant: true, pValue: 0.01 },
+      },
+      ENSG00000164458: {
+        NA19678: { isSignificant: true, pValue: 0.0073 },
+      },
+    },
+    F011652_2: {
+      ENSG00000228198: { NA19678_2: { isSignificant: true, pValue: 0.0214 } },
+    },
+  })
+})
+

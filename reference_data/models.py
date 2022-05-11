@@ -249,3 +249,14 @@ class GenCC(models.Model):
 
     class Meta:
         json_fields = ['classifications', 'hgnc_id']
+
+
+class ClinGen(models.Model):
+    gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
+
+    haploinsufficiency = models.TextField()
+    triplosensitivity = models.TextField()
+    href = models.TextField()
+
+    class Meta:
+        json_fields = ['haploinsufficiency', 'triplosensitivity', 'href']

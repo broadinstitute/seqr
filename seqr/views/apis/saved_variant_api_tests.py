@@ -168,10 +168,6 @@ class SavedVariantAPITest(object):
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
             }},
-            'tpms': {
-                'ENSG00000135953': {
-                    'geneId': 'ENSG00000135953', 'tpm': 8.38, 'sampleTissueType': 'M',
-            }},
         }})
 
         # include project tag types
@@ -201,13 +197,13 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         response_keys = {
-            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid',
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid', 'projectsByGuid'
         }
         response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
-        family_fields = {'individualGuids'}
+        family_fields = {'individualGuids', 'hasRnaTpmData'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
         individual_fields = {'igvSampleGuids'}
@@ -216,6 +212,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
         self.assertEqual(len(response_json['locusListsByGuid']), 1)
+        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'familiesLoaded': True}})
 
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
