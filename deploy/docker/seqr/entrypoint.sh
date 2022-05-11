@@ -35,11 +35,6 @@ fi
 
 cd /seqr
 
-if [ "$SEQR_GIT_BRANCH" ]; then
-  git pull
-  git checkout "$SEQR_GIT_BRANCH"
-fi
-
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
