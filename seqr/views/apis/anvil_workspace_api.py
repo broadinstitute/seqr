@@ -3,6 +3,7 @@ import json
 import time
 import tempfile
 from datetime import datetime
+from functools import wraps
 import requests
 
 from google.auth.transport.requests import Request
@@ -67,6 +68,20 @@ def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_RE
     return decorator
 
 
+def anvil_workspace_access_required(wrapped_func=None, meta_fields=None):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, namespace, name, *args, **kwargs):
+            workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=meta_fields)
+            if meta_fields:
+                return view_func(request, namespace, name, workspace_meta, *args, **kwargs)
+            return view_func(request, namespace, name, *args, **kwargs)
+        return anvil_auth_and_policies_required(_wrapped_view)
+    if wrapped_func:
+        return decorator(wrapped_func)
+    return decorator
+
+
 @anvil_auth_and_policies_required(policy_url=POLICY_REQUIRED_URL)
 def anvil_workspace_page(request, namespace, name):
     """
@@ -91,7 +106,7 @@ def anvil_workspace_page(request, namespace, name):
 
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
-@anvil_auth_and_policies_required
+@anvil_workspace_access_required
 def grant_workspace_access(request, namespace, name):
     # Validate that the current user has logged in through google and has sufficient permissions
     check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
@@ -112,8 +127,8 @@ def grant_workspace_access(request, namespace, name):
 
     return create_json_response({'success': True})
 
-@anvil_auth_and_policies_required
-def create_project_from_workspace(request, namespace, name):
+@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
+def create_project_from_workspace(request, namespace, name, workspace_meta):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
 
@@ -132,7 +147,6 @@ def create_project_from_workspace(request, namespace, name):
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the data path
-    workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=request_json['dataPath'].lstrip('/'))
     if not data_path.endswith(VCF_FILE_EXTENSIONS):
