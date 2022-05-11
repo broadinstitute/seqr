@@ -549,7 +549,8 @@ class HailSearch(object):
 
         comp_het_ht = comp_het_ht.annotate(gene_ids=comp_het_ht.transcripts.key_set())
         comp_het_ht = comp_het_ht.explode(comp_het_ht.gene_ids)
-        comp_het_ht = comp_het_ht.group_by('gene_ids').aggregate(variants=hl.agg.collect(comp_het_ht.row).drop('gene_ids'))
+        comp_het_ht = comp_het_ht.group_by('gene_ids').aggregate(variants=hl.agg.collect(comp_het_ht.row))
+        comp_het_ht = comp_het_ht.annotate(variants=comp_het_ht.variants.map(lambda v: v.drop('gene_ids')))
 
         self._comp_het_ht = comp_het_ht
 
