@@ -109,6 +109,7 @@ const createProjectFromWorkspace = postWorkspaceValues(
 const FORM_WIZARD_PAGES = [
   { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') },
   { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD], onPageSubmit: postWorkspaceValues('validate_vcf') },
+  // TODO need a way to get the response data from validate_vcf into the form data
   { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
 
