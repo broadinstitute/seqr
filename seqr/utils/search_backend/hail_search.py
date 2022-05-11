@@ -458,7 +458,7 @@ class HailSearch(object):
 
         if family_filter is not None:
             family_filter_q = family_filter(family_ht, samples, affected_status)
-            if family_filter_q:
+            if family_filter_q is not None:
                 family_ht = family_ht.filter(family_filter_q)
 
         return family_ht.annotate(
