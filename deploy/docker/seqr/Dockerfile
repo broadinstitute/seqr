@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r /app/seqr/requirements.txt
 
+COPY admin /app/seqr/admin
 COPY matchmaker /app/seqr/matchmaker
 COPY reference_data /app/seqr/reference_data
 COPY seqr /app/seqr/seqr
