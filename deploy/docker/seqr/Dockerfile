@@ -30,4 +30,4 @@ COPY wsgi.py settings.py servctl manage.py deploy/docker/seqr/entrypoint.sh depl
 # Berglass: Store and retrieve secrets on Google Cloud
 COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
-ENTRYPOINT ["exec", "/bin/berglas", "exec", "--", "/app/seqr/entrypoint.sh"]
+ENTRYPOINT ["/bin/berglas", "exec", "--", "/app/seqr/entrypoint.sh"]
