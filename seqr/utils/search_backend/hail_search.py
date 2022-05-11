@@ -545,8 +545,13 @@ class HailSearch(object):
         comp_het_ht = comp_het_ht.join(self._filter_by_genotype(
             inheritance_mode=COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter,
         ))
+        comp_het_ht = self._format_results(comp_het_ht)
 
-        self._comp_het_ht = self._format_results(comp_het_ht)
+        comp_het_ht = comp_het_ht.annotate(gene_ids=comp_het_ht.transcripts.key_set())
+        comp_het_ht = comp_het_ht.explode(comp_het_ht.gene_ids)
+        comp_het_ht = comp_het_ht.group_by('gene_ids').aggregate(variants=hl.agg.collect(comp_het_ht.row))
+
+        self._comp_het_ht = comp_het_ht
 
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
 
@@ -578,7 +583,7 @@ class HailSearch(object):
             results_ht = self._format_results(self.ht)
         # TODO page, self._sort
         collected = results_ht.take(num_results)
-        hail_results = [_json_serialize(dict(row)) for row in collected]
+        hail_results = [_json_serialize(row['variants'] if is_comp_het else dict(row)) for row in collected]
 
         # TODO potentially post-process compound hets
         return hail_results
