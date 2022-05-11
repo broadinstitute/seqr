@@ -108,7 +108,7 @@ const createProjectFromWorkspace = postWorkspaceValues(
 
 const FORM_WIZARD_PAGES = [
   { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') },
-  { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD] },
+  { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD], onPageSubmit: postWorkspaceValues('validate_vcf') },
   { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
 

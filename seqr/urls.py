@@ -131,7 +131,7 @@ from seqr.views.apis.project_api import create_project_handler, update_project_h
     project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
-    grant_workspace_access
+    grant_workspace_access, validate_anvil_vcf
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
@@ -304,6 +304,7 @@ api_endpoints = {
     'summary_data/update_analysed_by': bulk_update_family_analysed_by,
 
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,
+    'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/submit': create_project_from_workspace,
 
     # EXTERNAL APIS: DO NOT CHANGE
