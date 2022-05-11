@@ -456,7 +456,7 @@ class HailSearch(object):
 
         family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
 
-        if family_filter:
+        if family_filter is not None:
             family_filter_q = family_filter(family_ht, samples, affected_status)
             if family_filter_q:
                 family_ht = family_ht.filter(family_filter_q)
