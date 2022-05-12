@@ -566,7 +566,7 @@ class HailSearch(object):
         })
         ch_ht = ch_ht.annotate(
             family_guids=ch_ht.family_guids.filter(lambda family_guid: unaffected_by_family[family_guid].all(
-                lambda individual: ch_ht.v1.genotypes[individual].numAlt < 1 | ch_ht.v2.genotypes[individual].numAlt < 1
+                lambda i_guid: (ch_ht.v1.genotypes[i_guid].numAlt < 1) | (ch_ht.v2.genotypes[i_guid].numAlt < 1)
             )))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
