@@ -560,14 +560,9 @@ class HailSearch(object):
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1.variantId != ch_ht.v2.variantId) # TODO actually filter for phasing here
-        ch_ht = ch_ht.annotate(variants=[ch_ht.v1, ch_ht.v2]).select('variants')
-        # TODO deduplicate pairs
-
-        # xg = rt.group_by('geneIds').aggregate(v1=hl.agg.collect(rt.row), v2=hl.agg.collect(rt.row))
-        # xg = xg.explode('v1')
-        # xg = xg.explode('v2')
-        # xg = xg.filter(((xg.v1.locus != xg.v2.locus) | (xg.v1.alleles != xg.v2.alleles)) & (xg.v1.csqs.union(xg.v2.csqs).size() < 2))
-        # xg = xg.annotate(variants=[xg.v1, xg.v2]).select('variants')
+        ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2]))
+        ch_ht = ch_ht.key_by('variants').select()
+        ch_ht = ch_ht.distinct()
 
         self._comp_het_ht = ch_ht
 
