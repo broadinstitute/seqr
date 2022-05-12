@@ -557,6 +557,22 @@ class HailSearch(object):
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1.variantId != ch_ht.v2.variantId)
 
+        # Filter variant pairs for primary/secondary consequences
+        if self._allowed_consequences and self._allowed_consequences_secondary:
+            # Make a copy of lists to prevent blowing up memory usage
+            primary_cs = hl.literal(set(self._allowed_consequences))
+            secondary_cs = hl.literal(set(self._allowed_consequences_secondary))
+            ch_ht = ch_ht.annotate(
+                v1_csqs=ch_ht.v1.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence),
+                v2_csqs=ch_ht.v2.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence)
+            )
+            ch_ht = ch_ht.filter(
+                (ch_ht.v1_csqs.any(lambda c: primary_cs.includes(c)) & ch_ht.v2_csqs.any(lambda c: secondary_cs.includes(c))) |
+                (ch_ht.v1_csqs.any(lambda c: secondary_cs.includes(c)) & ch_ht.v2_csqs.any(lambda c: primary_cs.includes(c)))
+            )
+
+        # Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
+
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
         unaffected_by_family = hl.literal({
