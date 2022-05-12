@@ -548,18 +548,39 @@ class HailSearch(object):
         ))
         ch_ht = self._format_results(ch_ht)
 
-        # Group and filter variants by gene
+        # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=ch_ht.transcripts.key_set())
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
-        # ch_ht = ch_ht.group_by('gene_ids').aggregate(variants=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
-        # ch_ht = ch_ht.filter(ch_ht.variants.length() > 1)
-
-        # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
         ch_ht = ch_ht.annotate(v2=ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
-        ch_ht = ch_ht.filter(ch_ht.v1.variantId != ch_ht.v2.variantId) # TODO actually filter for phasing here
+        ch_ht = ch_ht.filter(ch_ht.v1.variantId != ch_ht.v2.variantId)
+
+        # Filter variant pairs for family and genotype
+        ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
+
+        unaffected_by_family = hl.literal({
+            family_guid: [
+                guid for guid, affected in affected_status.items() if affected == Individual.AFFECTED_STATUS_UNAFFECTED
+            ] for family_guid, affected_status in self._family_individual_affected_status.items()
+        })
+        def _is_comp_het_family(family_guid):
+            unaffected = unaffected_by_family.get(family_guid)
+            if not unaffected:
+                return True
+            return unaffected.all(
+                lambda individual: ch_ht.v1.genotypes[individual].numAlt < 1 | ch_ht.v2.genotypes[individual].numAlt < 1
+            )
+
+        ch_ht = ch_ht.annotate(family_guids=ch_ht.family_guids.filter(_is_comp_het_family))
+        ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
+        ch_ht = ch_ht.annotate(
+            v1=ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids)),
+            v2=ch_ht.v2.annotate(familyGuids=hl.array(ch_ht.family_guids)),
+        )
+
+        # Format pairs as lists and de-duplicate
         ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2]))
         ch_ht = ch_ht.key_by('variants').select()
         ch_ht = ch_ht.distinct()
