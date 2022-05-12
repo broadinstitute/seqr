@@ -541,21 +541,24 @@ class HailSearch(object):
             self._allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
 
-        comp_het_ht = self.ht.filter(self._get_filtered_transcript_consequences(comp_het_consequences))
-        comp_het_ht = comp_het_ht.join(self._filter_by_genotype(
+        # Filter and format variants
+        ch_ht = self.ht.filter(self._get_filtered_transcript_consequences(comp_het_consequences))
+        ch_ht = ch_ht.join(self._filter_by_genotype(
             inheritance_mode=COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter,
         ))
-        comp_het_ht = self._format_results(comp_het_ht)
+        ch_ht = self._format_results(ch_ht)
 
-        comp_het_ht = comp_het_ht.annotate(gene_ids=comp_het_ht.transcripts.key_set())
-        comp_het_ht = comp_het_ht.explode(comp_het_ht.gene_ids)
-        comp_het_ht = comp_het_ht.group_by('gene_ids').aggregate(
-            variants=hl.agg.collect(comp_het_ht.row).map(lambda v: v.drop('gene_ids')))
+        # Group variants by gene
+        ch_ht = ch_ht.annotate(gene_ids=ch_ht.transcripts.key_set())
+        ch_ht = ch_ht.explode(ch_ht.gene_ids)
+        ch_ht = ch_ht.group_by('gene_ids').aggregate(variants=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
 
-        self._comp_het_ht = comp_het_ht
+        # Filter variant pairs
+        ch_ht = ch_ht.filter(ch_ht.variants.length() > 1)
+
+        self._comp_het_ht = ch_ht
 
         # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
-
 
     @staticmethod
     def _format_results(ht):
@@ -586,7 +589,6 @@ class HailSearch(object):
         collected = results_ht.take(num_results)
         hail_results = [_json_serialize(row['variants'] if is_comp_het else dict(row)) for row in collected]
 
-        # TODO potentially post-process compound hets
         return hail_results
 
 # For production: should use custom json serializer
