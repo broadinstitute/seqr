@@ -567,8 +567,8 @@ class HailSearch(object):
                 v2_csqs=ch_ht.v2.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence)
             )
             ch_ht = ch_ht.filter(
-                (ch_ht.v1_csqs.any(lambda c: primary_cs.includes(c)) & ch_ht.v2_csqs.any(lambda c: secondary_cs.includes(c))) |
-                (ch_ht.v1_csqs.any(lambda c: secondary_cs.includes(c)) & ch_ht.v2_csqs.any(lambda c: primary_cs.includes(c)))
+                (ch_ht.v1_csqs.any(lambda c: primary_cs.contains(c)) & ch_ht.v2_csqs.any(lambda c: secondary_cs.contains(c))) |
+                (ch_ht.v1_csqs.any(lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(lambda c: primary_cs.contains(c)))
             )
 
         # Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
