@@ -536,29 +536,40 @@ class HailSearch(object):
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
 
+        # Filter and format variants
         comp_het_consequences = set(self._allowed_consequences)
         if annotations_secondary:
             self._allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
 
-        # Filter and format variants
         ch_ht = self.ht.filter(self._get_filtered_transcript_consequences(comp_het_consequences))
         ch_ht = ch_ht.join(self._filter_by_genotype(
             inheritance_mode=COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter,
         ))
         ch_ht = self._format_results(ch_ht)
 
-        # Group variants by gene
+        # Group and filter variants by gene
         ch_ht = ch_ht.annotate(gene_ids=ch_ht.transcripts.key_set())
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
-        ch_ht = ch_ht.group_by('gene_ids').aggregate(variants=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
+        # ch_ht = ch_ht.group_by('gene_ids').aggregate(variants=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
+        # ch_ht = ch_ht.filter(ch_ht.variants.length() > 1)
 
-        # Filter variant pairs
-        ch_ht = ch_ht.filter(ch_ht.variants.length() > 1)
+        # Get possible pairs of variants within the same gene
+        ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
+        ch_ht = ch_ht.annotate(v2=ch_ht.v1)
+        ch_ht = ch_ht.explode(ch_ht.v1)
+        ch_ht = ch_ht.explode(ch_ht.v2)
+        ch_ht = ch_ht.filter(ch_ht.v1.variantId != ch_ht.v2.variantId) # TODO actually filter for phasing here
+        ch_ht = ch_ht.annotate(variants=[ch_ht.v1, ch_ht.v2]).select('variants')
+        # TODO deduplicate pairs
+
+        # xg = rt.group_by('geneIds').aggregate(v1=hl.agg.collect(rt.row), v2=hl.agg.collect(rt.row))
+        # xg = xg.explode('v1')
+        # xg = xg.explode('v2')
+        # xg = xg.filter(((xg.v1.locus != xg.v2.locus) | (xg.v1.alleles != xg.v2.alleles)) & (xg.v1.csqs.union(xg.v2.csqs).size() < 2))
+        # xg = xg.annotate(variants=[xg.v1, xg.v2]).select('variants')
 
         self._comp_het_ht = ch_ht
-
-        # TODO modify query - get multiple hits within a single gene and ideally return grouped by gene
 
     @staticmethod
     def _format_results(ht):
