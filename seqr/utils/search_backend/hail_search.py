@@ -146,7 +146,7 @@ class HailSearch(object):
         self._comp_het_ht = None
 
     def _load_table(self, intervals=None):
-        #  In production: should have a Table and use read_table
+        # TODO #2665: should have a Table and use read_table
         self.ht = hl.read_matrix_table(
             f'/hail_datasets/{self._data_source}.mt', _intervals=intervals, _filter_intervals=bool(intervals)
         ).rows().select_globals()
@@ -187,7 +187,7 @@ class HailSearch(object):
             self.ht = self.ht.filter(self.ht.filters.length() < 1)
 
         annotations = {k: v for k, v in (annotations or {}).items() if v}
-        # new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
+        # TODO #2663: new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
 
@@ -225,7 +225,6 @@ class HailSearch(object):
     def filter_by_variant_ids(self, variant_ids):
         # In production: support SV variant IDs?
         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-        # In production: if supporting multi-genome-version search, need to lift and re-filter variants
         intervals = [ # TODO #2716: format chromosome for genome build
             hl.eval(hl.parse_locus_interval(f'[chr{chrom}:{pos}-{pos}]', reference_genome=self._genome_version))
             for chrom, pos, _, _ in variant_ids
