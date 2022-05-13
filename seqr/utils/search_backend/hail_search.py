@@ -592,7 +592,8 @@ class HailSearch(object):
 
         # Format pairs as lists and de-duplicate
         ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2]))
-        ch_ht = ch_ht.key_by('variants').select()
+        ch_ht = ch_ht.annotate(variantId=hl.str(':').join(ch_ht.variants.map(lambda v: v.variantId)))
+        ch_ht = ch_ht.key_by('variantId').select('variants')
         ch_ht = ch_ht.distinct()
 
         self._comp_het_ht = ch_ht
@@ -606,26 +607,23 @@ class HailSearch(object):
         return results.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
     def search(self, page=1, num_results=100):
-        total_results = 0
-        results = []
+        if self.ht:
+            self.ht = self._format_results(self.ht)
+            if self._comp_het_ht:
+                self.ht = self.ht.join(self._comp_het_ht, 'outer')
+        else:
+            self.ht = self._comp_het_ht
 
-        if not (self.ht or self._comp_het_ht):
+        if not self.ht:
             raise InvalidSearchException('Filters must be applied before search')
 
-        if self._comp_het_ht:
-            total_results +=  self._comp_het_ht.count()
-            results += self._comp_het_ht.take(num_results)
-
-        if self.ht:
-            total_results += self.ht.count()
-            results += self._format_results(self.ht).take(num_results)
-
+        total_results = self.ht.count()
         self.previous_search_results['total_results'] = total_results
         logger.info(f'Total hits: {total_results}')
 
         # TODO page, self._sort
-
-        hail_results = [_json_serialize(row.get('variants', row)) for row in results]
+        collected = self.ht.take(num_results)
+        hail_results = [_json_serialize(row.get('variants', row)) for row in collected]
 
         return hail_results
 
