@@ -13,7 +13,7 @@ from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_st
 
 logger = logging.getLogger(__name__)
 
-#  For production: constants should have their own file
+# For production: constants should have their own file
 
 GENOTYPE_QUERY_MAP = {
     REF_REF: lambda gt: gt.is_hom_ref(),
@@ -613,7 +613,6 @@ class HailSearch(object):
                 self.ht = self.ht.join(self._comp_het_ht, 'outer')
         else:
             self.ht = self._comp_het_ht
-            self.ht.show()
 
         if not self.ht:
             raise InvalidSearchException('Filters must be applied before search')
@@ -624,6 +623,7 @@ class HailSearch(object):
 
         # TODO #2496: page, self._sort
         collected = self.ht.take(num_results)
+        logger.info(str(collected))
         hail_results = [_json_serialize(row.get('variants', row)) for row in collected]
         import json
         logger.info(json.dumps(hail_results))
