@@ -591,7 +591,7 @@ class HailSearch(object):
         )
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2]))
+        ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2])) # TODO sort with self._sort
         ch_ht = ch_ht.annotate(variantId=hl.str(':').join(ch_ht.variants.map(lambda v: v.variantId)))
         ch_ht = ch_ht.key_by('variantId').select('variants')
         ch_ht = ch_ht.distinct()
@@ -624,7 +624,7 @@ class HailSearch(object):
         # TODO page, self._sort
         collected = self.ht.take(num_results)
         hail_results = [_json_serialize(row.get('variants', row)) for row in collected]
-
+        logger.info('search results', deatils=hail_results)
         return hail_results
 
 # For production: should use custom json serializer
