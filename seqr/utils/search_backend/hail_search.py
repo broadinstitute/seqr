@@ -617,7 +617,10 @@ class HailSearch(object):
         self._comp_het_ht = ch_ht
 
     def _format_results(self, ht):
-        results = ht.annotate(genomeVersion=self._genome_version, **{k: v(ht) for k, v in ANNOTATION_FIELDS.items()})
+        results = ht.annotate(
+            genomeVersion=self._genome_version.replace('GRCh', ''),
+            **{k: v(ht) for k, v in ANNOTATION_FIELDS.items()},
+        )
         results = results.key_by(VARIANT_KEY_FIELD)
         return results.select('genomeVersion', *CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
