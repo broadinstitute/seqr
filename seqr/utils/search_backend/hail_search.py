@@ -76,7 +76,6 @@ ANNOTATION_FIELDS = {
         goldStars=r.clinvar.gold_stars,
     ),
     'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT
-    'genomeVersion': lambda r: hl.eval(r.gv),
     'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
         hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
     ),
@@ -119,8 +118,20 @@ class HailSearch(object):
                 f'Search is only enabled on a single data source, requested {", ".join(data_sources)}')
         self._data_source = data_sources.pop()
 
-        for s in samples.select_related('individual__family'):
-            self.samples_by_family[s.individual.family.guid][s.sample_id] = s
+        projects = set()
+        for s in samples.select_related('individual__family', 'individual__family__project'):
+            family = s.individual.family
+            self.samples_by_family[family.guid][s.sample_id] = s
+            projects.add(family.project)
+
+        genome_version_projects = defaultdict(list)
+        for p in projects:
+            genome_version_projects[p.get_genome_version_display()].append(p.name)
+        if len(genome_version_projects) > 1:
+            project_builds = '; '.join(f'build [{", ".join(projects)}]' for build, projects in genome_version_projects.items())
+            raise InvalidSearchException(
+                f'Search is only enabled on a single genome build, requested the following project builds: {project_builds}')
+        self._genome_version = list(genome_version_projects.keys())[0]
 
         self._family_individual_affected_status = {}
         self._user = user
@@ -138,11 +149,11 @@ class HailSearch(object):
         #  In production: should have a Table and use read_table
         self.ht = hl.read_matrix_table(
             f'/hail_datasets/{self._data_source}.mt', _intervals=intervals, _filter_intervals=bool(intervals)
-        ).rows()
+        ).rows().select_globals()
 
     def _sample_table(self, sample):
         # In production: should use a different model field
-        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht')
+        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht').select_globals()
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
@@ -215,8 +226,8 @@ class HailSearch(object):
         # In production: support SV variant IDs?
         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
         # In production: if supporting multi-genome-version search, need to lift and re-filter variants
-        intervals = [
-            hl.eval(hl.parse_locus_interval(f'[chr{chrom}:{pos}-{pos}]', reference_genome='GRCh38'))
+        intervals = [ # TODO #2716: format chromosome for genome build
+            hl.eval(hl.parse_locus_interval(f'[chr{chrom}:{pos}-{pos}]', reference_genome=self._genome_version))
             for chrom, pos, _, _ in variant_ids
         ]
         self._load_table(intervals=intervals)
@@ -229,16 +240,21 @@ class HailSearch(object):
                 id_q |= self._variant_id_q(*variant_id)
 
     def _variant_id_q(self, chrom, pos, ref, alt):
-        return (self.ht.locus==hl.locus(f'chr{chrom}', pos, reference_genome='GRCh38')) & (self.ht.alleles==[ref, alt])
+        # TODO #2716: format chromosome for genome build
+        return (self.ht.locus==hl.locus(f'chr{chrom}', pos, reference_genome=self._genome_version)) & (self.ht.alleles==[ref, alt])
 
     def _filter_by_intervals(self, genes, intervals, exclude_locations):
         parsed_intervals = None
         if genes or parsed_intervals:
+            # TODO #2716: format chromosomes for genome build
+            gene_coords = [
+                {field: gene[f'{field}{self._genome_version}'] for field in ['chrom', 'start', 'end']}
+                for gene in (genes or {}).values()
+            ]
             parsed_intervals = [
-                hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in # TODO genome build
+                hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version)) for interval in
                 ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-                    # long-term we should check project to get correct genome version
-                    'chr{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
+                    'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
             ]
 
         if exclude_locations:
@@ -435,7 +451,7 @@ class HailSearch(object):
 
     def _get_filtered_family_table(self, family_guid, inheritance_mode, inheritance_filter, quality_filter, family_filter=None):
         samples = list(self.samples_by_family[family_guid].values())
-        sample_tables = [self._sample_table(sample).select_globals() for sample in samples]
+        sample_tables = [self._sample_table(sample) for sample in samples]
 
         affected_status = self._family_individual_affected_status.get(family_guid)
         individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
@@ -474,14 +490,14 @@ class HailSearch(object):
             ) for i, sample in enumerate(samples)])).select('genotypes')
 
 
-    @staticmethod
-    def _sample_inheritance_ht(sample_ht, inheritance_mode, individual, affected, genotype):
+    def _sample_inheritance_ht(self, sample_ht, inheritance_mode, individual, affected, genotype):
         gt_filter = GENOTYPE_QUERY_MAP[genotype](sample_ht.GT)
 
         x_sample_ht = None
         if inheritance_mode in {X_LINKED_RECESSIVE, RECESSIVE}:
             x_sample_ht = hl.filter_intervals(
-                sample_ht, [hl.parse_locus_interval('chrX', reference_genome='GRCh38')])
+                # TODO #2716: format chromosome for genome build
+                sample_ht, [hl.parse_locus_interval('chrX', reference_genome=self._genome_version)])
             if affected == Individual.AFFECTED_STATUS_UNAFFECTED and individual.sex == Individual.SEX_MALE:
                 genotype = REF_REF
 
@@ -601,13 +617,10 @@ class HailSearch(object):
 
         self._comp_het_ht = ch_ht
 
-    @staticmethod
-    def _format_results(ht):
-        results = ht.annotate_globals(gv=hl.eval(ht.genomeVersion)).drop(
-            'genomeVersion')  # prevents name collision with global
-        results = results.annotate(**{k: v(results) for k, v in ANNOTATION_FIELDS.items()})
+    def _format_results(self, ht):
+        results = ht.annotate(genomeVersion=self._genome_version, **{k: v(ht) for k, v in ANNOTATION_FIELDS.items()})
         results = results.key_by(VARIANT_KEY_FIELD)
-        return results.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
+        return results.select('genomeVersion', *CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
     def search(self, page=1, num_results=100):
         if self.ht:
