@@ -104,6 +104,9 @@ ANNOTATION_FIELDS = {
         ]})).group_by(lambda t: t.geneId),
 }
 
+VARIANT_KEY_FIELD = 'variantId'
+GROUPED_VARIANTS_FIELD = 'variants'
+
 class HailSearch(object):
 
     def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
@@ -555,7 +558,7 @@ class HailSearch(object):
         ch_ht = ch_ht.annotate(v2=ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
-        ch_ht = ch_ht.filter(ch_ht.v1.variantId != ch_ht.v2.variantId)
+        ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD]!= ch_ht.v2[VARIANT_KEY_FIELD])
 
         # Filter variant pairs for primary/secondary consequences
         if self._allowed_consequences and self._allowed_consequences_secondary:
@@ -591,9 +594,9 @@ class HailSearch(object):
         )
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2])) # TODO #2496: sort with self._sort
-        ch_ht = ch_ht.annotate(variantId=hl.str(':').join(ch_ht.variants.map(lambda v: v.variantId)))
-        ch_ht = ch_ht.key_by('variantId').select('variants')
+        ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])}) # TODO #2496: sort with self._sort
+        ch_ht = ch_ht.annotate(**{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
+        ch_ht = ch_ht.key_by(VARIANT_KEY_FIELD).select(GROUPED_VARIANTS_FIELD)
         ch_ht = ch_ht.distinct()
 
         self._comp_het_ht = ch_ht
@@ -603,7 +606,7 @@ class HailSearch(object):
         results = ht.annotate_globals(gv=hl.eval(ht.genomeVersion)).drop(
             'genomeVersion')  # prevents name collision with global
         results = results.annotate(**{k: v(results) for k, v in ANNOTATION_FIELDS.items()})
-        results = results.key_by('variantId')
+        results = results.key_by(VARIANT_KEY_FIELD)
         return results.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
     def search(self, page=1, num_results=100):
@@ -623,7 +626,9 @@ class HailSearch(object):
 
         # TODO #2496: page, self._sort
         collected = self.ht.take(num_results)
-        hail_results = [_json_serialize(row.get('variants') or row.drop('variants')) for row in collected]
+        hail_results = [
+            _json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
+        ]
         return hail_results
 
 # For production: should use custom json serializer
