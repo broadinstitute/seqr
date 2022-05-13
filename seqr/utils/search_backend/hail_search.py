@@ -248,7 +248,7 @@ class HailSearch(object):
         if genes or parsed_intervals:
             # TODO #2716: format chromosomes for genome build
             gene_coords = [
-                {field: gene[f'{field}{self._genome_version}'] for field in ['chrom', 'start', 'end']}
+                {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
                 for gene in (genes or {}).values()
             ]
             parsed_intervals = [
