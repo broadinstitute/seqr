@@ -144,7 +144,7 @@ class HailSearch(object):
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
         # return EsSearch.process_previous_results(*args, **kwargs)
-        # TODO re-enable caching at some point, but not helpful for development
+        # TODO #2496: re-enable caching, not helpful for initial development
         return None, {'page': page, 'num_results': num_results}
 
     def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
@@ -232,7 +232,7 @@ class HailSearch(object):
         parsed_intervals = None
         if genes or parsed_intervals:
             parsed_intervals = [
-                hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in
+                hl.eval(hl.parse_locus_interval(interval, reference_genome="GRCh38")) for interval in # TODO genome build
                 ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
                     # long-term we should check project to get correct genome version
                     'chr{chromGrch38}:{startGrch38}-{endGrch38}'.format(**gene) for gene in (genes or {}).values()]
@@ -441,7 +441,7 @@ class HailSearch(object):
         for i, sample_ht in enumerate(sample_tables):
             if quality_filter.get('min_gq'):
                 sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
-            # TODO ab filter
+            # TODO after #2665: ab filter
 
             if inheritance_filter:
                 individual = samples[i].individual
@@ -467,7 +467,7 @@ class HailSearch(object):
                 sampleId=hl.literal(sample.sample_id),
                 numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
                 gq=family_ht[f'GQ_{i}'],
-                # TODO ab
+                # TODO after #2665: ab
             ) for i, sample in enumerate(samples)])).select('genotypes')
 
 
@@ -591,7 +591,7 @@ class HailSearch(object):
         )
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2])) # TODO sort with self._sort
+        ch_ht = ch_ht.annotate(variants=hl.sorted([ch_ht.v1, ch_ht.v2])) # TODO #2496: sort with self._sort
         ch_ht = ch_ht.annotate(variantId=hl.str(':').join(ch_ht.variants.map(lambda v: v.variantId)))
         ch_ht = ch_ht.key_by('variantId').select('variants')
         ch_ht = ch_ht.distinct()
@@ -613,6 +613,7 @@ class HailSearch(object):
                 self.ht = self.ht.join(self._comp_het_ht, 'outer')
         else:
             self.ht = self._comp_het_ht
+            self.ht.show()
 
         if not self.ht:
             raise InvalidSearchException('Filters must be applied before search')
@@ -621,10 +622,11 @@ class HailSearch(object):
         self.previous_search_results['total_results'] = total_results
         logger.info(f'Total hits: {total_results}')
 
-        # TODO page, self._sort
+        # TODO #2496: page, self._sort
         collected = self.ht.take(num_results)
         hail_results = [_json_serialize(row.get('variants', row)) for row in collected]
-        logger.info('search results',  extra={'details': hail_results})
+        import json
+        logger.info(json.dumps(hail_results))
         return hail_results
 
 # For production: should use custom json serializer
