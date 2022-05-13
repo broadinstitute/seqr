@@ -70,12 +70,12 @@ ANNOTATION_FIELDS = {
     'pos': lambda r: r.locus.position,
     'ref': lambda r: r.alleles[0],
     'alt': lambda r: r.alleles[1],
-    'clinvar': lambda r: hl.struct( # In production - format in main HT
+    'clinvar': lambda r: hl.struct( # In production - format in main HT?
         clinicalSignificance=r.clinvar.clinical_significance,
         alleleId=r.clinvar.allele_id,
         goldStars=r.clinvar.gold_stars,
     ),
-    'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT
+    'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
     'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
         hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
     ),
@@ -146,10 +146,9 @@ class HailSearch(object):
         self._comp_het_ht = None
 
     def _load_table(self, intervals=None):
-        # TODO #2665: should have a Table and use read_table
-        self.ht = hl.read_matrix_table(
-            f'/hail_datasets/{self._data_source}.mt', _intervals=intervals, _filter_intervals=bool(intervals)
-        ).rows().select_globals()
+        self.ht = hl.read_table(
+            f'/hail_datasets/{self._data_source}.ht', _intervals=intervals, _filter_intervals=bool(intervals)
+        )
 
     def _sample_table(self, sample):
         # In production: should use a different model field
