@@ -624,7 +624,7 @@ class HailSearch(object):
         # TODO page, self._sort
         collected = self.ht.take(num_results)
         hail_results = [_json_serialize(row.get('variants', row)) for row in collected]
-        logger.info('search results', deatils=hail_results)
+        logger.info('search results',  extra={'details': hail_results})
         return hail_results
 
 # For production: should use custom json serializer
