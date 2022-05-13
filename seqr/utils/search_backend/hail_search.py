@@ -623,7 +623,7 @@ class HailSearch(object):
 
         # TODO #2496: page, self._sort
         collected = self.ht.take(num_results)
-        hail_results = [_json_serialize(row.get('variants') or row) for row in collected]
+        hail_results = [_json_serialize(row.get('variants') or row.drop('variants')) for row in collected]
         return hail_results
 
 # For production: should use custom json serializer
