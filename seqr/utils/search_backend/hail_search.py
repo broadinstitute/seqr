@@ -606,25 +606,26 @@ class HailSearch(object):
         return results.select(*CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
     def search(self, page=1, num_results=100):
-        is_comp_het = bool(self._comp_het_ht)
-        if is_comp_het:
-            # TODO actually return merged comp het/ regular variants
-            self.ht = self._comp_het_ht
+        total_results = 0
+        results = []
 
-        if not self.ht:
+        if not (self.ht or self._comp_het_ht):
             raise InvalidSearchException('Filters must be applied before search')
 
-        total_results = self.ht.count()
+        if self._comp_het_ht:
+            total_results +=  self._comp_het_ht.count()
+            results += self._comp_het_ht.take(num_results)
+
+        if self.ht:
+            total_results += self.ht.count()
+            results += self._format_results(self.ht).take(num_results)
+
         self.previous_search_results['total_results'] = total_results
         logger.info(f'Total hits: {total_results}')
 
-        if is_comp_het:
-            results_ht = self.ht
-        else:
-            results_ht = self._format_results(self.ht)
         # TODO page, self._sort
-        collected = results_ht.take(num_results)
-        hail_results = [_json_serialize(row['variants'] if is_comp_het else dict(row)) for row in collected]
+
+        hail_results = [_json_serialize(row.get('variants', row)) for row in results]
 
         return hail_results
 
