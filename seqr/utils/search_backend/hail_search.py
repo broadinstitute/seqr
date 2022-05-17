@@ -63,6 +63,10 @@ for path, pred_config in {
 }.items():
     PREDICTION_FIELDS_CONFIG.update({prediction: (path, sub_path) for sub_path, prediction in pred_config.items()})
 
+GENOTYPE_QUALITY_FIELDS = {
+    'AB': hl.tfloat64, 'AD': hl.tarray(hl.tint32), 'DP': hl.tint32, 'GQ': hl.tint32, 'PL': hl.tarray(hl.tint32),
+}
+
 GENOTYPE_FIELDS = ['familyGuids', 'genotypes']
 CORE_FIELDS = ['hgmd', 'rsid', 'xpos']
 ANNOTATION_FIELDS = {
@@ -151,8 +155,15 @@ class HailSearch(object):
         )
 
     def _sample_table(self, sample):
-        # In production: should use a different model field
-        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht').select_globals()
+        # In production: should write tables with types/ keys
+        types = {'locus': hl.tlocus(self._genome_version), 'alleles': hl.tarray(hl.tstr), 'GT': hl.tcall}
+        types.update(GENOTYPE_QUALITY_FIELDS)
+        # In production: should use a different model field, not elasticsearch_index
+        return hl.import_table(
+            f'/hail_datasets/{sample.elasticsearch_index}__samples/{sample.sample_id}.tsv.bgz',
+            types=types, key=['locus', 'alleles'],
+        )
+        # return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht').select_globals()
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
@@ -458,7 +469,9 @@ class HailSearch(object):
         for i, sample_ht in enumerate(sample_tables):
             if quality_filter.get('min_gq'):
                 sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
-            # TODO after #2665: ab filter
+            if quality_filter.get('min_ab'):
+                #  AB only relevant for hets
+                sample_ht = sample_ht.filter(~sample_ht.GT.is_het() | (sample_ht.AB > quality_filter['min_ab']))
 
             if inheritance_filter:
                 individual = samples[i].individual
@@ -471,7 +484,9 @@ class HailSearch(object):
             else:
                 family_ht = family_ht.join(sample_ht)
 
-        family_ht = family_ht.rename({'GT': 'GT_0', 'GQ': 'GQ_0'})
+        family_rename = {'GT': 'GT_0'}
+        family_rename.update({f: f'{f}_0' for f in GENOTYPE_QUALITY_FIELDS.keys()})
+        family_ht = family_ht.rename(family_rename)
 
         if family_filter is not None:
             family_filter_q = family_filter(family_ht, samples, affected_status)
@@ -484,9 +499,8 @@ class HailSearch(object):
                 sampleId=hl.literal(sample.sample_id),
                 numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
                 gq=family_ht[f'GQ_{i}'],
-                # TODO after #2665: ab
+                **{f.lower(): family_ht[f'{f}_{i}'] for f in GENOTYPE_QUALITY_FIELDS.keys()}
             ) for i, sample in enumerate(samples)])).select('genotypes')
-
 
     def _sample_inheritance_ht(self, sample_ht, inheritance_mode, individual, affected, genotype):
         gt_filter = GENOTYPE_QUERY_MAP[genotype](sample_ht.GT)
