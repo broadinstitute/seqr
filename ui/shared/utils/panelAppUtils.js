@@ -41,7 +41,7 @@ export const moiToMoiTypes = (rawMoi) => {
     return ['UNKNOWN']
   }
 
-  return ['OTHER']
+  return ['UNKNOWN']
 }
 
 export const panelAppUrl = (apiUrl, panelId, gene) => {
