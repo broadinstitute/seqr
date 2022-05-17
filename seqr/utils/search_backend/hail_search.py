@@ -471,7 +471,7 @@ class HailSearch(object):
                 sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
             if quality_filter.get('min_ab'):
                 #  AB only relevant for hets
-                sample_ht = sample_ht.filter(~sample_ht.GT.is_het() | (sample_ht.AB > quality_filter['min_ab'] / 100))
+                sample_ht = sample_ht.filter(~sample_ht.GT.is_het() | (sample_ht.AB > (quality_filter['min_ab'] / 100)))
 
             if inheritance_filter:
                 individual = samples[i].individual
