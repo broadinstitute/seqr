@@ -11,7 +11,7 @@ def write_project_sample_hts(file, project):
     mt = mt.annotate_entries(AB=hl.if_else(mt.AD.length() > 1, hl.float(mt.AD[1] / hl.sum(mt.AD)), hl.missing(hl.tfloat)))
     mt = mt.select_entries('AB', 'AD', 'DP', 'GQ', 'GT', 'PL')
     hl.experimental.export_entries_by_col(
-        mt,  f'gs://hail-backend-datasets/{file}__samples', use_string_key_as_file_name=True, header_json_in_file=False)
+        mt,  f'gs://hail-backend-datasets/{file}__samples/{project}', use_string_key_as_file_name=True, header_json_in_file=False)
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
