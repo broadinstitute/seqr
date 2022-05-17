@@ -147,11 +147,6 @@ def _add_discovery_tags(variants, discovery_tags):
 
 def _add_pa_attrs(locus_list_gene, locus_list_guid, gene_json):
     if hasattr(locus_list_gene, 'palocuslistgene'):
-        # Keeping locusListConfidence for backwards compatibility for now
-        if not gene_json.get('locusListConfidence'):
-            gene_json['locusListConfidence'] = {}
-        gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
-
         if not gene_json.get('locusListPaAttrs'):
             gene_json['locusListPaAttrs'] = {}
         gene_json['locusListPaAttrs'][locus_list_guid] = {

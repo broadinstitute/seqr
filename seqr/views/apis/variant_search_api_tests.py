@@ -152,13 +152,9 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['genesById'][basic_gene_id].keys()), gene_fields)
         if has_pa_attrs:
             gene_fields.add('locusListPaAttrs')
-            gene_fields.add('locusListConfidence')
             self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
             self.assertListEqual(
                 response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
-            )
-            self.assertDictEqual(
-                response_json['genesById']['ENSG00000227232']['locusListConfidence'], {LOCUS_LIST_GUID: '3'}
             )
             self.assertDictEqual(
                 response_json['genesById']['ENSG00000227232']['locusListPaAttrs'], {LOCUS_LIST_GUID: {'confidence': '3', 'moi': 'BIALLELIC, autosomal or pseudoautosomal'}}
