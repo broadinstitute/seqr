@@ -498,7 +498,6 @@ class HailSearch(object):
                 individualGuid=hl.literal(sample.individual.guid),
                 sampleId=hl.literal(sample.sample_id),
                 numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
-                gq=family_ht[f'GQ_{i}'],
                 **{f.lower(): family_ht[f'{f}_{i}'] for f in GENOTYPE_QUALITY_FIELDS.keys()}
             ) for i, sample in enumerate(samples)])).select('genotypes')
 
