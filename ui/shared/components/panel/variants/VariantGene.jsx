@@ -85,7 +85,7 @@ GeneLabel.propTypes = {
 
 const BaseLocusListLabels = React.memo((
   {
-    locusListGuids, locusListsByGuid, locusListPaAttrs,
+    locusListGuids, locusListsByGuid, panelAppDetail,
     geneSymbol, compact, containerStyle, ...labelProps
   },
 ) => (
@@ -102,13 +102,13 @@ const BaseLocusListLabels = React.memo((
   ) : (
     <div style={containerStyle}>
       {locusListGuids.map((locusListGuid) => {
-        const paAttrs = locusListPaAttrs[locusListGuid]
-        const { confidence, moi } = paAttrs
+        const paDetail = panelAppDetail[locusListGuid]
+        const { confidence, moi } = paDetail
         let { description } = locusListsByGuid[locusListGuid] || {}
         let initials = ''
         let label = (locusListsByGuid[locusListGuid] || {}).name
 
-        if (paAttrs) {
+        if (paDetail) {
           const { panelAppId, url } = locusListsByGuid[locusListGuid].paLocusList
           const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
           const initialsArray = moiToMoiTypes(moi)
@@ -143,7 +143,7 @@ const BaseLocusListLabels = React.memo((
               <b>PanelApp mode of inheritance: </b>
               {initials}
               {' '}
-              {locusListPaAttrs[locusListGuid].moi || 'Unknown'}
+              {panelAppDetail[locusListGuid].moi || 'Unknown'}
             </div>
           )
         }
@@ -167,7 +167,7 @@ const BaseLocusListLabels = React.memo((
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
-  locusListPaAttrs: PropTypes.object,
+  panelAppDetail: PropTypes.object,
   geneSymbol: PropTypes.string,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object.isRequired,
@@ -415,7 +415,7 @@ export const GeneDetails = React.memo((
           <LocusListLabels
             geneSymbol={gene.geneSymbol}
             locusListGuids={gene.locusListGuids}
-            locusListPaAttrs={gene.locusListPaAttrs}
+            panelAppDetail={gene.panelAppDetail}
             compact={compact}
             containerStyle={showDivider ? PADDED_INLINE_STYLE : INLINE_STYLE}
             {...labelProps}

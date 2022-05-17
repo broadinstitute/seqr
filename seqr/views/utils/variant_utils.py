@@ -109,7 +109,7 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analy
         gene_json = genes[locus_list_gene.gene_id]
         locus_list_guid = locus_list_gene.locus_list.guid
         gene_json['locusListGuids'].append(locus_list_guid)
-        _add_pa_attrs(locus_list_gene, locus_list_guid, gene_json)
+        _add_pa_detail(locus_list_gene, locus_list_guid, gene_json)
 
     return locus_lists_by_guid
 
@@ -145,11 +145,11 @@ def _add_discovery_tags(variants, discovery_tags):
             variant['discoveryTags'] += [tag for tag in tags if tag['savedVariant']['familyGuid'] not in variant['familyGuids']]
 
 
-def _add_pa_attrs(locus_list_gene, locus_list_guid, gene_json):
+def _add_pa_detail(locus_list_gene, locus_list_guid, gene_json):
     if hasattr(locus_list_gene, 'palocuslistgene'):
-        if not gene_json.get('locusListPaAttrs'):
-            gene_json['locusListPaAttrs'] = {}
-        gene_json['locusListPaAttrs'][locus_list_guid] = {
+        if not gene_json.get('panelAppDetail'):
+            gene_json['panelAppDetail'] = {}
+        gene_json['panelAppDetail'][locus_list_guid] = {
             'confidence': locus_list_gene.palocuslistgene.confidence_level,
             'moi': locus_list_gene.palocuslistgene.mode_of_inheritance,
         }
