@@ -652,10 +652,15 @@ class HailSearch(object):
         logger.info(f'Total hits: {total_results}')
 
         # TODO #2496: page, self._sort
+        import time
+        start = time.perf_counter()
         collected = self.ht.take(num_results)
+        col_time = time.perf_counter()
+        logger.info(f'Collected results in {col_time - start:0.4f} s')
         hail_results = [
             _json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
         ]
+        logger.info(f'Serialized results in {time.perf_counter() - col_time:0.4f} s')
         return hail_results
 
 # For production: should use custom json serializer
