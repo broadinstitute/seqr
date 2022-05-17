@@ -208,7 +208,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
             'locusListGuid': NEW_AU_PA_LOCUS_LIST_GUID,
             'name': 'Hereditary Neuropathy_CMT - isolated',
             'description': 'PanelApp_3069_0.199_Neurology and neurodevelopmental disorders',
-            'items': [{'geneId': 'ENSG00000090861'}], 'paLocusList': {'panelAppId': 3069},
+            'items': [{'geneId': 'ENSG00000090861'}], 'paLocusList': {'url': 'https://test-panelapp.url.au/api/panels/3069/genes', 'panelAppId': 3069},
             'numEntries': 1, 'numProjects': 0, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
@@ -216,7 +216,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
             'locusListGuid': NEW_UK_PA_LOCUS_LIST_GUID,
             'name': 'Auditory Neuropathy Spectrum Disorde',
             'description': 'PanelApp_UK_260_1.8_Hearing and ear disorders;Non-syndromic hearing loss',
-            'items': [{'geneId': 'ENSG00000139734'}], 'paLocusList': {'panelAppId': 260},
+            'items': [{'geneId': 'ENSG00000139734'}], 'paLocusList': {'url': 'https://test-panelapp.url.uk/api/panels/260/genes', 'panelAppId': 260},
             'numEntries': 1, 'numProjects': 0, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
