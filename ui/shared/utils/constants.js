@@ -1272,6 +1272,18 @@ const VARIANT_ICON_COLORS = {
   green: '#21a926',
 }
 
+export const PANEL_APP_MODE_OF_INHERITANCE_INITIALS = {
+  BIALLELIC: 'AR',
+  IMPRINTED_MATERNALY_EXPRESSED: null,
+  IMPRINTED_PATERNALY_EXPRESSED: null,
+  MITOCHONDRIAL: null,
+  MONOALLELIC: 'AD',
+  OTHER: null,
+  UNKNOWN: null,
+  X_LINKED_DOMINANT: 'XD',
+  X_LINKED_RECESSIVE: 'XR',
+}
+
 export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
   0: 'No Panel App confidence level',
   1: 'Red, lowest level of confidence; 1 of the 4 sources or from other sources.',

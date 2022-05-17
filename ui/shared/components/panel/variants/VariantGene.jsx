@@ -6,9 +6,10 @@ import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
+import { panelAppUrl, moiToMoiTypes } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
-  PANEL_APP_CONFIDENCE_DESCRIPTION,
+  PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_MODE_OF_INHERITANCE_INITIALS,
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
@@ -83,7 +84,10 @@ GeneLabel.propTypes = {
 }
 
 const BaseLocusListLabels = React.memo((
-  { locusListGuids, locusListsByGuid, locusListConfidence, compact, containerStyle, ...labelProps },
+  {
+    locusListGuids, locusListsByGuid, locusListPaAttrs,
+    geneSymbol, compact, containerStyle, ...labelProps
+  },
 ) => (
   compact ? (
     <GeneDetailSection
@@ -98,16 +102,48 @@ const BaseLocusListLabels = React.memo((
   ) : (
     <div style={containerStyle}>
       {locusListGuids.map((locusListGuid) => {
-        const panelAppConfidence = locusListConfidence && locusListConfidence[locusListGuid]
+        const paAttrs = locusListPaAttrs[locusListGuid]
+        const { confidence, moi } = paAttrs
         let { description } = locusListsByGuid[locusListGuid] || {}
-        if (panelAppConfidence) {
+        let initials = ''
+        let label = (locusListsByGuid[locusListGuid] || {}).name
+
+        if (paAttrs) {
+          const { panelAppId, url } = locusListsByGuid[locusListGuid].paLocusList
+          const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
+          const initialsArray = moiToMoiTypes(moi)
+            .map(moiType => PANEL_APP_MODE_OF_INHERITANCE_INITIALS[moiType])
+            .filter(moiType => moiType)
+
+          if (initialsArray.length > 0) {
+            initials = `(${initialsArray.join(', ')})`
+            let allowedLabelSpace = 14
+            if (initialsArray.length === 1) {
+              if (label.length > allowedLabelSpace) {
+                label = `${label.substring(0, allowedLabelSpace)}…`
+              }
+            } else if (initialsArray.length === 2) {
+              allowedLabelSpace = 11
+              if (label.length > allowedLabelSpace) {
+                label = `${label.substring(0, allowedLabelSpace)}…`
+              }
+            }
+            label = `${label} ${initials}`
+          }
+
           description = (
             <div>
-              {description}
+              <a target="_blank" href={fullUrl} rel="noreferrer">{description}</a>
               <br />
               <br />
               <b>PanelApp gene confidence: &nbsp;</b>
-              {PANEL_APP_CONFIDENCE_DESCRIPTION[panelAppConfidence]}
+              {PANEL_APP_CONFIDENCE_DESCRIPTION[confidence]}
+              <br />
+              <br />
+              <b>PanelApp mode of inheritance: </b>
+              {initials}
+              {' '}
+              {locusListPaAttrs[locusListGuid].moi || 'Unknown'}
             </div>
           )
         }
@@ -115,10 +151,10 @@ const BaseLocusListLabels = React.memo((
           <GeneDetailSection
             key={locusListGuid}
             color="teal"
-            customColor={panelAppConfidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppConfidence]}
-            maxWidth="7em"
+            customColor={confidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[confidence]}
+            maxWidth="12em"
             showEmpty
-            label={(locusListsByGuid[locusListGuid] || {}).name}
+            label={label}
             description={(locusListsByGuid[locusListGuid] || {}).name}
             details={description}
             containerStyle={containerStyle}
@@ -131,7 +167,8 @@ const BaseLocusListLabels = React.memo((
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
-  locusListConfidence: PropTypes.object,
+  locusListPaAttrs: PropTypes.object,
+  geneSymbol: PropTypes.string,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object.isRequired,
   containerStyle: PropTypes.object,
@@ -376,8 +413,9 @@ export const GeneDetails = React.memo((
       {
         hasLocusLists && (
           <LocusListLabels
+            geneSymbol={gene.geneSymbol}
             locusListGuids={gene.locusListGuids}
-            locusListConfidence={gene.locusListConfidence}
+            locusListPaAttrs={gene.locusListPaAttrs}
             compact={compact}
             containerStyle={showDivider ? PADDED_INLINE_STYLE : INLINE_STYLE}
             {...labelProps}
