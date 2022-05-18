@@ -12,7 +12,7 @@ import {
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
+import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel, FlexLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
@@ -34,24 +34,8 @@ const PADDED_INLINE_STYLE = {
   ...INLINE_STYLE,
 }
 
-const FlexLabel = styled(ColoredLabel)`
-  display: inline-flex !important;
-  vertical-align: top !important;
-`
-const ShrinkingSpan = styled.span`
-  flex: auto;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`
-const StaticSpan = styled.span`
-   margin-left: 0.5em;
-   white-space: nowrap;
-`
-
 const BaseGeneLabelContent = styled(({
-  color, customColor, initials,
-  label, maxWidth, containerStyle, dispatch, ...props
+  color, customColor, hint, label, maxWidth, containerStyle, dispatch, ...props
 }) => {
   const labelProps = {
     ...props,
@@ -59,13 +43,8 @@ const BaseGeneLabelContent = styled(({
     content: label,
   }
 
-  if (initials && customColor) {
-    return (
-      <FlexLabel {...labelProps} color={customColor}>
-        <ShrinkingSpan>{label}</ShrinkingSpan>
-        <StaticSpan>{initials}</StaticSpan>
-      </FlexLabel>
-    )
+  if (hint && customColor) {
+    return <FlexLabel {...labelProps} color={customColor} label={label} hint={hint} />
   }
 
   return customColor ?
@@ -164,7 +143,7 @@ const BaseLocusListLabels = React.memo((
             key={locusListGuid}
             color="teal"
             customColor={confidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[confidence]}
-            initials={initials}
+            hint={initials}
             maxWidth="12em"
             showEmpty
             label={label}

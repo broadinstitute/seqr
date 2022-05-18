@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import styled from 'styled-components'
 import { Button, Header, Icon, Label, Table } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
@@ -54,6 +56,35 @@ const BaseColoredLabel = styled(({ color, minWidth, ...props }) => <Label {...pr
   color: white !important;
 `
 export const ColoredLabel = props => <BaseColoredLabel {...props} />
+
+const ShrinkingSpan = styled.span`
+  flex: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+const StaticSpan = styled.span`
+   margin-left: 0.5em;
+   white-space: nowrap;
+`
+
+const BaseFlexLabel = styled(ColoredLabel)`
+display: inline-flex !important;
+vertical-align: top !important;
+`
+
+export const FlexLabel = props => (
+  <BaseFlexLabel {...props}>
+    <ShrinkingSpan>{props?.label || ''}</ShrinkingSpan>
+    <StaticSpan>{props?.hint || ''}</StaticSpan>
+  </BaseFlexLabel>
+)
+
+FlexLabel.propTypes = {
+  ...ColoredLabel.propTypes,
+  hint: PropTypes.string.isRequired,
+  label: PropTypes.string.isRequired,
+}
 
 const BaseColoredOutlineLabel = styled(({ color, ...props }) => <Label {...props} />)`
   color: ${props => props.color} !important;
