@@ -17,10 +17,6 @@ def write_project_sample_hts(file, project):
         sample_ht = sample_ht.select('AB', 'AD', 'DP', 'GQ', 'GT', 'PL')
         sample_ht.write(f'gs://hail-backend-datasets/{file}__samples/{sample_id}.ht')
 
-    # mt = mt.select_entries('AB', 'AD', 'DP', 'GQ', 'GT', 'PL')
-    # hl.experimental.export_entries_by_col(
-    #     mt,  f'gs://hail-backend-datasets/{file}__samples/{project}', use_string_key_as_file_name=True, header_json_in_file=False)
-
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('file')

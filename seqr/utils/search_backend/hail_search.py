@@ -63,10 +63,7 @@ for path, pred_config in {
 }.items():
     PREDICTION_FIELDS_CONFIG.update({prediction: (path, sub_path) for sub_path, prediction in pred_config.items()})
 
-GENOTYPE_QUALITY_FIELDS = {
-    'AB': hl.tfloat64, 'AD': hl.tarray(hl.tint32), 'DP': hl.tint32, 'PL': hl.tarray(hl.tint32),
-    'GQ': hl.tint32,
-}
+GENOTYPE_QUALITY_FIELDS = ['AB', 'AD', 'DP', 'PL', 'GQ']
 
 GENOTYPE_FIELDS = ['familyGuids', 'genotypes']
 CORE_FIELDS = ['hgmd', 'rsid', 'xpos']
@@ -156,15 +153,7 @@ class HailSearch(object):
         )
 
     def _sample_table(self, sample):
-        # In production: should write tables with types/ keys
-        types = {'locus': hl.tlocus(self._genome_version), 'alleles': hl.tarray(hl.tstr), 'GT': hl.tcall}
-        types.update(GENOTYPE_QUALITY_FIELDS)
         # In production: should use a different model field, not elasticsearch_index
-        # return hl.import_table(
-        #     f'/hail_datasets/{sample.elasticsearch_index}__samples/{sample.sample_id}.tsv.bgz',
-        #     types=types, key=['locus', 'alleles'],
-        # )
-        # return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht').select_globals()
         return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}__samples/{sample.sample_id}.ht')
 
     @classmethod
@@ -487,7 +476,7 @@ class HailSearch(object):
                 family_ht = family_ht.join(sample_ht)
 
         family_rename = {'GT': 'GT_0'}
-        family_rename.update({f: f'{f}_0' for f in GENOTYPE_QUALITY_FIELDS.keys()})
+        family_rename.update({f: f'{f}_0' for f in GENOTYPE_QUALITY_FIELDS})
         family_ht = family_ht.rename(family_rename)
 
         if family_filter is not None:
@@ -500,7 +489,7 @@ class HailSearch(object):
                 individualGuid=hl.literal(sample.individual.guid),
                 sampleId=hl.literal(sample.sample_id),
                 numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
-                **{f.lower(): family_ht[f'{f}_{i}'] for f in GENOTYPE_QUALITY_FIELDS.keys()}
+                **{f.lower(): family_ht[f'{f}_{i}'] for f in GENOTYPE_QUALITY_FIELDS}
             ) for i, sample in enumerate(samples)])).select('genotypes')
 
     def _sample_inheritance_ht(self, sample_ht, inheritance_mode, individual, affected, genotype):
@@ -654,15 +643,10 @@ class HailSearch(object):
         logger.info(f'Total hits: {total_results}')
 
         # TODO #2496: page, self._sort
-        import time
-        start = time.perf_counter()
         collected = self.ht.take(num_results)
-        col_time = time.perf_counter()
-        logger.info(f'Collected results in {col_time - start:0.4f} s')
         hail_results = [
             _json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
         ]
-        logger.info(f'Serialized results in {time.perf_counter() - col_time:0.4f} s')
         return hail_results
 
 # For production: should use custom json serializer
