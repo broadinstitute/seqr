@@ -64,7 +64,7 @@ for path, pred_config in {
     PREDICTION_FIELDS_CONFIG.update({prediction: (path, sub_path) for sub_path, prediction in pred_config.items()})
 
 GENOTYPE_QUALITY_FIELDS = {
-    # 'AB': hl.tfloat64, 'AD': hl.tarray(hl.tint32), 'DP': hl.tint32, 'PL': hl.tarray(hl.tint32),
+    'AB': hl.tfloat64, 'AD': hl.tarray(hl.tint32), 'DP': hl.tint32, 'PL': hl.tarray(hl.tint32),
     'GQ': hl.tint32,
 }
 
@@ -164,7 +164,8 @@ class HailSearch(object):
         #     f'/hail_datasets/{sample.elasticsearch_index}__samples/{sample.sample_id}.tsv.bgz',
         #     types=types, key=['locus', 'alleles'],
         # )
-        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht').select_globals()
+        # return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/sample_{sample.sample_id}.ht').select_globals()
+        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}__samples/{sample.sample_id}.ht')
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
