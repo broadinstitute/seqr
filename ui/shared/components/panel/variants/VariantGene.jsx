@@ -89,6 +89,53 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+const PanelAppHoverOver = ({ url, panelAppPanel, confidence, initials, moi }) => (
+  <div>
+    <a target="_blank" href={url} rel="noreferrer">{panelAppPanel}</a>
+    <br />
+    <br />
+    <b>PanelApp gene confidence: &nbsp;</b>
+    {PANEL_APP_CONFIDENCE_DESCRIPTION[confidence]}
+    <br />
+    <br />
+    <b>PanelApp mode of inheritance: </b>
+    {initials}
+    {' '}
+    {moi}
+  </div>
+)
+
+PanelAppHoverOver.propTypes = {
+  url: PropTypes.string.isRequired,
+  panelAppPanel: PropTypes.string.isRequired,
+  confidence: PropTypes.string.isRequired,
+  initials: PropTypes.string.isRequired,
+  moi: PropTypes.string.isRequired,
+}
+
+function getPaProps({ panelAppDetails, panelAppPanel, paLocusList, geneSymbol }) {
+  const { url, panelAppId } = paLocusList
+  const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
+  const moi = panelAppDetails.moi || 'Unknown'
+  const confidence = panelAppDetails.confidence || 'Unknown'
+  const initialsArray = moiToMoiInitials(moi)
+  const initials = initialsArray.length > 0 ? `(${initialsArray.join(', ')})` : ''
+
+  const description = PanelAppHoverOver({
+    url: fullUrl,
+    panelAppPanel,
+    confidence,
+    initials,
+    moi,
+  })
+
+  return {
+    initials,
+    description,
+    customColor: PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppDetails.confidence],
+  }
+}
+
 const BaseLocusListLabels = React.memo((
   {
     locusListGuids, locusListsByGuid, panelAppDetail,
@@ -108,46 +155,28 @@ const BaseLocusListLabels = React.memo((
   ) : (
     <div style={containerStyle}>
       {locusListGuids.map((locusListGuid) => {
-        const paDetail = panelAppDetail[locusListGuid]
-        const { confidence, moi } = paDetail
-        let { description } = locusListsByGuid[locusListGuid] || {}
-        let initials = ''
-        const label = (locusListsByGuid[locusListGuid] || {}).name
-
-        if (paDetail) {
-          const { panelAppId, url } = locusListsByGuid[locusListGuid].paLocusList
-          const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
-          const initialsArray = moiToMoiInitials(moi)
-          if (initialsArray.length > 0) {
-            initials = `(${initialsArray.join(', ')})`
-          }
-
-          description = (
-            <div>
-              <a target="_blank" href={fullUrl} rel="noreferrer">{description}</a>
-              <br />
-              <br />
-              <b>PanelApp gene confidence: &nbsp;</b>
-              {PANEL_APP_CONFIDENCE_DESCRIPTION[confidence]}
-              <br />
-              <br />
-              <b>PanelApp mode of inheritance: </b>
-              {initials}
-              {' '}
-              {panelAppDetail[locusListGuid].moi || 'Unknown'}
-            </div>
-          )
+        const locusList = locusListsByGuid[locusListGuid]
+        const panelAppDetails = panelAppDetail[locusListGuid]
+        const { name: label, description: locusListDescription, paLocusList } = locusList
+        const { description, initials, customColor } = panelAppDetails && paLocusList ? getPaProps({
+          panelAppDetails,
+          panelAppPanel: locusListDescription || '',
+          paLocusList,
+          geneSymbol,
+        }) : {
+          description: label,
         }
+
         return (
           <GeneDetailSection
             key={locusListGuid}
             color="teal"
-            customColor={confidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[confidence]}
+            customColor={customColor}
             hint={initials}
             maxWidth="12em"
             showEmpty
             label={label}
-            description={(locusListsByGuid[locusListGuid] || {}).name}
+            description={label}
             details={description}
             containerStyle={containerStyle}
             {...labelProps}

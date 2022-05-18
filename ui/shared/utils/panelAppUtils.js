@@ -45,6 +45,9 @@ export const moiToMoiInitials = (rawMoi) => {
 }
 
 export const panelAppUrl = (apiUrl, panelId, gene) => {
+  if (!apiUrl || !panelId || !gene) {
+    return ''
+  }
   const baseUrl = apiUrl.split('/api')[0]
 
   return `${baseUrl}/panels/${panelId}/gene/${gene}`
