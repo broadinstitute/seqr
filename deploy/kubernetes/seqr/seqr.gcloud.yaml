@@ -58,7 +58,7 @@ spec:
       - name: hail-datasets
         gcePersistentDisk:
           # This disk must already exist.
-          pdName: hail-datasets-disk
+          pdName: hail-datasets-disk-2
           fsType: ext4
       # - name: elasticsearch-es-http-certs-public
       #   secret:
