@@ -6,10 +6,9 @@ import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
-import { panelAppUrl, moiToMoiTypes } from '../../../utils/panelAppUtils'
+import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
-  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
-  PANEL_APP_CONFIDENCE_DESCRIPTION, PANEL_APP_MODE_OF_INHERITANCE_INITIALS,
+  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
@@ -111,9 +110,7 @@ const BaseLocusListLabels = React.memo((
         if (paDetail) {
           const { panelAppId, url } = locusListsByGuid[locusListGuid].paLocusList
           const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
-          const initialsArray = moiToMoiTypes(moi)
-            .map(moiType => PANEL_APP_MODE_OF_INHERITANCE_INITIALS[moiType])
-            .filter(moiType => moiType)
+          const initialsArray = moiToMoiInitials(moi)
 
           if (initialsArray.length > 0) {
             initials = `(${initialsArray.join(', ')})`

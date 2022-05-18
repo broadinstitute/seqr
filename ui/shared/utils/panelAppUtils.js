@@ -1,47 +1,47 @@
-export const moiToMoiTypes = (rawMoi) => {
+export const moiToMoiInitials = (rawMoi) => {
   if (!rawMoi) {
-    return 'UNKNOWN'
+    return []
   }
 
   const moi = rawMoi.toUpperCase()
 
   if (moi.startsWith('MONOALLELIC')) {
     if (moi.includes('PATERNALLY IMPRINTED')) {
-      return ['IMPRINTED_PATERNALY_EXPRESSED']
+      return []
     }
     if (moi.includes('MATERNALLY IMPRINTED')) {
-      return ['IMPRINTED_MATERNALY_EXPRESSED']
+      return []
     }
-    return ['MONOALLELIC']
+    return ['AD']
   }
   if (moi.startsWith('X-LINKED') || moi.startsWith('X LINKED')) {
     if (moi.includes('BIALLELIC MUTATIONS')) {
-      return ['X_LINKED_RECESSIVE']
+      return ['XR']
     }
     if (moi.includes('MONOALLELIC MUTATIONS')) {
-      return ['X_LINKED_RECESSIVE', 'X_LINKED_DOMINANT']
+      return ['XR', 'XD']
     }
   }
   if (moi.startsWith('BIALLELIC')) {
-    return ['BIALLELIC']
+    return ['AR']
   }
   if (moi.startsWith('BOTH')) {
-    return ['MONOALLELIC', 'BIALLELIC']
+    return ['AD', 'AR']
   }
   if (moi.startsWith('MITOCHONDRIAL')) {
-    return ['MITOCHONDRIAL']
+    return []
   }
   if (moi.startsWith('OTHER')) {
     if (moi.includes('EVALUATION COMMENTS')) {
-      return ['UNKNOWN']
+      return []
     }
-    return ['OTHER']
+    return []
   }
   if (moi.startsWith('UNKNOWN')) {
-    return ['UNKNOWN']
+    return []
   }
 
-  return ['UNKNOWN']
+  return []
 }
 
 export const panelAppUrl = (apiUrl, panelId, gene) => {
