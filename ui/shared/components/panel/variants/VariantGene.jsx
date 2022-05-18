@@ -34,12 +34,40 @@ const PADDED_INLINE_STYLE = {
   ...INLINE_STYLE,
 }
 
-const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, containerStyle, dispatch, ...props }) => {
+const FlexLabel = styled(ColoredLabel)`
+  display: inline-flex !important;
+  vertical-align: top !important;
+`
+const ShrinkingSpan = styled.span`
+  flex: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+const StaticSpan = styled.span`
+   margin-left: 0.5em;
+   white-space: nowrap;
+`
+
+const BaseGeneLabelContent = styled(({
+  color, customColor, initials,
+  label, maxWidth, containerStyle, dispatch, ...props
+}) => {
   const labelProps = {
     ...props,
     size: 'mini',
     content: label,
   }
+
+  if (initials && customColor) {
+    return (
+      <FlexLabel {...labelProps} color={customColor}>
+        <ShrinkingSpan>{label}</ShrinkingSpan>
+        <StaticSpan>{initials}</StaticSpan>
+      </FlexLabel>
+    )
+  }
+
   return customColor ?
     <ColoredLabel {...labelProps} color={customColor} /> : <Label {...labelProps} color={color || 'grey'} />
 })`
@@ -105,27 +133,14 @@ const BaseLocusListLabels = React.memo((
         const { confidence, moi } = paDetail
         let { description } = locusListsByGuid[locusListGuid] || {}
         let initials = ''
-        let label = (locusListsByGuid[locusListGuid] || {}).name
+        const label = (locusListsByGuid[locusListGuid] || {}).name
 
         if (paDetail) {
           const { panelAppId, url } = locusListsByGuid[locusListGuid].paLocusList
           const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
           const initialsArray = moiToMoiInitials(moi)
-
           if (initialsArray.length > 0) {
             initials = `(${initialsArray.join(', ')})`
-            let allowedLabelSpace = 14
-            if (initialsArray.length === 1) {
-              if (label.length > allowedLabelSpace) {
-                label = `${label.substring(0, allowedLabelSpace)}…`
-              }
-            } else if (initialsArray.length === 2) {
-              allowedLabelSpace = 11
-              if (label.length > allowedLabelSpace) {
-                label = `${label.substring(0, allowedLabelSpace)}…`
-              }
-            }
-            label = `${label} ${initials}`
           }
 
           description = (
@@ -149,6 +164,7 @@ const BaseLocusListLabels = React.memo((
             key={locusListGuid}
             color="teal"
             customColor={confidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[confidence]}
+            initials={initials}
             maxWidth="12em"
             showEmpty
             label={label}
