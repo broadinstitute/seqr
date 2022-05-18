@@ -616,7 +616,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {
-                    'error': f'Invalid file: missing column(s) {", ".join([col for col in header if col not in params["optional_headers"]])}',
+                    'error': f'Invalid file: missing column(s) {", ".join(sorted([col for col in header if col not in params["optional_headers"]]))}',
                 })
 
                 mismatch_row = loaded_data_row[:-1] + [loaded_data_row[-1] - 2]

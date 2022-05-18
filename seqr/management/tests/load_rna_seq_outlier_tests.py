@@ -23,7 +23,7 @@ class LoadRnaSeqTest(TestCase):
 
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_outlier', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) sampleID, geneID, pValue, padjust, zScore')
+        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) geneID, pValue, padjust, sampleID, zScore')
 
         mock_gzip_file.__iter__.return_value = [
             'sampleID\tgeneID\tdetail\tpValue\tpadjust\tzScore\n',

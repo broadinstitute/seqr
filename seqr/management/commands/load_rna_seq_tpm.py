@@ -21,9 +21,9 @@ class Command(BaseCommand):
     help = 'Load RNA-Seq TPM data'
 
     def add_arguments(self, parser):
-        parser.add_argument('input_file')
-        parser.add_argument('--mapping-file')
-        parser.add_argument('--ignore-extra-samples', action='store_true')
+        parser.add_argument('input_file', help='tsv file with TPM data')
+        parser.add_argument('--mapping-file', help='optional file to map sample IDs to seqr individual IDs')
+        parser.add_argument('--ignore-extra-samples', action='store_true', help='whether to suppress errors about extra samples')
 
     def handle(self, *args, **options):
         mapping_file = None
