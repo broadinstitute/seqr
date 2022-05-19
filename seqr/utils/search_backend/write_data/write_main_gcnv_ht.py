@@ -54,9 +54,9 @@ def write_main_gcnv_ht(file):
         'sortedTranscriptConsequences': gt.geneIds.map(lambda gene: hl.Struct(
             gene_id=gene,
             major_consequence=hl.if_else(
-                vt.cg_genes.contains(gene),
+                gt.cg_genes.contains(gene),
                 'COPY_GAIN',
-                hl.if_else(vt.lof_genes.contains(gene), 'LOF',  hl.missing(hl.tstr)),
+                hl.if_else(gt.lof_genes.contains(gene), 'LOF',  hl.missing(hl.tstr)),
             ))),
     }
     vt = gt.annotate(**variant_annotations).select(
