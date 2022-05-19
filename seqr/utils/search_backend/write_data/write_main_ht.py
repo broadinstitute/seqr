@@ -8,7 +8,7 @@ SEQR_FIELDS = [
 ]
 
 def write_main_ht(file):
-    ht =  hl.read_matrix_table( f'gs://hail-backend-datasets/{file}.mt').rows()
+    ht =  hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').rows()
     ht = ht.select_globals().select(*SEQR_FIELDS)
     ht.write(f'gs://hail-backend-datasets/{file}.ht')
 
