@@ -9,7 +9,6 @@ RENAME_FIELDS = {
 def write_main_gcnv_ht(file):
     file_name = file.split('.')[0]
     ht = hl.import_table(f'gs://hail-backend-datasets/{file}', impute=True)
-    ht = ht.drop('less_than_50bp')
 
     annotations = {
         'geneIds': hl.if_else(
@@ -20,7 +19,7 @@ def write_main_gcnv_ht(file):
         'prevCall': hl.is_defined(ht.identical_round1),
         'prevOverlap': hl.is_defined(ht.any_round1),
         'sample_id': ht.sample_fix.first_match_in('(.+)_v\d+_Exome_(C|RP-)\d+$')[0],
-        'strvctvre': hl.if_else(ht.strvctvre_score=='not_exonic', hl.missing(hl.tfloat32), hl.float32(ht.strvctvre_score)),
+        'strvctvre': hl.parse_float(ht.strvctvre_score),
         'svType': 'gCNV_' + ht.svtype,
         'variantId': ht.variant_name + '_' + ht.svtype + '_2',
     }
@@ -44,7 +43,7 @@ def write_main_gcnv_ht(file):
         sf=hl.agg.max(ht.sf),
         strvctvre=hl.agg.max(ht.strvctvre),
         samples=hl.agg.collect(ht.row),
-    ).key_by( 'variantId')
+    ).key_by('variantId')
 
     # Export main variants
     variant_annotations = {
