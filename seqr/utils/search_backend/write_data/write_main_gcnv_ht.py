@@ -9,6 +9,7 @@ RENAME_FIELDS = {
 def write_main_gcnv_ht(file):
     file_name = file.split('.')[0]
     ht = hl.import_table(f'gs://hail-backend-datasets/{file}', impute=True)
+    ht = ht.drop('less_than_50bp')
 
     annotations = {
         'geneIds': hl.if_else(
