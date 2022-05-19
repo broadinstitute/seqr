@@ -118,8 +118,7 @@ function getPaProps({ panelAppDetails, panelAppPanel, paLocusList, geneSymbol })
   const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
   const moi = panelAppDetails.moi || 'Unknown'
   const confidence = panelAppDetails.confidence || 'Unknown'
-  const initialsArray = moiToMoiInitials(moi)
-  const initials = initialsArray.length > 0 ? `(${initialsArray.join(', ')})` : ''
+  const initials = moiToMoiInitials(moi).join(', ')
 
   const description = PanelAppHoverOver({
     url: fullUrl,

@@ -57,26 +57,34 @@ const BaseColoredLabel = styled(({ color, minWidth, ...props }) => <Label {...pr
 `
 export const ColoredLabel = props => <BaseColoredLabel {...props} />
 
-const ShrinkingSpan = styled.span`
-  flex: auto;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`
-const StaticSpan = styled.span`
-   margin-left: 0.5em;
-   white-space: nowrap;
-`
-
 const BaseFlexLabel = styled(ColoredLabel)`
-display: inline-flex !important;
-vertical-align: top !important;
+  margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
+  white-space: nowrap;
+  display: inline-flex !important;
+  vertical-align: top !important;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${props => props.maxWidth || 'none'};
+  }
+
+  .detail {
+    margin-left: 0.5em !important;
+
+    &::before {
+      content: "(";
+    }
+    &::after {
+      content: ")";
+    }
+  }
 `
 
 export const FlexLabel = props => (
   <BaseFlexLabel {...props}>
-    <ShrinkingSpan>{props?.label || ''}</ShrinkingSpan>
-    <StaticSpan>{props?.hint || ''}</StaticSpan>
+    <span>{props?.label || ''}</span>
+    <Label.Detail>{props?.hint || ''}</Label.Detail>
   </BaseFlexLabel>
 )
 
