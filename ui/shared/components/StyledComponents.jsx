@@ -1,5 +1,4 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 
 import styled from 'styled-components'
 import { Button, Header, Icon, Label, Table } from 'semantic-ui-react'
@@ -56,43 +55,6 @@ const BaseColoredLabel = styled(({ color, minWidth, ...props }) => <Label {...pr
   color: white !important;
 `
 export const ColoredLabel = props => <BaseColoredLabel {...props} />
-
-const BaseFlexLabel = styled(ColoredLabel)`
-  margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
-  white-space: nowrap;
-  display: inline-flex !important;
-  vertical-align: top !important;
-
-  span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: ${props => props.maxWidth || 'none'};
-  }
-
-  .detail {
-    margin-left: 0.5em !important;
-
-    &::before {
-      content: "(";
-    }
-    &::after {
-      content: ")";
-    }
-  }
-`
-
-export const FlexLabel = props => (
-  <BaseFlexLabel {...props}>
-    <span>{props?.label || ''}</span>
-    <Label.Detail>{props?.hint || ''}</Label.Detail>
-  </BaseFlexLabel>
-)
-
-FlexLabel.propTypes = {
-  ...ColoredLabel.propTypes,
-  hint: PropTypes.string.isRequired,
-  label: PropTypes.string.isRequired,
-}
 
 const BaseColoredOutlineLabel = styled(({ color, ...props }) => <Label {...props} />)`
   color: ${props => props.color} !important;

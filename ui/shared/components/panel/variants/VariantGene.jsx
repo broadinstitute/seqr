@@ -12,7 +12,7 @@ import {
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel, FlexLabel } from '../../StyledComponents'
+import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
@@ -35,26 +35,38 @@ const PADDED_INLINE_STYLE = {
 }
 
 const BaseGeneLabelContent = styled(({
-  color, customColor, hint, label, maxWidth, containerStyle, dispatch, ...props
+  color, customColor, detail, label, maxWidth, containerStyle, dispatch, ...props
 }) => {
   const labelProps = {
     ...props,
     size: 'mini',
-    content: label,
-  }
-
-  if (hint && customColor) {
-    return <FlexLabel {...labelProps} color={customColor} label={label} hint={hint} />
+    content: <span>{label}</span>,
+    detail: detail || null,
   }
 
   return customColor ?
     <ColoredLabel {...labelProps} color={customColor} /> : <Label {...labelProps} color={color || 'grey'} />
 })`
-   margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
-   overflow: hidden;
-   text-overflow: ellipsis;
-   white-space: nowrap;
-   max-width: ${props => props.maxWidth || 'none'};
+  margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
+  white-space: nowrap;
+
+  span {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${props => props.maxWidth || 'none'};
+  }
+
+  .detail {
+    margin-left: 0.5em !important;
+
+    &::before {
+      content: "(";
+    }
+    &::after {
+      content: ")";
+    }
+  }
 `
 const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
@@ -114,6 +126,14 @@ PanelAppHoverOver.propTypes = {
 }
 
 function getPaProps({ panelAppDetails, panelAppPanel, paLocusList, geneSymbol }) {
+  if (!panelAppDetails || !paLocusList || !geneSymbol) {
+    return {
+      initials: '',
+      description: panelAppPanel,
+      customColor: false,
+    }
+  }
+
   const { url, panelAppId } = paLocusList
   const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
   const moi = panelAppDetails.moi || 'Unknown'
@@ -164,6 +184,8 @@ const BaseLocusListLabels = React.memo((
           geneSymbol,
         }) : {
           description: label,
+          initials: false,
+          customColor: false,
         }
 
         return (
@@ -171,7 +193,7 @@ const BaseLocusListLabels = React.memo((
             key={locusListGuid}
             color="teal"
             customColor={customColor}
-            hint={initials}
+            detail={initials}
             maxWidth="12em"
             showEmpty
             label={label}
