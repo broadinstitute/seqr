@@ -154,7 +154,7 @@ class HailSearch(object):
 
     def _sample_table(self, sample):
         # In production: should use a different model field, not elasticsearch_index
-        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}__samples/{sample.sample_id}.ht')
+        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/{sample.sample_id}.ht')
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
