@@ -22,7 +22,6 @@ DEPLOYMENT_TARGETS = [
     "settings",
     "secrets",
     "linkerd",
-    "nginx",
     "elasticsearch",
     "kibana",
     "redis",
@@ -224,17 +223,6 @@ def deploy_kibana(settings):
     wait_for_resource(
         'kibana', resource_type='kibana', json_path='{.items[0].status.health}', expected_status='green',
         deployment_target=settings["DEPLOY_TO"], verbose_template='kibana health')
-
-
-def deploy_nginx(settings):
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("nginx")
-    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.3/deploy/static/provider/cloud/deploy.yaml" % locals())
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
-    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
 
 
 def deploy_pipeline_runner(settings):
