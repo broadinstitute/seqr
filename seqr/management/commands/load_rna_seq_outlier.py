@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 import logging
 
 from seqr.models import RnaSeqOutlier
-from seqr.views.apis.data_manager_api import load_rna_seq_outlier
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier
 from seqr.views.utils.file_utils import parse_file
 
 logger = logging.getLogger(__name__)
