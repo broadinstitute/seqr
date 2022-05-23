@@ -1,12 +1,11 @@
 import elasticsearch_dsl
-import gzip
 from collections import defaultdict
 from django.db.models import prefetch_related_objects
 from django.utils import timezone
 from tqdm import tqdm
 import random
 
-from seqr.models import Sample, Individual, Family, Project
+from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
@@ -295,26 +294,106 @@ def match_and_update_samples(
 
     return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update, remaining_sample_ids
 
-
 def _parse_tsv_row(row):
     return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
 
+RNA_OUTLIER_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
 
-def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, parse_row, validate_header):
+SAMPLE_ID_COL = 'sample_id'
+GENE_ID_COL = 'gene_id'
+TPM_COL = 'TPM'
+TISSUE_COL = 'tissue'
+INDIV_ID_COL = 'individual_id'
+TPM_HEADER_COLS = [SAMPLE_ID_COL, GENE_ID_COL, TISSUE_COL, TPM_COL]
+
+TISSUE_TYPE_MAP = {
+    'whole_blood': 'WB',
+    'fibroblasts': 'F',
+    'muscle': 'M',
+    'lymphocytes': 'L',
+}
+
+REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
+
+def _parse_outlier_row(row, **kwargs):
+    yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_OUTLIER_COLUMNS.items()}
+
+def _parse_tpm_row(row, sample_id_to_tissue_type=None):
+    sample_id = row[SAMPLE_ID_COL]
+    if row[TPM_COL] != '0.0' and not sample_id.startswith('GTEX'):
+        prev_tissue = sample_id_to_tissue_type.get(sample_id)
+        tissue = row[TISSUE_COL]
+        if not tissue:
+            raise ValueError(f'Sample {sample_id} has no tissue type')
+        if prev_tissue and prev_tissue != tissue:
+            raise ValueError(f'Mismatched tissue types for sample {sample_id}: {prev_tissue}, {tissue}')
+        sample_id_to_tissue_type[sample_id] = tissue
+
+        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL]}
+        if INDIV_ID_COL in row:
+            parsed[INDIV_ID_COL] = row[INDIV_ID_COL]
+
+        yield sample_id, parsed
+
+def _check_invalid_tissues(samples, sample_id_to_tissue_type, warnings):
+    invalid_tissues = {}
+    for sample in samples:
+        tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
+        if not sample.tissue_type:
+            sample.tissue_type = tissue_type
+            sample.save()
+        elif sample.tissue_type != tissue_type:
+            invalid_tissues[sample] = tissue_type
+
+    if invalid_tissues:
+        mismatch = ', '.join([
+            f'{sample.sample_id} ({REVERSE_TISSUE_TYPE[expected_tissue]} to {REVERSE_TISSUE_TYPE[sample.tissue_type]})'
+            for sample, expected_tissue in invalid_tissues.items()])
+        message = f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {mismatch}'
+        warnings.append(message)
+
+    return [sample for sample in samples if sample not in invalid_tissues]
+
+def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    expected_columns = ['sampleID'] + list(RNA_OUTLIER_COLUMNS.keys())
+    return _load_rna_seq(
+        RnaSeqOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_outlier_row, expected_columns,
+    )
+
+def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    sample_id_to_tissue_type = {}
+    return _load_rna_seq(
+        RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
+        sample_id_to_tissue_type=sample_id_to_tissue_type, validate_samples=_check_invalid_tissues,
+    )
+
+def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
+                  sample_id_to_tissue_type=None, validate_samples=None):
+    sample_id_to_individual_id_mapping = {}
+    if mapping_file:
+        sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
+
     samples_by_id = defaultdict(dict)
-    with gzip.open(file_path, 'rt') as f:
-        header = _parse_tsv_row(next(f))
-        validate_header(header)
+    f = file_iter(file_path)
+    header = _parse_tsv_row(next(f))
+    missing_cols = set(expected_columns) - set(header)
+    if missing_cols:
+        raise ValueError(f'Invalid file: missing column(s) {", ".join(sorted(missing_cols))}')
 
-        for line in tqdm(f, unit=' rows'):
-            row = dict(zip(header, _parse_tsv_row(line)))
-            for sample_id, row_dict in parse_row(row):
-                gene_id = row_dict['gene_id']
-                existing_data = samples_by_id[sample_id].get(gene_id)
-                if existing_data and existing_data != row_dict:
-                    raise ValueError(
-                        f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
-                samples_by_id[sample_id][gene_id] = row_dict
+    for line in tqdm(f, unit=' rows'):
+        row = dict(zip(header, _parse_tsv_row(line)))
+        for sample_id, row_dict in parse_row(row, sample_id_to_tissue_type=sample_id_to_tissue_type):
+            gene_id = row_dict['gene_id']
+            existing_data = samples_by_id[sample_id].get(gene_id)
+            if existing_data and existing_data != row_dict:
+                raise ValueError(
+                    f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
+
+            indiv_id = row_dict.pop(INDIV_ID_COL, None)
+            if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
+                sample_id_to_individual_id_mapping[sample_id] = indiv_id
+
+            samples_by_id[sample_id][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
@@ -331,8 +410,13 @@ def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
     )
 
+    warnings = []
+    if validate_samples:
+        samples = validate_samples(samples, sample_id_to_tissue_type, warnings)
+
     # Delete old data
-    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
+    individual_db_ids = {s.individual_id for s in samples}
+    to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
     if to_delete:
         prefetch_related_objects(to_delete, 'sample')
         logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
@@ -341,7 +425,7 @@ def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping,
         })
         to_delete.delete()
 
-    loaded_sample_ids = set(model_cls.objects.values_list('sample_id', flat=True).distinct())
+    loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     samples_to_load = {
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
@@ -353,15 +437,15 @@ def load_rna_seq(model_cls, file_path, user, sample_id_to_individual_id_mapping,
     info.append(message)
     logger.info(message, user)
 
-    warnings = []
     if remaining_sample_ids:
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
         message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
         warnings.append(message)
-        logger.warning(message, user)
     if loaded_sample_ids:
         message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
         warnings.append(message)
-        logger.warning(message, user)
+
+    for warning in warnings:
+        logger.warning(warning, user)
 
     return samples_to_load, info, warnings

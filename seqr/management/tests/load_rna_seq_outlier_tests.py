@@ -16,11 +16,17 @@ class LoadRnaSeqTest(TestCase):
     @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.logger.info')
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.open')
-    @mock.patch('seqr.views.utils.dataset_utils.gzip.open')
+    @mock.patch('seqr.utils.file_utils.gzip.open')
     def test_command(self, mock_gzip_open, mock_open, mock_logger):
         mock_gzip_file = mock_gzip_open.return_value.__enter__.return_value
-        mock_gzip_file.__next__.return_value = 'sampleID\tgeneID\tdetail\tpValue\tpadjust\tzScore\n'
+        mock_gzip_file.__iter__.return_value = ['invalid\theader']
+
+        with self.assertRaises(ValueError) as e:
+            call_command('load_rna_seq_outlier', RNA_FILE_ID)
+        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) geneID, pValue, padjust, sampleID, zScore')
+
         mock_gzip_file.__iter__.return_value = [
+            'sampleID\tgeneID\tdetail\tpValue\tpadjust\tzScore\n',
             'NA19675_D2\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1\n',
             'NA19675_D2\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\n',
             'NA19675_D2\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',

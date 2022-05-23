@@ -493,6 +493,7 @@ LOCUS_LIST_FIELDS = {
     'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate', 'canEdit',
     'name',
 }
+PA_LOCUS_LIST_FIELDS = {'paLocusList'}
 LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 LOCUS_LIST_DETAIL_FIELDS.update(LOCUS_LIST_FIELDS)
 
