@@ -28,18 +28,6 @@ export const moiToMoiInitials = (rawMoi) => {
   if (moi.startsWith('BOTH')) {
     return ['AD', 'AR']
   }
-  if (moi.startsWith('MITOCHONDRIAL')) {
-    return []
-  }
-  if (moi.startsWith('OTHER')) {
-    if (moi.includes('EVALUATION COMMENTS')) {
-      return []
-    }
-    return []
-  }
-  if (moi.startsWith('UNKNOWN')) {
-    return []
-  }
 
   return []
 }

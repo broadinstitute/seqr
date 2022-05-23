@@ -35,13 +35,12 @@ const PADDED_INLINE_STYLE = {
 }
 
 const BaseGeneLabelContent = styled(({
-  color, customColor, detail, label, maxWidth, containerStyle, dispatch, ...props
+  color, customColor, label, maxWidth, containerStyle, dispatch, ...props
 }) => {
   const labelProps = {
     ...props,
     size: 'mini',
     content: <span>{label}</span>,
-    detail: detail || null,
   }
 
   return customColor ?
@@ -101,9 +100,9 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
-const PanelAppHoverOver = ({ url, panelAppPanel, confidence, initials, moi }) => (
+const PanelAppHoverOver = ({ url, locusListDescription, confidence, initials, moi }) => (
   <div>
-    <a target="_blank" href={url} rel="noreferrer">{panelAppPanel}</a>
+    <a target="_blank" href={url} rel="noreferrer">{locusListDescription}</a>
     <br />
     <br />
     <b>PanelApp gene confidence: &nbsp;</b>
@@ -119,17 +118,17 @@ const PanelAppHoverOver = ({ url, panelAppPanel, confidence, initials, moi }) =>
 
 PanelAppHoverOver.propTypes = {
   url: PropTypes.string.isRequired,
-  panelAppPanel: PropTypes.string.isRequired,
+  locusListDescription: PropTypes.string.isRequired,
   confidence: PropTypes.string.isRequired,
   initials: PropTypes.string.isRequired,
   moi: PropTypes.string.isRequired,
 }
 
-function getPaProps({ panelAppDetails, panelAppPanel, paLocusList, geneSymbol }) {
+function getPaProps({ panelAppDetails, locusListDescription, paLocusList, geneSymbol }) {
   if (!panelAppDetails || !paLocusList || !geneSymbol) {
     return {
-      initials: '',
-      description: panelAppPanel,
+      initials: null,
+      description: locusListDescription,
       customColor: false,
     }
   }
@@ -138,11 +137,11 @@ function getPaProps({ panelAppDetails, panelAppPanel, paLocusList, geneSymbol })
   const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
   const moi = panelAppDetails.moi || 'Unknown'
   const confidence = panelAppDetails.confidence || 'Unknown'
-  const initials = moiToMoiInitials(moi).join(', ')
+  const initials = moiToMoiInitials(moi).join(', ') || null
 
   const description = PanelAppHoverOver({
     url: fullUrl,
-    panelAppPanel,
+    locusListDescription,
     confidence,
     initials,
     moi,
@@ -177,9 +176,9 @@ const BaseLocusListLabels = React.memo((
         const locusList = locusListsByGuid[locusListGuid]
         const panelAppDetails = panelAppDetail[locusListGuid]
         const { name: label, description: locusListDescription, paLocusList } = locusList
-        const { description, initials, customColor } = panelAppDetails && paLocusList ? getPaProps({
+        const { description, initials, customColor } = (panelAppDetails && paLocusList) ? getPaProps({
           panelAppDetails,
-          panelAppPanel: locusListDescription || '',
+          locusListDescription,
           paLocusList,
           geneSymbol,
         }) : {
@@ -194,7 +193,7 @@ const BaseLocusListLabels = React.memo((
             color="teal"
             customColor={customColor}
             detail={initials}
-            maxWidth="12em"
+            maxWidth="8em"
             showEmpty
             label={label}
             description={label}
