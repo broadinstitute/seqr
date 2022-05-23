@@ -3,13 +3,13 @@ from django.contrib import admin
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult, MatchmakerContactNotes
 from seqr.models import Project, Family, Individual, Sample, LocusList, LocusListGene, LocusListInterval, VariantNote, \
     VariantTag, VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, \
-    FamilyAnalysedBy, VariantSearch, VariantSearchResults, IgvSample, UserPolicy, WarningMessage
+    FamilyAnalysedBy, VariantSearch, VariantSearchResults, IgvSample, UserPolicy, WarningMessage, FamilyNote
 
 for model_class in [
     Project, Family, Individual, Sample, IgvSample, LocusList, LocusListGene, LocusListInterval, VariantNote, VariantTag,
     VariantTagType, VariantFunctionalData, SavedVariant, GeneNote, AnalysisGroup, ProjectCategory, FamilyAnalysedBy,
     VariantSearch, VariantSearchResults, MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult,
-    MatchmakerContactNotes,
+    MatchmakerContactNotes, FamilyNote,
 ]:
 
     @admin.register(model_class)
