@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 import mock
-
+from copy import deepcopy
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \
     VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
@@ -10,8 +10,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
  get_json_for_saved_search, get_json_for_saved_variants_with_tags
 from seqr.views.utils.test_utils import USER_FIELDS, PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
-    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, IGV_SAMPLE_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
-    TAG_FIELDS, VARIANT_NOTE_FIELDS
+    FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
+    CASE_REVIEW_FAMILY_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS
 
 class JSONUtilsTest(TestCase):
     databases = '__all__'
@@ -184,4 +184,6 @@ class JSONUtilsTest(TestCase):
         locus_list = LocusList.objects.first()
         user = User.objects.filter().first()
         json = get_json_for_locus_list(locus_list, user)
-        self.assertSetEqual(set(json.keys()), LOCUS_LIST_DETAIL_FIELDS)
+        exp_detail_fields = deepcopy(LOCUS_LIST_DETAIL_FIELDS)
+        exp_detail_fields.update(PA_LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(json.keys()), exp_detail_fields)

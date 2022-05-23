@@ -109,10 +109,7 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analy
         gene_json = genes[locus_list_gene.gene_id]
         locus_list_guid = locus_list_gene.locus_list.guid
         gene_json['locusListGuids'].append(locus_list_guid)
-        if hasattr(locus_list_gene, 'palocuslistgene'):
-            if not gene_json.get('locusListConfidence'):
-                gene_json['locusListConfidence'] = {}
-            gene_json['locusListConfidence'][locus_list_guid] = locus_list_gene.palocuslistgene.confidence_level
+        _add_pa_detail(locus_list_gene, locus_list_guid, gene_json)
 
     return locus_lists_by_guid
 
@@ -146,6 +143,16 @@ def _add_discovery_tags(variants, discovery_tags):
             if not variant.get('discoveryTags'):
                 variant['discoveryTags'] = []
             variant['discoveryTags'] += [tag for tag in tags if tag['savedVariant']['familyGuid'] not in variant['familyGuids']]
+
+
+def _add_pa_detail(locus_list_gene, locus_list_guid, gene_json):
+    if hasattr(locus_list_gene, 'palocuslistgene'):
+        if not gene_json.get('panelAppDetail'):
+            gene_json['panelAppDetail'] = {}
+        gene_json['panelAppDetail'][locus_list_guid] = {
+            'confidence': locus_list_gene.palocuslistgene.confidence_level,
+            'moi': locus_list_gene.palocuslistgene.mode_of_inheritance,
+        }
 
 
 LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'

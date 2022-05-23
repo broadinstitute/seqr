@@ -13,7 +13,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
-    INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
+    PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
     VARIANT_NOTE_FIELDS, TAG_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
@@ -112,6 +112,7 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
 
         locus_list_fields = deepcopy(LOCUS_LIST_FIELDS)
+        locus_list_fields.update(PA_LOCUS_LIST_FIELDS)
         locus_list_fields.remove('numEntries')
         locus_list_fields.remove('canEdit')
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
@@ -144,24 +145,26 @@ class VariantSearchAPITest(object):
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
         self.assertSetEqual(set(response_json['familyNotesByGuid']['FAN000001_1'].keys()), FAMILY_NOTE_FIELDS)
 
-    def _assert_expected_results_context(self, response_json, has_confidence_gene=True, locus_list_detail=False):
+    def _assert_expected_results_context(self, response_json, has_pa_detail=True, locus_list_detail=False):
         gene_fields = {'locusListGuids'}
         gene_fields.update(GENE_VARIANT_FIELDS)
         basic_gene_id = next(gene_id for gene_id in ['ENSG00000268903', 'ENSG00000233653'] if gene_id in response_json['genesById'])
         self.assertSetEqual(set(response_json['genesById'][basic_gene_id].keys()), gene_fields)
-        if has_confidence_gene:
-            gene_fields.add('locusListConfidence')
+        if has_pa_detail:
+            gene_fields.add('panelAppDetail')
             self.assertSetEqual(set(response_json['genesById']['ENSG00000227232'].keys()), gene_fields)
             self.assertListEqual(
                 response_json['genesById']['ENSG00000227232']['locusListGuids'], [LOCUS_LIST_GUID]
             )
             self.assertDictEqual(
-                response_json['genesById']['ENSG00000227232']['locusListConfidence'], {LOCUS_LIST_GUID: '3'}
+                response_json['genesById']['ENSG00000227232']['panelAppDetail'], {LOCUS_LIST_GUID: {'confidence': '3', 'moi': 'BIALLELIC, autosomal or pseudoautosomal'}}
             )
 
         locus_list_fields = {'intervals'}
         if locus_list_detail:
             locus_list_fields.update(LOCUS_LIST_FIELDS)
+            if has_pa_detail:
+                locus_list_fields.update({'paLocusList'})
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
         intervals = response_json['locusListsByGuid'][LOCUS_LIST_GUID]['intervals']
         self.assertEqual(len(intervals), 2)
@@ -378,7 +381,7 @@ class VariantSearchAPITest(object):
         })
         expected_search_response['search']['totalResults'] = 1
         self.assertDictEqual(response_json, expected_search_response)
-        self._assert_expected_results_context(response_json, has_confidence_gene=False)
+        self._assert_expected_results_context(response_json, has_pa_detail=False)
         mock_error_logger.assert_not_called()
 
         # Test cross-project discovery for analyst users
