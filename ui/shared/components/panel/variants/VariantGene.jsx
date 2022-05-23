@@ -174,7 +174,7 @@ const BaseLocusListLabels = React.memo((
     <div style={containerStyle}>
       {locusListGuids.map((locusListGuid) => {
         const locusList = locusListsByGuid[locusListGuid]
-        const panelAppDetails = panelAppDetail[locusListGuid]
+        const panelAppDetails = panelAppDetail && panelAppDetail[locusListGuid]
         const { name: label, description: locusListDescription, paLocusList } = locusList
         const { description, initials, customColor } = (panelAppDetails && paLocusList) ? getPaProps({
           panelAppDetails,
