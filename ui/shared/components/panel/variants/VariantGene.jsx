@@ -407,6 +407,11 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   margin-top: 0 !important;
   margin-bottom: 5px !important;
   
+  resize: vertical;
+  &[style*="height"] {
+    max-height: unset; 
+  }
+  
   .segment {
     border-left: none !important;
   }
