@@ -16,9 +16,9 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
-    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
+    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_FIELD, HGMD_FIELD, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD, CLINVAR_FIELD, HGMD_FIELD
+    get_prediction_response_key, XSTOP_FIELD
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -300,10 +300,7 @@ class EsSearch(object):
         if not frequencies:
             return
 
-        clinvar_path_filters = [
-            f for f in clinvar_terms
-            if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
-        ]
+        clinvar_path_filters = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES]
         path_override = bool(clinvar_path_filters) and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
