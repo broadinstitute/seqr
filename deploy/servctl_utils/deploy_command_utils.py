@@ -20,7 +20,6 @@ DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
 
 DEPLOYMENT_TARGETS = [
     "settings",
-    "secrets",
     "linkerd",
     "nginx",
     "elasticsearch",
@@ -34,20 +33,6 @@ DEPLOYMENT_TARGETS = [
 DEPLOYABLE_COMPONENTS = ['pipeline-runner'] + DEPLOYMENT_TARGETS
 
 GCLOUD_CLIENT = 'gcloud-client'
-
-SECRETS = {
-    'elasticsearch': ['users', 'users_roles', 'roles.yml'],
-    'es-snapshot-gcs': ['{deploy_to}/gcs.client.default.credentials_file'],
-    GCLOUD_CLIENT: ['service-account-key.json'],
-    'kibana': ['elasticsearch.password'],
-    'matchbox': ['{deploy_to}/config.json'],
-    'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
-    'postgres': ['{deploy_to}/password'],
-    'seqr': [
-        'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password', 'airflow_api_audience',
-        '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret', '{deploy_to}/ga_token_id',
-    ],
-}
 
 
 def deploy_settings(settings):
@@ -69,38 +54,6 @@ def deploy_settings(settings):
     run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])
     run("kubectl create configmap all-settings --from-file=%(configmap_file_path)s" % locals())
     run("kubectl get configmaps all-settings -o yaml")
-
-
-def deploy_secrets(settings, components=None):
-    """Deploys or updates k8s secrets."""
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("secrets")
-
-    create_namespace(settings)
-
-    if not components:
-        components = SECRETS.keys()
-
-    # deploy secrets
-    for secret_label in components:
-        run("kubectl delete secret {}-secrets".format(secret_label), verbose=False, errors_to_ignore=["not found"])
-
-    for secret_label in components:
-        secret_files = SECRETS.get(secret_label)
-        if not secret_files:
-            raise Exception('Invalid secret component {}'.format(secret_label))
-
-        secret_command = ['kubectl create secret generic {secret_label}-secrets'.format(secret_label=secret_label)]
-        secret_command += [
-            '--from-file deploy/secrets/gcloud/{secret_label}/{file}'.format(secret_label=secret_label, file=file)
-            for file in secret_files
-        ]
-        if secret_label == GCLOUD_CLIENT:
-            secret_command.append('--from-file deploy/secrets/shared/gcloud/boto')
-        run(" ".join(secret_command).format(deploy_to=settings['DEPLOY_TO']), errors_to_ignore=["already exists"])
 
 
 def deploy_elasticsearch(settings):
@@ -269,10 +222,6 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings=None
     # make sure namespace exists
     if not runtime_settings.get("ONLY_PUSH_TO_REGISTRY"):
         create_namespace(settings)
-
-    if components[0] == 'secrets':
-        deploy_secrets(settings, components=components[1:])
-        return
 
     # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
     for component in DEPLOYABLE_COMPONENTS:

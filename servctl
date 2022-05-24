@@ -7,7 +7,7 @@ import os
 import sys
 
 from deploy.servctl_utils.deploy_command_utils import deploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
-    DEPLOYMENT_ENVS, SECRETS
+    DEPLOYMENT_ENVS
 from deploy.servctl_utils.other_command_utils import delete_component, delete_all
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
@@ -57,7 +57,7 @@ for command_name in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
                          "backup from which to restore the reference data database.")
 
     if command_name == DEPLOY_COMMAND:
-        choices = set(SECRETS.keys())
+        choices = set()
         choices.update(COMPONENT_ARG_CHOICES)
         sp.add_argument("components", nargs="+", help="one or more components to deploy", choices=choices)
 
