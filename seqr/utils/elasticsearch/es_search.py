@@ -1017,7 +1017,7 @@ class EsSearch(object):
             if variant.get(HGMD_FIELD, {}).get('class') in self._consequence_overrides.get(HGMD_FIELD, []):
                 all_gene_consequences.append(HGMD_FIELD)
             splice_ai = variant.get('predictions', {}).get(SPLICE_AI_FIELD)
-            if splice_ai and splice_ai > self._consequence_overrides.get(SPLICE_AI_FIELD, 100):
+            if splice_ai and splice_ai >= self._consequence_overrides.get(SPLICE_AI_FIELD, 100):
                 all_gene_consequences.append(SPLICE_AI_FIELD)
 
             variant['gene_consequences'] = {}
