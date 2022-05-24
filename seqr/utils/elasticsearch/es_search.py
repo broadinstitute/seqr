@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD
+    get_prediction_response_key, XSTOP_FIELD, CLINVAR_FIELD, HGMD_FIELD
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -247,11 +247,11 @@ class EsSearch(object):
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
         if clinvar_terms:
-            self._consequence_overrides['clinvar'] = clinvar_terms
+            self._consequence_overrides[CLINVAR_FIELD] = clinvar_terms
         if hgmd_classes:
-            self._consequence_overrides['hgmd'] = hgmd_classes
+            self._consequence_overrides[HGMD_FIELD] = hgmd_classes
         if splice_ai:
-            self._consequence_overrides['splice_ai'] = float(splice_ai)
+            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
@@ -332,9 +332,9 @@ class EsSearch(object):
 
     def _get_annotation_override_filter(self):
         pathogenicity_filter = _pathogenicity_filter(
-            self._consequence_overrides.get('clinvar'), self._consequence_overrides.get('hgmd'),
+            self._consequence_overrides.get(CLINVAR_FIELD), self._consequence_overrides.get(HGMD_FIELD),
         )
-        splice_ai = self._consequence_overrides.get('splice_ai')
+        splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
         splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
         if pathogenicity_filter and splice_ai_filter:
             return _or_filters([pathogenicity_filter, splice_ai_filter])
@@ -1015,13 +1015,13 @@ class EsSearch(object):
             all_gene_consequences = []
             if variant.get('svType'):
                 all_gene_consequences.append(variant['svType'])
-            if variant.get('clinvar', {}).get('clinicalSignificance') in self._consequence_overrides.get('clinvar', []):
-                all_gene_consequences.append('clinvar')
-            if variant.get('hgmd', {}).get('class') in self._consequence_overrides.get('hgmd', []):
-                all_gene_consequences.append('hgmd')
-            splice_ai = variant.get('predictions', {}).get('splice_ai')
-            if splice_ai and splice_ai > self._consequence_overrides.get('splice_ai', 100):
-                all_gene_consequences.append('splice_ai')
+            if variant.get(CLINVAR_FIELD, {}).get('clinicalSignificance') in self._consequence_overrides.get(CLINVAR_FIELD, []):
+                all_gene_consequences.append(CLINVAR_FIELD)
+            if variant.get(HGMD_FIELD, {}).get('class') in self._consequence_overrides.get(HGMD_FIELD, []):
+                all_gene_consequences.append(HGMD_FIELD)
+            splice_ai = variant.get('predictions', {}).get(SPLICE_AI_FIELD)
+            if splice_ai and splice_ai > self._consequence_overrides.get(SPLICE_AI_FIELD, 100):
+                all_gene_consequences.append(SPLICE_AI_FIELD)
 
             variant['gene_consequences'] = {}
             for k, transcripts in variant['transcripts'].items():
@@ -1477,8 +1477,8 @@ def _pos_offset_range_filter(chrom, pos, offset):
     }
 
 def _parse_pathogenicity_filter(pathogenicity):
-    clinvar_filters = pathogenicity.get('clinvar', [])
-    hgmd_filters = pathogenicity.get('hgmd', [])
+    clinvar_filters = pathogenicity.get(CLINVAR_FIELD, [])
+    hgmd_filters = pathogenicity.get(HGMD_FIELD, [])
 
     clinvar_clinical_significance_terms = set()
     if clinvar_filters:
