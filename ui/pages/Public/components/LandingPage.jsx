@@ -61,7 +61,7 @@ const LandingPage = ({ googleLoginEnabled }) => (
       Broad Institute.
       <Header size="small">
         {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-        View the <SeqrPaperLink content={<span><i>seqr</i> preprint</span>} />
+        View the <SeqrPaperLink content={<span><i>seqr</i> paper</span>} />
       </Header>
     </PageSegment>
     <PageSegment size="large">
