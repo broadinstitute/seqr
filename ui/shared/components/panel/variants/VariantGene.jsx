@@ -81,7 +81,8 @@ const LocusListDivider = styled(Divider).attrs({ fitted: true })`
 `
 
 const LocusListsContainer = styled.div`
-  display: ${props => (props.showInlineDetails ? 'inline-block' : 'block')}
+  max-height: 10.2em;
+  overflow-y: auto;
 `
 
 const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
@@ -153,51 +154,52 @@ function getPaProps({ panelAppDetails, locusListDescription, paLocusList, geneSy
 
 const BaseLocusListLabels = React.memo(({
   locusListGuids, locusListsByGuid, panelAppDetail, geneSymbol, compact, showInlineDetails, ...labelProps
-}) => (
-  compact ? (
-    <GeneDetailSection
-      compact
-      color="teal"
-      compactLabel="Gene Lists"
-      details={
-        locusListGuids.length > 0 &&
-          <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
-      }
-    />
-  ) : (
-    <LocusListsContainer showInlineDetails={showInlineDetails}>
-      {locusListGuids.map((locusListGuid) => {
-        const locusList = locusListsByGuid[locusListGuid]
-        const panelAppDetails = panelAppDetail && panelAppDetail[locusListGuid]
-        const { name: label, description: locusListDescription, paLocusList } = locusList
-        const { description, initials, customColor } = (panelAppDetails && paLocusList) ? getPaProps({
-          panelAppDetails,
-          locusListDescription,
-          paLocusList,
-          geneSymbol,
-        }) : {
-          description: label,
-          initials: false,
-          customColor: false,
+}) => {
+  const locusListSectionProps = {
+    compact, color: 'teal', compactLabel: 'Gene Lists',
+  }
+  if (compact) {
+    return (
+      <GeneDetailSection
+        {...locusListSectionProps}
+        details={
+          locusListGuids.length > 0 &&
+            <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
         }
-
-        return (
-          <GeneDetailSection
-            key={locusListGuid}
-            color="teal"
-            customColor={customColor}
-            detail={initials}
-            maxWidth="8em"
-            showEmpty
-            label={label}
-            description={label}
-            details={description}
-            {...labelProps}
-          />
-        )
-      })}
-    </LocusListsContainer>
-  )))
+      />
+    )
+  }
+  const labels = locusListGuids.map((locusListGuid) => {
+    const locusList = locusListsByGuid[locusListGuid]
+    const panelAppDetails = panelAppDetail && panelAppDetail[locusListGuid]
+    const { name: label, description: locusListDescription, paLocusList } = locusList
+    const { description, initials, customColor } = (panelAppDetails && paLocusList) ? getPaProps({
+      panelAppDetails,
+      locusListDescription,
+      paLocusList,
+      geneSymbol,
+    }) : {
+      description: label,
+      initials: false,
+      customColor: false,
+    }
+    return (
+      <GeneDetailSection
+        key={locusListGuid}
+        customColor={customColor}
+        detail={initials}
+        maxWidth="8em"
+        showEmpty
+        label={label}
+        description={label}
+        details={description}
+        {...locusListSectionProps}
+        {...labelProps}
+      />
+    )
+  })
+  return showInlineDetails ? labels : <LocusListsContainer>{labels}</LocusListsContainer>
+})
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
@@ -438,7 +440,7 @@ export const GeneDetails = React.memo((
   const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, rnaSeqData)
   const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps)
   const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
-  const showDivider = !showInlineDetails && geneDetails.length > 0 && hasLocusLists
+  const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
 
   return [
     ...geneDetails,
