@@ -253,17 +253,17 @@ SORT_FIELDS.update({
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
 
-CLINVAR_FIELD = 'clinvar'
+CLINVAR_KEY = 'clinvar'
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
-HGMD_FIELD = 'hgmd'
+HGMD_KEY = 'hgmd'
 HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
 HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2', 'samples']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
-        CLINVAR_FIELD: CLINVAR_FIELDS,
-        HGMD_FIELD: HGMD_FIELDS,
+        CLINVAR_KEY: CLINVAR_FIELDS,
+        HGMD_KEY: HGMD_FIELDS,
     }.items()
 }
 
