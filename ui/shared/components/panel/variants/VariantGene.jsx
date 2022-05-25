@@ -10,6 +10,7 @@ import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
+import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
@@ -158,21 +159,26 @@ const BaseLocusListLabels = React.memo(({
   const locusListSectionProps = {
     compact, color: 'teal', compactLabel: 'Gene Lists',
   }
+
+  const locusLists = locusListGuids.map(locusListGuid => ({
+    panelAppDetails: panelAppDetail && panelAppDetail[locusListGuid], ...locusListsByGuid[locusListGuid],
+  })).sort(compareObjects('name')).sort(
+    (a, b) => (b.panelAppDetails?.confidence || 0) - (a.panelAppDetails?.confidence || 0),
+  )
+
   if (compact) {
     return (
       <GeneDetailSection
         {...locusListSectionProps}
         details={
           locusListGuids.length > 0 &&
-            <List bulleted items={locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid].name)} />
+            <List bulleted items={locusLists.map(({ name }) => name)} />
         }
       />
     )
   }
-  const labels = locusListGuids.map((locusListGuid) => {
-    const locusList = locusListsByGuid[locusListGuid]
-    const panelAppDetails = panelAppDetail && panelAppDetail[locusListGuid]
-    const { name: label, description: locusListDescription, paLocusList } = locusList
+  const labels = locusLists.map((locusList) => {
+    const { locusListGuid, name: label, description: locusListDescription, paLocusList, panelAppDetails } = locusList
     const { description, initials, customColor } = (panelAppDetails && paLocusList) ? getPaProps({
       panelAppDetails,
       locusListDescription,
