@@ -1375,6 +1375,7 @@
             "predictions": {"eigen": null, "revel": null, "sift": null, "cadd": "14.33", "metasvm": "", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": null, "fathmm": null, "polyphen": null, "dann": null, "primate_ai": null, "gerp_rs": null},
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
+            "selectedMainTranscriptId": null,
             "liftedOverChrom": "",
             "originalAltAlleles": ["G"],
             "transcripts": {"ENSG00000135953": [

@@ -8,6 +8,7 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_NOTE_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
@@ -877,6 +878,7 @@ class SavedVariantAPITest(object):
 
         saved_variant = SavedVariant.objects.get(guid=VARIANT_GUID)
         self.assertEqual(saved_variant.selected_main_transcript_id, transcript_id)
+        self.assertEqual(get_json_for_saved_variant(saved_variant, add_details=True)['selectedMainTranscriptId'], transcript_id)
 
     def test_update_variant_acmg_classification(self):
         update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])
