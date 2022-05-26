@@ -1,1 +1,10 @@
-ui/node_modules/
+ui/node_modules/*
+static/*
+!static/fonts/*
+!static/images/*
+!static/admin/*
+deploy/*
+!deploy/docker/seqr/*
+.git
+.vscode
+.idea

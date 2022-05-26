@@ -6,10 +6,9 @@ from seqr.views.utils.test_utils import AuthenticationTestCase
 from seqr.models import Project
 from settings import ANALYST_PROJECT_CATEGORY
 
-PROJECT_GUID = 'R0001_1kg'
-PROJECT_CAT_GUID2 = 'PC000002_categry_with_unicde'
-PROJECT_CAT_GUID3 = 'PC000003_test_category_name'
-PROJECT_CAT_GUID4 = 'PC000004_demo'
+PROJECT_GUID = 'R0003_test'
+ADDED_PROJECT_CAT_GUID = 'PC000002_categry_with_unicde'
+EXISTING_PROJECT_CAT_GUID = 'PC000003_test_category_name'
 NEW_PROJECT_CAT_NAME = 'New project category'
 
 
@@ -20,7 +19,7 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
         url = reverse(update_project_categories_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
-        category_guids = [PROJECT_CAT_GUID2, PROJECT_CAT_GUID4, NEW_PROJECT_CAT_NAME]
+        category_guids = [EXISTING_PROJECT_CAT_GUID, ADDED_PROJECT_CAT_GUID, NEW_PROJECT_CAT_NAME]
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'projectCategoryGuids': category_guids
         }))
@@ -35,9 +34,9 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
 
         project_categories = [project_category for project_category in
                               project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY).order_by('guid')]
-        self.assertEqual(project_categories[0].guid, PROJECT_CAT_GUID2)
+        self.assertEqual(project_categories[0].guid, ADDED_PROJECT_CAT_GUID)
         self.assertNotIn(project_categories[0].guid, updated_guid_set)
-        self.assertEqual(project_categories[1].guid, PROJECT_CAT_GUID4)
+        self.assertEqual(project_categories[1].guid, EXISTING_PROJECT_CAT_GUID)
         self.assertNotIn(project_categories[1].guid, updated_guid_set)
         self.assertEqual(project_categories[2].name, NEW_PROJECT_CAT_NAME)
         self.assertIn(project_categories[2].guid, updated_guid_set)
@@ -45,7 +44,7 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']), 3)
         self.assertSetEqual(
-            {PROJECT_CAT_GUID2, PROJECT_CAT_GUID4, new_guid},
+            {EXISTING_PROJECT_CAT_GUID, ADDED_PROJECT_CAT_GUID, new_guid},
             set(response_json['projectsByGuid'][PROJECT_GUID]['projectCategoryGuids']))
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -63,5 +62,4 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
         project_category_guids_in_db = [
             project_category.guid for project_category in project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY)]
         self.assertListEqual(project_category_guids_in_db, [])
-        self.assertIsNone(response_json['projectCategoriesByGuid'][PROJECT_CAT_GUID2])
         self.assertIsNone(response_json['projectCategoriesByGuid'][new_guid])

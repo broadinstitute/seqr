@@ -2,7 +2,7 @@ import React from 'react'
 import { Form } from 'semantic-ui-react'
 import flatten from 'lodash/flatten'
 
-import { validators } from '../components/form/ReduxFormWrapper'
+import { validators } from '../components/form/FormHelpers'
 import {
   BooleanCheckbox,
   RadioGroup,
@@ -51,11 +51,6 @@ export const EDITABLE_PROJECT_FIELDS = [
   PROJECT_DESC_FIELD,
 ]
 
-export const PROJECT_FIELDS = [
-  ...EDITABLE_PROJECT_FIELDS,
-  GENOME_VERSION_FIELD,
-]
-
 export const FILE_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
@@ -81,6 +76,8 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
 export const DATASET_TYPE_SV_CALLS = 'SV'
+
+export const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
@@ -114,9 +111,12 @@ export const FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE = 'Rncc'
 export const FAMILY_STATUS_CLOSED = 'C'
 export const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
 const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
+const FAMILY_STATUS_NO_DATA = 'N'
 
-export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
+const DEPRECATED_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_SOLVED, color: '#4CAF50', name: 'Solved' },
+]
+export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE, color: '#4CAF50', name: 'Solved - known gene for phenotype' },
   { value: FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE, color: '#4CAF50', name: 'Solved - gene linked to different phenotype' },
   { value: FAMILY_STATUS_SOLVED_NOVEL_GENE, color: '#4CAF50', name: 'Solved - novel gene' },
@@ -129,9 +129,13 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_CLOSED, color: '#9c0502', name: 'Closed, no longer under analysis' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
   { value: FAMILY_STATUS_WAITING_FOR_DATA, color: '#FFC107', name: 'Waiting for data' },
+  { value: FAMILY_STATUS_NO_DATA, color: '#646464', name: 'No data expected' },
+]
+export const ALL_FAMILY_ANALYSIS_STATUS_OPTIONS = [
+  ...DEPRECATED_FAMILY_ANALYSIS_STATUS_OPTIONS, ...SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS,
 ]
 
-export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+export const FAMILY_ANALYSIS_STATUS_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
   (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
 )
 
@@ -185,9 +189,11 @@ export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
+export const FAMILY_FIELD_ANALYSIS_GROUPS = 'analysisGroups'
 
 export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
+  [FAMILY_FIELD_ANALYSIS_GROUPS]: 'Analysis Groups',
   [FAMILY_FIELD_ANALYSIS_STATUS]: 'Analysis Status',
   [FAMILY_FIELD_ASSIGNED_ANALYST]: 'Assigned Analyst',
   [FAMILY_FIELD_ANALYSED_BY]: 'Analysed By',
@@ -210,10 +216,15 @@ export const FAMILY_NOTES_FIELDS = [
   { id: FAMILY_FIELD_MME_NOTES, noteType: 'M' },
 ]
 
-export const FAMILY_DETAIL_FIELDS = [
+export const FAMILY_MAIN_FIELDS = [
+  { id: FAMILY_FIELD_ANALYSIS_GROUPS },
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST },
+]
+
+export const FAMILY_DETAIL_FIELDS = [
+  ...FAMILY_MAIN_FIELDS,
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE },
   { id: FAMILY_FIELD_SUCCESS_STORY },
@@ -400,6 +411,7 @@ export const LOCUS_LIST_NAME_FIELD = 'name'
 export const LOCUS_LIST_NUM_ENTRIES_FIELD = 'numEntries'
 export const LOCUS_LIST_DESCRIPTION_FIELD = 'description'
 export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
+export const LOCUS_LIST_CREATED_DATE_FIELD_NAME = 'createdDate'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
 
@@ -420,6 +432,12 @@ export const LOCUS_LIST_FIELDS = [
     validate: value => (value ? undefined : 'Description is required'),
     width: 9,
     isEditable: true,
+  },
+  {
+    name: LOCUS_LIST_CREATED_DATE_FIELD_NAME,
+    label: 'Created Date',
+    width: 3,
+    fieldDisplay: createdDate => new Date(createdDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
   },
   {
     name: LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
@@ -479,15 +497,26 @@ export const VEP_GROUP_SYNONYMOUS = 'synonymous'
 export const VEP_GROUP_OTHER = 'other'
 export const VEP_GROUP_SV = 'structural'
 export const VEP_GROUP_SV_CONSEQUENCES = 'structural_consequence'
+export const VEP_GROUP_SV_NEW = 'new_structural_variants'
 
 const VEP_SV_TYPES = [
   {
-    description: 'A large deletion',
+    description: 'A deletion called from exome data',
+    text: 'Exome Deletion',
+    value: 'gCNV_DEL',
+  },
+  {
+    description: 'A duplication called from exome data',
+    text: 'Exome Duplication',
+    value: 'gCNV_DUP',
+  },
+  {
+    description: 'A deletion called from genome data',
     text: 'Deletion',
     value: 'DEL',
   },
   {
-    description: 'A large duplication',
+    description: 'A duplication called from genome data',
     text: 'Duplication',
     value: 'DUP',
   },
@@ -573,6 +602,14 @@ const VEP_SV_CONSEQUENCES = [
     description: 'An SV which disrupts a promoter sequence (within 1kb)',
     text: 'Promoter',
     value: 'PROMOTER',
+  },
+]
+
+const SV_NEW_OPTIONS = [
+  {
+    description: 'An SV with no overlap in a previous callset',
+    text: 'New Calls Only',
+    value: 'NEW',
   },
 ]
 
@@ -817,7 +854,7 @@ export const GROUPED_VEP_CONSEQUENCES = ORDERED_VEP_CONSEQUENCES.reduce((acc, co
   const group = consequence.group || VEP_GROUP_OTHER
   acc[group] = [...(acc[group] || []), consequence]
   return acc
-}, {})
+}, { [VEP_GROUP_SV_NEW]: SV_NEW_OPTIONS })
 
 export const VEP_CONSEQUENCE_ORDER_LOOKUP = ORDERED_VEP_CONSEQUENCES.reduce(
   (acc, consequence, i) => ({ ...acc, [consequence.value]: i }), {},
@@ -874,6 +911,7 @@ const SORT_BY_EIGEN = 'EIGEN'
 const SORT_BY_MPC = 'MPC'
 const SORT_BY_PRIMATE_AI = 'PRIMATE_AI'
 const SORT_BY_TAGGED_DATE = 'TAGGED_DATE'
+const SORT_BY_SIZE = 'SIZE'
 
 export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectByGuid) => (
   user.isAnalyst || variant.familyGuids.some(
@@ -935,7 +973,7 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_REVEL, text: 'Revel', comparator: predictionComparator('revel') },
   { value: SORT_BY_EIGEN, text: 'Eigen', comparator: predictionComparator('eigen') },
   { value: SORT_BY_MPC, text: 'MPC', comparator: predictionComparator('mpc') },
-  { value: SORT_BY_SPLICE_AI, text: 'Splice AI', comparator: predictionComparator('splice_ai') },
+  { value: SORT_BY_SPLICE_AI, text: 'SpliceAI', comparator: predictionComparator('splice_ai') },
   { value: SORT_BY_PRIMATE_AI, text: 'Primate AI', comparator: predictionComparator('primate_ai') },
   {
     value: SORT_BY_PATHOGENICITY,
@@ -963,6 +1001,11 @@ const VARIANT_SORT_OPTONS = [
       ) - Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
       )),
+  },
+  {
+    value: SORT_BY_SIZE,
+    text: 'Size',
+    comparator: (a, b) => ((a.pos - a.end) - (b.pos - b.end)),
   },
   {
     value: SORT_BY_TAGGED_DATE,
@@ -1068,7 +1111,15 @@ export const PREDICTOR_FIELDS = [
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.7 },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 5 },
-  { field: SPLICE_AI_FIELD, group: SPLICING_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.8, infoField: 'splice_ai_consequence', infoTitle: 'Predicted Consequence' },
+  {
+    field: SPLICE_AI_FIELD,
+    group: SPLICING_IN_SILICO_GROUP,
+    warningThreshold: 0.5,
+    dangerThreshold: 0.8,
+    infoField: 'splice_ai_consequence',
+    infoTitle: 'Predicted Consequence',
+    fieldTitle: 'SpliceAI',
+  },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, warningThreshold: 1, dangerThreshold: 2, max: 99 },
   { field: 'dann', displayOnly: true, warningThreshold: 0.93, dangerThreshold: 0.96 },
   { field: 'strvctvre', group: SV_IN_SILICO_GROUP, warningThreshold: 0.5, dangerThreshold: 0.75 },
@@ -1177,7 +1228,7 @@ export const INHERITANCE_FILTER_OPTIONS = [
   {
     value: DE_NOVO_FILTER,
     text: 'De Novo/ Dominant',
-    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+    detail: 'Finds variants where all affected individuals have at least one alternate allele and all unaffected are homozygous reference.',
   },
   {
     value: ANY_AFFECTED,

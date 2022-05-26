@@ -5,6 +5,7 @@ MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
 MAX_INDEX_NAME_LENGTH = 4000
 MAX_SEARCH_CLAUSES = 1024
+MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 XPOS_SORT_KEY = 'xpos'
 
@@ -219,6 +220,14 @@ SORT_FIELDS = {
             }
         },
     }],
+    'size': [{
+        '_script': {
+            'type': 'number',
+            'script': {
+               'source': "(doc.containsKey('svType') && doc['svType'].value == 'BND') ? -50 : doc['start'].value - doc['end'].value"
+            }
+        }
+    }],
     XPOS_SORT_KEY: ['xpos'],
 }
 POPULATION_SORTS = {
@@ -258,7 +267,9 @@ NESTED_FIELDS = {
 }
 
 GRCH38_LOCUS_FIELD = 'rg37_locus'
+XSTOP_FIELD = 'xstop'
 SPLICE_AI_FIELD = 'splice_ai'
+NEW_SV_FIELD = 'new_structural_variants'
 CORE_FIELDS_CONFIG = {
     'alt': {},
     'contig': {'response_key': 'chrom'},
@@ -273,12 +284,15 @@ CORE_FIELDS_CONFIG = {
     'variantId': {},
     'xpos': {'format_value': int},
     GRCH38_LOCUS_FIELD: {},
+    XSTOP_FIELD:  {'format_value': int},
+    'rg37_locus_end': {'response_key': 'rg37LocusEnd', 'format_value': lambda locus: locus.to_dict()},
     'sv_type_detail': {'response_key': 'svTypeDetail'},
     'cpx_intervals': {
       'response_key': 'cpxIntervals',
       'format_value': lambda intervals:  [interval.to_dict() for interval in (intervals or [])],
     },
-    'algorithms': {'format_value': ', '.join}
+    'algorithms': {'format_value': ', '.join},
+    'bothsides_support': {'response_key': 'bothsidesSupport'},
 }
 PREDICTION_FIELDS_CONFIG = {
     'cadd_PHRED': {'response_key': 'cadd'},
@@ -329,12 +343,15 @@ GENOTYPE_FIELDS_CONFIG = {
 GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SNP_QUALITY_FIELDS.keys()})
 SV_GENOTYPE_FIELDS_CONFIG = {
-    'cn': {'format_value': int, 'default_value': 2},
+    'cn': {'format_value': int, 'default_value': -1},
     'end': {},
     'start': {},
     'num_exon': {},
-    'geneIds': {'response_key': 'geneIds'},
+    'geneIds': {'response_key': 'geneIds', 'format_value': list},
     'defragged': {'format_value': bool},
+    'prev_call': {'format_value': bool},
+    'prev_overlap': {'format_value': bool},
+    'new_call': {'format_value': bool},
 }
 SV_GENOTYPE_FIELDS_CONFIG.update(BASE_GENOTYPE_FIELDS_CONFIG)
 SV_GENOTYPE_FIELDS_CONFIG.update({field: {} for field in SV_QUALITY_FIELDS.keys()})
@@ -351,9 +368,9 @@ for pop_config in POPULATIONS.values():
             QUERY_FIELD_NAMES.append(pop_field)
 
 SV_SAMPLE_OVERRIDE_FIELD_CONFIGS = {
-    'start': {'select_val': min},
+    'pos': {'select_val': min, 'genotype_field': 'start'},
     'end': {'select_val': max},
-    'num_exon':{'select_val': max, 'genotype_field': 'numExon'},
+    'numExon':{'select_val': max},
     'geneIds': {
         'select_val': lambda gene_lists: set([gene_id for gene_list in gene_lists for gene_id in (gene_list or [])]),
         'equal': lambda a, b: set(a or []) == set(b or [])

@@ -296,7 +296,13 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
-        }
+        },
+        'test_pm_user@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
     'workspace': {
         'bucketName': 'test_bucket'
@@ -420,8 +426,11 @@ USER_FIELDS = {
 PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
-    'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd',
+    'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd', 'isDemo', 'allUserDemo',
+    'userIsCreator',
 }
+
+ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
 
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
@@ -457,12 +466,12 @@ INTERNAL_INDIVIDUAL_FIELDS = {
 INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
-    'projectGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-    'loadedDate', 'datasetType',
+    'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
+    'loadedDate', 'datasetType', 'elasticsearchIndex',
 }
 
 IGV_SAMPLE_FIELDS = {
-    'projectGuid', 'individualGuid', 'sampleGuid', 'filePath', 'sampleId', 'sampleType',
+    'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'filePath', 'sampleId', 'sampleType',
 }
 
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
@@ -477,7 +486,7 @@ FUNCTIONAL_FIELDS = {
     'tagGuid', 'name', 'color', 'metadata', 'metadataTitle', 'lastModifiedDate', 'createdBy', 'variantGuids',
 }
 
-SAVED_SEARCH_FIELDS = {'savedSearchGuid', 'name', 'search', 'createdById'}
+SAVED_SEARCH_FIELDS = {'savedSearchGuid', 'name', 'order', 'search', 'createdById'}
 
 LOCUS_LIST_FIELDS = {
     'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate', 'canEdit',
@@ -486,13 +495,21 @@ LOCUS_LIST_FIELDS = {
 LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 LOCUS_LIST_DETAIL_FIELDS.update(LOCUS_LIST_FIELDS)
 
+MATCHMAKER_SUBMISSION_FIELDS = {
+    'submissionGuid', 'individualGuid', 'createdDate', 'lastModifiedDate', 'deletedDate',
+}
+
+TAG_TYPE_FIELDS = {
+    'variantTagTypeGuid', 'name', 'category', 'description', 'color', 'order', 'metadataTitle',
+}
+
 GENE_FIELDS = {
     'chromGrch37', 'chromGrch38', 'codingRegionSizeGrch37', 'codingRegionSizeGrch38',  'endGrch37', 'endGrch38',
     'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
 }
 GENE_VARIANT_FIELDS = {
     'constraints', 'diseaseDesc', 'functionDesc', 'omimPhenotypes', 'mimNumber', 'geneNames', 'primateAi',
-    'cnSensitivity',
+    'cnSensitivity', 'genCc',
 }
 GENE_VARIANT_FIELDS.update(GENE_FIELDS)
 
@@ -719,6 +736,7 @@ PARSED_VARIANTS = [
     {
         'alt': 'T',
         'chrom': '1',
+        'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
         'cpxIntervals': None,
@@ -764,26 +782,28 @@ PARSED_VARIANTS = [
         'svType': None,
         'svTypeDetail': None,
         'numExon': None,
+        'rg37LocusEnd': None,
         '_sort': [1248367227],
     },
     {
         'alt': 'G',
         'chrom': '2',
+        'bothsidesSupport': None,
         'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000002_2', 'F000003_3'],
         'cpxIntervals': None,
         'algorithms': None,
         'genotypes': {
             'I000004_hg00731': {
-                'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 0, 'dp': 67, 'pl': None,
+                'ab': 0, 'ad': None, 'gq': 99, 'sampleId': 'HG00731', 'numAlt': 2, 'dp': 67, 'pl': None,
                 'sampleType': 'WES',
             },
             'I000005_hg00732': {
-                'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 2, 'dp': 42, 'pl': None,
+                'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00732', 'numAlt': 1, 'dp': 42, 'pl': None,
                 'sampleType': 'WES',
             },
             'I000006_hg00733': {
-                'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 1, 'dp': 42, 'pl': None,
+                'ab': 0, 'ad': None, 'gq': 96, 'sampleId': 'HG00733', 'numAlt': 0, 'dp': 42, 'pl': None,
                 'sampleType': 'WES',
             },
             'I000007_na20870': {
@@ -827,6 +847,7 @@ PARSED_VARIANTS = [
         'svType': None,
         'svTypeDetail': None,
         'numExon': None,
+        'rg37LocusEnd': None,
         '_sort': [2103343353],
     },
 ]
@@ -834,6 +855,7 @@ PARSED_VARIANTS = [
 PARSED_SV_VARIANT = {
     'alt': None,
     'chrom': '1',
+    'bothsidesSupport': True,
     'familyGuids': ['F000002_2'],
     'cpxIntervals': None,
     'algorithms': None,
@@ -841,14 +863,17 @@ PARSED_SV_VARIANT = {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'numAlt': -1, 'geneIds': ['ENSG00000228198'],
             'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': False, 'qs': 33, 'gq': None,
+            'prevCall': False, 'prevOverlap': False, 'newCall': True,
         },
         'I000005_hg00732': {
             'sampleId': 'HG00732', 'numAlt': -1, 'sampleType': None,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'isRef': True,
+            'prevCall': None, 'prevOverlap': None, 'newCall': None,
         },
         'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'numAlt': -1,  'geneIds': None, 'gq': None,
             'cn': 2, 'end': 49045890, 'start': 49045987, 'numExon': 1, 'defragged': False, 'qs': 80,
+            'prevCall': False, 'prevOverlap': True, 'newCall': False,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
@@ -892,15 +917,18 @@ PARSED_SV_VARIANT = {
     'variantId': 'prefix_19107_DEL',
     'xpos': 1049045487,
     'end': 49045899,
-    'svType': 'DEL',
+    'svType': 'INS',
     'svTypeDetail': None,
+    'svSourceDetail': {'chrom': '9'},
     'numExon': 2,
+    'rg37LocusEnd': None,
     '_sort': [1049045387],
 }
 
 PARSED_SV_WGS_VARIANT = {
     'alt': None,
     'chrom': '2',
+    'bothsidesSupport': None,
     'familyGuids': ['F000014_14'],
     'cpxIntervals': [{'chrom': '2', 'end': 3000, 'start': 1000, 'type': 'DUP'},
                      {'chrom': '20', 'end': 13000, 'start': 11000, 'type': 'INV'}],
@@ -908,7 +936,8 @@ PARSED_SV_WGS_VARIANT = {
     'genotypes': {
         'I000018_na21234': {
             'gq': 33, 'sampleId': 'NA21234', 'numAlt': 1, 'geneIds': None,
-            'cn': 1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
+            'cn': -1, 'end': None, 'start': None, 'numExon': None, 'defragged': None, 'qs': None, 'sampleType': 'WGS',
+            'prevCall': None, 'prevOverlap': None, 'newCall': None,
         },
     },
     'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
@@ -948,10 +977,12 @@ PARSED_SV_WGS_VARIANT = {
     },
     'variantId': 'prefix_19107_CPX',
     'xpos': 2049045387,
-    'end': 49045898,
+    'end': 12345678,
+    'endChrom': '20',
     'svType': 'CPX',
     'svTypeDetail': 'dupINV',
     'numExon': None,
+    'rg37LocusEnd': {'contig': '20', 'position': 12326326},
     '_sort': [2049045387],
 }
 

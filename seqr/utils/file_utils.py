@@ -1,5 +1,5 @@
 import os
-import subprocess
+import subprocess # nosec
 
 import google.cloud.storage
 
@@ -24,7 +24,7 @@ def run_command(command, user=None):
     logger.info('==> {}'.format(command), user)
     return subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
-    )
+    )   # nosec
 
 
 def _run_gsutil_command(command, gs_path, gunzip=False, user=None):

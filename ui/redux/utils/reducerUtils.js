@@ -1,5 +1,5 @@
-import { SubmissionError } from 'redux-form'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
@@ -28,25 +28,52 @@ export const updateEntity = (
       if (onSuccess) {
         onSuccess(responseJson, dispatch, getState)
       }
-    },
-    (e) => {
-      throw new SubmissionError({ _error: [e.message] })
     }).post(values)
 }
 
-// A helper method to load a project and all its detail fields
-export const loadProjectDetails = (
-  projectGuid, requestType = REQUEST_PROJECTS, detailField = 'variantTagTypes',
+export const loadProjectChildEntities = (
+  projectGuid, entityType, dispatchType, receiveDispatchType,
 ) => (dispatch, getState) => {
-  const project = getState().projectsByGuid[projectGuid]
-  if (!project || !project[detailField]) {
-    dispatch({ type: requestType || REQUEST_PROJECTS })
-    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+  const { projectsByGuid } = getState()
+  const project = projectsByGuid[projectGuid]
+
+  if (!project[`${toCamelcase(entityType)}Loaded`]) {
+    dispatch({ type: dispatchType })
+    new HttpRequestHelper(`/api/project/${projectGuid}/get_${toSnakecase(entityType)}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (receiveDispatchType) {
+          dispatch({ type: receiveDispatchType, updatesById: responseJson })
+        }
       },
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        if (receiveDispatchType) {
+          dispatch({ type: receiveDispatchType, updatesById: {} })
+        }
+      }).get()
+  }
+}
+
+export const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, dispatchOnReceive) => (
+  dispatch, getState,
+) => {
+  const { familiesByGuid } = getState()
+  const family = familiesByGuid[familyGuid]
+  if (!family || !family[detailField]) {
+    dispatch({ type: dispatchType, updates: { [familyGuid]: true } })
+    new HttpRequestHelper(`/api/family/${familyGuid}/${urlPath}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        if (dispatchOnReceive) {
+          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
+        }
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        if (dispatchOnReceive) {
+          dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
+        }
       }).get()
   }
 }

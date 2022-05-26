@@ -3,12 +3,13 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { Field } from 'redux-form'
-import { Label, Popup, Form, Input } from 'semantic-ui-react'
+import { Field } from 'react-final-form'
+import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
 import { SearchInput, YearSelector, RadioButtonGroup } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
+import Modal from 'shared/components/modal/Modal'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import BaseFieldView from 'shared/components/panel/view-fields/BaseFieldView'
 import TagFieldView from 'shared/components/panel/view-fields/TagFieldView'
@@ -18,9 +19,9 @@ import NullableBoolFieldView, { NULLABLE_BOOL_FIELD } from 'shared/components/pa
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import Sample from 'shared/components/panel/sample'
 import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
-import { ColoredIcon } from 'shared/components/StyledComponents'
+import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS } from 'shared/utils/constants'
+import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
@@ -33,6 +34,8 @@ import {
 import { getCurrentProject } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
+
+const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
 
 const Detail = styled.div`
   display: inline-block;
@@ -113,6 +116,23 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
+const ShowRnaSeqOutliers = ({ sample, hasRnaOutlierData, ...props }) => (hasRnaOutlierData ? (
+  <Modal
+    modalName={`OUTRIDER-${sample.sampleId}`}
+    title={`RNA-Seq OUTRIDER: ${sample.sampleId}`}
+    trigger={<ButtonLink padding="1em 0 0 0" content="Show RNA-Seq OUTRIDER" />}
+  >
+    <React.Suspense fallback={<Loader />}>
+      <RnaSeqOutliers sample={sample} {...props} />
+    </React.Suspense>
+  </Modal>
+) : null)
+
+ShowRnaSeqOutliers.propTypes = {
+  hasRnaOutlierData: PropTypes.bool,
+  sample: PropTypes.object,
+}
+
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
@@ -151,6 +171,11 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
+    <ShowRnaSeqOutliers
+      familyGuid={individual.familyGuid}
+      sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
+      hasRnaOutlierData={individual.hasRnaOutlierData}
+    />
   </div>
 ))
 
@@ -258,7 +283,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     subFieldsLookup: {
       deathYear: {
         format: val => (val === 0 ? 0 : (val || -1)),
-        normalize: val => (val < 0 ? null : val),
+        parse: val => (val < 0 ? null : val),
         includeAlive: true,
       },
     },

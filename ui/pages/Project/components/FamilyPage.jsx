@@ -4,19 +4,25 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 
+import { loadFamilyDetails } from 'redux/rootReducer'
 import {
   getFamiliesByGuid,
+  getFamilyDetailsLoading,
   getSortedIndividualsByFamily,
   getGenesById,
-  getHasActiveVariantSampleByFamily,
+  getHasActiveSearchableSampleByFamily,
 } from 'redux/selectors'
 import { FAMILY_DETAIL_FIELDS, getVariantMainGeneId } from 'shared/utils/constants'
 import Family from 'shared/components/panel/family/Family'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
+import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
 
-import { getCurrentProject } from '../selectors'
+import { loadFamilyVariantSummary } from '../reducers'
+import {
+  getCurrentProject, getFamilyVariantSummaryLoading, getFamilyTagTypeCounts,
+} from '../selectors'
 import IndividualRow from './FamilyTable/IndividualRow'
 import CreateVariantButton from './CreateVariantButton'
 import VariantTagTypeBar from './VariantTagTypeBar'
@@ -33,8 +39,8 @@ SearchLink.propTypes = {
   children: PropTypes.node,
 }
 
-const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
-  const discoveryGenes = project.discoveryTags.filter(tag => tag.familyGuids.includes(familyGuid)).map(
+const DiscoveryGenes = React.memo(({ family, genesById }) => {
+  const discoveryGenes = (family.discoveryTags || []).map(
     tag => (genesById[getVariantMainGeneId(tag)] || {}).geneSymbol,
   ).filter(val => val)
   return discoveryGenes.length > 0 ? (
@@ -46,17 +52,25 @@ const DiscoveryGenes = React.memo(({ project, familyGuid, genesById }) => {
 })
 
 DiscoveryGenes.propTypes = {
-  project: PropTypes.object.isRequired,
-  familyGuid: PropTypes.string.isRequired,
+  family: PropTypes.object.isRequired,
   genesById: PropTypes.object.isRequired,
 }
 
-const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, genesById }) => (
-  <div>
-    <VariantTagTypeBar height={15} width="calc(100% - 2.5em)" project={project} familyGuid={family.familyGuid} sectionLinks={false} />
+const BaseVariantDetail = (
+  { project, family, hasActiveVariantSample, compact, genesById, tagTypeCounts, load, loading },
+) => (
+  <DataLoader load={load} contentId={family.familyGuid} content={family.discoveryTags} loading={loading}>
+    <VariantTagTypeBar
+      height={15}
+      width="calc(100% - 2.5em)"
+      project={project}
+      familyGuid={family.familyGuid}
+      tagTypeCounts={tagTypeCounts}
+      sectionLinks={false}
+    />
     <HorizontalSpacer width={10} />
     <SearchLink family={family} disabled={!hasActiveVariantSample}><Icon name="search" /></SearchLink>
-    <DiscoveryGenes project={project} familyGuid={family.familyGuid} genesById={genesById} />
+    <DiscoveryGenes family={family} genesById={genesById} />
     {!compact && (
       <div>
         <VerticalSpacer height={20} />
@@ -80,7 +94,7 @@ const BaseVariantDetail = ({ project, family, hasActiveVariantSample, compact, g
         )}
       </div>
     )}
-  </div>
+  </DataLoader>
 )
 
 BaseVariantDetail.propTypes = {
@@ -89,15 +103,24 @@ BaseVariantDetail.propTypes = {
   genesById: PropTypes.object,
   compact: PropTypes.bool,
   hasActiveVariantSample: PropTypes.bool,
+  tagTypeCounts: PropTypes.object,
+  loading: PropTypes.bool,
+  load: PropTypes.func,
 }
 
 const mapVariantDetailStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   genesById: getGenesById(state),
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.family.familyGuid],
+  hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.family.familyGuid] || {}).isSearchable,
+  loading: getFamilyVariantSummaryLoading(state),
+  tagTypeCounts: getFamilyTagTypeCounts(state)[ownProps.family.familyGuid] || {},
 })
 
-const VariantDetail = connect(mapVariantDetailStateToProps)(BaseVariantDetail)
+const mapVariantDetailDispatchToProps = {
+  load: loadFamilyVariantSummary,
+}
+
+const VariantDetail = connect(mapVariantDetailStateToProps, mapVariantDetailDispatchToProps)(BaseVariantDetail)
 
 const FamilyReadsLayout = ({ reads, showReads }) => (
   <div>
@@ -111,17 +134,10 @@ FamilyReadsLayout.propTypes = {
   showReads: PropTypes.object,
 }
 
-const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, showVariantDetails, ...props }) => (
-  <div>
-    <Family
-      family={family}
-      compact={compact}
-      rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : null}
-      {...props}
-    />
-    {!compact && (
-      <FamilyReads layout={FamilyReadsLayout} familyGuid={family.familyGuid} buttonProps={READ_BUTTON_PROPS} />
-    )}
+const BaseExpandedFamily = React.memo(({ familyDetail, familyGuid, family, individuals, tableName, loading, load }) => (
+  <DataLoader load={load} contentId={familyGuid} content={family && family.detailsLoaded} loading={loading}>
+    {familyDetail}
+    <FamilyReads layout={FamilyReadsLayout} familyGuid={familyGuid} buttonProps={READ_BUTTON_PROPS} />
     {individuals && individuals.map(individual => (
       <IndividualRow
         key={individual.individualGuid}
@@ -129,11 +145,48 @@ const BaseFamilyDetail = React.memo(({ family, individuals, compact, tableName, 
         tableName={tableName}
       />
     ))}
-  </div>
+  </DataLoader>
 ))
 
+BaseExpandedFamily.propTypes = {
+  familyGuid: PropTypes.string.isRequired,
+  familyDetail: PropTypes.node,
+  family: PropTypes.object,
+  individuals: PropTypes.arrayOf(PropTypes.object),
+  tableName: PropTypes.string,
+  loading: PropTypes.bool,
+  load: PropTypes.func,
+}
+
+const mapExpandedStateToProps = (state, ownProps) => ({
+  loading: !!getFamilyDetailsLoading(state)[ownProps.familyGuid],
+  individuals: getSortedIndividualsByFamily(state)[ownProps.familyGuid],
+})
+
+const mapDispatchToProps = {
+  load: loadFamilyDetails,
+}
+
+const ExpandedFamily = connect(mapExpandedStateToProps, mapDispatchToProps)(BaseExpandedFamily)
+
+const BaseFamilyDetail = React.memo(({ familyGuid, family, compact, tableName, showVariantDetails, ...props }) => {
+  const familyDetail = (
+    <Family
+      family={family}
+      compact={compact}
+      rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : null}
+      {...props}
+    />
+  )
+  if (compact) {
+    return familyDetail
+  }
+  return <ExpandedFamily familyGuid={familyGuid} family={family} familyDetail={familyDetail} tableName={tableName} />
+})
+
 BaseFamilyDetail.propTypes = {
-  family: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string.isRequired,
+  family: PropTypes.object,
   individuals: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
   showVariantDetails: PropTypes.bool,
@@ -143,7 +196,6 @@ BaseFamilyDetail.propTypes = {
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   project: getCurrentProject(state),
-  individuals: ownProps.showIndividuals ? getSortedIndividualsByFamily(state)[ownProps.familyGuid] : null,
 })
 
 export const FamilyDetail = connect(mapStateToProps)(BaseFamilyDetail)
@@ -152,8 +204,6 @@ const FamilyPage = ({ match }) => (
   <FamilyDetail
     familyGuid={match.params.familyGuid}
     showVariantDetails
-    showDetails
-    showIndividuals
     fields={FAMILY_DETAIL_FIELDS}
   />
 )

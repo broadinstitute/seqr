@@ -1,8 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Button, Loader } from 'semantic-ui-react'
+import { Button, Label, Loader } from 'semantic-ui-react'
 import Modal from '../../modal/Modal'
-import { VerticalSpacer } from '../../Spacers'
 
 const AcmgCriteria = React.lazy(() => import('./AcmgCriteria'))
 
@@ -19,33 +18,31 @@ const getButtonBackgroundColor = (classification) => {
 }
 
 const AcmgModal = (props) => {
-  const { variant } = props
-  const modalName = `acmg-${variant.variantGuid}`
+  const { variant, familyGuid } = props
+  const modalName = `acmg-${variant.variantGuid}-${familyGuid}`
 
   const { classify } = variant.acmgClassification || {}
   const buttonBackgroundColor = getButtonBackgroundColor(classify)
 
   return (
-    <div>
-      <VerticalSpacer height={12} />
-      <Modal
-        title="ACMG Calculation"
-        size="fullscreen"
-        modalName={modalName}
-        trigger={
-          <Button color={buttonBackgroundColor} content={`Classify ${classify || ''}`} compact size="mini" />
-        }
-      >
-        <React.Suspense fallback={<Loader />}>
-          <AcmgCriteria modalName={modalName} variant={variant} />
-        </React.Suspense>
-      </Modal>
-    </div>
+    <Modal
+      title="ACMG Calculation"
+      size="fullscreen"
+      modalName={modalName}
+      trigger={
+        <Button as={Label} color={buttonBackgroundColor} content={`Classify ${classify || ''}`} horizontal basic={!classify} size="small" />
+      }
+    >
+      <React.Suspense fallback={<Loader />}>
+        <AcmgCriteria modalName={modalName} variant={variant} />
+      </React.Suspense>
+    </Modal>
   )
 }
 
 AcmgModal.propTypes = {
   variant: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string.isRequired,
 }
 
 export default AcmgModal

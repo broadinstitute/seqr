@@ -102,7 +102,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.assertListEqual(list(locus_lists_dict.keys()), [PRIVATE_LOCUS_LIST_GUID])
 
     def test_add_and_remove_project_locus_lists(self):
-        existing_guid = 'LL00005_retina_proteome'
+        existing_guids = {'LL00005_retina_proteome', LOCUS_LIST_GUID}
 
         # add a locus list to project
         url = reverse(add_project_locus_lists, args=[PROJECT_GUID])
@@ -111,7 +111,9 @@ class PaLocusListAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json()['locusListGuids']), {EXISTING_AU_PA_LOCUS_LIST_GUID, existing_guid})
+        expected_guids = {EXISTING_AU_PA_LOCUS_LIST_GUID}
+        expected_guids.update(existing_guids)
+        self.assertSetEqual(set(response.json()['locusListGuids']), expected_guids)
         ll_projects = LocusList.objects.get(guid=EXISTING_AU_PA_LOCUS_LIST_GUID).projects.all()
         self.assertEqual(ll_projects.count(), 2)
         self.assertTrue(PROJECT_GUID in {p.guid for p in ll_projects})
@@ -126,7 +128,7 @@ class PaLocusListAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['locusListGuids'], [existing_guid])
+        self.assertSetEqual(set(response.json()['locusListGuids']), existing_guids)
         ll_projects = LocusList.objects.get(guid=EXISTING_AU_PA_LOCUS_LIST_GUID).projects.all()
         self.assertEqual(ll_projects.count(), 1)
         self.assertFalse(PROJECT_GUID in {p.guid for p in ll_projects})

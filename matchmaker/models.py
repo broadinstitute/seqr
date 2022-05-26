@@ -10,7 +10,7 @@ class MatchmakerSubmission(ModelWithGUID):
 
     SEX_LOOKUP = {Individual.SEX_MALE: 'MALE', Individual.SEX_FEMALE: 'FEMALE'}
 
-    individual = models.OneToOneField(Individual, null=True, on_delete=models.SET_NULL)
+    individual = models.OneToOneField(Individual, on_delete=models.PROTECT)
 
     submission_id = models.CharField(max_length=255, db_index=True, unique=True)
     label = models.CharField(max_length=255, null=True, blank=True)

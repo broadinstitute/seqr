@@ -2,12 +2,15 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import sortBy from 'lodash/sortBy'
 import styled from 'styled-components'
-import { Grid, Icon, Popup } from 'semantic-ui-react'
+import { Grid, Icon, Popup, Loader, Dimmer } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
 import { getUser } from 'redux/selectors'
+import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import UpdateButton from 'shared/components/buttons/UpdateButton'
+import { validators } from 'shared/components/form/FormHelpers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
@@ -15,16 +18,17 @@ import { ButtonLink, HelpIcon } from 'shared/components/StyledComponents'
 import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
-  DATASET_TYPE_SV_CALLS,
+  DATASET_TITLE_LOOKUP,
   ANVIL_URL,
 } from 'shared/utils/constants'
+import { updateProjectMmeContact, loadMmeSubmissions } from '../reducers'
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamiliesByGuid,
   getProjectAnalysisGroupIndividualsCount,
   getProjectAnalysisGroupSamplesByTypes,
-  getProjectAnalysisGroupMmeSubmissions,
   getProjectAnalysisGroupMmeSubmissionDetails,
+  getMmeSubmissionsLoading,
 } from '../selectors'
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
@@ -33,8 +37,6 @@ import EditDatasetsButton from './EditDatasetsButton'
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
 `
-
-const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
 
 const FAMILY_SIZE_LABELS = {
   0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,
@@ -82,30 +84,66 @@ const MME_COLUMNS = [
   { name: 'mmeNotes', content: 'Notes', width: 6, format: ({ mmeNotes }) => (mmeNotes || []).map(({ note }) => note).join('; ') },
 ]
 
-const BaseMatchmakerSubmissionOverview = React.memo(({ mmeSubmissions }) => (
-  <DataTable
-    basic="very"
-    fixed
-    data={Object.values(mmeSubmissions)}
-    idField="submissionGuid"
-    defaultSortColumn="familyName"
-    columns={MME_COLUMNS}
-  />
+const MME_CONTACT_FIELDS = [
+  {
+    name: 'contact',
+    label: 'Contact Email',
+    validate: validators.requiredEmail,
+  },
+]
+
+const BaseMatchmakerSubmissionOverview = React.memo(({ project, mmeSubmissions, onSubmit, load, loading }) => (
+  <DataLoader load={load} loading={false} content>
+    {project.canEdit && (
+      <UpdateButton
+        onSubmit={onSubmit}
+        buttonText="Add Contact to MME Submissions"
+        editIconName="plus"
+        buttonFloated="right"
+        modalTitle="Add Contact to MME Submissions"
+        modalId="mmeContact"
+        formFields={MME_CONTACT_FIELDS}
+        confirmDialog="Are you sure you want to add this contact to all MME submissions in this project?"
+        showErrorPanel
+      />
+    )}
+    <DataTable
+      basic="very"
+      fixed
+      loading={loading}
+      data={Object.values(mmeSubmissions)}
+      idField="submissionGuid"
+      defaultSortColumn="familyName"
+      columns={MME_COLUMNS}
+    />
+  </DataLoader>
 ))
 
 BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
+  loading: PropTypes.bool,
+  load: PropTypes.func,
+  project: PropTypes.object,
+  onSubmit: PropTypes.func,
 }
 
 const mapMatchmakerSubmissionsStateToProps = (state, ownProps) => ({
   mmeSubmissions: getProjectAnalysisGroupMmeSubmissionDetails(state, ownProps),
+  loading: getMmeSubmissionsLoading(state),
 })
 
-const MatchmakerSubmissionOverview = connect(mapMatchmakerSubmissionsStateToProps)(BaseMatchmakerSubmissionOverview)
+const mapDispatchToProps = {
+  load: loadMmeSubmissions,
+  onSubmit: updateProjectMmeContact,
+}
+
+const MatchmakerSubmissionOverview = connect(
+  mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
+)(BaseMatchmakerSubmissionOverview)
 
 const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
   const familySizeHistogram = Object.values(familiesByGuid)
-    .map(family => Math.min(family.individualGuids.length, 5))
+    .map(family => Math.min((family.individualGuids || []).length, 5))
     .reduce((acc, familySize) => (
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
     ), {})
@@ -145,41 +183,29 @@ const mapFamiliesStateToProps = (state, ownProps) => ({
 
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
 
-const Matchmaker = React.memo(({ project, mmeSubmissions }) => {
-  const mmeSubmissionCount = mmeSubmissions.length
-  const deletedSubmissionCount = mmeSubmissions.filter(({ deletedDate }) => deletedDate).length
+const MatchmakerOverview = React.memo(({ project }) => (
+  <DetailSection
+    title="Matchmaker Submissions"
+    content={project.mmeSubmissionCount ? (
+      <div>
+        {`${project.mmeSubmissionCount} submissions `}
+        <Modal
+          trigger={<ButtonLink icon="external" size="tiny" />}
+          title={`Matchmaker Submissions for ${project.name}`}
+          modalName="mmeSubmissions"
+          size="large"
+        >
+          <MatchmakerSubmissionOverview project={project} />
+        </Modal>
+        {project.mmeDeletedSubmissionCount > 0 && <div>{`${project.mmeDeletedSubmissionCount} removed submissions`}</div>}
+      </div>
+    ) : 'No Submissions'}
+  />
+))
 
-  return (
-    <DetailSection
-      title="Matchmaker Submissions"
-      content={mmeSubmissionCount ? (
-        <div>
-          {`${mmeSubmissionCount - deletedSubmissionCount} submissions `}
-          <Modal
-            trigger={<ButtonLink icon="external" size="tiny" />}
-            title={`Matchmaker Submissions for ${project.name}`}
-            modalName="mmeSubmissions"
-            size="large"
-          >
-            <MatchmakerSubmissionOverview />
-          </Modal>
-          {deletedSubmissionCount > 0 && <div>{`${deletedSubmissionCount} removed submissions`}</div>}
-        </div>
-      ) : 'No Submissions'}
-    />
-  )
-})
-
-Matchmaker.propTypes = {
+MatchmakerOverview.propTypes = {
   project: PropTypes.object.isRequired,
-  mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
 }
-
-const mapMatchmakerStateToProps = (state, ownProps) => ({
-  mmeSubmissions: getProjectAnalysisGroupMmeSubmissions(state, ownProps),
-})
-
-const MatchmakerOverview = connect(mapMatchmakerStateToProps)(Matchmaker)
 
 class DatasetSection extends React.PureComponent {
 
@@ -317,10 +343,10 @@ const mapAnalysisStatusStateToProps = (state, ownProps) => ({
 
 const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
 
-const ProjectOverview = React.memo(props => (
+const ProjectOverview = React.memo(({ familiesLoading, ...props }) => (
   <Grid>
     <Grid.Column width={5}>
-      <FamiliesIndividualsOverview {...props} />
+      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <FamiliesIndividualsOverview {...props} />}
       <VerticalSpacer height={10} />
       <MatchmakerOverview {...props} />
     </Grid.Column>
@@ -330,13 +356,14 @@ const ProjectOverview = React.memo(props => (
     </Grid.Column>
     <Grid.Column width={6}>
       <AnvilOverview {...props} />
-      <AnalysisStatusOverview {...props} />
+      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <AnalysisStatusOverview {...props} />}
     </Grid.Column>
   </Grid>
 ))
 
 ProjectOverview.propTypes = {
   project: PropTypes.object.isRequired,
+  familiesLoading: PropTypes.bool,
 }
 
 export default ProjectOverview

@@ -1,7 +1,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 
-import { helpLabel, StyledForm } from './ReduxFormWrapper'
+import { helpLabel, StyledForm } from './FormHelpers'
 
 const StateChangeForm = React.memo(({ fields, initialValues, updateField }) => (
   <StyledForm inline hasSubmitButton={false}>

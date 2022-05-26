@@ -5,10 +5,15 @@ from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
+from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
-    receive_families_table_handler, create_family_note, update_family_note, delete_family_note
-from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS
+    receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
+    family_variant_tag_summary, update_family_analysis_groups
+from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
+    SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
+    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
+from seqr.models import FamilyAnalysedBy, AnalysisGroup
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -20,9 +25,110 @@ PM_REQUIRED_PROJECT_GUID = 'R0003_test'
 FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
+INDIVIDUAL_GUID = 'I000001_na19675'
 
 class FamilyAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+    fixtures = ['users', '1kg_project', 'reference_data']
+
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    def test_family_page_data(self, mock_analyst_group):
+        url = reverse(family_page_data, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid',  'igvSamplesByGuid',
+            'mmeSubmissionsByGuid',
+        }
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        self.assertEqual(len(response_json['familiesByGuid']), 1)
+        family = response_json['familiesByGuid'][FAMILY_GUID]
+        family_fields = {'individualGuids', 'detailsLoaded'}
+        family_fields.update(FAMILY_FIELDS)
+        self.assertSetEqual(set(family.keys()), family_fields)
+        self.assertEqual(family['projectGuid'], PROJECT_GUID)
+        self.assertSetEqual(set(family['individualGuids']), set(response_json['individualsByGuid'].keys()))
+
+        self.assertEqual(len(response_json['individualsByGuid']), 3)
+        individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData'}
+        individual_fields.update(INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(individual.keys()), individual_fields)
+        self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
+        self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
+
+        self.assertEqual(len(response_json['samplesByGuid']), 4)
+        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
+        self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
+        self.assertEqual(len(individual['sampleGuids']), 2)
+        self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
+
+        self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
+        self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
+        self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual({INDIVIDUAL_GUID}, {s['individualGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual(set(individual['igvSampleGuids']), set(response_json['igvSamplesByGuid'].keys()))
+
+        self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
+        submission = next(iter(response_json['mmeSubmissionsByGuid'].values()))
+        self.assertSetEqual(set(submission.keys()), MATCHMAKER_SUBMISSION_FIELDS)
+        self.assertEqual(submission['individualGuid'], INDIVIDUAL_GUID)
+        self.assertEqual(submission['submissionGuid'], individual['mmeSubmissionGuid'])
+
+        self.assertEqual(len(response_json['familyNotesByGuid']), 3)
+        self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
+        self.assertSetEqual({FAMILY_GUID}, {f['familyGuid'] for f in response_json['familyNotesByGuid'].values()})
+
+        # Test analyst users have internal fields returned
+        self.login_analyst_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        family_fields.update(INTERNAL_FAMILY_FIELDS)
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), family_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
+
+    def test_family_variant_tag_summary(self):
+        url = reverse(family_variant_tag_summary, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {
+            'projectsByGuid', 'familiesByGuid', 'familyTagTypeCounts', 'genesById',
+        }
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        family = response_json['familiesByGuid'][FAMILY_GUID]
+        self.assertSetEqual(set(family.keys()), {'familyGuid', 'discoveryTags'})
+        self.assertSetEqual({tag['variantGuid'] for tag in family['discoveryTags']}, {'SV0000001_2103343353_r0390_100'})
+
+        project = response_json['projectsByGuid'][PROJECT_GUID]
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes'})
+        self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
+
+        self.assertDictEqual(response_json['familyTagTypeCounts'], {
+            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
+        })
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_edit_families_handler(self, mock_pm_group):
@@ -82,24 +188,30 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(delete_families_handler, args=[PROJECT_GUID])
         self.check_manager_login(url)
 
-        # send request with a "families" attribute to provide a list of families
+        # Test errors
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'families': None}))
+        self.assertEqual(response.status_code, 400)
+
         req_values = {
             'families': [
                 {'familyGuid': FAMILY_GUID},
                 {'familyGuid': FAMILY_GUID2}
             ]
         }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
+
+        # Test success
+        MatchmakerSubmission.objects.update(deleted_date=datetime.now())
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID])
         self.assertIsNone(response_json['familiesByGuid'][FAMILY_GUID2])
-
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'families': None}))
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(FamilyAnalysedBy.objects.count(), 0)
 
         # Test PM permission
         url = reverse(delete_families_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -127,6 +239,23 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][0]['createdBy']['fullName'], 'Test Collaborator User')
+
+    def test_update_family_analysis_groups(self):
+        url = reverse(update_family_analysis_groups, args=[FAMILY_GUID])
+        self.check_manager_login(url)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'analysisGroups': [
+            {'analysisGroupGuid': 'AG0000185_accepted', 'name': 'Accepted'}]}))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+
+        self.assertListEqual(list(response_json.keys()), ['analysisGroupsByGuid'])
+        self.assertSetEqual(set(response_json['analysisGroupsByGuid'].keys()), {'AG0000183_test_group', 'AG0000185_accepted'})
+        self.assertTrue(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000185_accepted']['familyGuids'])
+        self.assertFalse(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000183_test_group']['familyGuids'])
+
+        self.assertIsNotNone(AnalysisGroup.objects.get(guid='AG0000185_accepted').families.filter(guid=FAMILY_GUID).first())
+        self.assertIsNone(AnalysisGroup.objects.get(guid='AG0000183_test_group').families.filter(guid=FAMILY_GUID).first())
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])

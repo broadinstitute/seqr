@@ -1,8 +1,56 @@
 # _seqr_ Changes
 
 ## dev
+
+## 3/25/22
+* Update display for translocations
+
+## 3/18/22
+* Disallow deleting individuals in matchmaker (REQUIRES DB MIGRATION)
+* Add GenCC reference data (REQUIRES DB MIGRATION)
+* Update local pipeline to use latest clinvar
+
+## 3/10/22
+* Return hom alt SNPs in trans with Deletions as compound hets
+* Disable variant download in demo projects (REQUIRES DB MIGRATION)
+
+## 3/2/22
+* Update seqr dockerfile to improve immutability and build automation (REQUIRES IMAGE UPDATE)
+* Adds NPM asset build to the seqr dockerfile
+* Bumps major version of react/ redux
+
+## 2/4/22
+* Show RNA-seq expression data (REQUIRES DB MIGRATION)
+* Allow deletion of analysed families (REQUIRES DB MIGRATION)
+* Allow bulk updating assigned analysts
+
+## 1/27/22
+* Separate structural annotation search for gCNV and genome SVs
+
+## 1/26/22
+* Improved usage for docker-compose pipeline runner
+* Add support for serving the django media root out of a google cloud storage bucket
+
+## 1/21/22
+* Support setting explicit order for saved search display (REQUIRES DB MIGRATION)
+
+## 1/7/22
+* Update variant layout
+* Project page performance optimization
+
+## 12/24/21
+* Show RNA-seq outlier data (REQUIRES DB MIGRATION)
+
+## 12/07/21
+* Show delay warning on AnVIL loading requests
+
+## 11/23/21
+* Update the seqr Dockerfile base image from debian:stretch to python:3.7-slim-bullseye
+* Consolidation and cleanup of various RUN tasks in the seqr Dockerfile
+
+## 11/17/21
 * Update pathogenicity search to override frequency filters
-* Add ACMG classifier to variants
+* Add ACMG classifier to variants (REQUIRES DB MIGRATION)
 
 ## 11/10/21
 * Update in-silico score filtering behavior and add splice AI override

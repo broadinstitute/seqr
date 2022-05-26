@@ -37,8 +37,8 @@ class Command(BaseCommand):
         sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
             elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
-        samples, included_families, _ = match_sample_ids_to_sample_records(
-            project=project,
+        samples, included_families, _, _ = match_sample_ids_to_sample_records(
+            projects=[project],
             user=None,
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
@@ -60,33 +60,7 @@ class Command(BaseCommand):
         # Lift-over saved variants
         update_variant_samples(samples, None, elasticsearch_index)
         saved_variants = get_json_for_saved_variants(list(saved_variant_models_by_guid.values()), add_details=True)
-        saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
-
-        num_already_lifted = len(saved_variants) - len(saved_variants_to_lift)
-        if num_already_lifted:
-            if input('Found {} saved variants already on Hg38. Continue with liftover (y/n)? '.format(num_already_lifted)) != 'y':
-                raise CommandError('Error: found {} saved variants already on Hg38'.format(num_already_lifted))
-        logger.info('Lifting over {} variants (skipping {} that are already lifted)'.format(
-            len(saved_variants_to_lift), num_already_lifted))
-
-        liftover_to_38 = LiftOver('hg19', 'hg38')
-        hg37_to_hg38_xpos = {}
-        lift_failed = {}
-        for v in saved_variants_to_lift:
-            if not (hg37_to_hg38_xpos.get(v['xpos']) or v['xpos'] in lift_failed):
-                hg38_coord = liftover_to_38.convert_coordinate('chr{}'.format(v['chrom'].lstrip('chr')), int(v['pos']))
-                if hg38_coord and hg38_coord[0]:
-                    hg37_to_hg38_xpos[v['xpos']] = get_xpos(hg38_coord[0][0], hg38_coord[0][1])
-                else:
-                    lift_failed[v['xpos']] = v
-
-        if lift_failed:
-            if input(
-                'Unable to lift over the following {} coordinates. Continue with update (y/n)?: {} '.format(
-                    len(lift_failed), ', '.join([
-                        '{}:{}-{}-{} ({})'.format(v['chrom'], v['pos'], v['ref'], v['alt'], ', '.join(v['familyGuids']))
-                        for v in lift_failed.values()]))) != 'y':
-                raise CommandError('Error: unable to lift over {} variants'.format(len(lift_failed)))
+        saved_variants_to_lift, hg37_to_hg38_xpos, lift_failed = _get_variants_to_lift(saved_variants)
 
         saved_variants_map = defaultdict(list)
         for v in saved_variants_to_lift:
@@ -96,44 +70,11 @@ class Command(BaseCommand):
 
         es_variants = get_es_variants_for_variant_tuples(expected_families, list(saved_variants_map.keys()))
 
-        missing_variants = set(saved_variants_map.keys()) - {(v['xpos'], v['ref'], v['alt']) for v in es_variants}
-        if missing_variants:
-            missing_variant_strings = []
-            for xpos, ref, alt in missing_variants:
-                var_id = '{}-{}-{}'.format(xpos, ref, alt)
-                for v in saved_variants_map[(xpos, ref, alt)]:
-                    tags = v.varianttag_set.all()
-                    notes = v.variantnote_set.all()
-                    missing_variant_strings.append('{var_id} {family_id}: {tags} ({guid})'.format(
-                        var_id=var_id, family_id=v.family.family_id, guid=v.guid,
-                        tags=', '.join([tag.variant_tag_type.name for tag in tags])if tags else 'No Tags; {}'.format(
-                            '; '.join([note.note for note in notes]))
-                    ))
-            if input('Unable to find the following {} variants in the index. Continue with update (y/n)?:\n{}\n'.format(
-                    len(missing_variants), '\n'.join(missing_variant_strings))) != 'y':
-                raise CommandError('Error: unable to find {} lifted-over variants'.format(len(missing_variants)))
+        missing_variants =_validate_missing_variants(es_variants, saved_variants_map)
 
         logger.info('Successfully lifted over {} variants'.format(len(es_variants)))
 
-        #  Update saved variants
-        missing_family_count = 0
-        for var in es_variants:
-            saved_variant_models = saved_variants_map[(var['xpos'], var['ref'], var['alt'])]
-            missing_saved_variants = [v for v in saved_variant_models if v.family.guid not in var['familyGuids']]
-            if missing_saved_variants:
-                variant_id = '{}-{}-{}-{}'.format(var['chrom'], var['pos'], var['ref'], var['alt'])
-                if input(('Variant {} (hg37: {}) not find for expected families {}. Continue with update (y/n)? '.format(
-                    variant_id, missing_saved_variants[0].xpos,
-                    ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]))
-                )) == 'y':
-                    var = get_single_es_variant([v.family for v in saved_variant_models], variant_id, return_all_queried_families=True)
-                    missing_family_count += len(missing_saved_variants)
-                else:
-                    raise CommandError('Error: unable to find family data for lifted over variant')
-            for saved_variant in saved_variant_models:
-                saved_variant.xpos = var['xpos']
-                saved_variant.saved_variant_json = var
-                saved_variant.save()
+        missing_family_count = _update_saved_variants(es_variants, saved_variants_map)
 
         logger.info('Successfully updated {} variants'.format(len(es_variants)))
 
@@ -145,3 +86,74 @@ class Command(BaseCommand):
         logger.info('---Done---')
         logger.info('Succesfully lifted over {} variants. Skipped {} failed variants. Family data not updated for {} variants'.format(
             len(es_variants), len(missing_variants) + len(lift_failed), missing_family_count))
+
+def _get_variants_to_lift(saved_variants):
+    saved_variants_to_lift = [v for v in saved_variants if v['genomeVersion'] != GENOME_VERSION_GRCh38]
+    num_already_lifted = len(saved_variants) - len(saved_variants_to_lift)
+    if num_already_lifted:
+        if input('Found {} saved variants already on Hg38. Continue with liftover (y/n)? '.format(
+                num_already_lifted)) != 'y':
+            raise CommandError('Error: found {} saved variants already on Hg38'.format(num_already_lifted))
+    logger.info('Lifting over {} variants (skipping {} that are already lifted)'.format(
+        len(saved_variants_to_lift), num_already_lifted))
+
+    liftover_to_38 = LiftOver('hg19', 'hg38')
+    hg37_to_hg38_xpos = {}
+    lift_failed = {}
+    for v in saved_variants_to_lift:
+        if not (hg37_to_hg38_xpos.get(v['xpos']) or v['xpos'] in lift_failed):
+            hg38_coord = liftover_to_38.convert_coordinate('chr{}'.format(v['chrom'].lstrip('chr')), int(v['pos']))
+            if hg38_coord and hg38_coord[0]:
+                hg37_to_hg38_xpos[v['xpos']] = get_xpos(hg38_coord[0][0], hg38_coord[0][1])
+            else:
+                lift_failed[v['xpos']] = v
+
+    if lift_failed:
+        if input(
+                'Unable to lift over the following {} coordinates. Continue with update (y/n)?: {} '.format(
+                    len(lift_failed), ', '.join([
+                        '{}:{}-{}-{} ({})'.format(v['chrom'], v['pos'], v['ref'], v['alt'], ', '.join(v['familyGuids']))
+                        for v in lift_failed.values()]))) != 'y':
+            raise CommandError('Error: unable to lift over {} variants'.format(len(lift_failed)))
+
+    return saved_variants_to_lift, hg37_to_hg38_xpos, lift_failed
+
+def _validate_missing_variants(es_variants, saved_variants_map):
+    missing_variants = set(saved_variants_map.keys()) - {(v['xpos'], v['ref'], v['alt']) for v in es_variants}
+    if missing_variants:
+        missing_variant_strings = []
+        for xpos, ref, alt in missing_variants:
+            var_id = '{}-{}-{}'.format(xpos, ref, alt)
+            for v in saved_variants_map[(xpos, ref, alt)]:
+                tags = v.varianttag_set.all()
+                notes = v.variantnote_set.all()
+                missing_variant_strings.append('{var_id} {family_id}: {tags} ({guid})'.format(
+                    var_id=var_id, family_id=v.family.family_id, guid=v.guid,
+                    tags=', '.join([tag.variant_tag_type.name for tag in tags]) if tags else 'No Tags; {}'.format(
+                        '; '.join([note.note for note in notes]))
+                ))
+        if input('Unable to find the following {} variants in the index. Continue with update (y/n)?:\n{}\n'.format(
+                len(missing_variants), '\n'.join(missing_variant_strings))) != 'y':
+            raise CommandError('Error: unable to find {} lifted-over variants'.format(len(missing_variants)))
+    return missing_variants
+
+def _update_saved_variants(es_variants, saved_variants_map):
+    missing_family_count = 0
+    for var in es_variants:
+        saved_variant_models = saved_variants_map[(var['xpos'], var['ref'], var['alt'])]
+        missing_saved_variants = [v for v in saved_variant_models if v.family.guid not in var['familyGuids']]
+        if missing_saved_variants:
+            variant_id = '{}-{}-{}-{}'.format(var['chrom'], var['pos'], var['ref'], var['alt'])
+            if input(('Variant {} (hg37: {}) not find for expected families {}. Continue with update (y/n)? '.format(
+                variant_id, missing_saved_variants[0].xpos,
+                ', '.join(['{} ({})'.format(v.family.guid, v.guid) for v in missing_saved_variants]))
+            )) == 'y':
+                var = get_single_es_variant([v.family for v in saved_variant_models], variant_id, return_all_queried_families=True)
+                missing_family_count += len(missing_saved_variants)
+            else:
+                raise CommandError('Error: unable to find family data for lifted over variant')
+        for saved_variant in saved_variant_models:
+            saved_variant.xpos = var['xpos']
+            saved_variant.saved_variant_json = var
+            saved_variant.save()
+    return missing_family_count

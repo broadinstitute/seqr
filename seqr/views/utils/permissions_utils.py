@@ -1,7 +1,9 @@
+from functools import wraps
+
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
-from django.db.models import Value
+from django.db.models import Value, TextField
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
@@ -11,7 +13,7 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL, \
-    DEMO_PROJECT_CATEGORY
+    SERVICE_ACCOUNT_ACCESS_GROUP
 
 logger = SeqrLogger(__name__)
 
@@ -23,6 +25,12 @@ def user_is_data_manager(user):
 
 def user_is_pm(user):
     return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
+
+def user_has_service_account_access(user):
+    return user.groups.filter(name=SERVICE_ACCOUNT_ACCESS_GROUP).exists()
+
+def user_is_active_and_has_service_account_access(user):
+    return user.is_active and user_has_service_account_access(user)
 
 def _has_current_policies(user):
     if not hasattr(user, 'userpolicy'):
@@ -44,6 +52,39 @@ def _require_permission(user_permission_test_func, error='User has insufficient 
 _active_required = user_passes_test(_require_permission(lambda user: user.is_active, error='User is no longer active'))
 def _current_policies_required(view_func, policy_url=API_POLICY_REQUIRED_URL):
     return user_passes_test(_has_current_policies, login_url=policy_url)(view_func)
+
+
+class ServiceAccountAccess:
+    """Useful for checking if a route is annotated with Service Account Access"""
+    def __init__(self, func):
+        assert func
+        self.func = func
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
+
+def service_account_access(wrapped_func=None):
+    """
+    Decorator for checking function has service account access
+    """
+    def decorator(_wrapped_func):
+
+        def _check_user_func(request, *args, **kwargs):
+            # reimplement this here as user_passes_test, login_required will
+            # both redirect client to login page (which this shouldn't do)
+            if not user_is_active_and_has_service_account_access(request.user):
+                raise PermissionDenied(
+                    f'{request.user.username} does not have service account access enabled'
+                )
+            return _wrapped_func(request, *args, **kwargs)
+
+        return ServiceAccountAccess(_check_user_func)
+
+    # doing it like this allows you to apply 'service_account_access' directly
+    if wrapped_func:
+        return decorator(wrapped_func)
+    return decorator
 
 def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
     def decorator(view_func):
@@ -156,7 +197,7 @@ def has_project_permissions(project, user, can_edit=False):
         permission_level = CAN_EDIT
 
     return user_is_data_manager(user) or \
-           (not can_edit and project.all_user_demo and project.projectcategory_set.filter(name=DEMO_PROJECT_CATEGORY).exists()) or \
+           (not can_edit and project.all_user_demo and project.is_demo) or \
            (user_is_analyst(user) and project_has_analyst_access(project)) or \
            user.has_perm(permission_level, project) or \
            anvil_has_perm(user, permission_level, project)
@@ -201,7 +242,7 @@ def get_project_guids_user_can_view(user):
         projects = Project.objects.all()
     else:
         projects = get_local_access_projects(user)
-        projects = (projects | Project.objects.filter(all_user_demo=True, projectcategory__name=DEMO_PROJECT_CATEGORY)).distinct()
+        projects = (projects | Project.objects.filter(all_user_demo=True, is_demo=True)).distinct()
 
     project_guids = [p.guid for p in projects.only('guid')]
     if is_anvil_authenticated(user) and not is_data_manager:
@@ -209,7 +250,7 @@ def get_project_guids_user_can_view(user):
                       list_anvil_workspaces(user)]
         project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
             workspace_name='').exclude(guid__in=project_guids).annotate(
-            workspace=Concat('workspace_namespace', Value('/'), 'workspace_name')).filter(
+            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
             workspace__in=workspaces).only('guid')]
 
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
@@ -227,7 +268,7 @@ def get_local_access_projects(user):
 def check_mme_permissions(submission, user):
     project = submission.individual.family.project
     check_project_permissions(project, user)
-    if not project.is_mme_enabled:
+    if not (project.is_mme_enabled and not project.is_demo):
         raise PermissionDenied('Matchmaker is not enabled')
 
 def has_case_review_permissions(project, user):

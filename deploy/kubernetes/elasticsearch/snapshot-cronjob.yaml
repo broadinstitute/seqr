@@ -1,3 +1,62 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: curator-config
+  labels:
+    app: es-monthly-snapshotter
+data:
+  curator_config.yaml: |
+    ---
+    client:
+      hosts:
+        - ${ELASTICSEARCH_SERVICE_HOSTNAME}
+      port: 9200
+      use_ssl: False
+      username: kibana
+      password: ${ES_PASSWORD}
+      timeout: 30
+      master_only: False
+
+    logging:
+      loglevel: INFO
+      logfile:
+      logformat: json
+      blacklist: ['elasticsearch', 'urllib3']
+  curator_actions.yaml: |
+    ---
+    actions:
+      1:
+        action: snapshot
+        description: >-
+          Create a snapshot of the current set of indices. The filtertype
+          of 'none' tells the snapshot to contain all indices.
+        options:
+          repository: snapshot_storage
+          wait_for_completion: True
+          name: snapshot-%Y.%m.%d
+        filters:
+        - filtertype: none
+      2:
+        action: delete_snapshots
+        description: >-
+          Delete snapshots older than 45 days from the snapshot_storage repository
+          (based on creation_date), for 'snapshot-' prefixed snapshots.
+        options:
+          repository: snapshot_storage
+          disable_action: False
+          timeout_override: 3600
+        filters:
+        - filtertype: pattern
+          kind: prefix
+          value: snapshot-
+          exclude:
+        - filtertype: age
+          source: creation_date
+          direction: older
+          unit: days
+          unit_count: 45
+---
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
@@ -14,11 +73,22 @@ spec:
           labels:
             app: es-monthly-snapshotter
         spec:
+          volumes:
+            - name: curator-yamls
+              configMap:
+                name: curator-config
           containers:
           - name: es-monthly-snapshotter
-            image: {{ DOCKER_IMAGE_PREFIX }}/curl{{ DOCKER_IMAGE_TAG }}
+            image: {{ DOCKER_IMAGE_PREFIX }}/curator{{ DOCKER_IMAGE_TAG }}
             imagePullPolicy: {{ IMAGE_PULL_POLICY }}
+            volumeMounts:
+            - name: curator-yamls
+              mountPath: /curator/configs
             env:
+            - name: LC_ALL
+              value: C.UTF-8
+            - name: LANG
+              value: C.UTF-8
             - name: ES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -29,5 +99,5 @@ spec:
             args:
             - /bin/sh
             - -c
-            - 'curl -s -i -u "kibana:${ES_PASSWORD}" -XPUT "http://${ELASTICSEARCH_SERVICE_HOSTNAME}:9200/_snapshot/snapshot_storage/%3Csnapshot-%7Bnow%2Fd%7D%3E" | tee /dev/stderr | grep "200 OK"'
+            - '/usr/bin/curator --config /curator/configs/curator_config.yaml /curator/configs/curator_actions.yaml'
           restartPolicy: OnFailure

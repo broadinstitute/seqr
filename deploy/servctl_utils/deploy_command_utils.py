@@ -107,8 +107,6 @@ def deploy_secrets(settings, components=None):
 def deploy_elasticsearch(settings):
     print_separator("elasticsearch")
 
-    docker_build("elasticsearch", settings, ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]])
-
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
@@ -149,13 +147,14 @@ def deploy_elasticsearch(settings):
 def _set_elasticsearch_kubernetes_resources():
     has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
     if not has_kube_resource:
-        run('kubectl apply -f deploy/kubernetes/elasticsearch/kubernetes-elasticsearch-all-in-one.yaml')
+        run('kubectl create -f https://download.elastic.co/downloads/eck/1.9.1/crds.yaml')
+        run('kubectl apply -f https://download.elastic.co/downloads/eck/1.9.1/operator.yaml')
 
 
 def deploy_elasticsearch_snapshot_config(settings):
     print_separator('elasticsearch snapshot configuration')
 
-    docker_build("curl", settings)
+    docker_build("curator", settings)
 
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
@@ -199,21 +198,10 @@ def deploy_redis(settings):
 def deploy_seqr(settings):
     print_separator("seqr")
 
-    if settings["BUILD_DOCKER_IMAGES"]:
-        seqr_git_hash = run("git log -1 --pretty=%h", errors_to_ignore=["Not a git repository"])
-        seqr_git_hash = (":" + seqr_git_hash.strip()) if seqr_git_hash is not None else ""
-
-        docker_build("seqr",
-                     settings,
-                     [
-                         "--build-arg SEQR_SERVICE_PORT=%s" % settings["SEQR_SERVICE_PORT"],
-                         "-f deploy/docker/seqr/Dockerfile",
-                         "-t %(DOCKER_IMAGE_NAME)s" + seqr_git_hash,
-                         ]
-                     )
-
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
+    if settings['BUILD_DOCKER_IMAGES']:
+        raise Exception("seqr image docker builds via servctl have been deprecated. Please ensure that your desired "
+                        "build has been produced via Cloudbuild and GCR, and then run the deployment without the "
+                        "docker build flag.")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
@@ -254,7 +242,7 @@ def deploy_pipeline_runner(settings):
     ])
 
 
-def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
+def deploy(deployment_target, components, output_dir=None, runtime_settings=None):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
     Args:
@@ -265,6 +253,8 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings={}):
         output_dir (string): path of directory where to put deployment logs and rendered config files
         runtime_settings (dict): a dictionary of other key-value pairs that override settings file(s) values.
     """
+    runtime_settings = runtime_settings or {}
+
     if not components:
         raise ValueError("components list is empty")
 

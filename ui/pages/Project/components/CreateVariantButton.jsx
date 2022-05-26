@@ -1,7 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { FormSection } from 'redux-form'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
 import { updateVariantTags } from 'redux/rootReducer'
@@ -9,7 +8,7 @@ import { getUser, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
-import { validators, configuredField } from 'shared/components/form/ReduxFormWrapper'
+import { validators, configuredField } from 'shared/components/form/FormHelpers'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD } from 'shared/utils/constants'
 
@@ -17,7 +16,6 @@ import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
 import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
-const BASE_FORM_ID = '-addVariant'
 const CHROMOSOMES = [...Array(23).keys(), 'X', 'Y'].map(val => val.toString()).splice(1)
 const ZYGOSITY_OPTIONS = [{ value: 0, name: 'Hom Ref' }, { value: 1, name: 'Het' }, { value: 2, name: 'Hom Alt' }]
 
@@ -32,13 +30,13 @@ const FORMAT_RESPONSE_FIELDS = [
 ]
 
 const ZygosityInput = React.memo(({ individuals, name, title, individualField, error }) => (
-  <FormSection name={name}>
+  <div>
     <Divider horizontal>{title}</Divider>
     <Grid columns="equal">
       {individuals.map((({ individualGuid, displayName }) => (
         <Grid.Column key={individualGuid}>
           {configuredField({
-            name: individualGuid,
+            name: `${name}.${individualGuid}`,
             label: displayName,
             error,
             ...individualField,
@@ -46,7 +44,7 @@ const ZygosityInput = React.memo(({ individuals, name, title, individualField, e
         </Grid.Column>
       )))}
     </Grid>
-  </FormSection>
+  </div>
 ))
 
 ZygosityInput.propTypes = {
@@ -58,10 +56,8 @@ ZygosityInput.propTypes = {
 }
 
 const mapZygosityInputStateToProps = (state, ownProps) => ({
-  individuals: getSortedIndividualsByFamily(state)[ownProps.meta.form.split(BASE_FORM_ID)[0]],
+  individuals: getSortedIndividualsByFamily(state)[ownProps.meta.data.formId],
 })
-
-const getFormFamilyGuid = props => props.meta.form.split(BASE_FORM_ID)[0]
 
 const mapTagInputStateToProps = state => ({
   options: getProjectTagTypeOptions(state),
@@ -76,7 +72,7 @@ const accordionPanels = ({ accordionLabel, dispatch, showSVs, ...props }) => ([{
 const SavedVariantToggle = props => <Accordion styled fluid panels={accordionPanels(props)} />
 
 const mapSavedVariantsStateToProps = (state, ownProps) => {
-  const familyGuid = getFormFamilyGuid(ownProps)
+  const familyGuid = ownProps.meta.data.formId
   return {
     data: (getTaggedVariantsByFamilyType(state)[familyGuid] || {})[ownProps.showSVs || false],
     familyGuid,
@@ -124,8 +120,6 @@ const SAVED_VARIANT_FIELD = {
   idField: 'variantGuid',
   includeSelectedRowData: true,
   control: SavedVariantField,
-  // redux form inexplicably updates the value to be a boolean on some focus changes and we should ignore that
-  normalize: (val, prevVal) => (typeof val === 'boolean' ? prevVal : val),
 }
 
 const SV_TYPE_OPTIONS = [
@@ -175,7 +169,7 @@ const SNV_FIELDS = [
     individualField: {
       options: ZYGOSITY_OPTIONS,
       component: Select,
-      normalize: numAlt => ({ numAlt }),
+      parse: numAlt => ({ numAlt }),
       format: value => (value || {}).numAlt,
     },
   },
@@ -205,7 +199,7 @@ const SV_FIELDS = [
     validate: validators.required,
     individualField: {
       component: IntegerInput,
-      normalize: cn => ({ cn }),
+      parse: cn => ({ cn }),
       format: value => (value || {}).cn,
       min: 0,
       max: 12,
@@ -218,7 +212,8 @@ const BaseCreateVariantButton = React.memo(({ variantType, family, user, ...prop
     <UpdateButton
       key={`manual${variantType}`}
       modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
-      modalId={`${family.familyGuid}${BASE_FORM_ID}-${variantType || 'SNV'}`}
+      modalId={`${family.familyGuid}-addVariant-${variantType || 'SNV'}`}
+      formMetaId={family.familyGuid}
       modalSize="large"
       buttonText={`Add Manual ${variantType}`}
       editIconName="plus"

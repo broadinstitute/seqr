@@ -4,18 +4,22 @@ import { connect } from 'react-redux'
 import { Popup } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadAnalystOptions } from 'redux/rootReducer'
+import { loadUserOptions, loadProjectAnalysisGroups } from 'redux/rootReducer'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
-  getHasActiveVariantSampleByFamily,
+  getHasActiveSearchableSampleByFamily,
+  getUserOptions,
+  getProjectAnalysisGroupOptions,
+  getAnalysisGroupsByFamily,
+  getAnalysisGroupIsLoading,
 } from 'redux/selectors'
 
+import TagFieldView from '../view-fields/TagFieldView'
 import Sample from '../sample'
 import { ColoredIcon } from '../../StyledComponents'
 import { Select } from '../../form/Inputs'
 import DataLoader from '../../DataLoader'
-import { getAnalystOptions } from '../../../../pages/Project/selectors'
 
 const NoWrap = styled.div`
   white-space: nowrap;
@@ -37,7 +41,7 @@ BaseFirstSample.propTypes = {
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
   firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
-  hasActiveVariantSample: getHasActiveVariantSampleByFamily(state)[ownProps.familyGuid],
+  hasActiveVariantSample: (getHasActiveSearchableSampleByFamily(state)[ownProps.familyGuid] || {}).isActive,
 })
 
 export const FirstSample = connect(mapSampleDispatchToProps)(BaseFirstSample)
@@ -65,12 +69,12 @@ BaseAnalystEmailDropdown.propTypes = {
 
 const mapDropdownStateToProps = state => ({
   loading: getUserOptionsIsLoading(state),
-  options: getAnalystOptions(state),
+  options: getUserOptions(state),
 })
 
-const mapDropdownDispatchToProps = {
-  load: loadAnalystOptions,
-}
+const mapDropdownDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadUserOptions(ownProps.meta.data.formId)),
+})
 
 export const AnalystEmailDropdown = connect(
   mapDropdownStateToProps, mapDropdownDispatchToProps,
@@ -88,7 +92,7 @@ export const analysisStatusIcon = (
       trigger={icon}
       content={
         <div>
-          {compact && value.text}
+          {compact && value.name}
           {analysisStatusLastModifiedDate && (
             <i>
               {compact && <br />}
@@ -138,3 +142,26 @@ AnalysedBy.propTypes = {
   analysedByList: PropTypes.arrayOf(PropTypes.object),
   compact: PropTypes.bool,
 }
+
+const BaseAnalysisGroups = React.memo(({ load, loading, ...props }) => (
+  <DataLoader load={load} loading={loading} content>
+    <TagFieldView {...props} />
+  </DataLoader>
+))
+
+BaseAnalysisGroups.propTypes = {
+  load: PropTypes.func,
+  loading: PropTypes.bool,
+}
+
+const mapGroupsStateToProps = (state, ownProps) => ({
+  fieldValue: getAnalysisGroupsByFamily(state)[ownProps.initialValues.familyGuid],
+  loading: getAnalysisGroupIsLoading(state),
+  tagOptions: getProjectAnalysisGroupOptions(state)[ownProps.initialValues.projectGuid] || [],
+})
+
+const mapGroupsDispatchToProps = (dispatch, ownProps) => ({
+  load: () => dispatch(loadProjectAnalysisGroups(ownProps.initialValues.projectGuid)),
+})
+
+export const AnalysisGroups = connect(mapGroupsStateToProps, mapGroupsDispatchToProps)(BaseAnalysisGroups)

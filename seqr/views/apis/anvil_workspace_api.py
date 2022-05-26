@@ -2,6 +2,7 @@
 import json
 import time
 import tempfile
+from datetime import datetime
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
@@ -19,7 +20,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
-from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
@@ -31,6 +32,8 @@ anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_
 
 BLOCK_SIZE = 65536
 
+ANVIL_LOADING_EMAIL_DATE = None
+ANVIL_LOADING_DELAY_EMAIL = None
 
 def get_vcf_samples(vcf_filename):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
@@ -152,6 +155,8 @@ def create_project_from_workspace(request, namespace, name):
         'description': request_json.get('description', ''),
         'workspace_namespace': namespace,
         'workspace_name': name,
+        'mme_primary_data_owner': request.user.get_full_name(),
+        'mme_contact_url': 'mailto:{}'.format(request.user.email),
     }
 
     project = create_model_from_json(Project, project_args, user=request.user)
@@ -173,6 +178,20 @@ def create_project_from_workspace(request, namespace, name):
 
     # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
+
+    if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
+            datetime.strptime(ANVIL_LOADING_EMAIL_DATE, '%Y-%m-%d') <= datetime.now():
+        try:
+            email_body = """Hi {user},
+            {email_content}
+            - The seqr team
+            """.format(
+                user=request.user.get_full_name() or request.user.email,
+                email_content=ANVIL_LOADING_DELAY_EMAIL,
+            )
+            send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[request.user.email])
+        except Exception as e:
+            logger.error('AnVIL loading delay email error: {}'.format(e), request.user)
 
     return create_json_response({'projectGuid':  project.guid})
 

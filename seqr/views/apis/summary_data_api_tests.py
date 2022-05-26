@@ -22,7 +22,7 @@ EXPECTED_MME_DETAILS_METRICS = {
 
 SAVED_VARIANT_RESPONSE_KEYS = {
     'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
-    'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid',
+    'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid', 'familyNotesByGuid',
 }
 
 
@@ -144,19 +144,11 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
 
-def assert_has_expected_calls(self, users, access_level_call=False):
+def assert_has_expected_calls(self, users):
     calls = [mock.call(user) for user in users]
     self.mock_list_workspaces.assert_has_calls(calls)
     self.mock_get_ws_acl.assert_not_called()
-    if access_level_call:
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo'),
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-        ], any_order=True)
-    else:
-        self.mock_get_ws_access_level.assert_not_called()
+    self.mock_get_ws_access_level.assert_not_called()
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
@@ -164,15 +156,15 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 3
     MANAGER_VARIANT_GUID = None
 
-    def test_mme_details(self):
-        super(AnvilSummaryDataAPITest, self).test_mme_details()
+    def test_mme_details(self, *args):
+        super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
 
     def test_saved_variants_page(self):
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
-        ], access_level_call=True)
+        ])
 
 
 # Test for permissions from AnVIL and local
@@ -181,8 +173,8 @@ class MixSummaryDataAPITest(MixAuthenticationTestCase, SummaryDataAPITest):
     NUM_MANAGER_SUBMISSIONS = 4
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
-    def test_mme_details(self):
-        super(MixSummaryDataAPITest, self).test_mme_details()
+    def test_mme_details(self, *args):
+        super(MixSummaryDataAPITest, self).test_mme_details(*args)
         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
 
     def test_saved_variants_page(self):

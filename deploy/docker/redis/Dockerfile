@@ -1,4 +1,4 @@
-FROM redis:6.0.6
+FROM redis:6.2.6
 
 LABEL maintainer="Broad TGG"
 

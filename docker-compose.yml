@@ -26,7 +26,7 @@ services:
 
 
   elasticsearch:
-    image: gcr.io/seqr-project/elasticsearch:gcloud-prod-elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.3
     volumes:
       - ./data/elasticsearch:/usr/share/elasticsearch/data
     container_name: elasticsearch
@@ -44,7 +44,7 @@ services:
 
 
   kibana:
-    image: gcr.io/seqr-project/kibana:gcloud-prod
+    image: docker.elastic.co/kibana/kibana:7.16.3
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     depends_on:
@@ -60,6 +60,7 @@ services:
     image: gcr.io/seqr-project/seqr:gcloud-prod
     volumes:
     - ./data/readviz:/readviz
+    - ./data/seqr_static_files:/seqr_static_files
     ports:
       - 80:8000
     environment:

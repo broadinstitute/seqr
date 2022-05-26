@@ -1,0 +1,32 @@
+name: Dockerfile Linting
+
+# Run the test suite on pushes (incl. merges) to master and dev
+# Run the test suite when a PR is opened, pushed to, or reopened
+on:
+  push:
+    branches:
+      - dev
+      - master
+    paths:
+      - deploy/docker/seqr/Dockerfile
+      - .hadolint.yaml
+      - .github/workflows/docker-lint.yaml
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - dev
+      - master
+    paths:
+      - deploy/docker/seqr/Dockerfile
+      - .hadolint.yaml
+      - .github/workflows/docker-lint.yaml
+
+jobs:
+  hadolint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2 
+      - uses: hadolint/hadolint-action@v1.5.0
+        with:
+          dockerfile: deploy/docker/seqr/Dockerfile
+          ignore: DL4006 DL3022

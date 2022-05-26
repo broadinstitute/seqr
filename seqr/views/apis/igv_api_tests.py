@@ -1,7 +1,7 @@
 import json
 import mock
 import responses
-import subprocess
+import subprocess # nosec
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
@@ -176,7 +176,7 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'igvSamplesByGuid': {'S000145_na19675': {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': 'S000145_na19675',
-            'filePath': '/readviz/NA19675.new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
+            'familyGuid': 'F000001_1', 'filePath': '/readviz/NA19675.new.cram', 'sampleId': None, 'sampleType': 'alignment'}}})
         mock_local_file_exists.assert_called_with('/readviz/NA19675.new.cram')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
@@ -190,7 +190,7 @@ class IgvAPITest(AuthenticationTestCase):
         sample_guid = next(iter(response_json['igvSamplesByGuid']))
         self.assertDictEqual(response_json['igvSamplesByGuid'][sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': sample_guid,
-            'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675', 'sampleType': 'gcnv'})
+            'familyGuid': 'F000001_1',  'filePath': 'gs://readviz/batch_10.dcr.bed.gz', 'sampleId': 'NA19675', 'sampleType': 'gcnv'})
         self.assertListEqual(list(response_json['individualsByGuid'].keys()), ['I000001_na19675'])
         self.assertSetEqual(
             set(response_json['individualsByGuid']['I000001_na19675']['igvSampleGuids']),
@@ -208,7 +208,8 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertNotEqual(sample_guid, junctions_sample_guid)
         self.assertDictEqual(response_json['igvSamplesByGuid'][junctions_sample_guid], {
             'projectGuid': PROJECT_GUID, 'individualGuid': 'I000001_na19675', 'sampleGuid': junctions_sample_guid,
-            'filePath': 'gs://readviz/batch_10.junctions.bed.gz', 'sampleId': 'NA19675', 'sampleType': 'spliceJunctions'})
+            'familyGuid': 'F000001_1',  'filePath': 'gs://readviz/batch_10.junctions.bed.gz', 'sampleId': 'NA19675',
+            'sampleType': 'spliceJunctions'})
 
         # test data manager access
         self.login_data_manager_user()

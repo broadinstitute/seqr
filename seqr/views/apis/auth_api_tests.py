@@ -91,16 +91,12 @@ class AuthAPITest(TestCase):
     @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'test_key')
     def test_login_view_with_google(self):
         url = reverse(login_view)
-
-        # send login request with a non-privileged user and a correct password
-        req_values = {
-            'email': 'test_new_user@institute.com',
-            'password': 'password123'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
+        response = self.client.post(url)
         self.assertEqual(response.status_code, 401)
-        self.assertEqual(response.reason_phrase, 'Password-based authentication is disabled. Please use Google authentication instead.')
+        self.assertEqual(
+            response.json()['error'],
+            'Password-based authentication is disabled. Please use Google authentication instead.'
+        )
 
     def test_logout_view(self):
         url = reverse(login_view)

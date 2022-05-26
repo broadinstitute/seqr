@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import datetime
 import json
 import mock
 from django.urls.base import reverse
@@ -18,6 +19,12 @@ LOAD_SAMPLE_DATA = [
     ["21", "HG00735", "", "", "", "Female", "Unaffected", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
+
+FILE_DATA = [
+    '##fileformat=VCFv4.2\n',
+    '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
+    'chr1	1000	test\n',
+]
 
 REQUEST_BODY = {
     'genomeVersion': '38',
@@ -86,17 +93,20 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.mock_get_ws_access_level.assert_not_called()
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', None)
     @mock.patch('seqr.views.apis.anvil_workspace_api.time')
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
     @mock.patch('seqr.views.apis.anvil_workspace_api.has_service_account_access')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.send_html_email')
     @mock.patch('seqr.views.apis.anvil_workspace_api.safe_post_to_slack')
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
     @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
     @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs')
     @mock.patch('seqr.views.apis.anvil_workspace_api.tempfile.NamedTemporaryFile')
-    def test_create_project_from_workspace(self, mock_tempfile, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack, mock_add_service_account,
+    def test_create_project_from_workspace(self, mock_tempfile, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack,
+                                           mock_send_email, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
                                            mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
@@ -176,8 +186,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_has_service_account.reset_mock()
         mock_add_service_account.return_value = False
         mock_file_exist.return_value = True
-        mock_file_iter.return_value = ['##fileformat=VCFv4.2\n', '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
-                                       'chr1	1000	test\n']
+        mock_file_iter.return_value = FILE_DATA
         mock_tempfile.return_value.__enter__.return_value.name = TEMP_PATH
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
         self.assertEqual(response.status_code, 200)
@@ -187,6 +196,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertListEqual(
             [project.genome_version, project.description, project.workspace_namespace, project.workspace_name],
             ['38', 'A test project', TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+        self.assertListEqual(
+            [project.mme_contact_institution, project.mme_primary_data_owner, project.mme_contact_url],
+            ['Broad Center for Mendelian Genomics', 'Test Manager User', 'mailto:test_user_manager@test.com'])
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
@@ -217,6 +229,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 }}```
         """.format(guid=project.guid)
         mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
+        mock_send_email.assert_not_called()
 
         # Test project exist
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -238,6 +251,48 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/login/google-oauth2?next=/api/create_project_from_workspace/submit/my-seqr-billing/anvil-no-project-workspace2')
+
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', 'We are unable to load your data at this time.')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.mv_file_to_gs', lambda *args, **kwargs: True)
+    @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist', lambda *args, **kwargs: True)
+    @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter', lambda *args, **kwargs: FILE_DATA)
+    @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account', lambda *args, **kwargs: False)
+    @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file', lambda *args, **kwargs: LOAD_SAMPLE_DATA)
+    @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.datetime')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.send_html_email')
+    def test_create_project_from_workspace_loading_delay_email(
+            self, mock_send_email, mock_datetime, mock_api_logger, mock_utils_logger):
+        url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+        self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
+
+        # Test not yet anvil email date
+        mock_send_email.side_effect = ValueError('Unable to send email')
+        mock_datetime.strptime.side_effect = datetime.strptime
+        mock_datetime.now.side_effect = lambda: datetime(2021, 3, 1, 0, 0, 0)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
+        self.assertEqual(response.status_code, 200)
+        mock_send_email.assert_not_called()
+        mock_api_logger.error.assert_not_called()
+
+        # Remove created project to allow future requests
+        project = Project.objects.get(
+            workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
+        project.workspace_name = None
+        project.save()
+
+        # Test after anvil email date
+        mock_datetime.now.side_effect = lambda: datetime(2021, 9, 1, 0, 0, 0)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
+        self.assertEqual(response.status_code, 200)
+        mock_send_email.assert_called_with("""Hi Test Manager User,
+            We are unable to load your data at this time.
+            - The seqr team
+            """, subject='Delay in loading AnVIL in seqr', to=['test_user_manager@test.com'])
+        mock_api_logger.error.assert_called_with(
+            'AnVIL loading delay email error: Unable to send email', self.manager_user)
 
 
 class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):

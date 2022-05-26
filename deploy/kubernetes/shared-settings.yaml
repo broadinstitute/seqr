@@ -1,6 +1,6 @@
 #####################################################
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
-ELASTICSEARCH_VERSION: 7.8.1
+ELASTICSEARCH_VERSION: 7.16.3
 LINKERD_VERSION: 'stable-2.10.0'
 
 ES_DATA_DISK_TYPE: pd-ssd
@@ -39,7 +39,6 @@ DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 IMAGE_PULL_POLICY: 'Always'
 
 DEPLOYMENT_TEMP_DIR: '/tmp'
-STATIC_MEDIA_DIR: '/seqr_static_files'
 MME_CONFIG_DIR: '/mme'
 
 POSTGRES_SERVICE_HOSTNAME: '127.0.0.1'

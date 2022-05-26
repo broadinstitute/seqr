@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 
-import { helpLabel } from './ReduxFormWrapper'
+import { helpLabel } from './FormHelpers'
 
 export class BaseSemanticInput extends React.Component {
 
@@ -340,7 +340,7 @@ CheckboxGroup.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
   onChange: PropTypes.func,
   label: PropTypes.node,
-  groupLabel: PropTypes.string,
+  groupLabel: PropTypes.node,
   horizontalGrouped: PropTypes.bool,
 }
 

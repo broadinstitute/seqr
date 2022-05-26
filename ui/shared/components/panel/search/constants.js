@@ -1,5 +1,6 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
+import styled from 'styled-components'
 import { RadioGroup, BooleanCheckbox, BaseSemanticInput, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 import {
@@ -19,7 +20,10 @@ import {
   UNAFFECTED,
   PREDICTOR_FIELDS,
   SPLICE_AI_FIELD,
+  VEP_GROUP_SV_NEW,
 } from 'shared/utils/constants'
+
+import { LocusListItemsFilter } from './LocusListItemsFilter'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
@@ -268,7 +272,7 @@ export const ALL_ANNOTATION_FILTER = {
   text: 'All',
   vepGroups: ALL_IMPACT_GROUPS,
 }
-export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV]
+export const SV_GROUPS = [VEP_GROUP_SV_CONSEQUENCES, VEP_GROUP_SV, VEP_GROUP_SV_NEW]
 export const ANNOTATION_FILTER_OPTIONS = [
   ALL_ANNOTATION_FILTER,
   {
@@ -299,19 +303,7 @@ export const ALL_ANNOTATION_FILTER_DETAILS =
 
 export const THIS_CALLSET_FREQUENCY = 'callset'
 export const SV_CALLSET_FREQUENCY = 'sv_callset'
-export const FREQUENCIES = [
-  {
-    name: 'g1k',
-    label: '1000 Genomes',
-    homHemi: false,
-    labelHelp: 'Filter by allele count (AC) in the 1000 Genomes Phase 3 release (5/2/2013), or by allele frequency (popmax AF) in any one of these five subpopulations defined for 1000 Genomes Phase 3: AFR, AMR, EAS, EUR, SAS',
-  },
-  {
-    name: 'exac',
-    label: 'ExAC',
-    homHemi: true,
-    labelHelp: 'Filter by allele count (AC) or homozygous/hemizygous count (H/H) in ExAC, or by allele frequency (popmax AF) in any one of these six subpopulations defined for ExAC: AFR, AMR, EAS, FIN, NFE, SAS',
-  },
+export const SNP_FREQUENCIES = [
   {
     name: 'gnomad_genomes',
     label: 'gnomAD genomes',
@@ -331,32 +323,38 @@ export const FREQUENCIES = [
     labelHelp: 'Filter by allele count (AC) or allele frequency (AF) in TOPMed',
   },
   {
-    name: 'gnomad_svs',
-    label: 'gnomAD genome SVs',
-    homHemi: false,
-    labelHelp: 'Filter by site frequency (AF) among gnomad SVs',
-  },
-  {
     name: THIS_CALLSET_FREQUENCY,
     label: 'This Callset',
     homHemi: false,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
   },
+]
+
+export const SV_CALLSET_CRITERIA_MESSAGE = 'Only an SV that is estimated to be the same SV (type and breakpoints) among jointly genotyped samples will be counted as an allele. CNVs called on exomes have unknown breakpoints so similar overlapping CNVs may be counted as an allele.'
+export const GNOMAD_SV_CRITERIA_MESSAGE = 'The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp'
+const SV_FREQUENCIES = [
+  {
+    name: 'gnomad_svs',
+    label: 'gnomAD genome SVs',
+    homHemi: false,
+    labelHelp: `Filter by locus frequency (AF) among gnomAD SVs. ${GNOMAD_SV_CRITERIA_MESSAGE}`,
+  },
   {
     name: SV_CALLSET_FREQUENCY,
-    label: 'SV Callset',
+    label: 'This SV Callset',
     homHemi: false,
-    labelHelp: 'Filter by site count (AC) or by site frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of Structural Variant calling for this project.',
+    labelHelp: `Filter by allele count (AC) or by allele frequency (AF) among all the jointly genotyped samples that were part of the Structural Variant (SV) calling for this project. ${SV_CALLSET_CRITERIA_MESSAGE}`,
   },
 ]
+
+export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
 export const LOCATION_FIELDS = [
   {
     name: LOCUS_LIST_ITEMS_FIELD.name,
     label: LOCUS_LIST_ITEMS_FIELD.label,
     labelHelp: LOCUS_LIST_ITEMS_FIELD.labelHelp,
-    component: BaseSemanticInput,
-    inputType: 'TextArea',
+    component: LocusListItemsFilter,
     rows: 8,
     width: 7,
   },
@@ -379,8 +377,8 @@ export const LOCATION_FIELDS = [
 ]
 
 export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
-  ({ field, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
-    const label = snakecaseToTitlecase(field)
+  ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
+    const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
 
     if (indicatorMap) {
@@ -419,13 +417,13 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
   },
 )
 
-export const QUALITY_FILTER_FIELDS = [
+export const SNP_QUALITY_FILTER_FIELDS = [
   {
     name: 'vcf_filter',
     label: 'Filter Value',
     labelHelp: 'Either show only variants that PASSed variant quality filters applied when the dataset was processed (typically VQSR or Hard Filters), or show all variants',
     control: RadioGroup,
-    options: [{ value: null, text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
+    options: [{ value: '', text: 'Show All Variants' }, { value: 'pass', text: 'Pass Variants Only' }],
     margin: '1em 2em',
     widths: 'equal',
   },
@@ -444,6 +442,31 @@ export const QUALITY_FILTER_FIELDS = [
     min: 0,
     max: 50,
     step: 5,
+  },
+]
+
+const DividedFormField = styled(Form.Field)`
+  border-left: solid grey 1px;
+`
+
+export const QUALITY_FILTER_FIELDS = [
+  ...SNP_QUALITY_FILTER_FIELDS,
+  {
+    name: 'min_qs',
+    label: 'WES SV Quality Score',
+    labelHelp: 'The quality score (QS) represents the quality of a Structural Variant call. Recommended SV-QS cutoffs for filtering: duplication >= 50, deletion >= 100, homozygous deletion >= 400.',
+    min: 0,
+    max: 1000,
+    step: 10,
+    component: DividedFormField,
+  },
+  {
+    name: 'min_gq_sv',
+    label: 'WGS SV Genotype Quality',
+    labelHelp: 'The genotype quality (GQ) represents the quality of a Structural Variant call. Recommended SV-QG cutoffs for filtering: > 10.',
+    min: 0,
+    max: 100,
+    step: 10,
   },
 ]
 

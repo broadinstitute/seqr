@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
-import { validators } from 'shared/components/form/ReduxFormWrapper'
+import { validators } from 'shared/components/form/FormHelpers'
 import { login } from '../reducers'
 import { UserFormContainer, UserForm } from './UserFormLayout'
 
@@ -16,7 +16,7 @@ const Login = ({ onSubmit }) => (
   <UserFormContainer header="Login to seqr">
     <UserForm
       onSubmit={onSubmit}
-      form="login"
+      modalName="login"
       fields={FIELDS}
       submitButtonText="Log In"
     />
