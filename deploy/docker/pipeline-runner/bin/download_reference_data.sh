@@ -12,6 +12,13 @@ curl -LO "http://ftp.ensembl.org/pub/release-99/variation/indexed_vep_cache/${CA
 tar xzf "${CACHE_FILE}"
 rm "${CACHE_FILE}"
 
+if [[ "${BUILD_VERSION}" == "38" ]]; then
+    cd /vep_data/homo_sapiens
+    curl -O http://ftp.ensembl.org/pub/release-99/fasta/homo_sapiens/dna/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    gzip -d Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz
+    bgzip Homo_sapiens.GRCh38.dna.primary_assembly.fa
+fi
+
 # download loftee reference data
 mkdir -p "/vep_data/loftee_data/GRCh${BUILD_VERSION}"
 cd "/vep_data/loftee_data/GRCh${BUILD_VERSION}"

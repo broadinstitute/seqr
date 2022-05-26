@@ -9,6 +9,7 @@
     "--minimal",
     "--assembly", "GRCh38",
     "--dir_cache", "/vep_data",
+    "--fasta", "/vep_data/homo_sapiens/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz",
     "--plugin", "LoF,gerp_bigwig:/vep_data/loftee_data/GRCh38/gerp_conservation_scores.homo_sapiens.GRCh38.bw,human_ancestor_fa:/vep_data/loftee_data/GRCh38/human_ancestor.fa.gz,conservation_file:/vep_data/loftee_data/GRCh38/loftee.sql",
     "-o", "STDOUT"
 ],
