@@ -9,8 +9,8 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
-    TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, \
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
+    FAMILY_NOTE_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -189,6 +189,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         locus_list_fields.update(LOCUS_LIST_FIELDS)
+        locus_list_fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertEqual(len(response_json['locusListsByGuid']), 2)
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
 

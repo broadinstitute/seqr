@@ -52,20 +52,28 @@ export const uploadQcPipelineOutput = values => submitRequest(
 
 export const deleteEsIndex = index => submitRequest('delete_index', RECEIVE_ELASTICSEARCH_STATUS, { index })
 
-export const uploadRnaSeq = ({ file, ...values }) => dispatch => new HttpRequestHelper(
-  `/api/data_management/update_rna_seq/${file.uploadedFileId}`,
-  ({ info, warnings, sampleGuids }) => {
+export const uploadRnaSeq = values => (dispatch) => {
+  let successResponseJson = null
+  return new HttpRequestHelper(
+    '/api/data_management/update_rna_seq',
+    (responseJson) => {
+      successResponseJson = responseJson
+    },
+  ).post(values).then(() => {
+    const { info, warnings, sampleGuids, fileName } = successResponseJson
     let numLoaded = 0
     return Promise.all(sampleGuids.map(sampleGuid => new HttpRequestHelper(
       `/api/data_management/load_rna_seq_sample/${sampleGuid}`,
-      () => { numLoaded += 1 },
+      () => {
+        numLoaded += 1
+      },
       e => warnings.push(`Error loading ${sampleGuid}: ${e.body && e.body.error ? e.body.error : e.message}`),
-    ).get())).then(() => {
+    ).post({ fileName, dataType: values.dataType }))).then(() => {
       info.push(`Successfully loaded data for ${numLoaded} RNA-seq samples`)
       dispatch({ type: RECEIVE_RNA_SEQ_UPLOAD_STATS, newValue: { info, warnings } })
     })
-  },
-).post(values)
+  })
+}
 
 export const reducers = {
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),

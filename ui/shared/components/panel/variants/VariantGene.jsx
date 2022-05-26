@@ -6,9 +6,9 @@ import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
+import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
-  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
-  PANEL_APP_CONFIDENCE_DESCRIPTION,
+  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
@@ -34,20 +34,38 @@ const PADDED_INLINE_STYLE = {
   ...INLINE_STYLE,
 }
 
-const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, containerStyle, dispatch, ...props }) => {
+const BaseGeneLabelContent = styled(({
+  color, customColor, label, maxWidth, containerStyle, dispatch, ...props
+}) => {
   const labelProps = {
     ...props,
     size: 'mini',
-    content: label,
+    content: <span>{label}</span>,
   }
+
   return customColor ?
     <ColoredLabel {...labelProps} color={customColor} /> : <Label {...labelProps} color={color || 'grey'} />
 })`
-   margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
-   overflow: hidden;
-   text-overflow: ellipsis;
-   white-space: nowrap;
-   max-width: ${props => props.maxWidth || 'none'};
+  margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
+  white-space: nowrap;
+
+  span {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${props => props.maxWidth || 'none'};
+  }
+
+  .detail {
+    margin-left: 0.5em !important;
+
+    &::before {
+      content: "(";
+    }
+    &::after {
+      content: ")";
+    }
+  }
 `
 const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
@@ -82,8 +100,65 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+const PanelAppHoverOver = ({ url, locusListDescription, confidence, initials, moi }) => (
+  <div>
+    <a target="_blank" href={url} rel="noreferrer">{locusListDescription}</a>
+    <br />
+    <br />
+    <b>PanelApp gene confidence: &nbsp;</b>
+    {PANEL_APP_CONFIDENCE_DESCRIPTION[confidence]}
+    <br />
+    <br />
+    <b>PanelApp mode of inheritance: </b>
+    {initials}
+    {' '}
+    {moi}
+  </div>
+)
+
+PanelAppHoverOver.propTypes = {
+  url: PropTypes.string.isRequired,
+  locusListDescription: PropTypes.string.isRequired,
+  confidence: PropTypes.string.isRequired,
+  initials: PropTypes.string.isRequired,
+  moi: PropTypes.string.isRequired,
+}
+
+function getPaProps({ panelAppDetails, locusListDescription, paLocusList, geneSymbol }) {
+  if (!panelAppDetails || !paLocusList || !geneSymbol) {
+    return {
+      initials: null,
+      description: locusListDescription,
+      customColor: false,
+    }
+  }
+
+  const { url, panelAppId } = paLocusList
+  const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
+  const moi = panelAppDetails.moi || 'Unknown'
+  const confidence = panelAppDetails.confidence || 'Unknown'
+  const initials = moiToMoiInitials(moi).join(', ') || null
+
+  const description = PanelAppHoverOver({
+    url: fullUrl,
+    locusListDescription,
+    confidence,
+    initials,
+    moi,
+  })
+
+  return {
+    initials,
+    description,
+    customColor: PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppDetails.confidence],
+  }
+}
+
 const BaseLocusListLabels = React.memo((
-  { locusListGuids, locusListsByGuid, locusListConfidence, compact, containerStyle, ...labelProps },
+  {
+    locusListGuids, locusListsByGuid, panelAppDetail,
+    geneSymbol, compact, containerStyle, ...labelProps
+  },
 ) => (
   compact ? (
     <GeneDetailSection
@@ -98,28 +173,30 @@ const BaseLocusListLabels = React.memo((
   ) : (
     <div style={containerStyle}>
       {locusListGuids.map((locusListGuid) => {
-        const panelAppConfidence = locusListConfidence && locusListConfidence[locusListGuid]
-        let { description } = locusListsByGuid[locusListGuid] || {}
-        if (panelAppConfidence) {
-          description = (
-            <div>
-              {description}
-              <br />
-              <br />
-              <b>PanelApp gene confidence: &nbsp;</b>
-              {PANEL_APP_CONFIDENCE_DESCRIPTION[panelAppConfidence]}
-            </div>
-          )
+        const locusList = locusListsByGuid[locusListGuid]
+        const panelAppDetails = panelAppDetail && panelAppDetail[locusListGuid]
+        const { name: label, description: locusListDescription, paLocusList } = locusList
+        const { description, initials, customColor } = (panelAppDetails && paLocusList) ? getPaProps({
+          panelAppDetails,
+          locusListDescription,
+          paLocusList,
+          geneSymbol,
+        }) : {
+          description: label,
+          initials: false,
+          customColor: false,
         }
+
         return (
           <GeneDetailSection
             key={locusListGuid}
             color="teal"
-            customColor={panelAppConfidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppConfidence]}
-            maxWidth="7em"
+            customColor={customColor}
+            detail={initials}
+            maxWidth="8em"
             showEmpty
-            label={(locusListsByGuid[locusListGuid] || {}).name}
-            description={(locusListsByGuid[locusListGuid] || {}).name}
+            label={label}
+            description={label}
             details={description}
             containerStyle={containerStyle}
             {...labelProps}
@@ -131,7 +208,8 @@ const BaseLocusListLabels = React.memo((
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
-  locusListConfidence: PropTypes.object,
+  panelAppDetail: PropTypes.object,
+  geneSymbol: PropTypes.string,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object.isRequired,
   containerStyle: PropTypes.object,
@@ -376,8 +454,9 @@ export const GeneDetails = React.memo((
       {
         hasLocusLists && (
           <LocusListLabels
+            geneSymbol={gene.geneSymbol}
             locusListGuids={gene.locusListGuids}
-            locusListConfidence={gene.locusListConfidence}
+            panelAppDetail={gene.panelAppDetail}
             compact={compact}
             containerStyle={showDivider ? PADDED_INLINE_STYLE : INLINE_STYLE}
             {...labelProps}
