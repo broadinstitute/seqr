@@ -1,8 +1,8 @@
-ui/dist/*
 ui/node_modules/*
 static/*
 !static/fonts/*
 !static/images/*
+!static/admin/*
 deploy/*
 !deploy/docker/seqr/*
 .git

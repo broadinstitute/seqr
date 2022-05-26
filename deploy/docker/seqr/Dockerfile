@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir -r /app/seqr/requirements.txt
 
+COPY admin /app/seqr/admin
 COPY matchmaker /app/seqr/matchmaker
 COPY reference_data /app/seqr/reference_data
 COPY seqr /app/seqr/seqr
@@ -29,4 +30,4 @@ COPY wsgi.py settings.py servctl manage.py deploy/docker/seqr/entrypoint.sh depl
 # Berglass: Store and retrieve secrets on Google Cloud
 COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
-ENTRYPOINT ["exec", "/bin/berglas", "exec", "--", "/app/seqr/entrypoint.sh"]
+ENTRYPOINT ["/bin/berglas", "exec", "--", "/app/seqr/entrypoint.sh"]

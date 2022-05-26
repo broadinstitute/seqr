@@ -13,7 +13,7 @@ gunicorn                          # web server
 jmespath
 openpyxl                          # library for reading/writing Excel files
 pillow                            # required dependency of Djagno ImageField-type database records
-psycopg2                          # postgres database access
+psycopg2-binary                   # postgres database access
 pyliftover                        # GRCh37/GRCh38 liftover
 requests                          # simpler way to make http requests
 redis<3.4                         # client lib for the redis in-memory database - used for caching server-side objects
