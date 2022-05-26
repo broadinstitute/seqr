@@ -29,9 +29,6 @@ DEPLOYMENT_TARGETS = [
     "elasticsearch-snapshot-config",
 ]
 
-# pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
-DEPLOYABLE_COMPONENTS = ['pipeline-runner'] + DEPLOYMENT_TARGETS
-
 GCLOUD_CLIENT = 'gcloud-client'
 
 SECRETS = {
@@ -225,14 +222,6 @@ def deploy_kibana(settings):
         deployment_target=settings["DEPLOY_TO"], verbose_template='kibana health')
 
 
-def deploy_pipeline_runner(settings):
-    print_separator("pipeline_runner")
-
-    docker_build("pipeline-runner", settings, [
-        "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
-    ])
-
-
 def deploy(deployment_target, components, output_dir=None, runtime_settings=None):
     """Deploy one or more components to the kubernetes cluster specified as the deployment_target.
 
@@ -262,8 +251,8 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings=None
         deploy_secrets(settings, components=components[1:])
         return
 
-    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
-    for component in DEPLOYABLE_COMPONENTS:
+    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYMENT_TARGETS
+    for component in DEPLOYMENT_TARGETS:
         if component in components:
             # only deploy requested components
             func_name = "deploy_" + component.replace("-", "_")
