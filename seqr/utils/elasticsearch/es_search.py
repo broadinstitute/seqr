@@ -16,7 +16,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
-    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, \
+    PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
     get_prediction_response_key, XSTOP_FIELD
 from seqr.utils.logging_utils import SeqrLogger
@@ -69,6 +69,7 @@ class EsSearch(object):
         self._family_individual_affected_status = {}
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
+        self._consequence_overrides = {}
         self._filtered_variant_ids = None
         self._paired_index_comp_het = False
         self._no_sample_filters = False
@@ -233,7 +234,8 @@ class EsSearch(object):
         elif rs_ids:
             self._filter(Q('terms', rsid=rs_ids))
 
-        self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
+        clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
+        self._filter_by_frequency(frequencies, clinvar_terms=clinvar_terms)
 
         self._filter_by_in_silico(in_silico)
 
@@ -244,6 +246,12 @@ class EsSearch(object):
         new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
+        if clinvar_terms:
+            self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
+        if hgmd_classes:
+            self._consequence_overrides[HGMD_KEY] = hgmd_classes
+        if splice_ai:
+            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
@@ -266,7 +274,7 @@ class EsSearch(object):
                     self.update_dataset_type(comp_het_dataset_type)
                 return
 
-        dataset_type = self._filter_by_annotations(annotations, pathogenicity, splice_ai, new_svs)
+        dataset_type = self._filter_by_annotations(annotations, new_svs)
 
         if skip_genotype_filter and not inheritance_mode:
             return
@@ -288,14 +296,11 @@ class EsSearch(object):
         if in_silico_filters:
             self._filter(_in_silico_filter(in_silico_filters))
 
-    def _filter_by_frequency(self, frequencies, pathogenicity=None):
+    def _filter_by_frequency(self, frequencies, clinvar_terms=None):
         if not frequencies:
             return
 
-        clinvar_path_filters = [
-            f for f in (pathogenicity or {}).get('clinvar', [])
-            if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
-        ]
+        clinvar_path_filters = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES]
         path_override = bool(clinvar_path_filters) and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
@@ -318,19 +323,25 @@ class EsSearch(object):
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
 
         if path_override:
-            q |= (_pathogenicity_filter({'clinvar': clinvar_path_filters}) & path_q)
+            q |= (_pathogenicity_filter(clinvar_path_filters) & path_q)
 
         self._filter(q)
 
-    def _filter_by_annotations(self, annotations, pathogenicity, splice_ai, new_svs):
-        dataset_type = None
-
-        pathogenicity_filter = _pathogenicity_filter(pathogenicity or {})
+    def _get_annotation_override_filter(self):
+        pathogenicity_filter = _pathogenicity_filter(
+            self._consequence_overrides.get(CLINVAR_KEY), self._consequence_overrides.get(HGMD_KEY),
+        )
+        splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
         splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
         if pathogenicity_filter and splice_ai_filter:
-            annotation_override_filter = _or_filters([pathogenicity_filter, splice_ai_filter])
+            return _or_filters([pathogenicity_filter, splice_ai_filter])
         else:
-            annotation_override_filter = pathogenicity_filter or splice_ai_filter
+            return pathogenicity_filter or splice_ai_filter
+
+
+    def _filter_by_annotations(self, annotations, new_svs):
+        dataset_type = None
+        annotation_override_filter = self._get_annotation_override_filter()
 
         if self._allowed_consequences:
             consequences_filter = _annotations_filter(self._allowed_consequences)
@@ -468,6 +479,7 @@ class EsSearch(object):
 
         comp_het_consequences = set(self._allowed_consequences)
         dataset_type = _dataset_type_for_annotations(annotations)
+        annotation_override_filter = self._get_annotation_override_filter()
         if annotations_secondary:
             self._allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
@@ -475,7 +487,10 @@ class EsSearch(object):
             if dataset_type and dataset_type != secondary_dataset_type:
                 dataset_type = None
 
-        comp_het_search = self._search.filter(_annotations_filter(comp_het_consequences))
+        annotation_filter = _annotations_filter(comp_het_consequences)
+        if annotation_override_filter:
+            annotation_filter |= annotation_override_filter
+        comp_het_search = self._search.filter(annotation_filter)
 
         comp_het_qs_by_index = defaultdict(list)
         if dataset_type or len(self._indices) <= 1:
@@ -905,6 +920,10 @@ class EsSearch(object):
             for family_guid, individual_affected_status in self._family_individual_affected_status.items()
         }
 
+        self._allowed_consequences += self._consequence_overrides.keys()
+        if self._allowed_consequences_secondary:
+            self._allowed_consequences_secondary += self._consequence_overrides.keys()
+
         compound_het_pairs_by_gene = {}
         for gene_agg in response.aggregations.genes.buckets:
             self._parse_compound_het_gene(gene_agg, compound_het_pairs_by_gene, family_unaffected_individual_guids)
@@ -990,14 +1009,23 @@ class EsSearch(object):
 
     def _filter_invalid_annotation_compound_hets(self, gene_id, gene_variants):
         for variant in gene_variants:
+            all_gene_consequences = []
+            if variant.get('svType'):
+                all_gene_consequences.append(variant['svType'])
+            if variant.get(CLINVAR_KEY, {}).get('clinicalSignificance') in self._consequence_overrides.get(CLINVAR_KEY, []):
+                all_gene_consequences.append(CLINVAR_KEY)
+            if variant.get(HGMD_KEY, {}).get('class') in self._consequence_overrides.get(HGMD_KEY, []):
+                all_gene_consequences.append(HGMD_KEY)
+            splice_ai = variant.get('predictions', {}).get(SPLICE_AI_FIELD)
+            if splice_ai and splice_ai >= self._consequence_overrides.get(SPLICE_AI_FIELD, 100):
+                all_gene_consequences.append(SPLICE_AI_FIELD)
+
             variant['gene_consequences'] = {}
             for k, transcripts in variant['transcripts'].items():
-                variant['gene_consequences'][k] = [
+                variant['gene_consequences'][k] = all_gene_consequences + [
                     transcript['majorConsequence'] for transcript in transcripts if
                     transcript.get('majorConsequence')
                 ]
-                if variant.get('svType'):
-                    variant['gene_consequences'][k].append(variant['svType'])
 
         return [variant for variant in gene_variants if any(
             consequence in self._allowed_consequences + (self._allowed_consequences_secondary or [])
@@ -1445,24 +1473,30 @@ def _pos_offset_range_filter(chrom, pos, offset):
         'gte': get_xpos(chrom, max(pos - offset, MIN_POS)),
     }
 
+def _parse_pathogenicity_filter(pathogenicity):
+    clinvar_filters = pathogenicity.get(CLINVAR_KEY, [])
+    hgmd_filters = pathogenicity.get(HGMD_KEY, [])
 
-def _pathogenicity_filter(pathogenicity):
-    clinvar_filters = pathogenicity.get('clinvar', [])
-    hgmd_filters = pathogenicity.get('hgmd', [])
-
-    pathogenicity_filter = None
+    clinvar_clinical_significance_terms = set()
     if clinvar_filters:
-        clinvar_clinical_significance_terms = set()
         for clinvar_filter in clinvar_filters:
             clinvar_clinical_significance_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
-        pathogenicity_filter = Q('terms', clinvar_clinical_significance=sorted(list(clinvar_clinical_significance_terms)))
 
+    hgmd_class = set()
     if hgmd_filters:
-        hgmd_class = set()
         for hgmd_filter in hgmd_filters:
             hgmd_class.update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
-        hgmd_q = Q('terms', hgmd_class=sorted(list(hgmd_class)))
+    return sorted(clinvar_clinical_significance_terms), sorted(hgmd_class)
+
+
+def _pathogenicity_filter(clinvar_terms, hgmd_classes=None):
+    pathogenicity_filter = None
+    if clinvar_terms:
+        pathogenicity_filter = Q('terms', clinvar_clinical_significance=clinvar_terms)
+
+    if hgmd_classes:
+        hgmd_q = Q('terms', hgmd_class=hgmd_classes)
         pathogenicity_filter = pathogenicity_filter | hgmd_q if pathogenicity_filter else hgmd_q
 
     return pathogenicity_filter
