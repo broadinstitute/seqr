@@ -6,8 +6,7 @@ import logging
 import os
 import sys
 
-from deploy.servctl_utils.deploy_command_utils import deploy, DEPLOYABLE_COMPONENTS, DEPLOYMENT_TARGETS, \
-    DEPLOYMENT_ENVS, SECRETS
+from deploy.servctl_utils.deploy_command_utils import deploy, DEPLOYMENT_TARGETS, DEPLOYMENT_ENVS, SECRETS
 from deploy.servctl_utils.other_command_utils import delete_component, delete_all
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
@@ -22,7 +21,7 @@ DELETE_ALL_COMMAND = 'delete-all'
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
 
-COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS
+COMPONENT_ARG_CHOICES = DEPLOYMENT_TARGETS
 DEPLOYMENT_TARGETS_SET = set(DEPLOYMENT_ENVS)
 
 ## DELETE_COMMAND
