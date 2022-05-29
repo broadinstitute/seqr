@@ -258,6 +258,19 @@ else:
     HIJACK_LOGIN_REDIRECT_URL = '/'
     TEMPLATE_DIRS.append('ui')
 
+    SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
+    try:
+        SECRET_KEY = open(SECRET_FILE).read().strip()
+    except IOError:
+        try:
+            SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
+            with open(SECRET_FILE, 'w') as f:
+                f.write(SECRET_KEY)
+        except IOError as e:
+            print('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
+        SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
+
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -275,17 +288,6 @@ TEMPLATES = [
     },
 ]
 
-    SECRET_FILE = os.path.join(BASE_DIR, 'django_key')
-    try:
-        SECRET_KEY = open(SECRET_FILE).read().strip()
-    except IOError:
-        try:
-            SECRET_KEY = ''.join(random.SystemRandom().choice(string.printable) for i in range(50))
-            with open(SECRET_FILE, 'w') as f:
-                f.write(SECRET_KEY)
-        except IOError as e:
-            logger.warning('Unable to generate {}: {}'.format(os.path.abspath(SECRET_FILE), e))
-        SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
 #########################################################
 #  seqr specific settings
