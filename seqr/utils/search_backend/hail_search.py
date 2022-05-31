@@ -642,7 +642,7 @@ class HailSearch(object):
             response_keys.append('selectedMainTranscriptId')
 
         results = results.key_by(VARIANT_KEY_FIELD)
-        return results.select(response_keys)
+        return results.select(*response_keys)
 
     def search(self, page=1, num_results=100):
         if self.ht:
