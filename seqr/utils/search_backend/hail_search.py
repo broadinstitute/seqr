@@ -623,6 +623,7 @@ class HailSearch(object):
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in ANNOTATION_FIELDS.items()},
         )
+        response_keys = ['genomeVersion', *CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys()]
         if self._allowed_consequences:
             consequences_set = hl.set(self._allowed_consequences)
             selected_transcript_expr = results.sortedTranscriptConsequences.find(
@@ -638,9 +639,10 @@ class HailSearch(object):
                 consequences_set.contains(results.sortedTranscriptConsequences[0].major_consequence),
                 hl.missing(hl.dtype('str')), selected_transcript_expr,
             ))
+            response_keys.append('selectedMainTranscriptId')
 
         results = results.key_by(VARIANT_KEY_FIELD)
-        return results.select('genomeVersion', *CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
+        return results.select(response_keys)
 
     def search(self, page=1, num_results=100):
         if self.ht:
