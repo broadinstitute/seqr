@@ -593,7 +593,7 @@ class HailSearch(object):
         ch_ht = ch_ht.annotate(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])}) # TODO #2496: sort with self._sort
         ch_ht = ch_ht.annotate(**{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
         ch_ht = ch_ht.key_by(VARIANT_KEY_FIELD).select(GROUPED_VARIANTS_FIELD)
-        ch_ht = ch_ht.distinct()
+        return ch_ht.distinct()
 
     def _get_valid_comp_het_annotation_pairs(self, ch_ht):
         primary_cs = hl.literal(set(self._allowed_consequences))
