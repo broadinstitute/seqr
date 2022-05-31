@@ -8,7 +8,7 @@ from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, MAX_NO_LOCATION_COMP_HET_FAMILIES, SPLICE_AI_FIELD, \
-    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER, PATH_FREQ_OVERRIDE_CUTOFF
+    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, PATH_FREQ_OVERRIDE_CUTOFF
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status
 
 logger = logging.getLogger(__name__)
@@ -277,7 +277,7 @@ class HailSearch(object):
 
         clinvar_path_filters = [
             f for f in (pathogenicity or {}).get('clinvar', [])
-            if f in {CLINVAR_PATH_FILTER, CLINVAR_LIKELY_PATH_FILTER}
+            if f in {'pathogenic', 'likely_pathogenic'} # TODO use constants
         ]
         has_path_override = bool(clinvar_path_filters) and any(
                 freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
