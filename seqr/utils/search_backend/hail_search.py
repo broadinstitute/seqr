@@ -8,7 +8,7 @@ from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, MAX_NO_LOCATION_COMP_HET_FAMILIES, SPLICE_AI_FIELD, \
-    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, PATH_FREQ_OVERRIDE_CUTOFF
+    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status
 
 logger = logging.getLogger(__name__)
@@ -142,6 +142,7 @@ class HailSearch(object):
         self.previous_search_results = previous_search_results or {}
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
+        self._consequence_overrides = {}
 
         self.ht = None
         self._comp_het_ht = None
@@ -166,6 +167,17 @@ class HailSearch(object):
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
         has_location_filter = genes or intervals
 
+        clinvar_terms = set()
+        for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
+            clinvar_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
+        if clinvar_terms:
+            self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
+        hgmd_classes = set()
+        for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
+            hgmd_classes.update(HGMD_CLASS_MAP.get(hgmd_filter, []))
+        if hgmd_classes:
+            self._consequence_overrides[HGMD_KEY] = hgmd_classes
+
         if has_location_filter:
             self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'))
         elif variant_ids:
@@ -178,7 +190,7 @@ class HailSearch(object):
 
         self._filter_custom(custom_query)
 
-        self._filter_by_frequency(frequencies, pathogenicity=pathogenicity)
+        self._filter_by_frequency(frequencies, clinvar_terms=clinvar_terms)
 
         self._filter_by_in_silico(in_silico)
 
@@ -189,6 +201,8 @@ class HailSearch(object):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         # TODO #2663: new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
+        if splice_ai:
+            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -213,12 +227,12 @@ class HailSearch(object):
                     'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            self._filter_compound_hets(annotations_secondary, quality_filter, has_location_filter)
+            self._comp_het_ht = self._get_compound_hets(annotations_secondary, quality_filter, has_location_filter)
             if inheritance_mode == COMPOUND_HET:
                 self.ht = None
                 return
 
-        self._filter_by_annotations(pathogenicity, splice_ai)
+        self.ht = self._filter_by_annotations(self._allowed_consequences)
 
         self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
 
@@ -268,17 +282,14 @@ class HailSearch(object):
             # or should come up with a simple json -> hail query parsing here
             raise NotImplementedError
 
-    def _filter_by_frequency(self, frequencies, pathogenicity=None):
+    def _filter_by_frequency(self, frequencies, clinvar_terms=None):
         if not frequencies:
             return
 
         #  UI bug causes sv freq filter to be added despite no SV data
         frequencies.pop('sv_callset', None)
 
-        clinvar_path_filters = [
-            f for f in (pathogenicity or {}).get('clinvar', [])
-            if f in {'pathogenic', 'likely_pathogenic'} # TODO use constants
-        ]
+        clinvar_path_terms = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES]
         has_path_override = bool(clinvar_path_filters) and any(
                 freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
@@ -288,8 +299,8 @@ class HailSearch(object):
             callset_f = self.ht.AF <= callset_filter['af']
             if has_path_override and callset_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                 callset_f |= (
-                        self._get_pathogenicity_filter({'clinvar': clinvar_path_filters}) &
-                        (self.ht.AF <= PATH_FREQ_OVERRIDE_CUTOFF)
+                    self._get_clinvar_filter(clinvar_path_terms) &
+                    (self.ht.AF <= PATH_FREQ_OVERRIDE_CUTOFF)
                 )
             self.ht = self.ht.filter(callset_f)
         elif callset_filter.get('ac') is not None:
@@ -302,8 +313,8 @@ class HailSearch(object):
                 pop_filter = self.ht[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
-                            self._get_pathogenicity_filter({'clinvar': clinvar_path_filters}) &
-                            (self.ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                        self._get_clinvar_filter(clinvar_path_terms) &
+                        (self.ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
                 ac_field = POPULATIONS[pop]['ac']
@@ -360,51 +371,39 @@ class HailSearch(object):
         score_path = PREDICTION_FIELDS_CONFIG[in_silico]
         return self.ht[score_path[0]][score_path[1]]
 
-    def _filter_by_annotations(self, pathogenicity, splice_ai):
+    def _filter_by_annotations(self, allowed_consequences):
         annotation_filters = []
-        pathogenicity_filter = self._get_pathogenicity_filter(pathogenicity)
-        if pathogenicity_filter is not None:
-            annotation_filters.append(pathogenicity_filter)
+
+        clinvar_terms = self._consequence_overrides.get(CLINVAR_KEY)
+        if clinvar_terms:
+            annotation_filters.append(self._get_clinvar_filter(clinvar_terms))
+        hgmd_classes = self._consequence_overrides.get(HGMD_KEY)
+        if hgmd_classes:
+            allowed_classes = hl.set(hgmd_classes)
+            annotation_filters.append(allowed_classes.contains(self.ht.hgmd['class']))
+        splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
         if splice_ai:
             annotation_filters.append(self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(splice_ai))
-        if self._allowed_consequences:
-            annotation_filters.append(self._get_filtered_transcript_consequences(self._allowed_consequences))
+
+        if allowed_consequences:
+            annotation_filters.append(self._get_filtered_transcript_consequences(allowed_consequences))
 
         if not annotation_filters:
-            return
+            return self.ht
         annotation_filter = annotation_filters[0]
         for af in annotation_filters[1:]:
             annotation_filter |= af
 
-        self.ht = self.ht.filter(annotation_filter)
+        return self.ht.filter(annotation_filter)
 
     def _get_filtered_transcript_consequences(self, allowed_consequences):
         allowed_consequences_set = hl.set(allowed_consequences)
         consequence_terms = self.ht.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
         return consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))
 
-    def _get_pathogenicity_filter(self, pathogenicity):
-        pathogenicity = pathogenicity or {}
-        clinvar_filters = pathogenicity.get('clinvar', [])
-        hgmd_filters = pathogenicity.get('hgmd', [])
-
-        pathogenicity_filter = None
-        clinvar_clinical_significance_terms = set()
-        for clinvar_filter in clinvar_filters:
-            clinvar_clinical_significance_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
-        if clinvar_clinical_significance_terms:
-            allowed_significances = hl.set(clinvar_clinical_significance_terms)
-            pathogenicity_filter = allowed_significances.contains(self.ht.clinvar.clinical_significance)
-
-        hgmd_classes = set()
-        for hgmd_filter in hgmd_filters:
-            hgmd_classes.update(HGMD_CLASS_MAP.get(hgmd_filter, []))
-        if hgmd_classes:
-            allowed_classes = hl.set(hgmd_classes)
-            hgmd_filter = allowed_classes.contains(self.ht.hgmd['class'])
-            pathogenicity_filter = hgmd_filter if pathogenicity_filter is None else pathogenicity_filter | hgmd_filter
-
-        return pathogenicity_filter
+    def _get_clinvar_filter(self, clinvar_terms):
+        allowed_significances = hl.set(clinvar_terms)
+        return allowed_significances.contains(self.ht.clinvar.clinical_significance)
 
     def _annotate_filtered_genotypes(self, inheritance_mode, inheritance_filter, quality_filter):
         self.ht = self.ht.join(self._filter_by_genotype(inheritance_mode, inheritance_filter, quality_filter))
@@ -546,7 +545,7 @@ class HailSearch(object):
             q |= gt_filter(family_ht[f'GT_{i}'])
         return q
 
-    def _filter_compound_hets(self, annotations_secondary, quality_filter, has_location_filter):
+    def _get_compound_hets(self, annotations_secondary, quality_filter, has_location_filter):
         if not self._allowed_consequences:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
@@ -562,7 +561,7 @@ class HailSearch(object):
             self._allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
 
-        ch_ht = self.ht.filter(self._get_filtered_transcript_consequences(comp_het_consequences))
+        ch_ht = self._filter_by_annotations(comp_het_consequences)
         ch_ht = ch_ht.join(self._filter_by_genotype(
             inheritance_mode=COMPOUND_HET, inheritance_filter={}, quality_filter=quality_filter,
         ))
@@ -579,7 +578,6 @@ class HailSearch(object):
 
         # Filter variant pairs for primary/secondary consequences
         if self._allowed_consequences and self._allowed_consequences_secondary:
-            # Make a copy of lists to prevent blowing up memory usage
             primary_cs = hl.literal(set(self._allowed_consequences))
             secondary_cs = hl.literal(set(self._allowed_consequences_secondary))
             ch_ht = ch_ht.annotate(
@@ -615,8 +613,6 @@ class HailSearch(object):
         ch_ht = ch_ht.annotate(**{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
         ch_ht = ch_ht.key_by(VARIANT_KEY_FIELD).select(GROUPED_VARIANTS_FIELD)
         ch_ht = ch_ht.distinct()
-
-        self._comp_het_ht = ch_ht
 
     def _format_results(self, ht):
         results = ht.annotate(
