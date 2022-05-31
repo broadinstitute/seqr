@@ -138,11 +138,10 @@ class HailSearch(object):
         self._family_individual_affected_status = {}
         self._user = user
         self._sort = sort
-        self._return_all_queried_families = return_all_queried_families
+        self._return_all_queried_families = return_all_queried_families # In production: need to implement for reloading saved variants
         self.previous_search_results = previous_search_results or {}
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
-        self._sample_table_queries = {}
 
         self.ht = None
         self._comp_het_ht = None
@@ -624,6 +623,22 @@ class HailSearch(object):
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in ANNOTATION_FIELDS.items()},
         )
+        if self._allowed_consequences:
+            consequences_set = hl.set(self._allowed_consequences)
+            selected_transcript_expr = results.sortedTranscriptConsequences.find(
+                lambda t: consequences_set.contains(t.major_consequence)).transcript_id
+            if self._allowed_consequences_secondary:
+                consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
+                selected_transcript_expr = hl.bind(lambda transcript_id: hl.or_else(
+                    transcript_id, results.sortedTranscriptConsequences.find(
+                        lambda t: consequences_secondary_set.contains(t.major_consequence)).transcript_id),
+                    selected_transcript_expr)
+
+            results = results.annotate(selectedMainTranscriptId=hl.if_else(
+                consequences_set.contains(results.sortedTranscriptConsequences[0].major_consequence),
+                hl.missing(hl.dtype('str')), selected_transcript_expr,
+            ))
+
         results = results.key_by(VARIANT_KEY_FIELD)
         return results.select('genomeVersion', *CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys())
 
