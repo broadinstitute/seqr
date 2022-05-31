@@ -142,7 +142,7 @@ class HailSearch(object):
         self.previous_search_results = previous_search_results or {}
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
-        self._consequence_overrides = {}
+        self._consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None}
 
         self.ht = None
         self._comp_het_ht = None
@@ -167,16 +167,10 @@ class HailSearch(object):
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
         has_location_filter = genes or intervals
 
-        clinvar_terms = set()
         for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
-            clinvar_terms.update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
-        if clinvar_terms:
-            self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
-        hgmd_classes = set()
+            self._consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
         for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
-            hgmd_classes.update(HGMD_CLASS_MAP.get(hgmd_filter, []))
-        if hgmd_classes:
-            self._consequence_overrides[HGMD_KEY] = hgmd_classes
+            self._consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
         if has_location_filter:
             self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'))
@@ -200,9 +194,7 @@ class HailSearch(object):
 
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         # TODO #2663: new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
-        splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
-        if splice_ai:
-            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
+        self._consequence_overrides[SPLICE_AI_FIELD] = annotations.pop(SPLICE_AI_FIELD, None)
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
 
         inheritance_mode = (inheritance or {}).get('mode')
@@ -374,16 +366,14 @@ class HailSearch(object):
     def _filter_by_annotations(self, allowed_consequences):
         annotation_filters = []
 
-        clinvar_terms = self._consequence_overrides.get(CLINVAR_KEY)
-        if clinvar_terms:
-            annotation_filters.append(self._get_clinvar_filter(clinvar_terms))
-        hgmd_classes = self._consequence_overrides.get(HGMD_KEY)
-        if hgmd_classes:
-            allowed_classes = hl.set(hgmd_classes)
+        if self._consequence_overrides[CLINVAR_KEY]:
+            annotation_filters.append(self._get_clinvar_filter(self._consequence_overrides[CLINVAR_KEY]))
+        if self._consequence_overrides[HGMD_KEY]:
+            allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
             annotation_filters.append(allowed_classes.contains(self.ht.hgmd['class']))
-        splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
-        if splice_ai:
-            annotation_filters.append(self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(splice_ai))
+        if self._consequence_overrides[SPLICE_AI_FIELD]:
+            annotation_filters.append(
+                self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(self._consequence_overrides[SPLICE_AI_FIELD]))
 
         if allowed_consequences:
             annotation_filters.append(self._get_filtered_transcript_consequences(allowed_consequences))
@@ -578,16 +568,7 @@ class HailSearch(object):
 
         # Filter variant pairs for primary/secondary consequences
         if self._allowed_consequences and self._allowed_consequences_secondary:
-            primary_cs = hl.literal(set(self._allowed_consequences))
-            secondary_cs = hl.literal(set(self._allowed_consequences_secondary))
-            ch_ht = ch_ht.annotate(
-                v1_csqs=ch_ht.v1.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence),
-                v2_csqs=ch_ht.v2.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence)
-            )
-            ch_ht = ch_ht.filter(
-                (ch_ht.v1_csqs.any(lambda c: primary_cs.contains(c)) & ch_ht.v2_csqs.any(lambda c: secondary_cs.contains(c))) |
-                (ch_ht.v1_csqs.any(lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(lambda c: primary_cs.contains(c)))
-            )
+            ch_ht = ch_ht.filter(self._get_valid_comp_het_annotation_pairs(ch_ht))
 
         # Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
 
@@ -613,6 +594,35 @@ class HailSearch(object):
         ch_ht = ch_ht.annotate(**{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
         ch_ht = ch_ht.key_by(VARIANT_KEY_FIELD).select(GROUPED_VARIANTS_FIELD)
         ch_ht = ch_ht.distinct()
+
+    def _get_valid_comp_het_annotation_pairs(self, ch_ht):
+        primary_cs = hl.literal(set(self._allowed_consequences))
+        secondary_cs = hl.literal(set(self._allowed_consequences_secondary))
+        ch_ht = ch_ht.annotate(
+            v1_csqs=ch_ht.v1.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence),
+            v2_csqs=ch_ht.v2.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence)
+        )
+        has_annotation_filter = (ch_ht.v1_csqs.any(
+            lambda c: primary_cs.contains(c)) & ch_ht.v2_csqs.any(
+            lambda c: secondary_cs.contains(c))) | (ch_ht.v1_csqs.any(
+            lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(
+            lambda c: primary_cs.contains(c)))
+        if self._consequence_overrides[CLINVAR_KEY]:
+            allowed_terms = hl.set(self._consequence_overrides[CLINVAR_KEY])
+            has_annotation_filter |= (
+                allowed_terms.contains(ch_ht.v1.clinvar.clinicalSignificance) |
+                allowed_terms.contains(ch_ht.v2.clinvar.clinicalSignificance))
+        if self._consequence_overrides[HGMD_KEY]:
+            allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
+            has_annotation_filter |= (
+                allowed_classes.contains(ch_ht.v1.hgmd['class']) |
+                allowed_classes.contains(ch_ht.v2.hgmd['class']))
+        if self._consequence_overrides[SPLICE_AI_FIELD]:
+            splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
+            has_annotation_filter |= (
+                    (ch_ht.v1.predictions.splice_ai >= splice_ai) |
+                    (ch_ht.v2.predictions.splice_ai >= splice_ai))
+        return has_annotation_filter
 
     def _format_results(self, ht):
         results = ht.annotate(
