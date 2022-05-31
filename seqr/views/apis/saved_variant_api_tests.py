@@ -8,9 +8,10 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
-    TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, \
-    AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
+    FAMILY_NOTE_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -168,10 +169,6 @@ class SavedVariantAPITest(object):
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
             }},
-            'tpms': {
-                'ENSG00000135953': {
-                    'geneId': 'ENSG00000135953', 'tpm': 8.38, 'sampleTissueType': 'M',
-            }},
         }})
 
         # include project tag types
@@ -193,6 +190,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         locus_list_fields.update(LOCUS_LIST_FIELDS)
+        locus_list_fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertEqual(len(response_json['locusListsByGuid']), 2)
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
 
@@ -201,13 +199,13 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         response_keys = {
-            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid',
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid', 'projectsByGuid'
         }
         response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
-        family_fields = {'individualGuids'}
+        family_fields = {'individualGuids', 'hasRnaTpmData'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
         individual_fields = {'igvSampleGuids'}
@@ -216,6 +214,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
         self.assertEqual(len(response_json['locusListsByGuid']), 1)
+        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'familiesLoaded': True}})
 
         # get variants with no tags for whole project
         response = self.client.get('{}?includeNoteVariants=true'.format(url))
@@ -879,6 +878,7 @@ class SavedVariantAPITest(object):
 
         saved_variant = SavedVariant.objects.get(guid=VARIANT_GUID)
         self.assertEqual(saved_variant.selected_main_transcript_id, transcript_id)
+        self.assertEqual(get_json_for_saved_variant(saved_variant, add_details=True)['selectedMainTranscriptId'], transcript_id)
 
     def test_update_variant_acmg_classification(self):
         update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])

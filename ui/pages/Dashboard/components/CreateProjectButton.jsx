@@ -13,7 +13,7 @@ const PROJECT_FIELDS = [
   ...EDITABLE_PROJECT_FIELDS,
   GENOME_VERSION_FIELD,
   { name: 'isDemo', label: 'Demo Project', component: BooleanCheckbox, inline: true },
-  { name: 'disableMme', label: 'Disable Matchmaker', component: BooleanCheckbox, inline: true },
+  { name: 'disableMme', label: 'Disable Matchmaker', component: BooleanCheckbox, inline: true, width: 8 },
 ]
 
 const ANVIL_PROJECT_FIELDS = [

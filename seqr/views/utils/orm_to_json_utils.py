@@ -7,6 +7,7 @@ from collections import defaultdict
 from copy import deepcopy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
+from django.db.models.functions import Lower
 from django.contrib.auth.models import User
 
 from reference_data.models import HumanPhenotypeOntology
@@ -444,7 +445,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False):
     """
     def _process_result(variant_json, saved_variant):
         if add_details:
-            variant_json.update(saved_variant.saved_variant_json)
+            variant_json.update({k: v for k, v in saved_variant.saved_variant_json.items() if k not in variant_json})
         variant_json['familyGuids'] = [saved_variant.family.guid]
         return variant_json
 
@@ -809,7 +810,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
 
     if project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-        users_by_email = {u.email: u for u in User.objects.filter(email__in = permission_levels.keys())}
+        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
         for email, permission in permission_levels.items():
             if email == SERVICE_ACCOUNT_FOR_ANVIL:
                 continue

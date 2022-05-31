@@ -26,6 +26,7 @@ from seqr.views.apis.family_api import \
     update_family_note, \
     delete_family_note, \
     family_page_data, \
+    get_family_rna_seq_data, \
     family_variant_tag_summary
 
 from seqr.views.apis.individual_api import \
@@ -109,14 +110,14 @@ from seqr.views.apis.users_api import \
     forgot_password
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, receive_rna_seq_table, load_rna_seq_sample_data, proxy_to_kibana
+    update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
     get_cmg_projects, \
     sample_metadata_export, \
     seqr_stats
-from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, rna_seq_expression, \
+from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, \
     bulk_update_family_analysed_by
 from seqr.views.apis.superuser_api import get_all_users
 
@@ -180,6 +181,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/note/create': create_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/delete': delete_family_note,
+    'family/(?P<family_guid>[\w.|-]+)/rna_seq_data/(?P<gene_id>[\w.|-]+)': get_family_rna_seq_data,
 
     'dashboard': dashboard_page_data,
 
@@ -291,16 +293,13 @@ api_endpoints = {
     'data_management/delete_index': delete_index,
     'data_management/upload_qc_pipeline_output': upload_qc_pipeline_output,
     'data_management/get_all_users': get_all_users,
-    'data_management/upload_rna_seq': receive_rna_seq_table,
-    'data_management/update_rna_seq/(?P<upload_file_id>[^/]+)': update_rna_seq,
+    'data_management/update_rna_seq': update_rna_seq,
     'data_management/load_rna_seq_sample/(?P<sample_guid>[^/]+)': load_rna_seq_sample_data,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
     'summary_data/update_analysed_by': bulk_update_family_analysed_by,
-
-    'rna_seq_expression/gene/(?P<gene>[^/]+)/tissues/(?P<tissues>[^/]+)': rna_seq_expression,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs
