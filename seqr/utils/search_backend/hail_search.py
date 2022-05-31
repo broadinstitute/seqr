@@ -184,7 +184,7 @@ class HailSearch(object):
 
         self._filter_custom(custom_query)
 
-        self._filter_by_frequency(frequencies, clinvar_terms=clinvar_terms)
+        self._filter_by_frequency(frequencies)
 
         self._filter_by_in_silico(in_silico)
 
@@ -274,15 +274,15 @@ class HailSearch(object):
             # or should come up with a simple json -> hail query parsing here
             raise NotImplementedError
 
-    def _filter_by_frequency(self, frequencies, clinvar_terms=None):
+    def _filter_by_frequency(self, frequencies):
         if not frequencies:
             return
 
         #  UI bug causes sv freq filter to be added despite no SV data
         frequencies.pop('sv_callset', None)
 
-        clinvar_path_terms = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES]
-        has_path_override = bool(clinvar_path_filters) and any(
+        clinvar_path_terms = [f for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES]
+        has_path_override = bool(clinvar_path_terms) and any(
                 freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
         # In production: will not have callset frequency, may rename these fields
