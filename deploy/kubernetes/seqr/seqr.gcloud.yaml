@@ -251,6 +251,7 @@ spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: 'default-pool'
 ---
+{% if not SEQR_SERVICE_IP %}
 # docs @ https://kubernetes.github.io/ingress-nginx/user-guide/basic-usage/
 kind: Ingress
 apiVersion: networking.k8s.io/v1
@@ -282,3 +283,4 @@ spec:
                 number: {{ SEQR_SERVICE_PORT }}
           path: /
           pathType: ImplementationSpecific
+{% endif %}
