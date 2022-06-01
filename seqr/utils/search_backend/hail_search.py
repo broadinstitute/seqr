@@ -110,21 +110,20 @@ VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 
 
-class VariantHailTableQuery(object):
+class BaseHailTableQuery(object):
 
-    def __init__(self, data_source, genome_version, intervals):
+    def __init__(self, data_source, genome_version, intervals=None, exclude_intervals=False):
         self._genome_version = genome_version
         self._comp_het_ht = None
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None}
 
-        self._ht = self.load_table(data_source, intervals)
+        self._ht = self.load_table(data_source, intervals, exclude_intervals)
 
     @staticmethod
-    def load_table(data_source, intervals):
-        return hl.read_table(
-            f'/hail_datasets/{data_source}.ht', _intervals=intervals, _filter_intervals=bool(intervals))
+    def load_table(data_source, intervals, exclude_intervals):
+        raise NotImplementedError
 
     @staticmethod
     def _sample_table(sample):
@@ -153,9 +152,6 @@ class VariantHailTableQuery(object):
 
         if quality_filter.get('vcf_filter') is not None:
             self._filter_vcf_filters()
-
-    def exclude_intervals(self, intervals):
-        self._ht = hl.filter_intervals(self._ht, intervals, keep=False)
 
     def _filter_rsids(self, rs_ids):
         self._ht = self._ht.filter(hl.set(rs_ids).contains(self._ht.rsid))
@@ -600,23 +596,35 @@ class VariantHailTableQuery(object):
         return result
 
 
-# TODO use base class
-class GcnvHailTableQuery(VariantHailTableQuery):
+class VariantHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
-    def load_table(data_source, intervals):
-        ht = hl.read_table(f'/hail_datasets/{data_source}.ht')
-        if intervals:
-            ht = ht.filter(hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval)))
+    def load_table(data_source, intervals, exclude_intervals):
+        kwargs = {} if exclude_intervals else {'_intervals': intervals, '_filter_intervals': bool(intervals)}
+        ht = hl.read_table( f'/hail_datasets/{data_source}.ht', **kwargs)
+        if intervals and exclude_intervals:
+            ht = hl.filter_intervals(ht, intervals, keep=False)
         return ht
 
 
-class AllDataTypeHailTableQuery(VariantHailTableQuery):
+class GcnvHailTableQuery(BaseHailTableQuery):
 
     @staticmethod
-    def load_table(data_source, intervals):
-        ht = VariantHailTableQuery.load_table(data_source, intervals)
-        sv_ht = GcnvHailTableQuery.load_table(data_source, intervals)
+    def load_table(data_source, intervals, exclude_intervals):
+        ht = hl.read_table(f'/hail_datasets/{data_source}.ht')
+        if intervals:
+            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
+                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
+            ht = ht.filter(interval_filter)
+        return ht
+
+
+class AllDataTypeHailTableQuery(BaseHailTableQuery):
+
+    @staticmethod
+    def load_table(*args):
+        ht = VariantHailTableQuery.load_table(*args)
+        sv_ht = GcnvHailTableQuery.load_table(*args)
 
         ht = ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')  # TODO key_by will break genotype joining
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
@@ -652,7 +660,7 @@ class HailSearch(object):
         self._return_all_queried_families = return_all_queried_families # In production: need to implement for reloading saved variants
         self.previous_search_results = previous_search_results or {}
 
-    def _load_table(self, intervals=None):
+    def _load_table(self, **kwargs):
         # TODO filter by searched dataset type
         data_sources_by_type = defaultdict(list)
         for s in self.samples:
@@ -664,12 +672,10 @@ class HailSearch(object):
                 f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources)}')
         data_sources_by_type = {k: v[0] for k, v in data_sources_by_type.items()}
 
-        kwargs = {'genome_version': self._genome_version, 'intervals': intervals}
-        self._query_wrapper = VariantHailTableQuery(data_sources_by_type[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
-
         # TODO load correct data type
-        # GcnvHailTableQuery(data_sources_by_type[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
-        # AllDataTypeHailTableQuery(data_sources_by_type, **kwargs)
+        data_source = data_sources_by_type[Sample.DATASET_TYPE_VARIANT_CALLS]
+        query_cls = VariantHailTableQuery
+        self._query_wrapper = query_cls(data_source, genome_version=self._genome_version, **kwargs)
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
@@ -758,11 +764,7 @@ class HailSearch(object):
                     'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
             ]
 
-        if exclude_locations:
-            self._load_table()
-            self._query_wrapper.exclude_intervals(intervals)
-        else:
-            self._load_table(intervals=parsed_intervals)
+        self._load_table(intervals=parsed_intervals, exclude_intervals=exclude_locations)
 
     def search(self, page=1, num_results=100):
         hail_results, total_results = self._query_wrapper.search(page, num_results, self._sort)
