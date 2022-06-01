@@ -633,24 +633,11 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 class HailSearch(object):
 
     def __init__(self, families, previous_search_results=None, return_all_queried_families=False, user=None, sort=None):
-        self.samples_by_family = defaultdict(dict)
-        samples = Sample.objects.filter(is_active=True, individual__family__in=families)
+        self.samples = Sample.objects.filter(
+            is_active=True, individual__family__in=families,
+        ).select_related('individual__family', 'individual__family__project')
 
-        data_sources_by_type = defaultdict(list)
-        for s in samples:
-            data_sources_by_type[s.dataset_type].append(s.elasticsearch_index) # In production: should use a different model field
-        multi_data_sources = next((data_sources for data_sources in data_sources_by_type.values() if len(data_sources) > 1), None)
-        if multi_data_sources:
-            raise InvalidSearchException(
-                f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources)}')
-        self._data_sources = {k: v[0] for k, v in data_sources_by_type.items()}
-
-        projects = set()
-        for s in samples.select_related('individual__family', 'individual__family__project'):
-            family = s.individual.family
-            self.samples_by_family[family.guid][s.sample_id] = s
-            projects.add(family.project)
-
+        projects = {s.individual.family.project for s in self.samples}
         genome_version_projects = defaultdict(list)
         for p in projects:
             genome_version_projects[p.get_genome_version_display()].append(p.name)
@@ -666,12 +653,23 @@ class HailSearch(object):
         self.previous_search_results = previous_search_results or {}
 
     def _load_table(self, intervals=None):
+        # TODO filter by searched dataset type
+        data_sources_by_type = defaultdict(list)
+        for s in self.samples:
+            data_sources_by_type[s.dataset_type].append(s.elasticsearch_index)  # In production: should use a different model field
+        multi_data_sources = next(
+            (data_sources for data_sources in data_sources_by_type.values() if len(data_sources) > 1), None)
+        if multi_data_sources:
+            raise InvalidSearchException(
+                f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources)}')
+        data_sources_by_type = {k: v[0] for k, v in data_sources_by_type.items()}
+
         kwargs = {'genome_version': self._genome_version, 'intervals': intervals}
-        self._query_wrapper = VariantHailTableQuery(self._data_sources[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
+        self._query_wrapper = VariantHailTableQuery(data_sources_by_type[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
 
         # TODO load correct data type
-        # GcnvHailTableQuery(self._data_sources[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
-        # AllDataTypeHailTableQuery(self._data_sources, **kwargs)
+        # GcnvHailTableQuery(data_sources_by_type[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
+        # AllDataTypeHailTableQuery(data_sources_by_type, **kwargs)
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):
@@ -700,8 +698,12 @@ class HailSearch(object):
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
         family_individual_affected_status = {}
+        samples_by_family = defaultdict(dict)
+        for s in self.samples:
+            samples_by_family[s.individual.family.guid][s.sample_id] = s
+
         if inheritance:
-            for family_guid, samples_by_id in self.samples_by_family.items():
+            for family_guid, samples_by_id in samples_by_family.items():
                 family_individual_affected_status[family_guid] = _get_family_affected_status(
                     samples_by_id, inheritance_filter)
 
@@ -710,27 +712,27 @@ class HailSearch(object):
                     aftd == Individual.AFFECTED_STATUS_AFFECTED for aftd in individual_affected_status.values()
                 )
                 if not has_affected_samples:
-                    del self.samples_by_family[family_guid]
+                    del samples_by_family[family_guid]
 
-            if len(self.samples_by_family) < 1:
+            if len(samples_by_family) < 1:
                 raise InvalidSearchException(
                     'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            if not has_location_filter and len(self.samples_by_family) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+            if not has_location_filter and len(samples_by_family) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
                 raise InvalidSearchException(
                     'Location must be specified to search for compound heterozygous variants across many families')
 
             comp_het_only = inheritance_mode == COMPOUND_HET
             self._query_wrapper.filter_compound_hets(
-                self.samples_by_family, family_individual_affected_status, annotations_secondary, quality_filter,
+                samples_by_family, family_individual_affected_status, annotations_secondary, quality_filter,
                 keep_main_ht=not comp_het_only)
             if comp_het_only:
                 return
 
         self._query_wrapper.filter_main_annotations()
         self._query_wrapper.annotate_filtered_genotypes(
-            self.samples_by_family, family_individual_affected_status, inheritance_mode, inheritance_filter, quality_filter)
+            samples_by_family, family_individual_affected_status, inheritance_mode, inheritance_filter, quality_filter)
 
     def filter_by_variant_ids(self, variant_ids):
         # In production: support SV variant IDs?
