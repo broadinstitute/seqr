@@ -64,6 +64,10 @@ for path, pred_config in {
     PREDICTION_FIELDS_CONFIG.update({prediction: (path, sub_path) for sub_path, prediction in pred_config.items()})
 
 GENOTYPE_QUALITY_FIELDS = ['AB', 'AD', 'DP', 'PL', 'GQ']
+TRANSCRIPT_FIELDS = [
+    'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
+    'lof', 'lof_flags', 'lof_filter', 'lof_info', 'major_consequence', 'transcript_id', 'transcript_rank',
+]
 
 GENOTYPE_FIELDS = ['familyGuids', 'genotypes']
 CORE_FIELDS = ['hgmd', 'rsid', 'xpos']
@@ -99,10 +103,7 @@ ANNOTATION_FIELDS = {
         prediction: r[path[0]][path[1]] for prediction, path in PREDICTION_FIELDS_CONFIG.items()
     }),
     'transcripts': lambda r: r.sortedTranscriptConsequences.map(
-        lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in [
-            'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
-            'lof', 'lof_flags', 'lof_filter', 'lof_info', 'major_consequence', 'transcript_id', 'transcript_rank',
-        ]})).group_by(lambda t: t.geneId),
+        lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in TRANSCRIPT_FIELDS})).group_by(lambda t: t.geneId),
 }
 
 VARIANT_KEY_FIELD = 'variantId'
@@ -114,11 +115,14 @@ class HailSearch(object):
         self.samples_by_family = defaultdict(dict)
         samples = Sample.objects.filter(is_active=True, individual__family__in=families)
 
-        data_sources = {s.elasticsearch_index for s in samples} # In production: should use a different model field
-        if len(data_sources) > 1:
+        data_sources_by_type = defaultdict(list)
+        for s in samples:
+            data_sources_by_type[s.dataset_type].append(s.elasticsearch_index) # In production: should use a different model field
+        multi_data_sources = next((data_sources for data_sources in data_sources_by_type.values() if len(data_sources) > 1), None)
+        if multi_data_sources:
             raise InvalidSearchException(
-                f'Search is only enabled on a single data source, requested {", ".join(data_sources)}')
-        self._data_source = data_sources.pop()
+                f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources)}')
+        self._data_sources = {k: v[0] for k, v in data_sources_by_type.items()}
 
         projects = set()
         for s in samples.select_related('individual__family', 'individual__family__project'):
@@ -147,10 +151,32 @@ class HailSearch(object):
         self.ht = None
         self._comp_het_ht = None
 
-    def _load_table(self, intervals=None):
+    def _load_table(self, intervals=None, keep_intervals=True):
+        # TODO should only load for queried dataset types
+        kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)} if keep_intervals else {}
         self.ht = hl.read_table(
-            f'/hail_datasets/{self._data_source}.ht', _intervals=intervals, _filter_intervals=bool(intervals)
+            f'/hail_datasets/{self._data_sources[Sample.DATASET_TYPE_VARIANT_CALLS]}.ht', **kwargs,
         )
+        if intervals and not keep_intervals:
+            self.ht = hl.filter_intervals(self.ht, intervals, keep=False)
+
+        sv_data_source = self._data_sources.get(Sample.DATASET_TYPE_SV_CALLS)
+        if sv_data_source:
+            sv_t =  hl.read_table(f'/hail_datasets/{self._data_sources[Sample.DATASET_TYPE_SV_CALLS]}.ht')
+            if intervals:
+                interval_filter = hl.array(intervals).any(lambda interval: interval.overlaps(sv_t.interval)) \
+                    if keep_intervals else hl.array(intervals).all(lambda interval: not interval.overlaps(sv_t.interval))
+                sv_t = sv_t.filter(interval_filter)
+
+            self.ht = self.ht.key_by(VARIANT_KEY_FIELD).join(sv_t, how='outer') # TODO key_by will break genotype joining
+            transcript_struct_types = self.ht.sortedTranscriptConsequences.dtype.element_type
+            sv_transcript_fields = self.ht.sortedTranscriptConsequences_1.dtype.element_type.keys()
+            missing_transcript_fields = [k for k in TRANSCRIPT_FIELDS if k not in sv_transcript_fields]
+            self.ht = self.ht.annotate(sortedTranscriptConsequences=hl.or_else(
+                self.ht.sortedTranscriptConsequences.map(lambda t: t.select(*sv_transcript_fields, *missing_transcript_fields)),
+                hl.array(self.ht.sortedTranscriptConsequences_1.map(
+                    lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
+            )).drop('sortedTranscriptConsequences_1')
 
     def _sample_table(self, sample):
         # In production: should use a different model field, not elasticsearch_index
@@ -262,11 +288,7 @@ class HailSearch(object):
                     'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
             ]
 
-        if exclude_locations:
-            self._load_table()
-            self.ht = hl.filter_intervals(self.ht, parsed_intervals, keep=False)
-        else:
-            self._load_table(intervals=parsed_intervals)
+        self._load_table(intervals=parsed_intervals, keep_intervals=not exclude_locations)
 
     def _filter_custom(self, custom_query):
         if custom_query:
