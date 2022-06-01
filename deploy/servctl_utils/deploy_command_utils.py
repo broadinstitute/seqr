@@ -105,8 +105,6 @@ def deploy_elasticsearch(settings):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
-    _set_elasticsearch_kubernetes_resources()
-
     # create persistent volumes
     pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
     num_disks = settings['ES_DATA_NUM_PODS']
@@ -142,12 +140,6 @@ def deploy_elasticsearch(settings):
     wait_for_resource(
         'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.health}', expected_status='green',
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
-
-def _set_elasticsearch_kubernetes_resources():
-    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
-    if not has_kube_resource:
-        run('kubectl create -f https://download.elastic.co/downloads/eck/1.9.1/crds.yaml')
-        run('kubectl apply -f https://download.elastic.co/downloads/eck/1.9.1/operator.yaml')
 
 
 def deploy_elasticsearch_snapshot_config(settings):
@@ -212,8 +204,6 @@ def deploy_kibana(settings):
     print_separator("kibana")
 
     docker_build("kibana", settings)
-
-    _set_elasticsearch_kubernetes_resources()
 
     deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
 
