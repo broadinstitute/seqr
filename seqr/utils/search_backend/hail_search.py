@@ -323,7 +323,7 @@ class BaseHailTableQuery(object):
         family_guids = sorted(samples_by_family.keys())
         family_hts = [
             self._get_filtered_family_table(
-                samples=list(samples_by_family[family_guid].values()), affected_status=family_individual_affected_status[family_guid],
+                samples=list(samples_by_family[family_guid].values()), affected_status=family_individual_affected_status.get(family_guid),
                 inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, quality_filter=quality_filter,
                 family_filter=family_filter)
             for family_guid in family_guids
