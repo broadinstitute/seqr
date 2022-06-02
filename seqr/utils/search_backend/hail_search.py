@@ -672,6 +672,7 @@ class HailSearch(object):
         data_sources_by_type = {k: v.pop() for k, v in data_sources_by_type.items()}
 
         # TODO load correct data type
+        self.samples = [s for s in self.samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS]
         data_source = data_sources_by_type[Sample.DATASET_TYPE_VARIANT_CALLS]
         query_cls = VariantHailTableQuery
         self._query_wrapper = query_cls(data_source, genome_version=self._genome_version, **kwargs)
