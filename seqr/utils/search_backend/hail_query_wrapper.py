@@ -636,9 +636,9 @@ class AllDataTypeHailTableQuery(BaseHailTableQuery):
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         sv_transcript_fields = ht.sortedTranscriptConsequences_1.dtype.element_type.keys()
         missing_transcript_fields = [k for k in TRANSCRIPT_FIELDS if k not in sv_transcript_fields]
-        return ht.annotate(sortedTranscriptConsequences=hl.or_else(
+        return ht.transmute(sortedTranscriptConsequences=hl.or_else(
             ht.sortedTranscriptConsequences.map(
                 lambda t: t.select(*sv_transcript_fields, *missing_transcript_fields)),
             hl.array(ht.sortedTranscriptConsequences_1.map(
                 lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
-        )).drop('sortedTranscriptConsequences_1')
+        ))
