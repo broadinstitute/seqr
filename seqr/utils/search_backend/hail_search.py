@@ -472,7 +472,7 @@ class BaseHailTableQuery(object):
 
         # Filter variant pairs for primary/secondary consequences
         if self._allowed_consequences and self._allowed_consequences_secondary:
-            ch_ht = ch_ht.filter(self._get_valid_comp_het_annotation_pairs(ch_ht))
+            ch_ht = self._filter_valid_comp_het_annotation_pairs(ch_ht)
 
         # Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
 
@@ -505,7 +505,7 @@ class BaseHailTableQuery(object):
         if not keep_main_ht:
             self._ht = None
 
-    def _get_valid_comp_het_annotation_pairs(self, ch_ht):
+    def _filter_valid_comp_het_annotation_pairs(self, ch_ht):
         primary_cs = hl.literal(set(self._allowed_consequences))
         secondary_cs = hl.literal(set(self._allowed_consequences_secondary))
         ch_ht = ch_ht.annotate(
@@ -532,7 +532,7 @@ class BaseHailTableQuery(object):
             has_annotation_filter |= (
                     (ch_ht.v1.predictions.splice_ai >= splice_ai) |
                     (ch_ht.v2.predictions.splice_ai >= splice_ai))
-        return has_annotation_filter
+        return ch_ht.filter(has_annotation_filter)
 
     def _format_results(self, ht):
         results = ht.annotate(
