@@ -661,9 +661,9 @@ class HailSearch(object):
 
     def _load_table(self, **kwargs):
         # TODO filter by searched dataset type
-        data_sources_by_type = defaultdict(list)
+        data_sources_by_type = defaultdict(set)
         for s in self.samples:
-            data_sources_by_type[s.dataset_type].append(s.elasticsearch_index)  # In production: should use a different model field
+            data_sources_by_type[s.dataset_type].add(s.elasticsearch_index)  # In production: should use a different model field
         multi_data_sources = next(
             (data_sources for data_sources in data_sources_by_type.values() if len(data_sources) > 1), None)
         if multi_data_sources:
