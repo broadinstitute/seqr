@@ -119,11 +119,20 @@ class BaseHailTableQuery(object):
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None}
 
-        self._ht = self.load_table(data_source, **kwargs)
+        self._ht = self._load_table(data_source, **kwargs)
 
-    @staticmethod
-    def load_table(data_source, intervals=None, **kwargs):
-        return hl.read_table( f'/hail_datasets/{data_source}.ht', _intervals=intervals, _filter_intervals=bool(intervals))
+    def _load_table(self, data_source, intervals=None, **kwargs):
+        return hl.read_table(
+            f'/hail_datasets/{data_source}.ht',
+            _intervals=self._parse_intervals(intervals),
+            _filter_intervals=bool(intervals),
+        )
+
+    def _parse_intervals(self, intervals):
+        if intervals:
+            intervals = [hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version))
+                         for interval in intervals]
+        return intervals
 
     @staticmethod
     def _sample_table(sample):
@@ -598,20 +607,20 @@ class BaseHailTableQuery(object):
 
 class VariantHailTableQuery(BaseHailTableQuery):
 
-    @staticmethod
-    def load_table(data_source, intervals=None, exclude_intervals=False):
-        ht = BaseHailTableQuery.load_table(data_source, intervals=None if exclude_intervals else intervals)
+    def _load_table(self, data_source, intervals=None, exclude_intervals=False):
+        ht = super(VariantHailTableQuery, self)._load_table(data_source, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
+            intervals = self._parse_intervals(intervals)
             ht = hl.filter_intervals(ht, intervals, keep=False)
         return ht
 
 
 class GcnvHailTableQuery(BaseHailTableQuery):
 
-    @staticmethod
-    def load_table(data_source, intervals=None, exclude_intervals=False):
-        ht = BaseHailTableQuery.load_table(data_source)
+    def _load_table(self, data_source, intervals=None, exclude_intervals=False):
+        ht = super(GcnvHailTableQuery, self)._load_table(data_source)
         if intervals:
+            intervals = self._parse_intervals(intervals)
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
             ht = ht.filter(interval_filter)
@@ -620,10 +629,10 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
 class AllDataTypeHailTableQuery(BaseHailTableQuery):
 
-    @staticmethod
-    def load_table(data_source, **kwargs):
-        ht = VariantHailTableQuery.load_table(data_source[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
-        sv_ht = GcnvHailTableQuery.load_table(data_source[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
+    def _load_table(self, data_source, **kwargs):
+        # TODO does not work, figure out multi-class inheritance
+        ht = VariantHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
+        sv_ht = GcnvHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
 
         ht = ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')  # TODO key_by will break genotype joining
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
@@ -743,26 +752,21 @@ class HailSearch(object):
     def filter_by_variant_ids(self, variant_ids):
         # In production: support SV variant IDs?
         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-        intervals = [ # TODO #2716: format chromosome for genome build
-            hl.eval(hl.parse_locus_interval(f'[chr{chrom}:{pos}-{pos}]', reference_genome=self._genome_version))
-            for chrom, pos, _, _ in variant_ids
-        ]
+        # TODO #2716: format chromosome for genome build
+        intervals = [ f'[chr{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
         self._load_table(intervals=intervals)
         self._query_wrapper.filter_by_variant_ids(variant_ids)
 
     def _filter_by_intervals(self, genes, intervals, exclude_locations):
         parsed_intervals = None
-        if genes or parsed_intervals:
+        if genes or intervals:
             # TODO #2716: format chromosomes for genome build
             gene_coords = [
                 {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
                 for gene in (genes or {}).values()
             ]
-            parsed_intervals = [
-                hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version)) for interval in
-                ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-                    'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
-            ]
+            parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+                'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
         self._load_table(intervals=parsed_intervals, exclude_intervals=exclude_locations)
 
