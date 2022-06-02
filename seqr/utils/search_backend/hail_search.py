@@ -669,7 +669,7 @@ class HailSearch(object):
         if multi_data_sources:
             raise InvalidSearchException(
                 f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources)}')
-        data_sources_by_type = {k: v[0] for k, v in data_sources_by_type.items()}
+        data_sources_by_type = {k: v.pop() for k, v in data_sources_by_type.items()}
 
         # TODO load correct data type
         data_source = data_sources_by_type[Sample.DATASET_TYPE_VARIANT_CALLS]
