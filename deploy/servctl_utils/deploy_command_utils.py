@@ -21,7 +21,6 @@ DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
 DEPLOYMENT_TARGETS = [
     "settings",
     "secrets",
-    "linkerd",
     "elasticsearch",
     "kibana",
     "redis",
@@ -163,22 +162,6 @@ def deploy_elasticsearch_snapshot_config(settings):
         run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
         # Set up the monthly cron job
         run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml' % settings)
-
-
-def deploy_linkerd(settings):
-    print_separator('linkerd')
-
-    version_match = run("linkerd version | awk '/Client/ {print $3}'")
-    if version_match.strip() != settings["LINKERD_VERSION"]:
-        raise Exception("Your locally installed linkerd version does not match %s. "
-                        "Download the correct version from https://github.com/linkerd/linkerd2/releases/tag/%s" % \
-                        (settings['LINKERD_VERSION'], settings['LINKERD_VERSION']))
-
-    has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
-    if not has_namespace:
-        run('linkerd install | kubectl apply -f -')
-
-        run('linkerd check')
 
 
 def deploy_redis(settings):
