@@ -182,11 +182,11 @@ class BaseHailTableQuery(object):
             raise NotImplementedError
 
     def _filter_by_frequency(self, frequencies):
-        #  UI bug causes sv freq filter to be added despite no SV data
-        frequencies.pop('sv_callset', None)
-
         if not frequencies:
             return
+
+        #  UI bug causes sv freq filter to be added despite no SV data
+        frequencies.pop('sv_callset', None)
 
         clinvar_path_terms = [f for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES]
         has_path_override = bool(clinvar_path_terms) and any(
