@@ -125,6 +125,29 @@ class BaseHailTableQuery(object):
             _intervals=self._parse_intervals(intervals),
             _filter_intervals=bool(intervals),
         )
+        """
+        intervals = [hl.eval(hl.parse_locus_interval('chr15:75023586-75117462', reference_genome='GRCh38'))]
+        data_source = 'RDG_WES_Broad_Internal'
+        ht = hl.read_table(f'/hail_datasets/{data_source}.ht', _intervals=intervals, _filter_intervals=True)
+        samples = ['UWA_FAM11_PT_D15-1500_1', 'UWA_FAM11_PT_D16-0788_1']
+        sample_hts = {sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{sample_id}.ht', _intervals=intervals, _filter_intervals=True) for sample_id in samples}
+        ht = ht.annotate(**{sample_id: s_ht[ht.locus, ht.alleles] for sample_id, s_ht in sample_hts.items()})
+        mt = ht.to_matrix_table_row_major(samples, col_field_name='s')
+        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
+        
+        # Get family IDs for non-ref families (all inheritance): 
+        mt.annotate_rows(familyGuids=hl.agg.filter(mt.GT.is_non_ref(), hl.agg.collect_as_set(fam_map[mt.s])))
+        # Get family Ids for non-ref samples (any affected):
+        mt.annotate_rows(familyGuids=hl.agg.filter(mt.GT.is_non_ref() & hl.set(affected_samples).contains(mt.s),  hl.agg.collect_as_set(fam_map[mt.s])))
+        # Get family Ids for inheritance:
+        sample_q = hl.agg.filter((mt.GT.is_het() & hl.set(unaffected_samples).contains(mt.s)) | (mt.GT.is_hom_var() & hl.set(affected_samples).contains(mt.s)), hl.agg.collect_as_set(mt.s))
+        mt.annotate_rows(familyGuids=hl.bind(lambda samples: fam_samples_map.key_set().filter(lambda f: fam_samples_map[f].is_subset(samples)), sample_q))
+        # Remove rows with no matched families:
+        mt.filter_rows(mt.familyGuids.size() > 0)
+        
+        # annotate genotypes for families
+        mt.annotate_rows(genotypes=hl.agg.filter(mt.familyGuids.contains(fam_map[mt.s]), hl.agg.collect(hl.struct(sample_id=mt.s, num_alt=mt.GT.n_alt_alleles(), ...))))
+        """
 
     def _parse_intervals(self, intervals):
         if intervals:
