@@ -1,3 +1,4 @@
+from collections import defaultdict
 import hail as hl
 import logging
 
@@ -6,7 +7,7 @@ from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
-    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, \
+    INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
     CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF
 
 logger = logging.getLogger(__name__)
@@ -67,8 +68,7 @@ TRANSCRIPT_FIELDS = [
     'lof', 'lof_flags', 'lof_filter', 'lof_info', 'major_consequence', 'transcript_id', 'transcript_rank',
 ]
 
-GENOTYPE_FIELDS = ['familyGuids', 'genotypes']
-CORE_FIELDS = ['hgmd', 'rsid', 'xpos']
+CORE_FIELDS = ['hgmd', 'rsid', 'xpos', 'genotypes']
 ANNOTATION_FIELDS = {
     'chrom': lambda r: r.locus.contig.replace("^chr", ""),
     'pos': lambda r: r.locus.position,
@@ -79,6 +79,7 @@ ANNOTATION_FIELDS = {
         alleleId=r.clinvar.allele_id,
         goldStars=r.clinvar.gold_stars,
     ),
+    'familyGuids': lambda r: hl.array(r.familyGuids),
     'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
     'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
         hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
@@ -110,44 +111,28 @@ GROUPED_VARIANTS_FIELD = 'variants'
 
 class BaseHailTableQuery(object):
 
-    def __init__(self, data_source, genome_version, **kwargs):
+    def __init__(self, data_source, samples, genome_version, **kwargs):
         self._genome_version = genome_version
+        self._samples_by_id = {s.sample_id: s for s in samples}
+        self._sample_ids_by_family = defaultdict(set)
+        self._affected_status_samples = defaultdict(set)
+        self._family_individual_affected_status = defaultdict(dict)
         self._comp_het_ht = None
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None}
 
-        self._ht = self._load_table(data_source, **kwargs)
+        self._mt = self._load_table(data_source, **kwargs)
 
     def _load_table(self, data_source, intervals=None, **kwargs):
-        return hl.read_table(
-            f'/hail_datasets/{data_source}.ht',
-            _intervals=self._parse_intervals(intervals),
-            _filter_intervals=bool(intervals),
-        )
-        """
-        intervals = [hl.eval(hl.parse_locus_interval('chr15:75023586-75117462', reference_genome='GRCh38'))]
-        data_source = 'RDG_WES_Broad_Internal'
-        ht = hl.read_table(f'/hail_datasets/{data_source}.ht', _intervals=intervals, _filter_intervals=True)
-        samples = ['UWA_FAM11_PT_D15-1500_1', 'UWA_FAM11_PT_D16-0788_1']
-        sample_hts = {sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{sample_id}.ht', _intervals=intervals, _filter_intervals=True) for sample_id in samples}
+        load_table_kwargs = {'_intervals': self._parse_intervals(intervals), '_filter_intervals': bool(intervals)}
+        ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
+        sample_hts = {
+            sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{sample_id}.ht', **load_table_kwargs)
+            for sample_id in self._samples_by_id.keys()
+        }
         ht = ht.annotate(**{sample_id: s_ht[ht.locus, ht.alleles] for sample_id, s_ht in sample_hts.items()})
-        mt = ht.to_matrix_table_row_major(samples, col_field_name='s')
-        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
-        
-        # Get family IDs for non-ref families (all inheritance): 
-        mt.annotate_rows(familyGuids=hl.agg.filter(mt.GT.is_non_ref(), hl.agg.collect_as_set(fam_map[mt.s])))
-        # Get family Ids for non-ref samples (any affected):
-        mt.annotate_rows(familyGuids=hl.agg.filter(mt.GT.is_non_ref() & hl.set(affected_samples).contains(mt.s),  hl.agg.collect_as_set(fam_map[mt.s])))
-        # Get family Ids for inheritance:
-        sample_q = hl.agg.filter((mt.GT.is_het() & hl.set(unaffected_samples).contains(mt.s)) | (mt.GT.is_hom_var() & hl.set(affected_samples).contains(mt.s)), hl.agg.collect_as_set(mt.s))
-        mt.annotate_rows(familyGuids=hl.bind(lambda samples: fam_samples_map.key_set().filter(lambda f: fam_samples_map[f].is_subset(samples)), sample_q))
-        # Remove rows with no matched families:
-        mt.filter_rows(mt.familyGuids.size() > 0)
-        
-        # annotate genotypes for families
-        mt.annotate_rows(genotypes=hl.agg.filter(mt.familyGuids.contains(fam_map[mt.s]), hl.agg.collect(hl.struct(sample_id=mt.s, num_alt=mt.GT.n_alt_alleles(), ...))))
-        """
+        return ht.to_matrix_table_row_major(sample_hts.keys(), col_field_name='s')
 
     def _parse_intervals(self, intervals):
         if intervals:
@@ -184,17 +169,17 @@ class BaseHailTableQuery(object):
             self._filter_vcf_filters()
 
     def _filter_rsids(self, rs_ids):
-        self._ht = self._ht.filter(hl.set(rs_ids).contains(self._ht.rsid))
+        self._mt = self._mt.filter_rows(hl.set(rs_ids).contains(self._mt.rsid))
 
     def _filter_vcf_filters(self):
-        self._ht = self._ht.filter(self._ht.filters.length() < 1)
+        self._mt = self._mt.filter_rows(self._mt.filters.length() < 1)
 
     def filter_main_annotations(self):
-        self._ht = self._filter_by_annotations(self._allowed_consequences)
+        self._mt = self._filter_by_annotations(self._allowed_consequences)
 
     def filter_by_variant_ids(self, variant_ids):
         if len(variant_ids) == 1:
-            self._ht = self._ht.filter(self._ht.alleles == [variant_ids[0][2], variant_ids[0][3]])
+            self._mt = self._mt.filter_rows(self._mt.alleles == [variant_ids[0][2], variant_ids[0][3]])
         else:
             id_q = self._variant_id_q(*variant_ids[0])
             for variant_id in variant_ids[1:]:
@@ -202,8 +187,8 @@ class BaseHailTableQuery(object):
 
     def _variant_id_q(self, chrom, pos, ref, alt):
         # TODO #2716: format chromosome for genome build
-        return (self._ht.locus == hl.locus(f'chr{chrom}', pos, reference_genome=self._genome_version)) & (
-                    self._ht.alleles == [ref, alt])
+        return (self._mt.locus == hl.locus(f'chr{chrom}', pos, reference_genome=self._genome_version)) & (
+                    self._mt.alleles == [ref, alt])
 
     def _filter_custom(self, custom_query):
         if custom_query:
@@ -225,49 +210,49 @@ class BaseHailTableQuery(object):
         # In production: will not have callset frequency, may rename these fields
         callset_filter = frequencies.pop('callset', {}) or {}
         if callset_filter.get('af') is not None:
-            callset_f = self._ht.AF <= callset_filter['af']
+            callset_f = self._mt.AF <= callset_filter['af']
             if has_path_override and callset_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                 callset_f |= (
                         self._get_clinvar_filter(clinvar_path_terms) &
-                        (self._ht.AF <= PATH_FREQ_OVERRIDE_CUTOFF)
+                        (self._mt.AF <= PATH_FREQ_OVERRIDE_CUTOFF)
                 )
-            self._ht = self._ht.filter(callset_f)
+            self._mt = self._mt.filter_rows(callset_f)
         elif callset_filter.get('ac') is not None:
-            self._ht = self._ht.filter(self._ht.AC <= callset_filter['ac'])
+            self._mt = self._mt.filter_rows(self._mt.AC <= callset_filter['ac'])
 
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
             if freqs.get('af') is not None:
                 af_field = POPULATIONS[pop].get('filter_af') or POPULATIONS[pop]['af']
-                pop_filter = self._ht[pop][af_field] <= freqs['af']
+                pop_filter = self._mt[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
                             self._get_clinvar_filter(clinvar_path_terms) &
-                            (self._ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                            (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
                 ac_field = POPULATIONS[pop]['ac']
                 if ac_field:
-                    pop_filter = self._ht[pop][ac_field] <= freqs['ac']
+                    pop_filter = self._mt[pop][ac_field] <= freqs['ac']
 
             if freqs.get('hh') is not None:
                 hom_field = POPULATIONS[pop]['hom']
                 hemi_field = POPULATIONS[pop]['hemi']
                 if hom_field:
-                    hh_filter = self._ht[pop][hom_field] <= freqs['hh']
+                    hh_filter = self._mt[pop][hom_field] <= freqs['hh']
                     if pop_filter is None:
                         pop_filter = hh_filter
                     else:
                         pop_filter &= hh_filter
                 if hemi_field:
-                    hh_filter = self._ht[pop][hemi_field] <= freqs['hh']
+                    hh_filter = self._mt[pop][hemi_field] <= freqs['hh']
                     if pop_filter is None:
                         pop_filter = hh_filter
                     else:
                         pop_filter &= hh_filter
 
             if pop_filter is not None:
-                self._ht = self._ht.filter(hl.is_missing(self._ht[pop]) | pop_filter)
+                self._mt = self._mt.filter_rows(hl.is_missing(self._mt[pop]) | pop_filter)
 
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = {k: v for k, v in (in_silico_filters or {}).items() if v is not None and len(v) != 0}
@@ -294,11 +279,11 @@ class BaseHailTableQuery(object):
             else:
                 missing_in_silico_q &= missing_score_filter
 
-        self._ht = self._ht.filter(in_silico_q | missing_in_silico_q)
+        self._mt = self._mt.filter_rows(in_silico_q | missing_in_silico_q)
 
     def _get_in_silico_ht_field(self, in_silico):
         score_path = PREDICTION_FIELDS_CONFIG[in_silico]
-        return self._ht[score_path[0]][score_path[1]]
+        return self._mt[score_path[0]][score_path[1]]
 
     def _filter_by_annotations(self, allowed_consequences):
         annotation_filters = []
@@ -307,7 +292,7 @@ class BaseHailTableQuery(object):
             annotation_filters.append(self._get_clinvar_filter(self._consequence_overrides[CLINVAR_KEY]))
         if self._consequence_overrides[HGMD_KEY]:
             allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
-            annotation_filters.append(allowed_classes.contains(self._ht.hgmd['class']))
+            annotation_filters.append(allowed_classes.contains(self._mt.hgmd['class']))
         if self._consequence_overrides[SPLICE_AI_FIELD]:
             annotation_filters.append(
                 self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(self._consequence_overrides[SPLICE_AI_FIELD]))
@@ -316,64 +301,110 @@ class BaseHailTableQuery(object):
             annotation_filters.append(self._get_filtered_transcript_consequences(allowed_consequences))
 
         if not annotation_filters:
-            return self._ht
+            return self._mt
         annotation_filter = annotation_filters[0]
         for af in annotation_filters[1:]:
             annotation_filter |= af
 
-        return self._ht.filter(annotation_filter)
+        return self._mt.filter_rows(annotation_filter)
 
     def _get_filtered_transcript_consequences(self, allowed_consequences):
         allowed_consequences_set = hl.set(allowed_consequences)
-        consequence_terms = self._ht.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
+        consequence_terms = self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
         return consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))
 
     def _get_clinvar_filter(self, clinvar_terms):
         allowed_significances = hl.set(clinvar_terms)
-        return allowed_significances.contains(self._ht.clinvar.clinical_significance)
+        return allowed_significances.contains(self._mt.clinvar.clinical_significance)
 
     def annotate_filtered_genotypes(self, *args):
-        self._ht = self._ht.join(self._filter_by_genotype(*args))
+        self._mt = self._filter_by_genotype(self._mt, *args)
 
-    def _filter_by_genotype(self, samples_by_family, family_individual_affected_status, inheritance_mode, inheritance_filter,
-                            quality_filter):
+    def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
         if inheritance_mode == ANY_AFFECTED:
             inheritance_filter = None
         elif inheritance_mode:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
-        family_filter = None
-        if inheritance_mode == COMPOUND_HET:
-            family_filter = self._filter_comp_het_family
-        elif inheritance_mode == ANY_AFFECTED:
-            family_filter = self._filter_any_affected_family
+        if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
+            individual_affected_status = inheritance_filter.get('affected') or {}
+            for sample_id, sample in self._samples_by_id.items():
+                indiv = sample.individual
+                family_guid = indiv.family.guid
+                self._sample_ids_by_family[family_guid].add(sample_id)
+                affected = individual_affected_status.get(indiv.guid) or indiv.affected
+                self._affected_status_samples[affected].add(sample_id)
+                self._family_individual_affected_status[family_guid][indiv.guid] = affected # TODO remove
+
+            no_search_families = {
+                family_guid for family_guid, affected_status in self._family_individual_affected_status.items()
+                if Individual.AFFECTED_STATUS_AFFECTED not in affected_status.values()
+            }
+            removed_samples = set()
+            for family in no_search_families:
+                removed_samples.update(self._sample_ids_by_family[family])
+                del self._sample_ids_by_family[family]
+            self._samples_by_id = {
+                sample_id: s for sample_id, s in self._samples_by_id.items() if sample_id in removed_samples
+            }
+
+            if len(self._sample_ids_by_family) < 1:
+                raise InvalidSearchException(
+                    'Inheritance based search is disabled in families with no data loaded for affected individuals')
+            if max_families and len(self._sample_ids_by_family) > max_families[0]:
+                raise InvalidSearchException(max_families[1])
+
+        sample_individual_map = hl.dict({sample_id: s.individual.guid for sample_id, s in self._samples_by_id.items()})
+        sample_family_map = hl.dict({sample_id: s.individual.family.guid for sample_id, s in self._samples_by_id.items()})
+
+        if inheritance_mode == ANY_AFFECTED:
+            affected_samples = self._affected_status_samples[Individual.AFFECTED_STATUS_AFFECTED]
+            if not affected_samples:
+                raise InvalidSearchException('Any Affected search specified with no affected indiviudals')
+            mt = mt.annotate_rows(familyGuids=hl.agg.filter(
+                mt.GT.is_non_ref() & hl.set(affected_samples).contains(mt.s),
+                hl.agg.collect_as_set(sample_family_map[mt.s])))
         elif not inheritance_filter:
-            family_filter = self._filter_non_ref_family
+            mt = mt.annotate_rows(familyGuids=hl.agg.filter(mt.GT.is_non_ref(), hl.agg.collect_as_set(sample_family_map[mt.s])))
+        else:
+            family_samples_map = hl.dict(self._sample_ids_by_family)
+            # TODO actually construct query
+            sample_q = hl.agg.filter((mt.GT.is_het() & hl.set(unaffected_samples).contains(mt.s)) | (
+                        mt.GT.is_hom_var() & hl.set(affected_samples).contains(mt.s)), hl.agg.collect_as_set(mt.s))
+            mt = mt.annotate_rows(familyGuids=hl.bind(
+                lambda samples: family_samples_map.key_set().filter(lambda f: family_samples_map[f].is_subset(samples)),
+                sample_q)
+            )
+            if inheritance_mode == COMPOUND_HET:
+                multi_unaffected_fam_samples = {} # TODO
+                multi_unaffected_samples = {} # TODO
+                # remove variants where all unaffected individuals are het
+                mt = mt.annotate_rows(notPhasedFamilies=hl.bind(
+                    lambda samples: multi_unaffected_fam_samples.key_set().filter(
+                        lambda f: multi_unaffected_fam_samples[f].is_subset(samples)),
+                    hl.agg.filter(mt.GT.is_het() & hl.set(multi_unaffected_samples).contains(mt.s)))
+                )
+                mt = mt.transmute_rows(familyGuids=mt.familyGuids.difference(mt.notPhasedFamilies))
 
-        family_guids = sorted(samples_by_family.keys())
-        family_hts = [
-            self._get_filtered_family_table(
-                samples=list(samples_by_family[family_guid].values()), affected_status=family_individual_affected_status.get(family_guid),
-                inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, quality_filter=quality_filter,
-                family_filter=family_filter)
-            for family_guid in family_guids
-        ]
+        # TODO actually apply qualty filters
+        # family_hts = [
+        #     self._get_filtered_family_table(
+        #         samples = list(samples_by_family[family_guid].values()),
+        #         affected_status = family_individual_affected_status.get(family_guid),
+        #         inheritance_mode = inheritance_mode, inheritance_filter = inheritance_filter, quality_filter = quality_filter,
+        # for family_guid in family_guids]
 
-        genotype_ht = family_hts[0]
-        for family_ht in family_hts[1:]:
-            genotype_ht = genotype_ht.join(family_ht, how='outer')
-        genotype_ht = genotype_ht.rename({'genotypes': 'genotypes_0'})
+        mt = mt.filter_rows(mt.familyGuids.size() > 0)
+        mt = mt.annotate_rows(genotypes=hl.agg.filter(
+            mt.familyGuids.contains(sample_family_map[mt.s]),
+            hl.agg.collect(hl.struct(
+                individualGuid=sample_individual_map[mt.s],
+                sampleId=mt.s,
+                numAlt=mt.GT.n_alt_alleles(),
+                **{f.lower(): mt[f] for f in GENOTYPE_QUALITY_FIELDS}
+            ))).group_by(lambda x: x.individualGuid))
 
-        return genotype_ht.annotate(
-            familyGuids=hl.array([
-                hl.if_else(hl.is_defined(genotype_ht[f'genotypes_{i}']), family_guid, hl.missing(hl.tstr))
-                for i, family_guid in enumerate(family_guids)
-            ]).filter(lambda x: hl.is_defined(x)),
-            genotypes=hl.array([
-                genotype_ht[f'genotypes_{i}'] for i in range(len(family_guids))
-            ]).flatmap(lambda x: x).filter(lambda x: hl.is_defined(x)).group_by(lambda x: x.individualGuid).map_values(
-                lambda x: x[0]),
-        ).select(*GENOTYPE_FIELDS)
+        return mt
 
     def _get_filtered_family_table(self, samples, affected_status, inheritance_mode, inheritance_filter,
                                    quality_filter, family_filter=None):
@@ -472,8 +503,7 @@ class BaseHailTableQuery(object):
             q |= gt_filter(family_ht[f'GT_{i}'])
         return q
 
-    def filter_compound_hets(self, samples_by_family, family_individual_affected_status, annotations_secondary, quality_filter,
-                             keep_main_ht=True):
+    def filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=True):
         if not self._allowed_consequences:
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
@@ -484,12 +514,12 @@ class BaseHailTableQuery(object):
                 {ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
 
-        ch_ht = self._filter_by_annotations(comp_het_consequences)
-        ch_ht = ch_ht.join(self._filter_by_genotype(
-            samples_by_family, family_individual_affected_status, inheritance_mode=COMPOUND_HET, inheritance_filter={},
-            quality_filter=quality_filter,
-        ))
-        ch_ht = self._format_results(ch_ht)
+        ch_mt = self._filter_by_annotations(comp_het_consequences)
+        ch_mt = self._filter_by_genotype(
+            ch_mt, COMPOUND_HET, inheritance_filter, quality_filter,
+            max_families=None if has_location_filter else (MAX_NO_LOCATION_COMP_HET_FAMILIES, 'Location must be specified to search for compound heterozygous variants across many families')
+        )
+        ch_ht = self._format_results(ch_mt)
 
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.annotate(gene_ids=ch_ht.transcripts.key_set())
@@ -507,11 +537,11 @@ class BaseHailTableQuery(object):
         # Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
 
         # Filter variant pairs for family and genotype
-        ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
+        ch_ht = ch_ht.annotate(family_guids=ch_ht.v1.familyGuids.intersection(ch_ht.v2.familyGuids))
         unaffected_by_family = hl.literal({
             family_guid: [
                 guid for guid, affected in affected_status.items() if affected == Individual.AFFECTED_STATUS_UNAFFECTED
-            ] for family_guid, affected_status in family_individual_affected_status.items()
+            ] for family_guid, affected_status in self._family_individual_affected_status.items()
         })
         ch_ht = ch_ht.annotate(
             family_guids=ch_ht.family_guids.filter(lambda family_guid: unaffected_by_family[family_guid].all(
@@ -519,8 +549,8 @@ class BaseHailTableQuery(object):
             )))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
-            v1=ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids)),
-            v2=ch_ht.v2.annotate(familyGuids=hl.array(ch_ht.family_guids)),
+            v1=ch_ht.v1.annotate(familyGuids=ch_ht.family_guids),
+            v2=ch_ht.v2.annotate(familyGuids=ch_ht.family_guids),
         )
 
         # Format pairs as lists and de-duplicate
@@ -533,7 +563,7 @@ class BaseHailTableQuery(object):
         self._comp_het_ht = ch_ht.distinct()
 
         if not keep_main_ht:
-            self._ht = None
+            self._mt = None
 
     def _filter_valid_comp_het_annotation_pairs(self, ch_ht):
         primary_cs = hl.literal(set(self._allowed_consequences))
@@ -564,12 +594,13 @@ class BaseHailTableQuery(object):
                     (ch_ht.v2.predictions.splice_ai >= splice_ai))
         return ch_ht.filter(has_annotation_filter)
 
-    def _format_results(self, ht):
-        results = ht.annotate(
+    def _format_results(self, mt):
+        results = mt.rows()
+        results = results.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
-            **{k: v(ht) for k, v in ANNOTATION_FIELDS.items()},
+            **{k: v(results) for k, v in ANNOTATION_FIELDS.items()},
         )
-        response_keys = ['genomeVersion', *CORE_FIELDS, *GENOTYPE_FIELDS, *ANNOTATION_FIELDS.keys()]
+        response_keys = ['genomeVersion', *CORE_FIELDS, *ANNOTATION_FIELDS.keys()]
         if self._allowed_consequences:
             consequences_set = hl.set(self._allowed_consequences)
             selected_transcript_expr = results.sortedTranscriptConsequences.find(
@@ -591,21 +622,21 @@ class BaseHailTableQuery(object):
         return results.select(*response_keys)
 
     def search(self, page, num_results, sort):
-        if self._ht:
-            self._ht = self._format_results(self._ht)
+        if self._mt:
+            ht = self._format_results(self._mt)
             if self._comp_het_ht:
-                self._ht = self._ht.join(self._comp_het_ht, 'outer')
+                ht = ht.join(self._comp_het_ht, 'outer')
         else:
-            self._ht = self._comp_het_ht
+            ht = self._comp_het_ht
 
-        if not self._ht:
+        if not ht:
             raise InvalidSearchException('Filters must be applied before search')
 
-        total_results = self._ht.count()
+        total_results = ht.count()
         logger.info(f'Total hits: {total_results}')
 
         # TODO #2496: page, sort
-        collected = self._ht.take(num_results)
+        collected = ht.take(num_results)
         hail_results = [
             self._json_serialize(row.get(GROUPED_VARIANTS_FIELD) or row.drop(GROUPED_VARIANTS_FIELD)) for row in collected
         ]
@@ -629,39 +660,42 @@ class BaseHailTableQuery(object):
 class VariantHailTableQuery(BaseHailTableQuery):
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
-        ht = super(VariantHailTableQuery, self)._load_table(data_source, intervals=None if exclude_intervals else intervals)
+        mt = super(VariantHailTableQuery, self)._load_table(data_source, intervals=None if exclude_intervals else intervals)
+        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         if intervals and exclude_intervals:
             intervals = self._parse_intervals(intervals)
-            ht = hl.filter_intervals(ht, intervals, keep=False)
-        return ht
+            mt = hl.filter_intervals(mt, intervals, keep=False)
+        return mt
 
 
 class GcnvHailTableQuery(BaseHailTableQuery):
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
-        ht = super(GcnvHailTableQuery, self)._load_table(data_source)
+        mt = super(GcnvHailTableQuery, self)._load_table(data_source)
+        # TODO filter no-sample rows
         if intervals:
             intervals = self._parse_intervals(intervals)
-            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
-                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
-            ht = ht.filter(interval_filter)
-        return ht
+            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
+                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(mt.interval))
+            mt = mt.filter_rows(interval_filter)
+        return mt
 
 
 class AllDataTypeHailTableQuery(BaseHailTableQuery):
 
     def _load_table(self, data_source, **kwargs):
         # TODO does not work, figure out multi-class inheritance
-        ht = VariantHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
-        sv_ht = GcnvHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
+        mt = VariantHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
+        sv_mt = GcnvHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
 
-        ht = ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')  # TODO key_by will break genotype joining
-        transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
-        sv_transcript_fields = ht.sortedTranscriptConsequences_1.dtype.element_type.keys()
+        mt = mt.key_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
+        transcript_struct_types = mt.sortedTranscriptConsequences.dtype.element_type
+        sv_transcript_fields = mt.sortedTranscriptConsequences_1.dtype.element_type.keys()
         missing_transcript_fields = [k for k in TRANSCRIPT_FIELDS if k not in sv_transcript_fields]
-        return ht.transmute(sortedTranscriptConsequences=hl.or_else(
-            ht.sortedTranscriptConsequences.map(
+        # TODO merge columns?
+        return mt.transmute(sortedTranscriptConsequences=hl.or_else(
+            mt.sortedTranscriptConsequences.map(
                 lambda t: t.select(*sv_transcript_fields, *missing_transcript_fields)),
-            hl.array(ht.sortedTranscriptConsequences_1.map(
+            hl.array(mt.sortedTranscriptConsequences_1.map(
                 lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
         ))
