@@ -17,8 +17,6 @@ import {
 
 const FilterContainer = styled.div`
   position: relative;
-  top: -60px;
-  margin-bottom: -60px;
   text-align: right;
 `
 
