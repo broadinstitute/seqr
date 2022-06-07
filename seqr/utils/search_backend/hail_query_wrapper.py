@@ -450,8 +450,8 @@ class BaseHailTableQuery(object):
         family_samples_map = hl.dict(sample_ids_by_family)
 
         sample_filter_exprs = [
-            (GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s)
-             for genotype, samples in sample_filters)
+            (GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
+             for genotype, samples in sample_filters
         ]
         sample_filter = sample_filter_exprs[0]
         for sub_filter in sample_filter_exprs[1:]:
