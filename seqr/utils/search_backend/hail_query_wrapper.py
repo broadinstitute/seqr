@@ -332,9 +332,9 @@ class BaseHailTableQuery(object):
             self._set_validated_affected_status(individual_affected_status, max_families)
 
         sample_family_map = hl.dict({sample_id: s.individual.family.guid for sample_id, s in self._samples_by_id.items()})
-        quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter or {})
         mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
-            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr,
+            mt, inheritance_mode, inheritance_filter, sample_family_map,
+            self._get_quality_filter_expr(mt, quality_filter or {}),
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
@@ -344,6 +344,7 @@ class BaseHailTableQuery(object):
         elif inheritance_mode == RECESSIVE:
             # TODO  # 2716: format chromosome for genome build
             x_chrom_filter = mt.locus.contig == 'chrX'
+            quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter or {})
             if quality_filter_expr is not None:
                 x_chrom_filter &= quality_filter_expr
             mt = mt.annotate_rows(xLinkedfamilies=self._get_matched_families_expr(
