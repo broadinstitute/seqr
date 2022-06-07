@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 # For production: constants should have their own file
 
+AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
+UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
+
 GENOTYPE_QUERY_MAP = {
     REF_REF: lambda gt: gt.is_hom_ref(),
     REF_ALT: lambda gt: gt.is_het(),
@@ -114,9 +117,7 @@ class BaseHailTableQuery(object):
     def __init__(self, data_source, samples, genome_version, **kwargs):
         self._genome_version = genome_version
         self._samples_by_id = {s.sample_id: s for s in samples}
-        self._sample_ids_by_family = defaultdict(set)
         self._affected_status_samples = defaultdict(set)
-        self._family_individual_affected_status = defaultdict(dict)
         self._comp_het_ht = None
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
@@ -321,187 +322,151 @@ class BaseHailTableQuery(object):
         self._mt = self._filter_by_genotype(self._mt, *args)
 
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
+        individual_affected_status = inheritance_filter.get('affected') or {}
         if inheritance_mode == ANY_AFFECTED:
             inheritance_filter = None
         elif inheritance_mode:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
         if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
-            individual_affected_status = inheritance_filter.get('affected') or {}
-            for sample_id, sample in self._samples_by_id.items():
-                indiv = sample.individual
-                family_guid = indiv.family.guid
-                self._sample_ids_by_family[family_guid].add(sample_id)
-                affected = individual_affected_status.get(indiv.guid) or indiv.affected
-                self._affected_status_samples[affected].add(sample_id)
-                self._family_individual_affected_status[family_guid][indiv.guid] = affected # TODO remove
+            self._set_validated_affected_status(individual_affected_status, max_families)
 
-            no_search_families = {
-                family_guid for family_guid, affected_status in self._family_individual_affected_status.items()
-                if Individual.AFFECTED_STATUS_AFFECTED not in affected_status.values()
-            }
-            removed_samples = set()
-            for family in no_search_families:
-                removed_samples.update(self._sample_ids_by_family[family])
-                del self._sample_ids_by_family[family]
-            self._samples_by_id = {
-                sample_id: s for sample_id, s in self._samples_by_id.items() if sample_id in removed_samples
-            }
-
-            if len(self._sample_ids_by_family) < 1:
-                raise InvalidSearchException(
-                    'Inheritance based search is disabled in families with no data loaded for affected individuals')
-            if max_families and len(self._sample_ids_by_family) > max_families[0]:
-                raise InvalidSearchException(max_families[1])
-
-        sample_individual_map = hl.dict({sample_id: s.individual.guid for sample_id, s in self._samples_by_id.items()})
         sample_family_map = hl.dict({sample_id: s.individual.family.guid for sample_id, s in self._samples_by_id.items()})
+        quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter or {})
+        mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
+            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr,
+        ))
 
-        if inheritance_mode == ANY_AFFECTED:
-            affected_samples = self._affected_status_samples[Individual.AFFECTED_STATUS_AFFECTED]
-            if not affected_samples:
-                raise InvalidSearchException('Any Affected search specified with no affected indiviudals')
-            mt = mt.annotate_rows(familyGuids=hl.agg.filter(
-                mt.GT.is_non_ref() & hl.set(affected_samples).contains(mt.s),
-                hl.agg.collect_as_set(sample_family_map[mt.s])))
-        elif not inheritance_filter:
-            mt = mt.annotate_rows(familyGuids=hl.agg.filter(mt.GT.is_non_ref(), hl.agg.collect_as_set(sample_family_map[mt.s])))
-        else:
-            family_samples_map = hl.dict(self._sample_ids_by_family)
-            # TODO actually construct query
-            sample_q = hl.agg.filter((mt.GT.is_het() & hl.set(unaffected_samples).contains(mt.s)) | (
-                        mt.GT.is_hom_var() & hl.set(affected_samples).contains(mt.s)), hl.agg.collect_as_set(mt.s))
-            mt = mt.annotate_rows(familyGuids=hl.bind(
-                lambda samples: family_samples_map.key_set().filter(lambda f: family_samples_map[f].is_subset(samples)),
-                sample_q)
-            )
-            if inheritance_mode == COMPOUND_HET:
-                multi_unaffected_fam_samples = {} # TODO
-                multi_unaffected_samples = {} # TODO
+        if inheritance_mode == X_LINKED_RECESSIVE:
+            mt = hl.filter_intervals(
+                # TODO #2716: format chromosome for genome build
+                mt, [hl.parse_locus_interval('chrX', reference_genome=self._genome_version)])
+        elif inheritance_mode == RECESSIVE:
+            # TODO  # 2716: format chromosome for genome build
+            x_chrom_filter = mt.locus.contig == 'chrX'
+            if quality_filter_expr is not None:
+                x_chrom_filter &= quality_filter_expr
+            mt = mt.annotate_rows(xLinkedfamilies=self._get_matched_families_expr(
+                mt, X_LINKED_RECESSIVE, inheritance_filter, sample_family_map, x_chrom_filter,
+            ))
+            mt = mt.transmute_rows(familyGuids=mt.familyGuids.union(mt.xLinkedfamilies))
+        elif inheritance_mode == COMPOUND_HET:
+            unaffected_samples_by_family = defaultdict(set)
+            for sample in self._affected_status_samples[UNAFFECTED]:
+                unaffected_samples_by_family[sample.individual.family.guid].add(sample.sample_id)
+            unaffected_samples_by_family = {k: v for k, v in unaffected_samples_by_family.items() if len(v) > 1}
+            if unaffected_samples_by_family:
                 # remove variants where all unaffected individuals are het
-                mt = mt.annotate_rows(notPhasedFamilies=hl.bind(
-                    lambda samples: multi_unaffected_fam_samples.key_set().filter(
-                        lambda f: multi_unaffected_fam_samples[f].is_subset(samples)),
-                    hl.agg.filter(mt.GT.is_het() & hl.set(multi_unaffected_samples).contains(mt.s)))
-                )
+                mt = mt.annotate_rows(notPhasedFamilies=self._get_family_all_samples_expr(
+                    mt, mt.GT.is_het(), hl.dict(unaffected_samples_by_family)))
                 mt = mt.transmute_rows(familyGuids=mt.familyGuids.difference(mt.notPhasedFamilies))
 
-        # TODO actually apply qualty filters
-        # family_hts = [
-        #     self._get_filtered_family_table(
-        #         samples = list(samples_by_family[family_guid].values()),
-        #         affected_status = family_individual_affected_status.get(family_guid),
-        #         inheritance_mode = inheritance_mode, inheritance_filter = inheritance_filter, quality_filter = quality_filter,
-        # for family_guid in family_guids]
-
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
-        mt = mt.annotate_rows(genotypes=hl.agg.filter(
+
+        sample_individual_map = hl.dict({sample_id: s.individual.guid for sample_id, s in self._samples_by_id.items()})
+        return mt.annotate_rows(genotypes=hl.agg.filter(
             mt.familyGuids.contains(sample_family_map[mt.s]),
             hl.agg.collect(hl.struct(
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
                 numAlt=mt.GT.n_alt_alleles(),
                 **{f.lower(): mt[f] for f in GENOTYPE_QUALITY_FIELDS}
-            ))).group_by(lambda x: x.individualGuid))
+            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
-        return mt
+    def _set_validated_affected_status(self, individual_affected_status, max_families):
+        for sample_id, sample in self._samples_by_id.items():
+            affected = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
+            self._affected_status_samples[affected].add(sample_id)
 
-    def _get_filtered_family_table(self, samples, affected_status, inheritance_mode, inheritance_filter,
-                                   quality_filter, family_filter=None):
-        sample_tables = [self._sample_table(sample) for sample in samples]
-
-        individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
-
-        family_ht = None
-        for i, sample_ht in enumerate(sample_tables):
-            if quality_filter.get('min_gq'):
-                sample_ht = sample_ht.filter(sample_ht.GQ > quality_filter['min_gq'])
-            if quality_filter.get('min_ab'):
-                #  AB only relevant for hets
-                sample_ht = sample_ht.filter(~sample_ht.GT.is_het() | (sample_ht.AB > (quality_filter['min_ab'] / 100)))
-
-            if inheritance_filter:
-                individual = samples[i].individual
-                affected = affected_status[individual.guid]
-                genotype = individual_genotype_filter.get(individual.guid) or inheritance_filter.get(affected)
-                sample_ht = self._sample_inheritance_ht(sample_ht, inheritance_mode, individual, affected, genotype)
-
-            if family_ht is None:
-                family_ht = sample_ht
-            else:
-                family_ht = family_ht.join(sample_ht)
-
-        family_rename = {'GT': 'GT_0'}
-        family_rename.update({f: f'{f}_0' for f in GENOTYPE_QUALITY_FIELDS})
-        family_ht = family_ht.rename(family_rename)
-
-        if family_filter is not None:
-            family_filter_q = family_filter(family_ht, samples, affected_status)
-            if family_filter_q is not None:
-                family_ht = family_ht.filter(family_filter_q)
-
-        return family_ht.annotate(
-            genotypes=hl.array([hl.struct(
-                individualGuid=hl.literal(sample.individual.guid),
-                sampleId=hl.literal(sample.sample_id),
-                numAlt=family_ht[f'GT_{i}'].n_alt_alleles(),
-                **{f.lower(): family_ht[f'{f}_{i}'] for f in GENOTYPE_QUALITY_FIELDS}
-            ) for i, sample in enumerate(samples)])).select('genotypes')
-
-    def _sample_inheritance_ht(self, sample_ht, inheritance_mode, individual, affected, genotype):
-        gt_filter = GENOTYPE_QUERY_MAP[genotype](sample_ht.GT)
-
-        x_sample_ht = None
-        if inheritance_mode in {X_LINKED_RECESSIVE, RECESSIVE}:
-            x_sample_ht = hl.filter_intervals(
-                # TODO #2716: format chromosome for genome build
-                sample_ht, [hl.parse_locus_interval('chrX', reference_genome=self._genome_version)])
-            if affected == Individual.AFFECTED_STATUS_UNAFFECTED and individual.sex == Individual.SEX_MALE:
-                genotype = REF_REF
-
-            x_gt_filter = GENOTYPE_QUERY_MAP[genotype](x_sample_ht.GT)
-            x_sample_ht = x_sample_ht.filter(x_gt_filter)
-            if inheritance_mode == X_LINKED_RECESSIVE:
-                return x_sample_ht
-
-        sample_ht = sample_ht.filter(gt_filter)
-
-        if x_sample_ht:
-            sample_ht = sample_ht.join(x_sample_ht, how='outer')
-
-        return sample_ht
-
-    def _filter_any_affected_family(self, family_ht, samples, affected_status):
-        affected_sample_indices = [
-            i for i, sample in enumerate(samples)
-            if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_AFFECTED
-        ]
-        if not affected_sample_indices:
+        if not self._affected_status_samples[AFFECTED]:
             raise InvalidSearchException(
-                'At least one affected individual must be included in "Any Affected" search')
+                'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
-        return self._family_has_genotype(family_ht, affected_sample_indices, HAS_ALT)
-
-    def _filter_non_ref_family(self, family_ht, samples, affected_status):
-        return self._family_has_genotype(family_ht, range(len(samples)), HAS_ALT)
-
-    def _filter_comp_het_family(self, family_ht, samples, affected_status):
-        unaffected_sample_indices = [
-            i for i, sample in enumerate(samples)
-            if affected_status[sample.individual.guid] == Individual.AFFECTED_STATUS_UNAFFECTED
-        ]
-        if len(unaffected_sample_indices) < 2:
-            return None
-
-        return self._family_has_genotype(family_ht, unaffected_sample_indices, REF_REF)
+        affected_families = {
+            self._samples_by_id[sample_id].individual.family for sample_id in self._affected_status_samples[AFFECTED]
+        }
+        self._samples_by_id = {
+            sample_id: s for sample_id, s in self._samples_by_id.items() if s.individual.family in affected_families
+        }
+        if max_families and len(affected_families) > max_families[0]:
+            raise InvalidSearchException(max_families[1])
 
     @staticmethod
-    def _family_has_genotype(family_ht, indices, expected_gt):
-        gt_filter = GENOTYPE_QUERY_MAP[expected_gt]
-        q = gt_filter(family_ht[f'GT_{indices[0]}'])
-        for i in indices[1:]:
-            q |= gt_filter(family_ht[f'GT_{i}'])
-        return q
+    def _get_quality_filter_expr(mt, quality_filter):
+        quality_filter_expr = None
+        if quality_filter.get('min_gq'):
+            quality_filter_expr = mt.GQ > quality_filter['min_gq']
+        if quality_filter.get('min_ab'):
+            #  AB only relevant for hets
+            ab_expr = (~mt.GT.is_het() | (mt.AB > (quality_filter['min_ab'] / 100)))
+            if quality_filter_expr is None:
+                quality_filter_expr = ab_expr
+            else:
+                quality_filter_expr &= ab_expr
+
+        return quality_filter_expr
+
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
+        if not inheritance_filter:
+            sample_filter = mt.GT.is_non_ref()
+            if quality_filter_expr is not None:
+                sample_filter &= quality_filter_expr
+            if inheritance_mode == ANY_AFFECTED:
+                sample_filter &= hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s)
+            return hl.agg.filter(sample_filter, hl.agg.collect_as_set(sample_family_map[mt.s]))
+
+        search_sample_ids = set()
+        sample_filters = []
+
+        individual_genotype_filter = (inheritance_filter or {}).get('genotype')
+        if individual_genotype_filter:
+            samples_by_individual = {s.individual.guid: sample_id for sample_id, s in self._samples_by_id.items()}
+            samples_by_gentotype = defaultdict(set)
+            for individual_guid, genotype in individual_genotype_filter.items():
+                sample_id = samples_by_individual.get(individual_guid)
+                if sample_id:
+                    search_sample_ids.add(sample_id)
+                    samples_by_gentotype[genotype].add(sample_id)
+            sample_filters += list(samples_by_gentotype.items())
+
+        for status, status_samples in self._affected_status_samples.items():
+            status_sample_ids = {s.sample_id for s in status_samples} - search_sample_ids
+            if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED:
+                male_sample_ids = {
+                    sample_id for sample_id in status_sample_ids
+                    if self._samples_by_id[sample_id].individual.sex == Individual.SEX_MALE
+                }
+                if male_sample_ids:
+                    status_sample_ids -= male_sample_ids
+                    sample_filters.append((REF_REF, male_sample_ids))
+            if status_sample_ids and inheritance_filter.get(status):
+                search_sample_ids.update(status_sample_ids)
+                sample_filters.append((inheritance_filter[status], status_sample_ids))
+
+        sample_ids_by_family = defaultdict(set)
+        for sample_id in search_sample_ids:
+            sample = self._samples_by_id[sample_id]
+            sample_ids_by_family[sample.individual.family.guid].add(sample_id)
+        family_samples_map = hl.dict(sample_ids_by_family)
+
+        sample_filter_exprs = [
+            (GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s)
+             for genotype, samples in sample_filters)
+        ]
+        sample_filter = sample_filter_exprs[0]
+        for sub_filter in sample_filter_exprs[1:]:
+            sample_filter |= sub_filter
+
+        if quality_filter_expr is not None:
+            sample_filter &= quality_filter_expr
+
+        return self._get_family_all_samples_expr(mt, sample_filter, family_samples_map)
+
+    @staticmethod
+    def _get_family_all_samples_expr(mt, sample_filter, family_samples_map):
+        return hl.bind(
+            lambda samples: family_samples_map.key_set().filter(lambda f: family_samples_map[f].is_subset(samples)),
+            hl.agg.filter(sample_filter, hl.agg.collect_as_set(mt.s)))
 
     def filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=True):
         if not self._allowed_consequences:
@@ -537,20 +502,18 @@ class BaseHailTableQuery(object):
         # Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
 
         # Filter variant pairs for family and genotype
-        ch_ht = ch_ht.annotate(family_guids=ch_ht.v1.familyGuids.intersection(ch_ht.v2.familyGuids))
-        unaffected_by_family = hl.literal({
-            family_guid: [
-                guid for guid, affected in affected_status.items() if affected == Individual.AFFECTED_STATUS_UNAFFECTED
-            ] for family_guid, affected_status in self._family_individual_affected_status.items()
-        })
+        ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
+        unaffected_family_individuals = defaultdict(set)
+        for sample in self._affected_status_samples[UNAFFECTED]:
+            unaffected_family_individuals[sample.individual.family.guid].add(sample.individual.guid)
         ch_ht = ch_ht.annotate(
-            family_guids=ch_ht.family_guids.filter(lambda family_guid: unaffected_by_family[family_guid].all(
+            family_guids=ch_ht.family_guids.filter(lambda family_guid: hl.dict(unaffected_family_individuals)[family_guid].all(
                 lambda i_guid: (ch_ht.v1.genotypes[i_guid].numAlt < 1) | (ch_ht.v2.genotypes[i_guid].numAlt < 1)
             )))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
-            v1=ch_ht.v1.annotate(familyGuids=ch_ht.family_guids),
-            v2=ch_ht.v2.annotate(familyGuids=ch_ht.family_guids),
+            v1=ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids)),
+            v2=ch_ht.v2.annotate(familyGuids=hl.array(ch_ht.family_guids)),
         )
 
         # Format pairs as lists and de-duplicate
