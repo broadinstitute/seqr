@@ -133,7 +133,7 @@ class BaseHailTableQuery(object):
             for sample_id in self._samples_by_id.keys()
         }
         ht = ht.annotate(**{sample_id: s_ht[ht.locus, ht.alleles] for sample_id, s_ht in sample_hts.items()})
-        return ht.to_matrix_table_row_major(sample_hts.keys(), col_field_name='s')
+        return ht.to_matrix_table_row_major(list(sample_hts.keys()), col_field_name='s')
 
     def _parse_intervals(self, intervals):
         if intervals:
