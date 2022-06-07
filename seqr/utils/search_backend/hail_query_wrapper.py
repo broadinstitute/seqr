@@ -334,7 +334,7 @@ class BaseHailTableQuery(object):
         sample_family_map = hl.dict({sample_id: s.individual.family.guid for sample_id, s in self._samples_by_id.items()})
         mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
             mt, inheritance_mode, inheritance_filter, sample_family_map,
-            self._get_quality_filter_expr(mt, quality_filter or {}),
+            self._get_quality_filter_expr(mt, quality_filter),
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
@@ -344,7 +344,7 @@ class BaseHailTableQuery(object):
         elif inheritance_mode == RECESSIVE:
             # TODO  # 2716: format chromosome for genome build
             x_chrom_filter = mt.locus.contig == 'chrX'
-            quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter or {})
+            quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter)
             if quality_filter_expr is not None:
                 x_chrom_filter &= quality_filter_expr
             mt = mt.annotate_rows(xLinkedfamilies=self._get_matched_families_expr(
@@ -394,6 +394,8 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _get_quality_filter_expr(mt, quality_filter):
+        if not quality_filter:
+            return None
         quality_filter_expr = None
         if quality_filter.get('min_gq'):
             quality_filter_expr = mt.GQ > quality_filter['min_gq']
