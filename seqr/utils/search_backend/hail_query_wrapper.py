@@ -733,7 +733,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     def _post_process_genotypes(self, mt):
         individual_map = {}
         family_individuals = defaultdict(set)
-        for sample_id, s in self._samples_by_id.values():
+        for sample_id, s in self._samples_by_id.items():
             i_guid = s.individual.guid
             individual_map[i_guid] = sample_id
             family_individuals[s.individual.family.guid].add(i_guid)
