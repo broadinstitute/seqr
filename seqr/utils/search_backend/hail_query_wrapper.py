@@ -229,7 +229,10 @@ class BaseHailTableQuery(object):
         for in_silico, value in in_silico_filters.items():
             ht_value = self._get_in_silico_ht_field(in_silico)
             try:
-                score_filter = ht_value >= float(value)
+                float_val = float(value)
+                if ht_value.dtype == hl.tstr:
+                    ht_value = hl.parse_float(ht_value)
+                score_filter = ht_value >= float_val
             except ValueError:
                 score_filter = ht_value.startswith(value)
 
