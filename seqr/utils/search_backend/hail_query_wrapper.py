@@ -682,11 +682,11 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     def _parse_pathogenicity_overrides(self, pathogenicity):
         pass
 
-    def _filter_rsids(self, rs_ids):
-        pass
-
     def _filter_vcf_filters(self):
         pass
+
+    def _filter_rsids(self, rs_ids):
+        raise InvalidSearchException('Variant ID search disabled for SVs')
 
     def filter_by_variant_ids(self, variant_ids):
         raise InvalidSearchException('Variant ID search disabled for SVs')
