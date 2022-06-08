@@ -742,10 +742,12 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         matched_individuals = hl.set(mt.genotypes.map(lambda g: g.individualGuid))
         missing_individuals = hl.array(mt.familyGuids.flatmap(lambda f: hl.dict(family_individuals)[f]).filter(
             lambda i: ~matched_individuals.contains(i)))
+        genotype_struct_types = mt.genotypes.dtype.element_type
         mt = mt.annotate_rows(genotypes=mt.genotypes.extend(missing_individuals.map(lambda i: hl.struct(
             individualGuid=i,
             sampleId=hl.dict(individual_map)[i],
             numAlt=0,
+            **{k: hl.missing(genotype_struct_types[k]) for k in self.GENOTYPE_FIELDS.keys()}
         ))))
         return super(GcnvHailTableQuery, self)._post_process_genotypes(mt)
 
