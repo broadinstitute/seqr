@@ -620,6 +620,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
         'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
     }
+    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     BOUND_ANNOTATION_FIELDS = {
         'selectedMainTranscriptId': '_selected_main_transcript_expr',
     }
