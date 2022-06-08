@@ -690,7 +690,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         # TODO override interval/ genes for sample-specific SV size
         'pos': lambda r: r.interval.start.position,
         'end': lambda r: r.interval.end.position,
-        'rg37LocusEnd': lambda r: r.rg37_locus_end.to_dict(),
+        'rg37LocusEnd': lambda r: r.rg37_locus_end,
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
