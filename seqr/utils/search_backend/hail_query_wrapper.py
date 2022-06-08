@@ -12,107 +12,62 @@ from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED
 
 logger = logging.getLogger(__name__)
 
-# For production: constants should have their own file
-
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
-
-GENOTYPE_QUERY_MAP = {
-    REF_REF: lambda gt: gt.is_hom_ref(),
-    REF_ALT: lambda gt: gt.is_het(),
-    ALT_ALT: lambda gt: gt.is_hom_var(),
-    HAS_ALT: lambda gt: gt.is_non_ref(),
-    HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
-}
-
-POPULATION_SUB_FIELDS = {
-    'AF',
-    'AC',
-    'AN',
-    'Hom',
-    'Hemi',
-    'Het',
-}
-POPULATIONS = {
-    'topmed': {'hemi': None,'het': None},
-    'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
-    'exac': {
-        'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
-    },
-    'gnomad_exomes': {'filter_AF':  'AF_POPMAX_OR_GLOBAL', 'het': None},
-    'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
-}
-for pop_config in POPULATIONS.values():
-    pop_config.update({field.lower(): field for field in POPULATION_SUB_FIELDS if field.lower() not in pop_config})
-
-PREDICTION_FIELDS_CONFIG = {}
-for path, pred_config in {
-    'cadd': {'PHRED': 'cadd'},
-    'dbnsfp': {
-        'FATHMM_pred': 'fathmm',
-        'GERP_RS': 'gerp_rs',
-        'MetaSVM_pred': 'metasvm',
-        'MutationTaster_pred': 'mutationtaster',
-        'phastCons100way_vertebrate': 'phastcons_100_vert',
-        'Polyphen2_HVAR_pred': 'polyphen',
-        'REVEL_score': 'revel',
-        'SIFT_pred': 'sift',
-    },
-    'eigen': {'Eigen_phred': 'eigen'},
-    'mpc': {'MPC': 'mpc'},
-    'primate_ai': {'score': 'primate_ai'},
-    'splice_ai': {'delta_score': 'splice_ai', 'splice_consequence': 'splice_ai_consequence'},
-}.items():
-    PREDICTION_FIELDS_CONFIG.update({prediction: (path, sub_path) for sub_path, prediction in pred_config.items()})
-
-GENOTYPE_QUALITY_FIELDS = ['AB', 'AD', 'DP', 'PL', 'GQ']
-TRANSCRIPT_FIELDS = [
-    'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp',
-    'lof', 'lof_flags', 'lof_filter', 'lof_info', 'major_consequence', 'transcript_id', 'transcript_rank',
-]
-
-CORE_FIELDS = ['hgmd', 'rsid', 'xpos', 'genotypes']
-ANNOTATION_FIELDS = {
-    'chrom': lambda r: r.locus.contig.replace("^chr", ""),
-    'pos': lambda r: r.locus.position,
-    'ref': lambda r: r.alleles[0],
-    'alt': lambda r: r.alleles[1],
-    'clinvar': lambda r: hl.struct( # In production - format in main HT?
-        clinicalSignificance=r.clinvar.clinical_significance,
-        alleleId=r.clinvar.allele_id,
-        goldStars=r.clinvar.gold_stars,
-    ),
-    'familyGuids': lambda r: hl.array(r.familyGuids),
-    'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
-    'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
-        hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
-    ),
-    'liftedOverChrom': lambda r: hl.if_else(
-        hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
-    ),
-    'liftedOverPos': lambda r: hl.if_else(
-        hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
-    ),
-    'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
-    'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
-    'populations': lambda r: hl.struct(callset=hl.struct(af=r.AF, ac=r.AC, an=r.AN), **{
-        population: hl.struct(**{
-            response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
-            if field is not None
-        }) for population, pop_config in POPULATIONS.items()}
-    ),
-    'predictions': lambda r: hl.struct(**{
-        prediction: r[path[0]][path[1]] for prediction, path in PREDICTION_FIELDS_CONFIG.items()
-    }),
-    'transcripts': lambda r: r.sortedTranscriptConsequences.map(
-        lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in TRANSCRIPT_FIELDS})).group_by(lambda t: t.geneId),
-}
 
 VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 
 
 class BaseHailTableQuery(object):
+
+    GENOTYPE_QUERY_MAP = {
+        REF_REF: lambda gt: gt.is_hom_ref(),
+        REF_ALT: lambda gt: gt.is_het(),
+        ALT_ALT: lambda gt: gt.is_hom_var(),
+        HAS_ALT: lambda gt: gt.is_non_ref(),
+        HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
+    }
+
+    GENOTYPE_QUALITY_FIELDS = []
+    CALLSET_POPULATION = {field.lower(): field for field in ['AF', 'AC', 'AN']}
+    POPULATIONS = {}
+    PREDICTION_FIELDS_CONFIG = {}
+    TRANSCRIPT_FIELDS = ['gene_id', 'major_consequence']
+
+    CORE_FIELDS = ['genotypes']
+    BASE_ANNOTATION_FIELDS = {
+        'familyGuids': lambda r: hl.array(r.familyGuids),
+    }
+
+    @property
+    def populations_configs(self):
+        populations = {
+            pop: {field.lower(): field for field in ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']}
+            for pop in self.POPULATIONS.keys()
+        }
+        for pop, pop_config in self.POPULATIONS.items():
+            populations[pop].update(pop_config)
+        return populations
+
+    @property
+    def annotation_fields(self):
+        annotation_fields = {
+            'populations': lambda r: hl.struct(
+                callset=hl.struct(**{key: r[field] for key, field in self.CALLSET_POPULATION.items()}), **{
+                population: hl.struct(**{
+                    response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
+                    if field is not None
+                }) for population, pop_config in self.populations_configs.items()}),
+            'predictions': lambda r: hl.struct(**{
+                prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
+            }),
+            'transcripts': lambda r: r.sortedTranscriptConsequences.map(
+                lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS})).group_by(
+                lambda t: t.geneId),
+        }
+        annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        return annotation_fields
 
     def __init__(self, data_source, samples, genome_version, **kwargs):
         self._genome_version = genome_version
@@ -133,7 +88,8 @@ class BaseHailTableQuery(object):
             for sample_id in self._samples_by_id.keys()
         }
         ht = ht.annotate(**{sample_id: s_ht[ht.locus, ht.alleles] for sample_id, s_ht in sample_hts.items()})
-        return ht.to_matrix_table_row_major(list(sample_hts.keys()), col_field_name='s')
+        mt = ht.to_matrix_table_row_major(list(sample_hts.keys()), col_field_name='s')
+        return mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
 
     def _parse_intervals(self, intervals):
         if intervals:
@@ -224,7 +180,7 @@ class BaseHailTableQuery(object):
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
             if freqs.get('af') is not None:
-                af_field = POPULATIONS[pop].get('filter_af') or POPULATIONS[pop]['af']
+                af_field = self.populations_configs[pop].get('filter_af') or self.populations_configs[pop]['af']
                 pop_filter = self._mt[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
@@ -232,13 +188,13 @@ class BaseHailTableQuery(object):
                             (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
-                ac_field = POPULATIONS[pop]['ac']
+                ac_field = self.populations_configs[pop]['ac']
                 if ac_field:
                     pop_filter = self._mt[pop][ac_field] <= freqs['ac']
 
             if freqs.get('hh') is not None:
-                hom_field = POPULATIONS[pop]['hom']
-                hemi_field = POPULATIONS[pop]['hemi']
+                hom_field = self.populations_configs[pop]['hom']
+                hemi_field = self.populations_configs[pop]['hemi']
                 if hom_field:
                     hh_filter = self._mt[pop][hom_field] <= freqs['hh']
                     if pop_filter is None:
@@ -283,7 +239,7 @@ class BaseHailTableQuery(object):
         self._mt = self._mt.filter_rows(in_silico_q | missing_in_silico_q)
 
     def _get_in_silico_ht_field(self, in_silico):
-        score_path = PREDICTION_FIELDS_CONFIG[in_silico]
+        score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
         return self._mt[score_path[0]][score_path[1]]
 
     def _filter_by_annotations(self, allowed_consequences):
@@ -371,7 +327,7 @@ class BaseHailTableQuery(object):
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
                 numAlt=mt.GT.n_alt_alleles(),
-                **{f.lower(): mt[f] for f in GENOTYPE_QUALITY_FIELDS}
+                **{f.lower(): mt[f] for f in self.GENOTYPE_QUALITY_FIELDS}
             )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
@@ -453,7 +409,7 @@ class BaseHailTableQuery(object):
         family_samples_map = hl.dict(sample_ids_by_family)
 
         sample_filter_exprs = [
-            (GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
+            (self.GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
              for genotype, samples in sample_filters
         ]
         sample_filter = sample_filter_exprs[0]
@@ -565,9 +521,9 @@ class BaseHailTableQuery(object):
         results = mt.rows()
         results = results.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
-            **{k: v(results) for k, v in ANNOTATION_FIELDS.items()},
+            **{k: v(results) for k, v in self.annotation_fields.items()},
         )
-        response_keys = ['genomeVersion', *CORE_FIELDS, *ANNOTATION_FIELDS.keys()]
+        response_keys = ['genomeVersion', *self.CORE_FIELDS, *self.annotation_fields.keys()]
         if self._allowed_consequences:
             consequences_set = hl.set(self._allowed_consequences)
             selected_transcript_expr = results.sortedTranscriptConsequences.find(
@@ -626,9 +582,64 @@ class BaseHailTableQuery(object):
 
 class VariantHailTableQuery(BaseHailTableQuery):
 
+    GENOTYPE_QUALITY_FIELDS = ['AB', 'AD', 'DP', 'PL', 'GQ']
+    POPULATIONS = {
+        'topmed': {'hemi': None, 'het': None},
+        'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
+        'exac': {
+            'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
+        },
+        'gnomad_exomes': {'filter_AF': 'AF_POPMAX_OR_GLOBAL', 'het': None},
+        'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
+    }
+    PREDICTION_FIELDS_CONFIG = {
+        'cadd': ('cadd', 'PHRED'),
+        'fathmm': ('dbnsfp', 'FATHMM_pred'),
+        'gerp_rs': ('dbnsfp', 'GERP_RS'),
+        'metasvm': ('dbnsfp', 'MetaSVM_pred'),
+        'mutationtaster': ('dbnsfp', 'MutationTaster_pred'),
+        'phastcons_100_vert': ('dbnsfp', 'phastCons100way_vertebrate'),
+        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
+        'revel': ('dbnsfp', 'REVEL_score'),
+        'sift': ('dbnsfp', 'SIFT_pred'),
+        'eigen': ('eigen', 'Eigen_phred'),
+        'mpc': ('mpc', 'MPC'),
+        'primate_ai': ('primate_ai', 'score'),
+        'splice_ai': ('splice_ai', 'delta_score'),
+        'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
+    }
+    TRANSCRIPT_FIELDS = BaseHailTableQuery.TRANSCRIPT_FIELDS + [
+        'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_flags', 'lof_filter', 'lof_info',
+        'transcript_id', 'transcript_rank',
+    ]
+
+    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['hgmd', 'rsid', 'xpos']
+    BASE_ANNOTATION_FIELDS = {
+        'chrom': lambda r: r.locus.contig.replace("^chr", ""),
+        'pos': lambda r: r.locus.position,
+        'ref': lambda r: r.alleles[0],
+        'alt': lambda r: r.alleles[1],
+        'clinvar': lambda r: hl.struct(  # In production - format in main HT?
+            clinicalSignificance=r.clinvar.clinical_significance,
+            alleleId=r.clinvar.allele_id,
+            goldStars=r.clinvar.gold_stars,
+        ),
+        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
+        'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
+            hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
+        ),
+        'liftedOverChrom': lambda r: hl.if_else(
+            hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
+        ),
+        'liftedOverPos': lambda r: hl.if_else(
+            hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
+        ),
+        'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
+        'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
+    }
+
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(VariantHailTableQuery, self)._load_table(data_source, intervals=None if exclude_intervals else intervals)
-        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         if intervals and exclude_intervals:
             intervals = self._parse_intervals(intervals)
             mt = hl.filter_intervals(mt, intervals, keep=False)
@@ -639,7 +650,6 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(GcnvHailTableQuery, self)._load_table(data_source)
-        # TODO filter no-sample rows
         if intervals:
             intervals = self._parse_intervals(intervals)
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
@@ -657,12 +667,10 @@ class AllDataTypeHailTableQuery(BaseHailTableQuery):
 
         mt = mt.key_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
         transcript_struct_types = mt.sortedTranscriptConsequences.dtype.element_type
-        sv_transcript_fields = mt.sortedTranscriptConsequences_1.dtype.element_type.keys()
-        missing_transcript_fields = [k for k in TRANSCRIPT_FIELDS if k not in sv_transcript_fields]
+        missing_transcript_fields = set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS)
         # TODO merge columns?
         return mt.transmute(sortedTranscriptConsequences=hl.or_else(
-            mt.sortedTranscriptConsequences.map(
-                lambda t: t.select(*sv_transcript_fields, *missing_transcript_fields)),
+            mt.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS)),
             hl.array(mt.sortedTranscriptConsequences_1.map(
                 lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
         ))
