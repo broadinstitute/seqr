@@ -40,6 +40,15 @@ class BaseHailTableQuery(object):
     CORE_FIELDS = ['genotypes']
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: hl.array(r.familyGuids),
+        'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
+            hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')), # TODO #2716: rg37_locus will be missing for build 37
+        ),
+        'liftedOverChrom': lambda r: hl.if_else(
+            hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
+        ),
+        'liftedOverPos': lambda r: hl.if_else(
+            hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
+        ),
     }
     BOUND_ANNOTATION_FIELDS = {}
 
@@ -613,15 +622,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
             goldStars=r.clinvar.gold_stars,
         ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
-        'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
-            hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
-        ),
-        'liftedOverChrom': lambda r: hl.if_else(
-            hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
-        ),
-        'liftedOverPos': lambda r: hl.if_else(
-            hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
-        ),
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
         'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
     }
@@ -690,6 +690,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         # TODO override interval/ genes for sample-specific SV size
         'pos': lambda r: r.interval.start.position,
         'end': lambda r: r.interval.end.position,
+        'rg37LocusEnd': lambda r: r.rg37_locus_end.to_dict(),
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)

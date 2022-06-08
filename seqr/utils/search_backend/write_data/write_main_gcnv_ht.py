@@ -46,10 +46,13 @@ def write_main_gcnv_ht(file):
     ).key_by('variantId')
 
     # Export main variants
+    hl.get_reference('GRCh38').add_liftover('gs://hail-common/references/grch38_to_grch37.over.chain.gz', hl.get_reference('GRCh37'))
+    start_locus = hl.locus(gt.chr, gt.start, reference_genome='GRCh38')
+    end_locus = hl.locus(gt.chr, gt.end, reference_genome='GRCh38')
     variant_annotations = {
-        'interval': hl.interval(
-            hl.locus(gt.chr, gt.start, reference_genome='GRCh38'),
-            hl.locus(gt.chr, gt.end, reference_genome='GRCh38')),
+        'interval': hl.interval(start_locus, end_locus),
+        'rg37_locus': hl.liftover(start_locus, 'GRCh37'),
+        'rg37_locus_end': hl.liftover(end_locus, 'GRCh37'),
         'sn': gt.sc/gt.sf,
         'strvctvre': hl.struct(score=gt.strvctvre),
         'sortedTranscriptConsequences': gt.geneIds.map(lambda gene: hl.Struct(
@@ -66,10 +69,10 @@ def write_main_gcnv_ht(file):
     vt.write(f'gs://hail-backend-datasets/{file_name}.ht')
 
     # Export all samples
-    # st = gt.explode('samples').select('samples', 'start', 'end', 'numExon', 'geneIds')
-    # st = st.annotate(samples=st.samples.select(
-    #     'sample_id', 'cn', 'start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall', 'qs'))
-    # st.write(f'gs://hail-backend-datasets/{file_name}.samples.ht')
+    st = gt.explode('samples').select('samples', 'start', 'end', 'numExon', 'geneIds')
+    st = st.annotate(samples=st.samples.select(
+        'sample_id', 'cn', 'start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall', 'qs'))
+    st.write(f'gs://hail-backend-datasets/{file_name}.samples.ht')
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
