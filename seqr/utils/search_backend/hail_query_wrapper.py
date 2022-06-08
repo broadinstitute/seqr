@@ -90,7 +90,7 @@ class BaseHailTableQuery(object):
             sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{sample_id}.ht', **load_table_kwargs)
             for sample_id in self._samples_by_id.keys()
         }
-        ht = ht.annotate(**{sample_id: s_ht[ht.locus, ht.alleles] for sample_id, s_ht in sample_hts.items()})
+        ht = ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
         mt = ht.to_matrix_table_row_major(list(sample_hts.keys()), col_field_name='s')
         return mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
 
