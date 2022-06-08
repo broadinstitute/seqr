@@ -340,15 +340,14 @@ class BaseHailTableQuery(object):
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
         sample_individual_map = hl.dict({sample_id: s.individual.guid for sample_id, s in self._samples_by_id.items()})
-        genotype_fields = {
-            'individualGuid': sample_individual_map[mt.s],
-            'sampleId': mt.s,
-            'numAlt': mt.GT.n_alt_alleles(),
-        }
-        genotype_fields.update({k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()})
         mt = mt.annotate_rows(genotypes=hl.agg.filter(
             mt.familyGuids.contains(sample_family_map[mt.s]),
-            hl.agg.collect(hl.dict(genotype_fields))))
+            hl.agg.collect(hl.struct(
+                individualGuid=sample_individual_map[mt.s],
+                sampleId=mt.s,
+                numAlt=mt.GT.n_alt_alleles(),
+                **{k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
+            ))))
         return self._post_process_genotypes(mt)
 
     def _post_process_genotypes(self, mt):
@@ -486,7 +485,7 @@ class BaseHailTableQuery(object):
             unaffected_family_individuals[individual.family.guid].add(individual.guid)
         ch_ht = ch_ht.annotate(
             family_guids=ch_ht.family_guids.filter(lambda family_guid: hl.dict(unaffected_family_individuals)[family_guid].all(
-                lambda i_guid: (ch_ht.v1.genotypes[i_guid]['numAlt'] < 1) | (ch_ht.v2.genotypes[i_guid]['numAlt'] < 1)
+                lambda i_guid: (ch_ht.v1.genotypes[i_guid].numAlt < 1) | (ch_ht.v2.genotypes[i_guid].numAlt < 1)
             )))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
@@ -743,7 +742,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         matched_individuals = hl.set(mt.genotypes.map(lambda g: g.individualGuid))
         missing_individuals = mt.familyGuids.flatmap(lambda f: family_individuals[f]).filter(
             lambda i: ~matched_individuals.contains(i))
-        mt = mt.annotate_rows(genotypes=mt.genotypes.extend(missing_individuals.map(lambda i: hl.dict({
+        mt = mt.annotate_rows(genotypes=mt.genotypes.extend(missing_individuals.map(lambda i: hl.struct(**{
             'individualGuid': i,
             'sampleId': individual_map[i],
             'numAlt': 0,
