@@ -29,6 +29,9 @@ DEPLOYMENT_TARGETS = [
     "elasticsearch-snapshot-config",
 ]
 
+# pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
+DEPLOYABLE_COMPONENTS = ['pipeline-runner'] + DEPLOYMENT_TARGETS
+
 GCLOUD_CLIENT = 'gcloud-client'
 
 SECRETS = {
@@ -197,16 +200,16 @@ def deploy_redis(settings):
 def deploy_seqr(settings):
     print_separator("seqr")
 
-    if settings['BUILD_DOCKER_IMAGES']:
-        if settings['DEPLOY_TO'] == 'prototype':
-            docker_build(
-                'seqr', settings, custom_build_args=['-f deploy/docker/seqr/Dockerfile'], docker_path='.', use_default_tags=False)
-            if settings['ONLY_PUSH_TO_REGISTRY']:
-                return
-        else:
-            raise Exception("seqr image docker builds via servctl have been deprecated. Please ensure that your desired "
-                            "build has been produced via Cloudbuild and GCR, and then run the deployment without the "
-                            "docker build flag.")
+    if settings['DEPLOY_TO'] == 'prototype':
+        docker_build(
+            'seqr', settings, custom_build_args=['-f deploy/docker/seqr/Dockerfile'], docker_path='.',
+            use_default_tags=False)
+        if settings['ONLY_PUSH_TO_REGISTRY']:
+            return
+    else:
+        raise Exception("seqr image docker builds via servctl have been deprecated. Please ensure that your desired "
+                        "build has been produced via Cloudbuild and GCR, and then run the deployment without the "
+                        "docker build flag.")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
@@ -226,6 +229,14 @@ def deploy_kibana(settings):
     wait_for_resource(
         'kibana', resource_type='kibana', json_path='{.items[0].status.health}', expected_status='green',
         deployment_target=settings["DEPLOY_TO"], verbose_template='kibana health')
+
+
+def deploy_pipeline_runner(settings):
+    print_separator("pipeline_runner")
+
+    docker_build("pipeline-runner", settings, [
+        "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
+    ])
 
 
 def deploy(deployment_target, components, output_dir=None, runtime_settings=None):
@@ -257,8 +268,8 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings=None
         deploy_secrets(settings, components=components[1:])
         return
 
-    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYMENT_TARGETS
-    for component in DEPLOYMENT_TARGETS:
+    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
+    for component in DEPLOYABLE_COMPONENTS:
         if component in components:
             # only deploy requested components
             func_name = "deploy_" + component.replace("-", "_")
@@ -335,7 +346,7 @@ def docker_build(component_label, settings, custom_build_args=(), docker_path=No
         "",
         ":latest",
         ":%(TIMESTAMP)s" % settings,
-        ]) if use_default_tags else set()
+        ])  if use_default_tags else set()
 
     if settings.get("DOCKER_IMAGE_TAG"):
         docker_tags.add(params["DOCKER_IMAGE_TAG"])
@@ -345,9 +356,10 @@ def docker_build(component_label, settings, custom_build_args=(), docker_path=No
     if not settings["BUILD_DOCKER_IMAGES"]:
         logger.info("Skipping docker build step. Use --build-docker-image to build a new image (and --force to build from the beginning)")
     else:
+        docker_build_command = ""
         docker_build_command = "docker build "
         docker_build_command += docker_path or "deploy/docker/%(COMPONENT_LABEL)s/"
-        docker_build_command += ( " " + " ".join(custom_build_args) + " ")
+        docker_build_command += (" " + " ".join(custom_build_args) + " ")
         if settings["FORCE_BUILD_DOCKER_IMAGES"]:
             docker_build_command += "--no-cache "
 
