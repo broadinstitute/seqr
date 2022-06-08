@@ -53,7 +53,7 @@ def write_main_gcnv_ht(file):
         'interval': hl.interval(start_locus, end_locus),
         'rg37_locus': hl.liftover(start_locus, 'GRCh37'),
         'rg37_locus_end': hl.liftover(end_locus, 'GRCh37'),
-        'sn': gt.sc/gt.sf,
+        'sn': hl.int(gt.sc/gt.sf),
         'strvctvre': hl.struct(score=gt.strvctvre),
         'sortedTranscriptConsequences': gt.geneIds.map(lambda gene: hl.Struct(
             gene_id=gene,
