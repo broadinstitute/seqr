@@ -5,7 +5,7 @@ from seqr.models import Sample
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET
 from seqr.utils.elasticsearch.es_search import EsSearch
-from seqr.utils.search_backend.hail_query_wrapper import VariantHailTableQuery
+from seqr.utils.search_backend.hail_query_wrapper import VariantHailTableQuery, GcnvHailTableQuery
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +45,8 @@ class HailSearch(object):
 
         # TODO load correct data type
         self.samples = [s for s in self.samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS]
-        data_source = data_sources_by_type[Sample.DATASET_TYPE_VARIANT_CALLS]
-        query_cls = VariantHailTableQuery
+        data_source = data_sources_by_type[Sample.DATASET_TYPE_SV_CALLS]
+        query_cls = GcnvHailTableQuery
         self._query_wrapper = query_cls(data_source, samples=self.samples, genome_version=self._genome_version, **kwargs)
 
     @classmethod

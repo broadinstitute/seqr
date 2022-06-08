@@ -51,6 +51,7 @@ def write_main_gcnv_ht(file):
             hl.locus(gt.chr, gt.start, reference_genome='GRCh38'),
             hl.locus(gt.chr, gt.end, reference_genome='GRCh38')),
         'sn': gt.sc/gt.sf,
+        'strvctvre': hl.struct(score=gt.strvctvre),
         'sortedTranscriptConsequences': gt.geneIds.map(lambda gene: hl.Struct(
             gene_id=gene,
             major_consequence=hl.if_else(
@@ -60,15 +61,15 @@ def write_main_gcnv_ht(file):
             ))),
     }
     vt = gt.annotate(**variant_annotations).select(
-        'numExon', 'sc', 'sf', 'strvctvre', 'svType', *variant_annotations.keys(),
+        'numExon', 'sc', 'sf', 'svType', *variant_annotations.keys(),
     )
     vt.write(f'gs://hail-backend-datasets/{file_name}.ht')
 
     # Export all samples
-    st = gt.explode('samples').select('samples', 'start', 'end', 'numExon', 'geneIds')
-    st = st.annotate(samples=st.samples.select(
-        'sample_id', 'cn', 'start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall', 'qs'))
-    st.write(f'gs://hail-backend-datasets/{file_name}.samples.ht')
+    # st = gt.explode('samples').select('samples', 'start', 'end', 'numExon', 'geneIds')
+    # st = st.annotate(samples=st.samples.select(
+    #     'sample_id', 'cn', 'start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall', 'qs'))
+    # st.write(f'gs://hail-backend-datasets/{file_name}.samples.ht')
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()

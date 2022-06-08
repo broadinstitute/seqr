@@ -29,8 +29,9 @@ class BaseHailTableQuery(object):
         HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
     }
 
-    GENOTYPE_QUALITY_FIELDS = []
+    GENOTYPE_FIELDS = {}
     # In production: will not have callset frequency, may rename these fields
+    CALLSET_FIELD = 'callset'
     CALLSET_POPULATION = {field.lower(): field for field in ['AF', 'AC', 'AN']}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
@@ -56,7 +57,7 @@ class BaseHailTableQuery(object):
     def annotation_fields(self):
         annotation_fields = {
             'populations': lambda r: hl.struct(
-                callset=hl.struct(**{key: r[field] for key, field in self.CALLSET_POPULATION.items()}), **{
+                **{self.CALLSET_FIELD: hl.struct(**{key: r[field] for key, field in self.CALLSET_POPULATION.items()})}, **{
                 population: hl.struct(**{
                     response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
                     if field is not None
@@ -162,7 +163,7 @@ class BaseHailTableQuery(object):
             raise NotImplementedError
 
     def _filter_by_frequency(self, frequencies):
-        callset_filter = (frequencies or {}).pop('callset', {}) or {}
+        callset_filter = (frequencies or {}).pop(self.CALLSET_FIELD, {}) or {}
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.populations_configs}
         if not (callset_filter or frequencies):
             return
@@ -336,7 +337,7 @@ class BaseHailTableQuery(object):
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
                 numAlt=mt.GT.n_alt_alleles(),
-                **{f.lower(): mt[f] for f in self.GENOTYPE_QUALITY_FIELDS}
+                **{k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
             )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
@@ -569,7 +570,7 @@ class BaseHailTableQuery(object):
 
 class VariantHailTableQuery(BaseHailTableQuery):
 
-    GENOTYPE_QUALITY_FIELDS = ['AB', 'AD', 'DP', 'PL', 'GQ']
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'DP', 'PL', 'GQ']}
     POPULATIONS = {
         'topmed': {'hemi': None, 'het': None},
         'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
@@ -674,6 +675,24 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
 
 class GcnvHailTableQuery(BaseHailTableQuery):
+    GENOTYPE_FIELDS = {
+        f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
+    }
+    CALLSET_FIELD = 'sv_callset'
+    CALLSET_POPULATION = {'af': 'sf', 'ac': 'sc', 'an': 'sn'}
+    PREDICTION_FIELDS_CONFIG = {
+        'strvctvre': ('strvctvre', 'score'),
+    }
+
+    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['numExon']
+    BASE_ANNOTATION_FIELDS = {
+        'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
+        # TODO override interval/ genes for sample-specific SV size
+        'pos': lambda r: r.interval.start.position,
+        'end': lambda r: r.interval.end.position,
+        'svType': lambda r: r.svType.replace('^gCNV_', ''),
+    }
+    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(GcnvHailTableQuery, self)._load_table(data_source)
