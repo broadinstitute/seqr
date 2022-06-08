@@ -340,14 +340,19 @@ class BaseHailTableQuery(object):
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
         sample_individual_map = hl.dict({sample_id: s.individual.guid for sample_id, s in self._samples_by_id.items()})
-        return mt.annotate_rows(genotypes=hl.agg.filter(
+        genotype_fields = {
+            'individualGuid': sample_individual_map[mt.s],
+            'sampleId': mt.s,
+            'numAlt': mt.GT.n_alt_alleles(),
+        }
+        genotype_fields.update({k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()})
+        mt = mt.annotate_rows(genotypes=hl.agg.filter(
             mt.familyGuids.contains(sample_family_map[mt.s]),
-            hl.agg.collect(hl.struct(
-                individualGuid=sample_individual_map[mt.s],
-                sampleId=mt.s,
-                numAlt=mt.GT.n_alt_alleles(),
-                **{k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
-            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
+            hl.agg.collect(hl.dict(genotype_fields))))
+        return self._post_process_genotypes(mt)
+
+    def _post_process_genotypes(self, mt):
+        return mt.annotate_rows(genotypes=mt.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
         for sample_id, sample in self._samples_by_id.items():
@@ -481,7 +486,7 @@ class BaseHailTableQuery(object):
             unaffected_family_individuals[individual.family.guid].add(individual.guid)
         ch_ht = ch_ht.annotate(
             family_guids=ch_ht.family_guids.filter(lambda family_guid: hl.dict(unaffected_family_individuals)[family_guid].all(
-                lambda i_guid: (ch_ht.v1.genotypes[i_guid].numAlt < 1) | (ch_ht.v2.genotypes[i_guid].numAlt < 1)
+                lambda i_guid: (ch_ht.v1.genotypes[i_guid]['numAlt'] < 1) | (ch_ht.v2.genotypes[i_guid]['numAlt'] < 1)
             )))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
@@ -725,6 +730,24 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         # TODO #2716: format chromosome for genome build
         x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=self._genome_version)
         return mt.interval.overlaps(x_chrom_interval)
+
+    def _post_process_genotypes(self, mt):
+        individual_map = {}
+        family_individuals = defaultdict(set)
+        for sample_id, s in self._samples_by_id.values():
+            i_guid = s.individual.guid
+            individual_map[i_guid] = sample_id
+            family_individuals[s.individual.family.guid].add(i_guid)
+
+        matched_individuals = hl.set(mt.genotypes.map(lambda g: g.individualGuid))
+        missing_individuals = mt.familyGuids.flatmap(lambda f: family_individuals[f]).filter(
+            lambda i: ~matched_individuals.contains(i))
+        mt = mt.annotate_rows(genotypes=mt.genotypes.extend(missing_individuals.map(lambda i: hl.dict({
+            'individualGuid': i,
+            'sampleId': individual_map[i],
+            'numAlt': 0,
+        }))))
+        return super(GcnvHailTableQuery, self)._post_process_genotypes(mt)
 
 
 class AllDataTypeHailTableQuery(BaseHailTableQuery):
