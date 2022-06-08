@@ -176,7 +176,7 @@ class BaseHailTableQuery(object):
             if has_path_override and callset_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                 callset_f |= (
                         self._get_clinvar_filter(clinvar_path_terms) &
-                        (self._mt.[self.CALLSET_POPULATION['af']] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                        (self._mt[self.CALLSET_POPULATION['af']] <= PATH_FREQ_OVERRIDE_CUTOFF)
                 )
             self._mt = self._mt.filter_rows(callset_f)
         elif callset_filter.get('ac') is not None:
