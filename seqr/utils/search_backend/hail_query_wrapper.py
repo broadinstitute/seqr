@@ -30,6 +30,7 @@ class BaseHailTableQuery(object):
     }
 
     GENOTYPE_QUALITY_FIELDS = []
+    # In production: will not have callset frequency, may rename these fields
     CALLSET_POPULATION = {field.lower(): field for field in ['AF', 'AC', 'AN']}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
@@ -39,6 +40,7 @@ class BaseHailTableQuery(object):
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: hl.array(r.familyGuids),
     }
+    BOUND_ANNOTATION_FIELDS = {}
 
     @property
     def populations_configs(self):
@@ -97,21 +99,10 @@ class BaseHailTableQuery(object):
                          for interval in intervals]
         return intervals
 
-    @staticmethod
-    def _sample_table(sample):
-        # In production: should use a different model field, not elasticsearch_index
-        return hl.read_table(f'/hail_datasets/{sample.elasticsearch_index}_samples/{sample.sample_id}.ht')
-
     def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
                         annotations=None, quality_filter=None, custom_query=None):
-        for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
-            self._consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
-        for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
-            self._consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
-        annotations = {k: v for k, v in (annotations or {}).items() if v}
-        # TODO #2663: new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
-        self._consequence_overrides[SPLICE_AI_FIELD] = annotations.pop(SPLICE_AI_FIELD, None)
-        self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
+        self._parse_pathogenicity_overrides(pathogenicity)
+        self._parse_annotations_overrides(annotations)
 
         if rs_ids:
             self._filter_rsids(rs_ids)
@@ -124,6 +115,23 @@ class BaseHailTableQuery(object):
 
         if quality_filter.get('vcf_filter') is not None:
             self._filter_vcf_filters()
+
+    def _parse_annotations_overrides(self, annotations):
+        annotations = {k: v for k, v in (annotations or {}).items() if v}
+        annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
+        for field in annotation_override_fields:
+            # TODO #2663: new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
+            value = annotations.pop(field, None)
+            if field in self.PREDICTION_FIELDS_CONFIG:
+                self._consequence_overrides[field] = value
+
+        self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
+
+    def _parse_pathogenicity_overrides(self, pathogenicity):
+        for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
+            self._consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
+        for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
+            self._consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
     def _filter_rsids(self, rs_ids):
         self._mt = self._mt.filter_rows(hl.set(rs_ids).contains(self._mt.rsid))
@@ -154,28 +162,25 @@ class BaseHailTableQuery(object):
             raise NotImplementedError
 
     def _filter_by_frequency(self, frequencies):
-        if not frequencies:
+        callset_filter = (frequencies or {}).pop('callset', {}) or {}
+        frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.populations_configs}
+        if not (callset_filter or frequencies):
             return
-
-        #  UI bug causes sv freq filter to be added despite no SV data
-        frequencies.pop('sv_callset', None)
 
         clinvar_path_terms = [f for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES]
         has_path_override = bool(clinvar_path_terms) and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
-        # In production: will not have callset frequency, may rename these fields
-        callset_filter = frequencies.pop('callset', {}) or {}
         if callset_filter.get('af') is not None:
-            callset_f = self._mt.AF <= callset_filter['af']
+            callset_f = self._mt[self.CALLSET_POPULATION['af']] <= callset_filter['af']
             if has_path_override and callset_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                 callset_f |= (
                         self._get_clinvar_filter(clinvar_path_terms) &
-                        (self._mt.AF <= PATH_FREQ_OVERRIDE_CUTOFF)
+                        (self._mt.[self.CALLSET_POPULATION['af']] <= PATH_FREQ_OVERRIDE_CUTOFF)
                 )
             self._mt = self._mt.filter_rows(callset_f)
         elif callset_filter.get('ac') is not None:
-            self._mt = self._mt.filter_rows(self._mt.AC <= callset_filter['ac'])
+            self._mt = self._mt.filter_rows(self._mt[self.CALLSET_POPULATION['ac']] <= callset_filter['ac'])
 
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
@@ -212,7 +217,10 @@ class BaseHailTableQuery(object):
                 self._mt = self._mt.filter_rows(hl.is_missing(self._mt[pop]) | pop_filter)
 
     def _filter_by_in_silico(self, in_silico_filters):
-        in_silico_filters = {k: v for k, v in (in_silico_filters or {}).items() if v is not None and len(v) != 0}
+        in_silico_filters = {
+            k: v for k, v in (in_silico_filters or {}).items()
+            if k in self.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0
+        }
         if not in_silico_filters:
             return
 
@@ -255,7 +263,9 @@ class BaseHailTableQuery(object):
                 self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(self._consequence_overrides[SPLICE_AI_FIELD]))
 
         if allowed_consequences:
-            annotation_filters.append(self._get_filtered_transcript_consequences(allowed_consequences))
+            annotation_filters.append(
+                self._get_consequence_terms().any(lambda ct: hl.set(allowed_consequences).contains(ct))
+            )
 
         if not annotation_filters:
             return self._mt
@@ -265,10 +275,8 @@ class BaseHailTableQuery(object):
 
         return self._mt.filter_rows(annotation_filter)
 
-    def _get_filtered_transcript_consequences(self, allowed_consequences):
-        allowed_consequences_set = hl.set(allowed_consequences)
-        consequence_terms = self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
-        return consequence_terms.any(lambda ct: allowed_consequences_set.contains(ct))
+    def _get_consequence_terms(self):
+        return self._mt.sortedTranscriptConsequences.map(lambda tc: tc.major_consequence)
 
     def _get_clinvar_filter(self, clinvar_terms):
         allowed_significances = hl.set(clinvar_terms)
@@ -294,12 +302,9 @@ class BaseHailTableQuery(object):
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
-            mt = hl.filter_intervals(
-                # TODO #2716: format chromosome for genome build
-                mt, [hl.parse_locus_interval('chrX', reference_genome=self._genome_version)])
+            mt = mt.filter_rows(self._get_x_chrom_filter(mt))
         elif inheritance_mode == RECESSIVE:
-            # TODO  # 2716: format chromosome for genome build
-            x_chrom_filter = mt.locus.contig == 'chrX'
+            x_chrom_filter = self._get_x_chrom_filter(mt)
             quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter)
             if quality_filter_expr is not None:
                 x_chrom_filter &= quality_filter_expr
@@ -350,20 +355,14 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _get_quality_filter_expr(mt, quality_filter):
-        if not quality_filter:
-            return None
-        quality_filter_expr = None
-        if quality_filter.get('min_gq'):
-            quality_filter_expr = mt.GQ > quality_filter['min_gq']
-        if quality_filter.get('min_ab'):
-            #  AB only relevant for hets
-            ab_expr = (~mt.GT.is_het() | (mt.AB > (quality_filter['min_ab'] / 100)))
-            if quality_filter_expr is None:
-                quality_filter_expr = ab_expr
-            else:
-                quality_filter_expr &= ab_expr
+        if (quality_filter or {}).get('min_gq'):
+            return mt.GQ > quality_filter['min_gq']
 
-        return quality_filter_expr
+        return None
+
+    def _get_x_chrom_filter(self, mt):
+        # TODO #2716: format chromosome for genome build
+        return mt.locus.contig == 'chrX'
 
     def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
         if not inheritance_filter:
@@ -522,27 +521,11 @@ class BaseHailTableQuery(object):
         results = results.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(results) for k, v in self.annotation_fields.items()},
+            **{k: getattr(self, v)(results) for k, v in self.BOUND_ANNOTATION_FIELDS.items()},
         )
-        response_keys = ['genomeVersion', *self.CORE_FIELDS, *self.annotation_fields.keys()]
-        if self._allowed_consequences:
-            consequences_set = hl.set(self._allowed_consequences)
-            selected_transcript_expr = results.sortedTranscriptConsequences.find(
-                lambda t: consequences_set.contains(t.major_consequence)).transcript_id
-            if self._allowed_consequences_secondary:
-                consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
-                selected_transcript_expr = hl.bind(lambda transcript_id: hl.or_else(
-                    transcript_id, results.sortedTranscriptConsequences.find(
-                        lambda t: consequences_secondary_set.contains(t.major_consequence)).transcript_id),
-                                                   selected_transcript_expr)
-
-            results = results.annotate(selectedMainTranscriptId=hl.if_else(
-                consequences_set.contains(results.sortedTranscriptConsequences[0].major_consequence),
-                hl.missing(hl.dtype('str')), selected_transcript_expr,
-            ))
-            response_keys.append('selectedMainTranscriptId')
-
         results = results.key_by(VARIANT_KEY_FIELD)
-        return results.select(*response_keys)
+        return results.select(
+            'genomeVersion', *self.CORE_FIELDS, *self.BOUND_ANNOTATION_FIELDS.keys(), *self.annotation_fields.keys())
 
     def search(self, page, num_results, sort):
         if self._mt:
@@ -637,6 +620,9 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
         'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
     }
+    BOUND_ANNOTATION_FIELDS = {
+        'selectedMainTranscriptId': '_selected_main_transcript_expr',
+    }
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(VariantHailTableQuery, self)._load_table(data_source, intervals=None if exclude_intervals else intervals)
@@ -644,6 +630,42 @@ class VariantHailTableQuery(BaseHailTableQuery):
             intervals = self._parse_intervals(intervals)
             mt = hl.filter_intervals(mt, intervals, keep=False)
         return mt
+
+    def _get_consequence_terms(self):
+        return self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
+
+    @staticmethod
+    def _get_quality_filter_expr(mt, quality_filter):
+        quality_filter_expr = BaseHailTableQuery._get_quality_filter_expr(mt, quality_filter)
+        if (quality_filter or {}).get('min_ab'):
+            #  AB only relevant for hets
+            ab_expr = (~mt.GT.is_het() | (mt.AB > (quality_filter['min_ab'] / 100)))
+            if quality_filter_expr is None:
+                quality_filter_expr = ab_expr
+            else:
+                quality_filter_expr &= ab_expr
+
+        return quality_filter_expr
+
+    def _selected_main_transcript_expr(self, results):
+        if not self._allowed_consequences:
+            return hl.missing(hl.dtype('str'))
+
+        consequences_set = hl.set(self._allowed_consequences)
+        selected_transcript_expr = results.sortedTranscriptConsequences.find(
+            lambda t: consequences_set.contains(t.major_consequence)).transcript_id
+        if self._allowed_consequences_secondary:
+            consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
+            selected_transcript_expr = hl.bind(
+                lambda transcript_id: hl.or_else(
+                    transcript_id, results.sortedTranscriptConsequences.find(
+                        lambda t: consequences_secondary_set.contains(t.major_consequence)).transcript_id),
+                selected_transcript_expr)
+
+        return hl.if_else(
+            consequences_set.contains(results.sortedTranscriptConsequences[0].major_consequence),
+            hl.missing(hl.dtype('str')), selected_transcript_expr,
+        )
 
 
 class GcnvHailTableQuery(BaseHailTableQuery):
@@ -656,6 +678,28 @@ class GcnvHailTableQuery(BaseHailTableQuery):
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(mt.interval))
             mt = mt.filter_rows(interval_filter)
         return mt
+
+    def _parse_pathogenicity_overrides(self, pathogenicity):
+        pass
+
+    def _filter_rsids(self, rs_ids):
+        pass
+
+    def _filter_vcf_filters(self):
+        pass
+
+    def filter_by_variant_ids(self, variant_ids):
+        raise InvalidSearchException('Variant ID search disabled for SVs')
+
+    @staticmethod
+    def _get_quality_filter_expr(mt, quality_filter):
+        # TODO
+        return None
+
+    def _get_x_chrom_filter(self, mt):
+        # TODO #2716: format chromosome for genome build
+        x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=self._genome_version)
+        return mt.interval.overlaps(x_chrom_interval)
 
 
 class AllDataTypeHailTableQuery(BaseHailTableQuery):
