@@ -231,6 +231,7 @@ class BaseHailTableQuery(object):
             try:
                 float_val = float(value)
                 if ht_value.dtype == hl.tstr:
+                    # In production: store all numeric scores as floats
                     ht_value = hl.parse_float(ht_value)
                 score_filter = ht_value >= float_val
             except ValueError:
