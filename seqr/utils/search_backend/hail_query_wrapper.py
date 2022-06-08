@@ -739,6 +739,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             individual_map[i_guid] = sample_id
             family_individuals[s.individual.family.guid].add(i_guid)
 
+        #  gCNV data has no ref/ref calls, so add them for all individuals missing from matched families
         matched_individuals = hl.set(mt.genotypes.map(lambda g: g.individualGuid))
         missing_individuals = mt.familyGuids.flatmap(lambda f: family_individuals[f]).filter(
             lambda i: ~matched_individuals.contains(i))
