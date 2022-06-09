@@ -695,11 +695,11 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         'pos': lambda r: hl.if_else(
             r.genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g.start)),
             r.interval.start.position,
-            hl.agg.min(r.genotypes.values().filter(lambda g: g.numAlt > 0).map(lambda g: g.start))),
+            hl.min(r.genotypes.values().map(lambda g: g.start))),
         'end': lambda r: hl.if_else(
             r.genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g.end)),
             r.interval.end.position,
-            hl.agg.max(r.genotypes.values().filter(lambda g: g.numAlt > 0).map(lambda g: g.end))),
+            hl.max(r.genotypes.values().map(lambda g: g.end))),
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     }
