@@ -679,11 +679,12 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return quality_filter_expr
 
+def _no_genotype_override(genotypes, field):
+    return genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
+
 def _get_genotype_override_field(genotypes, default, field, agg):
     return hl.if_else(
-        genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field])),
-        default,
-        agg(genotypes.values().map(lambda g: g[field]))
+        _no_genotype_override(genotypes, field), default, agg(genotypes.values().map(lambda g: g[field]))
     )
 
 class GcnvHailTableQuery(BaseHailTableQuery):
@@ -707,15 +708,12 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     COMPUTED_ANNOTATION_FIELDS = {
-        'transcripts': lambda self, r: hl.bind(
-            lambda gene_ids: hl.if_else(
-                hl.is_defined(gene_ids),
-                hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-                r.transcripts,
+        'transcripts': lambda self, r: hl.if_else(
+            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
+                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
+                r.genotypes.values().flatmap(lambda g: g.geneIds)
             ),
-            _get_genotype_override_field(
-                r.genotypes, hl.missing(hl.tarray(hl.tstr)), 'geneIds', lambda gene_ids: gene_ids.flatmap(lambda g: g)),
-        ),
+        )
     }
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
