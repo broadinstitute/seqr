@@ -348,9 +348,9 @@ class BaseHailTableQuery(object):
                 numAlt=mt.GT.n_alt_alleles(),
                 **{k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
             ))))
-        return self._post_process_genotypes(mt)
+        return self._format_genotypes(mt)
 
-    def _post_process_genotypes(self, mt):
+    def _format_genotypes(self, mt):
         return mt.annotate_rows(genotypes=mt.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
@@ -691,9 +691,15 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['numExon']
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
-        # TODO override interval/ genes for sample-specific SV size
-        'pos': lambda r: r.interval.start.position,
-        'end': lambda r: r.interval.end.position,
+        # TODO override numExon/ genes for sample-specific SV size
+        'pos': lambda r: hl.if_else(
+            r.genotypes.values().any(lambda g: g.numAlt > 0 & hl.is_missing(g.start)),
+            r.interval.start.position,
+            hl.agg.min(r.genotypes.values().filter(lambda g: g.numAlt > 0).map(lambda g: g.start))),
+        'end': lambda r: hl.if_else(
+            r.genotypes.values().any(lambda g: g.numAlt > 0 & hl.is_missing(g.end)),
+            r.interval.end.position,
+            hl.agg.max(r.genotypes.values().filter(lambda g: g.numAlt > 0).map(lambda g: g.end))),
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     }
@@ -730,7 +736,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=self._genome_version)
         return mt.interval.overlaps(x_chrom_interval)
 
-    def _post_process_genotypes(self, mt):
+    def _format_genotypes(self, mt):
         individual_map = {}
         family_individuals = defaultdict(set)
         for sample_id, s in self._samples_by_id.items():
@@ -749,7 +755,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             numAlt=0,
             **{k: hl.missing(genotype_struct_types[k]) for k in self.GENOTYPE_FIELDS.keys()}
         ))))
-        return super(GcnvHailTableQuery, self)._post_process_genotypes(mt)
+        return super(GcnvHailTableQuery, self)._format_genotypes(mt)
 
 
 class AllDataTypeHailTableQuery(BaseHailTableQuery):
