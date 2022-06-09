@@ -677,6 +677,12 @@ class VariantHailTableQuery(BaseHailTableQuery):
             hl.missing(hl.dtype('str')), selected_transcript_expr,
         )
 
+def _get_genotype_override_field(genotypes, default, field, agg):
+    return hl.if_else(
+        genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field])),
+        default,
+        agg(genotypes.values().map(lambda g: g[field]))
+    )
 
 class GcnvHailTableQuery(BaseHailTableQuery):
     GENOTYPE_FIELDS = {
@@ -689,11 +695,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     }
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['numExon']
-    _get_genotype_override_field = lambda genotypes, default, field, agg: hl.if_else(
-        genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field])),
-        default,
-        agg(genotypes.values().map(lambda g: g[field]))
-    )
+
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
         # TODO override numExon/ genes for sample-specific SV size
