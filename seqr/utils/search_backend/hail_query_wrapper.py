@@ -371,12 +371,18 @@ class BaseHailTableQuery(object):
         if max_families and len(affected_families) > max_families[0]:
             raise InvalidSearchException(max_families[1])
 
-    @staticmethod
-    def _get_quality_filter_expr(mt, quality_filter):
-        if (quality_filter or {}).get('min_gq'):
-            return mt.GQ > quality_filter['min_gq']
+    def _get_quality_filter_expr(self, mt, quality_filter):
+        quality_filter_expr = None
+        for filter_k, value in (quality_filter or {}).items():
+            field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
+            if field:
+                field_filter = mt[field] > value
+                if quality_filter_expr is None:
+                    quality_filter_expr = field_filter
+                else:
+                    quality_filter_expr &= field_filter
 
-        return None
+        return quality_filter_expr
 
     def _get_x_chrom_filter(self, mt):
         # TODO #2716: format chromosome for genome build
@@ -666,12 +672,13 @@ class VariantHailTableQuery(BaseHailTableQuery):
     def _get_consequence_terms(self):
         return self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
 
-    @staticmethod
-    def _get_quality_filter_expr(mt, quality_filter):
-        quality_filter_expr = BaseHailTableQuery._get_quality_filter_expr(mt, quality_filter)
-        if (quality_filter or {}).get('min_ab'):
+    def _get_quality_filter_expr(self, mt, quality_filter):
+        min_ab = (quality_filter or {}).get('min_ab')
+        quality_filter = {k: v for k, v in quality_filter or {} if k != 'min_ab'}
+        quality_filter_expr = super(VariantHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
+        if min_ab:
             #  AB only relevant for hets
-            ab_expr = (~mt.GT.is_het() | (mt.AB > (quality_filter['min_ab'] / 100)))
+            ab_expr = (~mt.GT.is_het() | (mt.AB > (min_ab / 100)))
             if quality_filter_expr is None:
                 quality_filter_expr = ab_expr
             else:
@@ -736,11 +743,6 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
     def filter_by_variant_ids(self, variant_ids):
         raise InvalidSearchException('Variant ID search disabled for SVs')
-
-    @staticmethod
-    def _get_quality_filter_expr(mt, quality_filter):
-        # TODO
-        return None
 
     def _get_x_chrom_filter(self, mt):
         # TODO #2716: format chromosome for genome build
