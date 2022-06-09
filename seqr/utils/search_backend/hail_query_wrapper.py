@@ -695,6 +695,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
         return quality_filter_expr
 
+
+def _allow_missing_gt(gt_filter):
+    return lambda gt: gt_filter(gt) | hl.is_missing(gt)
+
 def _no_genotype_override(genotypes, field):
     return genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
 
@@ -705,7 +709,6 @@ def _get_genotype_override_field(genotypes, default, field, agg):
 
 class GcnvHailTableQuery(BaseHailTableQuery):
 
-    _allow_missing_gt = lambda gt_filter: lambda gt: gt_filter(gt) | hl.is_missing(gt)
     GENOTYPE_QUERY_MAP = {
         k: _allow_missing_gt(v) if k in {REF_REF, HAS_REF} else v
         for k, v in BaseHailTableQuery.GENOTYPE_QUERY_MAP.items()
