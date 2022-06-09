@@ -50,7 +50,7 @@ class BaseHailTableQuery(object):
             hl.is_defined(r.rg37_locus), r.rg37_locus.position, hl.missing(hl.dtype('int32')),
         ),
     }
-    BOUND_ANNOTATION_FIELDS = {}
+    COMPUTED_ANNOTATION_FIELDS = {}
 
     @property
     def populations_configs(self):
@@ -475,7 +475,7 @@ class BaseHailTableQuery(object):
         if self._allowed_consequences and self._allowed_consequences_secondary:
             ch_ht = self._filter_valid_comp_het_annotation_pairs(ch_ht)
 
-        # Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
+        # TODO #2663 Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
@@ -539,11 +539,13 @@ class BaseHailTableQuery(object):
         results = results.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(results) for k, v in self.annotation_fields.items()},
-            **{k: getattr(self, v)(results) for k, v in self.BOUND_ANNOTATION_FIELDS.items()},
+        )
+        results = results.annotate(
+            **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
         results = results.key_by(VARIANT_KEY_FIELD)
         return results.select(
-            'genomeVersion', *self.CORE_FIELDS, *self.BOUND_ANNOTATION_FIELDS.keys(), *self.annotation_fields.keys())
+            'genomeVersion', *self.CORE_FIELDS, *self.COMPUTED_ANNOTATION_FIELDS.keys(), *self.annotation_fields.keys())
 
     def search(self, page, num_results, sort):
         if self._mt:
@@ -630,8 +632,28 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
-    BOUND_ANNOTATION_FIELDS = {
-        'selectedMainTranscriptId': '_selected_main_transcript_expr',
+
+    def _selected_main_transcript_expr(self, results):
+        if not self._allowed_consequences:
+            return hl.missing(hl.dtype('str'))
+
+        consequences_set = hl.set(self._allowed_consequences)
+        selected_transcript_expr = results.sortedTranscriptConsequences.find(
+            lambda t: consequences_set.contains(t.major_consequence)).transcript_id
+        if self._allowed_consequences_secondary:
+            consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
+            selected_transcript_expr = hl.bind(
+                lambda transcript_id: hl.or_else(
+                    transcript_id, results.sortedTranscriptConsequences.find(
+                        lambda t: consequences_secondary_set.contains(t.major_consequence)).transcript_id),
+                selected_transcript_expr)
+
+        return hl.if_else(
+            consequences_set.contains(results.sortedTranscriptConsequences[0].major_consequence),
+            hl.missing(hl.dtype('str')), selected_transcript_expr,
+        )
+    COMPUTED_ANNOTATION_FIELDS = {
+        'selectedMainTranscriptId': _selected_main_transcript_expr,
     }
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
@@ -656,26 +678,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
                 quality_filter_expr &= ab_expr
 
         return quality_filter_expr
-
-    def _selected_main_transcript_expr(self, results):
-        if not self._allowed_consequences:
-            return hl.missing(hl.dtype('str'))
-
-        consequences_set = hl.set(self._allowed_consequences)
-        selected_transcript_expr = results.sortedTranscriptConsequences.find(
-            lambda t: consequences_set.contains(t.major_consequence)).transcript_id
-        if self._allowed_consequences_secondary:
-            consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
-            selected_transcript_expr = hl.bind(
-                lambda transcript_id: hl.or_else(
-                    transcript_id, results.sortedTranscriptConsequences.find(
-                        lambda t: consequences_secondary_set.contains(t.major_consequence)).transcript_id),
-                selected_transcript_expr)
-
-        return hl.if_else(
-            consequences_set.contains(results.sortedTranscriptConsequences[0].major_consequence),
-            hl.missing(hl.dtype('str')), selected_transcript_expr,
-        )
 
 def _get_genotype_override_field(genotypes, default, field, agg):
     return hl.if_else(
@@ -704,6 +706,15 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
+    COMPUTED_ANNOTATION_FIELDS = {
+        'transcripts': lambda self, r: hl.bind(
+            lambda gene_ids: hl.if_else(
+                gene_ids, hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))), r.transcripts,
+            ),
+            _get_genotype_override_field(
+                r.genotypes, hl.missing(hl.tarray(hl.tstr)), 'geneIds', lambda gene_ids: gene_ids.flatmap(lambda g: g)),
+        ),
+    }
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(GcnvHailTableQuery, self)._load_table(data_source)
