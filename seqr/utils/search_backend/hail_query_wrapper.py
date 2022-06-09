@@ -689,17 +689,16 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     }
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['numExon']
+    _get_genotype_override_field = lambda genotypes, default, field, agg: hl.if_else(
+        genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field])),
+        default,
+        agg(genotypes.values().map(lambda g: g[field]))
+    )
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
         # TODO override numExon/ genes for sample-specific SV size
-        'pos': lambda r: hl.if_else(
-            r.genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g.start)),
-            r.interval.start.position,
-            hl.min(r.genotypes.values().map(lambda g: g.start))),
-        'end': lambda r: hl.if_else(
-            r.genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g.end)),
-            r.interval.end.position,
-            hl.max(r.genotypes.values().map(lambda g: g.end))),
+        'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
+        'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     }
