@@ -545,7 +545,7 @@ class BaseHailTableQuery(object):
         )
         results = results.key_by(VARIANT_KEY_FIELD)
         return results.select(
-            'genomeVersion', *self.CORE_FIELDS, *self.COMPUTED_ANNOTATION_FIELDS.keys(), *self.annotation_fields.keys())
+            'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
     def search(self, page, num_results, sort):
         if self._mt:
