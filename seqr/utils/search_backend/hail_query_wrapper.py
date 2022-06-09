@@ -709,7 +709,9 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     COMPUTED_ANNOTATION_FIELDS = {
         'transcripts': lambda self, r: hl.bind(
             lambda gene_ids: hl.if_else(
-                gene_ids, hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))), r.transcripts,
+                hl.is_defined(gene_ids),
+                hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
+                r.transcripts,
             ),
             _get_genotype_override_field(
                 r.genotypes, hl.missing(hl.tarray(hl.tstr)), 'geneIds', lambda gene_ids: gene_ids.flatmap(lambda g: g)),
