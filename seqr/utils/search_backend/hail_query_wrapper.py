@@ -380,8 +380,6 @@ class BaseHailTableQuery(object):
 
     def _get_quality_filter_expr(self, mt, quality_filter):
         quality_filter_expr = None
-        if self._consequence_overrides[NEW_SV_FIELD]:
-            quality_filter_expr = mt.newCall
         for filter_k, value in (quality_filter or {}).items():
             field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field:
@@ -758,6 +756,17 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         # TODO #2716: format chromosome for genome build
         x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=self._genome_version)
         return mt.interval.overlaps(x_chrom_interval)
+
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
+        families_expr = super(GcnvHailTableQuery, self)._get_matched_families_expr(
+            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr)
+        if self._consequence_overrides[NEW_SV_FIELD]:
+            families_expr = hl.bind(
+                lambda families, new_call_families: new_call_families.intersection(families),
+                families_expr,
+                hl.agg.filter(mt.newCall, hl.agg.collect_as_set(sample_family_map[mt.s])),
+            )
+        return families_expr
 
     def _format_genotypes(self, mt):
         individual_map = {}
