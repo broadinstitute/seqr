@@ -6,7 +6,7 @@ from seqr.views.utils.json_utils import _to_camel_case
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
-from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, \
+from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
     CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF
 
@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
+STRUCTURAL_ANNOTATION_FIELD = 'structural'
+
 VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
-
 
 class BaseHailTableQuery(object):
 
@@ -36,6 +37,7 @@ class BaseHailTableQuery(object):
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
     TRANSCRIPT_FIELDS = ['gene_id', 'major_consequence']
+    ANNOTATION_OVERRIDE_FIELDS = []
 
     CORE_FIELDS = ['genotypes']
     BASE_ANNOTATION_FIELDS = {
@@ -88,7 +90,10 @@ class BaseHailTableQuery(object):
         self._comp_het_ht = None
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
-        self._consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None}
+        self._consequence_overrides = {
+            CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None,
+            NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
+        }
 
         self._mt = self._load_table(data_source, **kwargs)
 
@@ -130,9 +135,8 @@ class BaseHailTableQuery(object):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
         for field in annotation_override_fields:
-            # TODO #2663: new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
             value = annotations.pop(field, None)
-            if field in self.PREDICTION_FIELDS_CONFIG:
+            if field in self.ANNOTATION_OVERRIDE_FIELDS:
                 self._consequence_overrides[field] = value
 
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
@@ -275,6 +279,9 @@ class BaseHailTableQuery(object):
         if self._consequence_overrides[SPLICE_AI_FIELD]:
             annotation_filters.append(
                 self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(self._consequence_overrides[SPLICE_AI_FIELD]))
+        if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
+            allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
+            annotation_filters.append(allowed_sv_types.contains(self._mt.svType))
 
         if allowed_consequences:
             annotation_filters.append(
@@ -373,6 +380,8 @@ class BaseHailTableQuery(object):
 
     def _get_quality_filter_expr(self, mt, quality_filter):
         quality_filter_expr = None
+        if self._consequence_overrides[NEW_SV_FIELD]:
+            quality_filter_expr = mt.newCall
         for filter_k, value in (quality_filter or {}).items():
             field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field:
@@ -621,6 +630,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_flags', 'lof_filter', 'lof_info',
         'transcript_id', 'transcript_rank',
     ]
+    ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['hgmd', 'rsid', 'xpos']
     BASE_ANNOTATION_FIELDS = {
@@ -706,7 +716,6 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
-        # TODO override genes for sample-specific SV size
         'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.numExon, 'numExon', hl.max),
@@ -722,6 +731,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             ),
         )
     }
+    ANNOTATION_OVERRIDE_FIELDS = [NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD]
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(GcnvHailTableQuery, self)._load_table(data_source)
