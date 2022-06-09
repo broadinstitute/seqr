@@ -694,13 +694,12 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         'strvctvre': ('strvctvre', 'score'),
     }
 
-    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['numExon']
-
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
-        # TODO override numExon/ genes for sample-specific SV size
+        # TODO override genes for sample-specific SV size
         'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
+        'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.numExon, 'numExon', hl.max),
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     }
