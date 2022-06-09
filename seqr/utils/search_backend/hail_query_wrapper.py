@@ -693,11 +693,11 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
         # TODO override numExon/ genes for sample-specific SV size
         'pos': lambda r: hl.if_else(
-            r.genotypes.values().any(lambda g: g.numAlt > 0 & hl.is_missing(g.start)),
+            r.genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g.start)),
             r.interval.start.position,
             hl.agg.min(r.genotypes.values().filter(lambda g: g.numAlt > 0).map(lambda g: g.start))),
         'end': lambda r: hl.if_else(
-            r.genotypes.values().any(lambda g: g.numAlt > 0 & hl.is_missing(g.end)),
+            r.genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g.end)),
             r.interval.end.position,
             hl.agg.max(r.genotypes.values().filter(lambda g: g.numAlt > 0).map(lambda g: g.end))),
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
