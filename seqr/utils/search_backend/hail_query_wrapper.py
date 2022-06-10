@@ -485,7 +485,7 @@ class BaseHailTableQuery(object):
         if self._allowed_consequences and self._allowed_consequences_secondary:
             ch_ht = self._filter_valid_comp_het_annotation_pairs(ch_ht)
 
-        # TODO #2663 Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
+        # TODO #2781 Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
@@ -758,12 +758,6 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     def _filter_vcf_filters(self):
         pass
 
-    def _filter_rsids(self, rs_ids):
-        raise InvalidSearchException('Variant ID search disabled for SVs')
-
-    def filter_by_variant_ids(self, variant_ids):
-        raise InvalidSearchException('Variant ID search disabled for SVs')
-
     def _get_x_chrom_filter(self, mt):
         # TODO #2716: format chromosome for genome build
         x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=self._genome_version)
@@ -784,7 +778,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 class AllDataTypeHailTableQuery(BaseHailTableQuery):
 
     def _load_table(self, data_source, **kwargs):
-        # TODO does not work, figure out multi-class inheritance
+        # TODO #2781 does not work, figure out multi-class inheritance
         mt = VariantHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
         sv_mt = GcnvHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
 

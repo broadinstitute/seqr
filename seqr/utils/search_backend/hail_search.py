@@ -43,7 +43,7 @@ class HailSearch(object):
                 f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources)}')
         data_sources_by_type = {k: v.pop() for k, v in data_sources_by_type.items()}
 
-        # TODO load correct data type
+        # TODO #2781  load correct data type
         self.samples = [s for s in self.samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS]
         data_source = data_sources_by_type[Sample.DATASET_TYPE_SV_CALLS]
         query_cls = GcnvHailTableQuery
