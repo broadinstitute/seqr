@@ -531,6 +531,7 @@ class BaseHailTableQuery(object):
             lambda c: secondary_cs.contains(c))) | (ch_ht.v1_csqs.any(
             lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(
             lambda c: primary_cs.contains(c)))
+        # TODO share override code with _filter_by_annotations
         if self._consequence_overrides[CLINVAR_KEY]:
             allowed_terms = hl.set(self._consequence_overrides[CLINVAR_KEY])
             has_annotation_filter |= (
@@ -546,6 +547,11 @@ class BaseHailTableQuery(object):
             has_annotation_filter |= (
                     (ch_ht.v1.predictions.splice_ai >= splice_ai) |
                     (ch_ht.v2.predictions.splice_ai >= splice_ai))
+        if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
+            allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
+            has_annotation_filter |= (
+                    allowed_sv_types.contains(ch_ht.v1.svType) |
+                    allowed_sv_types.contains(ch_ht.v2.svType))
         return ch_ht.filter(has_annotation_filter)
 
     def _format_results(self, mt):
