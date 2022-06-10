@@ -16,20 +16,20 @@ logger = logging.getLogger(__name__)
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
+GENOTYPE_QUERY_MAP = {
+    REF_REF: lambda gt: gt.is_hom_ref(),
+    REF_ALT: lambda gt: gt.is_het(),
+    ALT_ALT: lambda gt: gt.is_hom_var(),
+    HAS_ALT: lambda gt: gt.is_non_ref(),
+    HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
+}
+
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
 
 VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 
 class BaseHailTableQuery(object):
-
-    GENOTYPE_QUERY_MAP = {
-        REF_REF: lambda gt: gt.is_hom_ref(),
-        REF_ALT: lambda gt: gt.is_het(),
-        ALT_ALT: lambda gt: gt.is_hom_var(),
-        HAS_ALT: lambda gt: gt.is_non_ref(),
-        HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
-    }
 
     GENOTYPE_FIELDS = {}
     # In production: will not have callset frequency, may rename these fields
@@ -440,8 +440,8 @@ class BaseHailTableQuery(object):
         family_samples_map = hl.dict(sample_ids_by_family)
 
         sample_filter_exprs = [
-            (self.GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
-             for genotype, samples in sample_filters
+            (GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
+            for genotype, samples in sample_filters
         ]
         sample_filter = sample_filter_exprs[0]
         for sub_filter in sample_filter_exprs[1:]:
@@ -702,9 +702,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
         return quality_filter_expr
 
 
-def _allow_missing_gt(gt_filter):
-    return lambda gt: gt_filter(gt) | hl.is_missing(gt)
-
 def _no_genotype_override(genotypes, field):
     return genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
 
@@ -714,11 +711,6 @@ def _get_genotype_override_field(genotypes, default, field, agg):
     )
 
 class GcnvHailTableQuery(BaseHailTableQuery):
-
-    GENOTYPE_QUERY_MAP = {
-        k: _allow_missing_gt(v) if k in {REF_REF, HAS_REF} else v
-        for k, v in BaseHailTableQuery.GENOTYPE_QUERY_MAP.items()
-    }
 
     GENOTYPE_FIELDS = {
         f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
