@@ -59,7 +59,7 @@ class HailSearch(object):
             query_cls = QUERY_CLASS_MAP[data_type]
         else:
             query_cls = AllDataTypeHailTableQuery
-            data_source = data_sources_by_type[data_type]
+            data_source = data_sources_by_type
 
         self._query_wrapper = query_cls(data_source, samples=self.samples, genome_version=self._genome_version, **kwargs)
 
