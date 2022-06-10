@@ -743,7 +743,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(GcnvHailTableQuery, self)._load_table(data_source)
         #  gCNV data has no ref/ref calls so add them back in
-        mt = mt.mt.unfilter_entries()
+        mt = mt.unfilter_entries()
         mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
 
         if intervals:
