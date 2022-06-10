@@ -742,6 +742,10 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
     def _load_table(self, data_source, intervals=None, exclude_intervals=False):
         mt = super(GcnvHailTableQuery, self)._load_table(data_source)
+        #  gCNV data has no ref/ref calls so add them back in
+        mt = mt.mt.unfilter_entries()
+        mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
+
         if intervals:
             intervals = self._parse_intervals(intervals)
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
@@ -777,26 +781,26 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             )
         return families_expr
 
-    def _format_genotypes(self, mt):
-        individual_map = {}
-        family_individuals = defaultdict(set)
-        for sample_id, s in self._samples_by_id.items():
-            i_guid = s.individual.guid
-            individual_map[i_guid] = sample_id
-            family_individuals[s.individual.family.guid].add(i_guid)
-
-        #  gCNV data has no ref/ref calls, so add them for all individuals missing from matched families
-        matched_individuals = hl.set(mt.genotypes.map(lambda g: g.individualGuid))
-        missing_individuals = hl.array(mt.familyGuids.flatmap(lambda f: hl.dict(family_individuals)[f]).filter(
-            lambda i: ~matched_individuals.contains(i)))
-        genotype_struct_types = mt.genotypes.dtype.element_type
-        mt = mt.annotate_rows(genotypes=mt.genotypes.extend(missing_individuals.map(lambda i: hl.struct(
-            individualGuid=i,
-            sampleId=hl.dict(individual_map)[i],
-            numAlt=0,
-            **{k: hl.missing(genotype_struct_types[k]) for k in self.GENOTYPE_FIELDS.keys()}
-        ))))
-        return super(GcnvHailTableQuery, self)._format_genotypes(mt)
+    # def _format_genotypes(self, mt):
+    #     individual_map = {}
+    #     family_individuals = defaultdict(set)
+    #     for sample_id, s in self._samples_by_id.items():
+    #         i_guid = s.individual.guid
+    #         individual_map[i_guid] = sample_id
+    #         family_individuals[s.individual.family.guid].add(i_guid)
+    #
+    #     #  gCNV data has no ref/ref calls, so add them for all individuals missing from matched families
+    #     matched_individuals = hl.set(mt.genotypes.map(lambda g: g.individualGuid))
+    #     missing_individuals = hl.array(mt.familyGuids.flatmap(lambda f: hl.dict(family_individuals)[f]).filter(
+    #         lambda i: ~matched_individuals.contains(i)))
+    #     genotype_struct_types = mt.genotypes.dtype.element_type
+    #     mt = mt.annotate_rows(genotypes=mt.genotypes.extend(missing_individuals.map(lambda i: hl.struct(
+    #         individualGuid=i,
+    #         sampleId=hl.dict(individual_map)[i],
+    #         numAlt=0,
+    #         **{k: hl.missing(genotype_struct_types[k]) for k in self.GENOTYPE_FIELDS.keys()}
+    #     ))))
+    #     return super(GcnvHailTableQuery, self)._format_genotypes(mt)
 
 
 class AllDataTypeHailTableQuery(BaseHailTableQuery):
