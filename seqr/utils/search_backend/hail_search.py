@@ -110,7 +110,7 @@ class HailSearch(object):
         if annotations_secondary:
             annotation_types.update({k for k, v in annotations_secondary.items() if v})
 
-        if annotation_types.issubset(SV_ANNOTATION_TYPES):
+        if NEW_SV_FIELD in annotation_types or annotation_types.issubset(SV_ANNOTATION_TYPES):
             return Sample.DATASET_TYPE_SV_CALLS
         elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
             return Sample.DATASET_TYPE_VARIANT_CALLS
