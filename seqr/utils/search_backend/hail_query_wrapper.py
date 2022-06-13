@@ -797,8 +797,10 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
     def _load_table(self, data_source, intervals=None,  **kwargs):
         # TODO do not remove all sv sample records?
-        sv_sample_ids = [s.sample_id for s in self.samples if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS]
-        self.samples = [s for s in self.samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS]
+        sv_sample_ids = [sample_id for sample_id, s in self._samples_by_id.items() if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS]
+        self._samples_by_id = {
+            sample_id: s for sample_id, s in self._samples_by_id.items() if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS
+        }
 
         mt = super(VariantHailTableQuery, self)._load_table(
             data_source[Sample.DATASET_TYPE_VARIANT_CALLS], intervals=intervals, **kwargs)
