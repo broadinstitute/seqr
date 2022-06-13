@@ -808,7 +808,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             data_source[Sample.DATASET_TYPE_SV_CALLS], sample_ids=sv_sample_ids, filter_mt=GcnvHailTableQuery.filter_loaded_mt,
             intervals=self._parse_intervals(intervals), **kwargs)
 
-        mt = mt.key_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
+        mt = mt.key_rows_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
         transcript_struct_types = mt.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS)
         # TODO merge columns?
