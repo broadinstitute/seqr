@@ -802,13 +802,13 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             sample_id: s for sample_id, s in self._samples_by_id.items() if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS
         }
 
-        mt = super(VariantHailTableQuery, self)._load_table(
+        variant_mt = super(VariantHailTableQuery, self)._load_table(
             data_source[Sample.DATASET_TYPE_VARIANT_CALLS], intervals=intervals, **kwargs)
         sv_mt = BaseHailTableQuery._import_mt(
             data_source[Sample.DATASET_TYPE_SV_CALLS], sample_ids=sv_sample_ids, filter_mt=GcnvHailTableQuery.filter_loaded_mt,
             intervals=self._parse_intervals(intervals), **kwargs)
 
-        mt = mt.key_rows_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
+        mt = variant_mt.key_rows_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
         transcript_struct_types = mt.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS)
         # TODO merge columns?
