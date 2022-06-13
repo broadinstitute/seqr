@@ -6,7 +6,6 @@ on:
       - main
       - staging
       - reanalysis-dev
-      - upstream
 
 jobs:
   docker:
@@ -36,8 +35,6 @@ jobs:
           if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
             echo DEPLOY_TARGET=prod >> $GITHUB_ENV
           elif [[ $GITHUB_REF == 'refs/heads/staging' ]]; then
-            echo DEPLOY_TARGET=staging >> $GITHUB_ENV
-          elif [[ $GITHUB_REF == 'refs/heads/upstream' ]]; then
             echo DEPLOY_TARGET=staging >> $GITHUB_ENV
           elif [[ $GITHUB_REF == 'refs/heads/reanalysis-dev' ]]; then
             echo DEPLOY_TARGET=reanalysis-dev >> $GITHUB_ENV
