@@ -805,8 +805,8 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         mt = super(VariantHailTableQuery, self)._load_table(
             data_source[Sample.DATASET_TYPE_VARIANT_CALLS], intervals=intervals, **kwargs)
         sv_mt = BaseHailTableQuery._import_mt(
-            data_source[Sample.DATASET_TYPE_SV_CALLS], sv_sample_ids, filter_mt=GcnvHailTableQuery.filter_loaded_mt,
-            inetervals=self._parse_intervals(intervals), **kwargs)
+            data_source[Sample.DATASET_TYPE_SV_CALLS], sample_ids=sv_sample_ids, filter_mt=GcnvHailTableQuery.filter_loaded_mt,
+            intervals=self._parse_intervals(intervals), **kwargs)
 
         mt = mt.key_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
         transcript_struct_types = mt.sortedTranscriptConsequences.dtype.element_type
