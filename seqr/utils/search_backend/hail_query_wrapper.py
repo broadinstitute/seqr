@@ -100,8 +100,8 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, intervals=None, **kwargs):
         return self._import_mt(
-            data_source, self._samples_by_id.keys(), self.filter_loaded_mt, self._parse_intervals(intervals),
-            read_filtered_mt=self._should_read_filtered_mt(**kwargs), **kwargs,
+            data_source, sample_ids=self._samples_by_id.keys(), filter_mt=self.filter_loaded_mt,
+            intervals=self._parse_intervals(intervals), read_filtered_mt=self._should_read_filtered_mt(**kwargs), **kwargs,
         )
 
     @staticmethod
