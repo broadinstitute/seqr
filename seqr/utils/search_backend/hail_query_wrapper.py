@@ -832,10 +832,10 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         return ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
             sortedTranscriptConsequences=hl.or_else(
-                ht.sortedTranscriptConsequences.map(lambda t: t.select('consequence_terms', *VariantHailTableQuery.TRANSCRIPT_FIELDS)),
+                ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS, 'consequence_terms')),
                 hl.array(ht.sortedTranscriptConsequences_1.map(lambda t: t.annotate(
-                    consequence_terms=hl.set({t.major_consequence}),
-                    **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
+                    **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
+                    consequence_terms=[t.major_consequence])))
             ),
 
         )
