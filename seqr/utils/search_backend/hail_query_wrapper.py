@@ -637,7 +637,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
     }
     TRANSCRIPT_FIELDS = BaseHailTableQuery.TRANSCRIPT_FIELDS + [
-        'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_flags', 'lof_filter', 'lof_info',
+        'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_filter', 'lof_flags', 'lof_info',
         'transcript_id', 'transcript_rank',
     ]
     ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
@@ -786,6 +786,29 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
 class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
+    # TODO #2781 create shared behavior for ref_alt (comp hets)
+    # GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
+    # GENOTYPE_QUERY_MAP[REF_ALT] = lambda gt: gt.is_non_ref()
+
+    GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
+    GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
+
+    # TODO #2781 create shared behavior for callset AF
+    # CALLSET_FIELD = 'sv_callset'
+    # CALLSET_POPULATION = {'af': 'sf', 'ac': 'sc', 'an': 'sn'}
+    PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
+    PREDICTION_FIELDS_CONFIG.update(GcnvHailTableQuery.PREDICTION_FIELDS_CONFIG)
+    ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + GcnvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
+
+    BASE_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.BASE_ANNOTATION_FIELDS)
+    BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
+    BASE_ANNOTATION_FIELDS.update({k: lambda r: hl.if_else(
+        hl.is_defined(r.locus),
+        VariantHailTableQuery.BASE_ANNOTATION_FIELDS[k](r),
+        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[k](r)
+    ) for k in ['chrom', 'pos']})
+    COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
+    COMPUTED_ANNOTATION_FIELDS.update(GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     INITIAL_ENTRY_ANNOTATIONS = {
         #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
         'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_defined(mt.locus), mt.GT, hl.Call([0, 0]))
