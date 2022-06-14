@@ -783,6 +783,12 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             )
         return families_expr
 
+def _annotation_for_data_type(field):
+    return lambda r: hl.if_else(
+        hl.is_defined(r.locus),
+        VariantHailTableQuery.BASE_ANNOTATION_FIELDS[field](r),
+        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
+    )
 
 class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
@@ -802,11 +808,6 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
     BASE_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
-    _annotation_for_data_type = lambda field: lambda r: hl.if_else(
-        hl.is_defined(r.locus),
-        VariantHailTableQuery.BASE_ANNOTATION_FIELDS[field](r),
-        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
-    )
     BASE_ANNOTATION_FIELDS.update({k: _annotation_for_data_type(k) for k in ['chrom', 'pos']})
     COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     COMPUTED_ANNOTATION_FIELDS.update(GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
