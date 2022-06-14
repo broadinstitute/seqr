@@ -52,9 +52,6 @@ INHERITANCE_FILTERS = {
 
 PATH_FREQ_OVERRIDE_CUTOFF = 0.05
 
-CLINVAR_PATH_FILTER = 'pathogenic'
-CLINVAR_LIKELY_PATH_FILTER = 'likely_pathogenic'
-
 CLINVAR_SIGNFICANCE_MAP = {
     'pathogenic': ['Pathogenic', 'Pathogenic/Likely_pathogenic'],
     'likely_pathogenic': ['Likely_pathogenic', 'Pathogenic/Likely_pathogenic'],
@@ -67,6 +64,8 @@ CLINVAR_SIGNFICANCE_MAP = {
         'other'
     ],
 }
+CLINVAR_PATH_SIGNIFICANCES = set(CLINVAR_SIGNFICANCE_MAP['pathogenic'])
+CLINVAR_PATH_SIGNIFICANCES.update(CLINVAR_SIGNFICANCE_MAP['likely_pathogenic'])
 
 HGMD_CLASS_MAP = {
     'disease_causing': ['DM'],
@@ -254,15 +253,17 @@ SORT_FIELDS.update({
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
 
+CLINVAR_KEY = 'clinvar'
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
+HGMD_KEY = 'hgmd'
 HGMD_FIELDS = ['accession', 'class']
 GENOTYPES_FIELD_KEY = 'genotypes'
 HAS_ALT_FIELD_KEYS = ['samples_num_alt_1', 'samples_num_alt_2', 'samples']
 SORTED_TRANSCRIPTS_FIELD_KEY = 'sortedTranscriptConsequences'
 NESTED_FIELDS = {
     field_name: {field: {} for field in fields} for field_name, fields in {
-        'clinvar': CLINVAR_FIELDS,
-        'hgmd': HGMD_FIELDS,
+        CLINVAR_KEY: CLINVAR_FIELDS,
+        HGMD_KEY: HGMD_FIELDS,
     }.items()
 }
 

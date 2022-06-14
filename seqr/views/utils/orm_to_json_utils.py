@@ -445,7 +445,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False):
     """
     def _process_result(variant_json, saved_variant):
         if add_details:
-            variant_json.update(saved_variant.saved_variant_json)
+            variant_json.update({k: v for k, v in saved_variant.saved_variant_json.items() if k not in variant_json})
         variant_json['familyGuids'] = [saved_variant.family.guid]
         return variant_json
 

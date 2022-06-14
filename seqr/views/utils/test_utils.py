@@ -742,7 +742,7 @@ PARSED_VARIANTS = [
         'alt': 'T',
         'chrom': '1',
         'bothsidesSupport': None,
-        'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+        'clinvar': {'clinicalSignificance': 'Pathogenic/Likely_pathogenic', 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
         'cpxIntervals': None,
         'algorithms': None,

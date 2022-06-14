@@ -14,7 +14,7 @@ def delete_component(component, deployment_target=None):
     """Runs kubectl commands to delete any running deployment, service, or pod objects for the given component(s).
 
     Args:
-        component (string): component to delete (eg. 'nginx').
+        component (string): component to delete (eg. 'kibana').
         deployment_target (string): value from DEPLOYMENT_TARGETS - eg. "gcloud-dev"
     """
     pod_name = run(
@@ -33,8 +33,6 @@ def delete_component(component, deployment_target=None):
             pv = get_resource_name(component, resource_type='pv', deployment_target=deployment_target)
     elif component == 'kibana':
         run('kubectl delete kibana kibana', errors_to_ignore=['not found'])
-    elif component == "nginx":
-        raise ValueError("TODO: implement deleting nginx")
 
     run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
     run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
