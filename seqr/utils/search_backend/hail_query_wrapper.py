@@ -101,7 +101,7 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
-        mt = ht.to_matrix_table_row_major({s.sample_id for s in samples}, col_field_name='s')
+        mt = ht.to_matrix_table_row_major(list({s.sample_id for s in samples}), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
@@ -804,13 +804,17 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
         ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
-        missing_transcript_fields = set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS)
+        missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
         # TODO merge columns?
-        return ht.transmute(sortedTranscriptConsequences=hl.or_else(
-            ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS)),
-            hl.array(ht.sortedTranscriptConsequences_1.map(
-                lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
-        ))
+        return ht.transmute(
+            rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
+            sortedTranscriptConsequences=hl.or_else(
+                ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS)),
+                hl.array(ht.sortedTranscriptConsequences_1.map(
+                    lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
+            ),
+
+        )
 
     def _get_consequence_terms(self):
         # TODO #2781
