@@ -831,6 +831,10 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
+        shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
+        variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
+        sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
+        entry_fields = ['GT', *VariantHailTableQuery.GENOTYPE_FIELDS.values(), *GcnvHailTableQuery.GENOTYPE_FIELDS.values()]
         ht = ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
             sortedTranscriptConsequences=hl.or_else(
@@ -839,7 +843,10 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
                     **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
                     consequence_terms=[t.major_consequence])))
             ),
-            **{sample_id: hl.or_else(ht[sample_id], ht[f'{sample_id}_1']) for sample_id in variant_sample_ids.intersection(sv_sample_ids)},
+            **{sample_id: hl.or_else(
+                ht[sample_id].annotate(**{k: hl.missing(sv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(entry_fields),
+                ht[f'{sample_id}_1'].annotate(**{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(entry_fields),
+            ) for sample_id in shared_sample_ids},
             # **{sample_id: ht[sample_id] for sample_id in variant_sample_ids - sv_sample_ids}
             # **{sample_id: ht[sample_id] for sample_id in sv_sample_ids - variant_sample_ids}
         )
