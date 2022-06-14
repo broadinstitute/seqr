@@ -74,7 +74,7 @@ class BaseHailTableQuery(object):
                 population: hl.if_else(self._should_show_population(population, r), hl.dict({
                     response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
                     if field is not None
-                }), hl.missing(hl.tstr)) for population, pop_config in self.populations_configs.items()
+                }), hl.missing(hl.tdict)) for population, pop_config in self.populations_configs.items()
             }),
             'predictions': lambda r: hl.struct(**{
                 prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
