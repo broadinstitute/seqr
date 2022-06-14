@@ -106,7 +106,6 @@ class BaseHailTableQuery(object):
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
-        mt.describe() # TODO remove
         return mt
 
     @staticmethod
@@ -803,11 +802,12 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
     BASE_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
-    BASE_ANNOTATION_FIELDS.update({k: lambda r: hl.if_else(
+    _annotation_for_data_type = lambda field: lambda r: hl.if_else(
         hl.is_defined(r.locus),
-        VariantHailTableQuery.BASE_ANNOTATION_FIELDS[k](r),
-        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[k](r)
-    ) for k in ['chrom', 'pos']})
+        VariantHailTableQuery.BASE_ANNOTATION_FIELDS[field](r),
+        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
+    )
+    BASE_ANNOTATION_FIELDS.update({k: _annotation_for_data_type(k) for k in ['chrom', 'pos']})
     COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     COMPUTED_ANNOTATION_FIELDS.update(GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     INITIAL_ENTRY_ANNOTATIONS = {
@@ -841,7 +841,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
 
-        ht = ht.transmute(
+        return ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
             sortedTranscriptConsequences=hl.or_else(
                 ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS, 'consequence_terms')),
@@ -855,8 +855,6 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in variant_sample_ids - sv_sample_ids},
             **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
         )
-        ht.describe() # TODO remove
-        return ht
 
     def _get_x_chrom_filter(self, mt):
         # TODO #2781
