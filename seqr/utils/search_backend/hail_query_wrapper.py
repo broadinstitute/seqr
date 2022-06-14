@@ -795,11 +795,11 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
     def import_filtered_ht(data_source, samples, **kwargs):
         variant_ht = VariantHailTableQuery.import_filtered_ht(
             data_source[Sample.DATASET_TYPE_VARIANT_CALLS],
-            [s for s in samples if s.dataset_tpye == Sample.DATASET_TYPE_VARIANT_CALLS],
+            [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS],
             **kwargs)
         sv_ht = GcnvHailTableQuery.import_filtered_ht(
             data_source[Sample.DATASET_TYPE_SV_CALLS],
-            [s for s in samples if s.dataset_tpye == Sample.DATASET_TYPE_SV_CALLS],
+            [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS],
             **kwargs)
 
         ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
