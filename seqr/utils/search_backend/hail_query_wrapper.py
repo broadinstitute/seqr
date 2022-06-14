@@ -333,9 +333,9 @@ class BaseHailTableQuery(object):
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
-            mt = mt.filter_rows(self._get_x_chrom_filter(mt))
+            mt = mt.filter_rows(self.get_x_chrom_filter(mt, self._genome_version))
         elif inheritance_mode == RECESSIVE:
-            x_chrom_filter = self._get_x_chrom_filter(mt)
+            x_chrom_filter = self.get_x_chrom_filter(mt, self._genome_version)
             quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter)
             if quality_filter_expr is not None:
                 x_chrom_filter &= quality_filter_expr
@@ -397,7 +397,8 @@ class BaseHailTableQuery(object):
 
         return quality_filter_expr
 
-    def _get_x_chrom_filter(self, mt):
+    @staticmethod
+    def get_x_chrom_filter(mt, genome_version):
         # TODO #2716: format chromosome for genome build
         return mt.locus.contig == 'chrX'
 
@@ -767,9 +768,10 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     def _filter_vcf_filters(self):
         pass
 
-    def _get_x_chrom_filter(self, mt):
+    @staticmethod
+    def get_x_chrom_filter(mt, genome_version):
         # TODO #2716: format chromosome for genome build
-        x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=self._genome_version)
+        x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=genome_version)
         return mt.interval.overlaps(x_chrom_interval)
 
     def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
@@ -857,6 +859,10 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
         )
 
-    def _get_x_chrom_filter(self, mt):
-        # TODO #2781
-        return super(AllDataTypeHailTableQuery, self)._get_x_chrom_filter(mt)
+    @staticmethod
+    def get_x_chrom_filter(mt, genome_version):
+        return hl.if_else(
+            hl.is_defined(mt.locus),
+            VariantHailTableQuery.get_x_chrom_filter(mt, genome_version),
+            GcnvHailTableQuery.get_x_chrom_filter(mt, genome_version),
+        )
