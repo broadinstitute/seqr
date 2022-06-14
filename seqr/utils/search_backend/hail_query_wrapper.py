@@ -695,7 +695,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     def _get_quality_filter_expr(self, mt, quality_filter):
         min_ab = (quality_filter or {}).get('min_ab')
-        quality_filter = {k: v for k, v in quality_filter or {} if k != 'min_ab'}
+        quality_filter = {k: v for k, v in (quality_filter or {}).items() if k != 'min_ab'}
         quality_filter_expr = super(VariantHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
         if min_ab:
             #  AB only relevant for hets
