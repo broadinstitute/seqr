@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon, Button } from 'semantic-ui-react'
-
+import Cookies from 'js-cookie'
 import { getHijakEnabled } from 'redux/selectors'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
@@ -34,9 +34,21 @@ const COLUMNS = [
   hasFieldColumn('isActive', 'Active?'),
 ]
 
-const hijakLogIn = (e, { value }) => fetch(
-  `/hijack/${value.id}/`, { method: 'POST', credentials: 'include' },
-).then((response) => { window.location.href = response.url })
+const hijakLogIn = (e, { value }) => {
+  const hijackFormData = new FormData()
+  hijackFormData.append('user_pk', value.id)
+  hijackFormData.append('next', '/')
+  fetch(
+    '/hijack/acquire/', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-CSRFToken': Cookies.get('csrf_token'),
+      },
+      body: hijackFormData,
+    },
+  ).then((response) => { window.location.href = response.url })
+}
 
 const HIJAK_COLUMNS = [
   ...COLUMNS,

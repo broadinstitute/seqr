@@ -199,6 +199,7 @@ VARIANT_EXPORT_DATA = [
     {'header': 'cadd', 'value_path': 'predictions.cadd'},
     {'header': 'revel', 'value_path': 'predictions.revel'},
     {'header': 'eigen', 'value_path': 'predictions.eigen'},
+    {'header': 'splice_ai', 'value_path': 'predictions.splice_ai'},
     {'header': 'polyphen', 'value_path': 'predictions.polyphen', 'process': _get_prediction_val},
     {'header': 'sift', 'value_path': 'predictions.sift', 'process': _get_prediction_val},
     {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': _get_prediction_val},
