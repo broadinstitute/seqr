@@ -32,9 +32,6 @@ class BaseHailTableQuery(object):
     }
 
     GENOTYPE_FIELDS = {}
-    # In production: will not have callset frequency, may rename these fields
-    CALLSET_FIELD = 'callset'
-    CALLSET_POPULATION = {field.lower(): field for field in ['AF', 'AC', 'AN']}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
     TRANSCRIPT_FIELDS = ['gene_id', 'major_consequence']
@@ -69,8 +66,7 @@ class BaseHailTableQuery(object):
     @property
     def annotation_fields(self):
         annotation_fields = {
-            'populations': lambda r: hl.struct(
-                **{self.CALLSET_FIELD: hl.struct(**{key: r[field] for key, field in self.CALLSET_POPULATION.items()})}, **{
+            'populations': lambda r: hl.struct(**{
                 population: hl.struct(**{
                     response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
                     if field is not None
@@ -186,25 +182,13 @@ class BaseHailTableQuery(object):
             raise NotImplementedError
 
     def _filter_by_frequency(self, frequencies):
-        callset_filter = (frequencies or {}).pop(self.CALLSET_FIELD, {}) or {}
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.populations_configs}
-        if not (callset_filter or frequencies):
+        if not frequencies:
             return
 
         clinvar_path_terms = [f for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES]
         has_path_override = bool(clinvar_path_terms) and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
-
-        if callset_filter.get('af') is not None:
-            callset_f = self._mt[self.CALLSET_POPULATION['af']] <= callset_filter['af']
-            if has_path_override and callset_filter['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
-                callset_f |= (
-                        self._get_clinvar_filter(clinvar_path_terms) &
-                        (self._mt[self.CALLSET_POPULATION['af']] <= PATH_FREQ_OVERRIDE_CUTOFF)
-                )
-            self._mt = self._mt.filter_rows(callset_f)
-        elif callset_filter.get('ac') is not None:
-            self._mt = self._mt.filter_rows(self._mt[self.CALLSET_POPULATION['ac']] <= callset_filter['ac'])
 
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
@@ -613,6 +597,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'DP', 'PL', 'GQ']}
     POPULATIONS = {
+        'callset': {'hom': None, 'hemi': None, 'het': None},
         'topmed': {'hemi': None, 'het': None},
         'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
         'exac': {
@@ -688,6 +673,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
         ht = BaseHailTableQuery.import_filtered_ht(data_source, samples, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
             ht = hl.filter_intervals(ht, intervals, keep=False)
+        # In production: will not have callset frequency, may rename or rework these fields and filters
+        ht = ht.annotate(callset=hl.struct(**{field: ht[field] for field in ['AF', 'AC', 'AN']}))
         return ht
 
     def _get_consequence_terms(self):
@@ -724,8 +711,9 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     GENOTYPE_FIELDS = {
         f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
     }
-    CALLSET_FIELD = 'sv_callset'
-    CALLSET_POPULATION = {'af': 'sf', 'ac': 'sc', 'an': 'sn'}
+    POPULATIONS = {
+        'sv_callset': {'hom': None, 'hemi': None, 'het': None},
+    }
     PREDICTION_FIELDS_CONFIG = {
         'strvctvre': ('strvctvre', 'score'),
     }
@@ -760,6 +748,8 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
             ht = ht.filter(interval_filter)
+        # In production: will not have callset frequency, may rename or rework these fields and filters
+        ht = ht.annotate(sv_callset=hl.struct(**{key: ht[field] for key, field in {'AF': 'sf', 'AC': 'sc', 'AN': 'sn'}.items()}))
         return ht
 
     def _parse_pathogenicity_overrides(self, pathogenicity):
@@ -801,9 +791,8 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
     GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
 
-    # TODO #2781 create shared behavior for callset AF
-    # CALLSET_FIELD = 'sv_callset'
-    # CALLSET_POPULATION = {'af': 'sf', 'ac': 'sc', 'an': 'sn'}
+    POPULATIONS = deepcopy(VariantHailTableQuery.POPULATIONS)
+    POPULATIONS.update(GcnvHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     PREDICTION_FIELDS_CONFIG.update(GcnvHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + GcnvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
