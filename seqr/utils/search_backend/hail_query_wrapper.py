@@ -54,6 +54,7 @@ class BaseHailTableQuery(object):
         ),
     }
     COMPUTED_ANNOTATION_FIELDS = {}
+    INITIAL_ENTRY_ANNOTATIONS = {}
 
     @property
     def populations_configs(self):
@@ -86,7 +87,7 @@ class BaseHailTableQuery(object):
 
     def __init__(self, data_source, samples, genome_version, **kwargs):
         self._genome_version = genome_version
-        self._samples_by_id = {s.sample_id: s for s in samples}
+        self._samples_by_id = {s.sample_id: s for s in samples} # TODO will not work for mixed
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
         self._allowed_consequences = None
@@ -96,18 +97,26 @@ class BaseHailTableQuery(object):
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
         }
 
-        self._mt = self._load_table(data_source, **kwargs)
+        self._mt = self._load_table(data_source, samples, **kwargs)
 
-    def _load_table(self, data_source, intervals=None, **kwargs):
-        load_table_kwargs = {'_intervals': self._parse_intervals(intervals), '_filter_intervals': bool(intervals)}
+    def _load_table(self, data_source, samples, intervals=None, **kwargs):
+        ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
+        mt = ht.to_matrix_table_row_major({s.sample_id for s in samples}, col_field_name='s')
+        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
+        mt = mt.unfilter_entries()
+        if self.INITIAL_ENTRY_ANNOTATIONS:
+            mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
+        return mt
+
+    @staticmethod
+    def import_filtered_ht(data_source, samples, intervals=None, **kwargs):
+        load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         sample_hts = {
-            sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{sample_id}.ht', **load_table_kwargs)
-            for sample_id in self._samples_by_id.keys()
+            s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
+            for s in samples
         }
-        ht = ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
-        mt = ht.to_matrix_table_row_major(list(sample_hts.keys()), col_field_name='s')
-        return mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
+        return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
     def _parse_intervals(self, intervals):
         if intervals:
@@ -353,7 +362,7 @@ class BaseHailTableQuery(object):
             hl.agg.collect(hl.struct(
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
-                numAlt=mt.GT.n_alt_alleles(),
+                numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
                 **{k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
             )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
@@ -673,12 +682,12 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'selectedMainTranscriptId': _selected_main_transcript_expr,
     }
 
-    def _load_table(self, data_source, intervals=None, exclude_intervals=False):
-        mt = super(VariantHailTableQuery, self)._load_table(data_source, intervals=None if exclude_intervals else intervals)
+    @staticmethod
+    def import_filtered_ht(data_source, samples, intervals=None, exclude_intervals=False):
+        ht = BaseHailTableQuery.import_filtered_ht(data_source, samples, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
-            intervals = self._parse_intervals(intervals)
-            mt = hl.filter_intervals(mt, intervals, keep=False)
-        return mt
+            ht = hl.filter_intervals(ht, intervals, keep=False)
+        return ht
 
     def _get_consequence_terms(self):
         return self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
@@ -737,20 +746,20 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             ),
         )
     }
+    INITIAL_ENTRY_ANNOTATIONS = {
+        #  gCNV data has no ref/ref calls so add them back in
+        'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
+    }
     ANNOTATION_OVERRIDE_FIELDS = [NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD]
 
-    def _load_table(self, data_source, intervals=None, exclude_intervals=False):
-        mt = super(GcnvHailTableQuery, self)._load_table(data_source)
-        #  gCNV data has no ref/ref calls so add them back in
-        mt = mt.unfilter_entries()
-        mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
-
+    @staticmethod
+    def import_filtered_ht(data_source, samples, intervals=None, exclude_intervals=False):
+        ht = BaseHailTableQuery.import_filtered_ht(data_source, samples)
         if intervals:
-            intervals = self._parse_intervals(intervals)
-            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
-                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(mt.interval))
-            mt = mt.filter_rows(interval_filter)
-        return mt
+            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
+                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
+            ht = ht.filter(interval_filter)
+        return ht
 
     def _parse_pathogenicity_overrides(self, pathogenicity):
         pass
@@ -777,24 +786,29 @@ class GcnvHailTableQuery(BaseHailTableQuery):
 
 class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
-    def _load_table(self, data_source, intervals=None,  **kwargs):
-        # TODO do not remove all sv sample records?
-        sv_sample_ids = [sample_id for sample_id, s in self._samples_by_id.items() if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS]
-        self._samples_by_id = {
-            sample_id: s for sample_id, s in self._samples_by_id.items() if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS
-        }
+    INITIAL_ENTRY_ANNOTATIONS = {
+        #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
+        'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_defined(mt.locus), mt.GT, hl.Call([0, 0]))
+    }
 
-        # TODO #2781 does not work, figure out multi-class inheritance
-        mt = VariantHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
-        sv_mt = GcnvHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
+    @staticmethod
+    def import_filtered_ht(data_source, samples, **kwargs):
+        variant_ht = VariantHailTableQuery.import_filtered_ht(
+            data_source[Sample.DATASET_TYPE_VARIANT_CALLS],
+            [s for s in samples if s.dataset_tpye == Sample.DATASET_TYPE_VARIANT_CALLS],
+            **kwargs)
+        sv_ht = GcnvHailTableQuery.import_filtered_ht(
+            data_source[Sample.DATASET_TYPE_SV_CALLS],
+            [s for s in samples if s.dataset_tpye == Sample.DATASET_TYPE_SV_CALLS],
+            **kwargs)
 
-        mt = mt.key_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
-        transcript_struct_types = mt.sortedTranscriptConsequences.dtype.element_type
+        ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
+        transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS)
         # TODO merge columns?
-        return mt.transmute(sortedTranscriptConsequences=hl.or_else(
-            mt.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS)),
-            hl.array(mt.sortedTranscriptConsequences_1.map(
+        return ht.transmute(sortedTranscriptConsequences=hl.or_else(
+            ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS)),
+            hl.array(ht.sortedTranscriptConsequences_1.map(
                 lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
         ))
 
