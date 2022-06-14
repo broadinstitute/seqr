@@ -5,18 +5,19 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListsByGuid, getRnaSeqDataByFamilyGene } from 'redux/selectors'
+import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
+import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
-  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS,
-  PANEL_APP_CONFIDENCE_DESCRIPTION,
+  MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import { InlineHeader, ButtonLink, ColoredLabel } from '../../StyledComponents'
+import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
-import { GenCC } from '../genes/GeneDetail'
+import { GenCC, ClingenLabel } from '../genes/GeneDetail'
+import { getRnaSeqOutilerDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -33,20 +34,38 @@ const PADDED_INLINE_STYLE = {
   ...INLINE_STYLE,
 }
 
-const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, containerStyle, dispatch, ...props }) => {
+const BaseGeneLabelContent = styled(({
+  color, customColor, label, maxWidth, containerStyle, dispatch, ...props
+}) => {
   const labelProps = {
     ...props,
     size: 'mini',
-    content: label,
+    content: <span>{label}</span>,
   }
+
   return customColor ?
     <ColoredLabel {...labelProps} color={customColor} /> : <Label {...labelProps} color={color || 'grey'} />
 })`
-   margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
-   overflow: hidden;
-   text-overflow: ellipsis;
-   white-space: nowrap;
-   max-width: ${props => props.maxWidth || 'none'};
+  margin: ${props => props.margin || '0px .5em .8em 0px'} !important;
+  white-space: nowrap;
+
+  span {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: ${props => props.maxWidth || 'none'};
+  }
+
+  .detail {
+    margin-left: 0.5em !important;
+
+    &::before {
+      content: "(";
+    }
+    &::after {
+      content: ")";
+    }
+  }
 `
 const GeneLabelContent = props => <BaseGeneLabelContent {...props} />
 
@@ -81,8 +100,65 @@ GeneLabel.propTypes = {
   showEmpty: PropTypes.bool,
 }
 
+const PanelAppHoverOver = ({ url, locusListDescription, confidence, initials, moi }) => (
+  <div>
+    <a target="_blank" href={url} rel="noreferrer">{locusListDescription}</a>
+    <br />
+    <br />
+    <b>PanelApp gene confidence: &nbsp;</b>
+    {PANEL_APP_CONFIDENCE_DESCRIPTION[confidence]}
+    <br />
+    <br />
+    <b>PanelApp mode of inheritance: </b>
+    {initials}
+    {' '}
+    {moi}
+  </div>
+)
+
+PanelAppHoverOver.propTypes = {
+  url: PropTypes.string.isRequired,
+  locusListDescription: PropTypes.string.isRequired,
+  confidence: PropTypes.string.isRequired,
+  initials: PropTypes.string.isRequired,
+  moi: PropTypes.string.isRequired,
+}
+
+function getPaProps({ panelAppDetails, locusListDescription, paLocusList, geneSymbol }) {
+  if (!panelAppDetails || !paLocusList || !geneSymbol) {
+    return {
+      initials: null,
+      description: locusListDescription,
+      customColor: false,
+    }
+  }
+
+  const { url, panelAppId } = paLocusList
+  const fullUrl = panelAppUrl(url, panelAppId, geneSymbol)
+  const moi = panelAppDetails.moi || 'Unknown'
+  const confidence = panelAppDetails.confidence || 'Unknown'
+  const initials = moiToMoiInitials(moi).join(', ') || null
+
+  const description = PanelAppHoverOver({
+    url: fullUrl,
+    locusListDescription,
+    confidence,
+    initials,
+    moi,
+  })
+
+  return {
+    initials,
+    description,
+    customColor: PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppDetails.confidence],
+  }
+}
+
 const BaseLocusListLabels = React.memo((
-  { locusListGuids, locusListsByGuid, locusListConfidence, compact, containerStyle, ...labelProps },
+  {
+    locusListGuids, locusListsByGuid, panelAppDetail,
+    geneSymbol, compact, containerStyle, ...labelProps
+  },
 ) => (
   compact ? (
     <GeneDetailSection
@@ -97,28 +173,30 @@ const BaseLocusListLabels = React.memo((
   ) : (
     <div style={containerStyle}>
       {locusListGuids.map((locusListGuid) => {
-        const panelAppConfidence = locusListConfidence && locusListConfidence[locusListGuid]
-        let { description } = locusListsByGuid[locusListGuid] || {}
-        if (panelAppConfidence) {
-          description = (
-            <div>
-              {description}
-              <br />
-              <br />
-              <b>PanelApp gene confidence: &nbsp;</b>
-              {PANEL_APP_CONFIDENCE_DESCRIPTION[panelAppConfidence]}
-            </div>
-          )
+        const locusList = locusListsByGuid[locusListGuid]
+        const panelAppDetails = panelAppDetail && panelAppDetail[locusListGuid]
+        const { name: label, description: locusListDescription, paLocusList } = locusList
+        const { description, initials, customColor } = (panelAppDetails && paLocusList) ? getPaProps({
+          panelAppDetails,
+          locusListDescription,
+          paLocusList,
+          geneSymbol,
+        }) : {
+          description: label,
+          initials: false,
+          customColor: false,
         }
+
         return (
           <GeneDetailSection
             key={locusListGuid}
             color="teal"
-            customColor={panelAppConfidence && PANEL_APP_CONFIDENCE_LEVEL_COLORS[panelAppConfidence]}
-            maxWidth="7em"
+            customColor={customColor}
+            detail={initials}
+            maxWidth="8em"
             showEmpty
-            label={(locusListsByGuid[locusListGuid] || {}).name}
-            description={(locusListsByGuid[locusListGuid] || {}).name}
+            label={label}
+            description={label}
             details={description}
             containerStyle={containerStyle}
             {...labelProps}
@@ -130,7 +208,8 @@ const BaseLocusListLabels = React.memo((
 
 BaseLocusListLabels.propTypes = {
   locusListGuids: PropTypes.arrayOf(PropTypes.string).isRequired,
-  locusListConfidence: PropTypes.object,
+  panelAppDetail: PropTypes.object,
+  geneSymbol: PropTypes.string,
   compact: PropTypes.bool,
   locusListsByGuid: PropTypes.object.isRequired,
   containerStyle: PropTypes.object,
@@ -146,6 +225,19 @@ const mapLocusListStateToProps = state => ({
 })
 
 export const LocusListLabels = connect(mapLocusListStateToProps)(BaseLocusListLabels)
+
+const ClinGenRow = ({ value, label, href }) => (
+  <Table.Row>
+    <Table.Cell textAlign="right"><ClingenLabel value={value} /></Table.Cell>
+    <Table.Cell><a target="_blank" rel="noreferrer" href={href}>{label}</a></Table.Cell>
+  </Table.Row>
+)
+
+ClinGenRow.propTypes = {
+  value: PropTypes.string,
+  label: PropTypes.string,
+  href: PropTypes.string,
+}
 
 const GeneDetailSection = React.memo(({ details, compact, description, compactLabel, showEmpty, ...labelProps }) => {
   if (!details && !showEmpty) {
@@ -179,6 +271,20 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     label: 'GENCC',
     showDetails: gene => gene.genCc?.classifications,
     detailsDisplay: gene => (<GenCC genCc={gene.genCc} />),
+  },
+  {
+    color: 'purple',
+    description: 'ClinGen Dosage Sensitivity',
+    label: 'ClinGen',
+    showDetails: gene => gene.clinGen,
+    detailsDisplay: gene => (
+      <NoBorderTable basic="very" compact="very">
+        {gene.clinGen.haploinsufficiency &&
+          <ClinGenRow value={gene.clinGen.haploinsufficiency} href={gene.clinGen.href} label="Haploinsufficiency" />}
+        {gene.clinGen.triplosensitivity &&
+          <ClinGenRow value={gene.clinGen.triplosensitivity} href={gene.clinGen.href} label="Triplosensitivity" />}
+      </NoBorderTable>
+    ),
   },
   {
     color: 'orange',
@@ -264,7 +370,7 @@ const GENE_DETAIL_SECTIONS = [
     color: 'pink',
     description: 'RNA-Seq Outlier',
     label: 'RNA-Seq',
-    showDetails: (gene, rnaSeqData) => rnaSeqData?.significantOutliers && rnaSeqData.significantOutliers[gene.geneId],
+    showDetails: (gene, rnaSeqData) => rnaSeqData && rnaSeqData[gene.geneId],
     detailsDisplay: (gene, rnaSeqData) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
@@ -278,7 +384,7 @@ const GENE_DETAIL_SECTIONS = [
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {Object.entries(rnaSeqData.significantOutliers[gene.geneId]).map(([individual, data]) => (
+            {Object.entries(rnaSeqData[gene.geneId]).map(([individual, data]) => (
               <Table.Row key={individual}>
                 <Table.HeaderCell>{individual}</Table.HeaderCell>
                 {RNA_SEQ_DETAIL_FIELDS.map(
@@ -348,8 +454,9 @@ export const GeneDetails = React.memo((
       {
         hasLocusLists && (
           <LocusListLabels
+            geneSymbol={gene.geneSymbol}
             locusListGuids={gene.locusListGuids}
-            locusListConfidence={gene.locusListConfidence}
+            panelAppDetail={gene.panelAppDetail}
             compact={compact}
             containerStyle={showDivider ? PADDED_INLINE_STYLE : INLINE_STYLE}
             {...labelProps}
@@ -387,7 +494,7 @@ const getGeneConsequence = (geneId, variant) => {
 }
 
 const BaseVariantGene = React.memo((
-  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, rnaSeqData },
+  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, rnaSeqData },
 ) => {
   const geneConsequence = getGeneConsequence(geneId, variant)
 
@@ -459,14 +566,14 @@ const BaseVariantGene = React.memo((
     <div>
       {geneSummary}
       {!showInlineDetails && geneDetails}
-      {rnaSeqData?.tpms && rnaSeqData.tpms[gene.geneId] && (
+      {hasRnaTpmData && (
         <Modal
           trigger={<Button basic compact color="blue" size="mini" content="Show Gene Expression" />}
           title={`${gene.geneSymbol} Expression`}
           modalName={`${variant.variantId}-${gene.geneId}-tpm`}
         >
           <React.Suspense fallback={<Loader />}>
-            <RnaSeqTpm geneId={geneId} tpms={rnaSeqData.tpms[gene.geneId]} />
+            <RnaSeqTpm geneId={geneId} familyGuid={variant.familyGuids[0]} />
           </React.Suspense>
         </Modal>
       )}
@@ -481,12 +588,14 @@ BaseVariantGene.propTypes = {
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
+  hasRnaTpmData: PropTypes.bool,
   rnaSeqData: PropTypes.object,
 }
 
 const mapStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.geneId],
-  rnaSeqData: getRnaSeqDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+  hasRnaTpmData: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.hasRnaTpmData,
+  rnaSeqData: getRnaSeqOutilerDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
 })
 
 export const VariantGene = connect(mapStateToProps)(BaseVariantGene)
@@ -581,7 +690,7 @@ class VariantGenes extends React.PureComponent {
 
 const mapAllGenesStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
-  rnaSeqData: getRnaSeqDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+  rnaSeqData: getRnaSeqOutilerDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
 })
 
 export default connect(mapAllGenesStateToProps)(VariantGenes)

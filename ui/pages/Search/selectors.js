@@ -128,7 +128,7 @@ export const getSearchedProjectsLocusListOptions = createListEqualSelector(
       const { name, paLocusList } = locusListsByGuid[locusListGuid]
       return { text: name, value: locusListGuid, key: locusListGuid, description: paLocusList && 'PanelApp' }
     })
-    return [{ value: null }, ...locusListOptions]
+    return [{ value: null, description: 'None' }, ...locusListOptions]
   },
 )
 

@@ -1,11 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Grid } from 'semantic-ui-react'
+import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-const FamilyGrid = styled(({ annotation, offset, ...props }) => <Grid {...props} />)`
+const FamilyGrid = styled(({ annotation, offset, ...props }) => <Table {...props} />)`
   margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
   margin-top: ${props => (props.annotation ? '-33px !important' : 'inherit')};
+  background: inherit !important;
+  border: none !important;
 `
 
 const getContentWidth = (useFullWidth, leftContent, rightContent) => {
@@ -23,18 +25,18 @@ const FamilyLayout = React.memo((
 ) => (
   <div>
     {annotation}
-    <FamilyGrid annotation={annotation} offset={offset}>
-      <Grid.Row>
-        {(leftContent || !useFullWidth) && <Grid.Column width={3}>{leftContent}</Grid.Column>}
+    <FamilyGrid annotation={annotation} offset={offset} compact fixed={!useFullWidth}>
+      <Table.Row verticalAlign="top">
+        {(leftContent || !useFullWidth) && <Table.Cell width={3}>{leftContent}</Table.Cell>}
         {compact ? (fields || []).map(
-          field => <Grid.Column width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Grid.Column>,
+          field => <Table.Cell width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Table.Cell>,
         ) : (
-          <Grid.Column width={getContentWidth(useFullWidth, leftContent, rightContent)}>
+          <Table.Cell width={getContentWidth(useFullWidth, leftContent, rightContent)}>
             {(fields || []).map(field => fieldDisplay(field))}
-          </Grid.Column>
+          </Table.Cell>
         )}
-        {rightContent && <Grid.Column width={3}>{rightContent}</Grid.Column>}
-      </Grid.Row>
+        {rightContent && <Table.Cell width={3}>{rightContent}</Table.Cell>}
+      </Table.Row>
     </FamilyGrid>
   </div>
 ))
