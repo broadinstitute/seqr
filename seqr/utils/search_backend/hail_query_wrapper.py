@@ -106,6 +106,7 @@ class BaseHailTableQuery(object):
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
+        mt.describe() # TODO remove
         return mt
 
     @staticmethod
@@ -816,20 +817,21 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
+        variant_samples = [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS]
+        variant_sample_ids = {s.sample_id for s in variant_samples}
+        sv_samples = [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS]
+        sv_sample_ids = {s.sample_id for s in sv_samples}
+
         variant_ht = VariantHailTableQuery.import_filtered_ht(
-            data_source[Sample.DATASET_TYPE_VARIANT_CALLS],
-            [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS],
-            **kwargs)
+            data_source[Sample.DATASET_TYPE_VARIANT_CALLS], variant_samples, **kwargs)
         sv_ht = GcnvHailTableQuery.import_filtered_ht(
-            data_source[Sample.DATASET_TYPE_SV_CALLS],
-            [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS],
-            **kwargs)
+            data_source[Sample.DATASET_TYPE_SV_CALLS], sv_samples, **kwargs)
 
         ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
+
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
-        # TODO merge columns?
-        return ht.transmute(
+        ht = ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
             sortedTranscriptConsequences=hl.or_else(
                 ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS, 'consequence_terms')),
@@ -837,8 +839,12 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
                     **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
                     consequence_terms=[t.major_consequence])))
             ),
-
+            **{sample_id: hl.or_else(ht[sample_id], ht[f'{sample_id}_1']) for sample_id in variant_sample_ids.intersection(sv_sample_ids)},
+            # **{sample_id: ht[sample_id] for sample_id in variant_sample_ids - sv_sample_ids}
+            # **{sample_id: ht[sample_id] for sample_id in sv_sample_ids - variant_sample_ids}
         )
+        ht.describe() # TODO remove
+        return ht
 
     def _get_x_chrom_filter(self, mt):
         # TODO #2781
