@@ -99,31 +99,15 @@ class BaseHailTableQuery(object):
         self._mt = self._load_table(data_source, **kwargs)
 
     def _load_table(self, data_source, intervals=None, **kwargs):
-        return self._import_mt(
-            data_source, sample_ids=self._samples_by_id.keys(), filter_mt=self.filter_loaded_mt,
-            intervals=self._parse_intervals(intervals), read_filtered_mt=self._should_read_filtered_mt(**kwargs), **kwargs,
-        )
-
-    @staticmethod
-    def _import_mt(data_source, sample_ids, filter_mt, intervals, read_filtered_mt=False, **kwargs):
-        load_table_kwargs = {} if read_filtered_mt else {'_intervals': intervals, '_filter_intervals': bool(intervals)}
+        load_table_kwargs = {'_intervals': self._parse_intervals(intervals), '_filter_intervals': bool(intervals)}
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         sample_hts = {
             sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{sample_id}.ht', **load_table_kwargs)
-            for sample_id in sample_ids
+            for sample_id in self._samples_by_id.keys()
         }
         ht = ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
         mt = ht.to_matrix_table_row_major(list(sample_hts.keys()), col_field_name='s')
-        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
-        return filter_mt(mt, intervals, **kwargs)
-
-    @staticmethod
-    def _should_read_filtered_mt(exclude_intervals=False):
-        return not exclude_intervals
-
-    @staticmethod
-    def filter_loaded_mt(mt, intervals, exclude_intervals):
-        return mt
+        return mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
 
     def _parse_intervals(self, intervals):
         if intervals:
@@ -689,9 +673,10 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'selectedMainTranscriptId': _selected_main_transcript_expr,
     }
 
-    @staticmethod
-    def filter_loaded_mt(mt, intervals, exclude_intervals=False):
+    def _load_table(self, data_source, intervals=None, exclude_intervals=False):
+        mt = super(VariantHailTableQuery, self)._load_table(data_source, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
+            intervals = self._parse_intervals(intervals)
             mt = hl.filter_intervals(mt, intervals, keep=False)
         return mt
 
@@ -754,17 +739,14 @@ class GcnvHailTableQuery(BaseHailTableQuery):
     }
     ANNOTATION_OVERRIDE_FIELDS = [NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD]
 
-    @staticmethod
-    def _should_read_filtered_mt(exclude_intervals=False):
-        return False
-
-    @staticmethod
-    def filter_loaded_mt(mt, intervals, exclude_intervals=False):
+    def _load_table(self, data_source, intervals=None, exclude_intervals=False):
+        mt = super(GcnvHailTableQuery, self)._load_table(data_source)
         #  gCNV data has no ref/ref calls so add them back in
         mt = mt.unfilter_entries()
         mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
 
         if intervals:
+            intervals = self._parse_intervals(intervals)
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(mt.interval))
             mt = mt.filter_rows(interval_filter)
@@ -802,13 +784,11 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             sample_id: s for sample_id, s in self._samples_by_id.items() if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS
         }
 
-        variant_mt = super(VariantHailTableQuery, self)._load_table(
-            data_source[Sample.DATASET_TYPE_VARIANT_CALLS], intervals=intervals, **kwargs)
-        sv_mt = BaseHailTableQuery._import_mt(
-            data_source[Sample.DATASET_TYPE_SV_CALLS], sample_ids=sv_sample_ids, filter_mt=GcnvHailTableQuery.filter_loaded_mt,
-            intervals=self._parse_intervals(intervals), **kwargs)
+        # TODO #2781 does not work, figure out multi-class inheritance
+        mt = VariantHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
+        sv_mt = GcnvHailTableQuery._load_table(data_source[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
 
-        mt = variant_mt.key_rows_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
+        mt = mt.key_by(VARIANT_KEY_FIELD).join(sv_mt, how='outer')
         transcript_struct_types = mt.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS)
         # TODO merge columns?
