@@ -844,8 +844,8 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
                     consequence_terms=[t.major_consequence])))
             ),
             **{sample_id: hl.or_else(
-                ht[sample_id].annotate(**{k: hl.missing(sv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(entry_fields),
-                ht[f'{sample_id}_1'].annotate(**{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(entry_fields),
+                ht[sample_id].annotate(**{k: hl.missing(sv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields),
+                ht[f'{sample_id}_1'].annotate(**{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields),
             ) for sample_id in shared_sample_ids},
             # **{sample_id: ht[sample_id] for sample_id in variant_sample_ids - sv_sample_ids}
             # **{sample_id: ht[sample_id] for sample_id in sv_sample_ids - variant_sample_ids}
