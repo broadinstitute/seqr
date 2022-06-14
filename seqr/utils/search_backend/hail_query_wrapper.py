@@ -63,14 +63,20 @@ class BaseHailTableQuery(object):
             populations[pop].update(pop_config)
         return populations
 
+    @staticmethod
+    def _should_show_population(population, rows):
+        return True
+
     @property
     def annotation_fields(self):
         annotation_fields = {
-            'populations': lambda r: hl.struct(**{
+            'populations': lambda r: hl.dict({
                 population: hl.struct(**{
                     response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
                     if field is not None
-                }) for population, pop_config in self.populations_configs.items()}),
+                }) for population, pop_config in self.populations_configs.items()
+                 if self._should_show_population(population, r)
+            }),
             'predictions': lambda r: hl.struct(**{
                 prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
@@ -846,6 +852,12 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             ) for sample_id in shared_sample_ids},
             **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in variant_sample_ids - sv_sample_ids},
             **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
+        )
+
+    @staticmethod
+    def _should_show_population(population, rows):
+        return hl.if_else(
+            hl.is_defined(rows.locus), population in VariantHailTableQuery.POPULATIONS, population in GcnvHailTableQuery.POPULATIONS,
         )
 
     @staticmethod
