@@ -14,8 +14,24 @@ import {
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
-  getFamiliesByGuid, getProjectsByGuid,
+  getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual,
 } from 'redux/selectors'
+
+export const getRnaSeqOutilerDataByFamilyGene = createSelector(
+  getIndividualsByGuid,
+  getRnaSeqDataByIndividual,
+  (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => {
+      const { familyGuid, displayName } = individualsByGuid[individualGuid]
+      acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
+        (acc2, [geneId, data]) => (data.isSignificant ?
+          { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
+        ), acc[familyGuid] || {},
+      )
+      return acc
+    }, {},
+  ),
+)
 
 // Saved variant selectors
 export const getSavedVariantTableState = state => (
@@ -23,6 +39,9 @@ export const getSavedVariantTableState = state => (
 )
 
 const matchingVariants = (variants, matchFunc) => variants.filter(o => (Array.isArray(o) ? o : [o]).some(matchFunc))
+
+// sorts manual variants to top of list, as manual variants are missing all populations
+const sortCompHet = (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0)
 
 export const getPairedSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
@@ -50,13 +69,13 @@ export const getPairedSelectedSavedVariants = createSelector(
     }
 
     const selectedVariantsByGuid = variants.reduce((acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
-    const seenCompoundHets = []
+    const seenPairedGuids = []
     let pairedVariants = variants.reduce((acc, variant) => {
-      if (seenCompoundHets.includes(variant.variantGuid)) {
+      if (seenPairedGuids.includes(variant.variantGuid)) {
         return acc
       }
 
-      const variantCompoundHetGuids = [...[
+      const variantPairGuids = [...[
         ...variant.tagGuids.map(t => tagsByGuid[t].variantGuids),
         ...variant.noteGuids.map(n => notesByGuid[n].variantGuids),
       ].filter(variantGuids => variantGuids.length > 1).reduce(
@@ -65,14 +84,23 @@ export const getPairedSelectedSavedVariants = createSelector(
         ]), new Set(),
       )].filter(varGuid => selectedVariantsByGuid[varGuid])
 
-      if (variantCompoundHetGuids.length) {
-        const unseenGuids = variantCompoundHetGuids.filter(varGuid => !seenCompoundHets.includes(varGuid))
-        const compHet = [variant, ...unseenGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(
-          // sorts manual variants to top of list, as manual variants are missing all populations
-          (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0),
-        )
-        acc.push(compHet)
-        seenCompoundHets.push(variant.variantGuid, ...unseenGuids)
+      if (variantPairGuids.length) {
+        let unseenPairedGuids = variantPairGuids.filter(varGuid => !seenPairedGuids.includes(varGuid))
+        seenPairedGuids.push(variant.variantGuid, ...unseenPairedGuids)
+
+        if (unseenPairedGuids.length > 1) {
+          // check if variant is part of multiple distinct comp het pairs or a single MNV with 3+ linked variants
+          const pairVariant = selectedVariantsByGuid[unseenPairedGuids[0]]
+          const separateGuids = unseenPairedGuids.slice(1).filter(varGuid => !(
+            pairVariant.tagGuids.some(t => selectedVariantsByGuid[varGuid].tagGuids.includes(t)) ||
+            pairVariant.noteGuids.some(n => selectedVariantsByGuid[varGuid].noteGuids.includes(n))))
+          if (separateGuids.length) {
+            acc.push([variant, ...separateGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(sortCompHet))
+            unseenPairedGuids = unseenPairedGuids.filter(varGuid => !separateGuids.includes(varGuid))
+          }
+        }
+
+        acc.push([variant, ...unseenPairedGuids.map(varGuid => selectedVariantsByGuid[varGuid])].sort(sortCompHet))
         return acc
       }
 
@@ -186,10 +214,13 @@ export const getSavedVariantTotalPages = createSelector(
 const getSavedVariantExportData = createSelector(
   getPairedFilteredSavedVariants,
   getFamiliesByGuid,
-  (pairedVariants, familiesByGuid) => pairedVariants.reduce(
+  getProjectsByGuid,
+  (pairedVariants, familiesByGuid, projectsByGuid) => pairedVariants.reduce(
     (acc, variant) => (Array.isArray(variant) ? acc.concat(variant) : [...acc, variant]), [],
   ).map(({ genotypes, ...variant }) => ({
     ...variant,
+    project: projectsByGuid[familiesByGuid[variant.familyGuids[0]].projectGuid].name,
+    family: familiesByGuid[variant.familyGuids[0]].displayName,
     genotypes: Object.keys(genotypes).filter(
       indGuid => variant.familyGuids.some(familyGuid => familiesByGuid[familyGuid].individualGuids.includes(indGuid)),
     ).reduce((acc, indGuid) => ({ ...acc, [indGuid]: genotypes[indGuid] }), {}),

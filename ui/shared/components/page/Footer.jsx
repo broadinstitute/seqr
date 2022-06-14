@@ -17,7 +17,7 @@ const TableHeaderCell = styled(Table.HeaderCell)`
   }
 `
 
-const SEQR_PAPER_URL = 'https://doi.org/10.1101/2021.10.27.21265326'
+const SEQR_PAPER_URL = 'https://doi.org/10.1002/humu.24366'
 export const SeqrPaperLink =
   ({ content }) => <a target="_blank" rel="noreferrer" href={SEQR_PAPER_URL}>{content || SEQR_PAPER_URL}</a>
 
@@ -42,7 +42,8 @@ const Footer = React.memo(({ version }) => (
                 Chao, K., Lemire, G., Osei-Owusu, I., VanNoy, G., Wilson, M., Nguyen, K., Arachchi, H., Phu, W.,
                 Solomson, M., Mano, S., O’Leary, M., … O’Donnell-Luria, A.
                 <br />
-                seqr: a web-based analysis and collaboration tool for rare disease genomics. medRxiv (2021). &nbsp;
+                seqr: a web-based analysis and collaboration tool for rare disease genomics. Human Mutation (2022).
+                &nbsp;
                 <SeqrPaperLink />
               </Modal.Content>
             }

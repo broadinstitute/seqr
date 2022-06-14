@@ -1,9 +1,11 @@
 from datetime import datetime
 from django.urls.base import reverse
+import json
 import mock
 
-from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page
+from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, bulk_update_family_analysed_by
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+from seqr.models import FamilyAnalysedBy
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -121,6 +123,10 @@ class SummaryDataAPITest(object):
         if self.MANAGER_VARIANT_GUID:
             expected_variant_guids.add(self.MANAGER_VARIANT_GUID)
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
+        self.assertSetEqual(
+            set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
+            {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'},
+        )
 
         # Test analyst behavior
         self.login_analyst_user()
@@ -136,6 +142,47 @@ class SummaryDataAPITest(object):
         self.assertEqual(response.status_code, 200)
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
+
+    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
+    def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file, mock_analyst_group):
+        url = reverse(bulk_update_family_analysed_by)
+        self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.resolve_expression.return_value = 'analysts'
+
+        mock_load_uploaded_file.return_value = [['foo', 'bar']]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(
+            {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Project and Family columns are required')
+
+        mock_load_uploaded_file.return_value = [
+            ['Project', 'Family ID'],
+            ['1kg project n\u00e5me with uni\u00e7\u00f8de', '1'],
+            ['Test Reprocessed Project', '12'],
+            ['Test Reprocessed Project', 'not_a_family'],
+            ['not_a_project', '2'],
+        ]
+        created_time = datetime.now()
+        response = self.client.post(url, content_type='application/json', data=json.dumps(
+            {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
+        self.assertDictEqual(response.json(), {
+            'warnings': [
+                'No match found for the following families: 2 (not_a_project), not_a_family (Test Reprocessed Project)'
+            ],
+            'info': ['Updated "analysed by" for 2 families'],
+        })
+
+        models = FamilyAnalysedBy.objects.filter(last_modified_date__gte=created_time)
+        self.assertEqual(len(models), 2)
+        self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
+        self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
 
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):

@@ -1,6 +1,5 @@
 from datetime import timedelta
 import elasticsearch
-from elasticsearch_dsl import Q
 
 from settings import ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_SERVICE_PORT, ELASTICSEARCH_CREDENTIALS, ELASTICSEARCH_PROTOCOL, ES_SSL_CONTEXT
 from seqr.models import Sample
@@ -62,14 +61,14 @@ def get_index_metadata(index_name, client, include_fields=False, use_cache=True)
 def get_single_es_variant(families, variant_id, return_all_queried_families=False, user=None):
     variants = EsSearch(
         families, return_all_queried_families=return_all_queried_families, user=user,
-    ).filter_by_location(variant_ids=[variant_id]).search(num_results=1)
+    ).filter_by_variant_ids([variant_id]).search(num_results=1)
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return variants[0]
 
 
 def get_es_variants_for_variant_ids(families, variant_ids, dataset_type=None, user=None):
-    variants = EsSearch(families, user=user).filter_by_location(variant_ids=variant_ids)
+    variants = EsSearch(families, user=user).filter_by_variant_ids(variant_ids)
     if dataset_type:
         variants = variants.update_dataset_type(dataset_type)
     return variants.search(num_results=len(variant_ids))
@@ -85,67 +84,54 @@ def get_es_variants_for_variant_tuples(families, xpos_ref_alt_tuples):
     return get_es_variants_for_variant_ids(families, variant_ids, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
 
 
-def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, **kwargs):
+def get_es_variants(search_model, es_search_cls=EsSearch, sort=XPOS_SORT_KEY, skip_genotype_filter=False, load_all=False, user=None, page=1, num_results=100):
     cache_key = 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
     previous_search_results = safe_redis_get_json(cache_key) or {}
     total_results = previous_search_results.get('total_results')
 
-    previously_loaded_results, search_kwargs = es_search_cls.process_previous_results(previous_search_results, load_all=load_all, **kwargs)
+    previously_loaded_results, search_kwargs = es_search_cls.process_previous_results(previous_search_results, load_all=load_all, page=page, num_results=num_results)
     if previously_loaded_results is not None:
         return previously_loaded_results, previous_search_results.get('total_results')
+    page = search_kwargs.get('page', page)
+    num_results = search_kwargs.get('num_results', num_results)
 
     if load_all and total_results and int(total_results) >= int(MAX_VARIANTS):
         raise InvalidSearchException('Too many variants to load. Please refine your search and try again')
 
     search = search_model.variant_search.search
 
+    rs_ids = None
+    variant_ids = None
     genes, intervals, invalid_items = parse_locus_list_items(search.get('locus', {}))
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
-    rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
-    if invalid_items:
-        raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
-    has_location_filter = genes or intervals or rs_ids or variant_ids
+    if not (genes or intervals):
+        rs_ids, variant_ids, invalid_items = _parse_variant_items(search.get('locus', {}))
+        if invalid_items:
+            raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
+        if rs_ids and variant_ids:
+            raise InvalidSearchException('Invalid variant notation: found both variant IDs and rsIDs')
 
     es_search = es_search_cls(
         search_model.families.all(),
         previous_search_results=previous_search_results,
-        inheritance_search=search.get('inheritance'),
         user=user,
+        sort=sort,
     )
 
-    if search.get('customQuery'):
-        custom_q = search['customQuery']
-        if not isinstance(custom_q, list):
-            custom_q = [custom_q]
-        for q_dict in custom_q:
-            es_search.filter(Q(q_dict))
-
-    if sort:
-        es_search.sort(sort)
-
-    if has_location_filter:
-        es_search.filter_by_location(
-            genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids, locus=search['locus'])
-        if (variant_ids or rs_ids) and not (genes or intervals) and not search['locus'].get('excludeLocations'):
-            search_kwargs['num_results'] = len(variant_ids) + len(rs_ids)
-
-    if search.get('freqs'):
-        es_search.filter_by_frequency(search['freqs'], pathogenicity=search.get('pathogenicity'))
-
-    if search.get('in_silico'):
-        es_search.filter_by_in_silico(search['in_silico'])
-
-    es_search.filter_by_annotation_and_genotype(
-        search.get('inheritance'), quality_filter=search.get('qualityFilter'),
+    es_search.filter_variants(
+        inheritance=search.get('inheritance'), frequencies=search.get('freqs'), pathogenicity=search.get('pathogenicity'),
         annotations=search.get('annotations'), annotations_secondary=search.get('annotations_secondary'),
-        pathogenicity=search.get('pathogenicity'), skip_genotype_filter=skip_genotype_filter,
-        has_location_filter=has_location_filter)
+        in_silico=search.get('in_silico'), quality_filter=search.get('qualityFilter'),
+        custom_query=search.get('customQuery'), locus=search.get('locus'),
+        genes=genes, intervals=intervals, rs_ids=rs_ids, variant_ids=variant_ids,
+        skip_genotype_filter=skip_genotype_filter,
+    )
 
-    if hasattr(es_search, 'aggregate_by_gene'):
-        es_search.aggregate_by_gene()
+    if variant_ids:
+        num_results = len(variant_ids)
 
-    variant_results = es_search.search(**search_kwargs)
+    variant_results = es_search.search(page=page, num_results=num_results)
 
     safe_redis_set_json(cache_key, es_search.previous_search_results, expire=timedelta(weeks=2))
 

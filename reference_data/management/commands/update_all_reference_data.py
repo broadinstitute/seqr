@@ -11,6 +11,9 @@ from reference_data.management.commands.update_omim import OmimReferenceDataHand
 from reference_data.management.commands.update_primate_ai import PrimateAIReferenceDataHandler
 from reference_data.management.commands.update_mgi import MGIReferenceDataHandler
 from reference_data.management.commands.update_gene_cn_sensitivity import CNSensitivityReferenceDataHandler
+from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
+from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +23,8 @@ REFERENCE_DATA_SOURCES = OrderedDict([
     ("gene_cn_sensitivity", CNSensitivityReferenceDataHandler),
     ("primate_ai", PrimateAIReferenceDataHandler),
     ("mgi", MGIReferenceDataHandler),
+    ("gencc", GenCCReferenceDataHandler),
+    ("clingen", ClinGenReferenceDataHandler),
     ("hpo", None),
 ])
 

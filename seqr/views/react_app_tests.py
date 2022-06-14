@@ -30,8 +30,6 @@ class DashboardPageTest(AuthenticationTestCase):
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
-        self.assertRegex(content, r'src="/static/app(-.*)js"')
-        self.assertRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
         self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 5)
 
     @mock.patch('seqr.views.react_app.GA_TOKEN_ID', MOCK_GA_TOKEN)
@@ -49,15 +47,17 @@ class DashboardPageTest(AuthenticationTestCase):
         response = self.client.get(url)
         self._check_page_html(response, 'test_user_no_policies', google_enabled=True, ga_token_id=MOCK_GA_TOKEN)
 
-    def test_local_react_page(self):
-        url = reverse(no_login_main_app)
-        response = self.client.get(url, HTTP_HOST='localhost:3000')
-        self.assertEqual(response.status_code, 200)
-
-        content = response.content.decode('utf-8')
-        self.assertNotRegex(content, r'src="/static/app(-.*)js"')
-        self.assertContains(response, 'src="/app.js"')
-        self.assertNotRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
+    # 2022-06-14 mfranklin: Comment out this test as we use a separate
+    #           build process to broadinstitute/seqr
+    # def test_local_react_page(self):
+    #     url = reverse(no_login_main_app)
+    #     response = self.client.get(url, HTTP_HOST='localhost:3000')
+    #     self.assertEqual(response.status_code, 200)
+    #
+    #     content = response.content.decode('utf-8')
+    #     self.assertNotRegex(content, r'src="/static/app(-.*)js"')
+    #     self.assertContains(response, 'src="/app.js"')
+    #     self.assertNotRegex(content, r'<link\s+href="/static/app.*css"[^>]*>')
 
     def test_no_login_react_page(self):
         url = reverse(no_login_main_app)

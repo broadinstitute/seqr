@@ -7,6 +7,7 @@ from collections import defaultdict
 from copy import deepcopy
 from django.db.models import prefetch_related_objects, Prefetch
 from django.db.models.fields.files import ImageFieldFile
+from django.db.models.functions import Lower
 from django.contrib.auth.models import User
 
 from reference_data.models import HumanPhenotypeOntology
@@ -215,12 +216,8 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 pedigree_image = None
         return pedigree_image
 
-    analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP) if ANALYST_USER_GROUP else [])
     def _process_result(result, family):
-        result['analysedBy'] = [{
-            'createdBy': {'fullName': ab.created_by.get_full_name(), 'email': ab.created_by.email, 'isAnalyst': ab.created_by in analyst_users},
-            'lastModifiedDate': ab.last_modified_date,
-        } for ab in family.familyanalysedby_set.all()]
+        result['analysedBy'] = _get_json_for_models(family.familyanalysedby_set.all(), user=user, is_analyst=is_analyst)
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
@@ -813,7 +810,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
 
     if project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-        users_by_email = {u.email: u for u in User.objects.filter(email__in = permission_levels.keys())}
+        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
         for email, permission in permission_levels.items():
             if email == SERVICE_ACCOUNT_FOR_ANVIL:
                 continue

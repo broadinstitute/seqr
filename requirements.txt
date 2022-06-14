@@ -22,7 +22,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==3.2.12
+django==3.2.13
     # via
     #   -r requirements.in
     #   django-anymail

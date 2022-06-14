@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Segment, Icon, Popup, Divider, Loader } from 'semantic-ui-react'
 
 import {
-  getIndividualsByGuid,
+  getSortedIndividualsByFamily,
   getIGVSamplesByFamilySampleIndividual,
   getFamiliesByGuid,
   getProjectsByGuid,
@@ -43,7 +43,7 @@ const getTrackOptions = (type, sample, individual) => {
 
 const getSampleColor = individual => (individual.affected === AFFECTED ? 'red' : 'blue')
 
-const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
+const getIgvTracks = (igvSampleIndividuals, sortedIndividuals, sampleTypes) => {
   const gcnvSamplesByBatch = Object.entries(igvSampleIndividuals[GCNV_TYPE] || {}).reduce(
     (acc, [individualGuid, { filePath, sampleId }]) => {
       if (!acc[filePath]) {
@@ -60,8 +60,13 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
   return Object.entries(igvSampleIndividuals).reduce((acc, [type, samplesByIndividual]) => (
     sampleTypes.includes(type) ? [
       ...acc,
-      ...Object.entries(samplesByIndividual).map(([individualGuid, sample]) => {
-        const individual = individualsByGuid[individualGuid]
+      ...sortedIndividuals.map((individual) => {
+        const { individualGuid } = individual
+        const sample = samplesByIndividual[individualGuid]
+        if (!sample) {
+          return null
+        }
+
         const track = getTrackOptions(type, sample, individual)
 
         if (type === ALIGNMENT_TYPE) {
@@ -95,18 +100,22 @@ const getIgvTracks = (igvSampleIndividuals, individualsByGuid, sampleTypes) => {
         } else if (type === GCNV_TYPE) {
           const batch = gcnvSamplesByBatch[sample.filePath]
           const individualGuids = Object.keys(batch).sort()
+          if (individualGuids[0] !== individualGuid) {
+            return null
+          }
 
-          return individualGuids[0] === individualGuid ? {
+          const batchIndividuals = sortedIndividuals.filter(indiv => !!batch[indiv.individualGuid])
+          return {
             ...track,
             indexURL: `${track.url}.tbi`,
-            highlightSamples: Object.entries(batch).reduce((higlightAcc, [iGuid, sampleId]) => ({
-              [sampleId || individualsByGuid[iGuid].individualId]: getSampleColor(individualsByGuid[iGuid]),
+            highlightSamples: batchIndividuals.reduce((higlightAcc, indiv) => ({
+              [batch[indiv.individualGuid] || indiv.individualId]: getSampleColor(indiv),
               ...higlightAcc,
             }), {}),
-            name: individualGuids.length === 1 ? track.name : individualGuids.map(
-              iGuid => individualsByGuid[iGuid].displayName,
+            name: individualGuids.length === 1 ? track.name : batchIndividuals.map(
+              ({ displayName }) => displayName,
             ).join(', '),
-          } : null
+          }
         }
 
         return track
@@ -212,10 +221,10 @@ const getGeneLocus = (variant, genesById, project) => {
 }
 
 const IgvPanel = React.memo((
-  { igvSampleIndividuals, individualsByGuid, project, sampleTypes, rnaReferences, minJunctionEndsVisible, locus },
+  { igvSampleIndividuals, sortedIndividuals, project, sampleTypes, rnaReferences, minJunctionEndsVisible, locus },
 ) => {
   const tracks = applyUserTrackSettings(
-    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, individualsByGuid, sampleTypes)),
+    rnaReferences.concat(getIgvTracks(igvSampleIndividuals, sortedIndividuals, sampleTypes)),
     { [JUNCTION_TYPE]: { minJunctionEndsVisible } },
   )
 
@@ -230,7 +239,7 @@ IgvPanel.propTypes = {
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
   minJunctionEndsVisible: PropTypes.number,
-  individualsByGuid: PropTypes.object,
+  sortedIndividuals: PropTypes.arrayOf(PropTypes.object),
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
   locus: PropTypes.string,
@@ -245,7 +254,7 @@ class FamilyReads extends React.PureComponent {
     buttonProps: PropTypes.object,
     projectsByGuid: PropTypes.object,
     familiesByGuid: PropTypes.object,
-    individualsByGuid: PropTypes.object,
+    sortedIndividualByFamily: PropTypes.object,
     igvSamplesByFamilySampleIndividual: PropTypes.object,
     genesById: PropTypes.object,
   }
@@ -331,23 +340,27 @@ class FamilyReads extends React.PureComponent {
 
   getSampleColorPanel = () => {
     const { openFamily } = this.state
-    const { igvSamplesByFamilySampleIndividual, individualsByGuid } = this.props
-    const igvSampleIndividuals = (
-      openFamily && (igvSamplesByFamilySampleIndividual || {})[openFamily]) || {}
-    return Object.keys(igvSampleIndividuals[GCNV_TYPE] || {}).map(
-      iGuid => (
-        <div key={iGuid}>
-          <Icon name="square full" color={getSampleColor(individualsByGuid[iGuid])} />
-          <label>{individualsByGuid[iGuid].displayName}</label>
-        </div>
-      ),
-    )
+    const { igvSamplesByFamilySampleIndividual, sortedIndividualByFamily } = this.props
+
+    const gcnvSampleIndividuals = ((igvSamplesByFamilySampleIndividual || {})[openFamily] || {})[GCNV_TYPE]
+    if (!gcnvSampleIndividuals || !sortedIndividualByFamily[openFamily]) {
+      return null
+    }
+
+    return sortedIndividualByFamily[openFamily].filter(
+      ({ individualGuid }) => !!gcnvSampleIndividuals[individualGuid],
+    ).map(individual => (
+      <div key={individual.individualGuid}>
+        <Icon name="square full" color={getSampleColor(individual)} />
+        <label>{individual.displayName}</label>
+      </div>
+    ))
   }
 
   render() {
     const {
-      variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, individualsByGuid, familiesByGuid,
-      projectsByGuid, genesById, ...props
+      variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, familiesByGuid,
+      projectsByGuid, genesById, sortedIndividualByFamily, ...props
     } = this.props
     const { openFamily, sampleTypes, rnaReferences, minJunctionEndsVisible, locus } = this.state
 
@@ -439,7 +452,7 @@ class FamilyReads extends React.PureComponent {
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
             minJunctionEndsVisible={minJunctionEndsVisible}
-            individualsByGuid={individualsByGuid}
+            sortedIndividuals={sortedIndividualByFamily[openFamily]}
             project={project}
             locus={locus}
           />
@@ -454,7 +467,7 @@ class FamilyReads extends React.PureComponent {
 
 const mapStateToProps = state => ({
   igvSamplesByFamilySampleIndividual: getIGVSamplesByFamilySampleIndividual(state),
-  individualsByGuid: getIndividualsByGuid(state),
+  sortedIndividualByFamily: getSortedIndividualsByFamily(state),
   familiesByGuid: getFamiliesByGuid(state),
   projectsByGuid: getProjectsByGuid(state),
   genesById: getGenesById(state),

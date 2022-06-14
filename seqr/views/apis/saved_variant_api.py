@@ -39,6 +39,10 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     add_locus_list_detail = request.GET.get(INCLUDE_LOCUS_LISTS_PARAM) == 'true'
     response = get_variants_response(request, variant_query, add_locus_list_detail=add_locus_list_detail)
+    if 'individualsByGuid' in response and not family_guids:
+        if 'projectsByGuid' not in response:
+            response['projectsByGuid'] = {project_guid: {}}
+        response['projectsByGuid'][project_guid]['familiesLoaded'] = True
 
     return create_json_response(response)
 
