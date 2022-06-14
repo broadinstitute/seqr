@@ -87,7 +87,7 @@ class BaseHailTableQuery(object):
 
     def __init__(self, data_source, samples, genome_version, **kwargs):
         self._genome_version = genome_version
-        self._samples_by_id = {s.sample_id: s for s in samples} # TODO will not work for mixed
+        self._samples_by_id = {s.sample_id: s for s in samples} # TODO #2781 will not work for mixed
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
         self._allowed_consequences = None
@@ -832,16 +832,13 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         return ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
             sortedTranscriptConsequences=hl.or_else(
-                ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS)),
-                hl.array(ht.sortedTranscriptConsequences_1.map(
-                    lambda t: t.annotate(**{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
+                ht.sortedTranscriptConsequences.map(lambda t: t.select('consequence_terms', *VariantHailTableQuery.TRANSCRIPT_FIELDS)),
+                hl.array(ht.sortedTranscriptConsequences_1.map(lambda t: t.annotate(
+                    consequence_terms=hl.set({t.major_consequence}),
+                    **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields})))
             ),
 
         )
-
-    def _get_consequence_terms(self):
-        # TODO #2781
-        return super(AllDataTypeHailTableQuery, self)._get_consequence_terms()
 
     def _get_x_chrom_filter(self, mt):
         # TODO #2781
