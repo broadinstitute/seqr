@@ -499,8 +499,7 @@ class BaseHailTableQuery(object):
             unaffected_family_individuals[individual.family.guid].add(individual.guid)
         ch_ht = ch_ht.annotate(
             family_guids=ch_ht.family_guids.filter(lambda family_guid: hl.dict(unaffected_family_individuals)[family_guid].all(
-                lambda i_guid: (ch_ht.v1.genotypes.get(i_guid, hl.struct(numAlt=0)).numAlt < 1) |
-                               (ch_ht.v2.genotypes.get(i_guid, hl.struct(numAlt=0)).numAlt < 1)
+                lambda i_guid: self._non_alt_genotype(ch_ht.v1.genotypes, i_guid) | self._non_alt_genotype(ch_ht.v2.genotypes, i_guid)
             )))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
@@ -519,6 +518,10 @@ class BaseHailTableQuery(object):
 
         if not keep_main_ht:
             self._mt = None
+
+    @staticmethod
+    def _non_alt_genotype(genotypes, i_guid):
+        return ~genotypes.contains(i_guid) | genotypes[i_guid].numAlt < 1
 
     def _filter_valid_comp_het_annotation_pairs(self, ch_ht):
         primary_cs = hl.literal(set(self._allowed_consequences))
