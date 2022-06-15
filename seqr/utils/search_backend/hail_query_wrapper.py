@@ -521,7 +521,7 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _non_alt_genotype(genotypes, i_guid):
-        return ~genotypes.contains(i_guid) | genotypes[i_guid].numAlt < 1
+        return ~genotypes.contains(i_guid) | (genotypes[i_guid].numAlt < 1)
 
     def _filter_valid_comp_het_annotation_pairs(self, ch_ht):
         primary_cs = hl.literal(set(self._allowed_consequences))
