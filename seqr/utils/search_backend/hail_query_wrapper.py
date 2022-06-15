@@ -346,7 +346,7 @@ class BaseHailTableQuery(object):
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
-            mt.familyGuids.contains(sample_family_map[mt.s]),
+            self._matched_family_sample_filter(mt, sample_family_map),
             hl.agg.collect(hl.struct(
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
@@ -454,6 +454,9 @@ class BaseHailTableQuery(object):
         if family_samples_filter:
             sample_ids_by_family = {k: v for k, v in sample_ids_by_family.items() if family_samples_filter(v)}
         return hl.dict(sample_ids_by_family)
+
+    def _matched_family_sample_filter(self, mt, sample_family_map):
+        return mt.familyGuids.contains(sample_family_map[mt.s])
 
     def filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=True):
         if not self._allowed_consequences:
@@ -883,6 +886,16 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             mt, self._sample_ids_by_dataset_type[SV_DATASET].intersection(sample_ids), family_samples_filter)
 
         return hl.if_else(hl.is_defined(mt.svType), sv_samples_map, snp_samples_map)
+
+    def _matched_family_sample_filter(self, mt, sample_family_map):
+        sample_filter = super(AllDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
+        if not self._sample_ids_by_dataset_type:
+            return sample_filter
+        return sample_filter & hl.if_else(
+            hl.is_defined(mt.svType),
+            hl.set(self._sample_ids_by_dataset_type[SV_DATASET]).contains(mt.s),
+            hl.set(self._sample_ids_by_dataset_type[VARIANT_DATASET]).contains(mt.s),
+        )
 
     @staticmethod
     def get_x_chrom_filter(mt, genome_version):
