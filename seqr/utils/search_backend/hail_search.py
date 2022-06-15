@@ -40,28 +40,30 @@ class HailSearch(object):
         self.previous_search_results = previous_search_results or {}
 
     def _load_table(self, data_type, **kwargs):
-        data_sources_by_type = defaultdict(set)
+        sample_data_sources_by_type = defaultdict(lambda: defaultdict(list))
         for s in self.samples:
-            data_sources_by_type[s.dataset_type].add(s.elasticsearch_index)  # In production: should use a different model field
+            sample_data_sources_by_type[s.dataset_type][s.elasticsearch_index].append(s)  # In production: should use a different model field, not elasticsearch_index
         multi_data_sources = next(
-            (data_sources for data_sources in data_sources_by_type.values() if len(data_sources) > 1), None)
+            (data_sources for data_sources in sample_data_sources_by_type.values() if len(data_sources) > 1), None)
         if multi_data_sources:
             raise InvalidSearchException(
-                f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources)}')
-        data_sources_by_type = {k: v.pop() for k, v in data_sources_by_type.items()}
+                f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources.keys())}')
+        data_sources_by_type = {k: list(v.keys())[0] for k, v in sample_data_sources_by_type.items()}
+        samples_by_data_type = {k: v.values() for k, v in sample_data_sources_by_type.items()}
 
         if not data_type and len(data_sources_by_type) == 1:
             data_type = list(data_sources_by_type.keys())[0]
 
         if data_type:
-            self.samples = [s for s in self.samples if s.dataset_type == data_type]
+            samples = samples_by_data_type[data_type]
             data_source = data_sources_by_type[data_type]
             query_cls = QUERY_CLASS_MAP[data_type]
         else:
+            samples = samples_by_data_type
             query_cls = AllDataTypeHailTableQuery
             data_source = data_sources_by_type
 
-        self._query_wrapper = query_cls(data_source, samples=self.samples, genome_version=self._genome_version, **kwargs)
+        self._query_wrapper = query_cls(data_source, samples=samples, genome_version=self._genome_version, **kwargs)
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):

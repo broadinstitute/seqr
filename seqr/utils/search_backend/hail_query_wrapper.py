@@ -84,7 +84,6 @@ class BaseHailTableQuery(object):
 
     def __init__(self, data_source, samples, genome_version, **kwargs):
         self._genome_version = genome_version
-        self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
         self._allowed_consequences = None
@@ -93,12 +92,16 @@ class BaseHailTableQuery(object):
             CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None,
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
         }
+        self._save_samples(samples)
 
         self._mt = self._load_table(data_source, samples, **kwargs)
 
+    def _save_samples(self, samples):
+        self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
+
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
-        mt = ht.to_matrix_table_row_major(list({s.sample_id for s in samples}), col_field_name='s')
+        mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
@@ -820,20 +823,24 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         )
         return annotation_fields
 
+    def _save_samples(self, samples):
+        self._samples_by_data_type = samples # TODO use
+        self._individuals_by_sample_id = {}
+        for data_type_samples in samples.values():
+            for s in data_type_samples:
+                self._individuals_by_sample_id[s.sample_id] = s.individual
+
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
-        variant_samples = [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS]
-        variant_sample_ids = {s.sample_id for s in variant_samples}
-        sv_samples = [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS]
-        sv_sample_ids = {s.sample_id for s in sv_samples}
-
         variant_ht = VariantHailTableQuery.import_filtered_ht(
-            data_source[Sample.DATASET_TYPE_VARIANT_CALLS], variant_samples, **kwargs)
+            data_source[Sample.DATASET_TYPE_VARIANT_CALLS], samples[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
         sv_ht = GcnvHailTableQuery.import_filtered_ht(
-            data_source[Sample.DATASET_TYPE_SV_CALLS], sv_samples, **kwargs)
+            data_source[Sample.DATASET_TYPE_SV_CALLS], samples[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
 
         ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
 
+        variant_sample_ids = {s.sample_id for s in samples[Sample.DATASET_TYPE_VARIANT_CALLS]}
+        sv_sample_ids = {s.sample_id for s in samples[Sample.DATASET_TYPE_SV_CALLS]}
         shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
         variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
