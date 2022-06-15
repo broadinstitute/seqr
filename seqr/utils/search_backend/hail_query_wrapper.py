@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
+VARIANT_DATASET = Sample.DATASET_TYPE_VARIANT_CALLS
+SV_DATASET = Sample.DATASET_TYPE_SV_CALLS
 
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
 
@@ -332,15 +334,13 @@ class BaseHailTableQuery(object):
             ))
             mt = mt.transmute_rows(familyGuids=mt.familyGuids.union(mt.xLinkedfamilies))
         elif inheritance_mode == COMPOUND_HET:
-            unaffected_samples_by_family = defaultdict(set)
-            for sample_id in self._affected_status_samples[UNAFFECTED]:
-                unaffected_samples_by_family[self._individuals_by_sample_id[sample_id].family.guid].add(sample_id)
-            unaffected_samples_by_family = {k: v for k, v in unaffected_samples_by_family.items() if len(v) > 1}
-            if unaffected_samples_by_family:
-                # remove variants where all unaffected individuals are het
-                mt = mt.annotate_rows(notPhasedFamilies=self._get_family_all_samples_expr(
-                    mt, mt.GT.is_het(), hl.dict(unaffected_samples_by_family)))
-                mt = mt.transmute_rows(familyGuids=mt.familyGuids.difference(mt.notPhasedFamilies))
+            # remove variants where all unaffected individuals are het
+            mt = mt.annotate_rows(familyGuids=hl.bind(
+                lambda unphased_families: mt.familyGuids.difference(unphased_families),
+                self._get_family_all_samples_expr(
+                    mt, mt.GT.is_het(), self._affected_status_samples[UNAFFECTED],
+                    family_samples_filter=lambda s: len(s) > 1)
+            ))
 
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
@@ -427,11 +427,6 @@ class BaseHailTableQuery(object):
                 search_sample_ids.update(status_sample_ids)
                 sample_filters.append((inheritance_filter[status], status_sample_ids))
 
-        sample_ids_by_family = defaultdict(set)
-        for sample_id in search_sample_ids:
-            sample_ids_by_family[self._individuals_by_sample_id[sample_id].family.guid].add(sample_id)
-        family_samples_map = hl.dict(sample_ids_by_family)
-
         sample_filter_exprs = [
             (self.GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
             for genotype, samples in sample_filters
@@ -443,13 +438,22 @@ class BaseHailTableQuery(object):
         if quality_filter_expr is not None:
             sample_filter &= quality_filter_expr
 
-        return self._get_family_all_samples_expr(mt, sample_filter, family_samples_map)
+        return self._get_family_all_samples_expr(mt, sample_filter, search_sample_ids)
 
-    @staticmethod
-    def _get_family_all_samples_expr(mt, sample_filter, family_samples_map):
+    def _get_family_all_samples_expr(self, mt, sample_filter, sample_ids, family_samples_filter=None):
         return hl.bind(
-            lambda samples: family_samples_map.key_set().filter(lambda f: family_samples_map[f].is_subset(samples)),
-            hl.agg.filter(sample_filter, hl.agg.collect_as_set(mt.s)))
+            lambda samples, family_samples_map: family_samples_map.key_set().filter(lambda f: family_samples_map[f].is_subset(samples)),
+            hl.agg.filter(sample_filter, hl.agg.collect_as_set(mt.s)),
+            self._get_family_samples_map(mt, sample_ids, family_samples_filter),
+        )
+
+    def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
+        sample_ids_by_family = defaultdict(set)
+        for sample_id in sample_ids:
+            sample_ids_by_family[self._individuals_by_sample_id[sample_id].family.guid].add(sample_id)
+        if family_samples_filter:
+            sample_ids_by_family = {k: v for k, v in sample_ids_by_family.items() if family_samples_filter(v)}
+        return hl.dict(sample_ids_by_family)
 
     def filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=True):
         if not self._allowed_consequences:
@@ -807,7 +811,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
     COMPUTED_ANNOTATION_FIELDS.update(GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     INITIAL_ENTRY_ANNOTATIONS = {
         #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
-        'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_defined(mt.locus), mt.GT, hl.Call([0, 0]))
+        'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
     }
 
     @property
@@ -818,29 +822,30 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         population_annotation = annotation_fields['populations']
         annotation_fields['populations'] = lambda r: hl.bind(
             lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
-                hl.is_defined(r.locus), snp_populations.contains(p[0]),  sv_populations.contains(p[0])))),
+                hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
             population_annotation(r),
         )
         return annotation_fields
 
     def _save_samples(self, samples):
-        self._samples_by_data_type = samples # TODO use
         self._individuals_by_sample_id = {}
         for data_type_samples in samples.values():
             for s in data_type_samples:
                 self._individuals_by_sample_id[s.sample_id] = s.individual
 
+        self._sample_ids_by_dataset_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
+        if self._sample_ids_by_dataset_type[VARIANT_DATASET] == self._sample_ids_by_dataset_type[SV_DATASET]:
+            self._sample_ids_by_dataset_type = None
+
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
-        variant_ht = VariantHailTableQuery.import_filtered_ht(
-            data_source[Sample.DATASET_TYPE_VARIANT_CALLS], samples[Sample.DATASET_TYPE_VARIANT_CALLS], **kwargs)
-        sv_ht = GcnvHailTableQuery.import_filtered_ht(
-            data_source[Sample.DATASET_TYPE_SV_CALLS], samples[Sample.DATASET_TYPE_SV_CALLS], **kwargs)
+        variant_ht = VariantHailTableQuery.import_filtered_ht(data_source[VARIANT_DATASET], samples[VARIANT_DATASET], **kwargs)
+        sv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[SV_DATASET], samples[SV_DATASET], **kwargs)
 
         ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
 
-        variant_sample_ids = {s.sample_id for s in samples[Sample.DATASET_TYPE_VARIANT_CALLS]}
-        sv_sample_ids = {s.sample_id for s in samples[Sample.DATASET_TYPE_SV_CALLS]}
+        variant_sample_ids = {s.sample_id for s in samples[VARIANT_DATASET]}
+        sv_sample_ids = {s.sample_id for s in samples[SV_DATASET]}
         shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
         variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
@@ -868,10 +873,21 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
         )
 
+    def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
+        if not self._sample_ids_by_dataset_type:
+            return super(AllDataTypeHailTableQuery, self)._get_family_samples_map(mt, sample_ids, family_samples_filter)
+
+        snp_samples_map = super(AllDataTypeHailTableQuery, self)._get_family_samples_map(
+            mt, self._sample_ids_by_dataset_type[VARIANT_DATASET].intersection(sample_ids), family_samples_filter)
+        sv_samples_map = super(AllDataTypeHailTableQuery, self)._get_family_samples_map(
+            mt, self._sample_ids_by_dataset_type[SV_DATASET].intersection(sample_ids), family_samples_filter)
+
+        return hl.if_else(hl.is_defined(mt.svType, sv_samples_map, snp_samples_map))
+
     @staticmethod
     def get_x_chrom_filter(mt, genome_version):
         return hl.if_else(
-            hl.is_defined(mt.locus),
-            VariantHailTableQuery.get_x_chrom_filter(mt, genome_version),
+            hl.is_defined(mt.svType),
             GcnvHailTableQuery.get_x_chrom_filter(mt, genome_version),
+            VariantHailTableQuery.get_x_chrom_filter(mt, genome_version),
         )
