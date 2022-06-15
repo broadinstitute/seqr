@@ -269,20 +269,7 @@ class BaseHailTableQuery(object):
         return self._mt[score_path[0]][score_path[1]]
 
     def _filter_by_annotations(self, allowed_consequences):
-        annotation_filters = []
-
-        if self._consequence_overrides[CLINVAR_KEY]:
-            annotation_filters.append(self._get_clinvar_filter(self._consequence_overrides[CLINVAR_KEY]))
-        if self._consequence_overrides[HGMD_KEY]:
-            allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
-            annotation_filters.append(allowed_classes.contains(self._mt.hgmd['class']))
-        if self._consequence_overrides[SPLICE_AI_FIELD]:
-            annotation_filters.append(
-                self._get_in_silico_ht_field(SPLICE_AI_FIELD) >= float(self._consequence_overrides[SPLICE_AI_FIELD]))
-        if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
-            allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
-            annotation_filters.append(allowed_sv_types.contains(self._mt.svType))
-
+        annotation_filters =  self._get_annotation_override_filters(self._mt)
         if allowed_consequences:
             annotation_filters.append(
                 self._get_consequence_terms().any(lambda ct: hl.set(allowed_consequences).contains(ct))
@@ -295,6 +282,26 @@ class BaseHailTableQuery(object):
             annotation_filter |= af
 
         return self._mt.filter_rows(annotation_filter)
+
+    def _get_annotation_override_filters(self, mt, use_parsed_fields=False):
+        annotation_filters = []
+
+        if self._consequence_overrides[CLINVAR_KEY]:
+            allowed_significances = hl.set(self._consequence_overrides[CLINVAR_KEY])
+            clinvar_key = 'clinicalSignificance' if use_parsed_fields else 'clinical_significance'
+            annotation_filters.append(allowed_significances.contains(mt.clinvar[clinvar_key]))
+        if self._consequence_overrides[HGMD_KEY]:
+            allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
+            annotation_filters.append(allowed_classes.contains(mt.hgmd['class']))
+        if self._consequence_overrides[SPLICE_AI_FIELD]:
+            splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
+            score_path = ('predictions', 'splice_ai') if use_parsed_fields else self.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
+            annotation_filters.append(mt[score_path[0]][score_path[1]] >= splice_ai)
+        if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
+            allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
+            annotation_filters.append(allowed_sv_types.contains(mt.svType))
+
+        return annotation_filters
 
     def _get_consequence_terms(self):
         return self._mt.sortedTranscriptConsequences.map(lambda tc: tc.major_consequence)
@@ -538,27 +545,33 @@ class BaseHailTableQuery(object):
             lambda c: secondary_cs.contains(c))) | (ch_ht.v1_csqs.any(
             lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(
             lambda c: primary_cs.contains(c)))
-        # TODO share override code with _filter_by_annotations
-        if self._consequence_overrides[CLINVAR_KEY]:
-            allowed_terms = hl.set(self._consequence_overrides[CLINVAR_KEY])
-            has_annotation_filter |= (
-                    allowed_terms.contains(ch_ht.v1.clinvar.clinicalSignificance) |
-                    allowed_terms.contains(ch_ht.v2.clinvar.clinicalSignificance))
-        if self._consequence_overrides[HGMD_KEY]:
-            allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
-            has_annotation_filter |= (
-                    allowed_classes.contains(ch_ht.v1.hgmd['class']) |
-                    allowed_classes.contains(ch_ht.v2.hgmd['class']))
-        if self._consequence_overrides[SPLICE_AI_FIELD]:
-            splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
-            has_annotation_filter |= (
-                    (ch_ht.v1.predictions.splice_ai >= splice_ai) |
-                    (ch_ht.v2.predictions.splice_ai >= splice_ai))
-        if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
-            allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
-            has_annotation_filter |= (
-                    allowed_sv_types.contains(ch_ht.v1.svType) |
-                    allowed_sv_types.contains(ch_ht.v2.svType))
+        # # TODO share override code with _filter_by_annotations
+        # if self._consequence_overrides[CLINVAR_KEY]:
+        #     allowed_terms = hl.set(self._consequence_overrides[CLINVAR_KEY])
+        #     has_annotation_filter |= (
+        #             allowed_terms.contains(ch_ht.v1.clinvar.clinicalSignificance) |
+        #             allowed_terms.contains(ch_ht.v2.clinvar.clinicalSignificance))
+        # if self._consequence_overrides[HGMD_KEY]:
+        #     allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
+        #     has_annotation_filter |= (
+        #             allowed_classes.contains(ch_ht.v1.hgmd['class']) |
+        #             allowed_classes.contains(ch_ht.v2.hgmd['class']))
+        # if self._consequence_overrides[SPLICE_AI_FIELD]:
+        #     splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
+        #     has_annotation_filter |= (
+        #             (ch_ht.v1.predictions.splice_ai >= splice_ai) |
+        #             (ch_ht.v2.predictions.splice_ai >= splice_ai))
+        # if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
+        #     allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
+        #     has_annotation_filter |= (
+        #             allowed_sv_types.contains(ch_ht.v1.svType) |
+        #             allowed_sv_types.contains(ch_ht.v2.svType))
+
+        for af in self._get_annotation_override_filters(ch_ht.v1, use_parsed_fields=True):
+            has_annotation_filter |= af
+        for af in self._get_annotation_override_filters(ch_ht.v2, use_parsed_fields=True):
+            has_annotation_filter |= af
+
         return ch_ht.filter(has_annotation_filter)
 
     def _format_results(self, mt):
