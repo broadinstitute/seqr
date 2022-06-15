@@ -818,7 +818,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
                 hl.is_defined(r.locus), snp_populations.contains(p[0]),sv_populations.contains(p[0])))),
             annotation_fields['populations'](r),
         )
-
+        return annotation_fields
 
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
