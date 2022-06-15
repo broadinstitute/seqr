@@ -377,7 +377,7 @@ class BaseHailTableQuery(object):
         for filter_k, value in (quality_filter or {}).items():
             field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field:
-                field_filter = mt[field] > value
+                field_filter = hl.is_missing(mt[field]) | (mt[field] > value)
                 if quality_filter_expr is None:
                     quality_filter_expr = field_filter
                 else:
