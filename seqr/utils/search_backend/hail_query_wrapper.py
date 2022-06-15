@@ -428,7 +428,7 @@ class BaseHailTableQuery(object):
                 sample_filters.append((inheritance_filter[status], status_sample_ids))
 
         sample_filter_exprs = [
-            (self.GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
+            (self._get_genotype_filter(mt, genotype) & hl.set(samples).contains(mt.s))
             for genotype, samples in sample_filters
         ]
         sample_filter = sample_filter_exprs[0]
@@ -439,6 +439,9 @@ class BaseHailTableQuery(object):
             sample_filter &= quality_filter_expr
 
         return self._get_family_all_samples_expr(mt, sample_filter, search_sample_ids)
+
+    def _get_genotype_filter(self, mt, genotype):
+        return self.GENOTYPE_QUERY_MAP[genotype](mt.GT)
 
     def _get_family_all_samples_expr(self, mt, sample_filter, sample_ids, family_samples_filter=None):
         return hl.bind(
@@ -798,10 +801,6 @@ def _annotation_for_data_type(field):
 
 class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
-    # TODO #2781 create shared behavior for ref_alt (comp hets)
-    # GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
-    # GENOTYPE_QUERY_MAP[REF_ALT] = lambda gt: gt.is_non_ref()
-
     GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
 
@@ -900,6 +899,14 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             hl.set(self._sample_ids_by_dataset_type[SV_DATASET]).contains(mt.s),
             hl.set(self._sample_ids_by_dataset_type[VARIANT_DATASET]).contains(mt.s),
         )
+
+    def _get_genotype_filter(self, mt, genotype):
+        gt_filter = super(AllDataTypeHailTableQuery, self)._get_genotype_filter(mt, genotype)
+        if genotype == REF_ALT:
+            gt_filter = hl.if_else(
+                hl.is_defined(mt.svType), GcnvHailTableQuery.GENOTYPE_QUERY_MAP[genotype](mt.GT), gt_filter,
+            )
+        return gt_filter
 
     @staticmethod
     def get_x_chrom_filter(mt, genome_version):
