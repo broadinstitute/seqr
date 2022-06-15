@@ -163,7 +163,7 @@ class BaseHailTableQuery(object):
         self._mt = self._mt.filter_rows(hl.set(rs_ids).contains(self._mt.rsid))
 
     def _filter_vcf_filters(self):
-        self._mt = self._mt.filter_rows(self._mt.filters.length() < 1)
+        self._mt = self._mt.filter_rows(hl.is_missing(self._mt.filters) | self._mt.filters.length() < 1)
 
     def filter_main_annotations(self):
         self._mt = self._filter_by_annotations(self._allowed_consequences)
@@ -688,7 +688,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         quality_filter_expr = super(VariantHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
         if min_ab:
             #  AB only relevant for hets
-            ab_expr = (~mt.GT.is_het() | (mt.AB > (min_ab / 100)))
+            ab_expr = (hl.is_missing(mt.AB) | ~mt.GT.is_het() | (mt.AB > (min_ab / 100)))
             if quality_filter_expr is None:
                 quality_filter_expr = ab_expr
             else:
