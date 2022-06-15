@@ -64,12 +64,12 @@ class BaseHailTableQuery(object):
         return populations
 
     def _response_populations(self, rows):
-        return self.POPULATIONS.keys()
+        return hl.array(self.POPULATIONS.keys())
 
     @property
     def annotation_fields(self):
         annotation_fields = {
-            'populations': lambda r: hl.dict(hl.array(self._response_populations(r)).map(
+            'populations': lambda r: hl.dict(self._response_populations(r).map(
                 lambda population: (population, hl.struct(**{
                     response_key: hl.or_else(r[population][field], 0)
                     for response_key, field in self.populations_configs[population].items() if field is not None
@@ -858,9 +858,9 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         )
 
     def _response_populations(self, rows):
-        return hl.if_else(
-            hl.is_defined(rows.locus), VariantHailTableQuery.POPULATIONS.keys(), GcnvHailTableQuery.POPULATIONS.keys(),
-        )
+        return hl.if_else(hl.is_defined(rows.locus),
+                          hl.array(VariantHailTableQuery.POPULATIONS.keys()),
+                          hl.array(GcnvHailTableQuery.POPULATIONS.keys()))
 
     @staticmethod
     def get_x_chrom_filter(mt, genome_version):
