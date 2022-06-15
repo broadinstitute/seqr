@@ -63,19 +63,23 @@ class BaseHailTableQuery(object):
             populations[pop].update(pop_config)
         return populations
 
-    @staticmethod
-    def _should_show_population(population, rows):
-        return True
+    def _response_populations(self, rows):
+        return self.POPULATIONS.keys()
 
     @property
     def annotation_fields(self):
         annotation_fields = {
-            'populations': lambda r: hl.dict({
-                population: hl.if_else(self._should_show_population(population, r), hl.dict({
-                    response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
-                    if field is not None
-                }), hl.missing(hl.tdict)) for population, pop_config in self.populations_configs.items()
-            }),
+            'populations': lambda r: hl.dict(hl.array(self._response_populations(r)).map(
+                lambda population: (population, hl.struct(**{
+                    response_key: hl.or_else(r[population][field], 0)
+                    for response_key, field in self.populations_configs[population].items() if field is not None
+                })))),
+            # 'populations': lambda r: hl.struct(**{
+            #     population: hl.struct(**{
+            #         response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
+            #         if field is not None
+            #     }) for population, pop_config in self.populations_configs.items()
+            # }),
             'predictions': lambda r: hl.struct(**{
                 prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
@@ -853,10 +857,9 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
         )
 
-    @staticmethod
-    def _should_show_population(population, rows):
+    def _response_populations(self, rows):
         return hl.if_else(
-            hl.is_defined(rows.locus), population in VariantHailTableQuery.POPULATIONS, population in GcnvHailTableQuery.POPULATIONS,
+            hl.is_defined(rows.locus), VariantHailTableQuery.POPULATIONS.keys(), GcnvHailTableQuery.POPULATIONS.keys(),
         )
 
     @staticmethod
