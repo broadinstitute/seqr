@@ -163,7 +163,7 @@ class BaseHailTableQuery(object):
         self._mt = self._mt.filter_rows(hl.set(rs_ids).contains(self._mt.rsid))
 
     def _filter_vcf_filters(self):
-        self._mt = self._mt.filter_rows(hl.is_missing(self._mt.filters) | self._mt.filters.length() < 1)
+        self._mt = self._mt.filter_rows(hl.is_missing(self._mt.filters) | (self._mt.filters.length() < 1))
 
     def filter_main_annotations(self):
         self._mt = self._filter_by_annotations(self._allowed_consequences)
