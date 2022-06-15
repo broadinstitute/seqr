@@ -49,7 +49,7 @@ class HailSearch(object):
             raise InvalidSearchException(
                 f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources.keys())}')
         data_sources_by_type = {k: list(v.keys())[0] for k, v in sample_data_sources_by_type.items()}
-        samples_by_data_type = {k: v.values() for k, v in sample_data_sources_by_type.items()}
+        samples_by_data_type = {k: list(v.values()) for k, v in sample_data_sources_by_type.items()}
 
         if not data_type and len(data_sources_by_type) == 1:
             data_type = list(data_sources_by_type.keys())[0]
