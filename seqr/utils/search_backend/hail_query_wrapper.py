@@ -84,7 +84,7 @@ class BaseHailTableQuery(object):
 
     def __init__(self, data_source, samples, genome_version, **kwargs):
         self._genome_version = genome_version
-        self._samples_by_id = {s.sample_id: s for s in samples} # TODO #2781 will not work for mixed
+        self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
         self._allowed_consequences = None
@@ -311,7 +311,7 @@ class BaseHailTableQuery(object):
         if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
             self._set_validated_affected_status(individual_affected_status, max_families)
 
-        sample_family_map = hl.dict({sample_id: s.individual.family.guid for sample_id, s in self._samples_by_id.items()})
+        sample_family_map = hl.dict({sample_id: i.family.guid for sample_id, i in self._individuals_by_sample_id.items()})
         mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
             mt, inheritance_mode, inheritance_filter, sample_family_map,
             self._get_quality_filter_expr(mt, quality_filter),
@@ -331,7 +331,7 @@ class BaseHailTableQuery(object):
         elif inheritance_mode == COMPOUND_HET:
             unaffected_samples_by_family = defaultdict(set)
             for sample_id in self._affected_status_samples[UNAFFECTED]:
-                unaffected_samples_by_family[self._samples_by_id[sample_id].individual.family.guid].add(sample_id)
+                unaffected_samples_by_family[self._individuals_by_sample_id[sample_id].family.guid].add(sample_id)
             unaffected_samples_by_family = {k: v for k, v in unaffected_samples_by_family.items() if len(v) > 1}
             if unaffected_samples_by_family:
                 # remove variants where all unaffected individuals are het
@@ -341,7 +341,7 @@ class BaseHailTableQuery(object):
 
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
-        sample_individual_map = hl.dict({sample_id: s.individual.guid for sample_id, s in self._samples_by_id.items()})
+        sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
             mt.familyGuids.contains(sample_family_map[mt.s]),
             hl.agg.collect(hl.struct(
@@ -352,8 +352,8 @@ class BaseHailTableQuery(object):
             )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
-        for sample_id, sample in self._samples_by_id.items():
-            affected = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
+        for sample_id, individual in self._individuals_by_sample_id.items():
+            affected = individual_affected_status.get(individual.guid) or individual.affected
             self._affected_status_samples[affected].add(sample_id)
 
         if not self._affected_status_samples[AFFECTED]:
@@ -361,10 +361,10 @@ class BaseHailTableQuery(object):
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         affected_families = {
-            self._samples_by_id[sample_id].individual.family for sample_id in self._affected_status_samples[AFFECTED]
+            self._individuals_by_sample_id[sample_id].family for sample_id in self._affected_status_samples[AFFECTED]
         }
-        self._samples_by_id = {
-            sample_id: s for sample_id, s in self._samples_by_id.items() if s.individual.family in affected_families
+        self._individuals_by_sample_id = {
+            sample_id: i for sample_id, i in self._individuals_by_sample_id.items() if i.family in affected_families
         }
         if max_families and len(affected_families) > max_families[0]:
             raise InvalidSearchException(max_families[1])
@@ -401,7 +401,7 @@ class BaseHailTableQuery(object):
 
         individual_genotype_filter = (inheritance_filter or {}).get('genotype')
         if individual_genotype_filter:
-            samples_by_individual = {s.individual.guid: sample_id for sample_id, s in self._samples_by_id.items()}
+            samples_by_individual = {i.guid: sample_id for sample_id, i in self._individuals_by_sample_id.items()}
             samples_by_gentotype = defaultdict(set)
             for individual_guid, genotype in individual_genotype_filter.items():
                 sample_id = samples_by_individual.get(individual_guid)
@@ -415,7 +415,7 @@ class BaseHailTableQuery(object):
             if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED:
                 male_sample_ids = {
                     sample_id for sample_id in status_sample_ids
-                    if self._samples_by_id[sample_id].individual.sex == Individual.SEX_MALE
+                    if self._individuals_by_sample_id[sample_id].sex == Individual.SEX_MALE
                 }
                 if male_sample_ids:
                     status_sample_ids -= male_sample_ids
@@ -426,8 +426,7 @@ class BaseHailTableQuery(object):
 
         sample_ids_by_family = defaultdict(set)
         for sample_id in search_sample_ids:
-            sample = self._samples_by_id[sample_id]
-            sample_ids_by_family[sample.individual.family.guid].add(sample_id)
+            sample_ids_by_family[self._individuals_by_sample_id[sample_id].family.guid].add(sample_id)
         family_samples_map = hl.dict(sample_ids_by_family)
 
         sample_filter_exprs = [
@@ -486,7 +485,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
         unaffected_family_individuals = defaultdict(set)
         for sample_id in self._affected_status_samples[UNAFFECTED]:
-            individual = self._samples_by_id[sample_id].individual
+            individual = self._individuals_by_sample_id[sample_id]
             unaffected_family_individuals[individual.family.guid].add(individual.guid)
         ch_ht = ch_ht.annotate(
             family_guids=ch_ht.family_guids.filter(lambda family_guid: hl.dict(unaffected_family_individuals)[family_guid].all(
