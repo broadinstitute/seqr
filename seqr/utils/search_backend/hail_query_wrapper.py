@@ -71,7 +71,7 @@ class BaseHailTableQuery(object):
         annotation_fields = {
             'populations': lambda r: hl.dict(
                 hl.array(self._response_populations(r)).map(lambda population: (
-                    population, hl.dict(self.populations_configs[population].items().filter(
+                    population, hl.dict(hl.dict(self.populations_configs)[population].items().filter(
                         lambda p: p[1] is not None).map(lambda p: (p[0], hl.or_else(r[population][p[1]], 0))))))),
             # 'populations': lambda r: hl.struct(**{
             #     population: hl.struct(**{
