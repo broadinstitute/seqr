@@ -203,7 +203,7 @@ class BaseHailTableQuery(object):
                 pop_filter = self._mt[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
-                            self._get_clinvar_filter(clinvar_path_terms) &
+                            hl.set(clinvar_path_terms).contains(self._mt.clinvar.clinical_significance) &
                             (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
@@ -241,7 +241,8 @@ class BaseHailTableQuery(object):
         in_silico_q = None
         missing_in_silico_q = None
         for in_silico, value in in_silico_filters.items():
-            ht_value = self._get_in_silico_ht_field(in_silico)
+            score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
+            ht_value = self._mt[score_path[0]][score_path[1]]
             try:
                 float_val = float(value)
                 if ht_value.dtype == hl.tstr:
@@ -263,10 +264,6 @@ class BaseHailTableQuery(object):
                 missing_in_silico_q &= missing_score_filter
 
         self._mt = self._mt.filter_rows(in_silico_q | missing_in_silico_q)
-
-    def _get_in_silico_ht_field(self, in_silico):
-        score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
-        return self._mt[score_path[0]][score_path[1]]
 
     def _filter_by_annotations(self, allowed_consequences):
         annotation_filters =  self._get_annotation_override_filters(self._mt)
@@ -305,10 +302,6 @@ class BaseHailTableQuery(object):
 
     def _get_consequence_terms(self):
         return self._mt.sortedTranscriptConsequences.map(lambda tc: tc.major_consequence)
-
-    def _get_clinvar_filter(self, clinvar_terms):
-        allowed_significances = hl.set(clinvar_terms)
-        return allowed_significances.contains(self._mt.clinvar.clinical_significance)
 
     def annotate_filtered_genotypes(self, *args):
         self._mt = self._filter_by_genotype(self._mt, *args)
@@ -545,27 +538,6 @@ class BaseHailTableQuery(object):
             lambda c: secondary_cs.contains(c))) | (ch_ht.v1_csqs.any(
             lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(
             lambda c: primary_cs.contains(c)))
-        # # TODO share override code with _filter_by_annotations
-        # if self._consequence_overrides[CLINVAR_KEY]:
-        #     allowed_terms = hl.set(self._consequence_overrides[CLINVAR_KEY])
-        #     has_annotation_filter |= (
-        #             allowed_terms.contains(ch_ht.v1.clinvar.clinicalSignificance) |
-        #             allowed_terms.contains(ch_ht.v2.clinvar.clinicalSignificance))
-        # if self._consequence_overrides[HGMD_KEY]:
-        #     allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
-        #     has_annotation_filter |= (
-        #             allowed_classes.contains(ch_ht.v1.hgmd['class']) |
-        #             allowed_classes.contains(ch_ht.v2.hgmd['class']))
-        # if self._consequence_overrides[SPLICE_AI_FIELD]:
-        #     splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
-        #     has_annotation_filter |= (
-        #             (ch_ht.v1.predictions.splice_ai >= splice_ai) |
-        #             (ch_ht.v2.predictions.splice_ai >= splice_ai))
-        # if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
-        #     allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
-        #     has_annotation_filter |= (
-        #             allowed_sv_types.contains(ch_ht.v1.svType) |
-        #             allowed_sv_types.contains(ch_ht.v2.svType))
 
         for af in self._get_annotation_override_filters(ch_ht.v1, use_parsed_fields=True):
             has_annotation_filter |= af
