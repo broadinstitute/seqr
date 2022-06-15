@@ -826,7 +826,6 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
     def _save_samples(self, samples):
         self._samples_by_data_type = samples # TODO use
         self._individuals_by_sample_id = {}
-        logger.info(samples)
         for data_type_samples in samples.values():
             for s in data_type_samples:
                 self._individuals_by_sample_id[s.sample_id] = s.individual
