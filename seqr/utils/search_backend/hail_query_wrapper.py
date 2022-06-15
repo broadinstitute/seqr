@@ -813,10 +813,11 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         annotation_fields = super(AllDataTypeHailTableQuery, self).annotation_fields
         snp_populations = hl.set(set(VariantHailTableQuery.POPULATIONS.keys()))
         sv_populations = hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
+        population_annotation = annotation_fields['populations']
         annotation_fields['populations'] = lambda r: hl.bind(
             lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
-                hl.is_defined(r.locus), snp_populations.contains(p[0]),sv_populations.contains(p[0])))),
-            annotation_fields['populations'](r),
+                hl.is_defined(r.locus), snp_populations.contains(p[0]),  sv_populations.contains(p[0])))),
+            population_annotation(r),
         )
         return annotation_fields
 
