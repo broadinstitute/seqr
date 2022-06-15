@@ -453,7 +453,7 @@ class BaseHailTableQuery(object):
             sample_ids_by_family[self._individuals_by_sample_id[sample_id].family.guid].add(sample_id)
         if family_samples_filter:
             sample_ids_by_family = {k: v for k, v in sample_ids_by_family.items() if family_samples_filter(v)}
-        return hl.dict(sample_ids_by_family)
+        return hl.dict(sample_ids_by_family) if sample_ids_by_family else hl.dict()
 
     def _matched_family_sample_filter(self, mt, sample_family_map):
         return mt.familyGuids.contains(sample_family_map[mt.s])
