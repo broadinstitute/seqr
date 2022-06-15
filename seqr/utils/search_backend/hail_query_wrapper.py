@@ -63,31 +63,15 @@ class BaseHailTableQuery(object):
             populations[pop].update(pop_config)
         return populations
 
-    def _response_populations(self, rows):
-        return list(self.POPULATIONS.keys())
-
     @property
     def annotation_fields(self):
         annotation_fields = {
-            # 'populations': lambda r: hl.dict(
-            #     hl.array(self._response_populations(r)).map(lambda population: (
-            #         population, hl.dict(hl.dict(self.populations_configs)[population].items().filter(
-            #             lambda p: p[1] is not None).map(lambda p: (p[0], hl.or_else(r[population][p[1]], 0))))))),
-            'populations': lambda r: hl.bind(
-                lambda populations: hl.dict(populations.map(lambda population: (
-                    population,
-                    hl.dict(hl.dict(self.populations_configs)[population].items().filter(
-                        lambda p: p[1] is not None).map(
-                        lambda p: (p[0], hl.or_else(r[population][p[1]], 0))))
-                ))),
-                hl.array(self._response_populations(r)),
-            ),
-            # 'populations': lambda r: hl.struct(**{
-            #     population: hl.struct(**{
-            #         response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
-            #         if field is not None
-            #     }) for population, pop_config in self.populations_configs.items()
-            # }),
+            'populations': lambda r: hl.dict({
+                population: hl.struct(**{
+                    response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
+                    if field is not None
+                }) for population, pop_config in self.populations_configs.items()
+            }),
             'predictions': lambda r: hl.struct(**{
                 prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
@@ -824,6 +808,18 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_defined(mt.locus), mt.GT, hl.Call([0, 0]))
     }
 
+    @property
+    def annotation_fields(self):
+        annotation_fields = super(AllDataTypeHailTableQuery, self).annotation_fields
+        snp_populations = hl.set(set(VariantHailTableQuery.POPULATIONS.keys()))
+        sv_populations = hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
+        annotation_fields['populations'] = lambda r: hl.bind(
+            lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
+                hl.is_defined(r.locus), snp_populations.contains(p[0]),sv_populations.contains(p[0])))),
+            annotation_fields['populations'](r),
+        )
+
+
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
         variant_samples = [s for s in samples if s.dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS]
@@ -864,11 +860,6 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in variant_sample_ids - sv_sample_ids},
             **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
         )
-
-    def _response_populations(self, rows):
-        return hl.if_else(hl.is_defined(rows.locus),
-                          list(VariantHailTableQuery.POPULATIONS.keys()),
-                          list(GcnvHailTableQuery.POPULATIONS.keys()))
 
     @staticmethod
     def get_x_chrom_filter(mt, genome_version):
