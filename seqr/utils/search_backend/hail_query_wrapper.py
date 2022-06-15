@@ -882,7 +882,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         sv_samples_map = super(AllDataTypeHailTableQuery, self)._get_family_samples_map(
             mt, self._sample_ids_by_dataset_type[SV_DATASET].intersection(sample_ids), family_samples_filter)
 
-        return hl.if_else(hl.is_defined(mt.svType, sv_samples_map, snp_samples_map))
+        return hl.if_else(hl.is_defined(mt.svType), sv_samples_map, snp_samples_map)
 
     @staticmethod
     def get_x_chrom_filter(mt, genome_version):
