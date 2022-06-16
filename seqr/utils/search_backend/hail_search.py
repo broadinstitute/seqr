@@ -128,16 +128,17 @@ class HailSearch(object):
 
     def _filter_by_intervals(self, genes, intervals, exclude_locations, data_type):
         parsed_intervals = None
+        genes = genes or {}
         if genes or intervals:
             # TODO #2716: format chromosomes for genome build
             gene_coords = [
                 {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
-                for gene in (genes or {}).values()
+                for gene in genes.values()
             ]
             parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
                 'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
-        self._load_table(data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations)
+        self._load_table(data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations, gene_ids=genes.keys())
 
     def search(self, page=1, num_results=100):
         hail_results, total_results = self._query_wrapper.search(page, num_results, self._sort)

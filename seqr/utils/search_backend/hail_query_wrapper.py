@@ -90,10 +90,11 @@ class BaseHailTableQuery(object):
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         return annotation_fields
 
-    def __init__(self, data_source, samples, genome_version, **kwargs):
+    def __init__(self, data_source, samples, genome_version, gene_ids=None, **kwargs):
         self._genome_version = genome_version
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
+        self._filtered_genes = gene_ids
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {
@@ -653,23 +654,39 @@ class VariantHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     def _selected_main_transcript_expr(self, results):
-        if not self._allowed_consequences:
+        if not (self._filtered_genes or self._allowed_consequences):
             return hl.missing(hl.dtype('str'))
 
-        consequences_set = hl.set(self._allowed_consequences)
-        selected_transcript_expr = results.sortedTranscriptConsequences.find(
-            lambda t: consequences_set.contains(t.major_consequence)).transcript_id
-        if self._allowed_consequences_secondary:
-            consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
-            selected_transcript_expr = hl.bind(
-                lambda transcript_id: hl.or_else(
-                    transcript_id, results.sortedTranscriptConsequences.find(
-                        lambda t: consequences_secondary_set.contains(t.major_consequence)).transcript_id),
-                selected_transcript_expr)
+        gene_transcripts = None
+        if self._filtered_genes:
+            gene_set = hl.set(self._filtered_genes)
+            gene_transcripts = results.sortedTranscriptConsequences.filter(lambda t: gene_set.contains(t.gene_id))
+
+        consequence_transcripts = None
+        if self._allowed_consequences:
+            consequences_set = hl.set(self._allowed_consequences)
+            consequence_transcripts = results.sortedTranscriptConsequences.filter(
+                lambda t: consequences_set.contains(t.major_consequence))
+            if self._allowed_consequences_secondary:
+                consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
+                consequence_transcripts = hl.if_else(consequence_transcripts.size() > 0, consequence_transcripts,
+                    results.sortedTranscriptConsequences.find(
+                        lambda t: consequences_secondary_set.contains(t.major_consequence)))
+
+        if gene_transcripts is not None:
+            if consequence_transcripts is None:
+                matched_transcripts = gene_transcripts
+            else:
+                matched_transcripts = hl.bind(
+                    lambda t: hl.if_else(t.size() > 0, t, gene_transcripts),
+                    gene_transcripts.filter(lambda t: consequence_transcripts.contains(t)),
+                )
+        else:
+            matched_transcripts = consequence_transcripts
 
         return hl.if_else(
-            consequences_set.contains(results.sortedTranscriptConsequences[0].major_consequence),
-            hl.missing(hl.dtype('str')), selected_transcript_expr,
+            matched_transcripts.contains(results.sortedTranscriptConsequences[0]),
+            hl.missing(hl.dtype('str')), matched_transcripts[0],
         )
     COMPUTED_ANNOTATION_FIELDS = {
         'selectedMainTranscriptId': _selected_main_transcript_expr,
