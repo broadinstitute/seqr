@@ -660,18 +660,19 @@ class VariantHailTableQuery(BaseHailTableQuery):
         gene_transcripts = None
         if self._filtered_genes:
             gene_set = hl.set(self._filtered_genes)
-            gene_transcripts = results.sortedTranscriptConsequences.filter(lambda t: gene_set.contains(t.gene_id))
+            gene_transcripts = results.sortedTranscriptConsequences.filter(
+                lambda t: gene_set.contains(t.gene_id)).map(lambda t: t.transcript_id)
 
         consequence_transcripts = None
         if self._allowed_consequences:
             consequences_set = hl.set(self._allowed_consequences)
             consequence_transcripts = results.sortedTranscriptConsequences.filter(
-                lambda t: consequences_set.contains(t.major_consequence))
+                lambda t: consequences_set.contains(t.major_consequence)).map(lambda t: t.transcript_id)
             if self._allowed_consequences_secondary:
                 consequences_secondary_set = hl.set(self._allowed_consequences_secondary)
                 consequence_transcripts = hl.if_else(consequence_transcripts.size() > 0, consequence_transcripts,
                     results.sortedTranscriptConsequences.find(
-                        lambda t: consequences_secondary_set.contains(t.major_consequence)))
+                        lambda t: consequences_secondary_set.contains(t.major_consequence)).map(lambda t: t.transcript_id))
 
         if gene_transcripts is not None:
             if consequence_transcripts is None:
@@ -685,7 +686,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
             matched_transcripts = consequence_transcripts
 
         return hl.if_else(
-            matched_transcripts.contains(results.sortedTranscriptConsequences[0]),
+            matched_transcripts.contains(results.sortedTranscriptConsequences[0].transcript_id),
             hl.missing(hl.dtype('str')), matched_transcripts[0],
         )
     COMPUTED_ANNOTATION_FIELDS = {
