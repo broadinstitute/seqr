@@ -916,7 +916,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
         return hl.if_else(
-            hl.is_defined(v1.svType) | ((v2.svType == 'DEL') & (v2.pos <= v1.pos <= v2.end)),
+            hl.is_defined(v1.svType) | ((v2.svType == 'DEL') & (v2.pos <= v1.pos) & (v1.pos <= v2.end)),
             hl.empty_set(hl.tstr),
             v1.genotypes.key_set().filter(lambda i: v1.genotypes[i].numAlt == 2)
         )
