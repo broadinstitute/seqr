@@ -23,11 +23,17 @@ STRUCTURAL_ANNOTATION_FIELD = 'structural'
 VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
 
+COMP_HET_ALT = 'COMP_HET_ALT'
+INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
+INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
+
+
 class BaseHailTableQuery(object):
 
     GENOTYPE_QUERY_MAP = {
         REF_REF: lambda gt: gt.is_hom_ref(),
         REF_ALT: lambda gt: gt.is_het(),
+        COMP_HET_ALT: lambda gt: gt.is_het(),
         ALT_ALT: lambda gt: gt.is_hom_var(),
         HAS_ALT: lambda gt: gt.is_non_ref(),
         HAS_REF: lambda gt: gt.is_hom_ref() | gt.is_het_ref(),
@@ -428,7 +434,7 @@ class BaseHailTableQuery(object):
                 sample_filters.append((inheritance_filter[status], status_sample_ids))
 
         sample_filter_exprs = [
-            (self._get_genotype_filter(mt, genotype) & hl.set(samples).contains(mt.s))
+            (self.GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
             for genotype, samples in sample_filters
         ]
         sample_filter = sample_filter_exprs[0]
@@ -439,9 +445,6 @@ class BaseHailTableQuery(object):
             sample_filter &= quality_filter_expr
 
         return self._get_family_all_samples_expr(mt, sample_filter, search_sample_ids)
-
-    def _get_genotype_filter(self, mt, genotype):
-        return self.GENOTYPE_QUERY_MAP[genotype](mt.GT)
 
     def _get_family_all_samples_expr(self, mt, sample_filter, sample_ids, family_samples_filter=None):
         return hl.bind(
@@ -496,14 +499,7 @@ class BaseHailTableQuery(object):
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
-        unaffected_family_individuals = defaultdict(set)
-        for sample_id in self._affected_status_samples[UNAFFECTED]:
-            individual = self._individuals_by_sample_id[sample_id]
-            unaffected_family_individuals[individual.family.guid].add(individual.guid)
-        ch_ht = ch_ht.annotate(
-            family_guids=ch_ht.family_guids.filter(lambda family_guid: hl.dict(unaffected_family_individuals)[family_guid].all(
-                lambda i_guid: self._non_alt_genotype(ch_ht.v1.genotypes, i_guid) | self._non_alt_genotype(ch_ht.v2.genotypes, i_guid)
-            )))
+        ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
             v1=ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids)),
@@ -545,6 +541,17 @@ class BaseHailTableQuery(object):
             has_annotation_filter |= af
 
         return ch_ht.filter(has_annotation_filter)
+
+    def _valid_comp_het_families_expr(self, ch_ht):
+        unaffected_family_individuals = defaultdict(set)
+        for sample_id in self._affected_status_samples[UNAFFECTED]:
+            individual = self._individuals_by_sample_id[sample_id]
+            unaffected_family_individuals[individual.family.guid].add(individual.guid)
+        unaffected_family_individuals = hl.dict(unaffected_family_individuals)
+
+        return ch_ht.family_guids.filter(lambda family_guid: unaffected_family_individuals[family_guid].all(
+            lambda i_guid: self._non_alt_genotype(ch_ht.v1.genotypes, i_guid) | self._non_alt_genotype(ch_ht.v2.genotypes, i_guid)
+        ))
 
     def _format_results(self, mt):
         results = mt.rows()
@@ -708,7 +715,7 @@ def _get_genotype_override_field(genotypes, default, field, agg):
 class GcnvHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
-    GENOTYPE_QUERY_MAP[REF_ALT] = lambda gt: gt.is_non_ref()
+    GENOTYPE_QUERY_MAP[COMP_HET_ALT] = GENOTYPE_QUERY_MAP[HAS_ALT]
 
     GENOTYPE_FIELDS = {
         f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
@@ -785,6 +792,8 @@ def _annotation_for_data_type(field):
     )
 
 class AllDataTypeHailTableQuery(VariantHailTableQuery):
+
+    GENOTYPE_QUERY_MAP = GcnvHailTableQuery.GENOTYPE_QUERY_MAP
 
     GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
@@ -885,14 +894,6 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             hl.set(self._sample_ids_by_dataset_type[VARIANT_DATASET]).contains(mt.s),
         )
 
-    def _get_genotype_filter(self, mt, genotype):
-        gt_filter = super(AllDataTypeHailTableQuery, self)._get_genotype_filter(mt, genotype)
-        if genotype == REF_ALT:
-            gt_filter = hl.if_else(
-                hl.is_defined(mt.svType), GcnvHailTableQuery.GENOTYPE_QUERY_MAP[genotype](mt.GT), gt_filter,
-            )
-        return gt_filter
-
     @staticmethod
     def get_x_chrom_filter(mt, genome_version):
         return hl.if_else(
@@ -900,3 +901,23 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
             GcnvHailTableQuery.get_x_chrom_filter(mt, genome_version),
             VariantHailTableQuery.get_x_chrom_filter(mt, genome_version),
         )
+
+    def _valid_comp_het_families_expr(self, ch_ht):
+        valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
+        invalid_families = self._invalid_hom_alt_families(ch_ht.v1, ch_ht.v2).union(
+            self._invalid_hom_alt_families(ch_ht.v2, ch_ht.v1))
+        return valid_families.difference(invalid_families)
+
+    def _invalid_hom_alt_families(self, v1, v2):
+        individual_family_map = hl.dict({i.guid: i.family.guid for i in self._individuals_by_sample_id.values()})
+
+        # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
+        # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
+        return hl.if_else(
+            hl.is_defined(v1.svType) | ((v2.svType == 'DEL') & v2.interval.contains(v1.locus)),
+            hl.empty_set(hl.tstr),
+            hl.set(v1.genotypes.values().filter(
+                lambda g: g.numAlt == 2).map(lambda g: individual_family_map[g.individualGuid]))
+        )
+
+
