@@ -904,20 +904,21 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
 
     def _valid_comp_het_families_expr(self, ch_ht):
         valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
-        invalid_families = self._invalid_hom_alt_families(ch_ht.v1, ch_ht.v2).union(
-            self._invalid_hom_alt_families(ch_ht.v2, ch_ht.v1))
+
+        individual_family_map = hl.dict({i.guid: i.family.guid for i in self._individuals_by_sample_id.values()})
+        invalid_families = self._invalid_hom_alt_individuals(ch_ht.v1, ch_ht.v2).union(
+            self._invalid_hom_alt_individuals(ch_ht.v2, ch_ht.v1)
+        ).map(lambda i: individual_family_map[i])
         return valid_families.difference(invalid_families)
 
-    def _invalid_hom_alt_families(self, v1, v2):
-        individual_family_map = hl.dict({i.guid: i.family.guid for i in self._individuals_by_sample_id.values()})
-
+    @staticmethod
+    def _invalid_hom_alt_individuals(v1, v2):
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
         return hl.if_else(
             hl.is_defined(v1.svType) | ((v2.svType == 'DEL') & v2.interval.contains(v1.locus)),
             hl.empty_set(hl.tstr),
-            hl.set(v1.genotypes.values().filter(
-                lambda g: g.numAlt == 2).map(lambda g: individual_family_map[g.individualGuid]))
+            v1.genotypes.key_set().filter(lambda i: v1.genotypes[i].numAlt == 2)
         )
 
 
