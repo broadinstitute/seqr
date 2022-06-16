@@ -138,7 +138,7 @@ class HailSearch(object):
             parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
                 'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
-        self._load_table(data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations, gene_ids=genes.keys())
+        self._load_table(data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations, gene_ids=set(genes.keys()))
 
     def search(self, page=1, num_results=100):
         hail_results, total_results = self._query_wrapper.search(page, num_results, self._sort)
