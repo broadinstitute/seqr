@@ -495,13 +495,11 @@ class BaseHailTableQuery(object):
         if self._allowed_consequences and self._allowed_consequences_secondary:
             ch_ht = self._filter_valid_comp_het_annotation_pairs(ch_ht)
 
-        # TODO #2781 Once SVs are integrated: need to handle SNPs in trans with deletions called as hom alt
-
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
-        ch_ht = ch_ht.annotate(
+        ch_ht = ch_ht.transmute(
             v1=ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids)),
             v2=ch_ht.v2.annotate(familyGuids=hl.array(ch_ht.family_guids)),
         )
