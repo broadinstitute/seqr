@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
 import { Dropdown, Multiselect } from 'shared/components/form/Inputs'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
-import { PANEL_APP_CONFIDENCE_LEVELS } from 'shared/utils/constants'
+import { PANEL_APP_CONFIDENCE_LEVELS, PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 import { moiToMoiInitials } from 'shared/utils/panelAppUtils'
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
@@ -30,26 +30,25 @@ class BaseLocusListDropdown extends React.Component {
 
   componentDidUpdate(prevProps) {
     const { locusList, onChange, selectedMOIs } = this.props
-
     if (prevProps.locusList.rawItems !== locusList.rawItems || prevProps.selectedMOIs !== selectedMOIs) {
       const { locusListGuid } = locusList
 
       if (locusList.paLocusList) {
         const panelAppItems = locusList.items?.filter((item) => {
           let result = true
-          if (prevProps.selectedMOIs) {
+          if (selectedMOIs && selectedMOIs.length !== 0) {
             const initials = moiToMoiInitials(item.pagene.modeOfInheritance)
-            result = prevProps.selectedMOIs.filter(moi => initials.includes(moi)).length
+            result = selectedMOIs.filter(moi => initials.includes(moi)).length !== 0
           }
           return result
         }).reduce((acc, item) => {
           const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
           return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
         }, {})
-        onChange({ locusListGuid, panelAppItems })
+        onChange({ locusListGuid, panelAppItems, selectedMOIs })
       } else {
         const { rawItems } = locusList
-        onChange({ locusListGuid, rawItems })
+        onChange({ locusListGuid, rawItems, selectedMOIs })
       }
     }
   }
@@ -57,7 +56,7 @@ class BaseLocusListDropdown extends React.Component {
   // ignore all other properties on wrapperObject, except locusListGuid
   handleDropdown = (locusListGuid) => {
     const { onChange } = this.props
-    onChange({ locusListGuid })
+    onChange({ locusListGuid, selectedMOIs: [] })
   }
 
   handleMOIselect = (selectedMOIs) => {
@@ -69,28 +68,19 @@ class BaseLocusListDropdown extends React.Component {
     const { locusList, projectLocusListOptions, selectedMOIs } = this.props
     const locusListGuid = locusList.locusListGuid || ''
 
-    const options = [{
-      text: 'Autosomal Dominant',
-      value: 'AD',
-    },
-    {
-      text: 'Autosomal Recessive',
-      value: 'AR',
-    },
-    {
-      text: 'X-Linked Dominant',
-      value: 'XD',
-    },
-    {
-      text: 'X-Linked Recessive',
-      value: 'XR',
-    },
-    {
-      text: 'Other Mode of Inheritance',
-      value: 'other',
-    }]
+    const GeneListDropdown = (
+      <Dropdown
+        inline
+        selection
+        search
+        label="Gene List"
+        value={locusListGuid}
+        onChange={this.handleDropdown}
+        options={projectLocusListOptions}
+      />
+    )
 
-    if (projectLocusListOptions.find(option => option.value === locusListGuid)?.description === 'PanelApp') {
+    if (locusList.paLocusList) {
       return (
         <div>
           <Multiselect
@@ -98,34 +88,17 @@ class BaseLocusListDropdown extends React.Component {
             value={selectedMOIs}
             onChange={this.handleMOIselect}
             placeholder="Showing All MOIs"
-            options={options}
+            options={PANEL_APP_MOI_OPTIONS}
             color="violet"
-            // allowAdditions
           />
-          <Dropdown
-            inline
-            selection
-            search
-            label="Gene List"
-            value={locusListGuid}
-            onChange={this.handleDropdown}
-            options={projectLocusListOptions}
-          />
+          { GeneListDropdown }
         </div>
       )
     }
 
     return (
       <div>
-        <Dropdown
-          inline
-          selection
-          search
-          label="Gene List"
-          value={locusListGuid}
-          onChange={this.handleDropdown}
-          options={projectLocusListOptions}
-        />
+        { GeneListDropdown }
       </div>
     )
   }
@@ -140,7 +113,6 @@ const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
 
 const SUBSCRIPTION = { values: true }
 
-// When onChange is called, this selector will be called again to get the new value of the locusList
 const LocusListSelector = React.memo(({ value, ...props }) => (
   <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
     <LocusListDropdown selectedMOIs={value.selectedMOIs} {...props} />
