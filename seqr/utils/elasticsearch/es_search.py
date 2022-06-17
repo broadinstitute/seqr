@@ -229,9 +229,10 @@ class EsSearch(object):
         self._filter_custom(custom_query)
 
         if has_location_filter:
-            if genes:
+            exclude_locations = locus and locus.get('excludeLocations')
+            self._filter(_location_filter(genes, intervals, exclude_locations))
+            if genes and not exclude_locations:
                 self._filtered_gene_ids = set(genes.keys())
-            self._filter(_location_filter(genes, intervals, locus))
         elif variant_ids:
             self.filter_by_variant_ids(variant_ids, locus=locus)
         elif rs_ids:
@@ -1449,7 +1450,7 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
     return Q('bool', must=sample_queries, _name=family_guid)
 
 
-def _location_filter(genes, intervals, location_filter):
+def _location_filter(genes, intervals, exclude_locations):
     q = None
 
     if genes:
@@ -1479,7 +1480,7 @@ def _location_filter(genes, intervals, location_filter):
             else:
                 q = interval_q
 
-    if location_filter and location_filter.get('excludeLocations'):
+    if exclude_locations:
         return ~q
     else:
         return q
