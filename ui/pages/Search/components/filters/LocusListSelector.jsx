@@ -1,4 +1,3 @@
-/* eslint-disable react-perf/jsx-no-new-array-as-prop */
 import PropTypes from 'prop-types'
 import React from 'react'
 import { connect } from 'react-redux'
