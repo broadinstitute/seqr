@@ -70,6 +70,7 @@ class EsSearch(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {}
+        self._filtered_gene_ids = None
         self._filtered_variant_ids = None
         self._paired_index_comp_het = False
         self._no_sample_filters = False
@@ -228,6 +229,8 @@ class EsSearch(object):
         self._filter_custom(custom_query)
 
         if has_location_filter:
+            if genes:
+                self._filtered_gene_ids = set(genes.keys())
             self._filter(_location_filter(genes, intervals, locus))
         elif variant_ids:
             self.filter_by_variant_ids(variant_ids, locus=locus)
@@ -788,16 +791,7 @@ class EsSearch(object):
         gene_ids = result.pop('geneIds', None)
         if gene_ids:
             transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in gene_ids}
-
-        main_transcript_id = sorted_transcripts[0]['transcriptId'] \
-            if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
-        selected_main_transcript_id = None
-        if main_transcript_id and self._allowed_consequences and sorted_transcripts[0].get('majorConsequence') not in self._allowed_consequences:
-            selected_main_transcript_id = next((
-                t.get('transcriptId') for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences), None)
-            if not selected_main_transcript_id and self._allowed_consequences_secondary:
-                selected_main_transcript_id = next((
-                    t for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary), None)
+        main_transcript_id, selected_main_transcript_id = self._get_main_transcript(sorted_transcripts)
 
         result.update({
             'familyGuids': sorted(family_guids),
@@ -879,6 +873,30 @@ class EsSearch(object):
                     compare_func = conf.get('equal') or (lambda a, b: a == b)
                     if compare_func(gen.get(gen_field), result.get(field)):
                         gen[gen_field] = None
+
+    def _get_main_transcript(self, sorted_transcripts):
+        main_transcript_id = sorted_transcripts[0]['transcriptId'] \
+            if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
+
+        selected_main_transcript_id = None
+        if main_transcript_id and (self._filtered_gene_ids or self._allowed_consequences):
+            gene_transcripts = [
+                t for t in sorted_transcripts if t.get('geneId') in self._filtered_gene_ids
+            ] if  self._filtered_gene_ids else sorted_transcripts
+            selected_main_transcript_id = gene_transcripts[0].get('transcriptId')
+            if self._allowed_consequences:
+                consequence_transcript_id = next((
+                    t.get('transcriptId') for t in sorted_transcripts if
+                    t.get('majorConsequence') in self._allowed_consequences), None)
+                if not consequence_transcript_id and self._allowed_consequences_secondary:
+                    consequence_transcript_id = next((
+                        t for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
+                    ), None)
+                selected_main_transcript_id = consequence_transcript_id or selected_main_transcript_id
+            if selected_main_transcript_id == main_transcript_id:
+                selected_main_transcript_id = None
+
+        return main_transcript_id, selected_main_transcript_id
 
     def _parse_genome_versions(self, result, index_name, hit):
         genome_version = self.index_metadata[index_name]['genomeVersion']
