@@ -36,7 +36,8 @@ class BaseLocusListDropdown extends React.Component {
         const panelAppItems = locusList.items?.filter((item) => {
           let result = true
           if (selectedMOIs && selectedMOIs.length !== 0) {
-            const initials = moiToMoiInitials(item.pagene.modeOfInheritance)
+            const initials = moiToMoiInitials(item.pagene?.modeOfInheritance)
+            if (initials.length === 0) initials.push('other')
             result = selectedMOIs.filter(moi => initials.includes(moi)).length !== 0
           }
           return result
@@ -60,6 +61,36 @@ class BaseLocusListDropdown extends React.Component {
   handleMOIselect = (selectedMOIs) => {
     const { locusList, onChange } = this.props
     onChange({ locusListGuid: locusList.locusListGuid, selectedMOIs })
+  }
+
+  moiOptions = () => {
+    const { locusList } = this.props
+    if (!locusList.items) {
+      return []
+    }
+    const initials = locusList.items?.reduce((acc, gene) => {
+      moiToMoiInitials(gene.pagene?.modeOfInheritance).forEach((initial) => {
+        acc[initial] = true
+      })
+      if (moiToMoiInitials(gene.pagene?.modeOfInheritance).length === 0) {
+        acc.other = true
+      }
+      return acc
+    }, {}) || {}
+
+    const moiOptions = PANEL_APP_MOI_OPTIONS.map((moi) => {
+      if (initials[moi.value] !== true) {
+        return {
+          ...moi,
+          disabled: true,
+        }
+      }
+      return {
+        ...moi,
+      }
+    })
+
+    return moiOptions
   }
 
   render() {
@@ -91,7 +122,7 @@ class BaseLocusListDropdown extends React.Component {
             value={selectedMOIs}
             onChange={this.handleMOIselect}
             placeholder="Showing All MOIs"
-            options={PANEL_APP_MOI_OPTIONS}
+            options={this.moiOptions()}
             color="violet"
           />
           { GeneListDropdown }
