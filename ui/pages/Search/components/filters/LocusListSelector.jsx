@@ -52,7 +52,6 @@ class BaseLocusListDropdown extends React.Component {
     }
   }
 
-  // ignore all other properties on wrapperObject, except locusListGuid
   handleDropdown = (locusListGuid) => {
     const { onChange } = this.props
     onChange({ locusListGuid, selectedMOIs: [] })
@@ -79,10 +78,15 @@ class BaseLocusListDropdown extends React.Component {
       />
     )
 
+    const rightJustify = {
+      justifyContent: 'right',
+    }
+
     if (locusList.paLocusList) {
       return (
-        <div>
+        <div className="inline fields" style={rightJustify}>
           <Multiselect
+            className="wide eight"
             label="Modes of Inheritance"
             value={selectedMOIs}
             onChange={this.handleMOIselect}
