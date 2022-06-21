@@ -68,6 +68,7 @@ class BaseLocusListDropdown extends React.Component {
     if (!locusList.items) {
       return []
     }
+
     const initials = locusList.items?.reduce((acc, gene) => {
       moiToMoiInitials(gene.pagene?.modeOfInheritance).forEach((initial) => {
         acc[initial] = true
@@ -78,19 +79,7 @@ class BaseLocusListDropdown extends React.Component {
       return acc
     }, {}) || {}
 
-    const moiOptions = PANEL_APP_MOI_OPTIONS.map((moi) => {
-      if (initials[moi.value] !== true) {
-        return {
-          ...moi,
-          disabled: true,
-        }
-      }
-      return {
-        ...moi,
-      }
-    })
-
-    return moiOptions
+    return PANEL_APP_MOI_OPTIONS.filter(moi => initials[moi.value])
   }
 
   render() {
