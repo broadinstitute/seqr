@@ -106,13 +106,8 @@ const addDividedLink = (links, name, href) => links.push((
   </span>
 ), <a key={name} href={href} target="_blank" rel="noreferrer">{name}</a>)
 
-const isTrnaOrRrna = (geneNames) => {
-  if (!geneNames) {
-    return false
-  }
-  const geneName = geneNames.find(name => name.startsWith('MT-T') || name.startsWith('MT-R'))
-  return !!geneName
-}
+const isTrnaOrRrna = genesById => genesById &&
+    Object.values(genesById).some(({ gencodeGeneType }) => gencodeGeneType === 'Mt-tRNA' || gencodeGeneType === 'Mt-rRNA')
 
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = []
@@ -196,7 +191,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   )
   if (variant.chrom === 'M') {
     addDividedLink(links, 'mitomap', 'https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele')
-    if (isTrnaOrRrna(geneNames)) {
+    if (isTrnaOrRrna(genesById)) {
       addDividedLink(links, 'Mitovisualize',
         `https://www.mitovisualize.org/variant/m-${variant.pos}-${variant.ref}-${variant.alt}`)
     }

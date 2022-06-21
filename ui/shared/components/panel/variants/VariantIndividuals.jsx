@@ -173,7 +173,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
         {genotype.mitoCn && (
           <div>
             &nbsp;CN:&nbsp;
-            {genotype.mitoCn.toFixed(0)}
+            {genotype.mitoCn}
           </div>
         )}
       </Header.Content>

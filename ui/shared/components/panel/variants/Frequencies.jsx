@@ -228,7 +228,7 @@ const Frequencies = React.memo(({ variant }) => {
             </div>
           ))}
         </Popup.Content>
-        {(hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Heteroplasmic statistics" />}
+        {(hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Heteroplasmy" />}
         <Popup.Content>
           {hasAcHetPops.map(pop => (
             <div key={pop.field}>

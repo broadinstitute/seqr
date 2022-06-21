@@ -1107,6 +1107,7 @@ PARSED_MITO_VARIANT = {
     'ref': 'C',
     'rg37LocusEnd': None,
     'rsid': None,
+    'selectedMainTranscriptId': None,
     'svType': None,
     'svTypeDetail': None,
     'transcripts': {'ENSG00000198840': [
