@@ -8,11 +8,14 @@ from seqr.views.utils.dataset_utils import match_and_update_samples, load_mappin
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, \
-    project_has_analyst_access, project_has_anvil
+    project_has_analyst_access, project_has_anvil, service_account_access
 
 
 @data_manager_required
 def add_variants_dataset_handler(request, project_guid):
+    return add_variants_dataset_handler_base(request, project_guid)
+
+def add_variants_dataset_handler_base(request, project_guid):
     """Create or update samples for the given variant dataset
 
     Args:
@@ -136,3 +139,10 @@ def _get_samples_json(updated_samples, inactivated_sample_guids, project_guid):
             ind.guid: {'sampleGuids': [s.guid for s in ind.sample_set.all()]} for ind in individuals
         }
     return response
+
+# Service account access
+
+@service_account_access
+def sa_add_variants_dataset(request, project_guid):
+    return add_variants_dataset_handler_base(request, project_guid)
+    

@@ -5,7 +5,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.status import status_view
-from seqr.views.apis.dataset_api import add_variants_dataset_handler
+from seqr.views.apis.dataset_api import add_variants_dataset_handler, sa_add_variants_dataset
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG, \
     API_POLICY_REQUIRED_URL
 from django.conf.urls import url, include
@@ -27,7 +27,9 @@ from seqr.views.apis.family_api import \
     delete_family_note, \
     family_page_data, \
     get_family_rna_seq_data, \
-    family_variant_tag_summary
+    family_variant_tag_summary, \
+    sa_edit_families, \
+    sa_receive_families_table
 
 from seqr.views.apis.individual_api import \
     get_individual_rna_seq_data, \
@@ -39,7 +41,11 @@ from seqr.views.apis.individual_api import \
     receive_individuals_table_handler, \
     save_individuals_table_handler, \
     receive_individuals_metadata_handler, \
-    save_individuals_metadata_table_handler
+    save_individuals_metadata_table_handler, \
+    sa_receive_individuals_metadata, \
+    sa_receive_individuals_table, \
+    sa_save_individuals_table, \
+    sa_save_individuals_metadata_table
 
 from seqr.views.apis.case_review_api import \
     update_case_review_discussion, \
@@ -57,7 +63,8 @@ from seqr.views.apis.saved_variant_api import \
     update_variant_note_handler, \
     delete_variant_note_handler, \
     update_variant_main_transcript, \
-    update_saved_variant_json
+    update_saved_variant_json, \
+    sa_update_saved_variant_json
 
 from seqr.views.apis.dashboard_api import dashboard_page_data
 
@@ -300,6 +307,17 @@ api_endpoints = {
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,
     'summary_data/matchmaker': mme_details,
     'summary_data/update_analysed_by': bulk_update_family_analysed_by,
+
+    # service-account access
+    'project/(?P<project_guid>[^/]+)/upload_families_table/sa': sa_receive_families_table,
+    'project/(?P<project_guid>[^/]+)/edit_families/sa': sa_edit_families,
+    'project/(?P<project_guid>[^/]+)/upload_individuals_table/sa': sa_receive_individuals_table,
+    'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)/sa': sa_save_individuals_table,
+    'project/(?P<project_guid>[^/]+)/upload_individuals_metadata_table/sa': sa_receive_individuals_metadata,
+    'project/(?P<project_guid>[^/]+)/save_individuals_metadata_table/(?P<upload_file_id>[^/]+)/sa': sa_save_individuals_metadata_table,
+    'project/(?P<project_guid>[^/]+)/add_dataset/variants/sa': sa_add_variants_dataset,
+    'project/(?P<project_guid>[^/]+)/update_saved_variant_json/sa': sa_update_saved_variant_json,
+
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs

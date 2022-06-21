@@ -18,7 +18,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_js
     _get_json_for_families, get_json_for_family_notes, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
+    get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, service_account_access
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 
 
@@ -213,6 +213,10 @@ def delete_individuals_handler(request, project_guid):
 
 @login_and_policies_required
 def receive_individuals_table_handler(request, project_guid):
+    return receive_individuals_table_handler_base(request, project_guid)
+
+
+def receive_individuals_table_handler_base(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of individuals. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
     a temporary file and sends a 'uploadedFileId' representing this file back to the client. If/when the
@@ -304,6 +308,9 @@ def receive_individuals_table_handler(request, project_guid):
 
 @login_and_policies_required
 def save_individuals_table_handler(request, project_guid, upload_file_id):
+    return save_individuals_table_handler_base(request, project_guid, upload_file_id)
+
+def save_individuals_table_handler_base(request, project_guid, upload_file_id):
     """Handler for 'save' requests to apply Individual tables previously uploaded through receive_individuals_table(..)
 
     Args:
@@ -480,6 +487,9 @@ def _parse_phenotips_record(row):
 
 @login_and_policies_required
 def receive_individuals_metadata_handler(request, project_guid):
+    return  receive_individuals_metadata_handler_base(request, project_guid)
+
+def receive_individuals_metadata_handler_base(request, project_guid):
     """
     Handler for bulk update of hpo terms and other individual metadata . This handler parses the records, but
     doesn't save them in the database. Instead, it saves them to a temporary file and sends a 'uploadedFileId'
@@ -720,6 +730,10 @@ def _get_metadata_warnings(invalid_hpo_term_individuals, invalid_values, missing
 
 @login_and_policies_required
 def save_individuals_metadata_table_handler(request, project_guid, upload_file_id):
+    return save_individuals_metadata_table_handler_base(request, project_guid, upload_file_id)
+
+
+def save_individuals_metadata_table_handler_base(request, project_guid, upload_file_id):
     """
     Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_individuals_metadata_handler
     """
@@ -790,3 +804,22 @@ def get_hpo_terms(request, hpo_parent_id):
             for hpo in HumanPhenotypeOntology.objects.filter(parent_id=hpo_parent_id)
         }
     })
+
+
+# SERVICE account access
+
+@service_account_access
+def sa_receive_individuals_table(request, project_guid):
+    return receive_individuals_table_handler_base(request, project_guid)
+
+@service_account_access
+def sa_save_individuals_table(request, project_guid, upload_file_id):
+    return save_individuals_table_handler_base(request, project_guid, upload_file_id)
+
+@service_account_access
+def sa_receive_individuals_metadata(request, project_guid):
+    return  receive_individuals_metadata_handler_base(request, project_guid)
+
+@service_account_access
+def sa_save_individuals_metadata_table(request, project_guid, upload_file_id):
+    return save_individuals_metadata_table_handler_base(request, project_guid, upload_file_id)

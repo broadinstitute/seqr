@@ -27,6 +27,8 @@ COPY ui/dist /app/seqr/ui/dist
 COPY panelapp /app/seqr/panelapp
 COPY wsgi.py settings.py servctl manage.py deploy/docker/seqr/entrypoint.sh deploy/docker/seqr/init_db.sh deploy/docker/seqr/config/ deploy/docker/seqr/update_reference_server.py /app/seqr/
 
+RUN python manage.py collectstatic --no-input
+
 # Berglass: Store and retrieve secrets on Google Cloud
 COPY --from=us-docker.pkg.dev/berglas/berglas/berglas:latest /bin/berglas /bin/berglas
 
