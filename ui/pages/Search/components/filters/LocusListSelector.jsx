@@ -79,7 +79,10 @@ class BaseLocusListDropdown extends React.Component {
       return acc
     }, {}) || {}
 
-    return PANEL_APP_MOI_OPTIONS.filter(moi => initials[moi.value])
+    return PANEL_APP_MOI_OPTIONS.map(moi => ({
+      ...moi,
+      disabled: !initials[moi.value],
+    }))
   }
 
   render() {

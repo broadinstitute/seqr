@@ -5,6 +5,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 
+import _ from 'lodash'
 import { helpLabel } from './FormHelpers'
 
 export class BaseSemanticInput extends React.Component {
@@ -110,7 +111,7 @@ export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
     noResultsMessage={null}
     tabIndex="0"
   />
-))
+), _.isEqual)
 
 Dropdown.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
@@ -188,7 +189,7 @@ export class AddableSelect extends React.PureComponent {
 
   componentDidUpdate(prevProps) {
     const { options } = this.props
-    if (options.length !== prevProps.options.length) {
+    if (!_.isEqual(options, prevProps.options)) {
       this.resetOptions()
     }
   }
