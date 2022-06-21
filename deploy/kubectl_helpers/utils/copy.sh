@@ -11,9 +11,11 @@ TO_POD=$4 # boolean indicating whether to copy a file to the pod or from the pod
 
 POD_NAME=$("${DIR}"/get_pod_name.sh "${DEPLOYMENT_TARGET}" "${COMPONENT}")
 if ${TO_POD}; then
-    COMMAND="${FILE} ${POD_NAME}:."
+    SRC="${FILE}"
+    DST="${POD_NAME}:."
 else
-    COMMAND="${POD_NAME}:${FILE} ."
+    SRC="${POD_NAME}:${FILE}"
+    DST="."
 fi
 
-kubectl cp "${COMMAND}"
+kubectl cp "${SRC}" "${DST}"

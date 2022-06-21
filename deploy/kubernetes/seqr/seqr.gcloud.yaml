@@ -100,6 +100,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: airtable_key
+        - name: AIRFLOW_API_AUDIENCE
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: airflow_api_audience
         - name: DJANGO_KEY
           valueFrom:
             secretKeyRef:
@@ -162,6 +167,8 @@ spec:
           value: "{{ MME_CONFIG_DIR }}"
         - name: TERRA_API_ROOT_URL
           value: "{{ TERRA_API_ROOT_URL }}"
+        - name: AIRFLOW_WEBSERVER_URL
+          value: "{{ AIRFLOW_WEBSERVER_URL }}"
         - name: ELASTICSEARCH_PROTOCOL
           value: "{{ ELASTICSEARCH_PROTOCOL }}"
         # - name: ELASTICSEARCH_CA_PATH
@@ -220,3 +227,35 @@ spec:
                 topologyKey: "kubernetes.io/hostname"
       nodeSelector:
         cloud.google.com/gke-nodepool: 'default-pool'
+---
+# docs @ https://kubernetes.github.io/ingress-nginx/user-guide/basic-usage/
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: ingress-nginx
+  namespace: {{ NAMESPACE }}
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header l5d-dst-override $service_name.$namespace.svc.cluster.local:$service_port;
+      grpc_set_header l5d-dst-override $service_name.$namespace.svc.cluster.local:$service_port;
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/modsecurity-snippet: |
+      SecRuleEngine On
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+      - {{ CLUSTER_HOSTNAME }}
+      secretName: nginx-secrets
+  rules:
+    - host: {{ CLUSTER_HOSTNAME }}
+      http:
+        paths:
+        - backend:
+            service:
+              name: seqr
+              port:
+                number: {{ SEQR_SERVICE_PORT }}
+          path: /
+          pathType: ImplementationSpecific

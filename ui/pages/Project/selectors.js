@@ -272,16 +272,19 @@ export const getProjectTagTypeOptions = createSelector(
 export const getProjectVariantSavedByOptions = createSelector(
   getProjectFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  (familiesByGuid, variantDetailByFamilyVariant) => [null, ...Object.keys(familiesByGuid).reduce(
-    (acc, familyGuid) => new Set([
-      ...acc,
-      ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
-        ...variantAcc,
-        ...(tags || []).map(({ createdBy }) => createdBy),
-        ...(notes || []).map(({ createdBy }) => createdBy),
-      ]), []),
-    ]), new Set(),
-  )].map(value => ({ value })),
+  (familiesByGuid, variantDetailByFamilyVariant) => [
+    { value: null, text: 'View All' },
+    ...[...Object.keys(familiesByGuid).reduce(
+      (acc, familyGuid) => new Set([
+        ...acc,
+        ...Object.values(variantDetailByFamilyVariant[familyGuid] || {}).reduce((variantAcc, { tags, notes }) => ([
+          ...variantAcc,
+          ...(tags || []).map(({ createdBy }) => createdBy),
+          ...(notes || []).map(({ createdBy }) => createdBy),
+        ]), []),
+      ]), new Set(),
+    )].map(value => ({ value })),
+  ],
 )
 
 // Family table selectors
@@ -293,9 +296,9 @@ export const getFamiliesFilter = createSelector(
   getFamiliesTableState,
   familyTableState => familyTableState.familiesFilter || SHOW_ALL,
 )
-export const getFamiliesSearch = createSelector(
+const getFamiliesSearch = createSelector(
   getFamiliesTableState,
-  familyTableState => familyTableState.familiesSearch,
+  familyTableState => (familyTableState.familiesSearch || '').toLowerCase(),
 )
 export const getFamiliesSortOrder = createSelector(
   getFamiliesTableState,
@@ -313,7 +316,7 @@ const hasFamilySearch = createSelector(
 
 const getFamilySearchFields = family => ([
   family.displayName, family.familyId, (family.assignedAnalyst || {}).fullName, (family.assignedAnalyst || {}).email,
-  ...family.analysedBy.map(({ createdBy }) => `${createdBy.fullName}${createdBy.email}`),
+  ...family.analysedBy.map(({ createdBy }) => createdBy),
 ])
 
 const getFamiliesBySearchString = createSelector(

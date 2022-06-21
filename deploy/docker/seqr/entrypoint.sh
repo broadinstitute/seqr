@@ -81,6 +81,8 @@ if [ "$RUN_CRON_JOBS" ]; then
     echo 'SHELL=/bin/bash
 0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_omim --omim-key=$OMIM_KEY >> /proc/1/fd/1 2>&1
 0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_human_phenotype_ontology >> /proc/1/fd/1 2>&1
+0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_clingen >> /proc/1/fd/1 2>&1
+0 0 * * 0 /opt/venv/bin/python /seqr/manage.py update_gencc >> /proc/1/fd/1 2>&1
 0 0 * * 0 /opt/venv/bin/python /seqr/manage.py import_all_panels https://panelapp.agha.umccr.org/api/v1 --label=AU >> /proc/1/fd/1 2>&1
 0 0 * * 0 /opt/venv/bin/python /seqr/manage.py import_all_panels https://panelapp.genomicsengland.co.uk/api/v1 --label=UK >> /proc/1/fd/1 2>&1
 0 12 * * 1 /opt/venv/bin/python /seqr/manage.py detect_inactive_privileged_users >> /proc/1/fd/1 2>&1

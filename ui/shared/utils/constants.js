@@ -51,6 +51,25 @@ export const EDITABLE_PROJECT_FIELDS = [
   PROJECT_DESC_FIELD,
 ]
 
+export const ANVIL_FIELDS = [
+  {
+    name: 'workspaceNamespace',
+    label: 'Workspace Namespace',
+    placeholder: 'AnVIL workspace name before the /',
+    validate: validators.required,
+    width: 8,
+    inline: true,
+  },
+  {
+    name: 'workspaceName',
+    label: 'Workspace Name',
+    placeholder: 'AnVIL workspace name after the /',
+    validate: validators.required,
+    width: 8,
+    inline: true,
+  },
+]
+
 export const FILE_FORMATS = [
   { title: 'Excel', ext: 'xls' },
   {
@@ -124,7 +143,7 @@ export const SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_KNOWN_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - known gene for phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE, color: '#CDDC39', name: 'Strong candidate - gene linked to different phenotype' },
   { value: FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE, color: '#CDDC39', name: 'Strong candidate - novel gene' },
-  { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#CDDC39', name: 'Reviewed, currently pursuing candidates' },
+  { value: FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES, color: '#EB9F38', name: 'Reviewed, currently pursuing candidates' },
   { value: FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE, color: '#EF5350', name: 'Reviewed, no clear candidate' },
   { value: FAMILY_STATUS_CLOSED, color: '#9c0502', name: 'Closed, no longer under analysis' },
   { value: FAMILY_STATUS_ANALYSIS_IN_PROGRESS, color: '#4682B4', name: 'Analysis in Progress' },
@@ -138,6 +157,15 @@ export const ALL_FAMILY_ANALYSIS_STATUS_OPTIONS = [
 export const FAMILY_ANALYSIS_STATUS_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
   (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
 )
+
+export const SNP_DATA_TYPE = 'SNP'
+export const FAMILY_ANALYSED_BY_DATA_TYPES = [
+  [SNP_DATA_TYPE, 'WES/WGS'],
+  ['SV', 'gCNV/SV'],
+  ['RNA', 'RNAseq'],
+  ['MT', 'Mitochondrial'],
+  ['STR', 'STR'],
+]
 
 // SUCCESS STORY
 
@@ -216,11 +244,15 @@ export const FAMILY_NOTES_FIELDS = [
   { id: FAMILY_FIELD_MME_NOTES, noteType: 'M' },
 ]
 
-export const FAMILY_DETAIL_FIELDS = [
+export const FAMILY_MAIN_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_GROUPS },
   { id: FAMILY_FIELD_DESCRIPTION },
   { id: FAMILY_FIELD_ANALYSIS_STATUS },
   { id: FAMILY_FIELD_ASSIGNED_ANALYST },
+]
+
+export const FAMILY_DETAIL_FIELDS = [
+  ...FAMILY_MAIN_FIELDS,
   { id: FAMILY_FIELD_ANALYSED_BY },
   { id: FAMILY_FIELD_SUCCESS_STORY_TYPE },
   { id: FAMILY_FIELD_SUCCESS_STORY },
@@ -407,6 +439,7 @@ export const LOCUS_LIST_NAME_FIELD = 'name'
 export const LOCUS_LIST_NUM_ENTRIES_FIELD = 'numEntries'
 export const LOCUS_LIST_DESCRIPTION_FIELD = 'description'
 export const LOCUS_LIST_IS_PUBLIC_FIELD_NAME = 'isPublic'
+export const LOCUS_LIST_CREATED_DATE_FIELD_NAME = 'createdDate'
 export const LOCUS_LIST_LAST_MODIFIED_FIELD_NAME = 'lastModifiedDate'
 export const LOCUS_LIST_CURATOR_FIELD_NAME = 'createdBy'
 
@@ -427,6 +460,12 @@ export const LOCUS_LIST_FIELDS = [
     validate: value => (value ? undefined : 'Description is required'),
     width: 9,
     isEditable: true,
+  },
+  {
+    name: LOCUS_LIST_CREATED_DATE_FIELD_NAME,
+    label: 'Created Date',
+    width: 3,
+    fieldDisplay: createdDate => new Date(createdDate).toLocaleString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }),
   },
   {
     name: LOCUS_LIST_LAST_MODIFIED_FIELD_NAME,
@@ -510,9 +549,9 @@ const VEP_SV_TYPES = [
     value: 'DUP',
   },
   {
-    description: 'A translocation variant',
+    description: 'A chromosomal translocation',
     text: 'Translocation',
-    value: 'BND',
+    value: 'CTX',
   },
   {
     description: 'A copy number polymorphism variant',
@@ -525,11 +564,6 @@ const VEP_SV_TYPES = [
     value: 'CPX',
   },
   {
-    description: 'A reciprocal chromosomal translocation',
-    text: 'Reciprocal Translocation',
-    value: 'CTX',
-  },
-  {
     description: 'A large insertion',
     text: 'Insertion',
     value: 'INS',
@@ -538,6 +572,11 @@ const VEP_SV_TYPES = [
     description: 'A large inversion',
     text: 'Inversion',
     value: 'INV',
+  },
+  {
+    description: 'An unresolved structural event',
+    text: 'Breakend',
+    value: 'BND',
   },
 ]
 
@@ -1180,7 +1219,8 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance },
   { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
   { header: 'filter', getVal: variant => variant.genotypeFilters },
-  { header: 'family', getVal: variant => variant.familyGuids[0].split(/_(.+)/)[1] },
+  { header: 'project' },
+  { header: 'family' },
   { header: 'tags', getVal: (variant, tagsByGuid) => variant.tagGuids.map(tagGuid => tagsByGuid[tagGuid].name).join('|') },
   { header: 'classification', getVal: variant => (variant.acmgClassification ? `${variant.acmgClassification.score}, ${variant.acmgClassification.classify}, ${variant.acmgClassification.criteria}` : '') },
   {
@@ -1228,7 +1268,7 @@ export const INHERITANCE_FILTER_OPTIONS = [
   {
     value: DE_NOVO_FILTER,
     text: 'De Novo/ Dominant',
-    detail: 'Finds variants where all affected indivs have at least one alternate allele and all unaffected are homozygous reference.',
+    detail: 'Finds variants where all affected individuals have at least one alternate allele and all unaffected are homozygous reference.',
   },
   {
     value: ANY_AFFECTED,
@@ -1251,13 +1291,17 @@ export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
   4: 'Green, highest level of confidence; a gene from 3 or 4 sources.',
 }
 
-export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = {
+export const PANEL_APP_CONFIDENCE_LEVELS = {
   0: 'none',
-  1: VARIANT_ICON_COLORS.red,
-  2: VARIANT_ICON_COLORS.amber,
-  3: VARIANT_ICON_COLORS.green,
-  4: VARIANT_ICON_COLORS.green,
+  1: 'red',
+  2: 'amber',
+  3: 'green',
+  4: 'green',
 }
+
+export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = Object.entries(PANEL_APP_CONFIDENCE_LEVELS).reduce(
+  (acc, [confidence, color]) => ({ ...acc, [confidence]: VARIANT_ICON_COLORS[color] }), {},
+)
 
 // Users
 

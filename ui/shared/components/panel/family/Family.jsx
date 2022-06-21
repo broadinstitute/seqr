@@ -61,8 +61,9 @@ const getNoteField = noteType => ({
 
 const FAMILY_FIELD_RENDER_LOOKUP = {
   [FAMILY_FIELD_ANALYSIS_GROUPS]: {
-    canEdit: false,
+    canEdit: true,
     component: AnalysisGroups,
+    submitArgs: { familyField: 'analysis_groups', rawResponse: true },
     fieldDisplay: values => values.map(({ name }) => name).join(', '),
   },
   [FAMILY_FIELD_DESCRIPTION]: { canEdit: true },
@@ -82,11 +83,11 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     fieldDisplay: value => (value ? <div>{(value.fullName) ? value.fullName : value.email}</div> : ''),
   },
   [FAMILY_FIELD_ANALYSED_BY]: {
-    canEdit: true,
     component: BaseFieldView,
-    submitArgs: { familyField: 'analysed_by' },
-    addConfirm: 'Are you sure you want to add that you analysed this family?',
-    fieldDisplay: (analysedByList, compact) => <AnalysedBy analysedByList={analysedByList} compact={compact} />,
+    showEmptyValues: true,
+    fieldDisplay: (analysedByList, compact, familyGuid) => (
+      <AnalysedBy analysedByList={analysedByList} compact={compact} familyGuid={familyGuid} />
+    ),
   },
   [FAMILY_FIELD_SUCCESS_STORY_TYPE]: {
     internal: true,

@@ -83,6 +83,16 @@ export const getNotesByFamilyType = createSelector(
   }, {}),
 )
 
+export const getProjectAnalysisGroupOptions = createSelector(
+  getAnalysisGroupsGroupedByProjectGuid,
+  analysisGroupsByProject => Object.entries(analysisGroupsByProject).reduce(
+    (acc, [projectGuid, analysisGroupsByGuid]) => ({
+      ...acc,
+      [projectGuid]: Object.values(analysisGroupsByGuid).sort((a, b) => a.name.localeCompare(b.name)),
+    }), {},
+  ),
+)
+
 export const getAnalysisGroupsByFamily = createSelector(
   getAnalysisGroupsByGuid,
   analysisGroupsByGuid => Object.values(analysisGroupsByGuid).reduce(
@@ -159,28 +169,6 @@ export const getIGVSamplesByFamilySampleIndividual = createSelector(
     acc[sample.familyGuid][sample.sampleType][sample.individualGuid] = sample
     return acc
   }, {}),
-)
-
-export const getRnaSeqDataByFamilyGene = createSelector(
-  getIndividualsByGuid,
-  getRnaSeqDataByIndividual,
-  (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
-    (acc, [individualGuid, rnaSeqData]) => {
-      const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = {
-        significantOutliers: Object.entries(rnaSeqData.outliers || {}).reduce(
-          (acc2, [geneId, data]) => (data.isSignificant ?
-            { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
-          ), acc[familyGuid]?.significantOutliers || {},
-        ),
-        tpms: Object.entries(rnaSeqData.tpms || {}).reduce(
-          (acc2, [geneId, data]) => ({ ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } }),
-          acc[familyGuid]?.tpms || {},
-        ),
-      }
-      return acc
-    }, {},
-  ),
 )
 
 export const getProjectDatasetTypes = createSelector(

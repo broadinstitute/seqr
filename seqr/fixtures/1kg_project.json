@@ -376,7 +376,7 @@
     "fields": {
         "guid": "FAB000001_1",
         "created_date": "2021-07-22T19:27:08.563Z",
-        "created_by": 12,
+        "created_by": 13,
         "last_modified_date": null,
         "family": 1
     }
@@ -1220,6 +1220,25 @@
     }
 },
 {
+    "model": "seqr.sample",
+    "pk": 151,
+    "fields": {
+        "guid": "S000151_na20889",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 17,
+        "sample_type": "RNA",
+        "dataset_type": "VARIANTS",
+        "sample_id": "NA20889",
+        "is_active": true,
+        "elasticsearch_index":null,
+        "tissue_type": "M",
+        "data_source": "muscle_samples.tsv.gz",
+        "loaded_date": "2017-02-05T06:42:55.397Z"
+    }
+},
+{
     "model": "seqr.rnaseqoutlier",
     "pk": 1,
     "fields": {
@@ -1259,6 +1278,15 @@
         "sample": 150,
         "gene_id": "ENSG00000135953",
         "tpm": 8.38
+    }
+},
+{
+    "model": "seqr.rnaseqtpm",
+    "pk": 4,
+    "fields": {
+        "sample": 151,
+        "gene_id": "ENSG00000135953",
+        "tpm": 1.01
     }
 },
 {
@@ -1364,6 +1392,7 @@
             "predictions": {"eigen": null, "revel": null, "sift": null, "cadd": "14.33", "metasvm": "", "mpc": null, "splice_ai": null, "phastcons_100_vert": null, "mut_taster": null, "fathmm": null, "polyphen": null, "dann": null, "primate_ai": null, "gerp_rs": null},
             "hgmd": {"accession": null, "class": null},
             "rsid": null,
+            "selectedMainTranscriptId": null,
             "liftedOverChrom": "",
             "originalAltAlleles": ["G"],
             "transcripts": {"ENSG00000135953": [
@@ -1935,6 +1964,20 @@
   }
 },
 {
+  "model": "panelapp.palocuslist",
+  "pk": 1,
+  "fields": {
+    "seqr_locus_list": 1,
+    "panel_app_id": 1,
+    "disease_group": null,
+    "disease_sub_group": "2018-04-28T00:03:25.347Z",
+    "status": "public",
+    "version": "1.0",
+    "version_created": "2018-04-28T00:03:25.347Z",
+    "url": "https://panelapp.agha.umccr.org/api/v1/panels/254/genes"
+  }
+},
+{
   "model": "seqr.locuslistgene",
   "pk": 13,
   "fields": {
@@ -2000,6 +2043,19 @@
         "description": "A sample analysis group",
         "project": 1,
         "families": [1, 3, 5]
+    }
+},
+{
+    "model": "seqr.analysisgroup",
+    "pk": 2,
+    "fields": {
+        "guid": "AG0000185_accepted",
+        "created_date": "2018-08-09T18:53:24.207Z",
+        "created_by": null,
+        "last_modified_date": "2018-08-09T18:53:24.207Z",
+        "name": "Accepted",
+        "project": 1,
+        "families": [3]
     }
 },
 {

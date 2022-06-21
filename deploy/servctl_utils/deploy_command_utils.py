@@ -5,7 +5,6 @@ import os
 from pprint import pformat
 import time
 
-from deploy.servctl_utils.other_command_utils import get_disk_names
 from deploy.servctl_utils.kubectl_utils import is_pod_running, \
     wait_until_pod_is_running as sleep_until_pod_is_running, wait_until_pod_is_ready as sleep_until_pod_is_ready, \
     wait_for_resource, wait_for_not_resource
@@ -22,17 +21,12 @@ DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev']
 DEPLOYMENT_TARGETS = [
     "settings",
     "secrets",
-    "linkerd",
-    "nginx",
     "elasticsearch",
     "kibana",
     "redis",
     "seqr",
     "elasticsearch-snapshot-config",
 ]
-
-# pipeline runner docker image is used by docker-compose for local installs, but isn't part of the Broad seqr deployment
-DEPLOYABLE_COMPONENTS = ['pipeline-runner'] + DEPLOYMENT_TARGETS
 
 GCLOUD_CLIENT = 'gcloud-client'
 
@@ -45,7 +39,7 @@ SECRETS = {
     'nginx': ['{deploy_to}/tls.key', '{deploy_to}/tls.crt'],
     'postgres': ['{deploy_to}/password'],
     'seqr': [
-        'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password',
+        'omim_key', 'postmark_server_token', 'slack_token', 'airtable_key', 'django_key', 'seqr_es_password', 'airflow_api_audience',
         '{deploy_to}/google_client_id',  '{deploy_to}/google_client_secret', '{deploy_to}/ga_token_id',
     ],
 }
@@ -110,11 +104,13 @@ def deploy_elasticsearch(settings):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
-    _set_elasticsearch_kubernetes_resources()
-
     # create persistent volumes
     pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
-    disk_names = get_disk_names('es-data', settings)
+    num_disks = settings['ES_DATA_NUM_PODS']
+    disk_names = [
+        '{cluster_name}-es-data-disk{suffix}'.format(
+            cluster_name=settings['CLUSTER_NAME'], suffix='-{}'.format(i + 1) if num_disks > 1 else '')
+        for i in range(num_disks)]
     for disk_name in disk_names:
         volume_settings = {'DISK_NAME': disk_name}
         volume_settings.update(settings)
@@ -144,12 +140,6 @@ def deploy_elasticsearch(settings):
         'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.health}', expected_status='green',
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
 
-def _set_elasticsearch_kubernetes_resources():
-    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
-    if not has_kube_resource:
-        run('kubectl create -f https://download.elastic.co/downloads/eck/1.9.1/crds.yaml')
-        run('kubectl apply -f https://download.elastic.co/downloads/eck/1.9.1/operator.yaml')
-
 
 def deploy_elasticsearch_snapshot_config(settings):
     print_separator('elasticsearch snapshot configuration')
@@ -169,22 +159,6 @@ def deploy_elasticsearch_snapshot_config(settings):
         run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
         # Set up the monthly cron job
         run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml' % settings)
-
-
-def deploy_linkerd(settings):
-    print_separator('linkerd')
-
-    version_match = run("linkerd version | awk '/Client/ {print $3}'")
-    if version_match.strip() != settings["LINKERD_VERSION"]:
-        raise Exception("Your locally installed linkerd version does not match %s. "
-                        "Download the correct version from https://github.com/linkerd/linkerd2/releases/tag/%s" % \
-                        (settings['LINKERD_VERSION'], settings['LINKERD_VERSION']))
-
-    has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
-    if not has_namespace:
-        run('linkerd install | kubectl apply -f -')
-
-        run('linkerd check')
 
 
 def deploy_redis(settings):
@@ -214,32 +188,11 @@ def deploy_kibana(settings):
 
     docker_build("kibana", settings)
 
-    _set_elasticsearch_kubernetes_resources()
-
     deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
 
     wait_for_resource(
         'kibana', resource_type='kibana', json_path='{.items[0].status.health}', expected_status='green',
         deployment_target=settings["DEPLOY_TO"], verbose_template='kibana health')
-
-
-def deploy_nginx(settings):
-    if settings["ONLY_PUSH_TO_REGISTRY"]:
-        return
-
-    print_separator("nginx")
-    run("kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.3/deploy/static/provider/cloud/deploy.yaml" % locals())
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings, errors_to_ignore=["not found"])
-    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx.yaml" % settings)
-
-
-def deploy_pipeline_runner(settings):
-    print_separator("pipeline_runner")
-
-    docker_build("pipeline-runner", settings, [
-        "-f deploy/docker/%(COMPONENT_LABEL)s/Dockerfile",
-    ])
 
 
 def deploy(deployment_target, components, output_dir=None, runtime_settings=None):
@@ -271,8 +224,8 @@ def deploy(deployment_target, components, output_dir=None, runtime_settings=None
         deploy_secrets(settings, components=components[1:])
         return
 
-    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYABLE_COMPONENTS
-    for component in DEPLOYABLE_COMPONENTS:
+    # call deploy_* functions for each component in "components" list, in the order that these components are listed in DEPLOYMENT_TARGETS
+    for component in DEPLOYMENT_TARGETS:
         if component in components:
             # only deploy requested components
             func_name = "deploy_" + component.replace("-", "_")

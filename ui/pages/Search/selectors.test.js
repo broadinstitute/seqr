@@ -37,7 +37,7 @@ test('getIntitialSearch', () => {
 test('getSearchedProjectsLocusListOptions', () => {
   expect(getSearchedProjectsLocusListOptions(
     STATE, { projectFamilies: [{ projectGuid: PROJECT_GUID }] },
-  )).toEqual([{ value: null }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid, key: LOCUS_LIST.locusListGuid }])
+  )).toEqual([{ value: null, description: 'None' }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid, key: LOCUS_LIST.locusListGuid }])
 })
 
 test('getDatasetTypes', () => {

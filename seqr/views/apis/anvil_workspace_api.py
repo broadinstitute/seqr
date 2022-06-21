@@ -3,6 +3,10 @@ import json
 import time
 import tempfile
 from datetime import datetime
+import requests
+
+from google.auth.transport.requests import Request
+from google.oauth2 import id_token
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.views import redirect_to_login
@@ -24,7 +28,7 @@ from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
-from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
+from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -34,6 +38,7 @@ BLOCK_SIZE = 65536
 
 ANVIL_LOADING_EMAIL_DATE = None
 ANVIL_LOADING_DELAY_EMAIL = None
+DAG_VERSION = '0.0.1'
 
 def get_vcf_samples(vcf_filename):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
@@ -86,7 +91,6 @@ def anvil_workspace_page(request, namespace, name):
 
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
-
 @anvil_auth_and_policies_required
 def create_project_from_workspace(request, namespace, name):
     """
@@ -100,7 +104,6 @@ def create_project_from_workspace(request, namespace, name):
     """
     # Validate that the current user has logged in through google and has sufficient permissions
     workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
-
     projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if projects:
         error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
@@ -176,6 +179,8 @@ def create_project_from_workspace(request, namespace, name):
         logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), request.user,
                      detail=sample_ids)
 
+    # use airflow api to trigger AnVIL dags
+    _trigger_data_loading(project, data_path, request_json['sampleType'], request)
     # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
 
@@ -213,19 +218,14 @@ def _get_loading_project_path(project, sample_type):
 
 
 def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
-    pipeline_dag = {
-        "active_projects": [project.guid],
-        "vcf_path": data_path,
-        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
-        "projects_to_run": [project.guid],
-    }
+    pipeline_dag = _construct_dag_variables(project, data_path, sample_type)
     message_content = """
         *{user}* requested to load {sample_type} data ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
         {path} to seqr project <{base_url}project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to {ids_path}.  
   
-        DAG for the loading pipeline:
+        DAG {dag_name} is triggered with following:
         ```{dag}```
         """.format(
         user=user.email,
@@ -238,7 +238,104 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         project_name=project.name,
         sample_type=sample_type,
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
+        dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
         dag=json.dumps(pipeline_dag, indent=4),
     )
 
     safe_post_to_slack(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, message_content)
+
+def _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type):
+    pipeline_dag = _construct_dag_variables(project, data_path, sample_type)
+    message_content = """
+        ERROR triggering AnVIL loading for project {project_guid}: {e} 
+        
+        DAG {dag_name} should be triggered with following: 
+        ```{dag}```
+        """.format(
+            project_guid = project.guid,
+            e = e,
+            dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
+            dag = json.dumps(pipeline_dag, indent=4)
+        )
+    safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message_content)
+
+def _trigger_data_loading(project, data_path, sample_type, request):
+    try:
+        genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=sample_type)
+        dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
+
+        _check_dag_running_state(dag_id)
+        updated_anvil_variables = _construct_dag_variables(project, data_path, sample_type)
+        _update_variables(genome_test_type, updated_anvil_variables)
+        _wait_for_dag_variable_update(dag_id, project)
+
+        _trigger_dag(dag_id)
+    except Exception as e:
+        logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
+        logger_call(str(e), request.user)
+        _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type)
+
+class DagRunningException(Exception):
+    pass
+
+def _check_dag_running_state(dag_id):
+    endpoint = 'dags/{}/dagRuns'.format(dag_id)
+    resp = _make_airflow_api_request(endpoint, method='GET')
+    lastest_dag_runs = resp['dag_runs'][-1]
+    if lastest_dag_runs['state'] == 'running':
+        raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
+
+def _construct_dag_variables(project, data_path, sample_type):
+    dag_variables = {
+        "active_projects": [project.guid],
+        "vcf_path": data_path,
+        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
+        "projects_to_run": [project.guid],
+    }
+    return dag_variables
+
+def _wait_for_dag_variable_update(dag_id, project):
+    updated_project = project.guid
+    dag_projects = _get_task_ids(dag_id)
+    while updated_project not in ''.join(dag_projects):
+        dag_projects = _get_task_ids(dag_id)
+
+def _update_variables(key, val):
+    endpoint = 'variables/{}'.format(key)
+    val_str = json.dumps(val)
+    json_data= {
+        "key": key,
+        "value": val_str
+        }
+    _make_airflow_api_request(endpoint, method='PATCH', json=json_data)
+
+def _get_task_ids(dag_id):
+    endpoint = 'dags/{}/tasks'.format(dag_id)
+    airflow_response = _make_airflow_api_request(endpoint, method='GET')
+
+    tasks = airflow_response['tasks']
+    task_ids = [task_dict['task_id'] for task_dict in tasks]
+    return task_ids
+
+
+def _trigger_dag(dag_id):
+    endpoint = 'dags/{}/dagRuns'.format(dag_id)
+    _make_airflow_api_request(endpoint, method='POST', json={})
+
+
+def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
+    # Obtain an OpenID Connect (OIDC) token from metadata server or using service
+    # account.
+    google_open_id_connect_token = id_token.fetch_id_token(Request(), AIRFLOW_API_AUDIENCE)
+
+    webserver_url = f'{AIRFLOW_WEBSERVER_URL}/api/v1/{endpoint}'
+    resp = requests.request(
+        method, webserver_url,
+        headers={'Authorization': 'Bearer {}'.format(
+            google_open_id_connect_token)}, **kwargs)
+
+    resp.raise_for_status()
+    return resp.json()
+
+
+
