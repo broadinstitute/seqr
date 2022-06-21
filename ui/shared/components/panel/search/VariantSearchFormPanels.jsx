@@ -227,14 +227,12 @@ export const QUALITY_PANEL = {
   fieldProps: { control: LazyLabeledSlider, format: val => val || null },
 }
 
-const stopPropagation = e => e.stopPropagation()
-
 const HeaderContent = React.memo(({ name, title, inputSize, inputProps }) => (
   <Grid>
     <Grid.Row>
       <Grid.Column width={inputSize ? 16 - inputSize : 8} verticalAlign="middle">{title}</Grid.Column>
       {inputProps && (
-        <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right" onClick={stopPropagation}>
+        <ToggleHeaderFieldColumn width={inputSize || 3} floated="right" textAlign="right">
           {configuredField({ ...inputProps, name: `search.${name}` })}
         </ToggleHeaderFieldColumn>
       )}
