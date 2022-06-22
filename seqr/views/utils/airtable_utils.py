@@ -18,13 +18,19 @@ class AirtableSession(object):
     }
 
     def __init__(self, user, base=RDG_BASE):
-        if not (is_google_authenticated(user) and user.email.endswith('broadinstitute.org')):
-            raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
         self._user = user
+        self._check_user_access(base)
         self._url = f'{AIRTABLE_URL}/{self.AIRTABLE_BASES[base]}'
 
         self._session = requests.Session()
         self._session.headers.update({'Authorization': f'Bearer {AIRTABLE_API_KEY}'})
+
+    def _check_user_access(self, base):
+        has_access = is_google_authenticated(self._user)
+        if base != self.ANVIL_BASE:
+            has_access &= self._user.email.endswith('broadinstitute.org')
+        if not has_access:
+            raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
 
     def safe_create_record(self, record_type, record):
         try:
