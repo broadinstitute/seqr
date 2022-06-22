@@ -209,7 +209,8 @@ const Frequencies = React.memo(({ variant }) => {
   const hasMaxHlPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].max_hl)
 
   return (
-    (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops || hasAcHetPops.length || hasMaxHlPops.length) ? (
+    (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops.length || hasAcHetPops.length ||
+    hasMaxHlPops.length) ? (
       <Popup position="top center" wide="very" trigger={freqContent}>
         {hasGlobalAfPops.length > 0 && <Popup.Header content="Global AFs" />}
         <Popup.Content>
@@ -228,6 +229,8 @@ const Frequencies = React.memo(({ variant }) => {
             </div>
           ))}
         </Popup.Content>
+        {((hasGlobalAfPops.length > 0 || hasAcPops.length > 0) &&
+            (hasAcHetPops.length > 0 || hasMaxHlPops.length > 0)) && <VerticalSpacer height={5} />}
         {(hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Heteroplasmy" />}
         <Popup.Content>
           {hasAcHetPops.map(pop => (
