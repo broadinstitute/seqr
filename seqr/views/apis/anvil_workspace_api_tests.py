@@ -203,7 +203,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                            mock_datetime, mock_airtable_logger, mock_utils_logger):
         # Set up api responses
         airtable_tracking_url = f'{MOCK_AIRTABLE_URL}/appbxG6n6sW5e2vY3/AnVIL%20Seqr%20Loading%20Requests%20Tracking'
-        responses.add(responses.POST, airtable_tracking_url, status=400)
+        responses.add_passthru(responses.POST, airtable_tracking_url, status=400)
         # check dag running state
         responses.add(responses.GET,
                       '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
