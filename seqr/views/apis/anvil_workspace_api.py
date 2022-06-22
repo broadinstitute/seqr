@@ -181,7 +181,7 @@ def create_project_from_workspace(request, namespace, name):
                      detail=sample_ids)
 
     # use airflow api to trigger AnVIL dags
-    _trigger_data_loading(project, data_path, request_json['sampleType'], request)
+    trigger_success = _trigger_data_loading(project, data_path, request_json['sampleType'], request)
     # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
     AirtableSession(request.user, base=AirtableSession.ANVIL_BASE).safe_create_record(
@@ -191,7 +191,7 @@ def create_project_from_workspace(request, namespace, name):
             'AnVIL Project URL': _get_seqr_project_url(project),
             'Initial Request Date': datetime.now().strftime('%Y-%m-%d'),
             'Number of Samples': len(sample_ids),
-            'Status': 'Loading Requested'
+            'Status': 'Loading' if trigger_success else 'Loading Requested'
         })
 
     if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
@@ -282,10 +282,12 @@ def _trigger_data_loading(project, data_path, sample_type, request):
         _wait_for_dag_variable_update(dag_id, project)
 
         _trigger_dag(dag_id)
+        return True
     except Exception as e:
         logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
         logger_call(str(e), request.user)
         _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type)
+        return False
 
 class DagRunningException(Exception):
     pass
