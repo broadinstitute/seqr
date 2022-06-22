@@ -524,10 +524,7 @@ def _relative_list_summary(row, relative, all_affected=False):
         return 'None'
 
     divider = '\n* * '
-    return '{divider}{relatives}'.format(
-        divider='\n* * ',
-        relatives=divider.join([_relative_summary(rel, relative, all_affected) for rel in relative_list]),
-    )
+    return divider + divider.join([_relative_summary(rel, relative, all_affected) for rel in relative_list])
 
 def _get_rgp_dsm_relative_list(row, relative):
     if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES:
