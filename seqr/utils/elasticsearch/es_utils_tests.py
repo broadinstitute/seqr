@@ -2570,15 +2570,18 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
-            'locus': {'rawItems': 'ENSG00000223972'},
+            'locus': {'rawItems': 'ENSG00000228198'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        variants, total_results = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        expected_transcript_variant = deepcopy(PARSED_VARIANTS[0])
+        expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
+        self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_GENOME_VERSION_VARIANT])
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
-            filters=[{'terms': {'geneIds': ['ENSG00000223972']}}, ANNOTATION_QUERY],
+            filters=[{'terms': {'geneIds': ['ENSG00000228198']}}, ANNOTATION_QUERY],
             size=4,
         )
 
@@ -2587,10 +2590,11 @@ class EsUtilsTest(TestCase):
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
         get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    {'terms': {'geneIds': ['ENSG00000228198']}},
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [
@@ -2602,7 +2606,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=SECOND_INDEX_NAME),
             dict(
                 filters=[
-                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    {'terms': {'geneIds': ['ENSG00000228198']}},
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [
