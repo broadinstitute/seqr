@@ -109,11 +109,11 @@ class BaseLocusListDropdown extends React.Component {
       return (
         <div className="inline fields" style={rightJustify}>
           <Multiselect
-            className="wide eight"
+            className="wide nine"
             label="Modes of Inheritance"
             value={selectedMOIs}
             onChange={this.handleMOIselect}
-            placeholder="Showing All MOIs"
+            placeholder="Showing all MOIs as listed in Panel App"
             options={this.moiOptions()}
             color="violet"
           />
