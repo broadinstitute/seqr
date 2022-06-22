@@ -55,6 +55,17 @@ class EsSearch(object):
             # Some of the indices are an alias
             self._update_alias_metadata()
 
+        genome_versions = {meta['genomeVersion'] for meta in self.index_metadata.values()}
+        if len(genome_versions) > 1:
+            versions = defaultdict(set)
+            for s in samples.select_related('individual__family__project'):
+                versions[self.index_metadata[s.elasticsearch_index]].add(s.individual.family.project.name)
+            raise InvalidSearchException(
+                'Searching across multiple genome builds is prohibited. Remove projects with differing genome builds from search: {}'.format(
+                    '; '.join(['{} - {}'.format(build, ', '.join(sorted(projects))) for build, projects in versions.items()])
+                ))
+        self._genome_version = genome_versions.pop()
+
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
             dataset_type = self._get_index_dataset_type(index)
