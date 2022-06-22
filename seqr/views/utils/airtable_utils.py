@@ -11,8 +11,10 @@ logger = SeqrLogger(__name__)
 class AirtableSession(object):
 
     RDG_BASE = 'RDG'
+    ANVIL_BASE = 'AnVIL'
     AIRTABLE_BASES = {
-        RDG_BASE: 'app3Y97xtbbaOopVR'
+        RDG_BASE: 'app3Y97xtbbaOopVR',
+        ANVIL_BASE: 'appbxG6n6sW5e2vY3',
     }
 
     def __init__(self, user, base=RDG_BASE):
@@ -23,6 +25,12 @@ class AirtableSession(object):
 
         self._session = requests.Session()
         self._session.headers.update({'Authorization': f'Bearer {AIRTABLE_API_KEY}'})
+
+    def safe_create_record(self, record_type, record):
+        try:
+            self._session.post(f'{self._url}/{record_type}', data={'records': [{'fields': record}]})
+        except Exception as e:
+            logger.error(f'Airtable create "{record_type}" error: {e}', self._user)
 
     def fetch_records(self, record_type, fields, or_filters):
         filter_formulas = []

@@ -16,6 +16,7 @@ from django.shortcuts import redirect
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT
 from seqr.views.react_app import render_app_html
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import VCF_FILE_EXTENSIONS
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -183,6 +184,15 @@ def create_project_from_workspace(request, namespace, name):
     _trigger_data_loading(project, data_path, request_json['sampleType'], request)
     # Send a slack message to the slack channel
     _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
+    AirtableSession(request.user, base=AirtableSession.ANVIL_BASE).safe_create_record(
+        'AnVIL Seqr Loading Requests Tracking', {
+            'Requester Name': request.user.get_full_name(),
+            'Requester Email': request.user.email,
+            'AnVIL Project URL': _get_seqr_project_url(project),
+            'Initial Request Date': datetime.now().strftime('%Y-%m-%d'),
+            'Number of Samples': len(sample_ids),
+            'Status': 'Loading Requested'
+        })
 
     if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
             datetime.strptime(ANVIL_LOADING_EMAIL_DATE, '%Y-%m-%d') <= datetime.now():
@@ -216,12 +226,14 @@ def _get_loading_project_path(project, sample_type):
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
     )
 
+def _get_seqr_project_url(project):
+    return f'{BASE_URL}project/{project.guid}/project_page'
 
 def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
     pipeline_dag = _construct_dag_variables(project, data_path, sample_type)
     message_content = """
         *{user}* requested to load {sample_type} data ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
-        {path} to seqr project <{base_url}project/{guid}/project_page|*{project_name}*> (guid: {guid})  
+        {path} to seqr project <{project_url}|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to {ids_path}.  
   
@@ -233,7 +245,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         ids_path=ids_path,
         namespace=project.workspace_namespace,
         name=project.workspace_name,
-        base_url=BASE_URL,
+        project_url=_get_seqr_project_url(project),
         guid=project.guid,
         project_name=project.name,
         sample_type=sample_type,
