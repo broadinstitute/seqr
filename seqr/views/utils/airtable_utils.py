@@ -8,18 +8,18 @@ from settings import AIRTABLE_API_KEY, AIRTABLE_URL
 
 logger = SeqrLogger(__name__)
 
-RDG_BASE = 'RDG'
-AIRTABLE_BASES = {
-    RDG_BASE: 'app3Y97xtbbaOopVR'
-}
-
 class AirtableSession(object):
+
+    RDG_BASE = 'RDG'
+    AIRTABLE_BASES = {
+        RDG_BASE: 'app3Y97xtbbaOopVR'
+    }
 
     def __init__(self, user, base=RDG_BASE):
         if not (is_google_authenticated(user) and user.email.endswith('broadinstitute.org')):
             raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
         self._user = user
-        self._url = f'{AIRTABLE_URL}/{AIRTABLE_BASES[base]}'
+        self._url = f'{AIRTABLE_URL}/{self.AIRTABLE_BASES[base]}'
 
         self._session = requests.Session()
         self._session.headers.update({'Authorization': f'Bearer {AIRTABLE_API_KEY}'})
