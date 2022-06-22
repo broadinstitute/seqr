@@ -28,7 +28,8 @@ class AirtableSession(object):
 
     def safe_create_record(self, record_type, record):
         try:
-            self._session.post(f'{self._url}/{record_type}', data={'records': [{'fields': record}]})
+            response = self._session.post(f'{self._url}/{record_type}', data={'records': [{'fields': record}]})
+            response.raise_for_status()
         except Exception as e:
             logger.error(f'Airtable create "{record_type}" error: {e}', self._user)
 
