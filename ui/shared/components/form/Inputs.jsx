@@ -22,11 +22,12 @@ export class BaseSemanticInput extends React.Component {
       if (nextProps.options.length !== (options || []).length) {
         return true
       }
-      Object.entries(nextProps.options).forEach(([i, opt]) => { // eslint-disable-line consistent-return
-        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== options[i][k])) {
-          return true
-        }
-      })
+      if (Object.entries(nextProps.options)
+        .some(([i, opt]) => ['value', 'text', 'color', 'disabled', 'description']
+          .some(k => opt[k] !== options[i][k]))
+      ) {
+        return true
+      }
     }
     if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(
       k => nextProps[k] !== this.props[k], // eslint-disable-line react/destructuring-assignment
