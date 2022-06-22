@@ -58,6 +58,8 @@ const setIntVal = (onChange, min, max) => (stringVal) => {
   }
 }
 
+const stopPropagation = e => e.stopPropagation()
+
 export const IntegerInput = React.memo(({ onChange, min, max, value, ...props }) => (
   <BaseSemanticInput
     {...props}
@@ -67,6 +69,7 @@ export const IntegerInput = React.memo(({ onChange, min, max, value, ...props })
     min={min}
     max={max}
     onChange={setIntVal(onChange, min, max)}
+    onClick={stopPropagation}
   />
 ))
 
