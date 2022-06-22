@@ -27,7 +27,7 @@ class AirtableSession(object):
     def fetch_records(self, record_type, fields, or_filters):
         filter_formulas = []
         for key, values in or_filters.items():
-            filter_formulas += [f"{key}='{value}'" for value in values]
+            filter_formulas += [f"{key}='{value}'" for value in sorted(values)]
         self._session.params.update({'fields[]': fields, 'filterByFormula': f'OR({",".join(filter_formulas)})'})
         records = {}
         self._populate_records(record_type, records)
