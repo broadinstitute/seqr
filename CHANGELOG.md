@@ -1,6 +1,11 @@
 # _seqr_ Changes
 
 ## dev
+
+## 6/23/22
+* Migrate RGP case note formatting (REQUIRES DB MIGRATION)
+
+## 5/2/22
 * Add db indices for RNAseq outlier models (REQUIRES DB MIGRATION)
 
 ## 4/25/22
