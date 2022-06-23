@@ -43,6 +43,7 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_NOTES_FIELDS,
+  SNP_DATA_TYPE,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -319,9 +320,9 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_ANALYSED_DATE,
     name: 'Date Last Analysed',
-    createSortKeyGetter: () => family => family.analysedBy.map(
+    createSortKeyGetter: () => family => family.analysedBy.filter(({ dataType }) => dataType === SNP_DATA_TYPE).map(
       ({ lastModifiedDate }) => lastModifiedDate,
-    ).sort()[family.analysedBy.length - 1] || '3000-01-01T01:00:00.000Z',
+    ).sort().reverse()[0] || '2000-01-01T01:00:00.000Z',
   },
   {
     value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,

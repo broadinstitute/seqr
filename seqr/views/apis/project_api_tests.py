@@ -231,6 +231,7 @@ class ProjectAPITest(object):
             'numTags': 1,
         })
         self.assertListEqual(project_response['collaborators'], self.PROJECT_COLLABORATORS)
+        self.assertListEqual(project_response['locusListGuids'], ['LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'])
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
