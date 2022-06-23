@@ -82,7 +82,6 @@ class EsSearch(object):
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {}
         self._filtered_gene_ids = None
-        self._filtered_variant_ids = None
         self._paired_index_comp_het = False
         self._no_sample_filters = False
         self._any_affected_sample_filters = False
@@ -245,7 +244,7 @@ class EsSearch(object):
             if genes and not exclude_locations:
                 self._filtered_gene_ids = set(genes.keys())
         elif variant_ids:
-            self.filter_by_variant_ids(variant_ids, locus=locus)
+            self.filter_by_variant_ids(variant_ids)
         elif rs_ids:
             self._filter(Q('terms', rsid=rs_ids))
 
@@ -376,27 +375,8 @@ class EsSearch(object):
 
         return dataset_type
 
-    def filter_by_variant_ids(self, variant_ids, locus=None):
-        genome_version = locus and locus.get('genomeVersion')
-        variant_id_genome_versions = {variant_id: genome_version for variant_id in variant_ids or []}
-        if variant_id_genome_versions and genome_version:
-            # TODO
-            lifted_genome_version = GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
-            liftover = _liftover_grch38_to_grch37() if genome_version == GENOME_VERSION_GRCh38 else _liftover_grch37_to_grch38()
-            if liftover:
-                for variant_id in deepcopy(variant_ids):
-                    chrom, pos, ref, alt = self.parse_variant_id(variant_id)
-                    lifted_coord = liftover.convert_coordinate('chr{}'.format(chrom), pos)
-                    if lifted_coord and lifted_coord[0]:
-                        lifted_variant_id = '{chrom}-{pos}-{ref}-{alt}'.format(
-                            chrom=lifted_coord[0][0].lstrip('chr'), pos=lifted_coord[0][1], ref=ref, alt=alt
-                        )
-                        variant_id_genome_versions[lifted_variant_id] = lifted_genome_version
-                        variant_ids.append(lifted_variant_id)
-
+    def filter_by_variant_ids(self, variant_ids):
         self._filter(Q('terms', variantId=variant_ids))
-        if len({genome_version for genome_version in variant_id_genome_versions.values()}) > 1:
-            self._filtered_variant_ids = variant_id_genome_versions
         return self
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family, skipped_sample_count):
@@ -776,7 +756,9 @@ class EsSearch(object):
         if hasattr(raw_hit.meta, 'sort'):
             result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
-        self._parse_genome_versions(result, hit)
+        result['genomeVersion'] = self._genome_version
+        if self._genome_version == GENOME_VERSION_GRCh38:
+            self._add_liftover(result, hit)
         self._parse_xstop(result)
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
@@ -912,29 +894,27 @@ class EsSearch(object):
 
         return main_transcript_id, selected_main_transcript_id
 
-    def _parse_genome_versions(self, result, hit):
+    def _add_liftover(self, result, hit):
         lifted_over_genome_version = None
         lifted_over_chrom = None
         lifted_over_pos = None
         grch37_locus = result.pop(GRCH38_LOCUS_FIELD, None)
-        if self._genome_version == GENOME_VERSION_GRCh38:
-            if grch37_locus:
-                lifted_over_genome_version = GENOME_VERSION_GRCh37
-                lifted_over_chrom = grch37_locus['contig']
-                lifted_over_pos = grch37_locus['position']
-            else:
-                # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
-                liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
-                if liftover_grch38_to_grch37:
-                    grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
-                        'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
-                    )
-                    if grch37_coord and grch37_coord[0]:
-                        lifted_over_genome_version = GENOME_VERSION_GRCh37
-                        lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
-                        lifted_over_pos = grch37_coord[0][1]
+        if grch37_locus:
+            lifted_over_genome_version = GENOME_VERSION_GRCh37
+            lifted_over_chrom = grch37_locus['contig']
+            lifted_over_pos = grch37_locus['position']
+        else:
+            # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
+            liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+            if liftover_grch38_to_grch37:
+                grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
+                    'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
+                )
+                if grch37_coord and grch37_coord[0]:
+                    lifted_over_genome_version = GENOME_VERSION_GRCh37
+                    lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
+                    lifted_over_pos = grch37_coord[0][1]
         result.update({
-            'genomeVersion': self._genome_version,
             'liftedOverGenomeVersion': lifted_over_genome_version,
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
@@ -1116,13 +1096,6 @@ class EsSearch(object):
 
     def _deduplicate_results(self, sorted_new_results):
         original_result_count = len(sorted_new_results)
-
-        if self._filtered_variant_ids:
-            # TODO
-            sorted_new_results = [
-                v for v in sorted_new_results if self._filtered_variant_ids.get(v['variantId']) == v['genomeVersion']
-            ]
-
         variant_results = []
         for variant in sorted_new_results:
             if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
@@ -1302,7 +1275,7 @@ def _liftover_grch38_to_grch37():
             logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
     return LIFTOVER_GRCH38_TO_GRCH37
 
-
+# TODO no longer used?
 LIFTOVER_GRCH37_TO_GRCH38 = None
 def _liftover_grch37_to_grch38():
     global LIFTOVER_GRCH37_TO_GRCH38
