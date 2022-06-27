@@ -49,15 +49,11 @@ const FAMILY_SEARCH = {
   labelHelp: 'Filter families by searching on family name or individual phenotypes',
 }
 
-const BASE_FAMILY_FILTER = {
+const FAMILY_FILTER = {
   name: 'familiesFilter',
-  component: Dropdown,
+  component: SpacedDropdown,
   inline: true,
   fluid: false,
-}
-const FAMILY_FILTER = {
-  ...BASE_FAMILY_FILTER,
-  component: SpacedDropdown,
   selection: true,
   search: true,
   includeCategories: true,
@@ -82,41 +78,46 @@ const FILTER_FIELDS = [FAMILY_SEARCH, ...SORT_FILTER_FIELDS]
 const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
+const NESTED_FILTER_FIELD_NAME = 'nestedFamiliesFilter'
 
-const CATEGORY_FILTERS = Object.entries(CATEGORY_FAMILY_FILTERS).reduce((acc, [category, options]) => (
-  { ...acc, [category]: [{ ...BASE_FAMILY_FILTER, label: FAMILY_FIELD_NAME_LOOKUP[category], options }] }), {})
-
-const mapStateToProps = (state, ownProps) => ({
-  visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
-  totalFamiliesCount: Object.keys(getProjectAnalysisGroupFamiliesByGuid(state, ownProps)).length,
-  familiesTableState: getFamiliesTableState(state, ownProps),
+const mapFilterStateToProps = (state, ownProps) => ({
+  nestedFilterState: getFamiliesTableState(state, ownProps)[NESTED_FILTER_FIELD_NAME],
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => ({
-  updateFamiliesTableField: field => (value) => {
-    dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
+const mapFilterDispatchToProps = (dispatch, ownProps) => ({
+  updateNestedFilter: category => (value) => {
+    console.log(category, value, ownProps.nestedFilterState)
+    dispatch(updateFamiliesTable({
+      [NESTED_FILTER_FIELD_NAME]: { ...(ownProps.nestedFilterState || {}), [category]: value },
+    }, ownProps.tableName))
   },
 })
 
-const BaseFamilyTableFilter = ({ familiesTableState, updateFamiliesTableField, fields }) => (
-  <StateChangeForm
-    initialValues={familiesTableState}
-    updateField={updateFamiliesTableField}
-    fields={fields}
+const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category, options }) => (
+  <Dropdown
+    name={`${NESTED_FILTER_FIELD_NAME}.${category}`}
+    value={(nestedFilterState || {})[category]}
+    onChange={updateNestedFilter(category)}
+    label={FAMILY_FIELD_NAME_LOOKUP[category]}
+    options={options}
+    inline
+    multiple
   />
 )
 
 BaseFamilyTableFilter.propTypes = {
-  familiesTableState: PropTypes.object.isRequired,
-  updateFamiliesTableField: PropTypes.func.isRequired,
-  fields: PropTypes.arrayOf(PropTypes.object),
+  nestedFilterState: PropTypes.object,
+  updateNestedFilter: PropTypes.func.isRequired,
+  category: PropTypes.string,
+  options: PropTypes.arrayOf(PropTypes.object),
 }
 
-const FamilyTableFilter = connect(mapStateToProps, mapDispatchToProps)(BaseFamilyTableFilter)
+const FamilyTableFilter = connect(mapFilterStateToProps, mapFilterDispatchToProps)(BaseFamilyTableFilter)
 
 const familyFieldDisplay = tableName => (field) => {
   const { id } = field
-  return CATEGORY_FAMILY_FILTERS[id] ? <FamilyTableFilter tableName={tableName} fields={CATEGORY_FILTERS[id]} /> :
+  return CATEGORY_FAMILY_FILTERS[id] ?
+    <FamilyTableFilter tableName={tableName} category={id} options={CATEGORY_FAMILY_FILTERS[id]} /> :
     FAMILY_FIELD_NAME_LOOKUP[id]
 }
 
@@ -179,5 +180,17 @@ TableHeaderRow.propTypes = {
 }
 
 export { TableHeaderRow as TableHeaderRowComponent }
+
+const mapStateToProps = (state, ownProps) => ({
+  visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
+  totalFamiliesCount: Object.keys(getProjectAnalysisGroupFamiliesByGuid(state, ownProps)).length,
+  familiesTableState: getFamiliesTableState(state, ownProps),
+})
+
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  updateFamiliesTableField: field => (value) => {
+    dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
+  },
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(TableHeaderRow)
