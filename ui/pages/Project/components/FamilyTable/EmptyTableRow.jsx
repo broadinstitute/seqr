@@ -5,7 +5,6 @@ import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 import { SHOW_ALL } from 'shared/utils/constants'
 import { getFamiliesFilter } from '../../selectors'
-import { FAMILY_FILTER_LOOKUP } from '../../constants'
 
 const EmptyCell = styled(Table.Cell)`
   padding: 10px 0px 10px 15px;
@@ -17,7 +16,7 @@ const EmptyTableRow = React.memo(({ familiesFilter }) => (
   <Table.Row>
     <EmptyCell>
       0 families
-      { familiesFilter !== SHOW_ALL ? ` with filter "${FAMILY_FILTER_LOOKUP[familiesFilter].name}"` : ' in this project' }
+      { familiesFilter !== SHOW_ALL ? ' match the applied filters ' : ' in this project' }
     </EmptyCell>
   </Table.Row>
 ))

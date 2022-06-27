@@ -13,7 +13,7 @@ import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
 import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
 import { updateFamiliesTable } from '../../../reducers'
 import {
-  FAMILY_FILTER_OPTIONS,
+  CATEGORY_FAMILY_FILTERS,
   CASE_REVIEW_FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
   CASE_REVIEW_TABLE_NAME,
@@ -45,11 +45,15 @@ const FAMILY_SEARCH = {
   labelHelp: 'Filter families by searching on family name or individual phenotypes',
 }
 
-const FAMILY_FILTER = {
+const BASE_FAMILY_FILTER = {
   name: 'familiesFilter',
-  component: SpacedDropdown,
+  component: Dropdown,
   inline: true,
   fluid: false,
+}
+const FAMILY_FILTER = {
+  ...BASE_FAMILY_FILTER,
+  component: SpacedDropdown,
   selection: true,
   search: true,
   includeCategories: true,
@@ -70,27 +74,52 @@ const SORT_FILTER_FIELDS = [
     component: SortDirectionToggle,
   },
 ]
-const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
+const FILTER_FIELDS = [FAMILY_SEARCH, ...SORT_FILTER_FIELDS]
 const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
-const familyFieldDisplay = field => FAMILY_FIELD_NAME_LOOKUP[field.id]
+const CATEGORY_FILTERS = Object.entries(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, [category, options]) => ({ ...acc, [category]: [{ ...BASE_FAMILY_FILTER, options }] }), {},
+)
 
-export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) => (
-  <FamilyLayout
-    compact
-    offset={offset}
+const mapStateToProps = (state, ownProps) => ({
+  visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
+  totalFamiliesCount: Object.keys(getProjectAnalysisGroupFamiliesByGuid(state, ownProps)).length,
+  familiesTableState: getFamiliesTableState(state, ownProps),
+})
+
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  updateFamiliesTableField: field => (value) => {
+    dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
+  },
+})
+
+const BaseFamilyTableFilter = ({ familiesTableState, updateFamiliesTableField, fields }) => (
+  <StateChangeForm
+    initialValues={familiesTableState}
+    updateField={updateFamiliesTableField}
     fields={fields}
-    fieldDisplay={familyFieldDisplay}
-    rightContent={showVariantDetails ? 'Saved Variants' : null}
   />
-))
+)
 
-TableHeaderDetail.propTypes = {
-  offset: PropTypes.bool,
+BaseFamilyTableFilter.propTypes = {
+  familiesTableState: PropTypes.object.isRequired,
+  updateFamiliesTableField: PropTypes.func.isRequired,
   fields: PropTypes.arrayOf(PropTypes.object),
-  showVariantDetails: PropTypes.bool,
+}
+
+const FamilyTableFilter = connect(mapStateToProps, mapDispatchToProps)(BaseFamilyTableFilter)
+
+const familyFieldDisplay = tableName => (field) => {
+  const { id } = field
+  return (
+    <span>
+      {FAMILY_FIELD_NAME_LOOKUP[id]}
+      {CATEGORY_FAMILY_FILTERS[id] &&
+        <FamilyTableFilter tableName={tableName} fields={CATEGORY_FILTERS[id]} />}
+    </span>
+  )
 }
 
 const TableHeaderRow = React.memo(({
@@ -128,7 +157,13 @@ const TableHeaderRow = React.memo(({
     {fields && (
       <Table.Row>
         <Table.HeaderCell colSpan={2} textAlign="left">
-          <TableHeaderDetail fields={fields} showVariantDetails={showVariantDetails} offset />
+          <FamilyLayout
+            compact
+            offset
+            fields={fields}
+            fieldDisplay={familyFieldDisplay(tableName)}
+            rightContent={showVariantDetails ? 'Saved Variants' : null}
+          />
         </Table.HeaderCell>
       </Table.Row>
     )}
@@ -144,18 +179,6 @@ TableHeaderRow.propTypes = {
   tableName: PropTypes.string,
   showVariantDetails: PropTypes.bool,
 }
-
-const mapStateToProps = (state, ownProps) => ({
-  visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
-  totalFamiliesCount: Object.keys(getProjectAnalysisGroupFamiliesByGuid(state, ownProps)).length,
-  familiesTableState: getFamiliesTableState(state, ownProps),
-})
-
-const mapDispatchToProps = (dispatch, ownProps) => ({
-  updateFamiliesTableField: field => (value) => {
-    dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
-  },
-})
 
 export { TableHeaderRow as TableHeaderRowComponent }
 

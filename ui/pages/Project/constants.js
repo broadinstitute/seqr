@@ -244,6 +244,21 @@ export const FAMILY_FILTER_OPTIONS = [
   { ...IN_REVIEW_FAMILIES_FILTER, category: 'Analysis Status:' },
 ]
 
+const CATEGORY_LOOKUP = {
+  'Analysis Status:': FAMILY_FIELD_ANALYSIS_STATUS,
+  'Analysed By:': FAMILY_FIELD_ANALYSED_BY,
+  'Data Status:': FAMILY_FIELD_FIRST_SAMPLE,
+}
+// TODO explicitly construct this as dict, remove option list
+export const CATEGORY_FAMILY_FILTERS = FAMILY_FILTER_OPTIONS.reduce((acc, opt) => {
+  const category = CATEGORY_LOOKUP[opt.category]
+  if (!acc[category]) {
+    acc[category] = []
+  }
+  acc[category].push(opt)
+  return acc
+}, {})
+
 export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,
   {
