@@ -35,14 +35,15 @@ UpdateLocusList.propTypes = {
 }
 
 const DEFAULT_LOCUS_LIST = { [LOCUS_LIST_IS_PUBLIC_FIELD_NAME]: false }
+const defaultedList = value => ({ ...(value || {}), ...DEFAULT_LOCUS_LIST })
 
-const CreateLocusList = React.memo(({ onSubmit }) => (
+const CreateLocusList = React.memo(({ value, onSubmit }) => (
   <UpdateButton
     modalTitle="Create a New Gene List"
     modalId="createLocusList"
     buttonText="Create New Gene List"
     editIconName="plus"
-    initialValues={DEFAULT_LOCUS_LIST}
+    initialValues={defaultedList(value)}
     onSubmit={onSubmit}
     formFields={FIELDS}
     showErrorPanel
@@ -51,6 +52,7 @@ const CreateLocusList = React.memo(({ onSubmit }) => (
 
 CreateLocusList.propTypes = {
   onSubmit: PropTypes.func,
+  value: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
 }
 
 const redirectGeneLists = history => () => history.push('/gene_lists')
