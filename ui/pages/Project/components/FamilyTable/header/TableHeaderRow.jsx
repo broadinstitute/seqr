@@ -28,6 +28,10 @@ const RegularFontHeaderCell = styled(Table.HeaderCell)`
 // Allows dropdowns to be visible inside table cell
 const OverflowHeaderCell = styled(Table.HeaderCell)`
   overflow: visible !important;
+  
+  td {
+     overflow: visible !important;
+  }
 `
 
 const SpacedDropdown = styled(Dropdown)`
@@ -79,9 +83,8 @@ const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
-const CATEGORY_FILTERS = Object.entries(CATEGORY_FAMILY_FILTERS).reduce(
-  (acc, [category, options]) => ({ ...acc, [category]: [{ ...BASE_FAMILY_FILTER, options }] }), {},
-)
+const CATEGORY_FILTERS = Object.entries(CATEGORY_FAMILY_FILTERS).reduce((acc, [category, options]) => (
+  { ...acc, [category]: [{ ...BASE_FAMILY_FILTER, label: FAMILY_FIELD_NAME_LOOKUP[category], options }] }), {})
 
 const mapStateToProps = (state, ownProps) => ({
   visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
@@ -113,13 +116,8 @@ const FamilyTableFilter = connect(mapStateToProps, mapDispatchToProps)(BaseFamil
 
 const familyFieldDisplay = tableName => (field) => {
   const { id } = field
-  return (
-    <span>
-      {FAMILY_FIELD_NAME_LOOKUP[id]}
-      {CATEGORY_FAMILY_FILTERS[id] &&
-        <FamilyTableFilter tableName={tableName} fields={CATEGORY_FILTERS[id]} />}
-    </span>
-  )
+  return CATEGORY_FAMILY_FILTERS[id] ? <FamilyTableFilter tableName={tableName} fields={CATEGORY_FILTERS[id]} /> :
+    FAMILY_FIELD_NAME_LOOKUP[id]
 }
 
 const TableHeaderRow = React.memo(({
@@ -156,7 +154,7 @@ const TableHeaderRow = React.memo(({
     </Table.Row>
     {fields && (
       <Table.Row>
-        <Table.HeaderCell colSpan={2} textAlign="left">
+        <OverflowHeaderCell colSpan={2} textAlign="left">
           <FamilyLayout
             compact
             offset
@@ -164,7 +162,7 @@ const TableHeaderRow = React.memo(({
             fieldDisplay={familyFieldDisplay(tableName)}
             rightContent={showVariantDetails ? 'Saved Variants' : null}
           />
-        </Table.HeaderCell>
+        </OverflowHeaderCell>
       </Table.Row>
     )}
   </Table.Header>
