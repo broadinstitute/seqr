@@ -14,7 +14,7 @@ class AirtableSession(object):
     ANVIL_BASE = 'AnVIL'
     AIRTABLE_BASES = {
         RDG_BASE: 'app3Y97xtbbaOopVR',
-        ANVIL_BASE: 'appbxG6n6sW5e2vY3',
+        ANVIL_BASE: 'appUelDNM3BnWaR7M',
     }
 
     def __init__(self, user, base=RDG_BASE):
