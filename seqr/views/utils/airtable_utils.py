@@ -11,18 +11,33 @@ logger = SeqrLogger(__name__)
 class AirtableSession(object):
 
     RDG_BASE = 'RDG'
+    ANVIL_BASE = 'AnVIL'
     AIRTABLE_BASES = {
-        RDG_BASE: 'app3Y97xtbbaOopVR'
+        RDG_BASE: 'app3Y97xtbbaOopVR',
+        ANVIL_BASE: 'appUelDNM3BnWaR7M',
     }
 
     def __init__(self, user, base=RDG_BASE):
-        if not (is_google_authenticated(user) and user.email.endswith('broadinstitute.org')):
-            raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
         self._user = user
+        self._check_user_access(base)
         self._url = f'{AIRTABLE_URL}/{self.AIRTABLE_BASES[base]}'
 
         self._session = requests.Session()
         self._session.headers.update({'Authorization': f'Bearer {AIRTABLE_API_KEY}'})
+
+    def _check_user_access(self, base):
+        has_access = is_google_authenticated(self._user)
+        if base != self.ANVIL_BASE:
+            has_access &= self._user.email.endswith('broadinstitute.org')
+        if not has_access:
+            raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
+
+    def safe_create_record(self, record_type, record):
+        try:
+            response = self._session.post(f'{self._url}/{record_type}', json={'records': [{'fields': record}]})
+            response.raise_for_status()
+        except Exception as e:
+            logger.error(f'Airtable create "{record_type}" error: {e}', self._user)
 
     def fetch_records(self, record_type, fields, or_filters):
         filter_formulas = []

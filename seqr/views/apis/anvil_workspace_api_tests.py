@@ -49,6 +49,8 @@ TEMP_PATH = '/temp_path/temp_filename'
 TEST_GUID=f'P_{TEST_NO_PROJECT_WORKSPACE_NAME}'
 MOCK_TOKEN = 'mock_openid_bearer' # nosec
 MOCK_AIRFLOW_URL = 'http://testairflowserver'
+MOCK_AIRTABLE_URL = 'http://testairtable'
+MOCK_AIRTABLE_KEY = 'mock_key' # nosec
 
 DAG_RUNS = {
     'dag_runs': [
@@ -176,9 +178,13 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
     @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @mock.patch('seqr.views.apis.anvil_workspace_api.id_token.fetch_id_token', lambda *args: MOCK_TOKEN)
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', MOCK_AIRTABLE_KEY)
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_URL', MOCK_AIRTABLE_URL)
     @mock.patch('seqr.views.apis.anvil_workspace_api.AIRFLOW_WEBSERVER_URL', MOCK_AIRFLOW_URL)
     @mock.patch('seqr.views.apis.anvil_workspace_api.BASE_URL', 'http://testserver/')
     @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', None)
+    @mock.patch('seqr.views.utils.airtable_utils.logger')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.datetime')
     @mock.patch('seqr.views.apis.anvil_workspace_api.time')
     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
@@ -194,8 +200,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     def test_create_project_from_workspace(self, mock_tempfile, mock_mv_file, mock_file_iter, mock_file_exist, mock_slack,
                                            mock_send_email, mock_add_service_account,
                                            mock_has_service_account, mock_load_file, mock_api_logger, mock_time,
-                                           mock_utils_logger):
+                                           mock_datetime, mock_airtable_logger, mock_utils_logger):
         # Set up api responses
+        airtable_tracking_url = f'{MOCK_AIRTABLE_URL}/appUelDNM3BnWaR7M/AnVIL%20Seqr%20Loading%20Requests%20Tracking'
+        responses.add(responses.POST, airtable_tracking_url, status=400)
         # check dag running state
         responses.add(responses.GET,
                       '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
@@ -307,6 +315,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_exist.return_value = True
         mock_file_iter.return_value = FILE_DATA
         mock_tempfile.return_value.__enter__.return_value.name = TEMP_PATH
+        mock_datetime.now.side_effect = lambda: datetime(2021, 3, 1, 0, 0, 0)
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_VCF_DATA_PATH))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -334,7 +343,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         )
 
         # Test triggering anvil dags
-        self.assertEqual(len(responses.calls), 5)
+        self.assertEqual(len(responses.calls), 6)
         # check dag running state
         self.assertEqual(responses.calls[0].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
         self.assertEqual(responses.calls[0].request.method, "GET")
@@ -364,6 +373,17 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(responses.calls[4].request.method, 'POST')
         self.assertDictEqual(json.loads(responses.calls[4].request.body), {})
         self.assertEqual(responses.calls[4].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
+
+        # create airtable record
+        self.assertDictEqual(json.loads(responses.calls[5].request.body), {'records': [{'fields': {
+            'Requester Name': 'Test Manager User',
+            'Requester Email': 'test_user_manager@test.com',
+            'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
+            'Initial Request Date': '2021-03-01',
+            'Number of Samples': 3,
+            'Status': 'Loading',
+        }}]})
+        self.assertEqual(responses.calls[5].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
 
         slack_message = """
         *test_user_manager@test.com* requested to load WES data (GRCh38) from AnVIL workspace *my-seqr-billing/anvil-no-project-workspace1* at 
@@ -411,6 +431,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             self.manager_user, detail=['HG00735', 'NA19675', 'NA19678'])
         mock_api_logger.warning.assert_called_with(
             'seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again.', self.manager_user)
+        mock_airtable_logger.error.assert_called_with(
+            f'Airtable create "AnVIL Seqr Loading Requests Tracking" error: 400 Client Error: Bad Request for url: {airtable_tracking_url}', self.manager_user)
 
         slack_message_on_failure = """
         ERROR triggering AnVIL loading for project {guid}: seqr_vcf_to_es_AnVIL_WES_v0.0.1 is running and cannot be triggered again. 
@@ -432,11 +454,21 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         )
         mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)
         mock_send_email.assert_not_called()
-        self.assertEqual(len(responses.calls), 1)
+        self.assertEqual(len(responses.calls), 2)
         self.assertEqual(responses.calls[0].request.url, '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL))
         self.assertEqual(responses.calls[0].request.method, "GET")
         self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer {}'.format(MOCK_TOKEN))
         self.assertEqual(responses.calls[0].response.json(), DAG_RUNS_RUNNING)
+
+        # Airtable record created with correct status
+        self.assertDictEqual(json.loads(responses.calls[1].request.body), {'records': [{'fields': {
+            'Requester Name': 'Test Manager User',
+            'Requester Email': 'test_user_manager@test.com',
+            'AnVIL Project URL': f'http://testserver/project/{project2.guid}/project_page',
+            'Initial Request Date': '2021-03-01',
+            'Number of Samples': 3,
+            'Status': 'Loading Requested',
+        }}]})
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
