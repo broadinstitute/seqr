@@ -288,6 +288,7 @@ export const getProjectVariantSavedByOptions = createSelector(
 )
 
 // Family table selectors
+export const getFamiliesTableFilters = state => state.familyTableFilterState
 export const getFamiliesTableState = createSelector(
   (state, ownProps) => state[`${toCamelcase((ownProps || {}).tableName) || 'family'}TableState`],
   tableState => tableState,

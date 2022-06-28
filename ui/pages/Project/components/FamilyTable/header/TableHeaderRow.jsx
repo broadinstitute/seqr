@@ -10,8 +10,10 @@ import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
 import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
 
-import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
-import { updateFamiliesTable } from '../../../reducers'
+import {
+  getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState, getFamiliesTableFilters,
+} from '../../../selectors'
+import { updateFamiliesTable, updateFamiliesTableFilters } from '../../../reducers'
 import {
   CATEGORY_FAMILY_FILTERS,
   CASE_REVIEW_FAMILY_FILTER_OPTIONS,
@@ -78,24 +80,20 @@ const FILTER_FIELDS = [FAMILY_SEARCH, ...SORT_FILTER_FIELDS]
 const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
-const NESTED_FILTER_FIELD_NAME = 'nestedFamiliesFilter'
 
-const mapFilterStateToProps = (state, ownProps) => ({
-  nestedFilterState: getFamiliesTableState(state, ownProps)[NESTED_FILTER_FIELD_NAME],
+const mapFilterStateToProps = state => ({
+  nestedFilterState: getFamiliesTableFilters(state),
 })
 
-const mapFilterDispatchToProps = (dispatch, ownProps) => ({
+const mapFilterDispatchToProps = dispatch => ({
   updateNestedFilter: category => (value) => {
-    console.log(category, value, ownProps.nestedFilterState)
-    dispatch(updateFamiliesTable({
-      [NESTED_FILTER_FIELD_NAME]: { ...(ownProps.nestedFilterState || {}), [category]: value },
-    }, ownProps.tableName))
+    dispatch(updateFamiliesTableFilters({ [category]: value }))
   },
 })
 
 const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category, options }) => (
   <Dropdown
-    name={`${NESTED_FILTER_FIELD_NAME}.${category}`}
+    name={category}
     value={(nestedFilterState || {})[category]}
     onChange={updateNestedFilter(category)}
     label={FAMILY_FIELD_NAME_LOOKUP[category]}
@@ -114,10 +112,10 @@ BaseFamilyTableFilter.propTypes = {
 
 const FamilyTableFilter = connect(mapFilterStateToProps, mapFilterDispatchToProps)(BaseFamilyTableFilter)
 
-const familyFieldDisplay = tableName => (field) => {
+const familyFieldDisplay = (field) => {
   const { id } = field
   return CATEGORY_FAMILY_FILTERS[id] ?
-    <FamilyTableFilter tableName={tableName} category={id} options={CATEGORY_FAMILY_FILTERS[id]} /> :
+    <FamilyTableFilter category={id} options={CATEGORY_FAMILY_FILTERS[id]} /> :
     FAMILY_FIELD_NAME_LOOKUP[id]
 }
 
@@ -160,7 +158,7 @@ const TableHeaderRow = React.memo(({
             compact
             offset
             fields={fields}
-            fieldDisplay={familyFieldDisplay(tableName)}
+            fieldDisplay={familyFieldDisplay}
             rightContent={showVariantDetails ? 'Saved Variants' : null}
           />
         </OverflowHeaderCell>
