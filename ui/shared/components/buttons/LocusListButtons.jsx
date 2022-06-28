@@ -34,8 +34,7 @@ UpdateLocusList.propTypes = {
   size: PropTypes.string,
 }
 
-const DEFAULT_LOCUS_LIST = { [LOCUS_LIST_IS_PUBLIC_FIELD_NAME]: false }
-const defaultedList = value => ({ ...(value || {}), ...DEFAULT_LOCUS_LIST })
+const defaultedList = value => ({ ...(value || {}), [LOCUS_LIST_IS_PUBLIC_FIELD_NAME]: false })
 
 const CreateLocusList = React.memo(({ value, onSubmit }) => (
   <UpdateButton
