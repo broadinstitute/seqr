@@ -1,5 +1,5 @@
 import React from 'react'
-import { Table } from 'semantic-ui-react'
+import { Table, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
@@ -91,32 +91,38 @@ const mapFilterDispatchToProps = dispatch => ({
   },
 })
 
-const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category, options }) => (
-  <Dropdown
-    name={category}
-    value={(nestedFilterState || {})[category]}
-    onChange={updateNestedFilter(category)}
-    label={FAMILY_FIELD_NAME_LOOKUP[category]}
-    options={options}
-    inline
-    multiple
-  />
-)
+const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
+  const value = (nestedFilterState || {})[category]
+  return (
+    <Dropdown
+      name={category}
+      value={value}
+      onChange={updateNestedFilter(category)}
+      options={CATEGORY_FAMILY_FILTERS[category]}
+      trigger={
+        <span>
+          <Icon name={(value && value.length) ? 'filter' : 'caret down'} size="small" />
+          {FAMILY_FIELD_NAME_LOOKUP[category]}
+        </span>
+      }
+      icon={null}
+      inline
+      multiple
+    />
+  )
+}
 
 BaseFamilyTableFilter.propTypes = {
   nestedFilterState: PropTypes.object,
   updateNestedFilter: PropTypes.func.isRequired,
   category: PropTypes.string,
-  options: PropTypes.arrayOf(PropTypes.object),
 }
 
 const FamilyTableFilter = connect(mapFilterStateToProps, mapFilterDispatchToProps)(BaseFamilyTableFilter)
 
 const familyFieldDisplay = (field) => {
   const { id } = field
-  return CATEGORY_FAMILY_FILTERS[id] ?
-    <FamilyTableFilter category={id} options={CATEGORY_FAMILY_FILTERS[id]} /> :
-    FAMILY_FIELD_NAME_LOOKUP[id]
+  return CATEGORY_FAMILY_FILTERS[id] ? <FamilyTableFilter category={id} /> : FAMILY_FIELD_NAME_LOOKUP[id]
 }
 
 const TableHeaderRow = React.memo(({
