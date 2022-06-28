@@ -41,6 +41,29 @@ const SpacedDropdown = styled(Dropdown)`
   padding-right: 5px;
 `
 
+const FilterMultiDropdown = styled(Dropdown).attrs({ inline: true, multiple: true, icon: null })`
+  .ui.multiple.dropdown {
+    .label {
+      display: none;
+      white-space: nowrap;
+    }
+    
+    &.active.visible {
+      border: 1px solid rgba(34,36,38,.15);
+      border-radius: 0.28571429rem;
+      background-color: white;
+      z-index: 10;
+    
+      .trigger {
+        display: none;
+      }
+      .label {
+        display: inherit;
+      }
+    }
+  }
+`
+
 const FAMILY_SEARCH = {
   name: 'familiesSearch',
   component: BaseSemanticInput,
@@ -81,33 +104,23 @@ const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
-const mapFilterStateToProps = state => ({
-  nestedFilterState: getFamiliesTableFilters(state),
-})
-
-const mapFilterDispatchToProps = dispatch => ({
-  updateNestedFilter: category => (value) => {
-    dispatch(updateFamiliesTableFilters({ [category]: value }))
-  },
-})
+const renderLabel = label => ({ color: 'blue', content: label.text })
 
 const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
   const value = (nestedFilterState || {})[category]
   return (
-    <Dropdown
+    <FilterMultiDropdown
       name={category}
       value={value}
       onChange={updateNestedFilter(category)}
       options={CATEGORY_FAMILY_FILTERS[category]}
       trigger={
-        <span>
+        <span className="trigger">
           <Icon name={(value && value.length) ? 'filter' : 'caret down'} size="small" />
           {FAMILY_FIELD_NAME_LOOKUP[category]}
         </span>
       }
-      icon={null}
-      inline
-      multiple
+      renderLabel={renderLabel}
     />
   )
 }
@@ -117,6 +130,16 @@ BaseFamilyTableFilter.propTypes = {
   updateNestedFilter: PropTypes.func.isRequired,
   category: PropTypes.string,
 }
+
+const mapFilterStateToProps = state => ({
+  nestedFilterState: getFamiliesTableFilters(state),
+})
+
+const mapFilterDispatchToProps = dispatch => ({
+  updateNestedFilter: category => (value) => {
+    dispatch(updateFamiliesTableFilters({ [category]: value }))
+  },
+})
 
 const FamilyTableFilter = connect(mapFilterStateToProps, mapFilterDispatchToProps)(BaseFamilyTableFilter)
 
