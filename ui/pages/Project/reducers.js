@@ -331,7 +331,6 @@ export const reducers = {
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
-    familiesFilter: SHOW_ALL,
     familiesSearch: '',
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,

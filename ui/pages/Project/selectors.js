@@ -293,7 +293,7 @@ export const getFamiliesTableState = createSelector(
   (state, ownProps) => state[`${toCamelcase((ownProps || {}).tableName) || 'family'}TableState`],
   tableState => tableState,
 )
-export const getFamiliesFilter = createSelector(
+const getFamiliesFilter = createSelector(
   getFamiliesTableState,
   familyTableState => familyTableState.familiesFilter || SHOW_ALL,
 )
