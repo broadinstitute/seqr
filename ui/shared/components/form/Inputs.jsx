@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
 
-import _ from 'lodash'
+import { semanticShouldUpdate, propsAreEqual, optionsAreEqual } from '../../utils/semanticUtils'
 import { helpLabel } from './FormHelpers'
 
 export class BaseSemanticInput extends React.Component {
@@ -17,24 +17,7 @@ export class BaseSemanticInput extends React.Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    const { options } = this.props
-    if (nextProps.options) {
-      if (nextProps.options.length !== (options || []).length) {
-        return true
-      }
-      if (Object.entries(nextProps.options)
-        .some(([i, opt]) => ['value', 'text', 'color', 'disabled', 'description']
-          .some(k => opt[k] !== options[i][k]))
-      ) {
-        return true
-      }
-    }
-    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(
-      k => nextProps[k] !== this.props[k], // eslint-disable-line react/destructuring-assignment
-    )) {
-      return true
-    }
-    return nextState !== this.state
+    return semanticShouldUpdate(this, nextProps, nextState)
   }
 
   handleChange = (e, data) => {
@@ -115,7 +98,7 @@ export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
     noResultsMessage={null}
     tabIndex="0"
   />
-), _.isEqual)
+), propsAreEqual)
 
 Dropdown.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
@@ -193,7 +176,7 @@ export class AddableSelect extends React.PureComponent {
 
   componentDidUpdate(prevProps) {
     const { options } = this.props
-    if (!_.isEqual(options, prevProps.options)) {
+    if (!optionsAreEqual(options, prevProps.options)) {
       this.resetOptions()
     }
   }
