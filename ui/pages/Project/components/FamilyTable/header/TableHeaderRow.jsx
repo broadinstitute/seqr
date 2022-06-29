@@ -107,7 +107,7 @@ const CASE_REVEIW_FILTER_FIELDS = [
 const renderLabel = label => ({ color: 'blue', content: label.text })
 
 const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
-  const value = (nestedFilterState || {})[category]
+  const value = (nestedFilterState || {})[category] || []
   return (
     <FilterMultiDropdown
       name={category}
@@ -116,7 +116,7 @@ const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category
       options={CATEGORY_FAMILY_FILTERS[category]}
       trigger={
         <span className="trigger">
-          <Icon name={(value && value.length) ? 'filter' : 'caret down'} size="small" />
+          <Icon name={value.length ? 'filter' : 'caret down'} size="small" />
           {FAMILY_FIELD_NAME_LOOKUP[category]}
         </span>
       }

@@ -237,6 +237,15 @@ export const CATEGORY_FAMILY_FILTERS = {
   ],
 }
 
+export const FAMILY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.forEach((opt) => {
+      acc[opt.value] = opt.createFilter
+    })
+    return acc
+  }, {},
+)
+
 export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,
   {
@@ -262,7 +271,7 @@ export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
 export const CASE_REVIEW_FILTER_LOOKUP = CASE_REVIEW_FAMILY_FILTER_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    [opt.value]: opt,
+    [opt.value]: opt.createFilter,
   }), {},
 )
 

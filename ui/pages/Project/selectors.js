@@ -25,6 +25,7 @@ import {
   SORT_BY_FAMILY_NAME,
   CASE_REVIEW_STATUS_OPTIONS,
   CASE_REVIEW_FILTER_LOOKUP,
+  FAMILY_FILTER_LOOKUP,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
   CASE_REVIEW_FAMILY_EXPORT_DATA,
@@ -335,20 +336,17 @@ const getFamiliesFilterFunc = createSelector(
   getFamiliesTableFilters,
   (isCaseReview, caseReviewFilter, familyTableFilters) => {
     if (isCaseReview) {
-      return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter]?.createFilter
+      return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter]
     }
 
-    const nonEmptyFilter = Object.entries(familyTableFilters || {}).filter(entry => entry[1] && entry[1].length)
-    if (!nonEmptyFilter.length) {
+    const filterGroups = Object.values(familyTableFilters || {}).map(
+      groupVals => (groupVals || []).map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val),
+    ).filter(groupVals => groupVals.length)
+    if (!filterGroups.length) {
       return null
     }
 
-    const familyFilter = (...args) => {
-      // TODO
-      return CASE_REVIEW_FILTER_LOOKUP[familyTableFilters]?.createFilter(args)
-    }
-    return null
-    // return familyFilter
+    return (...args) => family => filterGroups.every(filters => filters.some(filter => filter(...args)(family)))
   },
 )
 
