@@ -206,8 +206,6 @@ TableHeaderRow.propTypes = {
   showVariantDetails: PropTypes.bool,
 }
 
-export { TableHeaderRow as TableHeaderRowComponent }
-
 const mapStateToProps = (state, ownProps) => ({
   visibleFamiliesCount: getVisibleFamilies(state, ownProps).length,
   totalFamiliesCount: Object.keys(getProjectAnalysisGroupFamiliesByGuid(state, ownProps)).length,
@@ -219,5 +217,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     dispatch(updateFamiliesTable({ [field]: value }, ownProps.tableName))
   },
 })
+
+export { TableHeaderRow as TableHeaderRowComponent }
 
 export default connect(mapStateToProps, mapDispatchToProps)(TableHeaderRow)
