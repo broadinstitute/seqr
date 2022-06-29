@@ -2,23 +2,27 @@ import PropTypes from 'prop-types'
 import React from 'react'
 import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
+
+import { getLocusListsIsLoading } from 'redux/selectors'
 import { Dropdown } from 'shared/components/form/Inputs'
-import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
+import { LocusListsLoader, LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { PANEL_APP_CONFIDENCE_LEVELS } from 'shared/utils/constants'
-import { getSearchedProjectsLocusListOptions } from '../../selectors'
+import { getLocusListOptions } from '../../selectors'
 
 class BaseLocusListDropdown extends React.Component {
 
   static propTypes = {
     locusList: PropTypes.object,
-    projectLocusListOptions: PropTypes.arrayOf(PropTypes.object),
+    locusListOptions: PropTypes.arrayOf(PropTypes.object),
+    loading: PropTypes.bool,
     onChange: PropTypes.func,
   }
 
   shouldComponentUpdate(nextProps) {
-    const { locusList, projectLocusListOptions, onChange } = this.props
-    return nextProps.projectLocusListOptions !== projectLocusListOptions ||
+    const { locusList, locusListOptions, onChange, loading } = this.props
+    return nextProps.locusListOptions !== locusListOptions ||
       nextProps.onChange !== onChange ||
+      nextProps.loading !== loading ||
       nextProps.locusList.locusListGuid !== locusList.locusListGuid ||
       (!!locusList.locusListGuid && nextProps.locusList.rawItems !== locusList.rawItems)
   }
@@ -48,7 +52,7 @@ class BaseLocusListDropdown extends React.Component {
   }
 
   render() {
-    const { locusList, projectLocusListOptions } = this.props
+    const { locusList, locusListOptions, loading } = this.props
     const locusListGuid = locusList.locusListGuid || ''
     return (
       <div>
@@ -56,10 +60,13 @@ class BaseLocusListDropdown extends React.Component {
           inline
           selection
           search
+          includeCategories
           label="Gene List"
           value={locusListGuid}
+          loading={loading}
+          disabled={loading}
           onChange={this.onChange}
-          options={projectLocusListOptions}
+          options={locusListOptions}
         />
       </div>
     )
@@ -68,7 +75,8 @@ class BaseLocusListDropdown extends React.Component {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  projectLocusListOptions: getSearchedProjectsLocusListOptions(state, ownProps),
+  locusListOptions: getLocusListOptions(state, ownProps),
+  loading: getLocusListsIsLoading(state),
 })
 
 const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
@@ -76,9 +84,11 @@ const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
 const SUBSCRIPTION = { values: true }
 
 const LocusListSelector = React.memo(({ value, ...props }) => (
-  <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
-    <LocusListDropdown {...props} />
-  </LocusListItemsLoader>
+  <LocusListsLoader>
+    <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
+      <LocusListDropdown {...props} />
+    </LocusListItemsLoader>
+  </LocusListsLoader>
 ))
 
 LocusListSelector.propTypes = {

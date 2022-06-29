@@ -21,6 +21,7 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 
 @login_and_policies_required
 def locus_lists(request):
+    #  TODO for search should include all lists users have access to? may need separat endpoint ithout including genes
     locus_list_models = LocusList.objects.filter(
         Q(is_public=True) | Q(created_by=request.user)
     ).annotate(num_projects=Count('projects'))
