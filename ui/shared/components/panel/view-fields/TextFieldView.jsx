@@ -12,8 +12,15 @@ const ReactMarkdown = React.lazy(() => import('react-markdown'))
 const RichTextEditor = React.lazy(() => import('../../form/RichTextEditor'))
 
 const MarkdownContainer = styled.div`
-  display: ${props => (props.inline ? 'inline-block' : 'block')}; 
-  white-space: pre-wrap;
+  display: ${props => (props.inline ? 'inline-block' : 'block')};
+  
+  h4 + ul {
+    list-style-type: none;
+    
+    ul {
+      list-style-type: none;
+    }
+  }  
 `
 
 const LazyRichTextEditor = props => <React.Suspense fallback={<Loader />}><RichTextEditor {...props} /></React.Suspense>
