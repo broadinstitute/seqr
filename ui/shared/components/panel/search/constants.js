@@ -25,6 +25,7 @@ import {
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
+import PaMoiSelector from '../../../../pages/Search/components/filters/PaMoiSelector'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
@@ -386,13 +387,19 @@ export const LOCATION_FIELDS = [
     shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
   },
   {
+    name: 'MOI Selection',
+    label: 'MoiSelection',
+    component: PaMoiSelector,
+    shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
+  },
+  {
     name: 'excludeLocations',
     component: LocusListItemsFilter,
     filterComponent: BooleanCheckbox,
     label: 'Exclude locations',
     labelHelp: 'Search for variants not in the specified genes/ intervals',
     width: 6,
-    inline: false,
+    inline: true,
     shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
   },
 ]
