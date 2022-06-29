@@ -338,7 +338,6 @@ def _get_field_value(value, config):
 def search_context_handler(request):
     """Search variants.
     """
-    #  TODO don't return locus lists? Or not b/c shared page?
     response = _get_saved_searches(request.user)
     context = json.loads(request.body)
 

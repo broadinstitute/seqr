@@ -132,14 +132,14 @@ export const loadGenes = geneIds => (dispatch, getState) => {
 
 export const loadLocusLists = allProjectLists => (dispatch) => {
   dispatch({ type: REQUEST_GENE_LISTS })
-  new HttpRequestHelper('/api/locus_lists',
+  new HttpRequestHelper(`/api/${allProjectLists ? 'all_locus_list_options' : 'locus_lists'}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       dispatch({ type: RECEIVE_GENE_LISTS, updatesById: {} })
     },
     (e) => {
       dispatch({ type: RECEIVE_GENE_LISTS, error: e.message, updatesById: {} })
-    }).get(allProjectLists && { allProjectLists })
+    }).get()
 }
 
 export const loadLocusListItems = locusListId => (dispatch, getState) => {
