@@ -1167,8 +1167,8 @@ export const PREDICTOR_FIELDS = [
   { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
   { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
-  { field: 'mitoTIP', indicatorMap: MITOTIP_MAP },
-  { field: 'hmtVar', warningThreshold: 0.35, dangerThreshold: 0.35 },
+  { field: 'mitotip', indicatorMap: MITOTIP_MAP },
+  { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },
 ]
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {

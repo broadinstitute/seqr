@@ -85,6 +85,8 @@ POPULATIONS = {
         'filter_AF': [],
         'AC': 'AC',
         'AN': 'AN',
+        'AC_het': 'AC_het',
+        'AF_het': 'AF_het',
     },
     'topmed': {
         'filter_AF': [],
@@ -330,10 +332,10 @@ PREDICTION_FIELDS_CONFIG = {
     'StrVCTVRE_score': {'response_key': 'strvctvre'},
 }
 MITO_PREDICTION_FIELDS_CONFIG = {
-    'APOGEE_score': {'response_key': 'apogee'},
+    'mitimpact_apogee': {},
     'hap_defining_variant': {'response_key': 'haplogroup_defining', 'format_value': lambda k: 'Y' if k else None},
-    'mitotip_trna_prediction': {'response_key': 'mitoTIP'},
-    'HmtVar_score': {'response_key': 'hmtVar'},
+    'mitotip_mitoTIP': {},
+    'hmtvar_hmtVar': {},
 }
 PREDICTION_FIELDS_CONFIG.update(MITO_PREDICTION_FIELDS_CONFIG)
 

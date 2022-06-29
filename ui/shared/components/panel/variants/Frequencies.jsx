@@ -237,7 +237,7 @@ const Frequencies = React.memo(({ variant }) => {
             <div key={pop.field}>
               {populations[pop.field].ac_het && `${pop.fieldTitle} heteroplasmic AF: 
               ${populations[pop.field].af_het?.toPrecision(pop.precision || 2)}
-              ${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
+              AC_het=${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
             </div>
           ))}
           {hasMaxHlPops.map(pop => (
@@ -256,7 +256,7 @@ const Frequencies = React.memo(({ variant }) => {
           </Popup.Content>
         ))}
       </Popup>
-    ) : freqContent
+      ) : freqContent
   )
 })
 

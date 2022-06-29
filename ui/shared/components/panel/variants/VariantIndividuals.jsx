@@ -143,6 +143,13 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
+const mitoCopyNumber = cn => (
+  <div>
+    &nbsp;
+    { copyNumberGenotype(cn, false)}
+  </div>
+)
+
 export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
     {warning && (
@@ -152,11 +159,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
         content={
           <div>
             <b>Warning: </b>
-            {typeof warning === 'string' ? warning : warning.reduce((acc, message) => ([...acc,
-              <span key={message}>
-                {message}
-              </span>,
-            ]), [])}
+            {warning}
           </div>
         }
       />
@@ -170,12 +173,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /
         {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
-        {genotype.mitoCn && (
-          <div>
-            &nbsp;CN:&nbsp;
-            {genotype.mitoCn}
-          </div>
-        )}
+        {genotype.mitoCn && (mitoCopyNumber(genotype.mitoCn))}
       </Header.Content>
     )}
   </AlleleContainer>
@@ -205,7 +203,7 @@ const GENOTYPE_DETAILS = [
   { title: 'Quality Score', field: 'qs' },
   { title: 'Mitochondrial Copy Number', field: 'mitoCn', format: val => val && val.toFixed(0) },
   { title: 'Heteroplasmy Level', field: 'hl', format: val => val && val.toPrecision(2) },
-  { title: 'Contamination of the sample', field: 'contamination' },
+  { title: 'Contamination', field: 'contamination' },
 ]
 
 const SV_GENOTYPE_DETAILS = [
@@ -245,11 +243,6 @@ const genotypeDetails = (genotype, variant, genesById) => {
   ]
 }
 
-const addWarning = (warning, moreMessage) => {
-  const warnings = typeof warning === 'string' ? [warning] : warning
-  return (warnings ? [...warnings, moreMessage] : moreMessage)
-}
-
 const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) => {
   if (!variant.genotypes) {
     return null
@@ -266,31 +259,31 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const isHemiX = isHemiXVariant(variant, individual)
 
-  let warning
+  let warnings = []
   if (genotype.defragged) {
-    warning = 'Defragged'
+    warnings = ['Defragged']
   } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
-    warning = 'Potential UPD/ Hemizygosity'
+    warnings = ['Potential UPD/ Hemizygosity']
   } else if (isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
-    warning = 'Variant absent in parents'
+    warnings = ['Variant absent in parents']
   }
 
   if (hasCnCall) {
     const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
     if (cnWarning) {
-      warning = addWarning(warning, cnWarning)
+      warnings = warnings.concat(cnWarning)
     }
   }
 
   if (genotype.contamination) {
-    const contamWarning = `Contamination (${genotype.contamination}) > 0`
-    warning = addWarning(warning, contamWarning)
+    warnings = warnings.concat(`Contamination (${genotype.contamination}) > 0`)
   }
 
   if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
-    const lowHlWarning = 'Common low heteroplasmy'
-    warning = addWarning(warning, lowHlWarning)
+    warnings = warnings.concat('Common low heteroplasmy')
   }
+
+  const warning = warnings.join('. ')
 
   let previousCall
   if (genotype.newCall) {
@@ -303,6 +296,9 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
   const details = genotypeDetails(genotype, variant, genesById)
+
+  const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
+  const secondaryQuality = genotype.ab || genotype.hl
 
   const content = (
     <span>
@@ -331,9 +327,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
           trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
         />
       )}
-      {`${genotype.gq || genotype.qs || '-'}${
-        variant.svType ? '' : genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) :
-          `${genotype.hl ? genotype.hl.toPrecision(2) : '-'}`}`}`}
+      {genotype.gq || genotype.qs || '-'}
+      {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
       {variant.genotypeFilters && (
         <small>
           <br />

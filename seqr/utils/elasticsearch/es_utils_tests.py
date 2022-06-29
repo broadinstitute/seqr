@@ -512,11 +512,13 @@ ES_MITO_WGS_VARIANT = {
       "gnomad_mito_AF_het": 5.317169E-5,
       "gnomad_mito_max_hl": 1.0,
       "hap_defining_variant" : False,
+      "helix_AC": 1312,
+      "helix_AC_het": 5,
       "helix_AF": 0.0033268193,
       "helix_AF_het": 4.081987E-5,
       "helix_max_hl": 0.90441,
       "high_constraint_region" : True,
-      "HmtVar_score" : 0.71,
+      "hmtvar_hmtVar" : 0.71,
       "mainTranscript_biotype" : "protein_coding",
       "mainTranscript_canonical" : 1,
       "mainTranscript_category" : "missense",
@@ -536,7 +538,8 @@ ES_MITO_WGS_VARIANT = {
       "mainTranscript_polyphen_prediction" : "probably_damaging",
       "mainTranscript_protein_id" : "ENSP00000355206",
       "mainTranscript_sift_prediction" : "deleterious_low_confidence",
-      "APOGEE_score" : 0.42,
+      "mitimpact_apogee" : 0.42,
+      "mitomap_pathogenic" : True,
       "pos" : 10195,
       "ref" : "C",
       "rg37_locus" : {
@@ -843,6 +846,7 @@ MAPPING_FIELDS = [
     'xstop',
     'bothsides_support',
 ]
+
 SV_MAPPING_FIELDS = [
     'start',
     'end',
@@ -875,22 +879,101 @@ SV_MAPPING_FIELDS = [
     'gnomad_svs_ID',
     'bothsides_support',
 ]
-POPULATIONS = ['callset', 'exac', 'g1k', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_svs', 'sv_callset', 'topmed']
-MITO_POPULATIONS = ['gnomad_mito', 'helix']
-FREQUENCIES = ['AC', 'AF', 'AN', 'filter_AF', 'Hemi', 'Het', 'Hom', 'ID']
-MITO_FREQUENCIES = ['AC_het', 'AF_het', 'max_hl']
-MITO_CROSS_MAPPING_FIELDS = {f'{dataset}_{freq_type}' for dataset in POPULATIONS for freq_type in MITO_FREQUENCIES}
-MITO_MAPPING_FIELDS = {f'{dataset}_{freq_type}' for dataset in MITO_POPULATIONS for freq_type in FREQUENCIES + MITO_FREQUENCIES}
-MITO_MAPPING_FIELDS.update({'APOGEE_score', 'common_low_heteroplasmy', 'high_constraint_region', 'mitotip_trna_prediction',
-                      'mitomap_pathogenic', 'HmtVar_score', 'hap_defining_variant'})
+
+MITO_MAPPING_FIELDS = [
+    "AC",
+    "AC_het",
+    "AF",
+    "AF_het",
+    "AN",
+    "alt",
+    "clinvar_allele_id",
+    "clinvar_clinical_significance",
+    "clinvar_gold_stars",
+    "common_low_heteroplasmy",
+    "contig",
+    "dbnsfp_FATHMM_pred",
+    "dbnsfp_GERP_RS",
+    "dbnsfp_MetaSVM_pred",
+    "dbnsfp_MutationTaster_pred",
+    "dbnsfp_Polyphen2_HVAR_pred",
+    "dbnsfp_REVEL_score",
+    "dbnsfp_SIFT_pred",
+    "dbnsfp_phastCons100way_vertebrate",
+    "end",
+    "filters",
+    "genotypes",
+    "gnomad_mito_AC",
+    "gnomad_mito_AC_het",
+    "gnomad_mito_AF",
+    "gnomad_mito_AF_het",
+    "gnomad_mito_AN",
+    "gnomad_mito_max_hl",
+    "hap_defining_variant",
+    "helix_AC",
+    "helix_AC_het",
+    "helix_AF",
+    "helix_AF_het",
+    "helix_max_hl",
+    "high_constraint_region",
+    "hmtvar_hmtVar",
+    "mitimpact_apogee",
+    "mitomap_pathogenic",
+    "mitotip_mitoTIP",
+    "ref",
+    "rg37_locus",
+    "rsid",
+    "sortedTranscriptConsequences",
+    "start",
+    "variantId",
+    "xpos",
+    "xstop",
+]
+
+MITO_SOURCE_ONLY_FIELDS = [
+    'callset_max_hl',
+    'exac_AC_het',
+    'exac_AF_het',
+    'exac_max_hl',
+    'g1k_AC_het',
+    'g1k_AF_het',
+    'g1k_max_hl',
+    'gnomad_exomes_AC_het',
+    'gnomad_exomes_AF_het',
+    'gnomad_exomes_max_hl',
+    'gnomad_genomes_AC_het',
+    'gnomad_genomes_AF_het',
+    'gnomad_genomes_max_hl',
+    'gnomad_svs_AC_het',
+    'gnomad_svs_AF_het',
+    'gnomad_svs_max_hl',
+    'sv_callset_AC_het',
+    'sv_callset_AF_het',
+    'sv_callset_max_hl',
+    'topmed_AC_het',
+    'topmed_max_hl',
+    'topmed_AF_het',
+    'helix_ID',
+    'helix_Hemi',
+    'helix_AN',
+    'helix_filter_AF',
+    'helix_Het',
+    'helix_Hom',
+    'gnomad_mito_filter_AF',
+    'gnomad_mito_Hom',
+    'gnomad_mito_ID',
+    'gnomad_mito_Het',
+    'gnomad_mito_Hemi',
+]
+
 SOURCE_FIELDS = {
     'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
     'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
-SOURCE_FIELDS.update(MITO_CROSS_MAPPING_FIELDS)
 SOURCE_FIELDS.update(MITO_MAPPING_FIELDS)
+SOURCE_FIELDS.update(MITO_SOURCE_ONLY_FIELDS)
 SOURCE_FIELDS -= {
     'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het',
     'gnomad_genomes_FAF_AF',

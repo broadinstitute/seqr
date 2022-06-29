@@ -748,10 +748,9 @@ class EsSearch(object):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
         index_family_samples = self.samples_by_family_index[index_name]
-        is_sv = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_SV_CALLS
-        is_mito = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_MITO_CALLS
+        data_type = self._get_index_dataset_type(index_name)
 
-        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, is_sv, is_mito)
+        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, data_type)
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -765,7 +764,7 @@ class EsSearch(object):
         self._parse_xstop(result)
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if is_sv and genotypes:
+        if data_type == Sample.DATASET_TYPE_SV_CALLS and genotypes:
             self._set_sv_genotype_coords(genotypes, result)
 
         populations = {
@@ -781,7 +780,7 @@ class EsSearch(object):
 
         sorted_transcripts = [
             {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
-            for transcript in hit.get(SORTED_TRANSCRIPTS_FIELD_KEY, [])
+            for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
         ]
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
@@ -813,7 +812,8 @@ class EsSearch(object):
         })
         return result
 
-    def _parse_genotypes(self, raw_hit, hit, index_family_samples, is_sv, is_mito):
+    def _parse_genotypes(self, raw_hit, hit, index_family_samples, data_type):
+        is_sv = data_type == Sample.DATASET_TYPE_SV_CALLS
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
         elif self._return_all_queried_families:
@@ -838,7 +838,8 @@ class EsSearch(object):
                        for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
-        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else MITO_GENOTYPE_FIELDS_CONFIG if is_mito else GENOTYPE_FIELDS_CONFIG
+        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else MITO_GENOTYPE_FIELDS_CONFIG\
+            if data_type == Sample.DATASET_TYPE_MITO_CALLS else GENOTYPE_FIELDS_CONFIG
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
