@@ -2,12 +2,29 @@ import PropTypes from 'prop-types'
 import React from 'react'
 import { connect } from 'react-redux'
 import { FormSpy } from 'react-final-form'
+import { Form } from 'semantic-ui-react'
+import styled from 'styled-components'
 
 import { getLocusListsIsLoading } from 'redux/selectors'
 import { Dropdown } from 'shared/components/form/Inputs'
 import { LocusListsLoader, LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { PANEL_APP_CONFIDENCE_LEVELS } from 'shared/utils/constants'
 import { getLocusListOptions } from '../../selectors'
+
+const DropdownInput = styled(Dropdown).attrs({
+  inline: true,
+  selection: true,
+  search: true,
+  includeCategories: true,
+  clearable: true,
+  fluid: true,
+  labeled: true,
+  width: 16,
+})`
+  label {
+    white-space: nowrap;
+  }
+`
 
 class BaseLocusListDropdown extends React.Component {
 
@@ -55,13 +72,8 @@ class BaseLocusListDropdown extends React.Component {
     const { locusList, locusListOptions, loading } = this.props
     const locusListGuid = locusList.locusListGuid || ''
     return (
-      <div>
-        <Dropdown
-          inline
-          selection
-          search
-          includeCategories
-          clearable
+      <Form.Group inline>
+        <DropdownInput
           label="Gene List"
           value={locusListGuid}
           loading={loading}
@@ -69,7 +81,7 @@ class BaseLocusListDropdown extends React.Component {
           onChange={this.onChange}
           options={locusListOptions}
         />
-      </div>
+      </Form.Group>
     )
   }
 
