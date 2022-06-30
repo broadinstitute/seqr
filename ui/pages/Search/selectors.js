@@ -124,7 +124,7 @@ export const getLocusListOptions = createListEqualSelector(
       (acc, { projectGuid }) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
         [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))
-    const locusListOptions = Object.values(locusListsByGuid).map(({ locusListGuid, name, isPublic, paLocusList }) => {
+    return Object.values(locusListsByGuid).map(({ locusListGuid, name, isPublic, paLocusList }) => {
       let category = 'Private'
       let categoryRank = 2
       if (projectsLocusListGuids.has(locusListGuid)) {
@@ -143,7 +143,6 @@ export const getLocusListOptions = createListEqualSelector(
         categoryRank,
       }
     }).sort(compareObjects('text')).sort(compareObjects('categoryRank'))
-    return [{ value: null, description: 'None' }, ...locusListOptions]
   },
 )
 

@@ -61,6 +61,7 @@ class BaseLocusListDropdown extends React.Component {
           selection
           search
           includeCategories
+          clearable
           label="Gene List"
           value={locusListGuid}
           loading={loading}
