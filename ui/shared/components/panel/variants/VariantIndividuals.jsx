@@ -143,13 +143,6 @@ const svGenotype = (genotype, isHemiX) => {
   )
 }
 
-const mitoCopyNumber = cn => (
-  <div>
-    &nbsp;
-    { copyNumberGenotype(cn, false)}
-  </div>
-)
-
 export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
   <AlleleContainer>
     {warning && (
@@ -173,7 +166,12 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /
         {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
-        {genotype.mitoCn && (mitoCopyNumber(genotype.mitoCn))}
+        {genotype.mitoCn && (
+          <span>
+            <br />
+            {copyNumberGenotype(genotype.mitoCn, false)}
+          </span>
+        )}
       </Header.Content>
     )}
   </AlleleContainer>
@@ -259,28 +257,28 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const isHemiX = isHemiXVariant(variant, individual)
 
-  let warnings = []
+  const warnings = []
   if (genotype.defragged) {
-    warnings = ['Defragged']
+    warnings.push('Defragged')
   } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
-    warnings = ['Potential UPD/ Hemizygosity']
+    warnings.push('Potential UPD/ Hemizygosity')
   } else if (isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
-    warnings = ['Variant absent in parents']
+    warnings.push('Variant absent in parents')
   }
 
   if (hasCnCall) {
     const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
     if (cnWarning) {
-      warnings = warnings.concat(cnWarning)
+      warnings.push(cnWarning)
     }
   }
 
   if (genotype.contamination) {
-    warnings = warnings.concat(`Contamination (${genotype.contamination}) > 0`)
+    warnings.push(`Contamination (${genotype.contamination}) > 0`)
   }
 
   if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
-    warnings = warnings.concat('Common low heteroplasmy')
+    warnings.push('Common low heteroplasmy')
   }
 
   const warning = warnings.join('. ')

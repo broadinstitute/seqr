@@ -370,6 +370,12 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           />
         </span>
       )}
+      {variant.highConstraintRegion && (
+        <span>
+          <HorizontalSpacer width={12} />
+          <Label color="red" horizontal size="tiny">High Constraint Region</Label>
+        </span>
+      )}
       {mainTranscript.hgvsc && (
         <div>
           <b>HGVS.C</b>
@@ -419,12 +425,6 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
       ).map(e => <div key={e}>{e}</div>)]}
       <VerticalSpacer height={5} />
       <VariantLocusListLabels variant={variant} familyGuids={variant.familyGuids} />
-      {variant.highConstraintRegion && (
-        <span>
-          <HorizontalSpacer width={12} />
-          <Label color="red" horizontal size="tiny">High Constraint Region</Label>
-        </span>
-      )}
       <VerticalSpacer height={5} />
       <SearchLinks variant={variant} mainTranscript={mainTranscript} />
     </div>
