@@ -1,7 +1,9 @@
 import React from 'react'
 import { Form } from 'semantic-ui-react'
 import styled from 'styled-components'
-import { RadioGroup, BooleanCheckbox, Select } from 'shared/components/form/Inputs'
+
+import { CreateLocusListButton } from 'shared/components/buttons/LocusListButtons'
+import { RadioGroup, AlignedBooleanCheckbox, Select } from 'shared/components/form/Inputs'
 import { snakecaseToTitlecase, camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import {
   VEP_GROUP_NONSENSE,
@@ -401,13 +403,21 @@ export const LOCATION_FIELDS = [
     shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
   },
   {
+    name: 'create',
+    fullFieldValue: true,
+    component: LocusListItemsFilter,
+    control: CreateLocusListButton,
+    width: 4,
+    shouldShow: locus => !locus[PANEL_APP_FIELD_NAME],
+    shouldDisable: locus => !locus[LOCUS_LIST_ITEMS_FIELD.name],
+  },
+  {
     name: 'excludeLocations',
     component: LocusListItemsFilter,
-    filterComponent: BooleanCheckbox,
+    filterComponent: AlignedBooleanCheckbox,
     label: 'Exclude locations',
     labelHelp: 'Search for variants not in the specified genes/ intervals',
-    width: 6,
-    inline: false,
+    width: 10,
     shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
   },
 ]
