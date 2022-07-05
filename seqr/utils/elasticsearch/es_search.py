@@ -1271,7 +1271,7 @@ class EsSearch(object):
         return searches
 
     def _execute_search(self, search):
-        logger.info(json.dumps(search.to_dict(), indent=2), self._user)
+        logger.debug(json.dumps(search.to_dict(), indent=2), self._user)
         try:
             return search.using(self._client).execute()
         except elasticsearch.exceptions.ConnectionTimeout as e:

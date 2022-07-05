@@ -365,7 +365,9 @@ const MITO_FREQUENCIES = [
   },
 ]
 
-export const FREQUENCIES = [...SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...SV_FREQUENCIES]
+SNP_FREQUENCIES.push(...MITO_FREQUENCIES)
+
+export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
 export const LOCUS_FIELD_NAME = 'locus'
 export const PANEL_APP_FIELD_NAME = 'panelAppItems'
