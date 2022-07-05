@@ -331,7 +331,7 @@ const getFamiliesBySearchString = createSelector(
 )
 
 const getFamiliesFilterFunc = createSelector(
-  (state, ownProps) => (ownProps || {}).tableName === CASE_REVIEW_TABLE_NAME,
+  (state, ownProps) => ownProps?.tableName === CASE_REVIEW_TABLE_NAME,
   state => state.caseReviewTableState.familiesFilter,
   getFamiliesTableFilters,
   (isCaseReview, caseReviewFilter, familyTableFilters) => {
