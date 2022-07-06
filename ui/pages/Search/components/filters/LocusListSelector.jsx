@@ -97,7 +97,7 @@ const LocusListDropdown = connect(mapStateToProps)(BaseLocusListDropdown)
 const SUBSCRIPTION = { values: true }
 
 const LocusListSelector = React.memo(({ value, ...props }) => (
-  <LocusListsLoader allProjectLists>
+  <LocusListsLoader allProjectLists hideLoading>
     <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
       <LocusListDropdown {...props} />
     </LocusListItemsLoader>

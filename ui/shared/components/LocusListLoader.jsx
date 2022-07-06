@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { loadLocusLists, loadLocusListItems } from 'redux/rootReducer'
-import { getLocusListIsLoading, getLocusListsByGuid, getParsedLocusList } from 'redux/selectors'
+import { getLocusListIsLoading, getLocusListsIsLoading, getLocusListsByGuid, getParsedLocusList } from 'redux/selectors'
 import DataLoader from './DataLoader'
 
 const BaseLocusListsLoader = React.memo(({ locusListsByGuid, loading, load, allProjectLists, children }) => (
@@ -20,8 +20,8 @@ BaseLocusListsLoader.propTypes = {
   children: PropTypes.node,
 }
 
-const mapListsStateToProps = state => ({
-  loading: getLocusListIsLoading(state),
+const mapListsStateToProps = (state, ownProps) => ({
+  loading: !ownProps.hideLoading && getLocusListsIsLoading(state),
   locusListsByGuid: getLocusListsByGuid(state),
 })
 
