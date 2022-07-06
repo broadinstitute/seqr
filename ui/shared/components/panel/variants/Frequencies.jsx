@@ -186,6 +186,8 @@ const POPULATIONS = [
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
     precision: 3,
+    urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
   },
   {
     field: 'helix',
@@ -235,14 +237,13 @@ const Frequencies = React.memo(({ variant }) => {
         <Popup.Content>
           {hasAcHetPops.map(pop => (
             <div key={pop.field}>
-              {populations[pop.field].ac_het && `${pop.fieldTitle} heteroplasmic AF: 
-              ${populations[pop.field].af_het?.toPrecision(pop.precision || 2)}
+              {`${pop.fieldTitle} heteroplasmic AF: ${populations[pop.field].af_het?.toPrecision(pop.precision || 2)}
               AC_het=${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
             </div>
           ))}
           {hasMaxHlPops.map(pop => (
             <div key={pop.field}>
-              {populations[pop.field].max_hl && `${pop.fieldTitle} max observed heteroplasmy:
+              {`${pop.fieldTitle} max observed heteroplasmy:
               ${populations[pop.field].max_hl.toPrecision(pop.precision || 2)}`}
             </div>
           ))}
