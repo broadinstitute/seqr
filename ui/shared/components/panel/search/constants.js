@@ -350,23 +350,6 @@ const SV_FREQUENCIES = [
   },
 ]
 
-const MITO_FREQUENCIES = [
-  {
-    name: 'gnomad_mito',
-    label: 'gnomAD homoplasmic',
-    homHemi: false,
-    labelHelp: 'Filter by the gnomAD allele count (AC) and allele frequency (AF) restricted to variants with a heteroplasmy level >= 0.95',
-  },
-  {
-    name: 'helix',
-    label: 'Helix homoplasmic',
-    homHemi: false,
-    labelHelp: 'Filter by the Helix allele count (AC) and allele frequency (AF)',
-  },
-]
-
-SNP_FREQUENCIES.push(...MITO_FREQUENCIES)
-
 export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
 
 export const LOCUS_FIELD_NAME = 'locus'
@@ -487,14 +470,6 @@ export const SNP_QUALITY_FILTER_FIELDS = [
     name: 'min_ab',
     label: 'Allele Balance',
     labelHelp: 'The allele balance represents the percentage of reads that support the alt allele out of the total number of sequencing reads overlapping a variant. Use this filter to set a minimum percentage for the allele balance in heterozygous individuals.',
-    min: 0,
-    max: 50,
-    step: 5,
-  },
-  {
-    name: 'min_hl',
-    label: 'Heteroplasmy level',
-    labelHelp: 'Heteroplasmy level (HL) is the percentage of the alt alleles out of all alleles.',
     min: 0,
     max: 50,
     step: 5,
