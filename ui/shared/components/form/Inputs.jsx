@@ -3,7 +3,9 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, List, Button, Pagination as PaginationComponent, Search } from 'semantic-ui-react'
+import {
+  Form, List, Button, Pagination as PaginationComponent, Search, Dropdown as DropdownComponent, Header,
+} from 'semantic-ui-react'
 
 import { helpLabel } from './FormHelpers'
 
@@ -76,6 +78,12 @@ IntegerInput.propTypes = {
   max: PropTypes.number,
 }
 
+const DisabledItem = styled(DropdownComponent.Item).attrs({ disabled: true })`
+  &:hover {
+    background: inherit !important;
+  }
+`
+
 const labelStyle = color => (color ? { color: 'white', backgroundColor: color } : {})
 
 const styledOption = option => ({
@@ -94,12 +102,16 @@ const processOptions = (options, includeCategories) => {
     if (includeCategories && option.category !== currCategory) {
       currCategory = option.category
       if (option.category) {
-        acc.push({ text: option.category, disabled: true })
+        acc.push({
+          as: DisabledItem,
+          key: option.category,
+          content: <Header content={option.category} size="tiny" dividing />,
+        })
       }
     }
-    acc.push(option)
+    acc.push(styledOption(option))
     return acc
-  }, []).map(styledOption)
+  }, [])
 }
 
 export const Dropdown = React.memo(({ options, includeCategories, ...props }) => (
@@ -448,6 +460,8 @@ BooleanCheckbox.propTypes = {
   value: PropTypes.any, // eslint-disable-line react/forbid-prop-types
   onChange: PropTypes.func,
 }
+
+export const AlignedBooleanCheckbox = AlignedCheckboxGroup.withComponent(BooleanCheckbox)
 
 const BaseInlineToggle = styled(({ divided, fullHeight, asFormInput, padded, ...props }) => <BooleanCheckbox {...props} toggle inline />)`
   ${props => (props.asFormInput ?

@@ -74,7 +74,7 @@ const mapSectionStateToProps = state => ({
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
 const NO_DETAIL_FIELDS = [
-  { id: FAMILY_FIELD_ANALYSIS_STATUS },
+  { id: FAMILY_FIELD_ANALYSIS_STATUS, colWidth: 2 },
   { id: FAMILY_FIELD_ANALYSED_BY, colWidth: 2 },
   { id: FAMILY_FIELD_FIRST_SAMPLE },
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },

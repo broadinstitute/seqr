@@ -479,9 +479,7 @@ def _get_testing(row):
         return 'None'
     elif DSMConstants.NOT_SURE_TEST in tests:
         return 'Not sure'
-    return 'Yes;\n{tab}{tab}{tests}'.format(tab=DSMConstants.TAB, tests='\n{0}{0}'.format(DSMConstants.TAB).join([
-        _test_summary(row, test) for test in tests.split(',')
-    ]))
+    return '\n* * '.join(['Yes;'] + [_test_summary(row, test) for test in tests.split(',')])
 
 def _parent_summary(row, parent):
     parent_values = {
@@ -525,11 +523,8 @@ def _relative_list_summary(row, relative, all_affected=False):
     if relative_list is None:
         return 'None'
 
-    divider = '\n{tab}{tab}'.format(tab=DSMConstants.TAB)
-    return '{divider}{relatives}'.format(
-        divider=divider,
-        relatives=divider.join([_relative_summary(rel, relative, all_affected) for rel in relative_list]),
-    )
+    divider = '\n* * '
+    return divider + divider.join([_relative_summary(rel, relative, all_affected) for rel in relative_list])
 
 def _get_rgp_dsm_relative_list(row, relative):
     if row[DSMConstants.NO_RELATIVES_COLUMNS[relative]] == DSMConstants.YES:
@@ -556,29 +551,28 @@ def _get_rgp_dsm_family_notes(row):
     DC = DSMConstants
 
     return """#### Clinical Information
-{tab} __Patient is my:__ {specified_relationship}{relationship}
-{tab} __Current Age:__ {age}
-{tab} __Age of Onset:__ {age_of_onset}
-{tab} __Race/Ethnicity:__ {race}; {ethnicity}
-{tab} __Case Description:__ {description}
-{tab} __Clinical Diagnoses:__ {clinical_diagnoses}
-{tab} __Genetic Diagnoses:__ {genetic_diagnoses}
-{tab} __Website/Blog:__ {website}
-{tab} __Additional Information:__ {info}
+* __Patient is my:__ {specified_relationship}{relationship}
+* __Current Age:__ {age}
+* __Age of Onset:__ {age_of_onset}
+* __Race/Ethnicity:__ {race}; {ethnicity}
+* __Case Description:__ {description}
+* __Clinical Diagnoses:__ {clinical_diagnoses}
+* __Genetic Diagnoses:__ {genetic_diagnoses}
+* __Website/Blog:__ {website}
+* __Additional Information:__ {info}
 #### Prior Testing
-{tab} __Referring Physician:__ {physician}
-{tab} __Doctors Seen:__ {doctors}{other_doctors}
-{tab} __Previous Testing:__ {testing}
-{tab} __Biopsies Available:__ {biopses}{other_biopses}
-{tab} __Other Research Studies:__ {studies}
+* __Referring Physician:__ {physician}
+* __Doctors Seen:__ {doctors}{other_doctors}
+* __Previous Testing:__ {testing}
+* __Biopsies Available:__ {biopses}{other_biopses}
+* __Other Research Studies:__ {studies}
 #### Family Information
-{tab} __Mother:__ {mother}
-{tab} __Father:__ {father}
-{tab} __Siblings:__ {siblings}
-{tab} __Children:__ {children}
-{tab} __Relatives:__ {relatives}
+* __Mother:__ {mother}
+* __Father:__ {father}
+* __Siblings:__ {siblings}
+* __Children:__ {children}
+* __Relatives:__ {relatives}
     """.format(
-        tab=DC.TAB,
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
             if row[DC.RELATIONSHIP_COLUMN] == DC.OTHER else '',
         relationship=DC.RELATIONSHIP_MAP[row[DC.RELATIONSHIP_COLUMN]][row[DC.SEX_COLUMN] or DC.PREFER_NOT_ANSWER],
@@ -757,8 +751,6 @@ class MergedPedigreeSampleManifestConstants:
 
 
 class DSMConstants:
-    TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
-
     YES = 'YES'
     NO = 'NO'
     UNSURE = 'UNSURE'

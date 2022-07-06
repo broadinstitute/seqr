@@ -24,7 +24,7 @@ class PaLocusList(models.Model):
     class Meta:
         """Fields included in JSON in API calls."""
 
-        json_fields = ['panel_app_id']
+        json_fields = ['url', 'panel_app_id']
 
 
 class PaLocusListGene(models.Model):

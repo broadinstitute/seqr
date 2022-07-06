@@ -117,7 +117,7 @@ ES_VARIANTS = [
           'mpc_MPC': None,
           'AF': 0.063,
           'alt': 'T',
-          'clinvar_clinical_significance': None,
+          'clinvar_clinical_significance': 'Pathogenic/Likely_pathogenic',
           'rsid': None,
           'dbnsfp_DANN_score': None,
           'AN': 32,
@@ -551,6 +551,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'liftedOverGenomeVersion': '37',
         'liftedOverPos': variant['pos'] - 10,
         'liftedOverChrom': variant['chrom'],
+        'selectedMainTranscriptId': None,
     })
 
 PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
@@ -560,13 +561,17 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION:
         'liftedOverGenomeVersion': '37',
         'liftedOverPos': variant['pos'] - 10,
         'liftedOverChrom': variant['chrom'],
+        'selectedMainTranscriptId': None,
     })
 
-PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_NO_CONSEQUENCE_FILTER_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1]['selectedMainTranscriptId'] = None
+
+PARSED_NO_SORT_VARIANTS = deepcopy(PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
 for var in PARSED_NO_SORT_VARIANTS:
     del var['_sort']
 
-PARSED_CADD_VARIANTS = deepcopy(PARSED_VARIANTS)
+PARSED_CADD_VARIANTS = deepcopy(PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
 PARSED_CADD_VARIANTS[0]['_sort'][0] = -25.9
 PARSED_CADD_VARIANTS[1]['_sort'][0] = maxsize
 
@@ -1743,7 +1748,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
-        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_VARIANTS)
+        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
                 'Pathogenic', 'Pathogenic/Likely_pathogenic'
@@ -1791,9 +1796,10 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'qualityFilter': {'min_gq': 10},
-            'annotations': {'frameshift': ['frameshift_variant']},
+            'annotations': {'frameshift': ['frameshift_variant'], 'splice_ai': '0.5'},
             'inheritance': {'mode': 'compound_het'},
-            'annotations_secondary': {'frameshift': ['frameshift_variant'], 'other': ['intron']},
+            'annotations_secondary': {'other': ['intron']},
+            'pathogenicity': {'clinvar': ['pathogenic'], 'hgmd': ['disease_causing']},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1808,7 +1814,12 @@ class EsUtilsTest(TestCase):
             'total_results': 1,
         })
 
-        annotation_query = {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}}
+        annotation_query = {'bool': {'should': [
+            {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}},
+            {'terms': {'hgmd_class': ['DM']}},
+            {'range': {'splice_ai_delta_score': {'gte': 0.5}}},
+            {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}},
+        ]}}
 
         self.assertExecutedSearch(
             filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
@@ -1823,12 +1834,8 @@ class EsUtilsTest(TestCase):
 
         # variants require both primary and secondary annotations
         setup_responses()
-        search_model.search = {
-            'qualityFilter': {'min_gq': 10},
-            'annotations': {'frameshift': ['frameshift_variant']},
-            'inheritance': {'mode': 'compound_het'},
-            'annotations_secondary': {'other': ['intron']},
-        }
+        del search_model.search['pathogenicity']
+        del search_model.search['annotations']['splice_ai']
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
 
@@ -2563,15 +2570,18 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
-            'locus': {'rawItems': 'ENSG00000223972'},
+            'locus': {'rawItems': 'ENSG00000228198'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        variants, total_results = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        expected_transcript_variant = deepcopy(PARSED_VARIANTS[0])
+        expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
+        self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_GENOME_VERSION_VARIANT])
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
-            filters=[{'terms': {'geneIds': ['ENSG00000223972']}}, ANNOTATION_QUERY],
+            filters=[{'terms': {'geneIds': ['ENSG00000228198']}}, ANNOTATION_QUERY],
             size=4,
         )
 
@@ -2580,10 +2590,11 @@ class EsUtilsTest(TestCase):
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
         get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    {'terms': {'geneIds': ['ENSG00000228198']}},
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [
@@ -2595,7 +2606,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=SECOND_INDEX_NAME),
             dict(
                 filters=[
-                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    {'terms': {'geneIds': ['ENSG00000228198']}},
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [

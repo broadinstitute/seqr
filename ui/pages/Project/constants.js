@@ -43,6 +43,7 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_NOTES_FIELDS,
+  SNP_DATA_TYPE,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -159,89 +160,91 @@ const ASSIGNED_TO_ME_FILTER = {
   createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
 
-export const FAMILY_FILTER_OPTIONS = [
-  ALL_FAMILIES_FILTER,
-  {
-    value: SHOW_DATA_LOADED,
-    category: 'Data Status:',
-    name: 'Data Loaded',
-    createFilter: (individualsByGuid, user, samplesByFamily) => family => (
-      (samplesByFamily[family.familyGuid] || []).filter(sample => sample.isActive).length > 0),
-  },
-  {
-    value: SHOW_PHENOTYPES_ENTERED,
-    category: 'Data Status:',
-    name: 'Phenotypes Entered',
-    createFilter: individualsByGuid => family => familyHasFeatures(family, individualsByGuid),
-  },
-  {
-    value: SHOW_NO_PHENOTYPES_ENTERED,
-    category: 'Data Status:',
-    name: 'No Phenotypes Entered',
-    createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
-  },
-  { ...ASSIGNED_TO_ME_FILTER, category: 'Analysed By:' },
-  {
-    value: SHOW_ANALYSED_BY_ME,
-    category: 'Analysed By:',
-    name: 'Analysed By Me',
-    createFilter: (individualsByGuid, user) => family => family.analysedBy.some(
-      analysedBy => analysedBy.createdBy === (user.displayName || user.email),
-    ),
-  },
-  {
-    value: SHOW_NOT_ANALYSED_BY_ME,
-    category: 'Analysed By:',
-    name: 'Not Analysed By Me',
-    createFilter: (individualsByGuid, user) => family => family.analysedBy.every(
-      analysedBy => analysedBy.createdBy !== (user.displayName || user.email),
-    ),
-  },
-  {
-    value: SHOW_ANALYSED,
-    category: 'Analysed By:',
-    name: 'Analysed',
-    createFilter: () => family => family.analysedBy.length > 0,
-  },
-  {
-    value: SHOW_NOT_ANALYSED,
-    category: 'Analysed By:',
-    name: 'Not Analysed',
-    createFilter: () => family => family.analysedBy.length < 1,
-  },
-  {
-    value: SHOW_SOLVED,
-    category: 'Analysis Status:',
-    name: 'Solved',
-    createFilter: () => family => SOLVED_STATUSES.has(family.analysisStatus),
-  },
-  {
-    value: SHOW_STRONG_CANDIDATE,
-    category: 'Analysis Status:',
-    name: 'Strong Candidate',
-    createFilter: () => family => STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
-  },
-  {
-    value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
-    category: 'Analysis Status:',
-    name: 'No Clear Candidate',
-    createFilter: () => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
-  },
-  {
-    value: SHOW_CLOSED,
-    category: 'Analysis Status:',
-    name: 'Closed',
-    createFilter: () => family => family.analysisStatus === FAMILY_STATUS_CLOSED,
-  },
-  {
-    value: SHOW_ANALYSIS_IN_PROGRESS,
-    category: 'Analysis Status:',
-    name: 'Analysis In Progress',
-    createFilter: () => family => ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
-  },
-  { ...ACCEPTED_FILTER, category: 'Analysis Status:' },
-  { ...IN_REVIEW_FAMILIES_FILTER, category: 'Analysis Status:' },
-]
+export const CATEGORY_FAMILY_FILTERS = {
+  [FAMILY_FIELD_ANALYSIS_STATUS]: [
+    {
+      value: SHOW_SOLVED,
+      name: 'Solved',
+      createFilter: () => family => SOLVED_STATUSES.has(family.analysisStatus),
+    },
+    {
+      value: SHOW_STRONG_CANDIDATE,
+      name: 'Strong Candidate',
+      createFilter: () => family => STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
+    },
+    {
+      value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
+      name: 'No Clear Candidate',
+      createFilter: () => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
+    },
+    {
+      value: SHOW_CLOSED,
+      name: 'Closed',
+      createFilter: () => family => family.analysisStatus === FAMILY_STATUS_CLOSED,
+    },
+    {
+      value: SHOW_ANALYSIS_IN_PROGRESS,
+      name: 'Analysis In Progress',
+      createFilter: () => family => ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
+    },
+    ACCEPTED_FILTER,
+    IN_REVIEW_FAMILIES_FILTER,
+  ],
+  [FAMILY_FIELD_ANALYSED_BY]: [
+    ASSIGNED_TO_ME_FILTER,
+    {
+      value: SHOW_ANALYSED_BY_ME,
+      name: 'Analysed By Me',
+      createFilter: (individualsByGuid, user) => family => family.analysedBy.some(
+        analysedBy => analysedBy.createdBy === (user.displayName || user.email),
+      ),
+    },
+    {
+      value: SHOW_NOT_ANALYSED_BY_ME,
+      name: 'Not Analysed By Me',
+      createFilter: (individualsByGuid, user) => family => family.analysedBy.every(
+        analysedBy => analysedBy.createdBy !== (user.displayName || user.email),
+      ),
+    },
+    {
+      value: SHOW_ANALYSED,
+      name: 'Analysed',
+      createFilter: () => family => family.analysedBy.length > 0,
+    },
+    {
+      value: SHOW_NOT_ANALYSED,
+      name: 'Not Analysed',
+      createFilter: () => family => family.analysedBy.length < 1,
+    },
+  ],
+  [FAMILY_FIELD_FIRST_SAMPLE]: [
+    {
+      value: SHOW_DATA_LOADED,
+      name: 'Data Loaded',
+      createFilter: (individualsByGuid, user, samplesByFamily) => family => (
+        (samplesByFamily[family.familyGuid] || []).filter(sample => sample.isActive).length > 0),
+    },
+    {
+      value: SHOW_PHENOTYPES_ENTERED,
+      name: 'Phenotypes Entered',
+      createFilter: individualsByGuid => family => familyHasFeatures(family, individualsByGuid),
+    },
+    {
+      value: SHOW_NO_PHENOTYPES_ENTERED,
+      name: 'No Phenotypes Entered',
+      createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
+    },
+  ],
+}
+
+export const FAMILY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.forEach((opt) => {
+      acc[opt.value] = opt.createFilter
+    })
+    return acc
+  }, {},
+)
 
 export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,
@@ -265,10 +268,10 @@ export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   })),
 ]
 
-export const FAMILY_FILTER_LOOKUP = [...FAMILY_FILTER_OPTIONS, ...CASE_REVIEW_FAMILY_FILTER_OPTIONS].reduce(
+export const CASE_REVIEW_FILTER_LOOKUP = CASE_REVIEW_FAMILY_FILTER_OPTIONS.reduce(
   (acc, opt) => ({
     ...acc,
-    [opt.value]: opt,
+    [opt.value]: opt.createFilter,
   }), {},
 )
 
@@ -319,9 +322,9 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_ANALYSED_DATE,
     name: 'Date Last Analysed',
-    createSortKeyGetter: () => family => family.analysedBy.map(
+    createSortKeyGetter: () => family => family.analysedBy.filter(({ dataType }) => dataType === SNP_DATA_TYPE).map(
       ({ lastModifiedDate }) => lastModifiedDate,
-    ).sort()[family.analysedBy.length - 1] || '3000-01-01T01:00:00.000Z',
+    ).sort().reverse()[0] || '2000-01-01T01:00:00.000Z',
   },
   {
     value: SORT_BY_REVIEW_STATUS_CHANGED_DATE,

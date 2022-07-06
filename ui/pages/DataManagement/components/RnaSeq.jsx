@@ -1,7 +1,8 @@
 import { connect } from 'react-redux'
 
-import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
-import { BooleanCheckbox } from 'shared/components/form/Inputs'
+import { validators } from 'shared/components/form/FormHelpers'
+import FileUploadField from 'shared/components/form/XHRUploaderField'
+import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
 import UploadFormPage from 'shared/components/page/UploadFormPage'
 
 import { getRnaSeqUploadStats } from '../selectors'
@@ -11,20 +12,26 @@ const mapStateToProps = state => ({
   fields: [
     {
       name: 'file',
-      component: FileUploadField,
-      dropzoneLabel: 'Drag-drop or click here to upload RNA-Seq Outlier Data',
-      validate: validateUploadedFile,
-      url: '/api/data_management/upload_rna_seq',
+      label: 'RNA-seq data',
+      placeholder: 'gs:// Google bucket path',
+      validate: validators.required,
     },
     {
-      name: 'mappingFile',
-      component: FileUploadField,
-      dropzoneLabel: 'Drag-drop or click here to upload an optional file that maps Sample Ids (column 1) to their corresponding Seqr Individual Ids (column 2)',
+      name: 'dataType',
+      label: 'Data Type',
+      component: Select,
+      options: ['Outlier', 'TPM'].map(text => ({ text, value: text.toLowerCase() })),
+      validate: validators.required,
     },
     {
       name: 'ignoreExtraSamples',
       component: BooleanCheckbox,
       label: 'Ignore extra samples',
+    },
+    {
+      name: 'mappingFile',
+      component: FileUploadField,
+      dropzoneLabel: 'Drag-drop or click here to upload an optional file that maps Sample Ids (column 1) to their corresponding Seqr Individual Ids (column 2)',
     },
   ],
   uploadStats: getRnaSeqUploadStats(state),

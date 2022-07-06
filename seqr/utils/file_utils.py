@@ -1,3 +1,4 @@
+import gzip
 import os
 import subprocess # nosec
 
@@ -54,7 +55,8 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None):
             yield line
     else:
         mode = 'rb' if raw_content else 'r'
-        with open(file_path, mode) as f:
+        open_func = gzip.open if file_path.endswith("gz") else open
+        with open_func(file_path, mode) as f:
             for line in f:
                 yield line
 

@@ -493,6 +493,7 @@ LOCUS_LIST_FIELDS = {
     'locusListGuid', 'description', 'lastModifiedDate', 'numEntries', 'isPublic', 'createdBy', 'createdDate', 'canEdit',
     'name',
 }
+PA_LOCUS_LIST_FIELDS = {'paLocusList'}
 LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 LOCUS_LIST_DETAIL_FIELDS.update(LOCUS_LIST_FIELDS)
 
@@ -741,7 +742,7 @@ PARSED_VARIANTS = [
         'alt': 'T',
         'chrom': '1',
         'bothsidesSupport': None,
-        'clinvar': {'clinicalSignificance': None, 'alleleId': None, 'variationId': None, 'goldStars': None},
+        'clinvar': {'clinicalSignificance': 'Pathogenic/Likely_pathogenic', 'alleleId': None, 'variationId': None, 'goldStars': None},
         'familyGuids': ['F000003_3'],
         'cpxIntervals': None,
         'algorithms': None,
@@ -758,6 +759,7 @@ PARSED_VARIANTS = [
         'liftedOverGenomeVersion': None,
         'liftedOverPos': None,
         'mainTranscriptId': TRANSCRIPT_3['transcriptId'],
+        'selectedMainTranscriptId': None,
         'originalAltAlleles': ['T'],
         'populations': {
             'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
@@ -822,6 +824,7 @@ PARSED_VARIANTS = [
         'liftedOverChrom': None,
         'liftedOverPos': None,
         'mainTranscriptId': TRANSCRIPT_1['transcriptId'],
+        'selectedMainTranscriptId': TRANSCRIPT_2['transcriptId'],
         'originalAltAlleles': ['G'],
         'populations': {
             'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
@@ -888,6 +891,7 @@ PARSED_SV_VARIANT = {
     'liftedOverGenomeVersion': None,
     'liftedOverPos': None,
     'mainTranscriptId': None,
+    'selectedMainTranscriptId': None,
     'originalAltAlleles': [],
     'populations': {
         'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},
@@ -952,6 +956,7 @@ PARSED_SV_WGS_VARIANT = {
     'liftedOverGenomeVersion': None,
     'liftedOverPos': None,
     'mainTranscriptId': None,
+    'selectedMainTranscriptId': None,
     'originalAltAlleles': [],
     'populations': {
         'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None},

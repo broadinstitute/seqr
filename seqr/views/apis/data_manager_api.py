@@ -18,12 +18,12 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq, load_mapping_file_content
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, RnaSeqOutlier
+from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -333,93 +333,63 @@ EXCLUDE_PROJECTS = [
     'kl_temp_manton_orphan-diseases_cmg-samples_exomes_v1', 'Interview Exomes', 'v02_loading_test_project',
 ]
 
-@data_manager_required
-def receive_rna_seq_table(request):
-    if len(request.FILES) != 1:
-        return create_json_response({'errors': [f'Received {len(request.FILES)} files instead of 1']}, status=400)
 
-    stream = next(iter(request.FILES.values()))
-    filename = stream._name
-    if not filename.endswith('.tsv.gz'):
-        return create_json_response({'errors': [f'Invalid file extension for {filename}: expected ".tsv.gz"']}, status=400)
-
-    # save gzipped data to temporary file
-    uploaded_file_id = f'tmp_-_{datetime.now().isoformat()}_-_{request.user}_-_{filename}'
-    serialized_file_path = _get_upload_file_path(uploaded_file_id)
-    with open(serialized_file_path, 'wb') as f:
-        f.write(stream.read())
-
-    return create_json_response({
-        'uploadedFileId': uploaded_file_id,
-        'info': [f'Loaded gzipped file {filename}'],
-    })
-
-RNA_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
+RNA_DATA_TYPE_CONFIGS = {
+    'outlier': {'load_func': load_rna_seq_outlier, 'model_class': RnaSeqOutlier},
+    'tpm': {'load_func': load_rna_seq_tpm, 'model_class': RnaSeqTpm},
+}
 
 @data_manager_required
-def update_rna_seq(request, upload_file_id):
-    file_path = _get_upload_file_path(upload_file_id)
-
+def update_rna_seq(request):
     request_json = json.loads(request.body)
+
+    data_type = request_json['dataType']
+    file_path = request_json['file']
+    if not does_file_exist(file_path, user=request.user):
+        return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
+
     mapping_file = None
     uploaded_mapping_file_id = request_json.get('mappingFile', {}).get('uploadedFileId')
     if uploaded_mapping_file_id:
         mapping_file = load_uploaded_file(uploaded_mapping_file_id)
 
     try:
-        samples_to_load, info, warnings = load_rna_seq_outlier(
+        load_func = RNA_DATA_TYPE_CONFIGS[data_type]['load_func']
+        samples_to_load, info, warnings = load_func(
             file_path, user=request.user, mapping_file=mapping_file, ignore_extra_samples=request_json.get('ignoreExtraSamples'))
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
-    os.remove(file_path)
-
     # Save sample data for loading
-    for sample, sample_data in samples_to_load.items():
-        with gzip.open(_get_sample_data_file_path(sample.guid), 'wt') as f:
-            json.dump(sample_data, f)
+    file_name = f'rna_sample_data__{data_type}__{datetime.now().isoformat()}.json.gz'
+    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'wt') as f:
+        for sample, sample_data in samples_to_load.items():
+            f.write(f'{sample.guid}\t\t{json.dumps(sample_data)}\n')
 
     return create_json_response({
         'info': info,
         'warnings': warnings,
+        'fileName': file_name,
         'sampleGuids': [s.guid for s in samples_to_load.keys()],
     })
 
-def _parse_outlier_row(row):
-    yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_COLUMNS.items()}
-
-def _validate_outlier_header(header):
-    missing_cols = ', '.join([col for col in ['sampleID'] + list(RNA_COLUMNS.keys()) if col not in header])
-    if missing_cols:
-        raise ValueError(f'Invalid file: missing column(s) {missing_cols}')
-
-def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    sample_id_to_individual_id_mapping = None
-    if mapping_file:
-        sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
-    return load_rna_seq(RnaSeqOutlier, file_path, user, sample_id_to_individual_id_mapping, ignore_extra_samples, _parse_outlier_row, _validate_outlier_header)
-
-def _get_upload_file_path(uploaded_file_id):
-    upload_directory = get_temp_upload_directory()
-    return os.path.join(upload_directory, uploaded_file_id)
-
-def _get_sample_data_file_path(sample_guid):
-    upload_directory = get_temp_upload_directory()
-    return os.path.join(upload_directory, 'rna_sample_data', f'{sample_guid}.json.gz')
 
 @data_manager_required
 def load_rna_seq_sample_data(request, sample_guid):
     sample = Sample.objects.get(guid=sample_guid)
     logger.info(f'Loading outlier data for {sample.sample_id}', request.user)
 
-    sample_file = _get_sample_data_file_path(sample_guid)
-    with gzip.open(sample_file, 'rt') as f:
-        data_by_gene = json.load(f)
-    os.remove(sample_file)
+    request_json = json.loads(request.body)
+    file_name = request_json['fileName']
+    data_type = request_json['dataType']
+    with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'rt') as f:
+        row = next(line for line in f if line.split('\t\t')[0] == sample_guid)
+        data_by_gene = json.loads(row.split('\t\t')[1])
 
-    models = RnaSeqOutlier.objects.bulk_create([RnaSeqOutlier(sample=sample, **data) for data in data_by_gene.values()])
-    logger.info(f'create {len(models)} RnaSeqOutliers', request.user, db_update={
-        'dbEntity': 'RnaSeqOutlier', 'numEntities': len(models), 'parentEntityIds': [sample_guid], 'updateType': 'bulk_create',
+    model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
+    models = model_cls.objects.bulk_create([model_cls(sample=sample, **data) for data in data_by_gene.values()])
+    logger.info(f'create {len(models)} {model_cls.__name__}', request.user, db_update={
+        'dbEntity': model_cls.__name__, 'numEntities': len(models), 'parentEntityIds': [sample_guid], 'updateType': 'bulk_create',
     })
 
     return create_json_response({'success': True})

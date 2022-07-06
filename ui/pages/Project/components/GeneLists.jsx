@@ -19,6 +19,12 @@ import { updateLocusLists } from '../reducers'
 const ItemContainer = styled.div`
   padding: 2px 0px;
   white-space: nowrap;
+  
+  button:first-child {
+    max-width: calc(100% - 40px);
+    text-align: left;
+    white-space: normal !important;
+  }
 `
 
 const LocusListItem = React.memo(({ project, locusList, onSubmit }) => (
