@@ -93,23 +93,20 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const postWorkspaceValues = (path, formatVals, onSuccess) => ({ namespace, name, ...values }) => new HttpRequestHelper(
-  `/api/create_project_from_workspace/${namespace}/${name}/${path}`,
-  onSuccess,
-).post(formatVals ? formatVals(values) : values)
+const postWorkspaceValues = (path, formatVals) => onSuccess => ({ namespace, name, ...values }) => (
+  new HttpRequestHelper(`/api/create_project_from_workspace/${namespace}/${name}/${path}`, onSuccess).post(
+    formatVals ? formatVals(values) : values,
+  ))
 
 const createProjectFromWorkspace = postWorkspaceValues(
-  'submit',
-  ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }),
-  (responseJson) => {
-    window.location.href = `/project/${responseJson.projectGuid}/project_page`
-  },
-)
+  'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }),
+)((responseJson) => {
+  window.location.href = `/project/${responseJson.projectGuid}/project_page`
+})
 
 const FORM_WIZARD_PAGES = [
   { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') },
   { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD], onPageSubmit: postWorkspaceValues('validate_vcf') },
-  // TODO need a way to get the response data from validate_vcf into the form data
   { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
 

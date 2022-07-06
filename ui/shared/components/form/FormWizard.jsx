@@ -10,7 +10,7 @@ class FormWizard extends React.PureComponent {
     pages: PropTypes.arrayOf(PropTypes.object),
   }
 
-  state = { pageIndex: 0 }
+  state = { pageIndex: 0, asyncValues: {} }
 
   navigateNext = () => {
     this.setState(prevState => ({
@@ -18,7 +18,17 @@ class FormWizard extends React.PureComponent {
     }))
   }
 
+  onPageSubmitSucceeded = values => this.setState(prevState => ({
+    asyncValues: { ...prevState.asyncValues, ...(values || {}) },
+  }))
+
   resolvedPageSubmit = () => Promise.resolve()
+
+  onFormSubmit = (values) => {
+    const { onSubmit } = this.props
+    const { asyncValues } = this.state
+    onSubmit({ ...asyncValues, ...values })
+  }
 
   render() {
     const { pages, onSubmit, ...props } = this.props
@@ -26,8 +36,8 @@ class FormWizard extends React.PureComponent {
 
     const { fields, onPageSubmit } = pages[pageIndex]
 
-    const formProps = pageIndex === pages.length - 1 ? { onSubmit } : {
-      onSubmit: onPageSubmit || this.resolvedPageSubmit,
+    const formProps = pageIndex === pages.length - 1 ? { onSubmit: this.onFormSubmit } : {
+      onSubmit: onPageSubmit(this.onPageSubmitSucceeded) || this.resolvedPageSubmit,
       onSubmitSucceeded: this.navigateNext,
       submitButtonText: 'Next',
       submitButtonIcon: 'angle double right',
