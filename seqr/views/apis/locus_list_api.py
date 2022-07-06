@@ -36,7 +36,6 @@ def locus_lists(request):
 
 @login_and_policies_required
 def all_locus_list_options(request):
-    #  TODO unit test
     locus_list_models = LocusList.objects.filter(
         _get_user_list_filter(request.user) | Q(projects__guid__in=get_project_guids_user_can_view(request.user))
     )
