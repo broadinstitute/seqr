@@ -27,7 +27,7 @@ class FormWizard extends React.PureComponent {
   onFormSubmit = (values) => {
     const { onSubmit } = this.props
     const { asyncValues } = this.state
-    onSubmit({ ...asyncValues, ...values })
+    return onSubmit({ ...asyncValues, ...values })
   }
 
   render() {
