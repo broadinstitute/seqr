@@ -60,7 +60,7 @@ body {
 .ui.accordion .title .dropdown.icon.clear::before {
   /*  Clearable icon does not display if dropdown is in an accordion */
   content: '\f00d';
-  font-family: Lato, Icons;
+  font-family: Icons, fantasy;
   font-size: 0.9rem;
 }
 
