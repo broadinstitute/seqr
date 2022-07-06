@@ -117,7 +117,6 @@ def anvil_has_perm(user, permission_level, project):
 
 def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
     kwargs = {'meta_fields': meta_fields } if meta_fields else {}
-    return {'workspace': {'bucketName': 'seqr-datasets'}} # TODO testing code, remove
     workspace_permission = user_get_workspace_access_level(user, namespace, name, **kwargs)
     if not workspace_permission:
         return False
