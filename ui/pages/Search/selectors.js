@@ -129,7 +129,7 @@ export const getLocusListOptions = createListEqualSelector(
       value: locusListGuid,
       key: locusListGuid,
       description: paLocusList && 'PanelApp',
-      icon: !isPublic && { name: 'lock', size: 'small' },
+      icon: { name: isPublic ? 'users' : 'lock', size: 'small' },
       category: `${projectsLocusListGuids.has(locusListGuid) ? 'Project' : 'All'} Lists`,
       categoryRank: projectsLocusListGuids.has(locusListGuid) ? 0 : 1,
     })).sort(compareObjects('text')).sort(compareObjects('categoryRank'))
