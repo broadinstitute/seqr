@@ -808,7 +808,6 @@ class EsSearch(object):
         return result
 
     def _parse_genotypes(self, raw_hit, hit, index_family_samples, data_type):
-        is_sv = data_type == Sample.DATASET_TYPE_SV_CALLS
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
         elif self._return_all_queried_families:
@@ -833,7 +832,7 @@ class EsSearch(object):
                        for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
-        genotype_fields_config = genotype_fields_config = GENOTYPE_FIELDS[data_type]
+        genotype_fields_config = GENOTYPE_FIELDS[data_type]
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
@@ -842,7 +841,7 @@ class EsSearch(object):
                     genotype_hit['sample_type'] = sample.sample_type
                     genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
 
-            if len(samples_by_id) != len(genotypes) and is_sv:
+            if len(samples_by_id) != len(genotypes) and data_type == Sample.DATASET_TYPE_SV_CALLS:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
