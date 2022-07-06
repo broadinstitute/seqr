@@ -69,11 +69,16 @@ def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_RE
     return decorator
 
 
-def anvil_workspace_access_required(wrapped_func=None, meta_fields=None):
+def anvil_workspace_no_project_access_required(wrapped_func=None, meta_fields=None):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, namespace, name, *args, **kwargs):
+            # Validate that the current user has logged in through google and has sufficient permissions
             workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=meta_fields)
+            projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
+            if projects:
+                error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
+                return create_json_response({'error': error}, status=400, reason=error)
             if meta_fields:
                 return view_func(request, namespace, name, workspace_meta, *args, **kwargs)
             return view_func(request, namespace, name, *args, **kwargs)
@@ -107,15 +112,8 @@ def anvil_workspace_page(request, namespace, name):
 
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
-@anvil_workspace_access_required
+@anvil_workspace_no_project_access_required
 def grant_workspace_access(request, namespace, name):
-    # Validate that the current user has logged in through google and has sufficient permissions
-    check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
-    projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
-    if projects:
-        error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
-        return create_json_response({'error': error}, status=400, reason=error)
-
     request_json = json.loads(request.body)
     if not request_json.get('agreeSeqrAccess'):
         error = 'Must agree to grant seqr access to the data in the associated workspace.'
@@ -128,7 +126,7 @@ def grant_workspace_access(request, namespace, name):
 
     return create_json_response({'success': True})
 
-@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
+@anvil_workspace_no_project_access_required(meta_fields=['workspace.bucketName'])
 def validate_anvil_vcf(request, namespace, name, workspace_meta):
     path = json.loads(request.body).get('dataPath')
     if not path:
@@ -142,7 +140,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
         return create_json_response({'error': error}, status=400, reason=error)
     if not does_file_exist(data_path, user=request.user):
-        error = 'Data file or path {} is not found.'.format(data_path)
+        error = 'Data file or path {} is not found.'.format(path)
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the VCF to see if it contains all the required samples
@@ -151,9 +149,9 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         return create_json_response(
             {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
 
-    return create_json_response({'vcfSamples': samples, 'fullDataPath': data_path})
+    return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 
-@anvil_workspace_access_required
+@anvil_workspace_no_project_access_required
 def create_project_from_workspace(request, namespace, name):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
