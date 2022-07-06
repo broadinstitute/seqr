@@ -121,7 +121,7 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
-const copyNumberGenotype = (cn, isHemiX, newline) => (isCalled(cn) && (
+const copyNumberGenotype = (cn, newline, isHemiX) => (isCalled(cn) && (
   <span>
     {newline && <br />}
     CN: &nbsp;
@@ -131,13 +131,13 @@ const copyNumberGenotype = (cn, isHemiX, newline) => (isCalled(cn) && (
 
 const svGenotype = (genotype, isHemiX) => {
   if (!isCalled(genotype.numAlt)) {
-    return copyNumberGenotype(genotype.cn, isHemiX, false)
+    return copyNumberGenotype(genotype.cn, false, isHemiX)
   }
   return (
     <span>
       {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
       {isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}/{genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
-      {copyNumberGenotype(genotype.cn, isHemiX, true)}
+      {copyNumberGenotype(genotype.cn, true, isHemiX)}
     </span>
   )
 }
@@ -165,7 +165,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /
         {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
-        {genotype.mitoCn && (copyNumberGenotype(genotype.mitoCn, false, true))}
+        {genotype.mitoCn && (copyNumberGenotype(genotype.mitoCn, true))}
       </Header.Content>
     )}
   </AlleleContainer>
