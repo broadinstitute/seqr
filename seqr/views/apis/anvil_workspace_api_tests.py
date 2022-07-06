@@ -22,6 +22,8 @@ LOAD_SAMPLE_DATA = [
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
 
+LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19679", "", "", "", "Male", "Affected", "", ""]]
+
 FILE_DATA = [
     '##fileformat=VCFv4.2\n',
     '#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	NA19675	NA19678	HG00735\n',
@@ -381,6 +383,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], ['NA19679 is the mother of NA19674 but doesn\'t have a separate record in the table'])
+
+        # Test missing samples
+        mock_load_file.return_value = LOAD_SAMPLE_DATA_EXTRA_SAMPLE
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertEqual(response_json['error'],
+                         'The following samples are included in the pedigree file but are missing from the VCF: NA19679')
 
         # Test valid operation
         responses.calls.reset()
