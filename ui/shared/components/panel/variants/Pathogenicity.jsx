@@ -99,11 +99,10 @@ const Pathogenicity = React.memo(({ variant, showHgmd }) => {
     }])
   }
 
-  return pathogenicity.map(([title, linkProps]) => (
+  return pathogenicity.map(([title, linkProps], index) => (
     <span key={title}>
-      <HorizontalSpacer width={5} />
-      {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-      <b>{title}:</b>
+      {index && <HorizontalSpacer width={5} />}
+      <b>{`${title}:`}</b>
       <HorizontalSpacer width={5} />
       <PathogenicityLink {...linkProps} />
     </span>
