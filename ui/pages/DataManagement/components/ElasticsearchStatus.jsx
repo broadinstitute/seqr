@@ -35,7 +35,11 @@ const INDEX_COLUMNS = [
       </div>
     )) : <DeleteIndexButton index={row.index} />),
   },
-  { name: 'datasetType', content: 'Caller Type', format: row => (row.datasetType === 'SV' ? 'SV' : 'SNV') },
+  {
+    name: 'datasetType',
+    content: 'Caller Type',
+    format: row => (row.datasetType === 'SV' || row.datasetType === 'MITO' ? row.datasetType : 'SNV'),
+  },
   { name: 'sampleType', content: 'Data Type' },
   { name: 'genomeVersion', content: 'Genome Version' },
   { name: 'creationDateString', content: 'Created Date', format: row => row.creationDateString.split('T')[0] },

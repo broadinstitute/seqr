@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../Spacers'
-import { DATASET_TYPE_SV_CALLS } from '../../utils/constants'
+import { DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from '../../utils/constants'
 
 const Detail = styled.span`
   font-size: 11px;
@@ -23,6 +23,7 @@ const Sample = React.memo(({ loadedSample, isOutdated, hoverDetails }) => (
         <Icon size="small" name="circle" color={iconColor(loadedSample, isOutdated)} />
         {loadedSample && <b>{loadedSample.sampleType}</b>}
         {loadedSample && loadedSample.datasetType === DATASET_TYPE_SV_CALLS && ' - SV'}
+        {loadedSample && loadedSample.datasetType === DATASET_TYPE_MITO_CALLS && ' - MITO'}
         {
           !hoverDetails && (loadedSample ? (
             <Detail>
