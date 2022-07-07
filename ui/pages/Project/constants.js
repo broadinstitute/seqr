@@ -27,6 +27,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_ANALYSED_BY_TYPE,
   FAMILY_FIELD_NAME_LOOKUP,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
@@ -44,6 +45,7 @@ import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_NOTES_FIELDS,
   SNP_DATA_TYPE,
+  FAMILY_ANALYSED_BY_DATA_TYPES,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -217,6 +219,11 @@ export const CATEGORY_FAMILY_FILTERS = {
       createFilter: () => family => family.analysedBy.length < 1,
     },
   ],
+  [FAMILY_FIELD_ANALYSED_BY_TYPE]: FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => ({
+    value: type,
+    name: typeDisplay,
+    createFilter: () => family => family.analysedBy.some(({ dataType }) => dataType === type),
+  })),
   [FAMILY_FIELD_FIRST_SAMPLE]: [
     {
       value: SHOW_DATA_LOADED,
