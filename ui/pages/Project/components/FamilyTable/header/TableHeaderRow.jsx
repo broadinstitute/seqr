@@ -8,7 +8,7 @@ import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import StateChangeForm from 'shared/components/form/StateChangeForm'
 import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
-import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
+import { FAMILY_FIELD_NAME_LOOKUP, FAMILY_FIELD_ANALYSED_BY } from 'shared/utils/constants'
 
 import {
   getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState, getFamiliesTableFilters,
@@ -104,16 +104,44 @@ const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
+const GROUPED_CATEGORIES = {
+  [FAMILY_FIELD_ANALYSED_BY]: [FAMILY_FIELD_ANALYSED_BY],
+}
+
+const GROUPED_CATEGORY_OPTIONS = Object.entries(GROUPED_CATEGORIES).reduce(
+  (acc, [category, subCategories]) => ({
+    ...acc,
+    [category]: subCategories.reduce((subAcc, c) => ([
+      ...subAcc,
+      ...CATEGORY_FAMILY_FILTERS[c].map(opt => ({ ...opt, category: FAMILY_FIELD_NAME_LOOKUP[c] })),
+    ]), []),
+  }), {},
+)
+
+const REVERSE_CATEGORY_LOOKUP = Object.entries(FAMILY_FIELD_NAME_LOOKUP).reduce(
+  (acc, [k, v]) => ({ ...acc, [v]: k }), {},
+)
+
+const GROUPED_CATEGORY_OPTION_LOOKUP = Object.values(GROUPED_CATEGORY_OPTIONS).reduce(
+  (acc, options) => ({
+    ...acc,
+    ...options.reduce((subAcc, { value, category }) => ({ ...subAcc, [value]: REVERSE_CATEGORY_LOOKUP[category] }), {}),
+  }), {},
+)
+
 const renderLabel = label => ({ color: 'blue', content: label.text })
 
 const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
-  const value = (nestedFilterState || {})[category] || []
+  const categories = GROUPED_CATEGORIES[category]
+  const nestedFilters = nestedFilterState || {}
+  const value = categories ? categories.reduce((acc, c) => [...acc, ...(nestedFilters[c] || [])], []) :
+    nestedFilters[category] || []
   return (
     <FilterMultiDropdown
       name={category}
       value={value}
       onChange={updateNestedFilter(category)}
-      options={CATEGORY_FAMILY_FILTERS[category]}
+      options={GROUPED_CATEGORY_OPTIONS[category] || CATEGORY_FAMILY_FILTERS[category]}
       trigger={
         <span className="trigger">
           <Icon name={value.length ? 'filter' : 'caret down'} size="small" />
@@ -121,6 +149,7 @@ const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category
         </span>
       }
       renderLabel={renderLabel}
+      includeCategories
     />
   )
 }
@@ -137,7 +166,15 @@ const mapFilterStateToProps = state => ({
 
 const mapFilterDispatchToProps = dispatch => ({
   updateNestedFilter: category => (value) => {
-    dispatch(updateFamiliesTableFilters({ [category]: value }))
+    const filterValue = GROUPED_CATEGORIES[category] ? value.reduce((acc, v) => {
+      const subCategory = GROUPED_CATEGORY_OPTION_LOOKUP[v]
+      if (!acc[subCategory]) {
+        acc[subCategory] = []
+      }
+      acc[subCategory].push(v)
+      return acc
+    }, {}) : { [category]: value }
+    dispatch(updateFamiliesTableFilters(filterValue))
   },
 })
 
