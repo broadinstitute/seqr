@@ -166,14 +166,13 @@ const mapFilterStateToProps = state => ({
 
 const mapFilterDispatchToProps = dispatch => ({
   updateNestedFilter: category => (value) => {
-    const filterValue = GROUPED_CATEGORIES[category] ? value.reduce((acc, v) => {
-      const subCategory = GROUPED_CATEGORY_OPTION_LOOKUP[v]
-      if (!acc[subCategory]) {
-        acc[subCategory] = []
-      }
-      acc[subCategory].push(v)
-      return acc
-    }, {}) : { [category]: value }
+    let filterValue = { [category]: value }
+    if (GROUPED_CATEGORIES[category]) {
+      filterValue = GROUPED_CATEGORIES[category].reduce((acc, c) => ({ ...acc, [c]: [] }), {})
+      value.forEach((v) => {
+        filterValue[GROUPED_CATEGORY_OPTION_LOOKUP[v]].push(v)
+      })
+    }
     dispatch(updateFamiliesTableFilters(filterValue))
   },
 })
