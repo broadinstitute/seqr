@@ -6,5 +6,5 @@ import LoadWorkspaceDataForm from './LoadWorkspaceDataForm'
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
-  shallow(<LoadWorkspaceDataForm namespace="test_namespace" name="test_name" />)
+  shallow(<LoadWorkspaceDataForm params={{ namespace: 'test_namespace', name: 'test_name' }} />)
 })
