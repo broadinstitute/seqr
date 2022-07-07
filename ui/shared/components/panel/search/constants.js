@@ -333,9 +333,18 @@ export const SNP_FREQUENCIES = [
   },
 ]
 
+export const MITO_FREQUENCIES = [
+  {
+    name: 'gnomad_mito',
+    label: 'gnomAD homoplasmic',
+    homHemi: false,
+    labelHelp: 'Filter by the gnomAD allele count (AC) and allele frequency (AF) restricted to variants with a heteroplasmy level >= 0.95',
+  },
+]
+
 export const SV_CALLSET_CRITERIA_MESSAGE = 'Only an SV that is estimated to be the same SV (type and breakpoints) among jointly genotyped samples will be counted as an allele. CNVs called on exomes have unknown breakpoints so similar overlapping CNVs may be counted as an allele.'
 export const GNOMAD_SV_CRITERIA_MESSAGE = 'The following criteria need to be met for an SV in gnomAD to be counted as an allele: Has the same SV type (deletion, duplication, etc) and either has sufficient reciprocal overlap (SVs >5Kb need 50%, SVs < 5Kb need 10%) or has insertion breakpoints within 100bp'
-const SV_FREQUENCIES = [
+export const SV_FREQUENCIES = [
   {
     name: 'gnomad_svs',
     label: 'gnomAD genome SVs',
@@ -350,24 +359,7 @@ const SV_FREQUENCIES = [
   },
 ]
 
-const MITO_FREQUENCIES = [
-  {
-    name: 'gnomad_mito',
-    label: 'gnomAD homoplasmic',
-    homHemi: false,
-    labelHelp: 'Filter by the gnomAD allele count (AC) and allele frequency (AF) restricted to variants with a heteroplasmy level >= 0.95',
-  },
-  {
-    name: 'helix',
-    label: 'Helix homoplasmic',
-    homHemi: false,
-    labelHelp: 'Filter by the Helix allele count (AC) and allele frequency (AF)',
-  },
-]
-
-SNP_FREQUENCIES.push(...MITO_FREQUENCIES)
-
-export const FREQUENCIES = [...SNP_FREQUENCIES, ...SV_FREQUENCIES]
+export const FREQUENCIES = [...SNP_FREQUENCIES, ...MITO_FREQUENCIES, ...SV_FREQUENCIES]
 
 export const LOCUS_FIELD_NAME = 'locus'
 export const PANEL_APP_FIELD_NAME = 'panelAppItems'
@@ -491,6 +483,9 @@ export const SNP_QUALITY_FILTER_FIELDS = [
     max: 50,
     step: 5,
   },
+]
+
+export const MITO_QUALITY_FILTER_FIELDS = [
   {
     name: 'min_hl',
     label: 'Heteroplasmy level',
