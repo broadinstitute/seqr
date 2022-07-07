@@ -38,7 +38,7 @@ const INDEX_COLUMNS = [
   {
     name: 'datasetType',
     content: 'Caller Type',
-    format: row => (row.datasetType === 'SV' || row.datasetType === 'MITO' ? row.datasetType : 'SNV'),
+    format: row => (row.datasetType === 'SNV' ? 'SNV' : row.datasetType),
   },
   { name: 'sampleType', content: 'Data Type' },
   { name: 'genomeVersion', content: 'Genome Version' },
