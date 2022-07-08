@@ -51,6 +51,7 @@ class LocusListAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
+        self.assertSetEqual(set(response.json().keys()), {'locusListsByGuid'})
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
 
