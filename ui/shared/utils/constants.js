@@ -219,6 +219,7 @@ export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 export const FAMILY_FIELD_ANALYSIS_GROUPS = 'analysisGroups'
 export const FAMILY_FIELD_ANALYSED_BY_TYPE = 'analysedByType'
+export const FAMILY_FIELD_ANALYSED_BY_DATE = 'analysedByDate'
 
 export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
@@ -238,6 +239,7 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
   [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
   [FAMILY_FIELD_ANALYSED_BY_TYPE]: 'Data Type',
+  [FAMILY_FIELD_ANALYSED_BY_DATE]: 'Analysis Date',
 }
 
 export const FAMILY_NOTES_FIELDS = [

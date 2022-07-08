@@ -8,7 +8,12 @@ import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import StateChangeForm from 'shared/components/form/StateChangeForm'
 import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
-import { FAMILY_FIELD_NAME_LOOKUP, FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_ANALYSED_BY_TYPE } from 'shared/utils/constants'
+import {
+  FAMILY_FIELD_NAME_LOOKUP,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSED_BY_TYPE,
+  FAMILY_FIELD_ANALYSED_BY_DATE,
+} from 'shared/utils/constants'
 
 import {
   getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState, getFamiliesTableFilters,
@@ -105,7 +110,7 @@ const CASE_REVEIW_FILTER_FIELDS = [
 ]
 
 const GROUPED_CATEGORIES = {
-  [FAMILY_FIELD_ANALYSED_BY]: [FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_ANALYSED_BY_TYPE],
+  [FAMILY_FIELD_ANALYSED_BY]: [FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_ANALYSED_BY_TYPE, FAMILY_FIELD_ANALYSED_BY_DATE],
 }
 
 const GROUPED_CATEGORY_OPTIONS = Object.entries(GROUPED_CATEGORIES).reduce(

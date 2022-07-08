@@ -28,6 +28,7 @@ import {
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
   FAMILY_FIELD_ANALYSED_BY_TYPE,
+  FAMILY_FIELD_ANALYSED_BY_DATE,
   FAMILY_FIELD_NAME_LOOKUP,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
@@ -224,6 +225,12 @@ export const CATEGORY_FAMILY_FILTERS = {
     name: typeDisplay,
     createFilter: () => family => family.analysedBy.some(({ dataType }) => dataType === type),
   })),
+  [FAMILY_FIELD_ANALYSED_BY_DATE]: [{
+    value: 'yearSinceAnalysed',
+    name: '>1 Year',
+    createFilter: () => family => family.analysedBy.every(
+      ({ lastModifiedDate }) => (new Date()).setFullYear(new Date().getFullYear() - 1) > new Date(lastModifiedDate)),
+  }],
   [FAMILY_FIELD_FIRST_SAMPLE]: [
     {
       value: SHOW_DATA_LOADED,
