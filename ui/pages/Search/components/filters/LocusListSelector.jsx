@@ -34,7 +34,7 @@ class BaseLocusListDropdown extends React.Component {
           const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
           return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
         }, {})
-        onChange({ locusListGuid, panelAppItems })
+        onChange({ locusListGuid, panelAppItems, locusList })
       } else {
         const { rawItems } = locusList
         onChange({ locusListGuid, rawItems })
@@ -87,9 +87,6 @@ LocusListSelector.propTypes = {
 
 export default props => (
   <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => {
-      console.log('LocusListSelector values', values)
-      return <LocusListSelector {...props} projectFamilies={values.projectFamilies} />
-    }}
+    {({ values }) => <LocusListSelector {...props} projectFamilies={values.projectFamilies} />}
   </FormSpy>
 )

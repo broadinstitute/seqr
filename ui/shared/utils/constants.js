@@ -1309,7 +1309,7 @@ export const PANEL_APP_MOI_OPTIONS = [{
   value: 'XR',
 },
 {
-  text: 'Other Mode of Inheritance',
+  text: 'Other Modes of Inheritance',
   value: 'other',
 }]
 

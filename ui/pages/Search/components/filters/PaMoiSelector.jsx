@@ -13,8 +13,7 @@ import { getSearchedProjectsLocusListOptions } from '../../selectors'
 class BasePaMoiDropdown extends React.Component {
 
   static propTypes = {
-    // locus: PropTypes.object,
-    locusList: PropTypes.object,
+    locus: PropTypes.object,
     selectedMOIs: PropTypes.arrayOf(PropTypes.string),
     shouldShow: PropTypes.func,
   }
@@ -25,8 +24,8 @@ class BasePaMoiDropdown extends React.Component {
   // Add logic to componentDidUpdate
 
   moiOptions = () => {
-    const { locusList } = this.props
-    console.log('locusList', locusList)
+    const { locus } = this.props
+    const { locusList } = locus
 
     const initials = locusList.items?.reduce((acc, gene) => {
       moiToMoiInitials(gene.pagene?.modeOfInheritance).forEach((initial) => {
@@ -80,21 +79,19 @@ PaMoiSelector.propTypes = {
   value: PropTypes.object,
 }
 
-const SUBSCRIPTION = { values: true }
+const SUBSCRIPTION = {
+  values: true,
+}
 
 export default props => (
   <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => {
-      console.log('values', values)
-      // Check if locusList.paLocusList exists, and show/hide dropdown
-      return (
-        <PaMoiSelector
-          {...props}
-          locus={values.search?.locus}
-          projectFamilies={values.projectFamilies}
-          inline
-        />
-      )
-    }}
+    {({ values }) => (
+      <PaMoiSelector
+        {...props}
+        locus={values.search?.locus}
+        projectFamilies={values.projectFamilies}
+        inline
+      />
+    )}
   </FormSpy>
 )

@@ -389,7 +389,9 @@ export const LOCATION_FIELDS = [
   {
     name: 'MOI Selection',
     label: 'MoiSelection',
-    component: PaMoiSelector,
+    component: LocusListItemsFilter,
+    filterComponent: PaMoiSelector,
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
     shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
   },
   {

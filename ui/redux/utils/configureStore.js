@@ -14,9 +14,7 @@ const persistStoreMiddleware = store => next => (action) => {
   return result
 }
 
-const enhancer = compose(
-  applyMiddleware(thunkMiddleware, persistStoreMiddleware),
-)
+const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
 
 /**
  * Initialize the Redux store
@@ -32,5 +30,7 @@ export default (
 
   console.log('Creating store with initial state:', persistedInitialState) // eslint-disable-line no-console
 
-  return createStore(rootReducer, persistedInitialState, enhancer)
+  return createStore(rootReducer, persistedInitialState, composeEnhancers(
+    applyMiddleware(thunkMiddleware, persistStoreMiddleware),
+  ))
 }
