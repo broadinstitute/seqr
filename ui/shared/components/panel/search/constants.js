@@ -500,8 +500,7 @@ const DividedFormField = styled(Form.Field)`
   border-left: solid grey 1px;
 `
 
-export const QUALITY_FILTER_FIELDS = [
-  ...SNP_QUALITY_FILTER_FIELDS,
+export const SV_QUALITY_FILTER_FIELDS = [
   {
     name: 'min_qs',
     label: 'WES SV Quality Score',
@@ -519,6 +518,12 @@ export const QUALITY_FILTER_FIELDS = [
     max: 100,
     step: 10,
   },
+]
+
+export const QUALITY_FILTER_FIELDS = [
+  ...SNP_QUALITY_FILTER_FIELDS,
+  ...MITO_QUALITY_FILTER_FIELDS,
+  ...SV_QUALITY_FILTER_FIELDS,
 ]
 
 export const ALL_QUALITY_FILTER = {
