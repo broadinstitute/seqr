@@ -33,7 +33,7 @@ def dashboard_page_data(request):
 
 
 def _get_projects_json(user):
-    project_guids = get_project_guids_user_can_view(user)
+    project_guids = get_project_guids_user_can_view(user, limit_data_manager=False)
     if not project_guids:
         return {}
 
