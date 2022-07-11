@@ -16,6 +16,9 @@ Optionally, if planning to use elasticsearch from docker-compose, install:
 - [docker](https://docs.docker.com/install/)
 - [docker-compose](https://docs.docker.com/compose/install/)   
 
+If installing for the Broad instance/ other kubernetes deployments, install:
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-macos/)
+
 ## Install seqr
 
 ```bash
