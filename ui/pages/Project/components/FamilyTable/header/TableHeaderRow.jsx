@@ -1,5 +1,5 @@
 import React from 'react'
-import { Table } from 'semantic-ui-react'
+import { Table, Icon } from 'semantic-ui-react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
@@ -10,10 +10,12 @@ import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
 import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
 
-import { getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState } from '../../../selectors'
-import { updateFamiliesTable } from '../../../reducers'
 import {
-  FAMILY_FILTER_OPTIONS,
+  getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState, getFamiliesTableFilters,
+} from '../../../selectors'
+import { updateFamiliesTable, updateFamiliesTableFilters } from '../../../reducers'
+import {
+  CATEGORY_FAMILY_FILTERS,
   CASE_REVIEW_FAMILY_FILTER_OPTIONS,
   FAMILY_SORT_OPTIONS,
   CASE_REVIEW_TABLE_NAME,
@@ -28,11 +30,38 @@ const RegularFontHeaderCell = styled(Table.HeaderCell)`
 // Allows dropdowns to be visible inside table cell
 const OverflowHeaderCell = styled(Table.HeaderCell)`
   overflow: visible !important;
+  
+  td {
+     overflow: visible !important;
+  }
 `
 
 const SpacedDropdown = styled(Dropdown)`
   padding-left: 10px;
   padding-right: 5px;
+`
+
+const FilterMultiDropdown = styled(Dropdown).attrs({ inline: true, multiple: true, icon: null })`
+  .ui.multiple.dropdown {
+    .label {
+      display: none;
+      white-space: nowrap;
+    }
+    
+    &.active.visible {
+      border: 1px solid rgba(34,36,38,.15);
+      border-radius: 0.28571429rem;
+      background-color: white;
+      z-index: 10;
+    
+      .trigger {
+        display: none;
+      }
+      .label {
+        display: inherit;
+      }
+    }
+  }
 `
 
 const FAMILY_SEARCH = {
@@ -70,27 +99,53 @@ const SORT_FILTER_FIELDS = [
     component: SortDirectionToggle,
   },
 ]
-const FILTER_FIELDS = [FAMILY_SEARCH, { ...FAMILY_FILTER, options: FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS]
+const FILTER_FIELDS = [FAMILY_SEARCH, ...SORT_FILTER_FIELDS]
 const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
-const familyFieldDisplay = field => FAMILY_FIELD_NAME_LOOKUP[field.id]
+const renderLabel = label => ({ color: 'blue', content: label.text })
 
-export const TableHeaderDetail = React.memo(({ fields, offset, showVariantDetails }) => (
-  <FamilyLayout
-    compact
-    offset={offset}
-    fields={fields}
-    fieldDisplay={familyFieldDisplay}
-    rightContent={showVariantDetails ? 'Saved Variants' : null}
-  />
-))
+const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
+  const value = (nestedFilterState || {})[category] || []
+  return (
+    <FilterMultiDropdown
+      name={category}
+      value={value}
+      onChange={updateNestedFilter(category)}
+      options={CATEGORY_FAMILY_FILTERS[category]}
+      trigger={
+        <span className="trigger">
+          <Icon name={value.length ? 'filter' : 'caret down'} size="small" />
+          {FAMILY_FIELD_NAME_LOOKUP[category]}
+        </span>
+      }
+      renderLabel={renderLabel}
+    />
+  )
+}
 
-TableHeaderDetail.propTypes = {
-  offset: PropTypes.bool,
-  fields: PropTypes.arrayOf(PropTypes.object),
-  showVariantDetails: PropTypes.bool,
+BaseFamilyTableFilter.propTypes = {
+  nestedFilterState: PropTypes.object,
+  updateNestedFilter: PropTypes.func.isRequired,
+  category: PropTypes.string,
+}
+
+const mapFilterStateToProps = state => ({
+  nestedFilterState: getFamiliesTableFilters(state),
+})
+
+const mapFilterDispatchToProps = dispatch => ({
+  updateNestedFilter: category => (value) => {
+    dispatch(updateFamiliesTableFilters({ [category]: value }))
+  },
+})
+
+const FamilyTableFilter = connect(mapFilterStateToProps, mapFilterDispatchToProps)(BaseFamilyTableFilter)
+
+const familyFieldDisplay = (field) => {
+  const { id } = field
+  return CATEGORY_FAMILY_FILTERS[id] ? <FamilyTableFilter category={id} /> : FAMILY_FIELD_NAME_LOOKUP[id]
 }
 
 const TableHeaderRow = React.memo(({
@@ -127,9 +182,15 @@ const TableHeaderRow = React.memo(({
     </Table.Row>
     {fields && (
       <Table.Row>
-        <Table.HeaderCell colSpan={2} textAlign="left">
-          <TableHeaderDetail fields={fields} showVariantDetails={showVariantDetails} offset />
-        </Table.HeaderCell>
+        <OverflowHeaderCell colSpan={2} textAlign="left">
+          <FamilyLayout
+            compact
+            offset
+            fields={fields}
+            fieldDisplay={familyFieldDisplay}
+            rightContent={showVariantDetails ? 'Saved Variants' : null}
+          />
+        </OverflowHeaderCell>
       </Table.Row>
     )}
   </Table.Header>
