@@ -11,8 +11,6 @@ import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 import {
   FAMILY_FIELD_NAME_LOOKUP,
   FAMILY_FIELD_ANALYSED_BY,
-  FAMILY_FIELD_ANALYSED_BY_TYPE,
-  FAMILY_FIELD_ANALYSED_BY_DATE,
 } from 'shared/utils/constants'
 
 import {
@@ -109,44 +107,22 @@ const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
-// TODO may be a better representation for this
-const GROUPED_CATEGORIES = {
-  [FAMILY_FIELD_ANALYSED_BY]: [FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_ANALYSED_BY_TYPE, FAMILY_FIELD_ANALYSED_BY_DATE],
-}
-
-const GROUPED_CATEGORY_OPTIONS = Object.entries(GROUPED_CATEGORIES).reduce(
-  (acc, [category, subCategories]) => ({
-    ...acc,
-    [category]: subCategories.reduce((subAcc, c) => ([
-      ...subAcc,
-      ...CATEGORY_FAMILY_FILTERS[c].map(opt => ({ ...opt, category: FAMILY_FIELD_NAME_LOOKUP[c] })),
-    ]), []),
-  }), {},
-)
-
-const REVERSE_CATEGORY_LOOKUP = Object.entries(FAMILY_FIELD_NAME_LOOKUP).reduce(
-  (acc, [k, v]) => ({ ...acc, [v]: k }), {},
-)
-
-const GROUPED_CATEGORY_OPTION_LOOKUP = Object.values(GROUPED_CATEGORY_OPTIONS).reduce(
-  (acc, options) => ({
-    ...acc,
-    ...options.reduce((subAcc, { value, category }) => ({ ...subAcc, [value]: REVERSE_CATEGORY_LOOKUP[category] }), {}),
-  }), {},
+const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY].reduce(
+  (acc, { value, category }) => ({ ...acc, [value]: category || FAMILY_FIELD_ANALYSED_BY }), {},
 )
 
 const renderLabel = label => ({ color: 'blue', content: label.text })
 
 const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
   const categoryVal = (nestedFilterState || {})[category]
-  const value = GROUPED_CATEGORIES[category] ? Object.values(categoryVal || {}).reduce((acc, v) => [...acc, ...v], []) :
-    categoryVal || []
+  const value = category === FAMILY_FIELD_ANALYSED_BY ?
+    Object.values(categoryVal || {}).reduce((acc, v) => [...acc, ...v], []) : categoryVal || []
   return (
     <FilterMultiDropdown
       name={category}
       value={value}
       onChange={updateNestedFilter(category)}
-      options={GROUPED_CATEGORY_OPTIONS[category] || CATEGORY_FAMILY_FILTERS[category]}
+      options={CATEGORY_FAMILY_FILTERS[category]}
       trigger={
         <span className="trigger">
           <Icon name={value.length ? 'filter' : 'caret down'} size="small" />
@@ -172,8 +148,8 @@ const mapFilterStateToProps = state => ({
 const mapFilterDispatchToProps = dispatch => ({
   updateNestedFilter: category => (value) => {
     dispatch(updateFamiliesTableFilters({
-      [category]: GROUPED_CATEGORIES[category] ? value.reduce((acc, v) => {
-        const subCategory = GROUPED_CATEGORY_OPTION_LOOKUP[v]
+      [category]: category === FAMILY_FIELD_ANALYSED_BY ? value.reduce((acc, v) => {
+        const subCategory = ANALYSED_BY_CATEGORY_OPTION_LOOKUP[v]
         if (!acc[subCategory]) {
           acc[subCategory] = []
         }
