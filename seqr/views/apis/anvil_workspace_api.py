@@ -3,6 +3,7 @@ import json
 import time
 import tempfile
 from datetime import datetime
+from functools import wraps
 import requests
 
 from google.auth.transport.requests import Request
@@ -68,6 +69,21 @@ def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_RE
     return decorator
 
 
+def anvil_workspace_access_required(wrapped_func=None, meta_fields=None):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, namespace, name, *args, **kwargs):
+            # Validate that the current user has logged in through google and has sufficient permissions
+            workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=meta_fields)
+            if meta_fields:
+                return view_func(request, namespace, name, workspace_meta, *args, **kwargs)
+            return view_func(request, namespace, name, *args, **kwargs)
+        return anvil_auth_and_policies_required(_wrapped_view)
+    if wrapped_func:
+        return decorator(wrapped_func)
+    return decorator
+
+
 @anvil_auth_and_policies_required(policy_url=POLICY_REQUIRED_URL)
 def anvil_workspace_page(request, namespace, name):
     """
@@ -92,7 +108,46 @@ def anvil_workspace_page(request, namespace, name):
 
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
-@anvil_auth_and_policies_required
+@anvil_workspace_access_required
+def grant_workspace_access(request, namespace, name):
+    request_json = json.loads(request.body)
+    if not request_json.get('agreeSeqrAccess'):
+        error = 'Must agree to grant seqr access to the data in the associated workspace.'
+        return create_json_response({'error': error}, status=400, reason=error)
+
+    # Add the seqr service account to the corresponding AnVIL workspace
+    added_account_to_workspace = add_service_account(request.user, namespace, name)
+    if added_account_to_workspace:
+        _wait_for_service_account_access(request.user, namespace, name)
+
+    return create_json_response({'success': True})
+
+@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
+def validate_anvil_vcf(request, namespace, name, workspace_meta):
+    path = json.loads(request.body).get('dataPath')
+    if not path:
+        error = 'dataPath is required'
+        return create_json_response({'error': error}, status=400, reason=error)
+
+    # Validate the data path
+    bucket_name = workspace_meta['workspace']['bucketName']
+    data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
+    if not data_path.endswith(VCF_FILE_EXTENSIONS):
+        error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
+        return create_json_response({'error': error}, status=400, reason=error)
+    if not does_file_exist(data_path, user=request.user):
+        error = 'Data file or path {} is not found.'.format(path)
+        return create_json_response({'error': error}, status=400, reason=error)
+
+    # Validate the VCF to see if it contains all the required samples
+    samples = get_vcf_samples(data_path)
+    if not samples:
+        return create_json_response(
+            {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
+
+    return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
+
+@anvil_workspace_access_required
 def create_project_from_workspace(request, namespace, name):
     """
     Create a project when a cooperator requests to load data from an AnVIL workspace.
@@ -103,8 +158,6 @@ def create_project_from_workspace(request, namespace, name):
     :return the projectsByGuid with the new project json
 
     """
-    # Validate that the current user has logged in through google and has sufficient permissions
-    workspace_meta = check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.bucketName'])
     projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if projects:
         error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
@@ -113,41 +166,16 @@ def create_project_from_workspace(request, namespace, name):
     # Validate all the user inputs from the post body
     request_json = json.loads(request.body)
 
-    missing_fields = [field for field in ['genomeVersion', 'uploadedFileId', 'dataPath', 'sampleType'] if not request_json.get(field)]
+    missing_fields = [field for field in ['genomeVersion', 'uploadedFileId', 'fullDataPath', 'vcfSamples', 'sampleType'] if not request_json.get(field)]
     if missing_fields:
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
-        return create_json_response({'error': error}, status=400, reason=error)
-
-    if not request_json.get('agreeSeqrAccess'):
-        error = 'Must agree to grant seqr access to the data in the associated workspace.'
-        return create_json_response({'error': error}, status=400, reason=error)
-
-    # Add the seqr service account to the corresponding AnVIL workspace
-    added_account_to_workspace = add_service_account(request.user, namespace, name)
-    if added_account_to_workspace:
-        _wait_for_service_account_access(request.user, namespace, name)
-
-    # Validate the data path
-    bucket_name = workspace_meta['workspace']['bucketName']
-    data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=request_json['dataPath'].lstrip('/'))
-    if not data_path.endswith(VCF_FILE_EXTENSIONS):
-        error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
-        return create_json_response({'error': error}, status=400, reason=error)
-    if not does_file_exist(data_path, user=request.user):
-        error = 'Data file or path {} is not found.'.format(request_json['dataPath'])
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
     pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, fail_on_warnings=True)
 
-    # Validate the VCF to see if it contains all the required samples
-    samples = get_vcf_samples(data_path)
-    if not samples:
-        return create_json_response(
-            {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
-
-    missing_samples = [record['individualId'] for record in pedigree_records if record['individualId'] not in samples]
+    missing_samples = [record['individualId'] for record in pedigree_records if record['individualId'] not in request_json['vcfSamples']]
     if missing_samples:
         return create_json_response(
             {'error': 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(', '.join(missing_samples))}, status=400)
@@ -181,9 +209,9 @@ def create_project_from_workspace(request, namespace, name):
                      detail=sample_ids)
 
     # use airflow api to trigger AnVIL dags
-    trigger_success = _trigger_data_loading(project, data_path, request_json['sampleType'], request)
+    trigger_success = _trigger_data_loading(project, request_json['fullDataPath'], request_json['sampleType'], request)
     # Send a slack message to the slack channel
-    _send_load_data_slack_msg(project, ids_path, data_path, request_json['sampleType'], request.user)
+    _send_load_data_slack_msg(project, ids_path, request_json['fullDataPath'], request_json['sampleType'], request.user)
     AirtableSession(request.user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
             'Requester Name': request.user.get_full_name(),
