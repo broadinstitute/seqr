@@ -65,7 +65,7 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
       width: 100% !important;
     }
     
-    .icon {
+    >.icon {
       margin: -0.75em !important;
       transform: rotate(90deg) !important;
     }

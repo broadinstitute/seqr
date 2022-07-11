@@ -24,6 +24,7 @@ import {
 // actions
 const REQUEST_GENES = 'REQUEST_GENES'
 const REQUEST_GENE_LISTS = 'REQUEST_GENE_LISTS'
+const RECEIVE_GENE_LISTS = 'RECEIVE_GENE_LISTS'
 const REQUEST_GENE_LIST = 'REQUEST_GENE_LIST'
 const REQUEST_SEARCH_GENE_BREAKDOWN = 'REQUEST_SEARCH_GENE_BREAKDOWN'
 const RECEIVE_SEARCH_GENE_BREAKDOWN = 'RECEIVE_SEARCH_GENE_BREAKDOWN'
@@ -129,14 +130,15 @@ export const loadGenes = geneIds => (dispatch, getState) => {
   }
 }
 
-export const loadLocusLists = () => (dispatch) => {
+export const loadLocusLists = allProjectLists => (dispatch) => {
   dispatch({ type: REQUEST_GENE_LISTS })
-  new HttpRequestHelper('/api/locus_lists',
+  new HttpRequestHelper(`/api/${allProjectLists ? 'all_locus_list_options' : 'locus_lists'}`,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      dispatch({ type: RECEIVE_GENE_LISTS, updatesById: {} })
     },
     (e) => {
-      dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      dispatch({ type: RECEIVE_GENE_LISTS, error: e.message, updatesById: {} })
     }).get()
 }
 
@@ -322,7 +324,7 @@ const rootReducer = combineReducers({
   hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),
   hpoTermsLoading: loadingReducer(REQUEST_HPO_TERMS, RECEIVE_HPO_TERMS),
   locusListsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'locusListsByGuid'),
-  locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_DATA),
+  locusListsLoading: loadingReducer(REQUEST_GENE_LISTS, RECEIVE_GENE_LISTS),
   locusListLoading: loadingReducer(REQUEST_GENE_LIST, RECEIVE_DATA),
   savedVariantsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'savedVariantsByGuid'),
   savedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_DATA),

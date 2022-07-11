@@ -121,24 +121,23 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
-const copyNumberGenotype = (cn, isHemiX) => (
+const copyNumberGenotype = (cn, newline, isHemiX) => (isCalled(cn) && (
   <span>
+    {newline && <br />}
     CN: &nbsp;
     {cn !== (isHemiX ? 1 : 2) ? <b><i>{cn}</i></b> : cn}
   </span>
-)
+))
 
 const svGenotype = (genotype, isHemiX) => {
-  const cnDisplay = isCalled(genotype.cn) && copyNumberGenotype(genotype.cn, isHemiX)
   if (!isCalled(genotype.numAlt)) {
-    return cnDisplay
+    return copyNumberGenotype(genotype.cn, false, isHemiX)
   }
   return (
     <span>
       {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
       {isHemiX || genotype.numAlt < 2 ? 'ref' : <b><i>alt</i></b>}/{genotype.numAlt > 0 ? <b><i>alt</i></b> : 'ref'}
-      {cnDisplay && <br />}
-      {cnDisplay}
+      {copyNumberGenotype(genotype.cn, true, isHemiX)}
     </span>
   )
 }
@@ -166,6 +165,7 @@ export const Alleles = React.memo(({ genotype, variant, isHemiX, warning }) => (
         <Allele isAlt={genotype.numAlt > (isHemiX ? 0 : 1)} variant={variant} textAlign="right" />
         /
         {isHemiX ? '-' : <Allele isAlt={genotype.numAlt > 0} variant={variant} textAlign="left" />}
+        {genotype.mitoCn && (copyNumberGenotype(genotype.mitoCn, true))}
       </Header.Content>
     )}
   </AlleleContainer>
@@ -193,6 +193,9 @@ const GENOTYPE_DETAILS = [
   { title: 'Filter', variantField: 'genotypeFilters', shouldHide: val => (val || []).length < 1 },
   { title: 'Phred Likelihoods', field: 'pl' },
   { title: 'Quality Score', field: 'qs' },
+  { title: 'Mitochondrial Copy Number', field: 'mitoCn', format: val => val && val.toFixed(0) },
+  { title: 'Heteroplasmy Level', field: 'hl', format: val => val && val.toPrecision(2) },
+  { title: 'Contamination', field: 'contamination' },
 ]
 
 const SV_GENOTYPE_DETAILS = [
@@ -248,21 +251,31 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const isHemiX = isHemiXVariant(variant, individual)
 
-  let warning
+  const warnings = []
   if (genotype.defragged) {
-    warning = 'Defragged'
+    warnings.push('Defragged')
   } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
-    warning = 'Potential UPD/ Hemizygosity'
+    warnings.push('Potential UPD/ Hemizygosity')
   } else if (isCompoundHet && [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
-    warning = 'Variant absent in parents'
+    warnings.push('Variant absent in parents')
   }
 
   if (hasCnCall) {
     const cnWarning = getGentoypeCnWarning(genotype, variant.svType, isHemiX)
     if (cnWarning) {
-      warning = warning ? `${warning}. ${cnWarning}` : cnWarning
+      warnings.push(cnWarning)
     }
   }
+
+  if (genotype.contamination) {
+    warnings.push(`Contamination (${genotype.contamination}) > 0`)
+  }
+
+  if (variant.commonLowHeteroplasmy && genotype.hl > 0) {
+    warnings.push('Common low heteroplasmy')
+  }
+
+  const warning = warnings.join('. ')
 
   let previousCall
   if (genotype.newCall) {
@@ -275,6 +288,9 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const hasConflictingNumAlt = genotype.otherSample && genotype.otherSample.numAlt !== genotype.numAlt
   const details = genotypeDetails(genotype, variant, genesById)
+
+  const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
+  const secondaryQuality = genotype.ab || genotype.hl
 
   const content = (
     <span>
@@ -303,7 +319,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
           trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
         />
       )}
-      {`${genotype.gq || genotype.qs || '-'}${variant.svType ? '' : genotype.numAlt >= 0 && `, ${genotype.ab ? genotype.ab.toPrecision(2) : '-'}`}`}
+      {genotype.gq || genotype.qs || '-'}
+      {showSecondaryQuality && `, ${secondaryQuality ? secondaryQuality.toPrecision(2) : '-'}`}
       {variant.genotypeFilters && (
         <small>
           <br />
