@@ -198,38 +198,36 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: SHOW_ANALYSED_BY_ME,
       name: 'Analysed By Me',
-      createFilter: (individualsByGuid, user) => family => family.analysedBy.some(
-        analysedBy => analysedBy.createdBy === (user.displayName || user.email),
-      ),
+      analysedByFilter: (individualsByGuid, user) => ({ createdBy }) => createdBy === (user.displayName || user.email),
     },
     {
       value: SHOW_NOT_ANALYSED_BY_ME,
       name: 'Not Analysed By Me',
-      createFilter: (individualsByGuid, user) => family => family.analysedBy.every(
-        analysedBy => analysedBy.createdBy !== (user.displayName || user.email),
-      ),
+      analysedByFilter: (individualsByGuid, user) => ({ createdBy }) => createdBy !== (user.displayName || user.email),
     },
     {
       value: SHOW_ANALYSED,
       name: 'Analysed',
-      createFilter: () => family => family.analysedBy.length > 0,
+      analysedByFilter: () => () => true,
     },
     {
       value: SHOW_NOT_ANALYSED,
       name: 'Not Analysed',
-      createFilter: () => family => family.analysedBy.length < 1,
+      requireNoAnalysedBy: true,
+      analysedByFilter: () => () => true,
     },
   ],
   [FAMILY_FIELD_ANALYSED_BY_TYPE]: FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => ({
     value: type,
     name: typeDisplay,
-    createFilter: () => family => family.analysedBy.some(({ dataType }) => dataType === type),
+    analysedByFilter: () => ({ dataType }) => dataType === type,
   })),
   [FAMILY_FIELD_ANALYSED_BY_DATE]: [{
     value: 'yearSinceAnalysed',
     name: '>1 Year',
-    createFilter: () => family => family.analysedBy.every(
-      ({ lastModifiedDate }) => (new Date()).setFullYear(new Date().getFullYear() - 1) > new Date(lastModifiedDate),
+    requireNoAnalysedBy: true,
+    analysedByFilter: () => ({ lastModifiedDate }) => (
+      (new Date()).setFullYear(new Date().getFullYear() - 1) < new Date(lastModifiedDate)
     ),
   }],
   [FAMILY_FIELD_FIRST_SAMPLE]: [
@@ -259,6 +257,24 @@ export const FAMILY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduc
     })
     return acc
   }, {},
+)
+
+export const ANALYSED_BY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.forEach((opt) => {
+      acc[opt.value] = opt.analysedByFilter
+    })
+    return acc
+  }, {},
+)
+
+export const NO_ANALYSED_BY_FIELDS = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.filter(opt => opt.requireNoAnalysedBy).forEach((opt) => {
+      acc.add(opt.value)
+    })
+    return acc
+  }, new Set(),
 )
 
 export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [

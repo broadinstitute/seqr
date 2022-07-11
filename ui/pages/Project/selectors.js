@@ -26,6 +26,8 @@ import {
   CASE_REVIEW_STATUS_OPTIONS,
   CASE_REVIEW_FILTER_LOOKUP,
   FAMILY_FILTER_LOOKUP,
+  ANALYSED_BY_FILTER_LOOKUP,
+  NO_ANALYSED_BY_FIELDS,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
   CASE_REVIEW_FAMILY_EXPORT_DATA,
@@ -330,6 +332,30 @@ const getFamiliesBySearchString = createSelector(
   },
 )
 
+const analysedByFilters = (filter) => {
+  const analsedByGroups = Object.values(filter).map(
+    groupVals => groupVals.map(val => ANALYSED_BY_FILTER_LOOKUP[val]).filter(val => val),
+  ).filter(groupVals => groupVals.length)
+  const requireNoAnalysedBy = Object.values(filter).some(
+    groupVals => groupVals.some(val => NO_ANALYSED_BY_FIELDS.has(val)),
+  )
+
+  const filters = Object.values(filter).reduce(
+    (acc, vals) => ([...acc, ...vals.map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)]), [],
+  )
+
+  if (analsedByGroups.length) {
+    filters.push((...args) => (family) => {
+      const filteredAnalysedBy = analsedByGroups.reduce(
+        (acc, filterGroup) => acc.filter(analysedBy => filterGroup.some(f => f(...args)(analysedBy))),
+        family.analysedBy,
+      )
+      return requireNoAnalysedBy ? filteredAnalysedBy.length === 0 : filteredAnalysedBy.length > 0
+    })
+  }
+  return filters
+}
+
 const getFamiliesFilterFunc = createSelector(
   (state, ownProps) => ownProps?.tableName === CASE_REVIEW_TABLE_NAME,
   state => state.caseReviewTableState.familiesFilter,
@@ -339,9 +365,16 @@ const getFamiliesFilterFunc = createSelector(
       return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter]
     }
 
-    const filterGroups = Object.values(familyTableFilters || {}).map(
+    const { analysedBy, ...tableFilters } = familyTableFilters || {}
+    const filterGroups = Object.values(tableFilters).map(
       groupVals => (groupVals || []).map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val),
     ).filter(groupVals => groupVals.length)
+    if (analysedBy) {
+      const filters = analysedByFilters(analysedBy)
+      if (filters.length) {
+        filterGroups.push(filters)
+      }
+    }
     if (!filterGroups.length) {
       return null
     }

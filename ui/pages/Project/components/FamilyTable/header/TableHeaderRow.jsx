@@ -109,6 +109,7 @@ const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
+// TODO may be a better representation for this
 const GROUPED_CATEGORIES = {
   [FAMILY_FIELD_ANALYSED_BY]: [FAMILY_FIELD_ANALYSED_BY, FAMILY_FIELD_ANALYSED_BY_TYPE, FAMILY_FIELD_ANALYSED_BY_DATE],
 }
@@ -137,10 +138,9 @@ const GROUPED_CATEGORY_OPTION_LOOKUP = Object.values(GROUPED_CATEGORY_OPTIONS).r
 const renderLabel = label => ({ color: 'blue', content: label.text })
 
 const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
-  const categories = GROUPED_CATEGORIES[category]
-  const nestedFilters = nestedFilterState || {}
-  const value = categories ? categories.reduce((acc, c) => [...acc, ...(nestedFilters[c] || [])], []) :
-    nestedFilters[category] || []
+  const categoryVal = (nestedFilterState || {})[category]
+  const value = GROUPED_CATEGORIES[category] ? Object.values(categoryVal || {}).reduce((acc, v) => [...acc, ...v], []) :
+    categoryVal || []
   return (
     <FilterMultiDropdown
       name={category}
@@ -171,14 +171,16 @@ const mapFilterStateToProps = state => ({
 
 const mapFilterDispatchToProps = dispatch => ({
   updateNestedFilter: category => (value) => {
-    let filterValue = { [category]: value }
-    if (GROUPED_CATEGORIES[category]) {
-      filterValue = GROUPED_CATEGORIES[category].reduce((acc, c) => ({ ...acc, [c]: [] }), {})
-      value.forEach((v) => {
-        filterValue[GROUPED_CATEGORY_OPTION_LOOKUP[v]].push(v)
-      })
-    }
-    dispatch(updateFamiliesTableFilters(filterValue))
+    dispatch(updateFamiliesTableFilters({
+      [category]: GROUPED_CATEGORIES[category] ? value.reduce((acc, v) => {
+        const subCategory = GROUPED_CATEGORY_OPTION_LOOKUP[v]
+        if (!acc[subCategory]) {
+          acc[subCategory] = []
+        }
+        acc[subCategory].push(v)
+        return acc
+      }, {}) : value,
+    }))
   },
 })
 
