@@ -6,7 +6,6 @@ import {
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_NOTES_FIELDS,
-  SHOW_ALL,
   GENOME_VERSION_DISPLAY_LOOKUP,
   getVariantMainTranscript,
   INDIVIDUAL_EXPORT_DATA,
@@ -25,6 +24,7 @@ import {
 import {
   SORT_BY_FAMILY_NAME,
   CASE_REVIEW_STATUS_OPTIONS,
+  CASE_REVIEW_FILTER_LOOKUP,
   FAMILY_FILTER_LOOKUP,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
@@ -56,6 +56,7 @@ export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isL
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
+export const getFamiliesTableFilters = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -292,10 +293,7 @@ export const getFamiliesTableState = createSelector(
   (state, ownProps) => state[`${toCamelcase((ownProps || {}).tableName) || 'family'}TableState`],
   tableState => tableState,
 )
-export const getFamiliesFilter = createSelector(
-  getFamiliesTableState,
-  familyTableState => familyTableState.familiesFilter || SHOW_ALL,
-)
+
 const getFamiliesSearch = createSelector(
   getFamiliesTableState,
   familyTableState => (familyTableState.familiesSearch || '').toLowerCase(),
@@ -332,27 +330,42 @@ const getFamiliesBySearchString = createSelector(
   },
 )
 
+const getFamiliesFilterFunc = createSelector(
+  (state, ownProps) => ownProps?.tableName === CASE_REVIEW_TABLE_NAME,
+  state => state.caseReviewTableState.familiesFilter,
+  getFamiliesTableFilters,
+  (isCaseReview, caseReviewFilter, familyTableFilters) => {
+    if (isCaseReview) {
+      return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter]
+    }
+
+    const filterGroups = Object.values(familyTableFilters || {}).map(
+      groupVals => (groupVals || []).map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val),
+    ).filter(groupVals => groupVals.length)
+    if (!filterGroups.length) {
+      return null
+    }
+
+    return (...args) => family => filterGroups.every(filters => filters.some(filter => filter(...args)(family)))
+  },
+)
+
 export const getVisibleFamilies = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getFamiliesBySearchString,
   getIndividualsByGuid,
   getSamplesByFamily,
   getUser,
-  getFamiliesFilter,
   getFamiliesSearch,
+  getFamiliesFilterFunc,
   (
-    familiesByGuid, familiesBySearchString, individualsByGuid, samplesByFamily, user, familiesFilter, familiesSearch,
+    familiesByGuid, familiesBySearchString, individualsByGuid, samplesByFamily, user, familiesSearch, familyFilter,
   ) => {
     const searchedFamilies = familiesBySearchString ? Object.keys(familiesBySearchString).filter(
       familySearchString => familySearchString.includes(familiesSearch),
     ).map(familySearchString => familiesBySearchString[familySearchString]) : Object.values(familiesByGuid)
-
-    if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
-      return searchedFamilies
-    }
-
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter].createFilter(individualsByGuid, user, samplesByFamily)
-    return searchedFamilies.filter(familyFilter)
+    return familyFilter ?
+      searchedFamilies.filter(familyFilter(individualsByGuid, user, samplesByFamily)) : searchedFamilies
   },
 )
 

@@ -189,7 +189,7 @@ def _get_analyst_projects():
     return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
 
 
-def get_project_guids_user_can_view(user, limit_data_manager=False):
+def get_project_guids_user_can_view(user, limit_data_manager=True):
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:
