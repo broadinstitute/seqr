@@ -229,7 +229,8 @@ export const CATEGORY_FAMILY_FILTERS = {
     value: 'yearSinceAnalysed',
     name: '>1 Year',
     createFilter: () => family => family.analysedBy.every(
-      ({ lastModifiedDate }) => (new Date()).setFullYear(new Date().getFullYear() - 1) > new Date(lastModifiedDate)),
+      ({ lastModifiedDate }) => (new Date()).setFullYear(new Date().getFullYear() - 1) > new Date(lastModifiedDate),
+    ),
   }],
   [FAMILY_FIELD_FIRST_SAMPLE]: [
     {
