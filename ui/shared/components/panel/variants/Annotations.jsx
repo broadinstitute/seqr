@@ -106,6 +106,9 @@ const addDividedLink = (links, name, href) => links.push((
   </span>
 ), <a key={name} href={href} target="_blank" rel="noreferrer">{name}</a>)
 
+const isTrnaOrRrna = genesById => genesById &&
+    Object.values(genesById).some(({ gencodeGeneType }) => gencodeGeneType === 'Mt-tRNA' || gencodeGeneType === 'Mt-rRNA')
+
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   const links = []
   const mainGene = genesById[mainTranscript.geneId]
@@ -186,6 +189,13 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       size="tiny"
     />,
   )
+  if (variant.chrom === 'M') {
+    addDividedLink(links, 'mitomap', 'https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele')
+    if (isTrnaOrRrna(genesById)) {
+      addDividedLink(links, 'Mitovisualize',
+        `https://www.mitovisualize.org/variant/m-${variant.pos}-${variant.ref}-${variant.alt}`)
+    }
+  }
 
   return links
 })
@@ -358,6 +368,12 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
             trigger={<Label color="red" horizontal size="tiny">LC LoF</Label>}
             content={lofDetails}
           />
+        </span>
+      )}
+      {variant.highConstraintRegion && (
+        <span>
+          <HorizontalSpacer width={12} />
+          <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
       )}
       {mainTranscript.hgvsc && (

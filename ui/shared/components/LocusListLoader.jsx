@@ -3,11 +3,11 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { loadLocusLists, loadLocusListItems } from 'redux/rootReducer'
-import { getLocusListIsLoading, getLocusListsByGuid, getParsedLocusList } from 'redux/selectors'
+import { getLocusListIsLoading, getLocusListsIsLoading, getLocusListsByGuid, getParsedLocusList } from 'redux/selectors'
 import DataLoader from './DataLoader'
 
-const BaseLocusListsLoader = React.memo(({ locusListsByGuid, loading, load, children }) => (
-  <DataLoader content={locusListsByGuid} loading={loading} load={load}>
+const BaseLocusListsLoader = React.memo(({ locusListsByGuid, loading, load, allProjectLists, children }) => (
+  <DataLoader content={locusListsByGuid} contentId={allProjectLists} loading={loading} load={load}>
     {children}
   </DataLoader>
 ))
@@ -15,12 +15,13 @@ const BaseLocusListsLoader = React.memo(({ locusListsByGuid, loading, load, chil
 BaseLocusListsLoader.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
+  allProjectLists: PropTypes.bool,
   locusListsByGuid: PropTypes.object,
   children: PropTypes.node,
 }
 
-const mapListsStateToProps = state => ({
-  loading: getLocusListIsLoading(state),
+const mapListsStateToProps = (state, ownProps) => ({
+  loading: !ownProps.hideLoading && getLocusListsIsLoading(state),
   locusListsByGuid: getLocusListsByGuid(state),
 })
 

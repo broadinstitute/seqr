@@ -327,7 +327,7 @@ We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bi
             }, "properties": MAPPING_PROPS_SAMPLES_NUM_ALT_1}}})
         response = self.client.post(url, content_type='application/json', data=ADD_DATASET_PAYLOAD)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf or .vcf.gz or .bgz or .bed']})
+        self.assertDictEqual(response.json(), {'errors': ['Variant call dataset path must end with .vcf or .vcf.gz or .bgz or .bed or .mt']})
 
         urllib3_responses.replace_json('/{}/_mapping'.format(INDEX_NAME), {
             INDEX_NAME: {'mappings': {'_meta': {

@@ -2,6 +2,9 @@
 
 ## dev
 
+## 7/6/22
+* Add MITO dataset type (REQUIRES DB MIGRATION)
+
 ## 6/23/22
 * Migrate RGP case note formatting (REQUIRES DB MIGRATION)
 

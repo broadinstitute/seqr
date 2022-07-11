@@ -94,6 +94,7 @@ const styledOption = option => ({
   color: option.color,
   disabled: option.disabled,
   description: option.description,
+  icon: option.icon,
 })
 
 const processOptions = (options, includeCategories) => {

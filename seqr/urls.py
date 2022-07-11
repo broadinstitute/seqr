@@ -70,6 +70,7 @@ from seqr.views.apis.gene_api import \
 
 from seqr.views.apis.locus_list_api import \
     locus_lists, \
+    all_locus_list_options, \
     locus_list_info, \
     create_locus_list_handler, \
     update_locus_list_handler, \
@@ -255,6 +256,7 @@ api_endpoints = {
     'locus_lists/create': create_locus_list_handler,
     'locus_lists/(?P<locus_list_guid>[^/]+)': locus_list_info,
     'locus_lists': locus_lists,
+    'all_locus_list_options': all_locus_list_options,
     'project/(?P<project_guid>[^/]+)/add_locus_lists': add_project_locus_lists,
     'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
