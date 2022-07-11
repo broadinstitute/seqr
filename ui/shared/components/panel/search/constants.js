@@ -485,6 +485,10 @@ export const SNP_QUALITY_FILTER_FIELDS = [
   },
 ]
 
+const DividedFormField = styled(Form.Field)`
+  border-left: solid grey 1px;
+`
+
 export const MITO_QUALITY_FILTER_FIELDS = [
   {
     name: 'min_hl',
@@ -493,12 +497,9 @@ export const MITO_QUALITY_FILTER_FIELDS = [
     min: 0,
     max: 50,
     step: 5,
+    component: DividedFormField,
   },
 ]
-
-const DividedFormField = styled(Form.Field)`
-  border-left: solid grey 1px;
-`
 
 export const SV_QUALITY_FILTER_FIELDS = [
   {
