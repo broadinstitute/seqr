@@ -417,6 +417,6 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
 
     for tissue in response.keys():
         response[tissue]['rdgData'] = list(
-            RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene_id).values_list('tpm', flat=True))
+            RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene_id).order_by('tpm').values_list('tpm', flat=True))
 
     return create_json_response(response)
