@@ -18,6 +18,12 @@ class FormWizard extends React.PureComponent {
     }))
   }
 
+  navigateBack = () => {
+    this.setState(prevState => ({
+      pageIndex: prevState.pageIndex - 1,
+    }))
+  }
+
   onPageSubmitSucceeded = values => this.setState(prevState => ({
     asyncValues: { ...prevState.asyncValues, ...(values || {}) },
   }))
@@ -42,11 +48,17 @@ class FormWizard extends React.PureComponent {
       submitButtonText: 'Next',
       submitButtonIcon: 'angle double right',
     }
+    const backButtonProps = pageIndex === 0 ? {} : {
+      onCancel: this.navigateBack,
+      cancelButtonText: 'Back',
+      cancelButtonIcon: 'angle double left',
+    }
 
     return (
       <FormWrapper
         {...props}
         {...formProps}
+        {...backButtonProps}
         fields={fields}
         showErrorPanel
         hideButtonStatus

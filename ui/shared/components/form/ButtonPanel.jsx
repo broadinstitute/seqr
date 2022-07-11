@@ -24,6 +24,7 @@ class ButtonPanel extends React.PureComponent {
 
   static propTypes = {
     cancelButtonText: PropTypes.string,
+    cancelButtonIcon: PropTypes.string,
     submitButtonText: PropTypes.string,
     submitButtonIcon: PropTypes.string,
     saveStatus: PropTypes.string,
@@ -35,11 +36,13 @@ class ButtonPanel extends React.PureComponent {
   render() {
     const {
       handleClose, cancelButtonText, handleSave, submitButtonText, submitButtonIcon, saveStatus, saveErrorMessage,
+      cancelButtonIcon,
     } = this.props
     return (
       <ContainerDiv>
         {handleClose && (
           <StyledButton tabIndex={0} onClick={handleClose} type="button">
+            {cancelButtonIcon && <Icon name={cancelButtonIcon} />}
             {cancelButtonText || 'Cancel'}
           </StyledButton>
         )}
