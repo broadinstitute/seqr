@@ -9,6 +9,9 @@ Before installing, always check first to see if a dependency is already installe
 - [python 3](https://www.python.org/downloads/)
 - [gcloud](https://cloud.google.com/sdk/install)
 - [postgres](https://www.postgresql.org/download/)
+  - Note: if you use homebrew to install postgres, it may not create the correct superuser. 
+After installation, run `psql -l` and if there is no user named `postgres`, run the following:
+  `$POSTGRES_INSTALL_PATH/bin/createuser -s postgres`
 - [redis](https://redis.io/topics/quickstart)
 - [node/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 
