@@ -6,7 +6,7 @@ import { Popup, Label, Icon } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import SearchResultsLink from '../../buttons/SearchResultsLink'
+import { SeqrVariantSearchLink } from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { getOtherGeneNames } from '../genes/GeneDetail'
@@ -164,14 +164,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   }
 
   // TODO genomeVersion no longer works
-  const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
   if (variant.svType) {
-    if (variant.endChrom && variant.endChrom !== variant.chrom) {
-      seqrLinkProps.location = `${variant.chrom}:${variant.pos - 50}-${variant.pos + 50}`
-    } else {
-      seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
-    }
-
     const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
     if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
       const endOffset = variant.endChrom ? 0 : variant.end - variant.pos
@@ -179,13 +172,11 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       const region = `${variant.chrom}-${start}-${start + endOffset}`
       addDividedLink(links, 'gnomad', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
     }
-  } else {
-    seqrLinkProps.variantId = variant.variantId
   }
   links.unshift(
     <Popup
       key="seqr-search"
-      trigger={<SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />}
+      trigger={<SeqrVariantSearchLink key="seqr" buttonText="seqr" variant={variant} />}
       content={`Search for this variant across all your seqr projects${variant.svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
       size="tiny"
     />,

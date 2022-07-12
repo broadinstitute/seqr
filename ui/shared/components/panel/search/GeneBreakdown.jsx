@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 
 import DataLoader from 'shared/components/DataLoader'
 import FamilyLink from 'shared/components/buttons/FamilyLink'
-import SearchResultsLink from 'shared/components/buttons/SearchResultsLink'
+import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import ShowGeneModal from 'shared/components/buttons/ShowGeneModal'
 import Modal from 'shared/components/modal/Modal'
 import { GeneDetails } from 'shared/components/panel/variants/VariantGene'
@@ -37,8 +37,8 @@ const COLUMNS = [
     width: 2,
     noFormatExport: true,
     format: row => (
-      <SearchResultsLink
-        location={row.geneId}
+      <GeneSearchLink
+        geneIds={row.geneId}
         familyGuids={row.families.map(({ family }) => family.familyGuid)}
         buttonText={row.numVariants.toString()}
         initialSearch={row.search}
