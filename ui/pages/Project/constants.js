@@ -95,7 +95,6 @@ const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 const SHOW_ASSIGNED_TO_ME_IN_REVIEW = 'SHOW_ASSIGNED_TO_ME_IN_REVIEW'
 const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'
 const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
-const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 const SHOW_CLOSED = 'SHOW_CLOSED'
@@ -197,11 +196,6 @@ export const CATEGORY_FAMILY_FILTERS = {
       value: SHOW_ANALYSED_BY_ME,
       name: 'Analysed By Me',
       analysedByFilter: (individualsByGuid, user) => ({ createdBy }) => createdBy === (user.displayName || user.email),
-    },
-    {
-      value: SHOW_NOT_ANALYSED_BY_ME,
-      name: 'Not Analysed By Me',
-      analysedByFilter: (individualsByGuid, user) => ({ createdBy }) => createdBy !== (user.displayName || user.email),
     },
     {
       value: SHOW_ANALYSED,
