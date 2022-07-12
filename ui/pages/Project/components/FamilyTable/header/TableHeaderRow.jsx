@@ -12,6 +12,7 @@ import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
 
 import {
   getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState, getFamiliesTableFilters,
+  getFamiliesFilterOptionsByCategory,
 } from '../../../selectors'
 import { updateFamiliesTable, updateFamiliesTableFilters } from '../../../reducers'
 import {
@@ -106,15 +107,14 @@ const CASE_REVEIW_FILTER_FIELDS = [
 
 const renderLabel = label => ({ color: 'blue', content: label.text })
 
-const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
+const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, options, category }) => {
   const value = (nestedFilterState || {})[category] || []
-  // TODO ability to filter by arbitrary analyst, maybe addable? nested dropdown? fetch before showing?
   return (
     <FilterMultiDropdown
       name={category}
       value={value}
       onChange={updateNestedFilter(category)}
-      options={CATEGORY_FAMILY_FILTERS[category]}
+      options={options}
       trigger={
         <span className="trigger">
           <Icon name={value.length ? 'filter' : 'caret down'} size="small" />
@@ -130,11 +130,13 @@ const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category
 BaseFamilyTableFilter.propTypes = {
   nestedFilterState: PropTypes.object,
   updateNestedFilter: PropTypes.func.isRequired,
-  category: PropTypes.string,
+  category: PropTypes.string.isRequired,
+  options: PropTypes.arrayOf(PropTypes.object),
 }
 
-const mapFilterStateToProps = state => ({
+const mapFilterStateToProps = (state, ownProps) => ({
   nestedFilterState: getFamiliesTableFilters(state),
+  options: getFamiliesFilterOptionsByCategory(state)[ownProps.category],
 })
 
 const mapFilterDispatchToProps = dispatch => ({
