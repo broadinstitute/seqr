@@ -15,13 +15,53 @@ class BasePaMoiDropdown extends React.Component {
   static propTypes = {
     locus: PropTypes.object,
     selectedMOIs: PropTypes.arrayOf(PropTypes.string),
-    shouldShow: PropTypes.func,
+    onChange: PropTypes.func,
   }
 
   shouldComponentUpdate(nextProps, nextState) {
     return semanticShouldUpdate(this, nextProps, nextState)
   }
+
   // Add logic to componentDidUpdate
+  componentDidUpdate(prevProps) {
+    console.log('running componentDidUpdate', prevProps)
+    console.log(this.props)
+    const { selectedMOIs, locus, onChange } = this.props
+    const { locusList } = locus
+    // const { panelAppItems } = locusList
+
+    // const panelAppItems = locusList.items?.filter((item) => {
+    //   let result = true
+    //   if (selectedMOIs && selectedMOIs.length !== 0) {
+    //     const initials = moiToMoiInitials(item.pagene?.modeOfInheritance)
+    //     if (initials.length === 0) initials.push('other')
+    //     result = selectedMOIs.filter(moi => initials.includes(moi)).length !== 0
+    //   }
+    //   return result
+    // }).reduce((acc, item) => {
+    console.log(selectedMOIs)
+    console.log(locusList)
+
+    const panelAppItems = {
+      red: '',
+      green: '',
+      amber: '',
+    }
+    locusList.panelAppItems = panelAppItems
+
+    if (prevProps.selectedMOIs !== selectedMOIs) {
+      console.log("something's different, push an update")
+      onChange({ selectedMOIs, panelAppItems })
+      // this.handleMOIselect(selectedMOIs)
+    } else {
+      console.log('nothing changed. no update.')
+    }
+  }
+
+  handleMOIselect = (selectedMOIs) => {
+    const { onChange } = this.props
+    onChange({ selectedMOIs })
+  }
 
   moiOptions = () => {
     const { locus } = this.props
@@ -44,9 +84,9 @@ class BasePaMoiDropdown extends React.Component {
   }
 
   render() {
-    const { selectedMOIs, shouldShow } = this.props
-    console.log('shouldShow', shouldShow)
+    const { selectedMOIs } = this.props || []
     console.log('all values?', this.props)
+    // selectedMOIs = selectedMOIs || []
 
     return (
       <Multiselect
@@ -85,13 +125,16 @@ const SUBSCRIPTION = {
 
 export default props => (
   <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => (
-      <PaMoiSelector
-        {...props}
-        locus={values.search?.locus}
-        projectFamilies={values.projectFamilies}
-        inline
-      />
-    )}
+    {({ values }) => {
+      console.log('values', values)
+      return (
+        <PaMoiSelector
+          {...props}
+          locus={values.search?.locus}
+          projectFamilies={values.projectFamilies}
+          inline
+        />
+      )
+    }}
   </FormSpy>
 )
