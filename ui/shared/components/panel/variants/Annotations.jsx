@@ -163,7 +163,6 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     addDividedLink(links, 'pubmed', `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`)
   }
 
-  // TODO genomeVersion no longer works
   const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
   if (variant.svType) {
     if (variant.endChrom && variant.endChrom !== variant.chrom) {

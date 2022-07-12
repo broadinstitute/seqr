@@ -29,8 +29,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const search = {
       ...(ownProps.initialSearch || {}),
       locus: {
-        // TODO genomeVersion no longer works, figure out how to search all projects
-        rawItems: ownProps.location, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion,
+        rawItems: ownProps.location, rawVariantItems: ownProps.variantId,
       },
     }
     if (ownProps.svType) {
@@ -39,7 +38,8 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
     const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
-      { allProjectFamilies: !projectFamilies, projectFamilies, search }, // TODO allProjectFamilies needs to be genome specific, add explicit prop?
+      // TODO update api endpoint for allProjectFamilies to have a genome Version (allGenomeProjectFamilies)
+      { allGenomeProjectFamilies: !projectFamilies && ownProps.genomeVersion, projectFamilies, search },
       resultsLink => window.open(resultsLink, '_blank'),
     ))
   },
