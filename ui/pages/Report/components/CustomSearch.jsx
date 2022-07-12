@@ -19,7 +19,7 @@ import { INHERITANCE_FILTER_OPTIONS, ALL_INHERITANCE_FILTER } from 'shared/utils
 import { loadProjectContext, loadProjectGroupContext, loadSearchHashContext } from '../reducers'
 import { getSearchHashContextLoading } from '../selectors'
 
-const INCLUDE_ALL_PROJECTS = 'allProjectFamilies'
+const INCLUDE_ALL_PROJECTS = 'allProjectFamilies'  // TODO allProjectFamilies needs to be genome specific
 
 const mapProjectsStateToProps = (state, ownProps) => ({
   project: getProjectsByGuid(state)[ownProps.value],
