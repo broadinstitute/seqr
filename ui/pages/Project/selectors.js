@@ -27,8 +27,6 @@ import {
   CASE_REVIEW_STATUS_OPTIONS,
   CASE_REVIEW_FILTER_LOOKUP,
   FAMILY_FILTER_LOOKUP,
-  ANALYSED_BY_FILTER_LOOKUP,
-  NO_ANALYSED_BY_FIELDS,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
   CASE_REVIEW_FAMILY_EXPORT_DATA,
@@ -350,6 +348,24 @@ export const getFamiliesFilterOptionsByCategory = createSelector(
       ...[...analysedByOptions].map(analysedBy => ({ value: analysedBy, category: 'Analysed By' })),
     ],
   }),
+)
+
+const ANALYSED_BY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.forEach((opt) => {
+      acc[opt.value] = opt.analysedByFilter
+    })
+    return acc
+  }, {},
+)
+
+const NO_ANALYSED_BY_FIELDS = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.filter(opt => opt.requireNoAnalysedBy).forEach((opt) => {
+      acc.add(opt.value)
+    })
+    return acc
+  }, new Set(),
 )
 
 const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY].reduce(

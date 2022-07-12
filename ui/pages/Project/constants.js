@@ -259,24 +259,6 @@ export const FAMILY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduc
   }, {},
 )
 
-export const ANALYSED_BY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
-  (acc, options) => {
-    options.forEach((opt) => {
-      acc[opt.value] = opt.analysedByFilter
-    })
-    return acc
-  }, {},
-)
-
-export const NO_ANALYSED_BY_FIELDS = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
-  (acc, options) => {
-    options.filter(opt => opt.requireNoAnalysedBy).forEach((opt) => {
-      acc.add(opt.value)
-    })
-    return acc
-  }, new Set(),
-)
-
 export const CASE_REVIEW_FAMILY_FILTER_OPTIONS = [
   ALL_FAMILIES_FILTER,
   {
