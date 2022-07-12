@@ -5,6 +5,7 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_ANALYSED_BY,
   FAMILY_NOTES_FIELDS,
   GENOME_VERSION_DISPLAY_LOOKUP,
   getVariantMainTranscript,
@@ -34,6 +35,7 @@ import {
   CASE_REVIEW_TABLE_NAME,
   CASE_REVIEW_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
+  CATEGORY_FAMILY_FILTERS,
 } from './constants'
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
@@ -332,18 +334,30 @@ const getFamiliesBySearchString = createSelector(
   },
 )
 
+const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY].reduce(
+  (acc, { value, category }) => ({ ...acc, [value]: category || FAMILY_FIELD_ANALYSED_BY }), {},
+)
+
 const analysedByFilters = (filter) => {
-  const analsedByGroups = Object.values(filter).map(
-    groupVals => groupVals.map(val => ANALYSED_BY_FILTER_LOOKUP[val]).filter(val => val),
-  ).filter(groupVals => groupVals.length)
-  const requireNoAnalysedBy = Object.values(filter).some(
-    groupVals => groupVals.some(val => NO_ANALYSED_BY_FIELDS.has(val)),
-  )
+  const filters = filter.map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)
 
-  const filters = Object.values(filter).reduce(
-    (acc, vals) => ([...acc, ...vals.map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)]), [],
-  )
-
+  let requireNoAnalysedBy = false
+  const analsedByGroups = Object.values(filter.reduce(
+    (acc, val) => {
+      const optFilter = ANALYSED_BY_FILTER_LOOKUP[val]
+      if (optFilter) {
+        const category = ANALYSED_BY_CATEGORY_OPTION_LOOKUP[val]
+        if (!acc[category]) {
+          acc[category] = []
+        }
+        acc[category].push(optFilter)
+      }
+      if (NO_ANALYSED_BY_FIELDS.has(val)) {
+        requireNoAnalysedBy = true
+      }
+      return acc
+    }, {},
+  ))
   if (analsedByGroups.length) {
     filters.push((...args) => (family) => {
       const filteredAnalysedBy = analsedByGroups.reduce(

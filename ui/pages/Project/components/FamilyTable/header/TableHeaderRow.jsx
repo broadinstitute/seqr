@@ -8,10 +8,7 @@ import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import StateChangeForm from 'shared/components/form/StateChangeForm'
 import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
-import {
-  FAMILY_FIELD_NAME_LOOKUP,
-  FAMILY_FIELD_ANALYSED_BY,
-} from 'shared/utils/constants'
+import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
 
 import {
   getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState, getFamiliesTableFilters,
@@ -107,16 +104,11 @@ const CASE_REVEIW_FILTER_FIELDS = [
   FAMILY_SEARCH, { ...FAMILY_FILTER, options: CASE_REVIEW_FAMILY_FILTER_OPTIONS }, ...SORT_FILTER_FIELDS,
 ]
 
-const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY].reduce(
-  (acc, { value, category }) => ({ ...acc, [value]: category || FAMILY_FIELD_ANALYSED_BY }), {},
-)
-
 const renderLabel = label => ({ color: 'blue', content: label.text })
 
 const BaseFamilyTableFilter = ({ nestedFilterState, updateNestedFilter, category }) => {
-  const categoryVal = (nestedFilterState || {})[category]
-  const value = category === FAMILY_FIELD_ANALYSED_BY ?
-    Object.values(categoryVal || {}).reduce((acc, v) => [...acc, ...v], []) : categoryVal || []
+  const value = (nestedFilterState || {})[category] || []
+  // TODO ability to filter by arbitrary analyst, maybe addable? nested dropdown? fetch before showing?
   return (
     <FilterMultiDropdown
       name={category}
@@ -147,16 +139,7 @@ const mapFilterStateToProps = state => ({
 
 const mapFilterDispatchToProps = dispatch => ({
   updateNestedFilter: category => (value) => {
-    dispatch(updateFamiliesTableFilters({
-      [category]: category === FAMILY_FIELD_ANALYSED_BY ? value.reduce((acc, v) => {
-        const subCategory = ANALYSED_BY_CATEGORY_OPTION_LOOKUP[v]
-        if (!acc[subCategory]) {
-          acc[subCategory] = []
-        }
-        acc[subCategory].push(v)
-        return acc
-      }, {}) : value,
-    }))
+    dispatch(updateFamiliesTableFilters({ [category]: value }))
   },
 })
 
