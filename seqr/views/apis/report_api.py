@@ -1,9 +1,7 @@
 from collections import defaultdict
-import requests
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
-from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch, Count
 from django.utils import timezone
 
@@ -11,18 +9,18 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
 
+from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     check_project_permissions
-from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import AIRTABLE_API_KEY, AIRTABLE_URL, ANALYST_PROJECT_CATEGORY
+from settings import ANALYST_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -550,17 +548,17 @@ LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
 def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
-    _validate_airtable_access(user)
+    session = AirtableSession(user)
     raw_records = {}
     # Airtable does handle its own pagination, but the query URI has a max length so the filter formula needs to be truncated
     for index in range(0, len(sample_ids), MAX_FILTER_IDS):
-        raw_records.update(_fetch_airtable_records(
+        raw_records.update(session.fetch_records(
             'Samples',
-            user=user,
             fields=SAMPLE_ID_FIELDS + SINGLE_SAMPLE_FIELDS + LIST_SAMPLE_FIELDS,
-            filter_formula='OR({})'.format(','.join([
-                "{{CollaboratorSampleID}}='{sample_id}',{{SeqrCollaboratorSampleID}}='{sample_id}'".format(sample_id=sample_id)
-                for sample_id in sample_ids[index:index+MAX_FILTER_IDS]]))
+            or_filters={
+                '{CollaboratorSampleID}': sample_ids[index:index+MAX_FILTER_IDS],
+                '{SeqrCollaboratorSampleID}': sample_ids[index:index + MAX_FILTER_IDS],
+            },
         ))
     sample_records = {}
     collaborator_ids = set()
@@ -588,47 +586,14 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
         sample_records[record_id] = parsed_record
 
     if include_collaborator and collaborator_ids:
-        collaborator_map = _fetch_airtable_records(
-            'Collaborator', user=user, fields=['CollaboratorID'], filter_formula='OR({})'.format(
-                ','.join(["RECORD_ID()='{}'".format(collaborator) for collaborator in collaborator_ids])))
+        collaborator_map = session.fetch_records(
+            'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids})
 
         for sample in sample_records.values():
             sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
 
     return sample_records
 
-
-def _validate_airtable_access(user):
-    if not (is_google_authenticated(user) and user.email.endswith('broadinstitute.org')):
-        raise PermissionDenied('Error: To access airtable user must login with Google authentication.')
-
-
-def _fetch_airtable_records(record_type, fields=None, filter_formula=None, offset=None, records=None, user=None):
-    headers = {'Authorization': 'Bearer {}'.format(AIRTABLE_API_KEY)}
-
-    params = {}
-    if offset:
-        params['offset'] = offset
-    if fields:
-        params['fields[]'] = fields
-    if filter_formula:
-        params['filterByFormula'] = filter_formula
-    response = requests.get('{}/{}'.format(AIRTABLE_URL, record_type), params=params, headers=headers)
-    response.raise_for_status()
-    if not records:
-        records = {}
-    try:
-        response_json = response.json()
-        records.update({record['id']: record['fields'] for record in response_json['records']})
-    except (ValueError, KeyError) as e:
-        raise Exception('Unable to retrieve airtable data: {}'.format(e))
-
-    if response_json.get('offset'):
-        return _fetch_airtable_records(
-            record_type, user=user, fields=fields, filter_formula=filter_formula, offset=response_json['offset'], records=records)
-
-    logger.info('Fetched {} {} records from airtable'.format(len(records), record_type), user)
-    return records
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
 # See https://hpo.jax.org/app/browse/term/HP:0000118

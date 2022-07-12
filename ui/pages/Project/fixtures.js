@@ -380,10 +380,15 @@ export const STATE_WITH_2_FAMILIES = {
     },
   },
   familyTableState: {
-    familiesFilter: 'ACCEPTED',
     familiesSortOrder: 'FAMILY_NAME',
     familiesSortDirection: -1,
     showDetails: true,
+  },
+  familyTableFilterState: {
+    analysisStatus: ['ACCEPTED'],
+  },
+  caseReviewTableState: {
+    familiesFilter: 'ACCEPTED',
   },
   user: {
     date_joined: '2015-02-19T20:22:50.633Z',

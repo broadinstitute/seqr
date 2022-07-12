@@ -202,6 +202,10 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "sequencing_center": "Broad",
   }
 
+def _get_list_param(call, param):
+    query_params = call.url.split('?')[1].split('&')
+    param_str = f'{param}='
+    return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
 
 class ReportAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
@@ -227,7 +231,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response_json['familiesCount'], {'internal': 13, 'external': 1})
         self.assertDictEqual(
             response_json['sampleCountsByType'],
-            {'WES__VARIANTS': {'internal': 8}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 2}},
+            {'WES__VARIANTS': {'internal': 8}, 'WGS__MITO': {'internal': 1}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 2}},
         )
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
@@ -301,7 +305,7 @@ class ReportAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
-    @mock.patch('seqr.views.apis.report_api.is_google_authenticated')
+    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
     def test_anvil_export(self, mock_google_authenticated,  mock_zip, mock_analyst_group):
         mock_google_authenticated.return_value = False
@@ -324,7 +328,7 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.json()['error'], 'Permission Denied')
         mock_google_authenticated.return_value = True
 
-        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -404,9 +408,10 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    @mock.patch('seqr.views.apis.report_api.is_google_authenticated')
+    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
     def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
         mock_google_authenticated.return_value = False
@@ -430,23 +435,23 @@ class ReportAPITest(AuthenticationTestCase):
         mock_google_authenticated.return_value = True
 
         # Test invalid airtable responses
-        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=402)
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=402)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 402)
 
         responses.reset()
-        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL), status=200)
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 500)
         self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
                                         'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
 
         responses.reset()
-        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
                       json=PAGINATED_AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, '{}/Samples'.format(AIRTABLE_URL),
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
                       json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
+        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
                       json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 500)
@@ -454,17 +459,32 @@ class ReportAPITest(AuthenticationTestCase):
             response.json()['error'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
         self.assertEqual(len(responses.calls), 2)
-        self.assertIsNone(responses.calls[0].request.params.get('offset'))
-        self.assertEqual(responses.calls[1].request.params.get('offset'), 'abc123')
+        expected_params = {
+            'fields[]': mock.ANY,
+            'filterByFormula':  "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885',{SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')",
+        }
+        expected_fields =  [
+            'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
+            'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
+        ]
+        self.assertDictEqual(responses.calls[0].request.params, expected_params)
+        self.assertListEqual(_get_list_param(responses.calls[0].request, 'fields%5B%5D'), expected_fields)
+        expected_params['offset'] = 'abc123'
+        self.assertDictEqual(responses.calls[1].request.params, expected_params)
+        self.assertListEqual(_get_list_param(responses.calls[1].request, 'fields%5B%5D'), expected_fields)
 
         # Test success
-        responses.add(responses.GET, '{}/Collaborator'.format(AIRTABLE_URL),
-                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
+        self.assertEqual(len(responses.calls), 4)
+        self.assertDictEqual(responses.calls[3].request.params, {
+            'fields[]': 'CollaboratorID',
+            'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
+        })
+        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
         # Test empty project
         empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])

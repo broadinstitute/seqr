@@ -600,9 +600,11 @@ class Sample(ModelWithGUID):
 
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
     DATASET_TYPE_SV_CALLS = 'SV'
+    DATASET_TYPE_MITO_CALLS = 'MITO'
     DATASET_TYPE_CHOICES = (
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        (DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 

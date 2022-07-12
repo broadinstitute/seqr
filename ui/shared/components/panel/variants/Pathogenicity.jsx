@@ -76,39 +76,37 @@ const clinvarUrl = (clinvar) => {
 
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
-  if (!clinvar.variationId && !clinvar.alleleId && !showHgmd) {
-    return null
+  const pathogenicity = []
+  if (clinvar.clinicalSignificance && (clinvar.variationId || clinvar.alleleId)) {
+    pathogenicity.push(['ClinVar', {
+      significance: clinvar.clinicalSignificance,
+      href: clinvarUrl(clinvar),
+      formatName: snakecaseToTitlecase,
+      goldStars: clinvar.goldStars,
+    }])
+  }
+  if (showHgmd) {
+    pathogenicity.push(['HGMD', {
+      significance: variant.hgmd.class,
+      href: `https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`,
+      formatName: hgmdName,
+    }])
+  }
+  if (variant.mitomapPathogenic) {
+    pathogenicity.push(['MITOMAP', {
+      significance: 'pathogenic',
+      href: 'https://www.mitomap.org/foswiki/bin/view/MITOMAP/ConfirmedMutations',
+    }])
   }
 
-  return (
-    <span>
-      {clinvar.clinicalSignificance && (
-        <span>
-          <b>ClinVar:</b>
-          <HorizontalSpacer width={5} />
-          <PathogenicityLink
-            key={clinvar.clinicalSignificance}
-            significance={clinvar.clinicalSignificance}
-            href={clinvarUrl(clinvar)}
-            formatName={snakecaseToTitlecase}
-            goldStars={clinvar.goldStars}
-          />
-        </span>
-      )}
-      {showHgmd && (
-        <span>
-          <HorizontalSpacer width={5} />
-          <b>HGMD:</b>
-          <HorizontalSpacer width={5} />
-          <PathogenicityLink
-            significance={variant.hgmd.class}
-            href={`https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/mut.php?acc=${variant.hgmd.accession}`}
-            formatName={hgmdName}
-          />
-        </span>
-      )}
+  return pathogenicity.map(([title, linkProps], index) => (
+    <span key={title}>
+      {!!index && <HorizontalSpacer width={5} />}
+      <b>{`${title}:`}</b>
+      <HorizontalSpacer width={5} />
+      <PathogenicityLink {...linkProps} />
     </span>
-  )
+  ))
 })
 
 Pathogenicity.propTypes = {
