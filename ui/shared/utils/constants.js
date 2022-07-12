@@ -95,8 +95,12 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
 export const DATASET_TYPE_SV_CALLS = 'SV'
+export const DATASET_TYPE_MITO_CALLS = 'MITO'
 
-export const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
+export const DATASET_TITLE_LOOKUP = {
+  [DATASET_TYPE_SV_CALLS]: ' SV',
+  [DATASET_TYPE_MITO_CALLS]: ' Mitochondria',
+}
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
@@ -1127,6 +1131,13 @@ const MUTTASTER_MAP = {
   P: { color: 'green', value: 'polymorphism automatic' },
 }
 
+const MITOTIP_MAP = {
+  likely_pathogenic: { color: 'red', value: 'likely pathogenic' },
+  possibly_pathogenic: { color: 'red', value: 'possibly pathogenic' },
+  possibly_benign: { color: 'green', value: 'possibly benign' },
+  likely_benign: { color: 'green', value: 'likely benign' },
+}
+
 const MISSENSE_IN_SILICO_GROUP = 'Missense'
 const CODING_IN_SILICO_GROUP = 'Coding/Noncoding'
 const SPLICING_IN_SILICO_GROUP = 'Splicing'
@@ -1158,6 +1169,10 @@ export const PREDICTOR_FIELDS = [
   { field: 'metasvm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
   { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
+  { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
+  { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
+  { field: 'mitotip', indicatorMap: MITOTIP_MAP },
+  { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },
 ]
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {

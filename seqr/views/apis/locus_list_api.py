@@ -12,7 +12,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
-    check_user_created_object_permissions, login_and_policies_required
+    check_user_created_object_permissions, login_and_policies_required, get_project_guids_user_can_view
 
 logger = SeqrLogger(__name__)
 
@@ -22,7 +22,7 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 @login_and_policies_required
 def locus_lists(request):
     locus_list_models = LocusList.objects.filter(
-        Q(is_public=True) | Q(created_by=request.user)
+        _get_user_list_filter(request.user)
     ).annotate(num_projects=Count('projects'))
 
     locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True,
@@ -33,6 +33,19 @@ def locus_lists(request):
         'genesById': _get_locus_lists_genes(locus_lists_json),
     })
 
+
+@login_and_policies_required
+def all_locus_list_options(request):
+    locus_list_models = LocusList.objects.filter(
+        _get_user_list_filter(request.user) | Q(projects__guid__in=get_project_guids_user_can_view(request.user))
+    )
+    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_metadata=False)
+    return create_json_response({
+        'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},
+    })
+
+def _get_user_list_filter(user):
+    return Q(is_public=True) | Q(created_by=user)
 
 @login_and_policies_required
 def locus_list_info(request, locus_list_guid):

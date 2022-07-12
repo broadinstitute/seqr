@@ -25,10 +25,7 @@ WorkspaceAccessError.propTypes = {
 
 const LoadWorkspaceData = ({ match }) => (
   <div>
-    <LoadWorkspaceDataForm
-      namespace={match.params.namespace}
-      name={match.params.name}
-    />
+    <LoadWorkspaceDataForm params={match.params} />
   </div>
 )
 

@@ -18,7 +18,6 @@ import {
 import { loadFamilies, loadProjectExportData } from '../../reducers'
 import { FamilyDetail } from '../FamilyPage'
 import TableHeaderRow from './header/TableHeaderRow'
-import EmptyTableRow from './EmptyTableRow'
 
 const ExportContainer = styled.span`
   float: right;
@@ -28,6 +27,12 @@ const ExportContainer = styled.span`
 const ToggleIcon = styled(Icon).attrs({ size: 'large', link: true, name: 'dropdown' })`
   position: relative;
   z-index: 1;
+`
+
+const EmptyCell = styled(Table.Cell)`
+  padding: 10px 0px 10px 15px;
+  color: gray;
+  border-width: 0px;
 `
 
 // Allows dropdowns to be visible inside table cell
@@ -143,7 +148,11 @@ const FamilyTable = React.memo(({
             tableName={tableName}
             {...props}
           />
-        )) : <EmptyTableRow tableName={tableName} />)}
+        )) : (
+          <Table.Row>
+            <EmptyCell content="0 families found" />
+          </Table.Row>
+        ))}
       </Table.Body>
       <Table.Footer>
         <Table.Row>
