@@ -8,43 +8,46 @@ import { FREQUENCIES, THIS_CALLSET_FREQUENCY, SV_CALLSET_FREQUENCY } from '../pa
 import { ButtonLink } from '../StyledComponents'
 
 const SearchResultsLink = ({
-  buttonText = 'Gene Search', openSearchResults, initialSearch, variant, geneIds,
+  buttonText = 'Gene Search', openSearchResults, initialSearch, variantId, location, genomeVersion, svType,
   familyGuids, familyGuid, ...props
 }) => <ButtonLink {...props} content={buttonText} onClick={openSearchResults} />
 
 SearchResultsLink.propTypes = {
   buttonText: PropTypes.string,
   initialSearch: PropTypes.object,
-  geneIds: PropTypes.string,
-  variant: PropTypes.object,
+  location: PropTypes.string,
+  variantId: PropTypes.string,
+  genomeVersion: PropTypes.string,
+  svType: PropTypes.string,
   familyGuid: PropTypes.string,
   familyGuids: PropTypes.arrayOf(PropTypes.string),
   openSearchResults: PropTypes.func,
 }
 
-const mapVariantSearchDispatchToProps = (dispatch, ownProps) => ({
+const mapDispatchToProps = (dispatch, ownProps) => ({
   openSearchResults: () => {
-    const { variantId, svType, genomeVersion, chrom, pos, end, endChrom } = ownProps.variant
     const search = {
-      // TODO genomeVersion no longer works, add explicit endpoint/ different query body?
-      locus: { genomeVersion },
+      ...(ownProps.initialSearch || {}),
+      locus: {
+        // TODO genomeVersion no longer works, figure out how to search all projects
+        rawItems: ownProps.location, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion,
+      },
     }
-    if (svType) {
-      search.locus.rawItems = (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` :
-        `${chrom}:${pos}-${end}%20`
-      search.annotations = { [VEP_GROUP_SV]: [svType, `gCNV_${svType}`] }
-    } else {
-      search.locus.rawVariantItems = variantId
+    if (ownProps.svType) {
+      search.annotations = { [VEP_GROUP_SV]: [ownProps.svType, `gCNV_${ownProps.svType}`] }
     }
+    const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
+    const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
-      // TODO allProjectFamilies needs to be genome specific, add explicit endpoint/ different query body?
-      { allProjectFamilies: true, search },
+      { allProjectFamilies: !projectFamilies, projectFamilies, search }, // TODO allProjectFamilies needs to be genome specific, add explicit prop?
       resultsLink => window.open(resultsLink, '_blank'),
     ))
   },
 })
 
-export const SeqrVariantSearchLink = connect(null, mapVariantSearchDispatchToProps)(SearchResultsLink)
+const ConnectedSearchResultsLink = connect(null, mapDispatchToProps)(SearchResultsLink)
+
+export default ConnectedSearchResultsLink
 
 const INITIAL_GENE_SEARCH = {
   inheritance: { mode: ANY_AFFECTED },
@@ -53,21 +56,4 @@ const INITIAL_GENE_SEARCH = {
   ),
 }
 
-const mapGeneSearchDispatchToProps = (dispatch, ownProps) => ({
-  openSearchResults: () => {
-    dispatch(navigateSavedHashedSearch(
-      {
-        projectFamilies: [{ familyGuids: ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids }],
-        search: {
-          ...(ownProps.initialSearch || INITIAL_GENE_SEARCH),
-          locus: {
-            rawItems: ownProps.geneIds,
-          },
-        },
-      },
-      resultsLink => window.open(resultsLink, '_blank'),
-    ))
-  },
-})
-
-export const GeneSearchLink = connect(null, mapGeneSearchDispatchToProps)(SearchResultsLink)
+export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />

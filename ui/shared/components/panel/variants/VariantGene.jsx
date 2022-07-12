@@ -541,7 +541,7 @@ const BaseVariantGene = React.memo((
           size="tiny"
         />
         &nbsp; | &nbsp;
-        <GeneSearchLinkWithPopup geneIds={geneId} familyGuids={variant.familyGuids} />
+        <GeneSearchLinkWithPopup location={geneId} familyGuids={variant.familyGuids} />
       </GeneLinks>
     )
   }
@@ -630,7 +630,7 @@ class VariantGenes extends React.PureComponent {
     const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
 
     const geneSearchLink = !mainGeneId && geneIds.length > 0 &&
-      <GeneSearchLinkWithPopup geneIds={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
+      <GeneSearchLinkWithPopup location={geneIds.join(',')} familyGuids={variant.familyGuids} padding="10px 0" />
 
     if (geneIds.length < 6 || showAll) {
       return (
