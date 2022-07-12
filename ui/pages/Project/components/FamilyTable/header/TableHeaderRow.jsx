@@ -42,9 +42,11 @@ const SpacedDropdown = styled(Dropdown)`
   padding-right: 5px;
 `
 
-const FilterMultiDropdown = styled(Dropdown).attrs({ inline: true, multiple: true, icon: null })`
+const FilterMultiDropdown = styled(Dropdown).attrs({ inline: true, multiple: true, search: true, icon: null })`
   .ui.multiple.dropdown {
-    .label {
+    width: 100%;
+  
+    .label, .search, .sizer {
       display: none;
       white-space: nowrap;
     }
@@ -58,7 +60,7 @@ const FilterMultiDropdown = styled(Dropdown).attrs({ inline: true, multiple: tru
       .trigger {
         display: none;
       }
-      .label {
+      .label, .search {
         display: inherit;
       }
     }
