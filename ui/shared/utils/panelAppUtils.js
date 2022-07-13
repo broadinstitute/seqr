@@ -1,3 +1,5 @@
+import { PANEL_APP_CONFIDENCE_LEVELS } from 'shared/utils/constants'
+
 export const moiToMoiInitials = (rawMoi) => {
   if (!rawMoi) {
     return []
@@ -39,4 +41,9 @@ export const panelAppUrl = (apiUrl, panelId, gene) => {
   const baseUrl = apiUrl.split('/api')[0]
 
   return `${baseUrl}/panels/${panelId}/gene/${gene}`
+}
+
+export const panelAppLocusListReducer = (acc, item) => {
+  const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
+  return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
 }

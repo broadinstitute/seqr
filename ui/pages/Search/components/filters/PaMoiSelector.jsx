@@ -2,8 +2,8 @@ import PropTypes from 'prop-types'
 import React from 'react'
 import { Multiselect } from 'shared/components/form/Inputs'
 import { semanticShouldUpdate } from 'shared/utils/semanticUtils'
-import { moiToMoiInitials } from 'shared/utils/panelAppUtils'
-import { PANEL_APP_CONFIDENCE_LEVELS, PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
+import { moiToMoiInitials, panelAppLocusListReducer } from 'shared/utils/panelAppUtils'
+import { PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
 class PaMoiDropdown extends React.Component {
 
@@ -28,10 +28,7 @@ class PaMoiDropdown extends React.Component {
         result = selectedMOIs.filter(moi => initials.includes(moi)).length !== 0
       }
       return result
-    }).reduce((acc, item) => {
-      const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
-      return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
-    }, {})
+    }).reduce(panelAppLocusListReducer, {})
 
     if (locus?.panelAppItems) {
       locus.panelAppItems = panelAppItems
