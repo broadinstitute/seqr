@@ -6,7 +6,7 @@ import { Multiselect } from 'shared/components/form/Inputs'
 import { semanticShouldUpdate } from 'shared/utils/semanticUtils'
 import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { moiToMoiInitials } from 'shared/utils/panelAppUtils'
-import { PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
+import { PANEL_APP_CONFIDENCE_LEVELS, PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
 import { getSearchedProjectsLocusListOptions } from '../../selectors'
 
@@ -24,34 +24,45 @@ class BasePaMoiDropdown extends React.Component {
 
   // Add logic to componentDidUpdate
   componentDidUpdate(prevProps) {
-    console.log('running componentDidUpdate', prevProps)
-    console.log(this.props)
     const { selectedMOIs, locus, onChange } = this.props
     const { locusList } = locus
-    // const { panelAppItems } = locusList
 
-    // const panelAppItems = locusList.items?.filter((item) => {
-    //   let result = true
-    //   if (selectedMOIs && selectedMOIs.length !== 0) {
-    //     const initials = moiToMoiInitials(item.pagene?.modeOfInheritance)
-    //     if (initials.length === 0) initials.push('other')
-    //     result = selectedMOIs.filter(moi => initials.includes(moi)).length !== 0
-    //   }
-    //   return result
-    // }).reduce((acc, item) => {
-    console.log(selectedMOIs)
-    console.log(locusList)
+    const panelAppItems = locusList.items?.filter((item) => {
+      let result = true
+      if (selectedMOIs && selectedMOIs.length !== 0) {
+        const initials = moiToMoiInitials(item.pagene?.modeOfInheritance)
+        if (initials.length === 0) initials.push('other')
+        result = selectedMOIs.filter(moi => initials.includes(moi)).length !== 0
+      }
+      return result
+    }).reduce((acc, item) => {
+      const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
+      return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
+    }, {})
 
-    const panelAppItems = {
-      red: '',
-      green: '',
-      amber: '',
+    // eslint-disable-next-line react/destructuring-assignment
+    if (this.props.locus?.panelAppItems) {
+      // eslint-disable-next-line no-param-reassign
+      // eslint-disable-next-line react/destructuring-assignment
+      this.props.locus.panelAppItems = panelAppItems
+      // this.props.locus.panelAppItems = {
+      //   green: 'world',
+      //   amber: 'from componentDidUpdate',
+      //   red: 'hello',
+      // }
     }
-    locusList.panelAppItems = panelAppItems
+
+    // locusList.panelAppItems = panelAppItems
 
     if (prevProps.selectedMOIs !== selectedMOIs) {
       console.log("something's different, push an update")
-      onChange({ selectedMOIs, panelAppItems })
+
+      locusList.panelAppItems = {
+        red: 'test',
+        green: 'abc',
+        amber: 'efg',
+      }
+      onChange({ selectedMOIs, values: { hello: 'world' } })
       // this.handleMOIselect(selectedMOIs)
     } else {
       console.log('nothing changed. no update.')
@@ -85,7 +96,17 @@ class BasePaMoiDropdown extends React.Component {
 
   render() {
     const { selectedMOIs } = this.props || []
-    console.log('all values?', this.props)
+    console.log('all props given to render', this.props)
+    // eslint-disable-next-line react/destructuring-assignment
+    // if (this.props.locus?.panelAppItems) {
+    //   // eslint-disable-next-line no-param-reassign
+    //   // eslint-disable-next-line react/destructuring-assignment
+    //   this.props.locus.panelAppItems = {
+    //     red: 'hello',
+    //     green: 'world',
+    //     amber: '',
+    //   }
+    // }
     // selectedMOIs = selectedMOIs || []
 
     return (
@@ -125,12 +146,25 @@ const SUBSCRIPTION = {
 
 export default props => (
   <FormSpy subscription={SUBSCRIPTION}>
+    {/* onChange=
+    {(stuff) => {
+      console.log('FormSpy onChange?', stuff)
+      console.log('props at formSpy time', props)
+    }} */}
     {({ values }) => {
-      console.log('values', values)
+      console.log('formspy values', values)
+      if (values.locus?.panelAppItems) {
+        // eslint-disable-next-line no-param-reassign
+        values.locus.panelAppItems = {
+          red: '',
+          green: '',
+          amber: '',
+        }
+      }
       return (
         <PaMoiSelector
           {...props}
-          locus={values.search?.locus}
+          // locus={values.search?.locus}
           projectFamilies={values.projectFamilies}
           inline
         />

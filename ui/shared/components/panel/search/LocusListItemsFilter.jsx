@@ -18,6 +18,7 @@ const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, fil
   <FormSpy subscription={SUBSCRIPTION}>
     {({ values }) => (!shouldShow || shouldShow(values?.search?.locus || {})) && createElement(
       filterComponent || BaseSemanticInput, {
+        locus: values?.search?.locus,
         inputType: 'TextArea',
         inline: true,
         rows: 8,
@@ -37,6 +38,7 @@ const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, fil
 )
 
 LocusListItemsFilter.propTypes = {
+  locus: PropTypes.object,
   label: PropTypes.node,
   iconColor: PropTypes.string,
   shouldDisable: PropTypes.func.isRequired,
