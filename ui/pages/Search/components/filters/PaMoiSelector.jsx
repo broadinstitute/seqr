@@ -22,7 +22,6 @@ class BasePaMoiDropdown extends React.Component {
     return semanticShouldUpdate(this, nextProps, nextState)
   }
 
-  // Add logic to componentDidUpdate
   componentDidUpdate(prevProps) {
     const { selectedMOIs, locus, onChange } = this.props
     const { locusList } = locus
@@ -40,32 +39,9 @@ class BasePaMoiDropdown extends React.Component {
       return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
     }, {})
 
-    // eslint-disable-next-line react/destructuring-assignment
-    if (this.props.locus?.panelAppItems) {
-      // eslint-disable-next-line no-param-reassign
-      // eslint-disable-next-line react/destructuring-assignment
-      this.props.locus.panelAppItems = panelAppItems
-      // this.props.locus.panelAppItems = {
-      //   green: 'world',
-      //   amber: 'from componentDidUpdate',
-      //   red: 'hello',
-      // }
-    }
-
-    // locusList.panelAppItems = panelAppItems
-
-    if (prevProps.selectedMOIs !== selectedMOIs) {
-      console.log("something's different, push an update")
-
-      locusList.panelAppItems = {
-        red: 'test',
-        green: 'abc',
-        amber: 'efg',
-      }
-      onChange({ selectedMOIs, values: { hello: 'world' } })
-      // this.handleMOIselect(selectedMOIs)
-    } else {
-      console.log('nothing changed. no update.')
+    if (prevProps.selectedMOIs !== selectedMOIs && locus?.panelAppItems) {
+      locus.panelAppItems = panelAppItems
+      onChange({ selectedMOIs })
     }
   }
 
@@ -96,19 +72,6 @@ class BasePaMoiDropdown extends React.Component {
 
   render() {
     const { selectedMOIs } = this.props || []
-    console.log('all props given to render', this.props)
-    // eslint-disable-next-line react/destructuring-assignment
-    // if (this.props.locus?.panelAppItems) {
-    //   // eslint-disable-next-line no-param-reassign
-    //   // eslint-disable-next-line react/destructuring-assignment
-    //   this.props.locus.panelAppItems = {
-    //     red: 'hello',
-    //     green: 'world',
-    //     amber: '',
-    //   }
-    // }
-    // selectedMOIs = selectedMOIs || []
-
     return (
       <Multiselect
         className="inline six wide field"
@@ -146,29 +109,12 @@ const SUBSCRIPTION = {
 
 export default props => (
   <FormSpy subscription={SUBSCRIPTION}>
-    {/* onChange=
-    {(stuff) => {
-      console.log('FormSpy onChange?', stuff)
-      console.log('props at formSpy time', props)
-    }} */}
-    {({ values }) => {
-      console.log('formspy values', values)
-      if (values.locus?.panelAppItems) {
-        // eslint-disable-next-line no-param-reassign
-        values.locus.panelAppItems = {
-          red: '',
-          green: '',
-          amber: '',
-        }
-      }
-      return (
-        <PaMoiSelector
-          {...props}
-          // locus={values.search?.locus}
-          projectFamilies={values.projectFamilies}
-          inline
-        />
-      )
-    }}
+    {({ values }) => (
+      <PaMoiSelector
+        {...props}
+        projectFamilies={values.projectFamilies}
+        inline
+      />
+    )}
   </FormSpy>
 )
