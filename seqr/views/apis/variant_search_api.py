@@ -56,10 +56,10 @@ def query_variants_handler(request, search_hash):
         return create_json_response({'error': str(e)}, status=400, reason=str(e))
 
     _check_results_permission(results_model, request.user)
-    is_all_project_search = _is_all_project_family_search(search_context)
+    skip_genotype_filter = bool(_all_project_family_search_genome(search_context))
 
     variants, total_results = get_es_variants(results_model, sort=sort, page=page, num_results=per_page,
-                                              skip_genotype_filter=is_all_project_search, user=request.user)
+                                              skip_genotype_filter=skip_genotype_filter, user=request.user)
 
     response = _process_variants(variants or [], results_model.families.all(), request)
     response['search'] = _get_search_context(results_model)
@@ -68,8 +68,8 @@ def query_variants_handler(request, search_hash):
     return create_json_response(response)
 
 
-def _is_all_project_family_search(search_context):
-    return bool(search_context and search_context.get('allProjectFamilies'))
+def _all_project_family_search_genome(search_context):
+    return (search_context or {}).get('allGenomeProjectFamilies')
 
 
 def _get_or_create_results_model(search_hash, search_context, user):
@@ -79,18 +79,20 @@ def _get_or_create_results_model(search_hash, search_context, user):
             raise Exception('Invalid search hash: {}'.format(search_hash))
 
         project_families = search_context.get('projectFamilies')
+        all_project_genome_version = _all_project_family_search_genome(search_context)
         if project_families:
             all_families = set()
             for project_family in project_families:
                 all_families.update(project_family['familyGuids'])
             families = Family.objects.filter(guid__in=all_families)
-        elif _is_all_project_family_search(search_context):
+        elif all_project_genome_version:
             omit_projects = [p.guid for p in Project.objects.filter(is_demo=True).only('guid')]
             project_guids = [
                 project_guid for project_guid in get_project_guids_user_can_view(user, limit_data_manager=True)
                 if project_guid not in omit_projects
             ]
-            families = Family.objects.filter(project__guid__in=project_guids)
+            families = Family.objects.filter(
+                project__guid__in=project_guids, project__genome_version=all_project_genome_version)
         elif search_context.get('projectGuids'):
             families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
         else:

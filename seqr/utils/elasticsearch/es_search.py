@@ -59,7 +59,7 @@ class EsSearch(object):
         if len(genome_versions) > 1:
             versions = defaultdict(set)
             for s in samples.select_related('individual__family__project'):
-                versions[self.index_metadata[s.elasticsearch_index]].add(s.individual.family.project.name)
+                versions[self.index_metadata[s.elasticsearch_index]['genomeVersion']].add(s.individual.family.project.name)
             raise InvalidSearchException(
                 'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {}'.format(
                     '; '.join(['{} - {}'.format(build, ', '.join(sorted(projects))) for build, projects in versions.items()])

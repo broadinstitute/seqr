@@ -38,7 +38,6 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
     const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
-      // TODO update api endpoint for allProjectFamilies to have a genome Version (allGenomeProjectFamilies)
       { allGenomeProjectFamilies: !projectFamilies && ownProps.genomeVersion, projectFamilies, search },
       resultsLink => window.open(resultsLink, '_blank'),
     ))
