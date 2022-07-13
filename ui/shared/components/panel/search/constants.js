@@ -387,8 +387,8 @@ export const LOCATION_FIELDS = [
     shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
   },
   {
-    name: 'MOI Selection',
-    label: 'MoiSelection',
+    name: PANEL_APP_FIELD_NAME,
+    label: 'Modes of Inheritance',
     component: LocusListItemsFilter,
     filterComponent: PaMoiSelector,
     shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],

@@ -30,10 +30,7 @@ class PaMoiDropdown extends React.Component {
       return result
     }).reduce(panelAppLocusListReducer, {})
 
-    if (locus?.panelAppItems) {
-      locus.panelAppItems = panelAppItems
-      onChange({ selectedMOIs })
-    }
+    onChange({ ...panelAppItems })
   }
 
   moiOptions = () => {
@@ -57,11 +54,11 @@ class PaMoiDropdown extends React.Component {
   }
 
   render() {
-    const { selectedMOIs } = this.props || []
+    const { selectedMOIs, label } = this.props || []
     return (
       <Multiselect
         className="inline six wide field"
-        label="Modes of Inheritance"
+        label={label}
         value={selectedMOIs}
         onChange={this.handleMOIselect}
         placeholder="Showing all MOIs as listed in Panel App"
