@@ -54,12 +54,13 @@ class PaMoiDropdown extends React.Component {
   }
 
   render() {
-    const { selectedMOIs, label } = this.props || []
+    const { selectedMOIs, label, width } = this.props || []
     return (
       <Multiselect
-        className="inline six wide field"
         label={label}
         value={selectedMOIs}
+        width={width}
+        inline
         onChange={this.handleMOIselect}
         placeholder="Showing all MOIs as listed in Panel App"
         options={this.moiOptions()}

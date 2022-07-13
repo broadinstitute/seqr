@@ -389,8 +389,10 @@ export const LOCATION_FIELDS = [
   {
     name: PANEL_APP_FIELD_NAME,
     label: 'Modes of Inheritance',
+    labelHelp: 'Filter the Gene List based on Modes of Inheritance from Panel App',
     component: LocusListItemsFilter,
     filterComponent: PaMoiSelector,
+    width: 6,
     shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
     shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
   },
