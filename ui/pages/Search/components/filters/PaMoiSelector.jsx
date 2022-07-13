@@ -1,20 +1,14 @@
 import PropTypes from 'prop-types'
 import React from 'react'
-import { connect } from 'react-redux'
-import { FormSpy } from 'react-final-form'
 import { Multiselect } from 'shared/components/form/Inputs'
 import { semanticShouldUpdate } from 'shared/utils/semanticUtils'
-import { LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { moiToMoiInitials } from 'shared/utils/panelAppUtils'
 import { PANEL_APP_CONFIDENCE_LEVELS, PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
-import { getSearchedProjectsLocusListOptions } from '../../selectors'
-
-class BasePaMoiDropdown extends React.Component {
+class PaMoiDropdown extends React.Component {
 
   static propTypes = {
     locus: PropTypes.object,
-    selectedMOIs: PropTypes.arrayOf(PropTypes.string),
     onChange: PropTypes.func,
   }
 
@@ -22,8 +16,8 @@ class BasePaMoiDropdown extends React.Component {
     return semanticShouldUpdate(this, nextProps, nextState)
   }
 
-  componentDidUpdate(prevProps) {
-    const { selectedMOIs, locus, onChange } = this.props
+  handleMOIselect = (selectedMOIs) => {
+    const { locus, onChange } = this.props
     const { locusList } = locus
 
     const panelAppItems = locusList.items?.filter((item) => {
@@ -39,15 +33,10 @@ class BasePaMoiDropdown extends React.Component {
       return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
     }, {})
 
-    if (prevProps.selectedMOIs !== selectedMOIs && locus?.panelAppItems) {
+    if (locus?.panelAppItems) {
       locus.panelAppItems = panelAppItems
       onChange({ selectedMOIs })
     }
-  }
-
-  handleMOIselect = (selectedMOIs) => {
-    const { onChange } = this.props
-    onChange({ selectedMOIs })
   }
 
   moiOptions = () => {
@@ -87,34 +76,9 @@ class BasePaMoiDropdown extends React.Component {
 
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  projectLocusListOptions: getSearchedProjectsLocusListOptions(state, ownProps),
-})
-
-const PaMoiDropdown = connect(mapStateToProps)(BasePaMoiDropdown)
-
-const PaMoiSelector = React.memo(({ value, ...props }) => (
-  <LocusListItemsLoader locusListGuid={value.locusListGuid} reloadOnIdUpdate content hideLoading>
-    <PaMoiDropdown selectedMOIs={value.selectedMOIs} {...props} />
-  </LocusListItemsLoader>
+export default React.memo(props => (
+  <PaMoiDropdown
+    {...props}
+    inline
+  />
 ))
-
-PaMoiSelector.propTypes = {
-  value: PropTypes.object,
-}
-
-const SUBSCRIPTION = {
-  values: true,
-}
-
-export default props => (
-  <FormSpy subscription={SUBSCRIPTION}>
-    {({ values }) => (
-      <PaMoiSelector
-        {...props}
-        projectFamilies={values.projectFamilies}
-        inline
-      />
-    )}
-  </FormSpy>
-)
