@@ -34,6 +34,7 @@ import {
 import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import EditIndividualMetadataButton from './edit-families-and-individuals/EditIndividualMetadataButton'
 import EditDatasetsButton from './EditDatasetsButton'
+import LoadWorkspaceDataForm from '../../AnvilWorkspace/components/LoadWorkspaceDataForm'
 
 const DetailContent = styled.div`
  padding: 5px 0px 0px 20px;
@@ -243,6 +244,8 @@ class DatasetSection extends React.PureComponent {
 
 }
 
+const params = {}
+
 const Dataset = React.memo(({ project, samplesByType, user }) => {
   const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
@@ -282,10 +285,26 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
     })
   }
 
+  Object.assign(params, { namespace: project.workspaceNamespace, name: project.workspaceName })
+
+  const addAnvilDataButton = (
+    <Modal
+      modalName="addAnvilDataset"
+      title="Add Anvil Dataset"
+      size="small"
+      trigger={<ButtonLink>Request Additional Data</ButtonLink>}
+    >
+      <LoadWorkspaceDataForm params={params} newData />
+    </Modal>
+  )
+
+  const dataButton = project.isAnalystProject && project.canEdit ? addAnvilDataButton :
+    (<EditDatasetsButton user={user} />)
+
   return datasetSections.map((sectionProps, i) => (
     <DetailSection
       {...sectionProps}
-      button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
+      button={(datasetSections.length - 1 === i) ? dataButton : null}
     />
   ))
 })
