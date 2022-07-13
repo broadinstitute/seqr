@@ -65,7 +65,7 @@ const ToggleHeaderFieldColumn = styled(Grid.Column)`
       width: 100% !important;
     }
     
-    .icon {
+    >.icon {
       margin: -0.75em !important;
       transform: rotate(90deg) !important;
       &.delete {
@@ -247,9 +247,11 @@ HeaderContent.propTypes = {
   inputProps: PropTypes.object,
 }
 
+const searchFieldName = (name, field) => (field.fullFieldValue ? `search.${name}` : `search.${name}.${field.name}`)
+
 const PanelContent = React.memo(({ name, fields, fieldProps, helpText, fieldLayout }) => {
   const fieldComponents = fields && configuredFields(
-    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field, name: `search.${name}.${field.name}` })) },
+    { fields: fields.map(field => ({ ...(fieldProps || {}), ...field, name: searchFieldName(name, field) })) },
   )
   return (
     <div>

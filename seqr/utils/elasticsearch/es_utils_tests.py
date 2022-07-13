@@ -14,15 +14,17 @@ from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
 from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37
-from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT, TRANSCRIPT_2
+from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
+    PARSED_MITO_VARIANT, TRANSCRIPT_2
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
 NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
 SV_INDEX_NAME = 'test_index_sv'
 SV_WGS_INDEX_NAME = 'test_index_sv_wgs'
-INDEX_ALIAS = '236a15db29fc23707a0ec5817ca78b5e'
-ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME])}
+MITO_WGS_INDEX_NAME = 'test_index_mito_wgs'
+INDEX_ALIAS = '377e97bd791cf92a78296bc184e0976a'
+ALIAS_MAP = {INDEX_ALIAS: ','.join([INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME, MITO_WGS_INDEX_NAME])}
 SUB_INDICES = ['sub_index_1', 'sub_index_2']
 SECOND_SUB_INDICES = ['sub_index_a', 'sub_index_b']
 
@@ -454,6 +456,147 @@ ES_SV_WGS_VARIANT = {
     'matched_queries': {SV_WGS_INDEX_NAME: ['F000014_14']},
   }
 
+ES_MITO_WGS_VARIANT = {
+    "_source" : {
+      "genotypes" : [
+        {
+          "num_alt": 2,
+          "gq": 60.0,
+          "hl": 1.0,
+          "mito_cn": 319.03225806451616,
+          "contamination": 0.0,
+          "dp": 5139.0,
+          "sample_id": "HG00733"
+        },
+      ],
+      "samples_gq_60_to_65" : [
+        "HG00733"
+      ],
+      "samples_num_alt_2" : [ "HG00733" ],
+      "AC" : 0,
+      "AC_het" : 1,
+      "AF" : 0.0,
+      "AF_het" : 3.968253968253968E-4,
+      "alt" : "A",
+      "AN" : 2520,
+      "clinvar_allele_id" : None,
+      "clinvar_clinical_significance" : ['Likely_pathogenic'],
+      "clinvar_gold_stars" : None,
+      "codingGeneIds" : [
+        "ENSG00000198840"
+      ],
+      "common_low_heteroplasmy" : False,
+      "contig" : "M",
+      "dbnsfp_SIFT_pred" : "D",
+      "dbnsfp_MutationTaster_pred" : "N",
+      "dbnsfp_FATHMM_pred" : "T",
+      "dbnsfp_GERP_RS" : "5.07",
+      "dbnsfp_phastCons100way_vertebrate" : "0.958000",
+      "docId" : "M-10195-C-A",
+      "domains" : [
+        "ENSP_mappings:5xtc",
+        "ENSP_mappings:5xtd",
+        "Gene3D:1",
+        "PANTHER:PTHR11058",
+        "Pfam:PF00507"
+      ],
+      "end" : 10195,
+      "filters" : [ ],
+      "geneIds" : [
+        "ENSG00000198840"
+      ],
+      "gnomad_mito_AN": 56421,
+      "gnomad_mito_AC": 1368,
+      "gnomad_mito_AC_het": 3,
+      "gnomad_mito_AF": 0.024246292,
+      "gnomad_mito_AF_het": 5.317169E-5,
+      "gnomad_mito_max_hl": 1.0,
+      "hap_defining_variant" : False,
+      "helix_AC": 1312,
+      "helix_AC_het": 5,
+      "helix_AF": 0.0033268193,
+      "helix_AF_het": 4.081987E-5,
+      "helix_max_hl": 0.90441,
+      "high_constraint_region" : True,
+      "hmtvar_hmtVar" : 0.71,
+      "mainTranscript_biotype" : "protein_coding",
+      "mainTranscript_canonical" : 1,
+      "mainTranscript_category" : "missense",
+      "mainTranscript_cdna_start" : 137,
+      "mainTranscript_cdna_end" : 137,
+      "mainTranscript_codons" : "cCc/cAc",
+      "mainTranscript_gene_id" : "ENSG00000198840",
+      "mainTranscript_gene_symbol" : "MT-ND3",
+      "mainTranscript_hgvs" : "p.Pro46His",
+      "mainTranscript_hgvsc" : "ENST00000361227.2:c.137C>A",
+      "mainTranscript_major_consequence" : "missense_variant",
+      "mainTranscript_major_consequence_rank" : 11,
+      "mainTranscript_transcript_id" : "ENST00000361227",
+      "mainTranscript_amino_acids" : "P/H",
+      "mainTranscript_domains" : "Gene3D:1,ENSP_mappings:5xtc,PANTHER:PTHR11058,ENSP_mappings:5xtd,Pfam:PF00507",
+      "mainTranscript_hgvsp" : "ENSP00000355206.2:p.Pro46His",
+      "mainTranscript_polyphen_prediction" : "probably_damaging",
+      "mainTranscript_protein_id" : "ENSP00000355206",
+      "mainTranscript_sift_prediction" : "deleterious_low_confidence",
+      "mitimpact_apogee" : 0.42,
+      "mitomap_pathogenic" : True,
+      "pos" : 10195,
+      "ref" : "C",
+      "rg37_locus" : {
+        "contig" : "MT",
+        "position" : 10195
+      },
+      "rsid" : None,
+      "sortedTranscriptConsequences" : [
+        {
+          "biotype" : "protein_coding",
+          "canonical" : 1,
+          "cdna_start" : 137,
+          "cdna_end" : 137,
+          "codons" : "cCc/cAc",
+          "gene_id" : "ENSG00000198840",
+          "gene_symbol" : "MT-ND3",
+          "hgvsc" : "ENST00000361227.2:c.137C>A",
+          "hgvsp" : "ENSP00000355206.2:p.Pro46His",
+          "transcript_id" : "ENST00000361227",
+          "amino_acids" : "P/H",
+          "polyphen_prediction" : "probably_damaging",
+          "protein_id" : "ENSP00000355206",
+          "protein_start" : 46,
+          "sift_prediction" : "deleterious_low_confidence",
+          "consequence_terms" : [
+            "missense_variant"
+          ],
+          "domains" : [
+            "Gene3D:1",
+            "ENSP_mappings:5xtc",
+            "ENSP_mappings:5xtd",
+            "Pfam:PF00507",
+            "PANTHER:PTHR11058",
+            "PANTHER:PTHR11058"
+          ],
+          "major_consequence" : "missense_variant",
+          "category" : "missense",
+          "hgvs" : "p.Pro46His",
+          "major_consequence_rank" : 11,
+          "transcript_rank" : 0
+        }
+      ],
+      "start" : 10195,
+      "transcriptConsequenceTerms" : [
+        "missense_variant"
+      ],
+      "transcriptIds" : [
+        "ENST00000361227"
+      ],
+      "variantId" : "M-10195-C-A",
+      "xpos" : 25000010195,
+      "xstart" : 25000010195,
+      "xstop" : 25000010195
+    },
+    'matched_queries': {MITO_WGS_INDEX_NAME: ['F000014_14']},
+}
+
 OR2M3_COMPOUND_HET_ES_VARIANTS = deepcopy(ES_VARIANTS)
 transcripts = OR2M3_COMPOUND_HET_ES_VARIANTS[1]['_source']['sortedTranscriptConsequences']
 transcripts[0]['major_consequence'] = 'frameshift_variant'
@@ -500,6 +643,7 @@ INDEX_ES_VARIANTS = {
     SV_INDEX_NAME: [ES_SV_VARIANT],
     SV_WGS_INDEX_NAME: [ES_SV_WGS_VARIANT],
     NO_LIFT_38_INDEX_NAME: [BUILD_38_NO_LIFTOVER_ES_VARIANT],
+    MITO_WGS_INDEX_NAME: [ES_MITO_WGS_VARIANT],
 }
 INDEX_ES_VARIANTS.update({k: ES_VARIANTS for k in SUB_INDICES + SECOND_SUB_INDICES})
 
@@ -702,6 +846,7 @@ MAPPING_FIELDS = [
     'xstop',
     'bothsides_support',
 ]
+
 SV_MAPPING_FIELDS = [
     'start',
     'end',
@@ -735,12 +880,100 @@ SV_MAPPING_FIELDS = [
     'bothsides_support',
 ]
 
+MITO_MAPPING_FIELDS = [
+    "AC",
+    "AC_het",
+    "AF",
+    "AF_het",
+    "AN",
+    "alt",
+    "clinvar_allele_id",
+    "clinvar_clinical_significance",
+    "clinvar_gold_stars",
+    "common_low_heteroplasmy",
+    "contig",
+    "dbnsfp_FATHMM_pred",
+    "dbnsfp_GERP_RS",
+    "dbnsfp_MetaSVM_pred",
+    "dbnsfp_MutationTaster_pred",
+    "dbnsfp_Polyphen2_HVAR_pred",
+    "dbnsfp_REVEL_score",
+    "dbnsfp_SIFT_pred",
+    "dbnsfp_phastCons100way_vertebrate",
+    "end",
+    "filters",
+    "genotypes",
+    "gnomad_mito_AC",
+    "gnomad_mito_AC_het",
+    "gnomad_mito_AF",
+    "gnomad_mito_AF_het",
+    "gnomad_mito_AN",
+    "gnomad_mito_max_hl",
+    "hap_defining_variant",
+    "helix_AC",
+    "helix_AC_het",
+    "helix_AF",
+    "helix_AF_het",
+    "helix_max_hl",
+    "high_constraint_region",
+    "hmtvar_hmtVar",
+    "mitimpact_apogee",
+    "mitomap_pathogenic",
+    "mitotip_mitoTIP",
+    "ref",
+    "rg37_locus",
+    "rsid",
+    "sortedTranscriptConsequences",
+    "start",
+    "variantId",
+    "xpos",
+    "xstop",
+]
+
+MITO_SOURCE_ONLY_FIELDS = [
+    'callset_max_hl',
+    'exac_AC_het',
+    'exac_AF_het',
+    'exac_max_hl',
+    'g1k_AC_het',
+    'g1k_AF_het',
+    'g1k_max_hl',
+    'gnomad_exomes_AC_het',
+    'gnomad_exomes_AF_het',
+    'gnomad_exomes_max_hl',
+    'gnomad_genomes_AC_het',
+    'gnomad_genomes_AF_het',
+    'gnomad_genomes_max_hl',
+    'gnomad_svs_AC_het',
+    'gnomad_svs_AF_het',
+    'gnomad_svs_max_hl',
+    'sv_callset_AC_het',
+    'sv_callset_AF_het',
+    'sv_callset_max_hl',
+    'topmed_AC_het',
+    'topmed_max_hl',
+    'topmed_AF_het',
+    'helix_ID',
+    'helix_Hemi',
+    'helix_AN',
+    'helix_filter_AF',
+    'helix_Het',
+    'helix_Hom',
+    'gnomad_mito_filter_AF',
+    'gnomad_mito_Hom',
+    'gnomad_mito_ID',
+    'gnomad_mito_Het',
+    'gnomad_mito_Hemi',
+]
+
 SOURCE_FIELDS = {
     'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
     'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
 SOURCE_FIELDS.update(SV_MAPPING_FIELDS)
+SOURCE_FIELDS.update(MITO_MAPPING_FIELDS)
+SOURCE_FIELDS.update(MITO_SOURCE_ONLY_FIELDS)
 SOURCE_FIELDS -= {
     'samples_no_call', 'samples_cn_0', 'samples_cn_1', 'samples_cn_2', 'samples_cn_3', 'samples_cn_gte_4', 'topmed_Het',
     'gnomad_genomes_FAF_AF',
@@ -766,6 +999,10 @@ CORE_INDEX_METADATA = {
     SV_INDEX_NAME: {
         '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
+    },
+    MITO_WGS_INDEX_NAME: {
+        '_meta': {'genomeVersion': '38', 'datasetType': 'MITO'},
+        'properties': {field: {'type': 'keyword'} for field in MITO_MAPPING_FIELDS},
     },
 }
 INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
@@ -1134,7 +1371,7 @@ class EsUtilsTest(TestCase):
         get_es_variants_for_variant_ids(self.families, ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL'])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'prefix-938_DEL']}}],
-            size=6, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=9, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
     @urllib3_responses.activate
@@ -1144,7 +1381,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variant, PARSED_NO_SORT_VARIANTS[1])
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['2-103343353-GAGA-G']}}],
-            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=3, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
         variant = get_single_es_variant(self.families, '1-248367227-TC-T', return_all_queried_families=True)
@@ -1156,7 +1393,7 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variant, all_family_variant)
         self.assertExecutedSearch(
             filters=[{'terms': {'variantId': ['1-248367227-TC-T']}}],
-            size=2, index=','.join([INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
+            size=3, index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME]), unsorted=True,
         )
 
         with self.assertRaises(InvalidSearchException) as cm:
@@ -1294,17 +1531,17 @@ class EsUtilsTest(TestCase):
             cm.exception.info,
             {'type': 'search_phase_execution_exception', 'root_cause': [{'type': 'too_many_clauses'}]})
 
-        _set_cache('index_metadata__test_index,test_index_sv', None)
+        _set_cache(f'index_metadata__{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}', None)
         urllib3_responses.add(
-            urllib3_responses.GET, '/test_index,test_index_sv/_mapping', body=Exception('Connection error'))
+            urllib3_responses.GET, f'/{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}/_mapping', body=Exception('Connection error'))
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'test_index,test_index_sv - Error accessing index: Connection error')
+        self.assertEqual(str(cm.exception), 'test_index,test_index_mito_wgs,test_index_sv - Error accessing index: Connection error')
 
-        urllib3_responses.replace_json('/test_index,test_index_sv/_mapping', {})
+        urllib3_responses.replace_json(f'/{INDEX_NAME},{MITO_WGS_INDEX_NAME},{SV_INDEX_NAME}/_mapping', {})
         with self.assertRaises(InvalidIndexException) as cm:
             get_es_variants(results_model)
-        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index')
+        self.assertEqual(str(cm.exception), 'Could not find expected indices: test_index_sv, test_index_mito_wgs, test_index')
 
     @mock.patch('seqr.utils.elasticsearch.utils.MAX_VARIANTS')
     @urllib3_responses.activate
@@ -1321,7 +1558,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 5)
 
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
-        self.assertTrue('index_metadata__{},{}'.format(INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
+        self.assertTrue('index_metadata__{},{},{}'.format(INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
 
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY, ALL_INHERITANCE_QUERY])
 
@@ -1748,7 +1985,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(self.families)
 
         variants, _ = get_es_variants(results_model, num_results=5)
-        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS)
+        self.assertListEqual(variants, [PARSED_SV_VARIANT] + PARSED_NO_CONSEQUENCE_FILTER_VARIANTS + [PARSED_MITO_VARIANT])
         path_filter = {'terms': {
             'clinvar_clinical_significance': [
                 'Pathogenic', 'Pathogenic/Likely_pathogenic'
@@ -1756,6 +1993,7 @@ class EsUtilsTest(TestCase):
         }}
         self.assertExecutedSearches([
             dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
+            dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
             dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
 
@@ -2570,15 +2808,18 @@ class EsUtilsTest(TestCase):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'annotations': {'frameshift': ['frameshift_variant']},
-            'locus': {'rawItems': 'ENSG00000223972'},
+            'locus': {'rawItems': 'ENSG00000228198'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        variants, total_results = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        expected_transcript_variant = deepcopy(PARSED_VARIANTS[0])
+        expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
+        self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_GENOME_VERSION_VARIANT])
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
-            filters=[{'terms': {'geneIds': ['ENSG00000223972']}}, ANNOTATION_QUERY],
+            filters=[{'terms': {'geneIds': ['ENSG00000228198']}}, ANNOTATION_QUERY],
             size=4,
         )
 
@@ -2587,10 +2828,11 @@ class EsUtilsTest(TestCase):
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
         get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+
         self.assertExecutedSearches([
             dict(
                 filters=[
-                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    {'terms': {'geneIds': ['ENSG00000228198']}},
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [
@@ -2602,7 +2844,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=SECOND_INDEX_NAME),
             dict(
                 filters=[
-                    {'terms': {'geneIds': ['ENSG00000223972']}},
+                    {'terms': {'geneIds': ['ENSG00000228198']}},
                     ANNOTATION_QUERY,
                     {'bool': {
                         'should': [
@@ -2756,9 +2998,9 @@ class EsUtilsTest(TestCase):
 
         get_es_variants(results_model, num_results=2)
 
-        self.assertExecutedSearch(index=INDEX_ALIAS, size=6)
+        self.assertExecutedSearch(index=INDEX_ALIAS, size=8)
         self.assertDictEqual(urllib3_responses.call_request_json(index=0), {
-            'actions': [{'add': {'indices': [INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
+            'actions': [{'add': {'indices': [INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME, SV_INDEX_NAME], 'alias': INDEX_ALIAS}}]})
 
     @urllib3_responses.activate
     def test_get_es_variants_search_index_alias(self):

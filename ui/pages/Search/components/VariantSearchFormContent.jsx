@@ -117,7 +117,7 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
   headerProps: {
     title: 'Location',
     name: 'locus',
-    inputSize: 12,
+    inputSize: 5,
     inputProps: { component: LocusListSelector, format: val => val || {} },
   },
 }

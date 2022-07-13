@@ -115,20 +115,24 @@ export const getSavedSearchOptions = createSavedSearchesSelector(
   },
 )
 
-export const getSearchedProjectsLocusListOptions = createListEqualSelector(
+export const getLocusListOptions = createListEqualSelector(
   (state, props) => props.projectFamilies,
   getProjectsByGuid,
   getLocusListsByGuid,
   (projectFamilies, projectsByGuid, locusListsByGuid) => {
-    const locusListGuids = [...new Set((projectFamilies || []).reduce(
+    const projectsLocusListGuids = new Set((projectFamilies || []).reduce(
       (acc, { projectGuid }) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
         [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
-    ))]
-    const locusListOptions = locusListGuids.map((locusListGuid) => {
-      const { name, paLocusList } = locusListsByGuid[locusListGuid]
-      return { text: name, value: locusListGuid, key: locusListGuid, description: paLocusList && 'PanelApp' }
-    })
-    return [{ value: null, description: 'None' }, ...locusListOptions]
+    ))
+    return Object.values(locusListsByGuid).map(({ locusListGuid, name, isPublic, paLocusList }) => ({
+      text: name,
+      value: locusListGuid,
+      key: locusListGuid,
+      description: paLocusList && 'PanelApp',
+      icon: { name: isPublic ? 'users' : 'lock', size: 'small' },
+      category: `${projectsLocusListGuids.has(locusListGuid) ? 'Project' : 'All'} Lists`,
+      categoryRank: projectsLocusListGuids.has(locusListGuid) ? 0 : 1,
+    })).sort(compareObjects('text')).sort(compareObjects('categoryRank'))
   },
 )
 
