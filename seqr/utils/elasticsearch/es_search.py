@@ -1275,17 +1275,6 @@ def _liftover_grch38_to_grch37():
             logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
     return LIFTOVER_GRCH38_TO_GRCH37
 
-# TODO no longer used?
-LIFTOVER_GRCH37_TO_GRCH38 = None
-def _liftover_grch37_to_grch38():
-    global LIFTOVER_GRCH37_TO_GRCH38
-    if not LIFTOVER_GRCH37_TO_GRCH38:
-        try:
-            LIFTOVER_GRCH37_TO_GRCH38 = LiftOver('hg19', 'hg38')
-        except Exception as e:
-            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
-    return LIFTOVER_GRCH37_TO_GRCH38
-
 
 def _get_family_affected_status(samples_by_id, inheritance_filter):
     individual_affected_status = inheritance_filter.get('affected') or {}
