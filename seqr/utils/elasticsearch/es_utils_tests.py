@@ -19,7 +19,7 @@ from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARS
 
 INDEX_NAME = 'test_index'
 SECOND_INDEX_NAME = 'test_index_second'
-NO_LIFT_38_INDEX_NAME = 'test_index_no_lift'
+HG38_INDEX_NAME = 'test_index_hg38'
 SV_INDEX_NAME = 'test_index_sv'
 SV_WGS_INDEX_NAME = 'test_index_sv_wgs'
 MITO_WGS_INDEX_NAME = 'test_index_mito_wgs'
@@ -639,10 +639,10 @@ COMPOUND_HET_INDEX_VARIANTS = {
 
 INDEX_ES_VARIANTS = {
     INDEX_NAME: ES_VARIANTS,
-    SECOND_INDEX_NAME: [BUILD_38_ES_VARIANT],
+    SECOND_INDEX_NAME: [ES_VARIANTS[1]],
     SV_INDEX_NAME: [ES_SV_VARIANT],
     SV_WGS_INDEX_NAME: [ES_SV_WGS_VARIANT],
-    NO_LIFT_38_INDEX_NAME: [BUILD_38_NO_LIFTOVER_ES_VARIANT],
+    HG38_INDEX_NAME: [BUILD_38_ES_VARIANT, BUILD_38_NO_LIFTOVER_ES_VARIANT],
     MITO_WGS_INDEX_NAME: [ES_MITO_WGS_VARIANT],
 }
 INDEX_ES_VARIANTS.update({k: ES_VARIANTS for k in SUB_INDICES + SECOND_SUB_INDICES})
@@ -682,6 +682,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT:
     })
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['transcripts']['ENSG00000135953'][0]['majorConsequence'] = 'frameshift_variant'
 PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['mainTranscriptId'] = TRANSCRIPT_2['transcriptId']
+PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT[1]['selectedMainTranscriptId'] = None
 
 PARSED_COMPOUND_HET_VARIANTS_PROJECT_2 = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
 for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
@@ -691,10 +692,7 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'genotypes': {
             'I000015_na20885': variant['genotypes']['I000015_na20885'],
         },
-        'genomeVersion': '38',
-        'liftedOverGenomeVersion': '37',
-        'liftedOverPos': variant['pos'] - 10,
-        'liftedOverChrom': variant['chrom'],
+        'genomeVersion': '37',
         'selectedMainTranscriptId': None,
     })
 
@@ -740,9 +738,9 @@ PARSED_MULTI_GENOME_VERSION_VARIANT.update({
     '_sort': [PARSED_MULTI_INDEX_VARIANT['_sort'][0] + 10],
 })
 
-PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
-for guid, genotype in PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT['genotypes'].items():
-    PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
+PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
+for guid, genotype in PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT['genotypes'].items():
+    PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT['genotypes'][guid] = dict(otherSample=genotype, **genotype)
 
 PARSED_MULTI_SAMPLE_VARIANT = deepcopy(PARSED_VARIANTS[1])
 for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT['genotypes'].items():
@@ -753,11 +751,11 @@ for guid, genotype in PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'].items():
     PARSED_MULTI_SAMPLE_VARIANT_0['genotypes'][guid] = dict(otherSample=genotype, **genotype)
 
 
-PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
-PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT.update({
+PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
+PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT.update({
     'familyGuids': ['F000003_3', 'F000011_11'],
     'genotypes': {
-        ind_guid: PARSED_MULTI_GENOME_VERSION_VARIANT['genotypes'][ind_guid]
+        ind_guid: PARSED_MULTI_INDEX_VARIANT['genotypes'][ind_guid]
         for ind_guid in ['I000007_na20870', 'I000015_na20885']
     },
 })
@@ -993,6 +991,10 @@ CORE_INDEX_METADATA = {
         'properties': MAPPING_PROPERTIES,
     },
     SECOND_INDEX_NAME: {
+        '_meta': {'genomeVersion': '37', 'datasetType': 'VARIANTS'},
+        'properties': MAPPING_PROPERTIES,
+    },
+    HG38_INDEX_NAME: {
         '_meta': {'genomeVersion': '38', 'datasetType': 'VARIANTS'},
         'properties': MAPPING_PROPERTIES,
     },
@@ -1001,12 +1003,11 @@ CORE_INDEX_METADATA = {
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
     },
     MITO_WGS_INDEX_NAME: {
-        '_meta': {'genomeVersion': '38', 'datasetType': 'MITO'},
+        '_meta': {'genomeVersion': '37', 'datasetType': 'MITO'},
         'properties': {field: {'type': 'keyword'} for field in MITO_MAPPING_FIELDS},
     },
 }
 INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
-INDEX_METADATA[NO_LIFT_38_INDEX_NAME] = INDEX_METADATA[SECOND_INDEX_NAME]
 INDEX_METADATA[SV_WGS_INDEX_NAME] = INDEX_METADATA[SV_INDEX_NAME]
 
 ALL_INHERITANCE_QUERY = {
@@ -2603,8 +2604,8 @@ class EsUtilsTest(TestCase):
         self.assertEqual(total_results, 11)
 
         self.assertCachedResults(results_model, {
-            'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}],
-            'variant_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
+            'compound_het_results': [{'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}],
+            'variant_results': [PARSED_MULTI_INDEX_VARIANT],
             'grouped_results': [{'null': [PARSED_VARIANTS[0]]}, {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2}],
             'duplicate_doc_count': 2,
             'loaded_variant_counts': {
@@ -2673,17 +2674,17 @@ class EsUtilsTest(TestCase):
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
         self.assertEqual(len(variants), 2)
-        self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION])
+        self.assertListEqual(variants, [PARSED_VARIANTS[0], PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT])
         self.assertEqual(total_results, 9)
 
         cache_results = {
             'compound_het_results': [],
-            'variant_results': [PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT],
+            'variant_results': [PARSED_MULTI_SAMPLE_MULTI_INDEX_VARIANT],
             'grouped_results': [
                 {'null': [PARSED_VARIANTS[0]]},
                 {'ENSG00000135953': PARSED_COMPOUND_HET_VARIANTS_PROJECT_2},
                 {'null': [PARSED_VARIANTS[0]]},
-                {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION}
+                {'ENSG00000228198': PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT}
             ],
             'duplicate_doc_count': 4,
             'loaded_variant_counts': {
@@ -2719,7 +2720,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_GENOME_VERSION_VARIANT]
+        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 4)
 
@@ -2737,7 +2738,7 @@ class EsUtilsTest(TestCase):
 
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
-        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_GENOME_VERSION_VARIANT]
+        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 3)
 
@@ -2774,7 +2775,7 @@ class EsUtilsTest(TestCase):
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
         variants, total_results = get_es_variants(results_model, num_results=2)
-        expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_GENOME_VERSION_VARIANT]
+        expected_variants = [PARSED_VARIANTS[0], PARSED_ANY_AFFECTED_MULTI_INDEX_VERSION_VARIANT]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 9)
 
@@ -2816,7 +2817,7 @@ class EsUtilsTest(TestCase):
         variants, total_results = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
         expected_transcript_variant = deepcopy(PARSED_VARIANTS[0])
         expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
-        self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_GENOME_VERSION_VARIANT])
+        self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_INDEX_VARIANT])
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'geneIds': ['ENSG00000228198']}}, ANNOTATION_QUERY],
@@ -2873,15 +2874,7 @@ class EsUtilsTest(TestCase):
             'I000015_na20885': PARSED_MULTI_GENOME_VERSION_VARIANT['genotypes']['I000015_na20885'],
         }
 
-        # Test using rg37_locus from pipeline
-        variants, _ = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 1)
-        self.assertListEqual(variants, [expected_grch38_variant])
-        mock_liftover.assert_not_called()
-
-        # Test using python liftover
-        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
-        Sample.objects.filter(elasticsearch_index=SECOND_INDEX_NAME).update(elasticsearch_index=NO_LIFT_38_INDEX_NAME)
+        Sample.objects.filter(elasticsearch_index=SECOND_INDEX_NAME).update(elasticsearch_index=HG38_INDEX_NAME)
 
         mock_liftover.side_effect = Exception()
         expected_no_lift_grch38_variant = deepcopy(expected_grch38_variant)
@@ -2891,8 +2884,8 @@ class EsUtilsTest(TestCase):
             'liftedOverPos': None,
         })
         variants, _ = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 1)
-        self.assertListEqual(variants, [expected_no_lift_grch38_variant])
+        self.assertEqual(len(variants), 2)
+        self.assertListEqual(variants, [expected_grch38_variant, expected_no_lift_grch38_variant])
         self.assertIsNone(_liftover_grch38_to_grch37())
         mock_liftover.assert_called_with('hg38', 'hg19')
 
@@ -2900,89 +2893,10 @@ class EsUtilsTest(TestCase):
         mock_liftover.side_effect = None
         mock_liftover.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
         variants, _ = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 1)
-        self.assertListEqual(variants, [expected_grch38_variant])
+        self.assertEqual(len(variants), 2)
+        self.assertListEqual(variants, [expected_grch38_variant, expected_grch38_variant])
         self.assertIsNotNone(_liftover_grch38_to_grch37())
         mock_liftover.assert_called_with('hg38', 'hg19')
-
-    @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH38_TO_GRCH37', None)
-    @mock.patch('seqr.utils.elasticsearch.es_search.LIFTOVER_GRCH37_TO_GRCH38', None)
-    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_VARIANTS', 3)
-    @mock.patch('seqr.utils.elasticsearch.es_search.LiftOver')
-    @urllib3_responses.activate
-    def test_multi_project_get_variants_by_id(self, mock_liftover):
-        setup_responses()
-        search_model = VariantSearch.objects.create(search={
-            'annotations': {'frameshift': ['frameshift_variant']},
-            'locus': {'rawVariantItems': '2-103343363-GAGA-G', 'genomeVersion': '38'},
-        })
-        results_model = VariantSearchResults.objects.create(variant_search=search_model)
-        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
-
-        # Test liftover variant to hg37 when liftover fails
-        mock_liftover.side_effect = Exception()
-        get_es_variants(results_model, num_results=2)
-        self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
-            filters=[
-                {'terms': {'variantId': ['2-103343363-GAGA-G']}},
-                ANNOTATION_QUERY,
-            ],
-            size=2,
-        )
-
-        # Test liftover variant to hg37
-        mock_liftover.side_effect = None
-        mock_liftover.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
-        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
-        variants, _ = get_es_variants(results_model, num_results=2)
-        self.assertEqual(len(variants), 1)
-        self.assertDictEqual(variants[0], PARSED_MULTI_GENOME_VERSION_VARIANT)
-
-        self.assertCachedResults(results_model, {
-            'all_results': [PARSED_MULTI_GENOME_VERSION_VARIANT],
-            'duplicate_doc_count': 1,
-            'total_results': 4,
-        })
-        self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
-            filters=[
-                {'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343353-GAGA-G']}},
-                ANNOTATION_QUERY,
-            ],
-            size=3,
-        )
-        mock_liftover.assert_called_with('hg38', 'hg19')
-
-        # Test liftover variant to hg38 when liftover fails
-        search_model.search['locus']['genomeVersion'] = '37'
-        search_model.save()
-        mock_liftover.side_effect = Exception()
-        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
-        get_es_variants(results_model, num_results=2)
-        self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
-            filters=[
-                {'terms': {'variantId': ['2-103343363-GAGA-G']}},
-                ANNOTATION_QUERY,
-            ],
-            size=2,
-        )
-
-        # Test liftover variant to hg38
-        mock_liftover.side_effect = None
-        mock_liftover.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos + 10]]
-        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
-        get_es_variants(results_model, num_results=2)
-        self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
-            filters=[
-                {'terms': {'variantId': ['2-103343363-GAGA-G', '2-103343373-GAGA-G']}},
-                ANNOTATION_QUERY,
-            ],
-            size=3,
-        )
-        mock_liftover.assert_called_with('hg19', 'hg38')
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_NAME_LENGTH', 30)
     @urllib3_responses.activate
@@ -3357,20 +3271,6 @@ class EsUtilsTest(TestCase):
                     }
                 }
             }, 'xpos', 'variantId'])
-
-    @urllib3_responses.activate
-    def test_deduplicate_variants(self):
-        setup_responses()
-        no_second_project_duplicate = deepcopy(PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT)
-        no_second_project_duplicate['genotypes']['I000015_na20885'].pop('otherSample')
-
-        self.assertListEqual(EsSearch._deduplicate_multi_genome_variant_results(
-            deepcopy([PARSED_VARIANTS[1],  PARSED_VARIANTS[1], PARSED_MULTI_GENOME_VERSION_VARIANT])
-        ), [no_second_project_duplicate])
-
-        self.assertListEqual(EsSearch._deduplicate_multi_genome_variant_results(
-            deepcopy([PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_MULTI_GENOME_VERSION_VARIANT, PARSED_VARIANTS[1]])
-        ), [PARSED_MULTI_SAMPLE_MULTI_GENOME_VERSION_VARIANT])
 
     @urllib3_responses.activate
     def test_genotype_inheritance_filter(self):

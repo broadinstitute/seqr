@@ -898,7 +898,7 @@ class EsSearch(object):
         lifted_over_genome_version = None
         lifted_over_chrom = None
         lifted_over_pos = None
-        grch37_locus = result.pop(GRCH38_LOCUS_FIELD, None)
+        grch37_locus = hit.get(GRCH38_LOCUS_FIELD, None)
         if grch37_locus:
             lifted_over_genome_version = GENOME_VERSION_GRCh37
             lifted_over_chrom = grch37_locus['contig']
