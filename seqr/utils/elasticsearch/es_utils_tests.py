@@ -994,10 +994,6 @@ CORE_INDEX_METADATA = {
         '_meta': {'genomeVersion': '37', 'datasetType': 'VARIANTS'},
         'properties': MAPPING_PROPERTIES,
     },
-    HG38_INDEX_NAME: {
-        '_meta': {'genomeVersion': '38', 'datasetType': 'VARIANTS'},
-        'properties': MAPPING_PROPERTIES,
-    },
     SV_INDEX_NAME: {
         '_meta': {'genomeVersion': '37', 'datasetType': 'SV'},
         'properties': {field: {'type': 'keyword'} for field in SV_MAPPING_FIELDS},
@@ -1008,6 +1004,8 @@ CORE_INDEX_METADATA = {
     },
 }
 INDEX_METADATA = deepcopy(CORE_INDEX_METADATA)
+INDEX_METADATA[HG38_INDEX_NAME] = deepcopy(INDEX_METADATA[SECOND_INDEX_NAME])
+INDEX_METADATA[HG38_INDEX_NAME]['_meta']['genomeVersion'] = '38'
 INDEX_METADATA[SV_WGS_INDEX_NAME] = INDEX_METADATA[SV_INDEX_NAME]
 
 ALL_INHERITANCE_QUERY = {
