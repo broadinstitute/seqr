@@ -2424,7 +2424,8 @@ class EsUtilsTest(TestCase):
     def test_all_samples_all_inheritance_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
-            'annotations': {'frameshift': ['frameshift_variant']}
+            'annotations': {'frameshift': ['frameshift_variant']},
+            'locus': {'rawVariantItems': '1-248367227-TC-T,2-103343353-GAGA-G'},
         })
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__guid='R0001_1kg'))
@@ -2433,7 +2434,8 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY])
+        self.assertExecutedSearch(filters=[
+            {'terms': {'variantId': ['1-248367227-TC-T', '2-103343353-GAGA-G']}}, ANNOTATION_QUERY])
 
     @urllib3_responses.activate
     def test_all_samples_any_affected_get_es_variants(self):
