@@ -894,7 +894,8 @@ class EsSearch(object):
 
         return main_transcript_id, selected_main_transcript_id
 
-    def _add_liftover(self, result, hit):
+    @staticmethod
+    def _add_liftover(result, hit):
         lifted_over_genome_version = None
         lifted_over_chrom = None
         lifted_over_pos = None
