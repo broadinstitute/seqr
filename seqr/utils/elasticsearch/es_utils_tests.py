@@ -1411,6 +1411,14 @@ class EsUtilsTest(TestCase):
             get_es_variants(results_model)
         self.assertEqual(str(cm.exception), 'No es index found for families no_individuals')
 
+        results_model.families.set(Family.objects.all())
+        with self.assertRaises(InvalidSearchException) as cm:
+            get_es_variants(results_model)
+        self.assertEqual(
+            str(cm.exception),
+            'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: 37 - 1kg project nåme with uniçøde, Test Reprocessed Project; 38 - Non-Analyst Project',
+        )
+
         search_model.search = {'inheritance': {'mode': 'recessive'}, 'locus': {'rawItems': 'DDX11L1'}}
         search_model.save()
         results_model.families.set([family for family in self.families if family.guid == 'F000005_5'])
