@@ -140,7 +140,7 @@ export const Dropdown = React.memo(({ options, includeCategories, ...props }) =>
     noResultsMessage={null}
     tabIndex="0"
   />
-), hasUpdatedFormInputProps)
+))
 
 Dropdown.propTypes = {
   options: PropTypes.arrayOf(PropTypes.object),
@@ -218,7 +218,7 @@ export class AddableSelect extends React.PureComponent {
 
   componentDidUpdate(prevProps) {
     const { options } = this.props
-    if (!optionsAreEqual(options, prevProps.options)) {
+    if (options.length !== prevProps.options.length) {
       this.resetOptions()
     }
   }
