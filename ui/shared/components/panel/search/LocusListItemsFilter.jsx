@@ -38,7 +38,6 @@ const LocusListItemsFilter = ({ shouldShow, shouldDisable, iconColor, label, fil
 )
 
 LocusListItemsFilter.propTypes = {
-  locus: PropTypes.object,
   label: PropTypes.node,
   iconColor: PropTypes.string,
   shouldDisable: PropTypes.func.isRequired,

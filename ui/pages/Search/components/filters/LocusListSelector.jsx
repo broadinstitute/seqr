@@ -7,7 +7,7 @@ import styled from 'styled-components'
 
 import { getLocusListsIsLoading } from 'redux/selectors'
 import { Dropdown } from 'shared/components/form/Inputs'
-import { panelAppLocusListReducer } from 'shared/utils/panelAppUtils'
+import { formatPanelAppItems } from 'shared/utils/panelAppUtils'
 import { LocusListsLoader, LocusListItemsLoader } from 'shared/components/LocusListLoader'
 import { getLocusListOptions } from '../../selectors'
 
@@ -51,7 +51,7 @@ class BaseLocusListDropdown extends React.Component {
       const { locusListGuid } = locusList
 
       if (locusList.paLocusList) {
-        const panelAppItems = locusList.items?.reduce(panelAppLocusListReducer, {})
+        const panelAppItems = formatPanelAppItems(locusList.items)
         onChange({ locusListGuid, panelAppItems, locusList })
       } else {
         const { rawItems } = locusList

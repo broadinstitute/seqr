@@ -43,7 +43,12 @@ export const panelAppUrl = (apiUrl, panelId, gene) => {
   return `${baseUrl}/panels/${panelId}/gene/${gene}`
 }
 
-export const panelAppLocusListReducer = (acc, item) => {
-  const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
-  return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
+export const formatPanelAppItems = (items) => {
+  if (!items) {
+    return []
+  }
+  return items.reduce((acc, item) => {
+    const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
+    return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
+  }, {})
 }

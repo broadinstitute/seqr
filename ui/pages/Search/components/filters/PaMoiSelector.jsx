@@ -1,34 +1,31 @@
 import PropTypes from 'prop-types'
 import React from 'react'
 import { Multiselect } from 'shared/components/form/Inputs'
-import { semanticShouldUpdate } from 'shared/utils/semanticUtils'
-import { moiToMoiInitials, panelAppLocusListReducer } from 'shared/utils/panelAppUtils'
+import { moiToMoiInitials, formatPanelAppItems } from 'shared/utils/panelAppUtils'
 import { PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
-class PaMoiDropdown extends React.Component {
+export default class PaMoiDropdown extends React.PureComponent {
 
   static propTypes = {
     locus: PropTypes.object,
     onChange: PropTypes.func,
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
-    return semanticShouldUpdate(this, nextProps, nextState)
-  }
-
   handleMOIselect = (selectedMOIs) => {
     const { locus, onChange } = this.props
     const { locusList } = locus
 
-    const panelAppItems = locusList.items?.filter((item) => {
-      let result = true
-      if (selectedMOIs && selectedMOIs.length !== 0) {
+    const panelAppItems = formatPanelAppItems(
+      locusList.items?.filter((item) => {
+        let result = true
         const initials = moiToMoiInitials(item.pagene?.modeOfInheritance)
         if (initials.length === 0) initials.push('other')
-        result = selectedMOIs.filter(moi => initials.includes(moi)).length !== 0
-      }
-      return result
-    }).reduce(panelAppLocusListReducer, {})
+        if (selectedMOIs && selectedMOIs.length !== 0) {
+          result = selectedMOIs.some(moi => initials.includes(moi))
+        }
+        return result
+      }),
+    )
 
     onChange({ ...panelAppItems })
   }
@@ -70,10 +67,3 @@ class PaMoiDropdown extends React.Component {
   }
 
 }
-
-export default React.memo(props => (
-  <PaMoiDropdown
-    {...props}
-    inline
-  />
-))
