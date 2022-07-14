@@ -39,6 +39,7 @@ ES_VARIANTS = [
           'g1k_AF': None,
           'gnomad_genomes_Hom': 0,
           'cadd_PHRED': '25.9',
+          'splice_ai_delta_score': 0.75,
           'exac_AC_Hemi': None,
           'g1k_AC': None,
           'topmed_AN': 125568,
@@ -113,7 +114,7 @@ ES_VARIANTS = [
               ]
             }
           ],
-          'hgmd_class': None,
+          'hgmd_class': 'DM',
           'AC': 2,
           'exac_AN_Adj': 121308,
           'mpc_MPC': None,
