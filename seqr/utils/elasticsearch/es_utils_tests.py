@@ -696,16 +696,6 @@ for variant in PARSED_COMPOUND_HET_VARIANTS_PROJECT_2:
         'selectedMainTranscriptId': None,
     })
 
-PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION = deepcopy(PARSED_COMPOUND_HET_VARIANTS_MULTI_PROJECT)
-for variant in PARSED_COMPOUND_HET_VARIANTS_MULTI_GENOME_VERSION:
-    variant.update({
-        'genomeVersion': '38',
-        'liftedOverGenomeVersion': '37',
-        'liftedOverPos': variant['pos'] - 10,
-        'liftedOverChrom': variant['chrom'],
-        'selectedMainTranscriptId': None,
-    })
-
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS = deepcopy(PARSED_VARIANTS)
 PARSED_NO_CONSEQUENCE_FILTER_VARIANTS[1]['selectedMainTranscriptId'] = None
 
@@ -724,8 +714,12 @@ PARSED_MULTI_INDEX_VARIANT['genotypes']['I000015_na20885'] = {
     'ab': 0.631, 'ad': None, 'gq': 99, 'sampleId': 'NA20885', 'numAlt': 1, 'dp': 50, 'pl': None, 'sampleType': 'WES',
 }
 
-PARSED_MULTI_GENOME_VERSION_VARIANT = deepcopy(PARSED_MULTI_INDEX_VARIANT)
-PARSED_MULTI_GENOME_VERSION_VARIANT.update({
+PARSED_HG38_VARIANT = deepcopy(PARSED_VARIANTS[1])
+PARSED_HG38_VARIANT.update({
+    'familyGuids': ['F000011_11'],
+    'genotypes': {
+        'I000015_na20885': PARSED_MULTI_INDEX_VARIANT['genotypes']['I000015_na20885'],
+    },
     'genomeVersion': '38',
     'liftedOverGenomeVersion': '37',
     'liftedOverPos': PARSED_MULTI_INDEX_VARIANT['pos'],
@@ -2866,16 +2860,10 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(guid__in=['F000011_11']))
 
-        expected_grch38_variant = deepcopy(PARSED_MULTI_GENOME_VERSION_VARIANT)
-        expected_grch38_variant['familyGuids'] = ['F000011_11']
-        expected_grch38_variant['genotypes'] = {
-            'I000015_na20885': PARSED_MULTI_GENOME_VERSION_VARIANT['genotypes']['I000015_na20885'],
-        }
-
         Sample.objects.filter(elasticsearch_index=SECOND_INDEX_NAME).update(elasticsearch_index=HG38_INDEX_NAME)
 
         mock_liftover.side_effect = Exception()
-        expected_no_lift_grch38_variant = deepcopy(expected_grch38_variant)
+        expected_no_lift_grch38_variant = deepcopy(PARSED_HG38_VARIANT)
         expected_no_lift_grch38_variant.update({
             'liftedOverGenomeVersion': None,
             'liftedOverChrom': None,
@@ -2883,7 +2871,7 @@ class EsUtilsTest(TestCase):
         })
         variants, _ = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
-        self.assertListEqual(variants, [expected_grch38_variant, expected_no_lift_grch38_variant])
+        self.assertListEqual(variants, [PARSED_HG38_VARIANT, expected_no_lift_grch38_variant])
         self.assertIsNone(_liftover_grch38_to_grch37())
         mock_liftover.assert_called_with('hg38', 'hg19')
 
@@ -2892,7 +2880,7 @@ class EsUtilsTest(TestCase):
         mock_liftover.return_value.convert_coordinate.side_effect = lambda chrom, pos: [[chrom, pos - 10]]
         variants, _ = get_es_variants(results_model, num_results=2)
         self.assertEqual(len(variants), 2)
-        self.assertListEqual(variants, [expected_grch38_variant, expected_grch38_variant])
+        self.assertListEqual(variants, [PARSED_HG38_VARIANT, PARSED_HG38_VARIANT])
         self.assertIsNotNone(_liftover_grch38_to_grch37())
         mock_liftover.assert_called_with('hg38', 'hg19')
 
