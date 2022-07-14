@@ -2809,6 +2809,7 @@ class EsUtilsTest(TestCase):
                 ], start_index=0, size=2, index=INDEX_NAME)
         ])
 
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_VARIANTS', 3)
     @urllib3_responses.activate
     def test_skip_genotype_filter(self):
         setup_responses()
@@ -2826,7 +2827,7 @@ class EsUtilsTest(TestCase):
         self.assertExecutedSearch(
             index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
             filters=[{'terms': {'geneIds': ['ENSG00000228198']}}, ANNOTATION_QUERY],
-            size=4,
+            size=3,
         )
 
         # test with inheritance override
