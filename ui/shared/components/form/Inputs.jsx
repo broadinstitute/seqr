@@ -362,9 +362,9 @@ export const AlignedCheckboxGroup = styled(CheckboxGroup)`
 `
 
 const BaseRadioGroup = React.memo((props) => {
-  const { value, options, label, onChange, margin, widths, getOptionProps, formGroupAs, ...baseProps } = props
+  const { value, options, label, onChange, margin, widths, getOptionProps, formGroupAs, grouped, ...baseProps } = props
   return (
-    <InlineFormGroup margin={margin} widths={widths} as={formGroupAs}>
+    <InlineFormGroup margin={margin} widths={widths} as={formGroupAs} grouped={grouped}>
       {label && <label>{label}</label>}
       {options.map((option, i) => (
         <BaseSemanticInput
@@ -387,6 +387,7 @@ BaseRadioGroup.propTypes = {
   formGroupAs: PropTypes.elementType,
   margin: PropTypes.string,
   widths: PropTypes.string,
+  grouped: PropTypes.bool,
   getOptionProps: PropTypes.func,
 }
 

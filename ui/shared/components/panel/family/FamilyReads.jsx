@@ -13,6 +13,7 @@ import {
 } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { CheckboxGroup, RadioGroup } from '../../form/Inputs'
+import StateChangeForm from '../../form/StateChangeForm'
 import { ButtonLink, HelpIcon } from '../../StyledComponents'
 import { VerticalSpacer } from '../../Spacers'
 import { getLocus } from '../variants/VariantUtils'
@@ -245,6 +246,10 @@ IgvPanel.propTypes = {
   locus: PropTypes.string,
 }
 
+const JUNCTION_OPTION_FIELDS = [
+  { component: RadioGroup, name: 'minJunctionEndsVisible', options: JUNCTION_VISIBILITY_OPTIONS, grouped: true },
+]
+
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
@@ -437,10 +442,10 @@ class FamilyReads extends React.PureComponent {
                       onChange={this.updateRnaReferences}
                     />
                     <Divider horizontal>Junction Filters</Divider>
-                    <RadioGroup
-                      value={junctionTrackOptions.minJunctionEndsVisible}
-                      options={JUNCTION_VISIBILITY_OPTIONS}
-                      onChange={this.junctionsOptionChange('minJunctionEndsVisible')}
+                    <StateChangeForm
+                      fields={JUNCTION_OPTION_FIELDS}
+                      initialValues={junctionTrackOptions}
+                      updateField={this.junctionsOptionChange}
                     />
                   </div>
                 )}
