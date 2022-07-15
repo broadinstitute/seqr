@@ -221,11 +221,11 @@ const getGeneLocus = (variant, genesById, project) => {
 }
 
 const IgvPanel = React.memo((
-  { igvSampleIndividuals, sortedIndividuals, project, sampleTypes, rnaReferences, minJunctionEndsVisible, locus },
+  { igvSampleIndividuals, sortedIndividuals, project, sampleTypes, rnaReferences, junctionTrackOptions, locus },
 ) => {
   const tracks = applyUserTrackSettings(
     rnaReferences.concat(getIgvTracks(igvSampleIndividuals, sortedIndividuals, sampleTypes)),
-    { [JUNCTION_TYPE]: { minJunctionEndsVisible } },
+    { [JUNCTION_TYPE]: junctionTrackOptions },
   )
 
   return (
@@ -238,7 +238,7 @@ const IgvPanel = React.memo((
 IgvPanel.propTypes = {
   sampleTypes: PropTypes.arrayOf(PropTypes.string),
   rnaReferences: PropTypes.arrayOf(PropTypes.object),
-  minJunctionEndsVisible: PropTypes.number,
+  junctionTrackOptions: PropTypes.object,
   sortedIndividuals: PropTypes.arrayOf(PropTypes.object),
   igvSampleIndividuals: PropTypes.object,
   project: PropTypes.object,
@@ -263,7 +263,9 @@ class FamilyReads extends React.PureComponent {
     openFamily: null,
     sampleTypes: [],
     rnaReferences: [],
-    minJunctionEndsVisible: 0,
+    junctionTrackOptions: {
+      minJunctionEndsVisible: 0,
+    },
     locus: null,
   }
 
@@ -308,8 +310,10 @@ class FamilyReads extends React.PureComponent {
     })
   }
 
-  junctionsOptionChange = (minJunctionEndsVisible) => {
-    this.setState({ minJunctionEndsVisible })
+  junctionsOptionChange = field => (value) => {
+    this.setState(prevState => (
+      { junctionTrackOptions: { ...prevState.junctionTrackOptions, [field]: value } }
+    ))
   }
 
   locusChange = (locus) => {
@@ -362,7 +366,7 @@ class FamilyReads extends React.PureComponent {
       variant, familyGuid, buttonProps, layout, igvSamplesByFamilySampleIndividual, familiesByGuid,
       projectsByGuid, genesById, sortedIndividualByFamily, ...props
     } = this.props
-    const { openFamily, sampleTypes, rnaReferences, minJunctionEndsVisible, locus } = this.state
+    const { openFamily, sampleTypes, rnaReferences, junctionTrackOptions, locus } = this.state
 
     const showReads = (
       <ReadButtons
@@ -434,9 +438,9 @@ class FamilyReads extends React.PureComponent {
                     />
                     <Divider horizontal>Junction Filters</Divider>
                     <RadioGroup
-                      value={minJunctionEndsVisible}
+                      value={junctionTrackOptions.minJunctionEndsVisible}
                       options={JUNCTION_VISIBILITY_OPTIONS}
-                      onChange={this.junctionsOptionChange}
+                      onChange={this.junctionsOptionChange('minJunctionEndsVisible')}
                     />
                   </div>
                 )}
@@ -451,7 +455,7 @@ class FamilyReads extends React.PureComponent {
             igvSampleIndividuals={igvSampleIndividuals}
             sampleTypes={sampleTypes}
             rnaReferences={rnaReferences}
-            minJunctionEndsVisible={minJunctionEndsVisible}
+            junctionTrackOptions={junctionTrackOptions}
             sortedIndividuals={sortedIndividualByFamily[openFamily]}
             project={project}
             locus={locus}
