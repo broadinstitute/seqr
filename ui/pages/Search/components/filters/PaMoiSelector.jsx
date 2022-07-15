@@ -18,8 +18,7 @@ export default class PaMoiDropdown extends React.PureComponent {
     const panelAppItems = formatPanelAppItems(
       locusList.items?.filter((item) => {
         let result = true
-        const initials = moiToMoiInitials(item.pagene?.modeOfInheritance)
-        if (initials.length === 0) initials.push('other')
+        const initials = moiToMoiInitials(item.pagene?.modeOfInheritance, false)
         if (selectedMOIs && selectedMOIs.length !== 0) {
           result = selectedMOIs.some(moi => initials.includes(moi))
         }
@@ -38,9 +37,6 @@ export default class PaMoiDropdown extends React.PureComponent {
       moiToMoiInitials(gene.pagene?.modeOfInheritance).forEach((initial) => {
         acc[initial] = true
       })
-      if (moiToMoiInitials(gene.pagene?.modeOfInheritance).length === 0) {
-        acc.other = true
-      }
       return acc
     }, {}) || {}
 

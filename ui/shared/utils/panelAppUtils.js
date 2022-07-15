@@ -21,7 +21,7 @@ export const moiToMoiInitials = (rawMoi, initialsOnly = true) => {
       return [XR_MOI]
     }
     if (moi.includes('MONOALLELIC MUTATIONS')) {
-      return [XD_MOI, XD_MOI]
+      return [XR_MOI, XD_MOI]
     }
   }
   if (moi.startsWith('BIALLELIC')) {
