@@ -104,16 +104,23 @@ const createProjectFromWorkspace = postWorkspaceValues(
   window.location.href = `/project/${responseJson.projectGuid}/project_page`
 })
 
+const addDataFromWorkspace = projectGuid => values => (
+  new HttpRequestHelper(`/api/project/${projectGuid}/add_workspace_data`, (responseJson) => {
+    if (responseJson.success) {
+      window.location.href = `/project/${projectGuid}/project_page`
+    }
+  }).post({ ...values, uploadedFileId: values.uploadedFile?.uploadedFileId }))
+
 const GRANT_ACCESS_PAGE = { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') }
 const VALIDATE_VCF_PAGE = { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD], onPageSubmit: postWorkspaceValues('validate_vcf') }
-const VALIDATE_NEWDATA_VCF_PAGE = { ...VALIDATE_VCF_PAGE, fields: [DATA_BUCK_FIELD] }
+const ADD_DATA_VALIDATE_VCF_PAGE = { ...VALIDATE_VCF_PAGE, fields: [DATA_BUCK_FIELD] }
 const UPLOAD_PED_PAGE = { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] }
-const UPLOAD_NEWDATA_PED_PAGE = { fields: [UPLOAD_PEDIGREE_FIELD] }
+const ADD_DATA_UPLOAD_PED_PAGE = { fields: [UPLOAD_PEDIGREE_FIELD] }
 
 const FORM_WIZARD_PAGES = [GRANT_ACCESS_PAGE, VALIDATE_VCF_PAGE, UPLOAD_PED_PAGE]
-const FORM_NEWDATA_WIZARD_PAGES = [GRANT_ACCESS_PAGE, VALIDATE_NEWDATA_VCF_PAGE, UPLOAD_NEWDATA_PED_PAGE]
+const FORM_ADD_DATA_WIZARD_PAGES = [GRANT_ACCESS_PAGE, ADD_DATA_VALIDATE_VCF_PAGE, ADD_DATA_UPLOAD_PED_PAGE]
 
-const LoadWorkspaceDataForm = React.memo(({ params, newData }) => (
+const LoadWorkspaceDataForm = React.memo(({ params, projectGuid }) => (
   <div>
     <Header size="large" textAlign="center">
       {`Load data to seqr from AnVIL Workspace "${params.namespace}/${params.name}"`}
@@ -128,8 +135,8 @@ const LoadWorkspaceDataForm = React.memo(({ params, newData }) => (
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
     <FormWizard
-      onSubmit={createProjectFromWorkspace}
-      pages={newData ? FORM_NEWDATA_WIZARD_PAGES : FORM_WIZARD_PAGES}
+      onSubmit={projectGuid ? addDataFromWorkspace(projectGuid) : createProjectFromWorkspace}
+      pages={projectGuid ? FORM_ADD_DATA_WIZARD_PAGES : FORM_WIZARD_PAGES}
       initialValues={params}
       size="small"
       noModal
@@ -147,7 +154,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, newData }) => (
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
-  newData: PropTypes.bool,
+  projectGuid: PropTypes.string,
 }
 
 export default LoadWorkspaceDataForm

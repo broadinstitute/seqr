@@ -294,11 +294,11 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
       size="small"
       trigger={<ButtonLink>Request Additional Data</ButtonLink>}
     >
-      <LoadWorkspaceDataForm params={params} newData />
+      <LoadWorkspaceDataForm params={params} projectGuid={project.projectGuid} />
     </Modal>
   )
 
-  const dataButton = project.isAnalystProject && project.canEdit ? addAnvilDataButton :
+  const dataButton = !project.isAnalystProject && project.canEdit ? addAnvilDataButton :
     (<EditDatasetsButton user={user} />)
 
   return datasetSections.map((sectionProps, i) => (

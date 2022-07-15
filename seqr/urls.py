@@ -132,7 +132,7 @@ from seqr.views.apis.project_api import create_project_handler, update_project_h
     project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
-    grant_workspace_access, validate_anvil_vcf
+    grant_workspace_access, validate_anvil_vcf, add_workspace_data
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
@@ -222,6 +222,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
+    'project/(?P<project_guid>[^/]+)/add_workspace_data': add_workspace_data,
 
     'search/variant/(?P<variant_id>[^/]+)': query_single_variant_handler,
     'search/(?P<search_hash>[^/]+)': query_variants_handler,

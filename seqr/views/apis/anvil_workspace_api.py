@@ -15,7 +15,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Project, CAN_EDIT
+from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import VCF_FILE_EXTENSIONS
@@ -24,12 +24,13 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, get_project_active_pedigrees
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
+from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required, \
+    get_project_and_check_permissions
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
@@ -193,29 +194,79 @@ def create_project_from_workspace(request, namespace, name):
 
     project = create_model_from_json(Project, project_args, user=request.user)
 
+    _trigger_add_workspace_data(project, pedigree_records, request.user, request_json)
+
+    return create_json_response({'projectGuid': project.guid})
+
+
+@anvil_auth_and_policies_required
+def add_workspace_data(request, project_guid):
+    """
+    Add data from an AnVIL workspace.
+
+    :param request: Django request object
+    :param project_guid: Django request object
+    :return success if no exceptions
+
+    """
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    check_workspace_perm(request.user, CAN_EDIT, project.workspace_namespace, project.workspace_name, can_share=True,
+                         meta_fields=['workspace.bucketName'])
+
+    request_json = json.loads(request.body)
+
+    missing_fields = [field for field in ['uploadedFileId', 'fullDataPath', 'vcfSamples'] if not request_json.get(field)]
+    if missing_fields:
+        error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
+        return create_json_response({'error': error}, status=400, reason=error)
+    request_json['genomeVersion'] = project.genome_version
+    request_json['sampleType'] = Sample.objects.filter(individual__family__project=project)[0].sample_type
+
+    # Parse families/individuals in the uploaded pedigree file
+    json_records = load_uploaded_file(request_json['uploadedFileId'])
+    pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, fail_on_warnings=True)
+
+    indivIds = {ped['individualId'] for ped in pedigree_records}
+    pedigree_records += [ped for ped in get_project_active_pedigrees(project) if ped['individualId'] not in indivIds]
+
+    missing_samples = [record['individualId'] for record in pedigree_records
+                       if record['individualId'] not in request_json['vcfSamples']]
+
+    if missing_samples:
+        return create_json_response({
+            'error': 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
+                ', '.join(missing_samples))
+        },
+            status=400)
+
+    _trigger_add_workspace_data(project, pedigree_records, request.user, request_json)
+
+    return create_json_response({'success': True})
+
+
+def _trigger_add_workspace_data(project, pedigree_records, user, request_json):
     # add families and individuals according to the uploaded individual records
-    updated_individuals, _, _ = add_or_update_individuals_and_families(
-        project, individual_records=pedigree_records, user=request.user
-    )
+    add_or_update_individuals_and_families(project, individual_records=pedigree_records, user=user)
 
     # Upload sample IDs to a file on Google Storage
     ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, request_json['sampleType']), guid=project.guid)
-    sample_ids = [individual.individual_id for individual in updated_individuals]
+    sample_ids = [individual['individualId'] for individual in pedigree_records]
     try:
         temp_path = save_temp_data('\n'.join(['s'] + sample_ids))
-        mv_file_to_gs(temp_path, ids_path, user=request.user)
+        mv_file_to_gs(temp_path, ids_path, user=user)
     except Exception as ee:
-        logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), request.user,
+        sample_ids.sort()
+        logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), user,
                      detail=sample_ids)
 
     # use airflow api to trigger AnVIL dags
-    trigger_success = _trigger_data_loading(project, request_json['fullDataPath'], request_json['sampleType'], request)
+    trigger_success = _trigger_data_loading(project, request_json['fullDataPath'], request_json['sampleType'], user)
     # Send a slack message to the slack channel
-    _send_load_data_slack_msg(project, ids_path, request_json['fullDataPath'], request_json['sampleType'], request.user)
-    AirtableSession(request.user, base=AirtableSession.ANVIL_BASE).safe_create_record(
+    _send_load_data_slack_msg(project, ids_path, request_json['fullDataPath'], request_json['sampleType'], user)
+    AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
-            'Requester Name': request.user.get_full_name(),
-            'Requester Email': request.user.email,
+            'Requester Name': user.get_full_name(),
+            'Requester Email': user.email,
             'AnVIL Project URL': _get_seqr_project_url(project),
             'Initial Request Date': datetime.now().strftime('%Y-%m-%d'),
             'Number of Samples': len(sample_ids),
@@ -229,14 +280,12 @@ def create_project_from_workspace(request, namespace, name):
             {email_content}
             - The seqr team
             """.format(
-                user=request.user.get_full_name() or request.user.email,
+                user=user.get_full_name() or user.email,
                 email_content=ANVIL_LOADING_DELAY_EMAIL,
             )
-            send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[request.user.email])
+            send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[user.email])
         except Exception as e:
-            logger.error('AnVIL loading delay email error: {}'.format(e), request.user)
-
-    return create_json_response({'projectGuid':  project.guid})
+            logger.error('AnVIL loading delay email error: {}'.format(e), user)
 
 
 def _wait_for_service_account_access(user, namespace, name):
@@ -299,7 +348,7 @@ def _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type):
         )
     safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, message_content)
 
-def _trigger_data_loading(project, data_path, sample_type, request):
+def _trigger_data_loading(project, data_path, sample_type, user):
     try:
         genome_test_type = 'AnVIL_{sample_type}'.format(sample_type=sample_type)
         dag_id = "seqr_vcf_to_es_{anvil_type}_v{version}".format(anvil_type=genome_test_type, version=DAG_VERSION)
@@ -313,7 +362,7 @@ def _trigger_data_loading(project, data_path, sample_type, request):
         return True
     except Exception as e:
         logger_call = logger.warning if isinstance(e, DagRunningException) else logger.error
-        logger_call(str(e), request.user)
+        logger_call(str(e), user)
         _send_slack_msg_on_failure_trigger(e, project, data_path, sample_type)
         return False
 
