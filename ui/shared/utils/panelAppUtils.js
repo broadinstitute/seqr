@@ -1,6 +1,6 @@
-import { PANEL_APP_CONFIDENCE_LEVELS } from 'shared/utils/constants'
+import { PANEL_APP_CONFIDENCE_LEVELS, AD_MOI, AR_MOI, XD_MOI, XR_MOI, OTHER_MOI } from 'shared/utils/constants'
 
-export const moiToMoiInitials = (rawMoi) => {
+export const moiToMoiInitials = (rawMoi, initialsOnly = true) => {
   if (!rawMoi) {
     return []
   }
@@ -9,29 +9,29 @@ export const moiToMoiInitials = (rawMoi) => {
 
   if (moi.startsWith('MONOALLELIC')) {
     if (moi.includes('PATERNALLY IMPRINTED')) {
-      return []
+      return initialsOnly ? [] : [OTHER_MOI]
     }
     if (moi.includes('MATERNALLY IMPRINTED')) {
-      return []
+      return initialsOnly ? [] : [OTHER_MOI]
     }
-    return ['AD']
+    return [AD_MOI]
   }
   if (moi.startsWith('X-LINKED') || moi.startsWith('X LINKED')) {
     if (moi.includes('BIALLELIC MUTATIONS')) {
-      return ['XR']
+      return [XR_MOI]
     }
     if (moi.includes('MONOALLELIC MUTATIONS')) {
-      return ['XR', 'XD']
+      return [XD_MOI, XD_MOI]
     }
   }
   if (moi.startsWith('BIALLELIC')) {
-    return ['AR']
+    return [AR_MOI]
   }
   if (moi.startsWith('BOTH')) {
-    return ['AD', 'AR']
+    return [AD_MOI, AR_MOI]
   }
 
-  return []
+  return initialsOnly ? [] : [OTHER_MOI]
 }
 
 export const panelAppUrl = (apiUrl, panelId, gene) => {

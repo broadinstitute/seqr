@@ -1307,25 +1307,31 @@ export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = Object.entries(PANEL_APP_CONFID
   (acc, [confidence, color]) => ({ ...acc, [confidence]: VARIANT_ICON_COLORS[color] }), {},
 )
 
+export const AD_MOI = 'AD'
+export const AR_MOI = 'AR'
+export const XD_MOI = 'XD'
+export const XR_MOI = 'XR'
+export const OTHER_MOI = 'other'
+
 export const PANEL_APP_MOI_OPTIONS = [{
   text: 'Autosomal Dominant',
-  value: 'AD',
+  value: AD_MOI,
 },
 {
   text: 'Autosomal Recessive',
-  value: 'AR',
+  value: AR_MOI,
 },
 {
   text: 'X-Linked Dominant',
-  value: 'XD',
+  value: XD_MOI,
 },
 {
   text: 'X-Linked Recessive',
-  value: 'XR',
+  value: XR_MOI,
 },
 {
   text: 'Other Modes of Inheritance',
-  value: 'other',
+  value: OTHER_MOI,
 }]
 
 // Users
