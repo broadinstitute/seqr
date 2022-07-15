@@ -22,7 +22,7 @@ import {
   ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
   MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
   DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
-  JUNCTION_VISIBILITY_OPTIONS, NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS,
+  JUNCTION_TRACK_FIELDS, NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS,
 } from './constants'
 
 const IGV = React.lazy(() => import('../../graph/IGV'))
@@ -246,10 +246,6 @@ IgvPanel.propTypes = {
   locus: PropTypes.string,
 }
 
-const JUNCTION_OPTION_FIELDS = [
-  { component: RadioGroup, name: 'minJunctionEndsVisible', options: JUNCTION_VISIBILITY_OPTIONS, grouped: true },
-]
-
 class FamilyReads extends React.PureComponent {
 
   static propTypes = {
@@ -270,6 +266,8 @@ class FamilyReads extends React.PureComponent {
     rnaReferences: [],
     junctionTrackOptions: {
       minJunctionEndsVisible: 0,
+      minUniquelyMappedReads: 0,
+      minTotalReads: 0,
     },
     locus: null,
   }
@@ -443,7 +441,7 @@ class FamilyReads extends React.PureComponent {
                     />
                     <Divider horizontal>Junction Filters</Divider>
                     <StateChangeForm
-                      fields={JUNCTION_OPTION_FIELDS}
+                      fields={JUNCTION_TRACK_FIELDS}
                       initialValues={junctionTrackOptions}
                       updateField={this.junctionsOptionChange}
                     />

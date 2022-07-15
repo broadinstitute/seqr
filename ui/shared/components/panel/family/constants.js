@@ -1,4 +1,5 @@
 import { GENOME_VERSION_DISPLAY_LOOKUP, GENOME_VERSION_LOOKUP } from '../../../utils/constants'
+import { IntegerInput, RadioGroup } from '../../form/Inputs'
 
 export const ALIGNMENT_TYPE = 'alignment'
 export const COVERAGE_TYPE = 'wig'
@@ -398,4 +399,10 @@ export const JUNCTION_VISIBILITY_OPTIONS = [
   { value: 2, text: 'Show only local junctions' },
   { value: 1, text: 'Show semi-local junctions' },
   { value: 0, text: 'Show all junctions' },
+]
+
+export const JUNCTION_TRACK_FIELDS = [
+  { component: RadioGroup, name: 'minJunctionEndsVisible', options: JUNCTION_VISIBILITY_OPTIONS, grouped: true },
+  { component: IntegerInput, name: 'minUniquelyMappedReads', label: 'Min. Uniquely Mapped Reads', min: 0 },
+  { component: IntegerInput, name: 'minTotalReads', label: 'Min. Total Reads', min: 0 },
 ]
