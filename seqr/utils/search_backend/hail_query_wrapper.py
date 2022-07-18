@@ -142,12 +142,14 @@ class BaseHailTableQuery(object):
     def _parse_intervals(self, intervals):
         if intervals:
             add_chr_prefix = self._should_add_chr_prefix()
-            # TODO better error handling for invalid ranges
+            raw_intervals = intervals
             intervals = [hl.eval(hl.parse_locus_interval(
                 self._formatted_chr_interval(interval) if add_chr_prefix else interval,
                 reference_genome=self._genome_version, invalid_missing=True)
             ) for interval in intervals]
-            logger.info(str(intervals))
+            invalid_intervals = [raw_intervals[i] for interval, i in enumerate(intervals) if interval is None]
+            if invalid_interval_indices:
+                raise InvalidSearchException(f'Invalid genes/intervals: {", ".join(invalid_intervals)}')
         return intervals
 
     def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
