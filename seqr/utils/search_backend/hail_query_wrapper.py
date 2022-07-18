@@ -404,7 +404,7 @@ class BaseHailTableQuery(object):
 
     def _get_x_chrom_interval(self):
         return hl.parse_locus_interval(
-            hl.get_reference(self._genome_version).x_contigs[0], reference_genome=genome_version)
+            hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
 
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):
