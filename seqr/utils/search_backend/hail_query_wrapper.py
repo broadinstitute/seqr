@@ -90,6 +90,7 @@ class BaseHailTableQuery(object):
                 lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        logger.info(f'GENOME VERSION: {self._genome_version}')
         if self._genome_version == GENOME_VERSION_GRCh38:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
