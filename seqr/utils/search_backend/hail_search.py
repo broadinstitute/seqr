@@ -121,8 +121,7 @@ class HailSearch(object):
     def filter_by_variant_ids(self, variant_ids):
         # In production: support SV variant IDs?
         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-        # TODO #2716: format chromosome for genome build
-        intervals = [ f'[chr{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
+        intervals = [ f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
         self._load_table(data_type=Sample.DATASET_TYPE_VARIANT_CALLS, intervals=intervals)
         self._query_wrapper.filter_by_variant_ids(variant_ids)
 
@@ -130,13 +129,12 @@ class HailSearch(object):
         parsed_intervals = None
         genes = genes or {}
         if genes or intervals:
-            # TODO #2716: format chromosomes for genome build
             gene_coords = [
                 {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
                 for gene in genes.values()
             ]
             parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-                'chr{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
+                '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
         self._load_table(
             data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,

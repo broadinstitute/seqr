@@ -129,8 +129,11 @@ class BaseHailTableQuery(object):
 
     def _parse_intervals(self, intervals):
         if intervals:
-            intervals = [hl.eval(hl.parse_locus_interval(interval, reference_genome=self._genome_version))
-                         for interval in intervals]
+            reference_genome = hl.get_reference(self._genome_version)
+            add_chr_prefix = any(c.startswith('chr') for c in reference_genome.contigs)
+            intervals = [hl.eval(hl.parse_locus_interval(
+                f'chr{interval}' if add_chr_prefix else interval, reference_genome=self._genome_version)
+            ) for interval in intervals]
         return intervals
 
     def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
