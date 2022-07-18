@@ -135,12 +135,16 @@ class BaseHailTableQuery(object):
         reference_genome = hl.get_reference(self._genome_version)
         return any(c.startswith('chr') for c in reference_genome.contigs)
 
+    @staticmethod
+    def _formatted_chr_interval(interval):
+        return f'[chr{interval.replace("[", "")}' if interval.startswith('[') else f'chr{interval}'
+
     def _parse_intervals(self, intervals):
         if intervals:
             add_chr_prefix = self._should_add_chr_prefix()
             # TODO better error handling for invalid ranges
             intervals = [hl.eval(hl.parse_locus_interval(
-                f'chr{interval}' if add_chr_prefix else interval, reference_genome=self._genome_version)
+                self._formatted_chr_interval(interval) if add_chr_prefix else interval, reference_genome=self._genome_version)
             ) for interval in intervals]
         return intervals
 

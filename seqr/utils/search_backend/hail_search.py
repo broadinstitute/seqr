@@ -121,7 +121,7 @@ class HailSearch(object):
     def filter_by_variant_ids(self, variant_ids):
         # In production: support SV variant IDs?
         variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-        intervals = [ f'{chrom}:{pos}-{pos}' for chrom, pos, _, _ in variant_ids]
+        intervals = [ f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
         self._load_table(data_type=Sample.DATASET_TYPE_VARIANT_CALLS, intervals=intervals)
         self._query_wrapper.filter_by_variant_ids(variant_ids)
 
