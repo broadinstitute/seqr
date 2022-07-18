@@ -112,13 +112,22 @@ const addDataFromWorkspace = projectGuid => values => (
   }).post({ ...values, uploadedFileId: values.uploadedFile?.uploadedFileId }))
 
 const GRANT_ACCESS_PAGE = { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') }
-const VALIDATE_VCF_PAGE = { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD], onPageSubmit: postWorkspaceValues('validate_vcf') }
-const ADD_DATA_VALIDATE_VCF_PAGE = { ...VALIDATE_VCF_PAGE, fields: [DATA_BUCK_FIELD] }
-const UPLOAD_PED_PAGE = { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] }
-const ADD_DATA_UPLOAD_PED_PAGE = { fields: [UPLOAD_PEDIGREE_FIELD] }
+const VALIDATE_VCF_PAGE = {
+  fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD],
+  onPageSubmit: postWorkspaceValues('validate_vcf'),
+}
 
-const FORM_WIZARD_PAGES = [GRANT_ACCESS_PAGE, VALIDATE_VCF_PAGE, UPLOAD_PED_PAGE]
-const FORM_ADD_DATA_WIZARD_PAGES = [GRANT_ACCESS_PAGE, ADD_DATA_VALIDATE_VCF_PAGE, ADD_DATA_UPLOAD_PED_PAGE]
+const NEW_PROJECT_WIZARD_PAGES = [
+  GRANT_ACCESS_PAGE,
+  VALIDATE_VCF_PAGE,
+  { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
+]
+
+const ADD_DATA_WIZARD_PAGES = [
+  GRANT_ACCESS_PAGE,
+  { ...VALIDATE_VCF_PAGE, fields: [DATA_BUCK_FIELD] },
+  { fields: [UPLOAD_PEDIGREE_FIELD] },
+]
 
 const LoadWorkspaceDataForm = React.memo(({ params, projectGuid }) => (
   <div>
@@ -136,7 +145,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, projectGuid }) => (
     </Segment>
     <FormWizard
       onSubmit={projectGuid ? addDataFromWorkspace(projectGuid) : createProjectFromWorkspace}
-      pages={projectGuid ? FORM_ADD_DATA_WIZARD_PAGES : FORM_WIZARD_PAGES}
+      pages={projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
       initialValues={params}
       size="small"
       noModal

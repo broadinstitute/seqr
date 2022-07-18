@@ -24,7 +24,8 @@ RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_
 def get_project_active_pedigrees(project):
     individuals = Individual.objects.filter(family__project=project).prefetch_related(
         'family', 'mother', 'father')
-    active_indivs = [indiv for indiv in individuals if len(Sample.objects.filter(individual=indiv, is_active=True)) > 0]
+    active_indivs = [indiv for indiv in individuals if len(
+        Sample.objects.filter(individual=indiv, is_active=True, elasticsearch_index__isnull=False)) > 0]
     indiv_jsons = _get_json_for_individuals(active_indivs, project_guid=project.guid, family_fields=['family_id'])
     ped_fields = [
         JsonConstants.FAMILY_ID_COLUMN,

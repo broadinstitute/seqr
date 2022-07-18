@@ -298,7 +298,7 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
     </Modal>
   )
 
-  const dataButton = !project.isAnalystProject && project.canEdit ? addAnvilDataButton :
+  const dataButton = (!project.isAnalystProject && project.canEdit) ? addAnvilDataButton :
     (<EditDatasetsButton user={user} />)
 
   return datasetSections.map((sectionProps, i) => (

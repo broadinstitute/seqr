@@ -169,8 +169,7 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
         })
 
     prefetch_related_objects(projects, 'created_by')
-    if add_project_category_guids_field:
-        prefetch_related_objects(projects, 'projectcategory_set')
+    prefetch_related_objects(projects, 'projectcategory_set')
 
     return _get_json_for_models(projects, user=user, is_analyst=is_analyst, process_result=_process_result)
 

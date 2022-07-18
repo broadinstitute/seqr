@@ -255,9 +255,8 @@ def _trigger_add_workspace_data(project, pedigree_records, user, request_json):
         temp_path = save_temp_data('\n'.join(['s'] + sample_ids))
         mv_file_to_gs(temp_path, ids_path, user=user)
     except Exception as ee:
-        sample_ids.sort()
         logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), user,
-                     detail=sample_ids)
+                     detail=sorted(sample_ids))
 
     # use airflow api to trigger AnVIL dags
     trigger_success = _trigger_data_loading(project, request_json['fullDataPath'], request_json['sampleType'], user)
