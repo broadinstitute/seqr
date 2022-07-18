@@ -7,8 +7,8 @@ import styled from 'styled-components'
 
 import { getLocusListsIsLoading } from 'redux/selectors'
 import { Dropdown } from 'shared/components/form/Inputs'
+import { formatPanelAppItems } from 'shared/utils/panelAppUtils'
 import { LocusListsLoader, LocusListItemsLoader } from 'shared/components/LocusListLoader'
-import { PANEL_APP_CONFIDENCE_LEVELS } from 'shared/utils/constants'
 import { getLocusListOptions } from '../../selectors'
 
 const DropdownInput = styled(Dropdown).attrs({
@@ -51,11 +51,8 @@ class BaseLocusListDropdown extends React.Component {
       const { locusListGuid } = locusList
 
       if (locusList.paLocusList) {
-        const panelAppItems = locusList.items?.reduce((acc, item) => {
-          const color = PANEL_APP_CONFIDENCE_LEVELS[item.pagene?.confidenceLevel] || PANEL_APP_CONFIDENCE_LEVELS[0]
-          return { ...acc, [color]: [acc[color], item.display].filter(val => val).join(', ') }
-        }, {})
-        onChange({ locusListGuid, panelAppItems })
+        const panelAppItems = formatPanelAppItems(locusList.items)
+        onChange({ locusListGuid, panelAppItems, locusList })
       } else {
         const { rawItems } = locusList
         onChange({ locusListGuid, rawItems })

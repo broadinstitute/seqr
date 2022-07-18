@@ -41,6 +41,17 @@ describe('Test moiToMoiInitials()', () => {
     expect(moiToMoiInitials('some invalid string')).toEqual([])
     expect(moiToMoiInitials(null)).toEqual([])
   })
+
+  test('Test initialsOnly flag', () => {
+    expect(moiToMoiInitials(null, true)).toEqual([])
+    expect(moiToMoiInitials(null, false)).toEqual([])
+    expect(moiToMoiInitials('An unknown string', true)).toEqual([])
+    expect(moiToMoiInitials('An unknown string', false)).toEqual(['other'])
+    expect(moiToMoiInitials(moiArray[12][4], true)).toEqual([])
+    expect(moiToMoiInitials(moiArray[12][4], false)).toEqual(['other'])
+    expect(moiToMoiInitials(moiArray[27][4], true)).toEqual([])
+    expect(moiToMoiInitials(moiArray[27][4], false)).toEqual(['other'])
+  })
 })
 
 const panelAppData = [{

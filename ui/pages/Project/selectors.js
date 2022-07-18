@@ -5,6 +5,7 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_ANALYSED_BY,
   FAMILY_NOTES_FIELDS,
   GENOME_VERSION_DISPLAY_LOOKUP,
   getVariantMainTranscript,
@@ -32,6 +33,7 @@ import {
   CASE_REVIEW_TABLE_NAME,
   CASE_REVIEW_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
+  CATEGORY_FAMILY_FILTERS,
 } from './constants'
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
@@ -330,18 +332,99 @@ const getFamiliesBySearchString = createSelector(
   },
 )
 
+const getFamilyAnalysers = createSelector(
+  getProjectFamiliesByGuid,
+  familiesByGuid => new Set(Object.values(familiesByGuid).reduce(
+    (acc, family) => ([...acc, ...family.analysedBy.map(({ createdBy }) => createdBy)]), [],
+  )),
+)
+
+export const getFamiliesFilterOptionsByCategory = createSelector(
+  getFamilyAnalysers,
+  analysedByOptions => ({
+    ...CATEGORY_FAMILY_FILTERS,
+    [FAMILY_FIELD_ANALYSED_BY]: [
+      ...CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY],
+      ...[...analysedByOptions].map(analysedBy => ({ value: analysedBy, category: 'Analysed By' })),
+    ],
+  }),
+)
+
+const ANALYSED_BY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.forEach((opt) => {
+      acc[opt.value] = opt.analysedByFilter
+    })
+    return acc
+  }, {},
+)
+
+const NO_ANALYSED_BY_FIELDS = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.filter(opt => opt.requireNoAnalysedBy).forEach((opt) => {
+      acc.add(opt.value)
+    })
+    return acc
+  }, new Set(),
+)
+
+const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY].reduce(
+  (acc, { value, category }) => ({ ...acc, [value]: category || 'Analysed By' }), {},
+)
+
+const analysedByFilters = (filter, analysedByOptions) => {
+  const filters = filter.map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)
+
+  let requireNoAnalysedBy = false
+  const analsedByGroups = Object.values(filter.reduce(
+    (acc, val) => {
+      const optFilter = analysedByOptions.has(val) ? () => ({ createdBy }) => createdBy === val :
+        ANALYSED_BY_FILTER_LOOKUP[val]
+      if (optFilter) {
+        const category = ANALYSED_BY_CATEGORY_OPTION_LOOKUP[val]
+        if (!acc[category]) {
+          acc[category] = []
+        }
+        acc[category].push(optFilter)
+      }
+      if (NO_ANALYSED_BY_FIELDS.has(val)) {
+        requireNoAnalysedBy = true
+      }
+      return acc
+    }, {},
+  ))
+  if (analsedByGroups.length) {
+    filters.push((...args) => (family) => {
+      const filteredAnalysedBy = analsedByGroups.reduce(
+        (acc, filterGroup) => acc.filter(analysedBy => filterGroup.some(f => f(...args)(analysedBy))),
+        family.analysedBy,
+      )
+      return requireNoAnalysedBy ? filteredAnalysedBy.length === 0 : filteredAnalysedBy.length > 0
+    })
+  }
+  return filters
+}
+
 const getFamiliesFilterFunc = createSelector(
   (state, ownProps) => ownProps?.tableName === CASE_REVIEW_TABLE_NAME,
   state => state.caseReviewTableState.familiesFilter,
   getFamiliesTableFilters,
-  (isCaseReview, caseReviewFilter, familyTableFilters) => {
+  getFamilyAnalysers,
+  (isCaseReview, caseReviewFilter, familyTableFilters, analysedByOptions) => {
     if (isCaseReview) {
       return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter]
     }
 
-    const filterGroups = Object.values(familyTableFilters || {}).map(
+    const { analysedBy, ...tableFilters } = familyTableFilters || {}
+    const filterGroups = Object.values(tableFilters).map(
       groupVals => (groupVals || []).map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val),
     ).filter(groupVals => groupVals.length)
+    if (analysedBy) {
+      const filters = analysedByFilters(analysedBy, analysedByOptions)
+      if (filters.length) {
+        filterGroups.push(filters)
+      }
+    }
     if (!filterGroups.length) {
       return null
     }

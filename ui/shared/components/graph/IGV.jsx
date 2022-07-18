@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import igv from 'igv/dist/igv.esm.min'
 
+import { JUNCTION_TRACK_FIELDS } from '../panel/family/constants'
 import { FontAwesomeIconsContainer } from '../StyledComponents'
 
 const IGVContainer = styled(FontAwesomeIconsContainer)`
@@ -17,7 +18,7 @@ const IGVContainer = styled(FontAwesomeIconsContainer)`
   }
 `
 
-const TRACK_UPDATE_PROPERTIES = ['minJunctionEndsVisible']
+const TRACK_UPDATE_PROPERTIES = JUNCTION_TRACK_FIELDS.map(({ name }) => name)
 
 const getTrackId = track => track.url || track.name // merged tracks do not have a URL
 

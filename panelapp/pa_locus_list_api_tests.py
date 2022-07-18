@@ -23,7 +23,7 @@ PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_DETAIL_FIELDS)
 
 PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
-PA_GENE_FIELDS = {'confidenceLevel'}
+PA_GENE_FIELDS = {'confidenceLevel', 'modeOfInheritance'}
 
 PANEL_APP_API_URL_AU = 'https://test-panelapp.url.au/api'
 PANEL_APP_API_URL_UK = 'https://test-panelapp.url.uk/api'

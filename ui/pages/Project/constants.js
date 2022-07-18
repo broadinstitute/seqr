@@ -44,6 +44,7 @@ import {
   INDIVIDUAL_HPO_EXPORT_DATA,
   FAMILY_NOTES_FIELDS,
   SNP_DATA_TYPE,
+  FAMILY_ANALYSED_BY_DATA_TYPES,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -94,7 +95,6 @@ const SHOW_NO_PHENOTYPES_ENTERED = 'SHOW_NO_PHENOTYPES_ENTERED'
 const SHOW_ASSIGNED_TO_ME_IN_REVIEW = 'SHOW_ASSIGNED_TO_ME_IN_REVIEW'
 const SHOW_ASSIGNED_TO_ME = 'SHOW_ASSIGNED_TO_ME'
 const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
-const SHOW_NOT_ANALYSED_BY_ME = 'SHOW_NOT_ANALYSED_BY_ME'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 const SHOW_CLOSED = 'SHOW_CLOSED'
@@ -195,26 +195,33 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: SHOW_ANALYSED_BY_ME,
       name: 'Analysed By Me',
-      createFilter: (individualsByGuid, user) => family => family.analysedBy.some(
-        analysedBy => analysedBy.createdBy === (user.displayName || user.email),
-      ),
-    },
-    {
-      value: SHOW_NOT_ANALYSED_BY_ME,
-      name: 'Not Analysed By Me',
-      createFilter: (individualsByGuid, user) => family => family.analysedBy.every(
-        analysedBy => analysedBy.createdBy !== (user.displayName || user.email),
-      ),
+      analysedByFilter: (individualsByGuid, user) => ({ createdBy }) => createdBy === (user.displayName || user.email),
     },
     {
       value: SHOW_ANALYSED,
       name: 'Analysed',
-      createFilter: () => family => family.analysedBy.length > 0,
+      analysedByFilter: () => () => true,
     },
     {
       value: SHOW_NOT_ANALYSED,
       name: 'Not Analysed',
-      createFilter: () => family => family.analysedBy.length < 1,
+      requireNoAnalysedBy: true,
+      analysedByFilter: () => () => true,
+    },
+    ...FAMILY_ANALYSED_BY_DATA_TYPES.map(([type, typeDisplay]) => ({
+      value: type,
+      name: typeDisplay,
+      category: 'Data Type',
+      analysedByFilter: () => ({ dataType }) => dataType === type,
+    })),
+    {
+      value: 'yearSinceAnalysed',
+      name: '>1 Year',
+      category: 'Analysis Date',
+      requireNoAnalysedBy: true,
+      analysedByFilter: () => ({ lastModifiedDate }) => (
+        (new Date()).setFullYear(new Date().getFullYear() - 1) < new Date(lastModifiedDate)
+      ),
     },
   ],
   [FAMILY_FIELD_FIRST_SAMPLE]: [
