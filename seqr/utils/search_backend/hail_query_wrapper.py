@@ -346,15 +346,6 @@ class BaseHailTableQuery(object):
 
         if inheritance_mode == X_LINKED_RECESSIVE:
             mt = mt.filter_rows(self.get_x_chrom_filter(mt, self._get_x_chrom_interval()))
-        elif inheritance_mode == RECESSIVE:
-            x_chrom_filter = self.get_x_chrom_filter(mt, self._get_x_chrom_interval())
-            quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter)
-            if quality_filter_expr is not None:
-                x_chrom_filter &= quality_filter_expr
-            mt = mt.annotate_rows(xLinkedfamilies=self._get_matched_families_expr(
-                mt, X_LINKED_RECESSIVE, inheritance_filter, sample_family_map, x_chrom_filter,
-            ))
-            mt = mt.transmute_rows(familyGuids=mt.familyGuids.union(mt.xLinkedfamilies))
         elif inheritance_mode == COMPOUND_HET:
             # remove variants where all unaffected individuals are het
             mt = mt.annotate_rows(familyGuids=hl.bind(
