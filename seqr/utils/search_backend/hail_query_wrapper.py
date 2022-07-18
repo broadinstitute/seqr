@@ -4,7 +4,7 @@ import hail as hl
 import logging
 
 from seqr.views.utils.json_utils import _to_camel_case
-from reference_data.models import GENOME_VERSION_GRCh37
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
@@ -48,8 +48,10 @@ class BaseHailTableQuery(object):
     CORE_FIELDS = ['genotypes']
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: hl.array(r.familyGuids),
+    }
+    LIFTOVER_ANNOTATION_FIELDS = {
         'liftedOverGenomeVersion': lambda r: hl.if_else(  # In production - format all rg37_locus fields in main HT?
-            hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')), # TODO #2716: rg37_locus will be missing for build 37
+            hl.is_defined(r.rg37_locus), hl.literal(GENOME_VERSION_GRCh37), hl.missing(hl.dtype('str')),
         ),
         'liftedOverChrom': lambda r: hl.if_else(
             hl.is_defined(r.rg37_locus), r.rg37_locus.contig, hl.missing(hl.dtype('str')),
@@ -88,6 +90,8 @@ class BaseHailTableQuery(object):
                 lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
+        if self._genome_version == GENOME_VERSION_GRCh38:
+            annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, **kwargs):
