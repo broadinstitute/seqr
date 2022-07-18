@@ -27,7 +27,7 @@ import {
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
-import PaMoiSelector from '../../../../pages/Search/components/filters/PaMoiSelector'
+import PaMoiSelector from './PaMoiSelector'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
