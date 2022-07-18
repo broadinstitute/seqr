@@ -138,6 +138,7 @@ class BaseHailTableQuery(object):
     def _parse_intervals(self, intervals):
         if intervals:
             add_chr_prefix = self._should_add_chr_prefix()
+            # TODO better error handling for invalid ranges
             intervals = [hl.eval(hl.parse_locus_interval(
                 f'chr{interval}' if add_chr_prefix else interval, reference_genome=self._genome_version)
             ) for interval in intervals]
