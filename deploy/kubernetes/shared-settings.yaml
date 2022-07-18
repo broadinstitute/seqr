@@ -1,7 +1,6 @@
 #####################################################
 ####### SETTINGS THAT MAY NEED TO BE MODIFIED #######
 ELASTICSEARCH_VERSION: 7.16.3
-LINKERD_VERSION: 'stable-2.10.0'
 
 ES_DATA_DISK_TYPE: pd-ssd
 ES_DATA_DISK_SIZE: 3200

@@ -5,8 +5,9 @@ from django.urls.base import reverse
 from copy import deepcopy
 from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, create_locus_list_handler, \
-    update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS
+    update_locus_list_handler, delete_locus_list_handler, add_project_locus_lists, delete_project_locus_lists, \
+    all_locus_list_options
+from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS, LOCUS_LIST_FIELDS
 
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
@@ -16,6 +17,8 @@ PROJECT_GUID = 'R0001_1kg'
 PUBLIC_LOCUS_LIST_FIELDS = deepcopy(LOCUS_LIST_DETAIL_FIELDS)
 PUBLIC_LOCUS_LIST_FIELDS.update(PA_LOCUS_LIST_FIELDS)
 
+OPTION_LOCUS_LIST_FIELDS = LOCUS_LIST_FIELDS - {'canEdit', 'numEntries'}
+OPTION_LOCUS_LIST_FIELDS.update(PA_LOCUS_LIST_FIELDS)
 
 class LocusListAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -40,6 +43,25 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID, 'LL00005_retina_proteome'})
+
+    def test_all_locus_list_options(self):
+        url = reverse(all_locus_list_options)
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertSetEqual(set(response.json().keys()), {'locusListsByGuid'})
+        locus_lists_dict = response.json()['locusListsByGuid']
+        self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
+
+        locus_list = locus_lists_dict[LOCUS_LIST_GUID]
+        self.assertSetEqual(set(locus_list.keys()), OPTION_LOCUS_LIST_FIELDS)
+
+        self.login_collaborator()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(response.json()['locusListsByGuid'].keys()), {LOCUS_LIST_GUID, 'LL00005_retina_proteome'})
 
     def test_public_locus_list_info(self):
         url = reverse(locus_list_info, args=[LOCUS_LIST_GUID])

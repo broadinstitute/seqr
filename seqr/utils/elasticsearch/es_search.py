@@ -11,14 +11,14 @@ from itertools import combinations
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
-    HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
+    HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD
+    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -70,6 +70,7 @@ class EsSearch(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {}
+        self._filtered_gene_ids = None
         self._filtered_variant_ids = None
         self._paired_index_comp_het = False
         self._no_sample_filters = False
@@ -228,7 +229,10 @@ class EsSearch(object):
         self._filter_custom(custom_query)
 
         if has_location_filter:
-            self._filter(_location_filter(genes, intervals, locus))
+            exclude_locations = locus and locus.get('excludeLocations')
+            self._filter(_location_filter(genes, intervals, exclude_locations))
+            if genes and not exclude_locations:
+                self._filtered_gene_ids = set(genes.keys())
         elif variant_ids:
             self.filter_by_variant_ids(variant_ids, locus=locus)
         elif rs_ids:
@@ -748,9 +752,9 @@ class EsSearch(object):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
         index_family_samples = self.samples_by_family_index[index_name]
-        is_sv = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_SV_CALLS
+        data_type = self._get_index_dataset_type(index_name)
 
-        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, is_sv)
+        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, data_type)
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -764,7 +768,7 @@ class EsSearch(object):
         self._parse_xstop(result)
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if is_sv and genotypes:
+        if data_type == Sample.DATASET_TYPE_SV_CALLS and genotypes:
             self._set_sv_genotype_coords(genotypes, result)
 
         populations = {
@@ -788,16 +792,7 @@ class EsSearch(object):
         gene_ids = result.pop('geneIds', None)
         if gene_ids:
             transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in gene_ids}
-
-        main_transcript_id = sorted_transcripts[0]['transcriptId'] \
-            if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
-        selected_main_transcript_id = None
-        if main_transcript_id and self._allowed_consequences and sorted_transcripts[0].get('majorConsequence') not in self._allowed_consequences:
-            selected_main_transcript_id = next((
-                t.get('transcriptId') for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences), None)
-            if not selected_main_transcript_id and self._allowed_consequences_secondary:
-                selected_main_transcript_id = next((
-                    t for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary), None)
+        main_transcript_id, selected_main_transcript_id = self._get_main_transcript(sorted_transcripts)
 
         result.update({
             'familyGuids': sorted(family_guids),
@@ -812,7 +807,7 @@ class EsSearch(object):
         })
         return result
 
-    def _parse_genotypes(self, raw_hit, hit, index_family_samples, is_sv):
+    def _parse_genotypes(self, raw_hit, hit, index_family_samples, data_type):
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
         elif self._return_all_queried_families:
@@ -837,7 +832,7 @@ class EsSearch(object):
                        for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
-        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
+        genotype_fields_config = GENOTYPE_FIELDS[data_type]
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
@@ -846,7 +841,7 @@ class EsSearch(object):
                     genotype_hit['sample_type'] = sample.sample_type
                     genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
 
-            if len(samples_by_id) != len(genotypes) and is_sv:
+            if len(samples_by_id) != len(genotypes) and data_type == Sample.DATASET_TYPE_SV_CALLS:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
@@ -879,6 +874,31 @@ class EsSearch(object):
                     compare_func = conf.get('equal') or (lambda a, b: a == b)
                     if compare_func(gen.get(gen_field), result.get(field)):
                         gen[gen_field] = None
+
+    def _get_main_transcript(self, sorted_transcripts):
+        main_transcript_id = sorted_transcripts[0]['transcriptId'] \
+            if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
+
+        selected_main_transcript_id = None
+        if main_transcript_id and (self._filtered_gene_ids or self._allowed_consequences):
+            gene_transcripts = [
+                t for t in sorted_transcripts if t.get('geneId') in self._filtered_gene_ids
+            ] if  self._filtered_gene_ids else sorted_transcripts
+
+            selected_main_transcript_id = gene_transcripts[0].get('transcriptId')
+            if self._allowed_consequences:
+                consequence_transcript_id = next((
+                    t.get('transcriptId') for t in gene_transcripts if
+                    t.get('majorConsequence') in self._allowed_consequences), None)
+                if not consequence_transcript_id and self._allowed_consequences_secondary:
+                    consequence_transcript_id = next((
+                        t for t in gene_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
+                    ), None)
+                selected_main_transcript_id = consequence_transcript_id or selected_main_transcript_id
+            if selected_main_transcript_id == main_transcript_id:
+                selected_main_transcript_id = None
+
+        return main_transcript_id, selected_main_transcript_id
 
     def _parse_genome_versions(self, result, index_name, hit):
         genome_version = self.index_metadata[index_name]['genomeVersion']
@@ -1431,7 +1451,7 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
     return Q('bool', must=sample_queries, _name=family_guid)
 
 
-def _location_filter(genes, intervals, location_filter):
+def _location_filter(genes, intervals, exclude_locations):
     q = None
 
     if genes:
@@ -1461,7 +1481,7 @@ def _location_filter(genes, intervals, location_filter):
             else:
                 q = interval_q
 
-    if location_filter and location_filter.get('excludeLocations'):
+    if exclude_locations:
         return ~q
     else:
         return q

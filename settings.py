@@ -295,7 +295,7 @@ GA_TOKEN_ID = os.environ.get("GA_TOKEN_ID")
 
 SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
 
-AIRTABLE_URL = 'https://api.airtable.com/v0/app3Y97xtbbaOopVR'
+AIRTABLE_URL = 'https://api.airtable.com/v0'
 AIRTABLE_API_KEY = os.environ.get("AIRTABLE_API_KEY")
 
 API_LOGIN_REQUIRED_URL = '/api/login-required-error'

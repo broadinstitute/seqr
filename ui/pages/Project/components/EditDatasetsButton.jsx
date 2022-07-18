@@ -8,7 +8,7 @@ import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
-import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS } from 'shared/utils/constants'
+import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
 import { getProjectGuid } from '../selectors'
@@ -66,6 +66,7 @@ const UPLOAD_CALLSET_FIELDS = [
     options: [
       { value: DATASET_TYPE_VARIANT_CALLS, name: 'Haplotypecaller' },
       { value: DATASET_TYPE_SV_CALLS, name: 'SV Caller' },
+      { value: DATASET_TYPE_MITO_CALLS, name: 'Mitochondria Caller' },
     ],
     validate: value => (value ? undefined : 'Specify the caller type'),
   },

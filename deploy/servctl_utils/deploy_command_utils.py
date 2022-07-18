@@ -21,7 +21,6 @@ DEPLOYMENT_ENVS = ['gcloud-prod', 'gcloud-dev', 'prototype']
 DEPLOYMENT_TARGETS = [
     "settings",
     "secrets",
-    "linkerd",
     "elasticsearch",
     "kibana",
     "redis",
@@ -108,8 +107,6 @@ def deploy_elasticsearch(settings):
     if settings["ONLY_PUSH_TO_REGISTRY"]:
         return
 
-    _set_elasticsearch_kubernetes_resources()
-
     # create persistent volumes
     pv_template_path = 'deploy/kubernetes/elasticsearch/persistent-volumes/es-data.yaml'
     num_disks = settings['ES_DATA_NUM_PODS']
@@ -146,12 +143,6 @@ def deploy_elasticsearch(settings):
         'elasticsearch', resource_type='elasticsearch', json_path='{.items[0].status.health}', expected_status='green',
         deployment_target=settings["DEPLOY_TO"], verbose_template='elasticsearch health')
 
-def _set_elasticsearch_kubernetes_resources():
-    has_kube_resource = run('kubectl explain elasticsearch', errors_to_ignore=["server doesn't have a resource type", "couldn't find resource for"])
-    if not has_kube_resource:
-        run('kubectl create -f https://download.elastic.co/downloads/eck/1.9.1/crds.yaml')
-        run('kubectl apply -f https://download.elastic.co/downloads/eck/1.9.1/operator.yaml')
-
 
 def deploy_elasticsearch_snapshot_config(settings):
     print_separator('elasticsearch snapshot configuration')
@@ -171,22 +162,6 @@ def deploy_elasticsearch_snapshot_config(settings):
         run('kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/configure-snapshot-repo.yaml' % settings)
         # Set up the monthly cron job
         run('kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/snapshot-cronjob.yaml' % settings)
-
-
-def deploy_linkerd(settings):
-    print_separator('linkerd')
-
-    version_match = run("linkerd version | awk '/Client/ {print $3}'")
-    if version_match.strip() != settings["LINKERD_VERSION"]:
-        raise Exception("Your locally installed linkerd version does not match %s. "
-                        "Download the correct version from https://github.com/linkerd/linkerd2/releases/tag/%s" % \
-                        (settings['LINKERD_VERSION'], settings['LINKERD_VERSION']))
-
-    has_namespace = run('kubectl get namespace linkerd', errors_to_ignore=['namespaces "linkerd" not found'])
-    if not has_namespace:
-        run('linkerd install | kubectl apply -f -')
-
-        run('linkerd check')
 
 
 def deploy_redis(settings):
@@ -221,8 +196,6 @@ def deploy_kibana(settings):
     print_separator("kibana")
 
     docker_build("kibana", settings)
-
-    _set_elasticsearch_kubernetes_resources()
 
     deploy_pod("kibana", settings, wait_until_pod_is_ready=True)
 

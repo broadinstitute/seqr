@@ -11,6 +11,7 @@ import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_RE
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const RECEIVE_DATA = 'RECEIVE_DATA'
 const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
+const UPDATE_FAMILY_TABLE_FILTER_STATE = 'UPDATE_FAMILY_TABLE_FILTER_STATE'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
@@ -310,6 +311,8 @@ export const updateFamiliesTable = (updates, tableName) => (
   { type: tableName === CASE_REVIEW_TABLE_NAME ? UPDATE_CASE_REVIEW_TABLE_STATE : UPDATE_FAMILY_TABLE_STATE, updates }
 )
 
+export const updateFamiliesTableFilters = updates => ({ type: UPDATE_FAMILY_TABLE_FILTER_STATE, updates })
+
 export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_TABLE_STATE, updates })
 
 // reducers
@@ -328,11 +331,11 @@ export const reducers = {
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
-    familiesFilter: SHOW_ALL,
     familiesSearch: '',
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
   }, false),
+  familyTableFilterState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_FILTER_STATE),
   caseReviewTableState: createSingleObjectReducer(UPDATE_CASE_REVIEW_TABLE_STATE, {
     familiesFilter: SHOW_IN_REVIEW,
     familiesSortOrder: SORT_BY_FAMILY_ADDED_DATE,
