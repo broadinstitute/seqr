@@ -147,8 +147,7 @@ class BaseHailTableQuery(object):
                 self._formatted_chr_interval(interval) if add_chr_prefix else interval,
                 reference_genome=self._genome_version, invalid_missing=True)
             ) for interval in intervals]
-            import json
-            logger.info(json.dumps(intervals))
+            logger.info(str(intervals))
         return intervals
 
     def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
