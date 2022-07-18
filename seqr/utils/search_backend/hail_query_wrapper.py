@@ -127,10 +127,13 @@ class BaseHailTableQuery(object):
         }
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
+    def _should_add_chr_prefix(self):
+        reference_genome = hl.get_reference(self._genome_version)
+        return any(c.startswith('chr') for c in reference_genome.contigs)
+
     def _parse_intervals(self, intervals):
         if intervals:
-            reference_genome = hl.get_reference(self._genome_version)
-            add_chr_prefix = any(c.startswith('chr') for c in reference_genome.contigs)
+            add_chr_prefix = self._should_add_chr_prefix()
             intervals = [hl.eval(hl.parse_locus_interval(
                 f'chr{interval}' if add_chr_prefix else interval, reference_genome=self._genome_version)
             ) for interval in intervals]
@@ -182,14 +185,14 @@ class BaseHailTableQuery(object):
         if len(variant_ids) == 1:
             self._mt = self._mt.filter_rows(self._mt.alleles == [variant_ids[0][2], variant_ids[0][3]])
         else:
-            id_q = self._variant_id_q(*variant_ids[0])
+            add_chr_prefix = self._should_add_chr_prefix()
+            id_q = self._variant_id_q(*variant_ids[0], add_chr_prefix=add_chr_prefix)
             for variant_id in variant_ids[1:]:
-                id_q |= self._variant_id_q(*variant_id)
+                id_q |= self._variant_id_q(*variant_id, add_chr_prefix=add_chr_prefix)
 
-    def _variant_id_q(self, chrom, pos, ref, alt):
-        # TODO #2716: format chromosome for genome build
-        return (self._mt.locus == hl.locus(f'chr{chrom}', pos, reference_genome=self._genome_version)) & (
-                    self._mt.alleles == [ref, alt])
+    def _variant_id_q(self, chrom, pos, ref, alt, add_chr_prefix=False):
+        locus = hl.locus(f'chr{chrom}' if add_chr_prefix else chrom, pos, reference_genome=self._genome_version)
+        return (self._mt.locus == locus) & (self._mt.alleles == [ref, alt])
 
     def _filter_custom(self, custom_query):
         if custom_query:
