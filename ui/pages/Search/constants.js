@@ -70,7 +70,7 @@ export const INHERITANCE_FILTER_LOOKUP = {
 }
 
 export const INHERITANCE_MODE_LOOKUP = Object.entries(INHERITANCE_FILTER_LOOKUP).reduce(
-  (acc, [mode, filter]) => ({ ...acc, [JSON.stringify(filter)]: mode }), {},
+  (acc, [mode, filter]) => ({ ...acc, [mode]: mode, [JSON.stringify(filter)]: mode }), {},
 )
 
 export const INHERITANCE_FILTER_JSON_OPTIONS = INHERITANCE_FILTER_OPTIONS.map(
