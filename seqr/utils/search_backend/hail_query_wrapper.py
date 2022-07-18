@@ -4,7 +4,7 @@ import hail as hl
 import logging
 
 from seqr.views.utils.json_utils import _to_camel_case
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
@@ -90,8 +90,7 @@ class BaseHailTableQuery(object):
                 lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
-        logger.info(f'GENOME VERSION: {self._genome_version}')
-        if self._genome_version == GENOME_VERSION_GRCh38:
+        if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
