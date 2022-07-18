@@ -148,7 +148,7 @@ class BaseHailTableQuery(object):
                 reference_genome=self._genome_version, invalid_missing=True)
             ) for interval in intervals]
             invalid_intervals = [raw_intervals[i] for interval, i in enumerate(intervals) if interval is None]
-            if invalid_interval_indices:
+            if invalid_intervals:
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
