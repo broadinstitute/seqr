@@ -9,6 +9,39 @@ import {
 
 import { helpLabel } from './FormHelpers'
 
+const optionsAreEqual = (options, nextOptions) => {
+  if (nextOptions) {
+    if (nextOptions.length !== (options || []).length) {
+      return false
+    }
+    if (Object.entries(nextOptions)
+      .some(([i, opt]) => ['value', 'text', 'color', 'disabled', 'description']
+        .some(k => opt[k] !== options[i][k]))
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+const hasUpdatedFormInputProps = (props, nextProps) => {
+  if (!optionsAreEqual(props.options, nextProps.options)) {
+    return false
+  }
+  if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(
+    k => nextProps[k] !== props[k],
+  )) {
+    return false
+  }
+  return true
+}
+
+const formInputComponentShouldUpdate = (that, nextProps, nextState) => {
+  if (!hasUpdatedFormInputProps(that.props, nextProps)) {
+    return true
+  }
+  return nextState !== that.state
+}
 export class BaseSemanticInput extends React.Component {
 
   static propTypes = {
@@ -18,23 +51,7 @@ export class BaseSemanticInput extends React.Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    const { options } = this.props
-    if (nextProps.options) {
-      if (nextProps.options.length !== (options || []).length) {
-        return true
-      }
-      Object.entries(nextProps.options).forEach(([i, opt]) => { // eslint-disable-line consistent-return
-        if (['value', 'text', 'color', 'disabled', 'description'].some(k => opt[k] !== options[i][k])) {
-          return true
-        }
-      })
-    }
-    if (Object.keys(nextProps).filter(k => k !== 'onChange' && k !== 'options').some(
-      k => nextProps[k] !== this.props[k], // eslint-disable-line react/destructuring-assignment
-    )) {
-      return true
-    }
-    return nextState !== this.state
+    return formInputComponentShouldUpdate(this, nextProps, nextState)
   }
 
   handleChange = (e, data) => {

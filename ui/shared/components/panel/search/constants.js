@@ -27,6 +27,7 @@ import {
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
+import PaMoiSelector from './PaMoiSelector'
 
 export const getSelectedAnalysisGroups = (
   analysisGroupsByGuid, familyGuids,
@@ -386,6 +387,16 @@ export const LOCATION_FIELDS = [
     component: LocusListItemsFilter,
     width: 4,
     shouldDisable: locus => !!locus[LOCUS_LIST_ITEMS_FIELD.name] || !!locus[PANEL_APP_FIELD_NAME],
+  },
+  {
+    name: PANEL_APP_FIELD_NAME,
+    label: 'Modes of Inheritance',
+    labelHelp: 'Filter the Gene List based on Modes of Inheritance from Panel App',
+    component: LocusListItemsFilter,
+    filterComponent: PaMoiSelector,
+    width: 6,
+    shouldDisable: locus => !!locus[VARIANT_FIELD_NAME],
+    shouldShow: locus => !!locus[PANEL_APP_FIELD_NAME],
   },
   {
     name: 'create',
