@@ -57,7 +57,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cron \
     curl \
     emacs \
-    git \
     gnupg \
     htop \
     less \
@@ -65,7 +64,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nano \
     postgresql-client \
     procps \
-    default-jdk \
     redis-tools \
     xterm \
     && apt-get clean \
