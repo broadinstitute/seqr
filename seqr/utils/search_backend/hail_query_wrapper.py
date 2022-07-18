@@ -330,9 +330,9 @@ class BaseHailTableQuery(object):
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
-            mt = mt.filter_rows(self.get_x_chrom_filter(mt, self._genome_version))
+            mt = mt.filter_rows(self.get_x_chrom_filter(mt, self._get_x_chrom_interval()))
         elif inheritance_mode == RECESSIVE:
-            x_chrom_filter = self.get_x_chrom_filter(mt, self._genome_version)
+            x_chrom_filter = self.get_x_chrom_filter(mt, self._get_x_chrom_interval())
             quality_filter_expr = self._get_quality_filter_expr(mt, quality_filter)
             if quality_filter_expr is not None:
                 x_chrom_filter &= quality_filter_expr
@@ -392,10 +392,13 @@ class BaseHailTableQuery(object):
 
         return quality_filter_expr
 
+    def _get_x_chrom_interval(self):
+        return hl.parse_locus_interval(
+            hl.get_reference(self._genome_version).x_contigs[0], reference_genome=genome_version)
+
     @staticmethod
-    def get_x_chrom_filter(mt, genome_version):
-        # TODO #2716: format chromosome for genome build
-        return mt.locus.contig == 'chrX'
+    def get_x_chrom_filter(mt, x_interval):
+        return x_interval.contains(mt.locus)
 
     def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
         if not inheritance_filter:
@@ -782,10 +785,8 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         pass
 
     @staticmethod
-    def get_x_chrom_filter(mt, genome_version):
-        # TODO #2716: format chromosome for genome build
-        x_chrom_interval = hl.parse_locus_interval('chrX', reference_genome=genome_version)
-        return mt.interval.overlaps(x_chrom_interval)
+    def get_x_chrom_filter(mt, x_interval):
+        return mt.interval.overlaps(x_interval)
 
     def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
         families_expr = super(GcnvHailTableQuery, self)._get_matched_families_expr(
@@ -909,11 +910,11 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery):
         )
 
     @staticmethod
-    def get_x_chrom_filter(mt, genome_version):
+    def get_x_chrom_filter(mt, x_interval):
         return hl.if_else(
             hl.is_defined(mt.svType),
-            GcnvHailTableQuery.get_x_chrom_filter(mt, genome_version),
-            VariantHailTableQuery.get_x_chrom_filter(mt, genome_version),
+            GcnvHailTableQuery.get_x_chrom_filter(mt, x_interval),
+            VariantHailTableQuery.get_x_chrom_filter(mt, x_interval),
         )
 
     def _valid_comp_het_families_expr(self, ch_ht):
