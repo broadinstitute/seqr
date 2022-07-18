@@ -149,7 +149,7 @@ class BaseHailTableQuery(object):
             ) for interval in intervals]
             invalid_intervals = [raw_intervals[i] for interval, i in enumerate(intervals) if interval is None]
             if invalid_interval_indices:
-                raise InvalidSearchException(f'Invalid genes/intervals: {", ".join(invalid_intervals)}')
+                raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
     def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
