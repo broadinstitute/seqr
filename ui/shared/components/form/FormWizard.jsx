@@ -8,9 +8,10 @@ class FormWizard extends React.PureComponent {
   static propTypes = {
     onSubmit: PropTypes.func.isRequired,
     pages: PropTypes.arrayOf(PropTypes.object),
+    successMessage: PropTypes.string,
   }
 
-  state = { pageIndex: 0, asyncValues: {} }
+  state = { pageIndex: 0, asyncValues: {}, formSubmitSucceeded: false }
 
   navigateNext = () => {
     this.setState(prevState => ({
@@ -30,23 +31,36 @@ class FormWizard extends React.PureComponent {
 
   resolvedPageSubmit = () => Promise.resolve()
 
+  onFormSubmitSucceeded = () => this.setState({ formSubmitSucceeded: true })
+
   onFormSubmit = (values) => {
     const { onSubmit } = this.props
     const { asyncValues } = this.state
-    return onSubmit({ ...asyncValues, ...values })
+    return onSubmit({ ...asyncValues, ...values }, this.onFormSubmitSucceeded)
   }
 
   render() {
-    const { pages, onSubmit, ...props } = this.props
-    const { pageIndex } = this.state
+    const { pages, onSubmit, successMessage, ...props } = this.props
+    const { pageIndex, formSubmitSucceeded } = this.state
 
     const { fields, onPageSubmit } = pages[pageIndex]
 
-    const formProps = pageIndex === pages.length - 1 ? { onSubmit: this.onFormSubmit } : {
+    const lastPageProps = formSubmitSucceeded ? {
+      onSubmit: this.resolvedPageSubmit,
+      submitButtonText: 'Close',
+      successMessage,
+    } : {
+      onSubmit: this.onFormSubmit,
+      submitButtonText: 'Submit',
+      closeOnSuccess: false,
+    }
+
+    const formProps = pageIndex === pages.length - 1 ? lastPageProps : {
       onSubmit: onPageSubmit(this.onPageSubmitSucceeded) || this.resolvedPageSubmit,
       onSubmitSucceeded: this.navigateNext,
       submitButtonText: 'Next',
       submitButtonIcon: 'angle double right',
+      closeOnSuccess: false,
     }
     const backButtonProps = pageIndex === 0 ? {} : {
       onCancel: this.navigateBack,

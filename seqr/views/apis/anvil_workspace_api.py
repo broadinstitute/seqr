@@ -24,7 +24,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, get_project_active_pedigrees
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
@@ -172,14 +172,9 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    # Parse families/individuals in the uploaded pedigree file
-    json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, fail_on_warnings=True)
-
-    missing_samples = [record['individualId'] for record in pedigree_records if record['individualId'] not in request_json['vcfSamples']]
-    if missing_samples:
-        return create_json_response(
-            {'error': 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(', '.join(missing_samples))}, status=400)
+    pedigree_records, error = _parse_uploaded_pedigree(request_json, request.user)
+    if error:
+        return create_json_response({'error': error}, status=400)
 
     # Create a new Project in seqr
     project_args = {
@@ -194,7 +189,7 @@ def create_project_from_workspace(request, namespace, name):
 
     project = create_model_from_json(Project, project_args, user=request.user)
 
-    _trigger_add_workspace_data(project, pedigree_records, request.user, request_json)
+    _trigger_add_workspace_data(project, pedigree_records, request.user, request_json['fullDataPath'], request_json['sampleType'])
 
     return create_json_response({'projectGuid': project.guid})
 
@@ -219,38 +214,54 @@ def add_workspace_data(request, project_guid):
     if missing_fields:
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
-    request_json['genomeVersion'] = project.genome_version
-    request_json['sampleType'] = Sample.objects.filter(individual__family__project=project)[0].sample_type
 
-    # Parse families/individuals in the uploaded pedigree file
-    json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=request.user, fail_on_warnings=True)
+    pedigree_records, error = _parse_uploaded_pedigree(request_json, request.user)
+    if error:
+        return create_json_response({'error': error}, status=400)
 
-    indivIds = {ped['individualId'] for ped in pedigree_records}
-    pedigree_records += [ped for ped in get_project_active_pedigrees(project) if ped['individualId'] not in indivIds]
-
-    missing_samples = [record['individualId'] for record in pedigree_records
-                       if record['individualId'] not in request_json['vcfSamples']]
-
-    if missing_samples:
+    previous_samples = Sample.objects.filter(
+        individual__family__project=project, is_active=True, elasticsearch_index__isnull=False,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).prefetch_related('individual')
+    previous_loaded_individuals = {s.individual.individual_id for s in previous_samples}
+    missing_loaded_samples = [individual_id for individual_id in previous_loaded_individuals if
+                              individual_id not in request_json['vcfSamples']]
+    if missing_loaded_samples:
         return create_json_response({
-            'error': 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                ', '.join(missing_samples))
-        },
-            status=400)
+            'error': 'In order to add new data to this project, new samples must be joint called in a single VCF with all previously loaded samples.'
+                     ' The following samples were previously loaded in this project but are missing from the VCF: {}'.format(
+                ', '.join(missing_loaded_samples))}, status=400)
 
-    _trigger_add_workspace_data(project, pedigree_records, request.user, request_json)
+    _trigger_add_workspace_data(project, pedigree_records, request.user, request_json['fullDataPath'],
+                                previous_samples.first().sample_type,
+                                previous_loaded_ids=previous_loaded_individuals)
 
     return create_json_response({'success': True})
 
 
-def _trigger_add_workspace_data(project, pedigree_records, user, request_json):
+def _parse_uploaded_pedigree(request_json, user):
+    # Parse families/individuals in the uploaded pedigree file
+    json_records = load_uploaded_file(request_json['uploadedFileId'])
+    pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=user, fail_on_warnings=True)
+
+    missing_samples = [record['individualId'] for record in pedigree_records
+                       if record['individualId'] not in request_json['vcfSamples']]
+
+    error = 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
+                ', '.join(missing_samples)) if missing_samples else None
+
+    return pedigree_records, error
+
+
+def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None):
     # add families and individuals according to the uploaded individual records
-    add_or_update_individuals_and_families(project, individual_records=pedigree_records, user=user)
+    updated_individuals, _, _ = add_or_update_individuals_and_families(
+        project, individual_records=pedigree_records, user=user
+    )
 
     # Upload sample IDs to a file on Google Storage
-    ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, request_json['sampleType']), guid=project.guid)
-    sample_ids = [individual['individualId'] for individual in pedigree_records]
+    ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, sample_type), guid=project.guid)
+    sample_ids = [individual.individual_id for individual in updated_individuals]
+    sample_ids += previous_loaded_ids if previous_loaded_ids else []
     try:
         temp_path = save_temp_data('\n'.join(['s'] + sample_ids))
         mv_file_to_gs(temp_path, ids_path, user=user)
@@ -259,9 +270,9 @@ def _trigger_add_workspace_data(project, pedigree_records, user, request_json):
                      detail=sorted(sample_ids))
 
     # use airflow api to trigger AnVIL dags
-    trigger_success = _trigger_data_loading(project, request_json['fullDataPath'], request_json['sampleType'], user)
+    trigger_success = _trigger_data_loading(project, data_path, sample_type, user)
     # Send a slack message to the slack channel
-    _send_load_data_slack_msg(project, ids_path, request_json['fullDataPath'], request_json['sampleType'], user)
+    _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user)
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
             'Requester Name': user.get_full_name(),

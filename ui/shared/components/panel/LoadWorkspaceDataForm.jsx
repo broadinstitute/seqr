@@ -93,8 +93,8 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const postWorkspaceValues = (path, formatVals) => onSuccess => ({ namespace, name, ...values }) => (
-  new HttpRequestHelper(`/api/create_project_from_workspace/${namespace}/${name}/${path}`, onSuccess).post(
+const postWorkspaceValues = (path, formatVals) => onSuccess => ({ workspaceNamespace, workspaceName, ...values }) => (
+  new HttpRequestHelper(`/api/create_project_from_workspace/${workspaceNamespace}/${workspaceName}/${path}`, onSuccess).post(
     formatVals ? formatVals(values) : values,
   ))
 
@@ -104,10 +104,10 @@ const createProjectFromWorkspace = postWorkspaceValues(
   window.location.href = `/project/${responseJson.projectGuid}/project_page`
 })
 
-const addDataFromWorkspace = projectGuid => values => (
+const addDataFromWorkspace = projectGuid => (values, onSuccess) => (
   new HttpRequestHelper(`/api/project/${projectGuid}/add_workspace_data`, (responseJson) => {
     if (responseJson.success) {
-      window.location.href = `/project/${projectGuid}/project_page`
+      onSuccess()
     }
   }).post({ ...values, uploadedFileId: values.uploadedFile?.uploadedFileId }))
 
@@ -129,10 +129,12 @@ const ADD_DATA_WIZARD_PAGES = [
   { fields: [UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const LoadWorkspaceDataForm = React.memo(({ params, projectGuid }) => (
+const successMessage = 'Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available.'
+
+const LoadWorkspaceDataForm = React.memo(({ params, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
-      {`Load data to seqr from AnVIL Workspace "${params.namespace}/${params.name}"`}
+      {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
     </Header>
     <Segment basic textAlign="center">
       <Message info compact>
@@ -144,11 +146,13 @@ const LoadWorkspaceDataForm = React.memo(({ params, projectGuid }) => (
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
     <FormWizard
-      onSubmit={projectGuid ? addDataFromWorkspace(projectGuid) : createProjectFromWorkspace}
-      pages={projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
+      {...props}
+      onSubmit={params.projectGuid ? addDataFromWorkspace(params.projectGuid) : createProjectFromWorkspace}
+      pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
+      successMessage={successMessage}
       initialValues={params}
       size="small"
-      noModal
+      noModal={!params.projectGuid}
     />
     <p>
       Need help? please submit &nbsp;
@@ -163,7 +167,6 @@ const LoadWorkspaceDataForm = React.memo(({ params, projectGuid }) => (
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
-  projectGuid: PropTypes.string,
 }
 
 export default LoadWorkspaceDataForm

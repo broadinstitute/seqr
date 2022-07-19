@@ -12,31 +12,12 @@ from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import user_is_pm
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals
-from seqr.models import Individual, Sample
+from seqr.models import Individual
 
 logger = SeqrLogger(__name__)
 
 
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
-
-
-def get_project_active_pedigrees(project):
-    individuals = Individual.objects.filter(family__project=project).prefetch_related(
-        'family', 'mother', 'father')
-    active_indivs = [indiv for indiv in individuals if len(
-        Sample.objects.filter(individual=indiv, is_active=True, elasticsearch_index__isnull=False)) > 0]
-    indiv_jsons = _get_json_for_individuals(active_indivs, project_guid=project.guid, family_fields=['family_id'])
-    ped_fields = [
-        JsonConstants.FAMILY_ID_COLUMN,
-        JsonConstants.INDIVIDUAL_ID_COLUMN,
-        JsonConstants.PATERNAL_ID_COLUMN,
-        JsonConstants.MATERNAL_ID_COLUMN,
-        JsonConstants.SEX_COLUMN,
-        JsonConstants.AFFECTED_COLUMN,
-        JsonConstants.NOTES_COLUMN,
-    ]
-    return [{key: indiv[key] for key in ped_fields} for indiv in indiv_jsons]
 
 
 def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warnings=False):
