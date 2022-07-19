@@ -1088,28 +1088,14 @@ RECESSIVE_INHERITANCE_QUERY = {
             {'bool': {
                 '_name': 'F000002_2',
                 'must': [
-                    {'bool': {
-                        'should': [
-                            {'bool': {
-                                'must_not': [
-                                    {'term': {'samples_no_call': 'HG00732'}},
-                                    {'term': {'samples_num_alt_2': 'HG00732'}},
-                                    {'term': {'samples_no_call': 'HG00733'}},
-                                    {'term': {'samples_num_alt_2': 'HG00733'}}
-                                ],
-                                'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
-                            }},
-                            {'bool': {
-                                'must_not': [
-                                    {'term': {'samples_no_call': 'HG00732'}},
-                                    {'term': {'samples_num_alt_1': 'HG00732'}},
-                                    {'term': {'samples_num_alt_2': 'HG00732'}},
-                                    {'term': {'samples_no_call': 'HG00733'}},
-                                    {'term': {'samples_num_alt_2': 'HG00733'}}
-                                ],
-                                'must': [{'match': {'contig': 'X'}}, {'term': {'samples_num_alt_2': 'HG00731'}}]
-                            }}
-                        ]
+                        {'bool': {
+                            'must_not': [
+                                {'term': {'samples_no_call': 'HG00732'}},
+                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                {'term': {'samples_no_call': 'HG00733'}},
+                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                            ],
+                            'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
                     }},
                     {'bool': {'must_not': [
                         {'term': {'samples_gq_0_to_5': 'HG00731'}},
@@ -1124,15 +1110,7 @@ RECESSIVE_INHERITANCE_QUERY = {
             {'bool': {
                 '_name': 'F000003_3',
                 'must': [
-                    {'bool': {
-                        'should': [
-                            {'bool': {'must': [
-                                {'match': {'contig': 'X'}},
-                                {'term': {'samples_num_alt_2': 'NA20870'}}
-                            ]}},
-                            {'term': {'samples_num_alt_2': 'NA20870'}},
-                        ]
-                    }},
+                    {'term': {'samples_num_alt_2': 'NA20870'}},
                     {'bool': {'must_not': [
                         {'term': {'samples_gq_0_to_5': 'NA20870'}},
                         {'term': {'samples_gq_5_to_10': 'NA20870'}}
@@ -1332,6 +1310,10 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
+        if executed_search != expected_search:
+            exp = expected_search_params['filters']
+            act = executed_search['query']['bool']['filter']
+            # import pdb; pdb.set_trace()
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
@@ -2187,35 +2169,17 @@ class EsUtilsTest(TestCase):
                         '_name': 'F000002_2',
                         'must': [{
                             'bool': {
+                                'minimum_should_match': 1,
                                 'should': [
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'term': {'samples_cn_0': 'HG00731'}},
-                                            {'term': {'samples_cn_2': 'HG00731'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
-                                        ],
-                                        'must_not': [
-                                            {'term': {'samples_cn_0': 'HG00732'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00732'}},
-                                            {'term': {'samples_cn_0': 'HG00733'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
-                                        ]
-                                    }},
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'term': {'samples_cn_0': 'HG00731'}},
-                                            {'term': {'samples_cn_2': 'HG00731'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
-                                        ],
-                                        'must_not': [
-                                            {'term': {'samples': 'HG00732'}},
-                                            {'term': {'samples_cn_0': 'HG00733'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
-                                        ],
-                                        'must': [{'match': {'contig': 'X'}}],
-                                    }}
+                                    {'term': {'samples_cn_0': 'HG00731'}},
+                                    {'term': {'samples_cn_2': 'HG00731'}},
+                                    {'term': {'samples_cn_gte_4': 'HG00731'}},
+                                ],
+                                'must_not': [
+                                    {'term': {'samples_cn_0': 'HG00732'}},
+                                    {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                    {'term': {'samples_cn_0': 'HG00733'}},
+                                    {'term': {'samples_cn_gte_4': 'HG00733'}},
                                 ]
                             }
                         }]
@@ -2274,45 +2238,20 @@ class EsUtilsTest(TestCase):
                                     '_name': 'F000002_2',
                                     'must': [
                                         {'bool': {
-                                            'should': [
-                                                {'bool': {
-                                                    'must_not': [
-                                                        {'term': {'samples_no_call': 'HG00732'}},
-                                                        {'term': {'samples_num_alt_2': 'HG00732'}},
-                                                        {'term': {'samples_no_call': 'HG00733'}},
-                                                        {'term': {'samples_num_alt_2': 'HG00733'}}
-                                                    ],
-                                                    'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
-                                                }},
-                                                {'bool': {
-                                                    'must_not': [
-                                                        {'term': {'samples_no_call': 'HG00732'}},
-                                                        {'term': {'samples_num_alt_1': 'HG00732'}},
-                                                        {'term': {'samples_num_alt_2': 'HG00732'}},
-                                                        {'term': {'samples_no_call': 'HG00733'}},
-                                                        {'term': {'samples_num_alt_2': 'HG00733'}}
-                                                    ],
-                                                    'must': [
-                                                        {'match': {'contig': 'X'}},
-                                                        {'term': {'samples_num_alt_2': 'HG00731'}}
-                                                    ]
-                                                }}
-                                            ]
+                                            'must_not': [
+                                                {'term': {'samples_no_call': 'HG00732'}},
+                                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                                {'term': {'samples_no_call': 'HG00733'}},
+                                                {'term': {'samples_num_alt_2': 'HG00733'}}
+                                            ],
+                                            'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
                                         }},
                                     ]
                                 }},
                                 {'bool': {
                                     '_name': 'F000003_3',
                                     'must': [
-                                        {'bool': {
-                                            'should': [
-                                                {'bool': {'must': [
-                                                    {'match': {'contig': 'X'}},
-                                                    {'term': {'samples_num_alt_2': 'NA20870'}}
-                                                ]}},
-                                                {'term': {'samples_num_alt_2': 'NA20870'}},
-                                            ]
-                                        }}
+                                        {'term': {'samples_num_alt_2': 'NA20870'}},
                                     ]
                                 }},
                             ]
@@ -2345,35 +2284,17 @@ class EsUtilsTest(TestCase):
                         '_name': 'F000002_2',
                         'must': [{
                             'bool': {
+                                'minimum_should_match': 1,
                                 'should': [
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'term': {'samples_cn_0': 'HG00731'}},
-                                            {'term': {'samples_cn_2': 'HG00731'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
-                                        ],
-                                        'must_not': [
-                                            {'term': {'samples_cn_0': 'HG00732'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00732'}},
-                                            {'term': {'samples_cn_0': 'HG00733'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
-                                        ]
-                                    }},
-                                    {'bool': {
-                                        'minimum_should_match': 1,
-                                        'should': [
-                                            {'term': {'samples_cn_0': 'HG00731'}},
-                                            {'term': {'samples_cn_2': 'HG00731'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00731'}},
-                                        ],
-                                        'must_not': [
-                                            {'term': {'samples': 'HG00732'}},
-                                            {'term': {'samples_cn_0': 'HG00733'}},
-                                            {'term': {'samples_cn_gte_4': 'HG00733'}},
-                                        ],
-                                        'must': [{'match': {'contig': 'X'}}],
-                                    }}
+                                    {'term': {'samples_cn_0': 'HG00731'}},
+                                    {'term': {'samples_cn_2': 'HG00731'}},
+                                    {'term': {'samples_cn_gte_4': 'HG00731'}},
+                                ],
+                                'must_not': [
+                                    {'term': {'samples_cn_0': 'HG00732'}},
+                                    {'term': {'samples_cn_gte_4': 'HG00732'}},
+                                    {'term': {'samples_cn_0': 'HG00733'}},
+                                    {'term': {'samples_cn_gte_4': 'HG00733'}},
                                 ]
                             }
                         }]
@@ -2536,28 +2457,13 @@ class EsUtilsTest(TestCase):
                             '_name': 'F000002_2',
                             'must': [
                                 {'bool': {
-                                    'should': [
-                                        {'bool': {
-                                            'must_not': [
-                                                {'term': {'samples_no_call': 'HG00732'}},
-                                                {'term': {'samples_num_alt_2': 'HG00732'}},
-                                                {'term': {'samples_no_call': 'HG00733'}},
-                                                {'term': {'samples_num_alt_2': 'HG00733'}}
-                                            ],
-                                            'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
-                                        }},
-                                        {'bool': {
-                                            'must_not': [
-                                                {'term': {'samples_no_call': 'HG00732'}},
-                                                {'term': {'samples_num_alt_1': 'HG00732'}},
-                                                {'term': {'samples_num_alt_2': 'HG00732'}},
-                                                {'term': {'samples_no_call': 'HG00733'}},
-                                                {'term': {'samples_num_alt_2': 'HG00733'}}
-                                            ],
-                                            'must': [{'match': {'contig': 'X'}},
-                                                     {'term': {'samples_num_alt_2': 'HG00731'}}]
-                                        }}
-                                    ]
+                                    'must_not': [
+                                        {'term': {'samples_no_call': 'HG00732'}},
+                                        {'term': {'samples_num_alt_2': 'HG00732'}},
+                                        {'term': {'samples_no_call': 'HG00733'}},
+                                        {'term': {'samples_num_alt_2': 'HG00733'}}
+                                    ],
+                                    'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
                                 }},
                             ]
                         }
@@ -2573,15 +2479,7 @@ class EsUtilsTest(TestCase):
                         'bool': {
                             '_name': 'F000003_3',
                             'must': [
-                                {'bool': {
-                                    'should': [
-                                        {'bool': {'must': [
-                                            {'match': {'contig': 'X'}},
-                                            {'term': {'samples_num_alt_2': 'NA20870'}}
-                                        ]}},
-                                        {'term': {'samples_num_alt_2': 'NA20870'}},
-                                    ]
-                                }},
+                               {'term': {'samples_num_alt_2': 'NA20870'}},
                             ]
                         }
                     },
@@ -2630,13 +2528,7 @@ class EsUtilsTest(TestCase):
                 ANNOTATION_QUERY,
                 {'bool': {
                     'must': [
-                        {'bool': {'should': [
-                            {'bool': {'must': [
-                                {'match': {'contig': 'X'}},
-                                {'term': {'samples_num_alt_2': 'NA20885'}}
-                            ]}},
-                            {'term': {'samples_num_alt_2': 'NA20885'}},
-                        ]}},
+                        {'term': {'samples_num_alt_2': 'NA20885'}},
                         {'bool': {
                             'must_not': [
                                 {'term': {'samples_gq_0_to_5': 'NA20885'}},
@@ -3074,13 +2966,7 @@ class EsUtilsTest(TestCase):
                 ANNOTATION_QUERY,
                 {'bool': {
                     'must': [
-                        {'bool': {'should': [
-                            {'bool': {'must': [
-                                {'match': {'contig': 'X'}},
-                                {'term': {'samples_num_alt_2': 'NA20885'}}
-                            ]}},
-                            {'term': {'samples_num_alt_2': 'NA20885'}},
-                        ]}},
+                        {'term': {'samples_num_alt_2': 'NA20885'}},
                         {'bool': {
                             'must_not': [
                                 {'term': {'samples_gq_0_to_5': 'NA20885'}},
@@ -3541,18 +3427,14 @@ class EsUtilsTest(TestCase):
             expected_filter=custom_affected_x_linked_filter)
 
         # recessive
-        _execute_inheritance_search(mode='recessive', expected_comp_het_filter=com_het_filter, expected_filter={
-            'bool': {'should': [recessive_filter, x_linked_filter]}
-        })
+        _execute_inheritance_search(mode='recessive', expected_comp_het_filter=com_het_filter, expected_filter=recessive_filter)
 
         _execute_inheritance_search(
-            mode='recessive', dataset_type='SV', expected_comp_het_filter=sv_com_het_filter, expected_filter={
-                'bool': {'should': [sv_recessive_filter, sv_x_linked_filter]}})
+            mode='recessive', dataset_type='SV', expected_comp_het_filter=sv_com_het_filter, expected_filter=sv_recessive_filter)
 
         _execute_inheritance_search(
             mode='recessive', inheritance_filter={'affected': custom_affected},
-            expected_comp_het_filter=custom_affected_comp_het_filter, expected_filter={
-                'bool': {'should': [custom_affected_recessive_filter, custom_affected_x_linked_filter]}})
+            expected_comp_het_filter=custom_affected_comp_het_filter, expected_filter=custom_affected_recessive_filter)
 
         # any affected
         _execute_inheritance_search(mode='any_affected', expected_filter={
