@@ -70,7 +70,7 @@ const INHERITANCE_PANEL = {
           return null
         }
         const { affected, genotype, ...coreFilter } = val.filter
-        return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
+        return INHERITANCE_MODE_LOOKUP[val.mode] || INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
       parse: val => (val === ALL_INHERITANCE_FILTER ? null : {
         mode: val,

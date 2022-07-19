@@ -53,4 +53,4 @@ class PaLocusListGene(models.Model):
     class Meta:
         """Fields included in JSON in API calls."""
 
-        json_fields = ['confidence_level']
+        json_fields = ['confidence_level', 'mode_of_inheritance']
