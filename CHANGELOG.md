@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 7/19/22
 * Add "Incomplete Penetrance" functional tag type (REQUIRES DB MIGRATION)
 
 ## 7/12/22
