@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Message, Segment } from 'semantic-ui-react'
 
-import LoadWorkspaceDataForm from './components/LoadWorkspaceDataForm'
+import LoadWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
 
 export const WorkspaceAccessError = ({ match }) => (
   <Segment basic padded="very" textAlign="center">
