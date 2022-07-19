@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add "Incomplete Penetrance" functional tag type (REQUIRES DB MIGRATION)
 
 ## 7/12/22
 * Add MITO dataset type (REQUIRES DB MIGRATION)
