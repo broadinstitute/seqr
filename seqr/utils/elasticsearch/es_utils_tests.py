@@ -1310,10 +1310,6 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
-        if executed_search != expected_search:
-            exp = expected_search_params['filters']
-            act = executed_search['query']['bool']['filter']
-            # import pdb; pdb.set_trace()
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
