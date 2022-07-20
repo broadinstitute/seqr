@@ -52,7 +52,7 @@ class BaseLocusListDropdown extends React.Component {
 
       if (locusList.paLocusList) {
         const panelAppItems = formatPanelAppItems(locusList.items)
-        onChange({ locusListGuid, panelAppItems, locusList })
+        onChange({ locusListGuid, panelAppItems })
       } else {
         const { rawItems } = locusList
         onChange({ locusListGuid, rawItems })
