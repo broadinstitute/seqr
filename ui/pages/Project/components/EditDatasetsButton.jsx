@@ -8,6 +8,7 @@ import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import LoadWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
@@ -170,20 +171,33 @@ const PANES = [
 
 const IGV_ONLY_PANES = [PANES[1]]
 
-const EditDatasetsButton = React.memo(({ user }) => (
-  (user.isDataManager || user.isPm) ? (
-    <Modal
-      modalName={MODAL_NAME}
-      title="Datasets"
-      size="small"
-      trigger={<ButtonLink>Edit Datasets</ButtonLink>}
-    >
-      <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />
-    </Modal>
-  ) : null
-))
+const EditDatasetsButton = React.memo(({ project, user }) => {
+  const showLoadWorkspaceData = !project.isAnalystProject && project.canEdit
+  const title = showLoadWorkspaceData ? 'Request Additional Data from Anvil Workspace' : 'Datasets'
+  const text = showLoadWorkspaceData ? 'Request Additional Data' : 'Edit Datasets'
+  return (
+    (user.isDataManager || user.isPm || showLoadWorkspaceData) ? (
+      <Modal
+        modalName={MODAL_NAME}
+        title={title}
+        size="small"
+        trigger={<ButtonLink>{text}</ButtonLink>}
+      >
+        {showLoadWorkspaceData ? (
+          <LoadWorkspaceDataForm
+            params={project}
+            modalName={MODAL_NAME}
+          />
+        ) : (
+          <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />
+        )}
+      </Modal>
+    ) : null
+  )
+})
 
 EditDatasetsButton.propTypes = {
+  project: PropTypes.object,
   user: PropTypes.object,
 }
 

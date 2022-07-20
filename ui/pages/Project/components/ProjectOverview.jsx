@@ -15,7 +15,6 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
 import { ButtonLink, HelpIcon } from 'shared/components/StyledComponents'
-import LoadWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
 import {
   SAMPLE_TYPE_LOOKUP,
   GENOME_VERSION_LOOKUP,
@@ -244,8 +243,6 @@ class DatasetSection extends React.PureComponent {
 
 }
 
-const ADD_WORKSPACE_DATA_MODAL = 'addAnvilDataset'
-
 const Dataset = React.memo(({ project, samplesByType, user }) => {
   const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
@@ -285,24 +282,10 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
     })
   }
 
-  const addAnvilDataButton = (
-    <Modal
-      modalName={ADD_WORKSPACE_DATA_MODAL}
-      title="Request Additional Data from Anvil Workspace"
-      size="small"
-      trigger={<ButtonLink>Request Additional Data</ButtonLink>}
-    >
-      <LoadWorkspaceDataForm params={project} modalName={ADD_WORKSPACE_DATA_MODAL} />
-    </Modal>
-  )
-
-  const dataButton = (!project.isAnalystProject && project.canEdit) ? addAnvilDataButton :
-    (<EditDatasetsButton user={user} />)
-
   return datasetSections.map((sectionProps, i) => (
     <DetailSection
       {...sectionProps}
-      button={(datasetSections.length - 1 === i) ? dataButton : null}
+      button={(datasetSections.length - 1 === i) ? <EditDatasetsButton project={project} user={user} /> : null}
     />
   ))
 })

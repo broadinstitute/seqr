@@ -29,6 +29,7 @@ from seqr.views.utils.individual_utils import add_or_update_individuals_and_fami
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required, \
     get_project_and_check_permissions
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL, SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
@@ -172,9 +173,7 @@ def create_project_from_workspace(request, namespace, name):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records, error = _parse_uploaded_pedigree(request_json, request.user)
-    if error:
-        return create_json_response({'error': error}, status=400)
+    pedigree_records = _parse_uploaded_pedigree(request_json, request.user)
 
     # Create a new Project in seqr
     project_args = {
@@ -205,8 +204,7 @@ def add_workspace_data(request, project_guid):
 
     """
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    check_workspace_perm(request.user, CAN_EDIT, project.workspace_namespace, project.workspace_name, can_share=True,
-                         meta_fields=['workspace.bucketName'])
+    check_workspace_perm(request.user, CAN_EDIT, project.workspace_namespace, project.workspace_name, can_share=True)
 
     request_json = json.loads(request.body)
 
@@ -215,9 +213,7 @@ def add_workspace_data(request, project_guid):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records, error = _parse_uploaded_pedigree(request_json, request.user)
-    if error:
-        return create_json_response({'error': error}, status=400)
+    pedigree_records = _parse_uploaded_pedigree(request_json, request.user)
 
     previous_samples = Sample.objects.filter(
         individual__family__project=project, is_active=True, elasticsearch_index__isnull=False,
@@ -229,7 +225,7 @@ def add_workspace_data(request, project_guid):
         return create_json_response({
             'error': 'In order to add new data to this project, new samples must be joint called in a single VCF with all previously loaded samples.'
                      ' The following samples were previously loaded in this project but are missing from the VCF: {}'.format(
-                ', '.join(missing_loaded_samples))}, status=400)
+                ', '.join(sorted(missing_loaded_samples)))}, status=400)
 
     _trigger_add_workspace_data(project, pedigree_records, request.user, request_json['fullDataPath'],
                                 previous_samples.first().sample_type,
@@ -249,7 +245,10 @@ def _parse_uploaded_pedigree(request_json, user):
     error = 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
                 ', '.join(missing_samples)) if missing_samples else None
 
-    return pedigree_records, error
+    if error:
+        raise ErrorsWarningsException([error], [])
+
+    return pedigree_records
 
 
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None):
@@ -263,7 +262,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     sample_ids = [individual.individual_id for individual in updated_individuals]
     sample_ids += previous_loaded_ids if previous_loaded_ids else []
     try:
-        temp_path = save_temp_data('\n'.join(['s'] + sample_ids))
+        temp_path = save_temp_data('\n'.join(['s'] + sorted(sample_ids)))
         mv_file_to_gs(temp_path, ids_path, user=user)
     except Exception as ee:
         logger.error('Uploading sample IDs to Google Storage failed. Errors: {}'.format(str(ee)), user,

@@ -93,23 +93,25 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const postWorkspaceValues = (path, formatVals) => onSuccess => ({ workspaceNamespace, workspaceName, ...values }) => (
-  new HttpRequestHelper(`/api/create_project_from_workspace/${workspaceNamespace}/${workspaceName}/${path}`, onSuccess).post(
-    formatVals ? formatVals(values) : values,
-  ))
+const postWorkspaceValues = (path, formatVals, formatUrl) => onSuccess => (
+  { workspaceNamespace, workspaceName, ...values },
+) => (
+  new HttpRequestHelper(
+    formatUrl ? formatUrl(values) : `/api/create_project_from_workspace/${workspaceNamespace}/${workspaceName}/${path}`,
+    onSuccess,
+  ).post(formatVals ? formatVals(values) : values)
+)
 
-const createProjectFromWorkspace = postWorkspaceValues(
-  'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }),
-)((responseJson) => {
-  window.location.href = `/project/${responseJson.projectGuid}/project_page`
-})
+const postSubmitValues = formatUrl => postWorkspaceValues(
+  'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }), formatUrl,
+)
 
-const addDataFromWorkspace = projectGuid => (values, onSuccess) => (
-  new HttpRequestHelper(`/api/project/${projectGuid}/add_workspace_data`, (responseJson) => {
-    if (responseJson.success) {
-      onSuccess()
-    }
-  }).post({ ...values, uploadedFileId: values.uploadedFile?.uploadedFileId }))
+const createProjectFromWorkspace = postSubmitValues()
+
+const addDataFromWorkspace = postSubmitValues(({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`))
+
+// eslint-disable-next-line no-return-assign
+const openNewProjectPage = resp => (window.location.href = `/project/${resp.projectGuid}/project_page`)
 
 const GRANT_ACCESS_PAGE = { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') }
 const VALIDATE_VCF_PAGE = {
@@ -129,8 +131,6 @@ const ADD_DATA_WIZARD_PAGES = [
   { fields: [UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const successMessage = 'Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available.'
-
 const LoadWorkspaceDataForm = React.memo(({ params, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
@@ -147,9 +147,10 @@ const LoadWorkspaceDataForm = React.memo(({ params, ...props }) => (
     </Segment>
     <FormWizard
       {...props}
-      onSubmit={params.projectGuid ? addDataFromWorkspace(params.projectGuid) : createProjectFromWorkspace}
+      onSubmit={params.projectGuid ? addDataFromWorkspace : createProjectFromWorkspace}
+      onClose={params.projectGuid ? null : openNewProjectPage}
       pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
-      successMessage={successMessage}
+      successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
       initialValues={params}
       size="small"
       noModal={!params.projectGuid}
