@@ -296,7 +296,6 @@ CORE_FIELDS_CONFIG = {
     'svType': {},
     'variantId': {},
     'xpos': {'format_value': int},
-    GRCH38_LOCUS_FIELD: {},
     XSTOP_FIELD:  {'format_value': int},
     'rg37_locus_end': {'response_key': 'rg37LocusEnd', 'format_value': lambda locus: locus.to_dict()},
     'sv_type_detail': {'response_key': 'svTypeDetail'},
@@ -397,7 +396,7 @@ GENOTYPE_FIELDS = {
 }
 
 QUERY_FIELD_NAMES = list(CORE_FIELDS_CONFIG.keys()) + list(PREDICTION_FIELDS_CONFIG.keys()) + \
-                    [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY] + HAS_ALT_FIELD_KEYS
+                    [SORTED_TRANSCRIPTS_FIELD_KEY, GENOTYPES_FIELD_KEY, GRCH38_LOCUS_FIELD] + HAS_ALT_FIELD_KEYS
 for field_name, fields in NESTED_FIELDS.items():
     QUERY_FIELD_NAMES += ['{}_{}'.format(field_name, field) for field in fields.keys()]
 for pop_config in POPULATIONS.values():
