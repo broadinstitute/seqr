@@ -43,7 +43,7 @@ class FormWizard extends React.PureComponent {
     if (onClose) {
       return onClose(responseJson)
     }
-    return null
+    return this.resolvedPageSubmit()
   }
 
   getFormProps = () => {
