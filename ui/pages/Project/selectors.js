@@ -373,7 +373,12 @@ const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_
 )
 
 const analysedByFilters = (filter, analysedByOptions) => {
-  const filters = filter.map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)
+  const filters = []
+
+  const otherFilters = filter.map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)
+  if (otherFilters.length) {
+    filters.push(otherFilters)
+  }
 
   let requireNoAnalysedBy = false
   const analsedByGroups = Object.values(filter.reduce(
@@ -394,13 +399,13 @@ const analysedByFilters = (filter, analysedByOptions) => {
     }, {},
   ))
   if (analsedByGroups.length) {
-    filters.push((...args) => (family) => {
+    filters.push([(...args) => (family) => {
       const filteredAnalysedBy = analsedByGroups.reduce(
         (acc, filterGroup) => acc.filter(analysedBy => filterGroup.some(f => f(...args)(analysedBy))),
         family.analysedBy,
       )
       return requireNoAnalysedBy ? filteredAnalysedBy.length === 0 : filteredAnalysedBy.length > 0
-    })
+    }])
   }
   return filters
 }
@@ -422,7 +427,7 @@ const getFamiliesFilterFunc = createSelector(
     if (analysedBy) {
       const filters = analysedByFilters(analysedBy, analysedByOptions)
       if (filters.length) {
-        filterGroups.push(filters)
+        filterGroups.push(...filters)
       }
     }
     if (!filterGroups.length) {
