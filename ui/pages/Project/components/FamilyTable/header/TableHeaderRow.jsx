@@ -61,7 +61,7 @@ const FilterMultiDropdown = styled(Dropdown).attrs({ inline: true, multiple: tru
         display: none;
       }
       .label, .search {
-        display: inherit;
+        display: inline-block;
       }
     }
   }
