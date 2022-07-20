@@ -48,7 +48,7 @@ ReactDOM.render(
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/project/:projectGuid" component={Project} />
           <Route path="/create_project_from_workspace/:workspaceNamespace/:workspaceName" component={LoadWorkspaceData} />
-          <Route path="/workspace/:namespace/:name" component={WorkspaceAccessError} />
+          <Route path="/workspace/:workspaceNamespace/:workspaceName" component={WorkspaceAccessError} />
           <Route path="/variant_search" component={VariantSearch} />
           <Route path="/data_management" component={DataManagement} />
           <Route path="/report" component={Report} />
