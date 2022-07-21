@@ -1,21 +1,23 @@
 import PropTypes from 'prop-types'
 import React from 'react'
+import { connect } from 'react-redux'
+
+import { getLocusListsWithGenes } from 'redux/selectors'
 import { Multiselect } from 'shared/components/form/Inputs'
 import { moiToMoiInitials, formatPanelAppItems } from 'shared/utils/panelAppUtils'
 import { PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
 const EMPTY_LIST = []
 
-export default class PaMoiDropdown extends React.PureComponent {
+class PaMoiDropdown extends React.PureComponent {
 
   static propTypes = {
-    locus: PropTypes.object,
+    locusList: PropTypes.object,
     onChange: PropTypes.func,
   }
 
   handleMOIselect = (selectedMOIs) => {
-    const { locus, onChange } = this.props
-    const { locusList } = locus
+    const { locusList, onChange } = this.props
 
     const panelAppItems = formatPanelAppItems(
       locusList.items?.filter((item) => {
@@ -32,8 +34,7 @@ export default class PaMoiDropdown extends React.PureComponent {
   }
 
   moiOptions = () => {
-    const { locus } = this.props
-    const { locusList } = locus
+    const { locusList } = this.props
 
     const initials = locusList.items.reduce((acc, gene) => {
       moiToMoiInitials(gene.pagene?.modeOfInheritance).forEach((initial) => {
@@ -67,3 +68,9 @@ export default class PaMoiDropdown extends React.PureComponent {
   }
 
 }
+
+const mapStateToProps = (state, ownProps) => ({
+  locusList: getLocusListsWithGenes(state)[ownProps.locus.locusListGuid],
+})
+
+export default connect(mapStateToProps)(PaMoiDropdown)
