@@ -50,8 +50,8 @@ class PaMoiDropdown extends React.PureComponent {
   }
 
   render() {
-    const { selectedMOIs, label, width, locus } = this.props || []
-    const disabled = !locus?.locusList?.items
+    const { selectedMOIs, label, width, locusList } = this.props || []
+    const disabled = !locusList?.items
     return (
       <Multiselect
         label={label}
