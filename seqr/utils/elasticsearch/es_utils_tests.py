@@ -1088,14 +1088,14 @@ RECESSIVE_INHERITANCE_QUERY = {
             {'bool': {
                 '_name': 'F000002_2',
                 'must': [
-                        {'bool': {
-                            'must_not': [
-                                {'term': {'samples_no_call': 'HG00732'}},
-                                {'term': {'samples_num_alt_2': 'HG00732'}},
-                                {'term': {'samples_no_call': 'HG00733'}},
-                                {'term': {'samples_num_alt_2': 'HG00733'}}
-                            ],
-                            'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
+                    {'bool': {
+                        'must_not': [
+                            {'term': {'samples_no_call': 'HG00732'}},
+                            {'term': {'samples_num_alt_2': 'HG00732'}},
+                            {'term': {'samples_no_call': 'HG00733'}},
+                            {'term': {'samples_num_alt_2': 'HG00733'}}
+                        ],
+                        'must': [{'term': {'samples_num_alt_2': 'HG00731'}}]
                     }},
                     {'bool': {'must_not': [
                         {'term': {'samples_gq_0_to_5': 'HG00731'}},
