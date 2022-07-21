@@ -186,7 +186,7 @@ const EditDatasetsButton = React.memo(({ project, user }) => {
         {showLoadWorkspaceData ? (
           <LoadWorkspaceDataForm
             params={project}
-            modalName={MODAL_NAME}
+            successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
           />
         ) : (
           <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />

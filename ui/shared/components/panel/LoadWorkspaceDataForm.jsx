@@ -106,12 +106,9 @@ const postSubmitValues = formatUrl => postWorkspaceValues(
   'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }), formatUrl,
 )
 
-const createProjectFromWorkspace = postSubmitValues()
+const createProjectFromWorkspace = postSubmitValues()((resp) => { window.location.href = `/project/${resp.projectGuid}/project_page` })
 
-const addDataFromWorkspace = postSubmitValues(({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`))
-
-// eslint-disable-next-line no-return-assign
-const openNewProjectPage = resp => (window.location.href = `/project/${resp.projectGuid}/project_page`)
+const addDataFromWorkspace = postSubmitValues(({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`))()
 
 const GRANT_ACCESS_PAGE = { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') }
 const VALIDATE_VCF_PAGE = {
@@ -148,12 +145,10 @@ const LoadWorkspaceDataForm = React.memo(({ params, ...props }) => (
     <FormWizard
       {...props}
       onSubmit={params.projectGuid ? addDataFromWorkspace : createProjectFromWorkspace}
-      onClose={params.projectGuid ? null : openNewProjectPage}
       pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
-      successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
       initialValues={params}
       size="small"
-      noModal={!params.projectGuid}
+      noModal
     />
     <p>
       Need help? please submit &nbsp;
