@@ -449,13 +449,6 @@ class EsSearch(object):
                 from seqr.utils.elasticsearch.utils import InvalidSearchException
                 raise InvalidSearchException('Invalid custom inheritance')
 
-
-            # For recessive search, should be hom recessive, x-linked recessive, or compound het
-            if inheritance_mode == RECESSIVE:
-                x_linked_q = _family_genotype_inheritance_filter(
-                    X_LINKED_RECESSIVE, inheritance_filter, samples_by_id, affected_status, index_fields,
-                )
-                family_samples_q |= x_linked_q
         else:
             # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
             family_samples_q = _any_affected_sample_filter(list(samples_by_id.keys()))

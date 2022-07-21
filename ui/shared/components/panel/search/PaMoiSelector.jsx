@@ -7,6 +7,8 @@ import { Multiselect } from 'shared/components/form/Inputs'
 import { moiToMoiInitials, formatPanelAppItems } from 'shared/utils/panelAppUtils'
 import { PANEL_APP_MOI_OPTIONS } from 'shared/utils/constants'
 
+const EMPTY_LIST = []
+
 class PaMoiDropdown extends React.PureComponent {
 
   static propTypes = {
@@ -34,7 +36,7 @@ class PaMoiDropdown extends React.PureComponent {
   moiOptions = () => {
     const { locusList } = this.props
 
-    const initials = locusList.items?.reduce((acc, gene) => {
+    const initials = locusList.items.reduce((acc, gene) => {
       moiToMoiInitials(gene.pagene?.modeOfInheritance).forEach((initial) => {
         acc[initial] = true
       })
@@ -48,7 +50,8 @@ class PaMoiDropdown extends React.PureComponent {
   }
 
   render() {
-    const { selectedMOIs, label, width } = this.props || []
+    const { selectedMOIs, label, width, locus } = this.props || []
+    const disabled = !locus?.locusList?.items
     return (
       <Multiselect
         label={label}
@@ -57,7 +60,8 @@ class PaMoiDropdown extends React.PureComponent {
         inline
         onChange={this.handleMOIselect}
         placeholder="Showing all MOIs as listed in Panel App"
-        options={this.moiOptions()}
+        disabled={disabled}
+        options={disabled ? EMPTY_LIST : this.moiOptions()}
         color="violet"
       />
     )
