@@ -45,7 +45,7 @@ def load_settings(settings_file_paths, settings=None):
         yaml_string = _parse_jinja_template(settings_path, template_variables=settings)
 
         try:
-            settings_from_this_file = yaml.load(yaml_string) # nosec
+            settings_from_this_file = yaml.load(yaml_string, Loader=yaml.Loader) # nosec
         except yaml.parser.ParserError:
             raise ValueError('Unable to parse yaml file %(settings_path)s: %(e)s' % locals())
 
