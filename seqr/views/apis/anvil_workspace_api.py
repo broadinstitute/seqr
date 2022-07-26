@@ -203,7 +203,7 @@ def add_workspace_data(request, project_guid):
     :return success if no exceptions
 
     """
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = Project.objects.get(guid=project_guid)
     check_workspace_perm(request.user, CAN_EDIT, project.workspace_namespace, project.workspace_name, can_share=True)
 
     request_json = json.loads(request.body)
@@ -242,10 +242,9 @@ def _parse_uploaded_pedigree(request_json, user):
     missing_samples = [record['individualId'] for record in pedigree_records
                        if record['individualId'] not in request_json['vcfSamples']]
 
-    error = 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
-                ', '.join(missing_samples)) if missing_samples else None
-
-    if error:
+    if missing_samples:
+        error = 'The following samples are included in the pedigree file but are missing from the VCF: {}'.format(
+                ', '.join(missing_samples))
         raise ErrorsWarningsException([error], [])
 
     return pedigree_records
