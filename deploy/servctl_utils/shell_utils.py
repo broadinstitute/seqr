@@ -6,6 +6,11 @@ from io import StringIO
 
 logger = logging.getLogger(__name__)
 
+ALWAYS_IGNORE_WARNINGS = [
+    'WARNING: the gcp auth plugin is deprecated',
+    'Warning: storage.k8s.io/v1beta1 StorageClass is deprecated',
+    'To learn more, consult https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke',
+]
 
 def run(command,
         ok_return_codes=(0,),
@@ -45,26 +50,28 @@ def run(command,
         return None
 
     # pipe output to log
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, bufsize=1, **kwargs) # nosec
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, **kwargs) # nosec
     line_buffer = StringIO()
     log_buffer = StringIO()
     previous_is_slash_r = False
     while True:
-        out = p.stdout.read(1)
+        out = p.stdout.read(1).decode('utf-8')
         if out == '' and p.poll() is not None:
             break
         if out != '':
             try:
-                log_buffer.write(out.decode('utf-8'))
+                log_buffer.write(out)
                 if verbose:
-                    line_buffer.write(out.decode('utf-8'))
+                    line_buffer.write(out)
                     if out.endswith('\r') or (out.endswith('\n') and previous_is_slash_r):
                         sys.stdout.write(line_buffer.getvalue())
                         sys.stdout.flush()
                         line_buffer = StringIO()
                         previous_is_slash_r = True
                     elif out.endswith('\n'):
-                        logger.info(line_buffer.getvalue().rstrip('\n'))
+                        line_content = line_buffer.getvalue().rstrip('\n')
+                        if all(ignore_str not in line_content for ignore_str in ALWAYS_IGNORE_WARNINGS):
+                            logger.info(line_content)
                         line_buffer = StringIO()
                         previous_is_slash_r = False
                     else:
@@ -73,7 +80,8 @@ def run(command,
                 pass
     p.wait()
 
-    output = log_buffer.getvalue()
+    output = '\n'.join([line for line in log_buffer.getvalue().split('\n')
+                        if all(ignore_str not in line for ignore_str in ALWAYS_IGNORE_WARNINGS)])
 
     if p.returncode not in ok_return_codes:
         should_ignore = False
