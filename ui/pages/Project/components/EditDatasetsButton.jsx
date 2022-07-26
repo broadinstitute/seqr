@@ -173,15 +173,13 @@ const IGV_ONLY_PANES = [PANES[1]]
 
 const EditDatasetsButton = React.memo(({ project, user }) => {
   const showLoadWorkspaceData = !project.isAnalystProject && project.canEdit
-  const title = showLoadWorkspaceData ? 'Request Additional Data from Anvil Workspace' : 'Datasets'
-  const text = showLoadWorkspaceData ? 'Request Additional Data' : 'Edit Datasets'
   return (
     (user.isDataManager || user.isPm || showLoadWorkspaceData) ? (
       <Modal
         modalName={MODAL_NAME}
-        title={title}
+        title={showLoadWorkspaceData ? 'Request Additional Data from Anvil Workspace' : 'Datasets'}
         size="small"
-        trigger={<ButtonLink>{text}</ButtonLink>}
+        trigger={<ButtonLink>{showLoadWorkspaceData ? 'Request Additional Data' : 'Edit Datasets'}</ButtonLink>}
       >
         {showLoadWorkspaceData ? (
           <LoadWorkspaceDataForm
