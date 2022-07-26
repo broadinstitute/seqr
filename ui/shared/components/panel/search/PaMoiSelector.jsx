@@ -37,7 +37,7 @@ class PaMoiDropdown extends React.PureComponent {
     const { locusList } = this.props
 
     const initials = locusList.items.reduce((acc, gene) => {
-      moiToMoiInitials(gene.pagene?.modeOfInheritance).forEach((initial) => {
+      moiToMoiInitials(gene.pagene?.modeOfInheritance, false).forEach((initial) => {
         acc[initial] = true
       })
       return acc
