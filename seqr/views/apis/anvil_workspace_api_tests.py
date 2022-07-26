@@ -538,7 +538,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
                                 mock_api_logger, mock_datetime, mock_airtable_logger, mock_utils_logger):
         self._setup_dag_trigger(responses, ADD_DATA_UPDATE_DAG_TASKS_RESP)
 
-       # Test requesting to load data from a workspace without an existing project
+        # Test requesting to load data from a workspace without an existing project
         url = reverse(add_workspace_data, args=['no_PROJECT1_GUID'])
         self.client.force_login(self.collaborator_user)
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
