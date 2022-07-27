@@ -19,7 +19,7 @@ import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
-import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
+import { BooleanCheckbox, RadioGroup, Select } from 'shared/components/form/Inputs'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
@@ -87,7 +87,9 @@ const DATA_BUCK_FIELD = {
   name: 'dataPath',
   label: 'Path to the Joint Called VCF',
   labelHelp: 'File path for a joint called VCF available in the workspace "Files".',
-  placeholder: '/path-under-Files-of-the-workspace',
+  component: Select,
+  fieldDecorator: ({ dataPathList }) => ({ options: dataPathList.map(path => ({ value: path, name: path })) }),
+  placeholder: 'Click to select',
   validate: validators.required,
 }
 

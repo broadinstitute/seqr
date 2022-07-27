@@ -80,3 +80,15 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
+
+
+def get_gs_file_list(gs_path, user=None):
+    if not is_google_bucket_file_path(gs_path):
+        raise Exception('A Google Storage path is expected.')
+    gs_path = gs_path.rstrip('/')
+    process = _run_gsutil_command('ls', f'{gs_path}/**', user=user)
+    if process.wait() != 0:
+        errors = [line.decode('utf-8').strip() for line in process.stdout]
+        raise Exception('Run command failed: ' + ' '.join(errors))
+    for line in process.stdout:
+        yield line.decode('utf-8').rstrip('\n')

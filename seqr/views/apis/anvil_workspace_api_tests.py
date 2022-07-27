@@ -190,10 +190,12 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.url, '/login/google-oauth2?next=/workspace/my-seqr-billing/anvil-1kg%2520project%2520n%25C3%25A5me%2520with%2520uni%25C3%25A7%25C3%25B8de')
         self.mock_get_ws_access_level.assert_not_called()
 
+    @mock.patch('seqr.views.apis.anvil_workspace_api.get_gs_file_list')
     @mock.patch('seqr.views.apis.anvil_workspace_api.time')
     @mock.patch('seqr.views.apis.anvil_workspace_api.has_service_account_access')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
-    def test_grant_workspace_access(self, mock_add_service_account, mock_has_service_account, mock_time,  mock_utils_logger):
+    def test_grant_workspace_access(self, mock_add_service_account, mock_has_service_account, mock_time,
+                                    mock_get_file_list, mock_utils_logger):
 
         # Requesting to load data from a workspace without an existing project
         url = reverse(grant_workspace_access,
@@ -204,7 +206,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                              TEST_NO_PROJECT_WORKSPACE_NAME),
                                                      self.collaborator_user)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, TEST_WORKSPACE_NAMESPACE,
-                                                         TEST_NO_PROJECT_WORKSPACE_NAME)
+                                                         TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.bucketName'])
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
@@ -237,13 +239,15 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_time.reset_mock()
         mock_has_service_account.reset_mock()
         mock_add_service_account.return_value = False
+        mock_get_file_list.return_value = ['/test.vcf']  # todo: add bucket path
         response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
+        self.assertDictEqual(response.json(), {'success': True, 'dataPathList': ['/test.vcf']})
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
                                                     TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
+        # todo: add mock_get_file_list parameter test
 
         # Test logged in locally
         remove_token(

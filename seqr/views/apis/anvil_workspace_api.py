@@ -27,7 +27,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
-from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
+from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs, get_gs_file_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
@@ -110,8 +110,9 @@ def anvil_workspace_page(request, namespace, name):
 
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
-@anvil_workspace_access_required
-def grant_workspace_access(request, namespace, name):
+
+@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
+def grant_workspace_access(request, namespace, name, workspace_meta):
     request_json = json.loads(request.body)
     if not request_json.get('agreeSeqrAccess'):
         error = 'Must agree to grant seqr access to the data in the associated workspace.'
@@ -122,7 +123,12 @@ def grant_workspace_access(request, namespace, name):
     if added_account_to_workspace:
         _wait_for_service_account_access(request.user, namespace, name)
 
-    return create_json_response({'success': True})
+    bucket_name = workspace_meta['workspace']['bucketName']
+    bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
+    data_path_list = [path.replace(bucket_path, '', 1) for path in get_gs_file_list(bucket_path)
+                      if path.endswith(VCF_FILE_EXTENSIONS)]
+
+    return create_json_response({'success': True, 'dataPathList': data_path_list})
 
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
 def validate_anvil_vcf(request, namespace, name, workspace_meta):
