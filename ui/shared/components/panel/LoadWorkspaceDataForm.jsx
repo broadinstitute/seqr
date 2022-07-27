@@ -106,7 +106,9 @@ const postSubmitValues = formatUrl => postWorkspaceValues(
   'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }), formatUrl,
 )
 
-const createProjectFromWorkspace = postSubmitValues()((resp) => { window.location.href = `/project/${resp.projectGuid}/project_page` })
+const createProjectFromWorkspace = postSubmitValues()((responseJson) => {
+  window.location.href = `/project/${responseJson.projectGuid}/project_page`
+})
 
 const addDataFromWorkspace = postSubmitValues(({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`))()
 

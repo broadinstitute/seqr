@@ -177,9 +177,9 @@ const EditDatasetsButton = React.memo(({ project, user }) => {
     (user.isDataManager || user.isPm || showLoadWorkspaceData) ? (
       <Modal
         modalName={MODAL_NAME}
-        title={showLoadWorkspaceData ? 'Request Additional Data from Anvil Workspace' : 'Datasets'}
+        title={showLoadWorkspaceData ? 'Load Additional Data From AnVIL Workspace' : 'Datasets'}
         size="small"
-        trigger={<ButtonLink>{showLoadWorkspaceData ? 'Request Additional Data' : 'Edit Datasets'}</ButtonLink>}
+        trigger={<ButtonLink>{showLoadWorkspaceData ? 'Load Additional Data' : 'Edit Datasets'}</ButtonLink>}
       >
         {showLoadWorkspaceData ? (
           <LoadWorkspaceDataForm
