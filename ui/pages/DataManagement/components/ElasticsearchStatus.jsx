@@ -7,6 +7,7 @@ import { Header, Grid, Message, Button } from 'semantic-ui-react'
 import DispatchRequestButton from 'shared/components/buttons/DispatchRequestButton'
 import DataTable from 'shared/components/table/DataTable'
 import DataLoader from 'shared/components/DataLoader'
+import { DATASET_TYPE_VARIANT_CALLS } from 'shared/utils/constants'
 import { getElasticsearchStatusLoading, getElasticsearchStatusData } from '../selectors'
 import { loadElasticsearchStatus, deleteEsIndex } from '../reducers'
 
@@ -35,7 +36,11 @@ const INDEX_COLUMNS = [
       </div>
     )) : <DeleteIndexButton index={row.index} />),
   },
-  { name: 'datasetType', content: 'Caller Type', format: row => (row.datasetType === 'SV' ? 'SV' : 'SNV') },
+  {
+    name: 'datasetType',
+    content: 'Caller Type',
+    format: row => (!row.datasetType || row.datasetType === DATASET_TYPE_VARIANT_CALLS ? 'SNV' : row.datasetType),
+  },
   { name: 'sampleType', content: 'Data Type' },
   { name: 'genomeVersion', content: 'Genome Version' },
   { name: 'creationDateString', content: 'Created Date', format: row => row.creationDateString.split('T')[0] },

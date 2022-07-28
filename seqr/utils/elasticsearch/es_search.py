@@ -11,14 +11,14 @@ from itertools import combinations
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECESSIVE, X_LINKED_RECESSIVE, \
-    HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, GENOTYPE_FIELDS_CONFIG, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
+    HAS_ALT_FIELD_KEYS, GENOTYPES_FIELD_KEY, POPULATION_RESPONSE_FIELD_CONFIGS, POPULATIONS, \
     SORTED_TRANSCRIPTS_FIELD_KEY, CORE_FIELDS_CONFIG, NESTED_FIELDS, PREDICTION_FIELDS_CONFIG, INHERITANCE_FILTERS, \
     QUERY_FIELD_NAMES, REF_REF, ANY_AFFECTED, GENOTYPE_QUERY_MAP, CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, \
     SORT_FIELDS, MAX_VARIANTS, MAX_COMPOUND_HET_GENES, MAX_INDEX_NAME_LENGTH, QUALITY_QUERY_FIELDS, \
-    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, SV_GENOTYPE_FIELDS_CONFIG, \
+    GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD
+    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -55,6 +55,17 @@ class EsSearch(object):
             # Some of the indices are an alias
             self._update_alias_metadata()
 
+        genome_versions = {meta['genomeVersion'] for meta in self.index_metadata.values()}
+        if len(genome_versions) > 1:
+            versions = defaultdict(set)
+            for s in samples.select_related('individual__family__project'):
+                versions[self.index_metadata[s.elasticsearch_index]['genomeVersion']].add(s.individual.family.project.name)
+            raise InvalidSearchException(
+                'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {}'.format(
+                    '; '.join(['{} - {}'.format(build, ', '.join(sorted(projects))) for build, projects in versions.items()])
+                ))
+        self._genome_version = genome_versions.pop()
+
         self.indices_by_dataset_type = defaultdict(list)
         for index in self._indices:
             dataset_type = self._get_index_dataset_type(index)
@@ -70,7 +81,7 @@ class EsSearch(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {}
-        self._filtered_variant_ids = None
+        self._filtered_gene_ids = None
         self._paired_index_comp_het = False
         self._no_sample_filters = False
         self._any_affected_sample_filters = False
@@ -228,9 +239,12 @@ class EsSearch(object):
         self._filter_custom(custom_query)
 
         if has_location_filter:
-            self._filter(_location_filter(genes, intervals, locus))
+            exclude_locations = locus and locus.get('excludeLocations')
+            self._filter(_location_filter(genes, intervals, exclude_locations))
+            if genes and not exclude_locations:
+                self._filtered_gene_ids = set(genes.keys())
         elif variant_ids:
-            self.filter_by_variant_ids(variant_ids, locus=locus)
+            self.filter_by_variant_ids(variant_ids)
         elif rs_ids:
             self._filter(Q('terms', rsid=rs_ids))
 
@@ -361,26 +375,8 @@ class EsSearch(object):
 
         return dataset_type
 
-    def filter_by_variant_ids(self, variant_ids, locus=None):
-        genome_version = locus and locus.get('genomeVersion')
-        variant_id_genome_versions = {variant_id: genome_version for variant_id in variant_ids or []}
-        if variant_id_genome_versions and genome_version:
-            lifted_genome_version = GENOME_VERSION_GRCh37 if genome_version == GENOME_VERSION_GRCh38 else GENOME_VERSION_GRCh38
-            liftover = _liftover_grch38_to_grch37() if genome_version == GENOME_VERSION_GRCh38 else _liftover_grch37_to_grch38()
-            if liftover:
-                for variant_id in deepcopy(variant_ids):
-                    chrom, pos, ref, alt = self.parse_variant_id(variant_id)
-                    lifted_coord = liftover.convert_coordinate('chr{}'.format(chrom), pos)
-                    if lifted_coord and lifted_coord[0]:
-                        lifted_variant_id = '{chrom}-{pos}-{ref}-{alt}'.format(
-                            chrom=lifted_coord[0][0].lstrip('chr'), pos=lifted_coord[0][1], ref=ref, alt=alt
-                        )
-                        variant_id_genome_versions[lifted_variant_id] = lifted_genome_version
-                        variant_ids.append(lifted_variant_id)
-
+    def filter_by_variant_ids(self, variant_ids):
         self._filter(Q('terms', variantId=variant_ids))
-        if len({genome_version for genome_version in variant_id_genome_versions.values()}) > 1:
-            self._filtered_variant_ids = variant_id_genome_versions
         return self
 
     def _filter_by_genotype(self, inheritance_mode, inheritance_filter, quality_filters_by_family, skipped_sample_count):
@@ -453,13 +449,6 @@ class EsSearch(object):
                 from seqr.utils.elasticsearch.utils import InvalidSearchException
                 raise InvalidSearchException('Invalid custom inheritance')
 
-
-            # For recessive search, should be hom recessive, x-linked recessive, or compound het
-            if inheritance_mode == RECESSIVE:
-                x_linked_q = _family_genotype_inheritance_filter(
-                    X_LINKED_RECESSIVE, inheritance_filter, samples_by_id, affected_status, index_fields,
-                )
-                family_samples_q |= x_linked_q
         else:
             # If no inheritance specified only return variants where at least one of the requested samples has an alt allele
             family_samples_q = _any_affected_sample_filter(list(samples_by_id.keys()))
@@ -748,9 +737,9 @@ class EsSearch(object):
         hit = {k: raw_hit[k] for k in QUERY_FIELD_NAMES if k in raw_hit}
         index_name = raw_hit.meta.index
         index_family_samples = self.samples_by_family_index[index_name]
-        is_sv = self._get_index_dataset_type(index_name) == Sample.DATASET_TYPE_SV_CALLS
+        data_type = self._get_index_dataset_type(index_name)
 
-        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, is_sv)
+        family_guids, genotypes = self._parse_genotypes(raw_hit, hit, index_family_samples, data_type)
 
         result = _get_field_values(hit, CORE_FIELDS_CONFIG, format_response_key=str)
         result.update({
@@ -760,11 +749,13 @@ class EsSearch(object):
         if hasattr(raw_hit.meta, 'sort'):
             result['_sort'] = [_parse_es_sort(sort, self._sort[i]) for i, sort in enumerate(raw_hit.meta.sort)]
 
-        self._parse_genome_versions(result, index_name, hit)
+        result['genomeVersion'] = self._genome_version
+        if self._genome_version == GENOME_VERSION_GRCh38:
+            self._add_liftover(result, hit)
         self._parse_xstop(result)
 
         # If an SV has genotype-specific coordinates that differ from the main coordinates, use those
-        if is_sv and genotypes:
+        if data_type == Sample.DATASET_TYPE_SV_CALLS and genotypes:
             self._set_sv_genotype_coords(genotypes, result)
 
         populations = {
@@ -788,16 +779,7 @@ class EsSearch(object):
         gene_ids = result.pop('geneIds', None)
         if gene_ids:
             transcripts = {gene_id: ts for gene_id, ts in transcripts.items() if gene_id in gene_ids}
-
-        main_transcript_id = sorted_transcripts[0]['transcriptId'] \
-            if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
-        selected_main_transcript_id = None
-        if main_transcript_id and self._allowed_consequences and sorted_transcripts[0].get('majorConsequence') not in self._allowed_consequences:
-            selected_main_transcript_id = next((
-                t.get('transcriptId') for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences), None)
-            if not selected_main_transcript_id and self._allowed_consequences_secondary:
-                selected_main_transcript_id = next((
-                    t for t in sorted_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary), None)
+        main_transcript_id, selected_main_transcript_id = self._get_main_transcript(sorted_transcripts)
 
         result.update({
             'familyGuids': sorted(family_guids),
@@ -812,7 +794,7 @@ class EsSearch(object):
         })
         return result
 
-    def _parse_genotypes(self, raw_hit, hit, index_family_samples, is_sv):
+    def _parse_genotypes(self, raw_hit, hit, index_family_samples, data_type):
         if hasattr(raw_hit.meta, 'matched_queries'):
             family_guids = list(raw_hit.meta.matched_queries)
         elif self._return_all_queried_families:
@@ -837,7 +819,7 @@ class EsSearch(object):
                        for sample_id, sample in samples_by_id.items())]
 
         genotypes = {}
-        genotype_fields_config = SV_GENOTYPE_FIELDS_CONFIG if is_sv else GENOTYPE_FIELDS_CONFIG
+        genotype_fields_config = GENOTYPE_FIELDS[data_type]
         for family_guid in family_guids:
             samples_by_id = index_family_samples[family_guid]
             for genotype_hit in hit[GENOTYPES_FIELD_KEY]:
@@ -846,7 +828,7 @@ class EsSearch(object):
                     genotype_hit['sample_type'] = sample.sample_type
                     genotypes[sample.individual.guid] = _get_field_values(genotype_hit, genotype_fields_config)
 
-            if len(samples_by_id) != len(genotypes) and is_sv:
+            if len(samples_by_id) != len(genotypes) and data_type == Sample.DATASET_TYPE_SV_CALLS:
                 # Family members with no variants are not included in the SV index
                 for sample_id, sample in samples_by_id.items():
                     if sample.individual.guid not in genotypes:
@@ -880,30 +862,53 @@ class EsSearch(object):
                     if compare_func(gen.get(gen_field), result.get(field)):
                         gen[gen_field] = None
 
-    def _parse_genome_versions(self, result, index_name, hit):
-        genome_version = self.index_metadata[index_name]['genomeVersion']
+    def _get_main_transcript(self, sorted_transcripts):
+        main_transcript_id = sorted_transcripts[0]['transcriptId'] \
+            if len(sorted_transcripts) and 'transcriptRank' in sorted_transcripts[0] else None
+
+        selected_main_transcript_id = None
+        if main_transcript_id and (self._filtered_gene_ids or self._allowed_consequences):
+            gene_transcripts = [
+                t for t in sorted_transcripts if t.get('geneId') in self._filtered_gene_ids
+            ] if  self._filtered_gene_ids else sorted_transcripts
+
+            selected_main_transcript_id = gene_transcripts[0].get('transcriptId')
+            if self._allowed_consequences:
+                consequence_transcript_id = next((
+                    t.get('transcriptId') for t in gene_transcripts if
+                    t.get('majorConsequence') in self._allowed_consequences), None)
+                if not consequence_transcript_id and self._allowed_consequences_secondary:
+                    consequence_transcript_id = next((
+                        t for t in gene_transcripts if t.get('majorConsequence') in self._allowed_consequences_secondary
+                    ), None)
+                selected_main_transcript_id = consequence_transcript_id or selected_main_transcript_id
+            if selected_main_transcript_id == main_transcript_id:
+                selected_main_transcript_id = None
+
+        return main_transcript_id, selected_main_transcript_id
+
+    @staticmethod
+    def _add_liftover(result, hit):
         lifted_over_genome_version = None
         lifted_over_chrom = None
         lifted_over_pos = None
-        grch37_locus = result.pop(GRCH38_LOCUS_FIELD, None)
-        if genome_version == GENOME_VERSION_GRCh38:
-            if grch37_locus:
-                lifted_over_genome_version = GENOME_VERSION_GRCh37
-                lifted_over_chrom = grch37_locus['contig']
-                lifted_over_pos = grch37_locus['position']
-            else:
-                # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
-                liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
-                if liftover_grch38_to_grch37:
-                    grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
-                        'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
-                    )
-                    if grch37_coord and grch37_coord[0]:
-                        lifted_over_genome_version = GENOME_VERSION_GRCh37
-                        lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
-                        lifted_over_pos = grch37_coord[0][1]
+        grch37_locus = hit.get(GRCH38_LOCUS_FIELD, None)
+        if grch37_locus:
+            lifted_over_genome_version = GENOME_VERSION_GRCh37
+            lifted_over_chrom = grch37_locus['contig']
+            lifted_over_pos = grch37_locus['position']
+        else:
+            # TODO once all projects are lifted in pipeline, remove this code (https://github.com/broadinstitute/seqr/issues/1010)
+            liftover_grch38_to_grch37 = _liftover_grch38_to_grch37()
+            if liftover_grch38_to_grch37:
+                grch37_coord = liftover_grch38_to_grch37.convert_coordinate(
+                    'chr{}'.format(hit['contig'].lstrip('chr')), int(hit['start'])
+                )
+                if grch37_coord and grch37_coord[0]:
+                    lifted_over_genome_version = GENOME_VERSION_GRCh37
+                    lifted_over_chrom = grch37_coord[0][0].lstrip('chr')
+                    lifted_over_pos = grch37_coord[0][1]
         result.update({
-            'genomeVersion': genome_version,
             'liftedOverGenomeVersion': lifted_over_genome_version,
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
@@ -1085,22 +1090,12 @@ class EsSearch(object):
 
     def _deduplicate_results(self, sorted_new_results):
         original_result_count = len(sorted_new_results)
-
-        if self._filtered_variant_ids:
-            sorted_new_results = [
-                v for v in sorted_new_results if self._filtered_variant_ids.get(v['variantId']) == v['genomeVersion']
-            ]
-
-        genome_builds = {var['genomeVersion'] for var in sorted_new_results}
-        if len(genome_builds) > 1:
-            variant_results = self._deduplicate_multi_genome_variant_results(sorted_new_results)
-        else:
-            variant_results = []
-            for variant in sorted_new_results:
-                if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
-                    self._merge_duplicate_variants(variant_results[-1], variant)
-                else:
-                    variant_results.append(variant)
+        variant_results = []
+        for variant in sorted_new_results:
+            if variant_results and variant_results[-1]['variantId'] == variant['variantId']:
+                self._merge_duplicate_variants(variant_results[-1], variant)
+            else:
+                variant_results.append(variant)
 
         previous_duplicates = self.previous_search_results.get('duplicate_doc_count', 0)
         new_duplicates = original_result_count - len(variant_results)
@@ -1109,43 +1104,6 @@ class EsSearch(object):
         self.previous_search_results['total_results'] -= self.previous_search_results['duplicate_doc_count']
 
         return variant_results
-
-    @classmethod
-    def _deduplicate_multi_genome_variant_results(cls, sorted_new_results):
-        hg_38_variant_indices = {}
-        hg_37_variant_indices = {}
-
-        variant_results = []
-        for i, variant in enumerate(sorted_new_results):
-            if variant['genomeVersion'] == GENOME_VERSION_GRCh38:
-                hg37_id = '{}-{}-{}-{}'.format(variant['liftedOverChrom'], variant['liftedOverPos'], variant['ref'],
-                                               variant['alt'])
-                existing_38_index = hg_38_variant_indices.get(hg37_id)
-                if existing_38_index is not None:
-                    cls._merge_duplicate_variants(variant_results[existing_38_index], variant)
-                    variant_results.append(None)
-                else:
-                    existing_37_index = hg_37_variant_indices.get(hg37_id)
-                    if existing_37_index is not None:
-                        cls._merge_duplicate_variants(variant, variant_results[existing_37_index])
-                        variant_results[existing_37_index] = None
-
-                    hg_38_variant_indices[hg37_id] = i
-                    variant_results.append(variant)
-            else:
-                existing_38_index = hg_38_variant_indices.get(variant['variantId'])
-                existing_37_index = hg_37_variant_indices.get(variant['variantId'])
-                if existing_38_index is not None:
-                    cls._merge_duplicate_variants(variant_results[existing_38_index], variant)
-                    variant_results.append(None)
-                elif existing_37_index is not None:
-                    cls._merge_duplicate_variants(variant_results[existing_37_index], variant)
-                    variant_results.append(None)
-                else:
-                    hg_37_variant_indices[variant['variantId']] = i
-                    variant_results.append(variant)
-
-        return [var for var in variant_results if var]
 
     @classmethod
     def _merge_duplicate_variants(cls, variant, duplicate_variant):
@@ -1312,17 +1270,6 @@ def _liftover_grch38_to_grch37():
     return LIFTOVER_GRCH38_TO_GRCH37
 
 
-LIFTOVER_GRCH37_TO_GRCH38 = None
-def _liftover_grch37_to_grch38():
-    global LIFTOVER_GRCH37_TO_GRCH38
-    if not LIFTOVER_GRCH37_TO_GRCH38:
-        try:
-            LIFTOVER_GRCH37_TO_GRCH38 = LiftOver('hg19', 'hg38')
-        except Exception as e:
-            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
-    return LIFTOVER_GRCH37_TO_GRCH38
-
-
 def _get_family_affected_status(samples_by_id, inheritance_filter):
     individual_affected_status = inheritance_filter.get('affected') or {}
     affected_status = {}
@@ -1431,7 +1378,7 @@ def _named_family_sample_q(family_samples_q, family_guid, quality_filters_by_fam
     return Q('bool', must=sample_queries, _name=family_guid)
 
 
-def _location_filter(genes, intervals, location_filter):
+def _location_filter(genes, intervals, exclude_locations):
     q = None
 
     if genes:
@@ -1461,7 +1408,7 @@ def _location_filter(genes, intervals, location_filter):
             else:
                 q = interval_q
 
-    if location_filter and location_filter.get('excludeLocations'):
+    if exclude_locations:
         return ~q
     else:
         return q

@@ -56,6 +56,14 @@ body {
   left: auto !important; /* csslint allow: important */
 }
 
+/* Bug in current version of semantic UI css, no known fix available */
+.ui.accordion .title .dropdown.icon.clear::before {
+  /*  Clearable icon does not display if dropdown is in an accordion */
+  content: '\f00d';
+  font-family: Icons, fantasy;
+  font-size: 0.9rem;
+}
+
 /* jquery UI dialogs should display over semantic UI modals. Used for pedigree editing */
 .ui-dialog.ui-widget {
   z-index: 2000 !important; /* csslint allow: important */

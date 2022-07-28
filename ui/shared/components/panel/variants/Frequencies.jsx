@@ -182,6 +182,18 @@ const POPULATIONS = [
     queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_sv_r2_1' },
     helpMessage: GNOMAD_SV_CRITERIA_MESSAGE,
   },
+  {
+    field: 'gnomad_mito',
+    fieldTitle: 'gnomAD mito',
+    precision: 3,
+    urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
+  },
+  {
+    field: 'helix',
+    fieldTitle: 'Helix mito',
+    precision: 3,
+  },
 ]
 
 const Frequencies = React.memo(({ variant }) => {
@@ -195,9 +207,12 @@ const Frequencies = React.memo(({ variant }) => {
   const hasHelpMessagePops = POPULATIONS.filter(
     pop => pop.helpMessage && populations[pop.field] && populations[pop.field].af !== null,
   )
+  const hasAcHetPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac_het)
+  const hasMaxHlPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].max_hl)
 
   return (
-    (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops) ? (
+    (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops.length || hasAcHetPops.length ||
+    hasMaxHlPops.length) ? (
       <Popup position="top center" wide="very" trigger={freqContent}>
         {hasGlobalAfPops.length > 0 && <Popup.Header content="Global AFs" />}
         <Popup.Content>
@@ -216,6 +231,23 @@ const Frequencies = React.memo(({ variant }) => {
             </div>
           ))}
         </Popup.Content>
+        {((hasGlobalAfPops.length > 0 || hasAcPops.length > 0) &&
+            (hasAcHetPops.length > 0 || hasMaxHlPops.length > 0)) && <VerticalSpacer height={5} />}
+        {(hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Heteroplasmy" />}
+        <Popup.Content>
+          {hasAcHetPops.map(pop => (
+            <div key={pop.field}>
+              {`${pop.fieldTitle} heteroplasmic AF: ${populations[pop.field].af_het?.toPrecision(pop.precision || 2)}
+              AC_het=${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
+            </div>
+          ))}
+          {hasMaxHlPops.map(pop => (
+            <div key={pop.field}>
+              {`${pop.fieldTitle} max observed heteroplasmy:
+              ${populations[pop.field].max_hl.toPrecision(pop.precision || 2)}`}
+            </div>
+          ))}
+        </Popup.Content>
         {hasHelpMessagePops.map(pop => (
           <Popup.Content key={pop.field}>
             <Divider />
@@ -225,7 +257,7 @@ const Frequencies = React.memo(({ variant }) => {
           </Popup.Content>
         ))}
       </Popup>
-    ) : freqContent
+      ) : freqContent
   )
 })
 

@@ -17,7 +17,7 @@ import {
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import BulkUploadForm from 'shared/components/form/BulkUploadForm'
-import FormWrapper from 'shared/components/form/FormWrapper'
+import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 
@@ -40,11 +40,12 @@ const BLANK_EXPORT = {
   processRow: val => val,
 }
 
-const UploadPedigreeField = React.memo(({ error }) => (
+const UploadPedigreeField = React.memo(({ name, error }) => (
   <div className={`${error ? 'error' : ''} field`}>
     <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm" color={error ? 'red' : null}>
       <BulkUploadForm
+        name={name}
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}
         optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
@@ -57,6 +58,7 @@ const UploadPedigreeField = React.memo(({ error }) => (
 ))
 
 UploadPedigreeField.propTypes = {
+  name: PropTypes.string,
   error: PropTypes.bool,
 }
 
@@ -69,7 +71,7 @@ const UPLOAD_PEDIGREE_FIELD = {
 const AGREE_CHECKBOX = {
   name: 'agreeSeqrAccess',
   component: BooleanCheckbox,
-  label: 'By submitting this form I agree to grant seqr access to the data in the associated workspace',
+  label: 'By proceeding with seqr loading, I agree to grant seqr access to the data in this workspace',
   validate: validators.required,
 }
 
@@ -91,21 +93,27 @@ const DATA_BUCK_FIELD = {
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const FORM_FIELDS = [
-  DATA_BUCK_FIELD, UPLOAD_PEDIGREE_FIELD, PROJECT_DESC_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD, AGREE_CHECKBOX,
+const postWorkspaceValues = (path, formatVals) => onSuccess => ({ namespace, name, ...values }) => (
+  new HttpRequestHelper(`/api/create_project_from_workspace/${namespace}/${name}/${path}`, onSuccess).post(
+    formatVals ? formatVals(values) : values,
+  ))
+
+const createProjectFromWorkspace = postWorkspaceValues(
+  'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }),
+)((responseJson) => {
+  window.location.href = `/project/${responseJson.projectGuid}/project_page`
+})
+
+const FORM_WIZARD_PAGES = [
+  { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') },
+  { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD], onPageSubmit: postWorkspaceValues('validate_vcf') },
+  { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const createProjectFromWorkspace = (namespace, name) => ({ uploadedFile, ...values }) => new HttpRequestHelper(
-  `/api/create_project_from_workspace/submit/${namespace}/${name}`,
-  (responseJson) => {
-    window.location.href = `/project/${responseJson.projectGuid}/project_page`
-  },
-).post({ ...values, uploadedFileId: uploadedFile.uploadedFileId })
-
-const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
+const LoadWorkspaceDataForm = React.memo(({ params }) => (
   <div>
     <Header size="large" textAlign="center">
-      {`Load data to seqr from AnVIL Workspace "${namespace}/${name}"`}
+      {`Load data to seqr from AnVIL Workspace "${params.namespace}/${params.name}"`}
     </Header>
     <Segment basic textAlign="center">
       <Message info compact>
@@ -116,14 +124,12 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
       </Message>
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
-    <FormWrapper
-      modalName="loadWorkspaceData"
-      onSubmit={createProjectFromWorkspace(namespace, name)}
-      confirmCloseIfNotSaved
-      closeOnSuccess
-      showErrorPanel
+    <FormWizard
+      onSubmit={createProjectFromWorkspace}
+      pages={FORM_WIZARD_PAGES}
+      initialValues={params}
       size="small"
-      fields={FORM_FIELDS}
+      noModal
     />
     <p>
       Need help? please submit &nbsp;
@@ -137,8 +143,7 @@ const LoadWorkspaceDataForm = React.memo(({ namespace, name }) => (
 ))
 
 LoadWorkspaceDataForm.propTypes = {
-  namespace: PropTypes.string.isRequired,
-  name: PropTypes.string.isRequired,
+  params: PropTypes.object.isRequired,
 }
 
 export default LoadWorkspaceDataForm

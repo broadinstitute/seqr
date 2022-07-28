@@ -16,9 +16,11 @@ import VariantSearchFormPanels, {
 import {
   HIGH_IMPACT_GROUPS_SPLICE, HIGH_IMPACT_GROUPS, MODERATE_IMPACT_GROUPS, CODING_IMPACT_GROUPS, ANY_PATHOGENICITY_FILTER,
   SV_GROUPS, SNP_FREQUENCIES, SNP_QUALITY_FILTER_FIELDS, PATHOGENICITY_FIELDS, PATHOGENICITY_FILTER_OPTIONS,
+  MITO_FREQUENCIES, MITO_QUALITY_FILTER_FIELDS, SV_FREQUENCIES, SV_QUALITY_FILTER_FIELDS,
 } from 'shared/components/panel/search/constants'
 import {
   ALL_INHERITANCE_FILTER, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, NO_SV_IN_SILICO_GROUPS, VEP_GROUP_SV_NEW,
+  DATASET_TYPE_MITO_CALLS,
 } from 'shared/utils/constants'
 import { SavedSearchDropdown } from './SavedSearch'
 import LocusListSelector from './filters/LocusListSelector'
@@ -68,7 +70,7 @@ const INHERITANCE_PANEL = {
           return null
         }
         const { affected, genotype, ...coreFilter } = val.filter
-        return INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
+        return INHERITANCE_MODE_LOOKUP[val.mode] || INHERITANCE_MODE_LOOKUP[JSON.stringify(coreFilter)]
       },
       parse: val => (val === ALL_INHERITANCE_FILTER ? null : {
         mode: val,
@@ -122,7 +124,9 @@ const LOCATION_PANEL_WITH_GENE_LIST = {
   },
 }
 
-const ALL_DATASET_TYPE = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
+const ALL_DATASET_TYPE = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
+const DATASET_TYPE_VARIANT_MITO = `${DATASET_TYPE_MITO_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
+const DATASET_TYPE_VARIANT_SV = `${DATASET_TYPE_SV_CALLS},${DATASET_TYPE_VARIANT_CALLS}`
 
 const NO_HGMD_PANEL_PROPS = {
   headerProps: {
@@ -181,6 +185,24 @@ const DATASET_TYPE_PANEL_PROPS = {
       fields: SNP_QUALITY_FILTER_FIELDS,
     },
   },
+  [DATASET_TYPE_VARIANT_SV]: {
+    [FREQUENCY_PANEL.name]: {
+      fields: SNP_FREQUENCIES.concat(SV_FREQUENCIES),
+    },
+    [QUALITY_PANEL.name]: {
+      fields: SNP_QUALITY_FILTER_FIELDS.concat(SV_QUALITY_FILTER_FIELDS),
+    },
+  },
+}
+
+DATASET_TYPE_PANEL_PROPS[DATASET_TYPE_VARIANT_MITO] = {
+  ...DATASET_TYPE_PANEL_PROPS[DATASET_TYPE_VARIANT_CALLS],
+  [FREQUENCY_PANEL.name]: {
+    fields: SNP_FREQUENCIES.concat(MITO_FREQUENCIES),
+  },
+  [QUALITY_PANEL.name]: {
+    fields: SNP_QUALITY_FILTER_FIELDS.concat(MITO_QUALITY_FILTER_FIELDS),
+  },
 }
 
 const HAS_HGMD = true
@@ -188,7 +210,8 @@ const NO_HGMD = false
 const HAS_ANN_SECONDARY = true
 const NO_ANN_SECONDARY = false
 
-const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_CALLS].reduce((typeAcc, type) => {
+const PANEL_MAP = [ALL_DATASET_TYPE, DATASET_TYPE_VARIANT_MITO, DATASET_TYPE_VARIANT_SV,
+  DATASET_TYPE_VARIANT_CALLS].reduce((typeAcc, type) => {
   const typePanelProps = DATASET_TYPE_PANEL_PROPS[type] || {}
   const typePanels = PANELS.map(panel => ({ ...panel, ...(typePanelProps[panel.name] || {}) }))
   return {

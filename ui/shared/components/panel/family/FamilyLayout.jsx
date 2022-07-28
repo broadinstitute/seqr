@@ -26,17 +26,19 @@ const FamilyLayout = React.memo((
   <div>
     {annotation}
     <FamilyGrid annotation={annotation} offset={offset} compact fixed={!useFullWidth}>
-      <Table.Row verticalAlign="top">
-        {(leftContent || !useFullWidth) && <Table.Cell width={3}>{leftContent}</Table.Cell>}
-        {compact ? (fields || []).map(
-          field => <Table.Cell width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Table.Cell>,
-        ) : (
-          <Table.Cell width={getContentWidth(useFullWidth, leftContent, rightContent)}>
-            {(fields || []).map(field => fieldDisplay(field))}
-          </Table.Cell>
-        )}
-        {rightContent && <Table.Cell width={3}>{rightContent}</Table.Cell>}
-      </Table.Row>
+      <Table.Body>
+        <Table.Row verticalAlign="top">
+          {(leftContent || !useFullWidth) && <Table.Cell width={3}>{leftContent}</Table.Cell>}
+          {compact ? (fields || []).map(
+            field => <Table.Cell width={field.colWidth || 1} key={field.id}>{fieldDisplay(field)}</Table.Cell>,
+          ) : (
+            <Table.Cell width={getContentWidth(useFullWidth, leftContent, rightContent)}>
+              {(fields || []).map(field => fieldDisplay(field))}
+            </Table.Cell>
+          )}
+          {rightContent && <Table.Cell width={3}>{rightContent}</Table.Cell>}
+        </Table.Row>
+      </Table.Body>
     </FamilyGrid>
   </div>
 ))

@@ -17,6 +17,16 @@ test('getVisibleFamilies', () => {
   expect(visibleFamilies[1].familyGuid).toEqual('F011652_2')
 })
 
+test('getVisibleFamilies - Case Review', () => {
+
+  const visibleFamilies = getVisibleFamilies(STATE_WITH_2_FAMILIES, { tableName: 'Case Review' })
+
+  expect(visibleFamilies.length).toEqual(2)
+  expect(visibleFamilies[0].familyGuid).toEqual('F011652_1')
+  expect(visibleFamilies[1].familyGuid).toEqual('F011652_2')
+})
+
+
 test('getVisibleFamiliesInSortedOrder', () => {
   const visibleFamiliesSorted = getVisibleFamiliesInSortedOrder(STATE_WITH_2_FAMILIES, {})
 
