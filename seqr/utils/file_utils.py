@@ -91,4 +91,6 @@ def get_gs_file_list(gs_path, user=None):
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
     for line in process.stdout:
-        yield line.decode('utf-8').rstrip('\n')
+        line = line.decode('utf-8').rstrip('\n')
+        if line.startswith(gs_path):
+            yield line
