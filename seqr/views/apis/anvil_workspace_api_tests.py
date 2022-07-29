@@ -239,15 +239,15 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_time.reset_mock()
         mock_has_service_account.reset_mock()
         mock_add_service_account.return_value = False
-        mock_get_file_list.return_value = ['/test.vcf']  # todo: add bucket path
+        mock_get_file_list.return_value = ['gs://test_bucket/test.vcf', 'gs://test_bucket/data/test.vcf.gz']
         response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True, 'dataPathList': ['/test.vcf']})
+        self.assertDictEqual(response.json(), {'success': True, 'dataPathList': ['/test.vcf', '/data/test.vcf.gz']})
         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
                                                     TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
-        # todo: add mock_get_file_list parameter test
+        mock_get_file_list.called_with('gs://test_bucket')
 
         # Test logged in locally
         remove_token(
