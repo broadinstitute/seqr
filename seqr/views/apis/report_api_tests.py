@@ -302,198 +302,198 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
-    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
-    @responses.activate
-    def test_anvil_export(self, mock_google_authenticated,  mock_zip, mock_analyst_group):
-        mock_google_authenticated.return_value = False
-        url = reverse(anvil_export, args=[PROJECT_GUID])
-        self.check_analyst_login(url)
+    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    # @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
+    # @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
+    # @responses.activate
+    # def test_anvil_export(self, mock_google_authenticated,  mock_zip, mock_analyst_group):
+    #     mock_google_authenticated.return_value = False
+    #     url = reverse(anvil_export, args=[PROJECT_GUID])
+    #     self.check_analyst_login(url)
+    #
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.json()['error'], 'Permission Denied')
+    #     mock_analyst_group.__bool__.return_value = True
+    #     mock_analyst_group.resolve_expression.return_value = 'analysts'
+    #
+    #     unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
+    #     response = self.client.get(unauthorized_project_url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.json()['error'], 'Permission Denied')
+    #
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.json()['error'], 'Permission Denied')
+    #     mock_google_authenticated.return_value = True
+    #
+    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertEqual(
+    #         response.get('content-disposition'),
+    #         'attachment; filename="1kg project nme with unide_AnVIL_Metadata.zip"'
+    #     )
+    #
+    #     mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
+    #     self.assertEqual(mock_write_zip.call_count, 4)
+    #     mock_write_zip.assert_has_calls([
+    #         mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Subject.tsv', mock.ANY),
+    #         mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Sample.tsv', mock.ANY),
+    #         mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Family.tsv', mock.ANY),
+    #         mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery.tsv', mock.ANY),
+    #     ])
+    #
+    #     subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
+    #     self.assertEqual(subject_file[0], '\t'.join([
+    #         'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
+    #         '05-dbgap_study_id', '06-dbgap_subject_id', '07-multiple_datasets',
+    #         '08-family_id', '09-paternal_id', '10-maternal_id', '11-twin_id', '12-proband_relationship', '13-sex',
+    #         '14-ancestry', '15-ancestry_detail', '16-age_at_last_observation', '17-phenotype_group', '18-disease_id',
+    #         '19-disease_description', '20-affected_status', '21-congenital_status', '22-age_of_onset', '23-hpo_present',
+    #         '24-hpo_absent', '25-phenotype_description', '26-solve_state']))
+    #     self.assertIn(u'\t'.join([
+    #         'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'dbgap_stady_id_1',
+    #         'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
+    #         'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
+    #         'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
+    #         'Tier 1']), subject_file)
+    #
+    #     sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
+    #     self.assertEqual(sample_file[0], '\t'.join([
+    #         'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
+    #         '05-sample_source', '06-tissue_affected_status',]))
+    #     self.assertIn(
+    #         '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-']),
+    #         sample_file,
+    #     )
+    #
+    #     family_file = mock_write_zip.call_args_list[2][0][1].split('\n')
+    #     self.assertEqual(family_file[0], '\t'.join([
+    #         'entity:family_id', '01-family_id', '02-consanguinity', '03-consanguinity_detail', '04-pedigree_image',
+    #         '05-pedigree_detail', '06-family_history', '07-family_onset']))
+    #     self.assertIn('\t'.join([
+    #         '1', '1', 'Present', '-', '-', '-', '-', '-',
+    #     ]), family_file)
+    #
+    #     discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
+    #     self.assertEqual(len(discovery_file), 6)
+    #     self.assertEqual(discovery_file[0], '\t'.join([
+    #         'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
+    #         '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
+    #         '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
+    #         '17-significance', '18-discovery_notes']))
+    #     self.assertIn('\t'.join([
+    #         'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
+    #         'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-']), discovery_file)
+    #     self.assertIn('\t'.join([
+    #         'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
+    #         'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
+    #         '-', '-', '-', '-']), discovery_file)
+    #     self.assertIn('\t'.join([
+    #         'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
+    #         '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
+    #         'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
+    #         discovery_file)
+    #     self.assertIn('\t'.join([
+    #         'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
+    #         '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
+    #         'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
+    #         discovery_file)
+    #
+    #     # Test non-broad analysts do not have access
+    #     self.login_pm_user()
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.json()['error'], 'Permission Denied')
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-
-        unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
-        response = self.client.get(unauthorized_project_url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_google_authenticated.return_value = True
-
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.get('content-disposition'),
-            'attachment; filename="1kg project nme with unide_AnVIL_Metadata.zip"'
-        )
-
-        mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
-        self.assertEqual(mock_write_zip.call_count, 4)
-        mock_write_zip.assert_has_calls([
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Subject.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Sample.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Family.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery.tsv', mock.ANY),
-        ])
-
-        subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
-        self.assertEqual(subject_file[0], '\t'.join([
-            'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
-            '05-dbgap_study_id', '06-dbgap_subject_id', '07-multiple_datasets',
-            '08-family_id', '09-paternal_id', '10-maternal_id', '11-twin_id', '12-proband_relationship', '13-sex',
-            '14-ancestry', '15-ancestry_detail', '16-age_at_last_observation', '17-phenotype_group', '18-disease_id',
-            '19-disease_description', '20-affected_status', '21-congenital_status', '22-age_of_onset', '23-hpo_present',
-            '24-hpo_absent', '25-phenotype_description', '26-solve_state']))
-        self.assertIn(u'\t'.join([
-            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
-            'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
-            'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
-            'Tier 1']), subject_file)
-
-        sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
-        self.assertEqual(sample_file[0], '\t'.join([
-            'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
-            '05-sample_source', '06-tissue_affected_status',]))
-        self.assertIn(
-            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-']),
-            sample_file,
-        )
-
-        family_file = mock_write_zip.call_args_list[2][0][1].split('\n')
-        self.assertEqual(family_file[0], '\t'.join([
-            'entity:family_id', '01-family_id', '02-consanguinity', '03-consanguinity_detail', '04-pedigree_image',
-            '05-pedigree_detail', '06-family_history', '07-family_onset']))
-        self.assertIn('\t'.join([
-            '1', '1', 'Present', '-', '-', '-', '-', '-',
-        ]), family_file)
-
-        discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
-        self.assertEqual(len(discovery_file), 6)
-        self.assertEqual(discovery_file[0], '\t'.join([
-            'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
-            '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
-            '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
-            '17-significance', '18-discovery_notes']))
-        self.assertIn('\t'.join([
-            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
-            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-']), discovery_file)
-        self.assertIn('\t'.join([
-            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
-            'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
-            '-', '-', '-', '-']), discovery_file)
-        self.assertIn('\t'.join([
-            'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
-            '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
-            discovery_file)
-        self.assertIn('\t'.join([
-            'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
-            '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
-            discovery_file)
-
-        # Test non-broad analysts do not have access
-        self.login_pm_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-
-    @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
-    @responses.activate
-    def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
-        mock_google_authenticated.return_value = False
-        url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
-        self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-
-        unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
-        response = self.client.get(unauthorized_project_url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual( response.json()['error'], 'Permission Denied')
-        mock_google_authenticated.return_value = True
-
-        # Test invalid airtable responses
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=402)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 402)
-
-        responses.reset()
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=200)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 500)
-        self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
-                                        'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
-
-        responses.reset()
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
-                      json=PAGINATED_AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
-                      json=AIRTABLE_SAMPLE_RECORDS, status=200)
-        responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
-                      json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(
-            response.json()['error'],
-            'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
-        self.assertEqual(len(responses.calls), 2)
-        expected_params = {
-            'fields[]': mock.ANY,
-            'filterByFormula':  "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885',{SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')",
-        }
-        expected_fields =  [
-            'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
-            'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
-        ]
-        self.assertDictEqual(responses.calls[0].request.params, expected_params)
-        self.assertListEqual(_get_list_param(responses.calls[0].request, 'fields%5B%5D'), expected_fields)
-        expected_params['offset'] = 'abc123'
-        self.assertDictEqual(responses.calls[1].request.params, expected_params)
-        self.assertListEqual(_get_list_param(responses.calls[1].request, 'fields%5B%5D'), expected_fields)
-
-        # Test success
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
-        self.assertEqual(len(responses.calls), 4)
-        self.assertDictEqual(responses.calls[3].request.params, {
-            'fields[]': 'CollaboratorID',
-            'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
-        })
-        self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
-
-        # Test empty project
-        empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])
-        response = self.client.get(empty_project_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'rows': []})
-
-        # Test non-broad analysts do not have access
-        self.login_pm_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
+    # @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
+    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    # @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
+    # @responses.activate
+    # def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
+    #     mock_google_authenticated.return_value = False
+    #     url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
+    #     self.check_analyst_login(url)
+    #
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.json()['error'], 'Permission Denied')
+    #     mock_analyst_group.__bool__.return_value = True
+    #     mock_analyst_group.resolve_expression.return_value = 'analysts'
+    #
+    #     unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
+    #     response = self.client.get(unauthorized_project_url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.json()['error'], 'Permission Denied')
+    #
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual( response.json()['error'], 'Permission Denied')
+    #     mock_google_authenticated.return_value = True
+    #
+    #     # Test invalid airtable responses
+    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=402)
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 402)
+    #
+    #     responses.reset()
+    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), status=200)
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 500)
+    #     self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
+    #                                     'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
+    #
+    #     responses.reset()
+    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
+    #                   json=PAGINATED_AIRTABLE_SAMPLE_RECORDS, status=200)
+    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
+    #                   json=AIRTABLE_SAMPLE_RECORDS, status=200)
+    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Collaborator'.format(AIRTABLE_URL),
+    #                   json=AIRTABLE_COLLABORATOR_RECORDS, status=200)
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 500)
+    #     self.assertEqual(
+    #         response.json()['error'],
+    #         'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
+    #     self.assertEqual(len(responses.calls), 2)
+    #     expected_params = {
+    #         'fields[]': mock.ANY,
+    #         'filterByFormula':  "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885',{SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')",
+    #     }
+    #     expected_fields =  [
+    #         'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
+    #         'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
+    #     ]
+    #     self.assertDictEqual(responses.calls[0].request.params, expected_params)
+    #     self.assertListEqual(_get_list_param(responses.calls[0].request, 'fields%5B%5D'), expected_fields)
+    #     expected_params['offset'] = 'abc123'
+    #     self.assertDictEqual(responses.calls[1].request.params, expected_params)
+    #     self.assertListEqual(_get_list_param(responses.calls[1].request, 'fields%5B%5D'), expected_fields)
+    #
+    #     # Test success
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 200)
+    #     response_json = response.json()
+    #     self.assertListEqual(list(response_json.keys()), ['rows'])
+    #     self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
+    #     self.assertEqual(len(responses.calls), 4)
+    #     self.assertDictEqual(responses.calls[3].request.params, {
+    #         'fields[]': 'CollaboratorID',
+    #         'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
+    #     })
+    #     self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
+    #
+    #     # Test empty project
+    #     empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])
+    #     response = self.client.get(empty_project_url)
+    #     self.assertEqual(response.status_code, 200)
+    #     self.assertDictEqual(response.json(), {'rows': []})
+    #
+    #     # Test non-broad analysts do not have access
+    #     self.login_pm_user()
+    #     response = self.client.get(url)
+    #     self.assertEqual(response.status_code, 403)
+    #     self.assertEqual(response.json()['error'], 'Permission Denied')
