@@ -148,7 +148,9 @@ This is expected to take a while
 After the dataset is loaded into elasticsearch, it can be added to your seqr project with these steps:
 
 1. Go to the project page
-1. Click on Edit Families & Individuals and click on Bulk Edit Individuals tab.
+1. If you have not already, add the individuals in the dataset to the seqr project
+  1. Click on Edit Families & Individuals and click on Bulk Edit Individuals tab.
+  1. Upload a family pedigree file following the format described on that page. Submit and return to project page.
 1. Upload a family pedigree file following the format described on that page. Submit and return to project page.
 1. Click on Edit Datasets
 1. Enter the elasticsearch index name (the `$INDEX_NAME` argument you provided at loading time). Upload a mapping file if the individual IDs in the family pedigree file do not mach the sample IDs in the .vcf file. Submit the form.
