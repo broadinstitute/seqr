@@ -21,7 +21,7 @@ class FormWizard extends React.PureComponent {
 
   navigateBack = () => {
     this.setState(prevState => ({
-      pageIndex: prevState.pageIndex - 1, formSubmitSucceeded: false,
+      pageIndex: prevState.pageIndex - 1,
     }))
   }
 
@@ -50,8 +50,7 @@ class FormWizard extends React.PureComponent {
 
     const formProps = (pageIndex === pages.length - 1) ? {
       onSubmit: this.onFormSubmit,
-      onSubmitSucceeded: this.setSubmitSucceeded,
-      successMessage: formSubmitSucceeded ? successMessage : null,
+      onSubmitSucceeded: successMessage ? this.setSubmitSucceeded : null,
     } : {
       onSubmit: onPageSubmit(this.onPageSubmitSucceeded) || this.resolvedPageSubmit,
       onSubmitSucceeded: this.navigateNext,
@@ -65,7 +64,9 @@ class FormWizard extends React.PureComponent {
       cancelButtonIcon: 'angle double left',
     }
 
-    return (
+    return (formSubmitSucceeded ? (
+      <b>{successMessage}</b>
+    ) : (
       <FormWrapper
         {...props}
         {...formProps}
@@ -74,7 +75,7 @@ class FormWizard extends React.PureComponent {
         showErrorPanel
         hideButtonStatus
       />
-    )
+    ))
   }
 
 }
