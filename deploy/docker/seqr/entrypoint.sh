@@ -35,6 +35,15 @@ fi
 
 cd /seqr
 
+if [ "$SEQR_GIT_BRANCH" ]; then
+    git init
+    git remote add origin https://github.com/broadinstitute/seqr
+    git checkout -b hail-local
+    git add .
+    git -c user.email="seqr@broadinstitute.org" commit -m "image local"
+    git pull origin "$SEQR_GIT_BRANCH"
+fi
+
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass

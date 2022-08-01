@@ -50,12 +50,12 @@ def run(command,
         return None
 
     # pipe output to log
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, **kwargs) # nosec
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=full_env, encoding='utf-8', **kwargs) # nosec
     line_buffer = StringIO()
     log_buffer = StringIO()
     previous_is_slash_r = False
     while True:
-        out = p.stdout.read(1).decode('utf-8')
+        out = p.stdout.read(1)
         if out == '' and p.poll() is not None:
             break
         if out != '':
