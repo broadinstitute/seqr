@@ -174,7 +174,7 @@ def deploy_seqr(settings):
 
     if settings['DEPLOY_TO'] == 'prototype':
         docker_build(
-            'seqr', settings, custom_build_args=['-f deploy/docker/seqr/Dockerfile'], docker_path='.',
+            'seqr', settings, custom_build_args=['-f deploy/docker/seqr/Dockerfile', '--platform=linux/amd64'], docker_path='.',
             use_default_tags=False)
         if settings['ONLY_PUSH_TO_REGISTRY']:
             return
