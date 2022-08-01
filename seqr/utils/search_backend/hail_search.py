@@ -29,7 +29,7 @@ class HailSearch(object):
         for p in projects:
             genome_version_projects[p.get_genome_version_display()].append(p.name)
         if len(genome_version_projects) > 1:
-            project_builds = '; '.join(f'build [{", ".join(projects)}]' for build, projects in genome_version_projects.items())
+            project_builds = '; '.join(f'{build} [{", ".join(projects)}]' for build, projects in genome_version_projects.items())
             raise InvalidSearchException(
                 f'Search is only enabled on a single genome build, requested the following project builds: {project_builds}')
         self._genome_version = list(genome_version_projects.keys())[0]
