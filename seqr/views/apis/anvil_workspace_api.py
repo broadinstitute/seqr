@@ -20,6 +20,7 @@ from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import VCF_FILE_EXTENSIONS
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
@@ -233,11 +234,28 @@ def add_workspace_data(request, project_guid):
                      ' The following samples were previously loaded in this project but are missing from the VCF: {}'.format(
                 ', '.join(sorted(missing_loaded_samples)))}, status=400)
 
-    _trigger_add_workspace_data(project, pedigree_records, request.user, request_json['fullDataPath'],
-                                previous_samples.first().sample_type,
-                                previous_loaded_ids=previous_loaded_individuals)
+    updated_individuals, updated_families, updated_notes = _trigger_add_workspace_data(
+        project, pedigree_records, request.user, request_json['fullDataPath'], previous_samples.first().sample_type,
+        previous_loaded_ids=previous_loaded_individuals)
 
-    return create_json_response({'success': True})
+    individuals_by_guid = {
+        individual['individualGuid']: individual for individual in
+        _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
+    }
+    families_by_guid = {
+        family['familyGuid']: family for family in
+        _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
+    }
+
+    response = {
+        'individualsByGuid': individuals_by_guid,
+        'familiesByGuid': families_by_guid,
+    }
+    if updated_notes:
+        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(updated_notes)}
+        response['familyNotesByGuid'] = family_notes_by_guid
+
+    return create_json_response(response)
 
 
 def _parse_uploaded_pedigree(request_json, user):
@@ -258,7 +276,7 @@ def _parse_uploaded_pedigree(request_json, user):
 
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None):
     # add families and individuals according to the uploaded individual records
-    updated_individuals, _, _ = add_or_update_individuals_and_families(
+    updated_individuals, updated_families, updated_notes = add_or_update_individuals_and_families(
         project, individual_records=pedigree_records, user=user
     )
 
@@ -301,6 +319,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         except Exception as e:
             logger.error('AnVIL loading delay email error: {}'.format(e), user)
 
+    return updated_individuals, updated_families, updated_notes
 
 def _wait_for_service_account_access(user, namespace, name):
     for _ in range(2):
