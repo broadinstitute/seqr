@@ -560,6 +560,11 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         # Test a valid operation
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertEqual(sorted(response_json.keys()), ['familiesByGuid', 'familyNotesByGuid', 'individualsByGuid'])
+        self.assertEqual(sorted(response_json['individualsByGuid'].keys()), ['I0000019_hg00735', 'I000001_na19675', 'I000002_na19678'])
+        self.assertEqual(sorted(response_json['familiesByGuid'].keys()), ['F000001_1', 'F000015_21'])
+        self.assertEqual(sorted(response_json['familyNotesByGuid'].keys()), ['FAN000004_21_c_a_new_family'])
         self.mock_api_logger.error.assert_not_called()
 
         self.mock_tempfile.assert_called_with(mode='wb', delete=False)

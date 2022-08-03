@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment, Message } from 'semantic-ui-react'
+import { connect } from 'react-redux'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -20,6 +21,7 @@ import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
+import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
@@ -110,7 +112,11 @@ const createProjectFromWorkspace = postSubmitValues()((responseJson) => {
   window.location.href = `/project/${responseJson.projectGuid}/project_page`
 })
 
-const addDataFromWorkspace = postSubmitValues(({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`))()
+const addDataFromWorkspace = values => dispatch => postSubmitValues(
+  ({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`),
+)((responseJson) => {
+  dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+})(values)
 
 const GRANT_ACCESS_PAGE = { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') }
 const VALIDATE_VCF_PAGE = {
@@ -130,7 +136,7 @@ const ADD_DATA_WIZARD_PAGES = [
   { fields: [UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const LoadWorkspaceDataForm = React.memo(({ params, ...props }) => (
+const LoadWorkspaceDataForm = React.memo(({ params, onSubmit, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
@@ -146,7 +152,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, ...props }) => (
     </Segment>
     <FormWizard
       {...props}
-      onSubmit={params.projectGuid ? addDataFromWorkspace : createProjectFromWorkspace}
+      onSubmit={params.projectGuid ? onSubmit : createProjectFromWorkspace}
       pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
       initialValues={params}
       size="small"
@@ -165,6 +171,11 @@ const LoadWorkspaceDataForm = React.memo(({ params, ...props }) => (
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
+  onSubmit: PropTypes.func.isRequired,
 }
 
-export default LoadWorkspaceDataForm
+const mapDispatchToProps = {
+  onSubmit: addDataFromWorkspace,
+}
+
+export default connect(null, mapDispatchToProps)(LoadWorkspaceDataForm)
