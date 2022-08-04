@@ -483,6 +483,6 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {
             'M': {
                 'individualData': {'NA19675_1': 8.38},
-                'rdgData': [8.38, 1.01],
+                'rdgData': [1.01, 8.38],
             }
         })

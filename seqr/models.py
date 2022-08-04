@@ -600,9 +600,11 @@ class Sample(ModelWithGUID):
 
     DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
     DATASET_TYPE_SV_CALLS = 'SV'
+    DATASET_TYPE_MITO_CALLS = 'MITO'
     DATASET_TYPE_CHOICES = (
         (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
         (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        (DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
@@ -836,6 +838,12 @@ class VariantFunctionalData(ModelWithGUID):
                 'color': '#D84315',
              })),
          )),
+        ('Additional Information', (
+            ('Incomplete Penetrance', json.dumps({
+                'description': 'Variant has been shown to be disease-causing (in literature, functional studies, etc.) but one or more individuals in this family with the variant do not present with clinical features of the disorder.',
+                'color': '#E985DC',
+            })),
+        )),
     )
 
     FUNCTIONAL_DATA_TAG_TYPES = [{

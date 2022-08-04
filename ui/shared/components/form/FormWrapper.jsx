@@ -78,8 +78,11 @@ class FormWrapper extends React.PureComponent {
     liveValidate: PropTypes.bool,
     showErrorPanel: PropTypes.bool,
     cancelButtonText: PropTypes.string,
+    cancelButtonIcon: PropTypes.string,
     submitButtonText: PropTypes.string,
+    submitButtonIcon: PropTypes.string,
     successMessage: PropTypes.string,
+    hideButtonStatus: PropTypes.bool,
 
     /* Submit the form whenever values change rather than with a submit button */
     submitOnChange: PropTypes.bool,
@@ -102,6 +105,8 @@ class FormWrapper extends React.PureComponent {
 
     /* Call if submit succeeded */
     onSubmitSucceeded: PropTypes.func,
+
+    onCancel: PropTypes.func,
 
     setModalConfirm: PropTypes.func,
 
@@ -180,15 +185,15 @@ class FormWrapper extends React.PureComponent {
     dirty, dirtySinceLastSubmit,
   }) => {
     const {
-      submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, onSubmitSucceeded,
-      noModal, liveValidate,
+      submitOnChange, showErrorPanel, successMessage, cancelButtonText, submitButtonText, submitButtonIcon,
+      onCancel, noModal, liveValidate, hideButtonStatus, cancelButtonIcon,
     } = this.props
 
     const currentFormSubmitFailed = submitFailed && !dirtySinceLastSubmit
     let saveStatus = NONE
-    if (submitSucceeded) {
+    if (!hideButtonStatus && submitSucceeded) {
       saveStatus = SUCCEEDED
-    } else if (currentFormSubmitFailed) {
+    } else if (!hideButtonStatus && currentFormSubmitFailed) {
       saveStatus = ERROR
     }
 
@@ -208,10 +213,12 @@ class FormWrapper extends React.PureComponent {
         <ButtonPanel
           key="buttonPanel"
           cancelButtonText={cancelButtonText}
+          cancelButtonIcon={cancelButtonIcon}
           submitButtonText={submitButtonText}
+          submitButtonIcon={submitButtonIcon}
           saveStatus={saveStatus}
           saveErrorMessage={saveErrorMessage}
-          handleClose={onSubmitSucceeded || (noModal ? null : this.handleUnconfirmedClose)}
+          handleClose={onCancel || (noModal ? null : this.handleUnconfirmedClose)}
         />
       ),
     ]

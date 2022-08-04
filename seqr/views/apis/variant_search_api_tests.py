@@ -109,7 +109,7 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response_json, EXPECTED_SEARCH_CONTEXT_RESPONSE)
 
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV', 'MITO'})
 
         locus_list_fields = deepcopy(LOCUS_LIST_FIELDS)
         locus_list_fields.update(PA_LOCUS_LIST_FIELDS)
@@ -440,7 +440,7 @@ class VariantSearchAPITest(object):
         mock_get_variants.side_effect = _get_variants
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allProjectFamilies': True, 'search': SEARCH
+            'allGenomeProjectFamilies': '37', 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -457,7 +457,7 @@ class VariantSearchAPITest(object):
         VariantSearchResults.objects.filter(search_hash=SEARCH_HASH).delete()
         self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allProjectFamilies': True, 'search': SEARCH
+            'allGenomeProjectFamilies': '37', 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), empty_search_response)
@@ -468,7 +468,7 @@ class VariantSearchAPITest(object):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13'}
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allProjectFamilies': True, 'search': SEARCH
+            'allGenomeProjectFamilies': '37', 'search': SEARCH
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -556,7 +556,7 @@ class VariantSearchAPITest(object):
         self.assertDictEqual(response_json, expected_response)
         self.assertEqual(len(response_json['savedSearchesByGuid']), 3)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_CONTEXT_FIELDS)
-        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV'})
+        self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID]['datasetTypes']), {'VARIANTS', 'SV', 'MITO'})
         self.assertSetEqual(set(response_json['projectsByGuid']['R0003_test']['datasetTypes']), {'VARIANTS'})
         self.assertEqual(len(response_json['familiesByGuid']), 13)
 
@@ -585,7 +585,7 @@ class VariantSearchAPITest(object):
 
         # Test all project search context
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(
-            {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allProjectFamilies': True, 'search': SEARCH}}))
+            {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allGenomeProjectFamilies': '37', 'search': SEARCH}}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self._assert_expected_search_context(response_json)

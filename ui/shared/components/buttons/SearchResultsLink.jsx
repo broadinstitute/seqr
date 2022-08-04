@@ -29,7 +29,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const search = {
       ...(ownProps.initialSearch || {}),
       locus: {
-        rawItems: ownProps.location, rawVariantItems: ownProps.variantId, genomeVersion: ownProps.genomeVersion,
+        rawItems: ownProps.location, rawVariantItems: ownProps.variantId,
       },
     }
     if (ownProps.svType) {
@@ -38,7 +38,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
     const familyGuids = ownProps.familyGuid ? [ownProps.familyGuid] : ownProps.familyGuids
     const projectFamilies = familyGuids && [{ familyGuids }]
     dispatch(navigateSavedHashedSearch(
-      { allProjectFamilies: !projectFamilies, projectFamilies, search },
+      { allGenomeProjectFamilies: !projectFamilies && ownProps.genomeVersion, projectFamilies, search },
       resultsLink => window.open(resultsLink, '_blank'),
     ))
   },

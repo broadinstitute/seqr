@@ -1,5 +1,5 @@
 import { getProjectDatasetTypes } from 'redux/selectors'
-import { getIntitialSearch, getSearchedProjectsLocusListOptions, getDatasetTypes } from './selectors'
+import { getIntitialSearch, getLocusListOptions, getDatasetTypes } from './selectors'
 
 import { STATE, SEARCH_HASH, SEARCH, PROJECT_GUID, FAMILY_GUID, ANALYSIS_GROUP_GUID, LOCUS_LIST } from './fixtures'
 
@@ -34,10 +34,18 @@ test('getIntitialSearch', () => {
   )
 })
 
-test('getSearchedProjectsLocusListOptions', () => {
-  expect(getSearchedProjectsLocusListOptions(
+test('getLocusListOptions', () => {
+  expect(getLocusListOptions(
     STATE, { projectFamilies: [{ projectGuid: PROJECT_GUID }] },
-  )).toEqual([{ value: null, description: 'None' }, { text: LOCUS_LIST.name, value: LOCUS_LIST.locusListGuid, key: LOCUS_LIST.locusListGuid }])
+  )).toEqual([{
+    text: LOCUS_LIST.name,
+    value: LOCUS_LIST.locusListGuid,
+    key: LOCUS_LIST.locusListGuid,
+    description: undefined,
+    icon: { name: 'users', size: 'small' },
+    category: 'Project Lists',
+    categoryRank: 0,
+  }])
 })
 
 test('getDatasetTypes', () => {
