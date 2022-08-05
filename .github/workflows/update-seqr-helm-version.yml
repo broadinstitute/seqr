@@ -8,6 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: seqr
+        run:
+          git rev-parse --short HEAD
+      - uses: actions/checkout@v3
         with:
           repository: broadinstitute/seqr-helm
       - name: Update appVersion in the seqr HelmChart Chart.yaml
