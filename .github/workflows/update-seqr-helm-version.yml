@@ -8,9 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: seqr
+      - name: get seqr version
+        id: seqr
         run:
-          git rev-parse --short HEAD
+          echo "::set-output name=commit_id::$(git rev-parse --short HEAD)"
       - uses: actions/checkout@v3
         with:
           repository: broadinstitute/seqr-helm
@@ -19,11 +20,11 @@ jobs:
         with:
           valueFile: 'charts/seqr/Chart.yaml'
           propertyPath: 'appVersion'
-          value: '1.0-toBeUpdated'  # todo: add seqr step ${{ steps.seqr.outputs.version }}
+          value: ${{ steps.seqr.outputs.commit_id }}
           repository: broadinstitute/seqr-helm
           masterBranchName: main
-          branch: seqr-version-pr  # todo: update the branch name to something like deployment/${{ steps.image.outputs.version }}
+          branch: seqr-version-${{ steps.seqr.outputs.commit_id }}
           targetBranch: main
           createPR: true
-          message: 'Update appVersion to #seqr-version#'  # todo: change #seqr-version# to ${{ steps.image.outputs.version }}'
+          message: 'Update appVersion to ${{ steps.seqr.outputs.commit_id }}
           token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
