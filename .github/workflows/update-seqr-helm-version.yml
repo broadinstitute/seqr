@@ -26,5 +26,5 @@ jobs:
           branch: seqr-version-${{ steps.seqr.outputs.commit_id }}
           targetBranch: main
           createPR: true
-          message: 'Update appVersion to ${{ steps.seqr.outputs.commit_id }}
+          message: 'Update appVersion to ${{ steps.seqr.outputs.commit_id }}'
           token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
