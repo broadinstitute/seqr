@@ -112,8 +112,8 @@ def anvil_workspace_page(request, namespace, name):
     return redirect('/create_project_from_workspace/{}/{}'.format(namespace, name))
 
 
-@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
-def grant_workspace_access(request, namespace, name, workspace_meta):
+@anvil_workspace_access_required
+def grant_workspace_access(request, namespace, name):
     request_json = json.loads(request.body)
     if not request_json.get('agreeSeqrAccess'):
         error = 'Must agree to grant seqr access to the data in the associated workspace.'
@@ -124,12 +124,18 @@ def grant_workspace_access(request, namespace, name, workspace_meta):
     if added_account_to_workspace:
         _wait_for_service_account_access(request.user, namespace, name)
 
+    return create_json_response({'success': True})
+
+
+@anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
+def get_anvil_vcf_list(request, namespace, name, workspace_meta):
     bucket_name = workspace_meta['workspace']['bucketName']
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
     data_path_list = [path.replace(bucket_path, '', 1) for path in get_gs_file_list(bucket_path)
                       if path.endswith(VCF_FILE_EXTENSIONS)]
 
-    return create_json_response({'success': True, 'dataPathList': data_path_list})
+    return create_json_response({'dataPathList': data_path_list})
+
 
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
 def validate_anvil_vcf(request, namespace, name, workspace_meta):

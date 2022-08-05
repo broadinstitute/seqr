@@ -41,12 +41,9 @@ class FormWizard extends React.PureComponent {
 
   render() {
     const { pages, onSubmit, successMessage, ...props } = this.props
-    const { pageIndex, formSubmitSucceeded, asyncValues } = this.state
+    const { pageIndex, formSubmitSucceeded } = this.state
 
-    const { onPageSubmit } = pages[pageIndex]
-    const fields = pages[pageIndex].fields.map(
-      ({ fieldDecorator, ...keys }) => ({ ...keys, ...fieldDecorator ? fieldDecorator(asyncValues) : {} }),
-    )
+    const { onPageSubmit, fields } = pages[pageIndex]
 
     const formProps = (pageIndex === pages.length - 1) ? {
       onSubmit: this.onFormSubmit,
