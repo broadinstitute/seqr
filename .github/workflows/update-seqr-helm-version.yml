@@ -28,7 +28,7 @@ jobs:
         with:
           token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           commit-message: 'Update appVersion to ${{ env.SEQR_VERSION }}'
-          committer: shifa@broadinstitute.org
+          committer: shifa <shifa@broadinstitute.org>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           labels: automation
       - name: Check outputs
