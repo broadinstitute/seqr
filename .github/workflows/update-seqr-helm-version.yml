@@ -17,6 +17,8 @@ jobs:
         with:
           repository: broadinstitute/seqr-helm
           ref: main
+          ssh-key: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          persist-credentials: true
       - name: Update appVersion in seqr Chart file
         uses: mikefarah/yq@v4.22.1
         with:
@@ -30,6 +32,6 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
+          ssh: true
           repository: broadinstitute/seqr-helm
-          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           branch: main
