@@ -33,9 +33,9 @@ class FileUtilsTest(TestCase):
 
     @mock.patch('seqr.utils.file_utils.subprocess')
     @mock.patch('seqr.utils.file_utils.logger')
-    def get_gs_file_list(self, mock_logger, mock_subproc):
+    def test_get_gs_file_list(self, mock_logger, mock_subproc):
         with self.assertRaises(Exception) as ee:
-            get_gs_file_list('/temp_path', user=None)
+            get_gs_file_list('/temp_path')
         self.assertEqual(str(ee.exception),  'A Google Storage path is expected.')
 
         process = mock_subproc.Popen.return_value
