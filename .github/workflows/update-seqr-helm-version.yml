@@ -16,16 +16,22 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: broadinstitute/seqr-helm
-      - name: Update appVersion in the seqr HelmChart Chart.yaml
-        uses: fjogeleit/yaml-update-action@main
+          ref: main
+      - name: Update appVersion in seqr Chart file
+        uses: mikefarah/yq@v4.22.1
         with:
-          valueFile: 'charts/seqr/Chart.yaml'
-          propertyPath: 'appVersion'
-          value: ${{ env.SEQR_VERSION }}
-          repository: broadinstitute/seqr-helm
-          masterBranchName: main
-          branch: seqr-version-${{ env.SEQR_VERSION }}
-          targetBranch: main
-          createPR: true
-          message: 'Update appVersion to ${{ env.SEQR_VERSION }}'
+          cmd: >
+            yq -i '.appVersion = "${{ env.SEQR_VERSION }}"' charts/seqr/Chart.yaml
+      - name: Create Pull Request
+        id: createpr
+        uses: peter-evans/create-pull-request@v3
+        with:
           token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          commit-message: 'Update appVersion to ${{ env.SEQR_VERSION }}'
+          committer: tgg-automation
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          labels: automation
+      - name: Check outputs
+        run: |
+          echo "Pull Request Number - ${{ steps.createpr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.createpr.outputs.pull-request-url }}"
