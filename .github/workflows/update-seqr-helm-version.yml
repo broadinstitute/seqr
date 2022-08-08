@@ -31,6 +31,8 @@ jobs:
           committer: shifa <shifa@broadinstitute.org>
           author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
           labels: automation
+          title: 'Update appVersion to ${{ env.SEQR_VERSION }}'
+          body: Automated changes triggered by a push to the release branch in the seqr [repo](https://github.com/broadinstitute/seqr).
       - name: Check outputs
         run: |
           echo "Pull Request Number - ${{ steps.createpr.outputs.pull-request-number }}"
