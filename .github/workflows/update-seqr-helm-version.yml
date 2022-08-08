@@ -8,23 +8,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: get seqr version
+      - name: collect seqr version info
         id: seqr
         run:
+          echo "::set-output name=seqr_version::$(grep "SEQR_VERSION[ ]*=[ ]*'.*'" ./settings.py | sed -n "s/^.*'\(.*\)'/\1/p")
           echo "::set-output name=commit_id::$(git rev-parse --short HEAD)"
       - uses: actions/checkout@v3
         with:
           repository: broadinstitute/seqr-helm
       - name: Update appVersion in the seqr HelmChart Chart.yaml
         uses: fjogeleit/yaml-update-action@main
+        pre:
+          echo "SEQR_VERSION=${{ steps.seqr.outputs.seqr_version }}-${{ steps.seqr.outputs.commit_id }}" >> $GITHUB_ENV
         with:
           valueFile: 'charts/seqr/Chart.yaml'
           propertyPath: 'appVersion'
-          value: ${{ steps.seqr.outputs.commit_id }}
+          value: ${{ env.SEQR_VERSION }}
           repository: broadinstitute/seqr-helm
           masterBranchName: main
-          branch: seqr-version-${{ steps.seqr.outputs.commit_id }}
+          branch: seqr-version-${{ env.SEQR_VERSION }}
           targetBranch: main
           createPR: true
-          message: 'Update appVersion to ${{ steps.seqr.outputs.commit_id }}'
+          message: 'Update appVersion to ${{ env.SEQR_VERSION }}'
           token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
