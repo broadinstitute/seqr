@@ -2,7 +2,9 @@ name: Update seqr Version
 on:
   push:
     branches:
-      - seqr-helm-version
+      - seqr-helm-version  # for testing
+      - master
+      - dev
 jobs:
   run:
     runs-on: ubuntu-latest
