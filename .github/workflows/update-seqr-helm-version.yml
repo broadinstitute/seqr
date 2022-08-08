@@ -11,7 +11,7 @@ jobs:
       - name: collect seqr version info
         id: info
         run:
-          echo "::set-output name=seqr_version::$(grep SEQR_VERSION ./settings.py | sed -n \"s/^.*'\(.*\)'/\1/p\")"
+          echo "::set-output name=seqr_version::$(grep SEQR_VERSION ./settings.py | sed -n 's/^.*=[ ]*\(.*\)/\1/p')"
           echo "::set-output name=commit_id::$(git rev-parse --short HEAD)"
       - name: get seqr version env
         run:
