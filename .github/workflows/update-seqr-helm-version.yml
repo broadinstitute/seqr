@@ -30,5 +30,6 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
+          repository: broadinstitute/seqr-helm
           github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           branch: main
