@@ -8,15 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: collect seqr version info
-        id: info
-        - run:
-          echo "::set-output name=seqr_version::$(grep SEQR_VERSION ./settings.py | sed -n 's/^.*=[ ]*\(.*\)/\1/p')"
-        - run:
-          echo "::set-output name=commit_id::$(git rev-parse --short HEAD)"
-      - name: get seqr version env
-        run:
-          echo "SEQR_VERSION=${{ steps.info.outputs.seqr_version }}-${{ steps.info.outputs.commit_id }}" >> $GITHUB_ENV
+      - name: get seqr version
+        run: |
+          seqr_version=$(grep SEQR_VERSION ./settings.py | sed -n "s/^.*=[ ]*'\(.*\)'/\1/p")
+          commit_id=$(git rev-parse --short HEAD)
+          echo "SEQR_VERSION=$seqr_version-$commit_id" >> $GITHUB_ENV
       - uses: actions/checkout@v3
         with:
           repository: broadinstitute/seqr-helm
