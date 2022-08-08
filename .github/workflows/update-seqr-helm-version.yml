@@ -22,18 +22,13 @@ jobs:
         with:
           cmd: >
             yq -i '.appVersion = "${{ env.SEQR_VERSION }}"' charts/seqr/Chart.yaml
-      - name: Create Pull Request
-        id: createpr
-        uses: peter-evans/create-pull-request@v3
-        with:
-          token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
-          commit-message: 'Update appVersion to ${{ env.SEQR_VERSION }}'
-          committer: shifa <shifa@broadinstitute.org>
-          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-          labels: automation
-          title: 'Update appVersion to ${{ env.SEQR_VERSION }}'
-          body: Automated changes triggered by a push to the release branch in the seqr [repo](https://github.com/broadinstitute/seqr).
-      - name: Check outputs
+      - name: Commit files
         run: |
-          echo "Pull Request Number - ${{ steps.createpr.outputs.pull-request-number }}"
-          echo "Pull Request URL - ${{ steps.createpr.outputs.pull-request-url }}"
+          git config --local user.email "${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>"
+          git config --local user.name "tgg-automation"
+          git commit -m "Update seqr version" -a
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          branch: main
