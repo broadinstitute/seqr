@@ -47,7 +47,7 @@ class FormWizard extends React.PureComponent {
 
     const formProps = (pageIndex === pages.length - 1) ? {
       onSubmit: this.onFormSubmit,
-      onSubmitSucceeded: successMessage ? this.setSubmitSucceeded : null,
+      onSubmitSucceeded: this.setSubmitSucceeded,
     } : {
       onSubmit: onPageSubmit(this.onPageSubmitSucceeded) || this.resolvedPageSubmit,
       onSubmitSucceeded: this.navigateNext,

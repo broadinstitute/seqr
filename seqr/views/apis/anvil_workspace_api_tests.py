@@ -501,20 +501,10 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'Project "{name}" for workspace "{namespace}/{name}" exists.'
                          .format(namespace=TEST_WORKSPACE_NAMESPACE, name=TEST_NO_PROJECT_WORKSPACE_NAME))
 
-        # Test saving ID file exception
-        responses.calls.reset()
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
-        self.mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
-        # Test triggering dag exception
-        responses.replace(responses.GET,
-                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
-                      json=DAG_RUNS_RUNNING)
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
-        self.assertEqual(response.status_code, 200)
-        project2 = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME2)
-
-        self._assert_loading_request_exceptions(project2, "GRCh38", samples=['HG00735', 'NA19675', 'NA19678'])
+        self._test_mv_file_and_triggering_dag_exception(
+            url, {'workspace_namespace': TEST_WORKSPACE_NAMESPACE, 'workspace_name': TEST_NO_PROJECT_WORKSPACE_NAME2},
+            ['HG00735', 'NA19675', 'NA19678'], 'GRCh38', REQUEST_BODY)
 
         # Test logged in locally
         remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
@@ -580,28 +570,14 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
 
         self._assert_sent_slack_message(Project.objects.get(guid=PROJECT1_GUID), "GRCh37")
 
-        # Test saving ID file exception
-        responses.calls.reset()
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
-        self.mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
-
-        # Test triggering dag exception
-        responses.replace(responses.GET,
-                          '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
-                          json=DAG_RUNS_RUNNING)
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA2))
-        self.assertEqual(response.status_code, 200)
-        project = Project.objects.get(guid=PROJECT2_GUID)
-
-        self._assert_loading_request_exceptions(project, "GRCh37", PROJECT2_SAMPLES)
+        self._test_mv_file_and_triggering_dag_exception(url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLES, 'GRCh37', REQUEST_BODY_ADD_DATA2)
 
         # Test logged in locally
-        remove_token(
-            self.manager_user)  # The user will look like having logged in locally after the access token is removed
+        remove_token(self.manager_user)  # The user will look like having logged in locally after the access token is removed
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, f'/login/google-oauth2?next=/api/project/{project.guid}/add_workspace_data')
+        self.assertEqual(response.url, f'/login/google-oauth2?next=/api/project/{PROJECT2_GUID}/add_workspace_data')
 
     def _test_missing_fields_in_request(self, url, fields, workspace_name):
         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
@@ -701,7 +677,19 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
         self.mock_send_email.assert_not_called()
 
-    def _assert_loading_request_exceptions(self, project, genome_version, samples):
+    def _test_mv_file_and_triggering_dag_exception(self, url, workspace, samples, genome_version, request_body):
+        # Test saving ID file exception
+        responses.calls.reset()
+        self.mock_mv_file.side_effect = Exception('Something wrong while moving the ID file.')
+        # Test triggering dag exception
+        responses.replace(responses.GET,
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/dagRuns'.format(MOCK_AIRFLOW_URL),
+                      json=DAG_RUNS_RUNNING)
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+        project = Project.objects.get(**workspace)
+
         self.mock_api_logger.error.assert_called_with(
             'Uploading sample IDs to Google Storage failed. Errors: Something wrong while moving the ID file.',
             self.manager_user, detail=samples)

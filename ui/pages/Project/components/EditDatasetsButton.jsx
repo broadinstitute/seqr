@@ -172,7 +172,7 @@ const PANES = [
 const IGV_ONLY_PANES = [PANES[1]]
 
 const EditDatasetsButton = React.memo(({ project, user }) => {
-  const showLoadWorkspaceData = !project.isAnalystProject && project.canEdit
+  const showLoadWorkspaceData = !project?.isAnalystProject && project?.canEdit
   return (
     (user.isDataManager || user.isPm || showLoadWorkspaceData) ? (
       <Modal
