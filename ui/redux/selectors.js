@@ -249,7 +249,7 @@ export const getFunctionalTagTypesTypesByProject = createSelector(
   }), {}),
 )
 
-const getLocusListsWithGenes = createSelector(
+export const getLocusListsWithGenes = createSelector(
   getLocusListsByGuid,
   getGenesById,
   getPaGenesById,

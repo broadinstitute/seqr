@@ -20,13 +20,12 @@ from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.dataset_utils import VCF_FILE_EXTENSIONS
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
+from seqr.views.utils.individual_utils import add_or_update_individuals_and_families, get_updated_response_json
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs, get_gs_file_list
 from seqr.utils.logging_utils import SeqrLogger
@@ -213,7 +212,7 @@ def add_workspace_data(request, project_guid):
 
     :param request: Django request object
     :param project_guid: Django request object
-    :return success if no exceptions
+    :return a data json with fields of individualGuid, familyGuid and optional familyNotesByGuid if no exceptions
 
     """
     project = Project.objects.get(guid=project_guid)
@@ -244,22 +243,7 @@ def add_workspace_data(request, project_guid):
         project, pedigree_records, request.user, request_json['fullDataPath'], previous_samples.first().sample_type,
         previous_loaded_ids=previous_loaded_individuals)
 
-    individuals_by_guid = {
-        individual['individualGuid']: individual for individual in
-        _get_json_for_individuals(updated_individuals, request.user, add_sample_guids_field=True)
-    }
-    families_by_guid = {
-        family['familyGuid']: family for family in
-        _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
-    }
-
-    response = {
-        'individualsByGuid': individuals_by_guid,
-        'familiesByGuid': families_by_guid,
-    }
-    if updated_notes:
-        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(updated_notes)}
-        response['familyNotesByGuid'] = family_notes_by_guid
+    response = get_updated_response_json(updated_individuals, updated_families, updated_notes, request.user)
 
     return create_json_response(response)
 
