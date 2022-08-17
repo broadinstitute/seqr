@@ -46,22 +46,22 @@ export const FILE_FIELD_NAME = 'uploadedFile'
 
 export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
 
-export const EDITABLE_PROJECT_FIELDS = [
-  { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
-  PROJECT_DESC_FIELD,
-]
-
 const CONSENT_CODE_OPTIONS = ['HMB', 'GRU', 'Other'].map(text => ({ text, value: text[0] }))
 export const CONSENT_CODE_LOOKUP = CONSENT_CODE_OPTIONS.reduce(
   (acc, { value, text }) => ({ ...acc, [value]: text }), {},
 )
-export const CONSENT_CODE_FIELD = {
+const CONSENT_CODE_FIELD = {
   name: 'consentCode',
   label: 'Consent Code',
   component: RadioGroup,
   options: CONSENT_CODE_OPTIONS,
-  validate: validators.required,
 }
+
+export const EDITABLE_PROJECT_FIELDS = [
+  { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
+  PROJECT_DESC_FIELD,
+  CONSENT_CODE_FIELD,
+]
 
 export const ANVIL_FIELDS = [
   {

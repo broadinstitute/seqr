@@ -11,7 +11,6 @@ import DataLoader from 'shared/components/DataLoader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { validators } from 'shared/components/form/FormHelpers'
-import { ButtonRadioGroup } from 'shared/components/form/Inputs'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Modal from 'shared/components/modal/Modal'
 import DataTable from 'shared/components/table/DataTable'
@@ -22,8 +21,6 @@ import {
   DATASET_TITLE_LOOKUP,
   ANVIL_URL,
   ANVIL_FIELDS,
-  CONSENT_CODE_FIELD,
-  CONSENT_CODE_LOOKUP,
 } from 'shared/utils/constants'
 import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } from '../reducers'
 import {
@@ -307,7 +304,7 @@ const mapDatasetStateToProps = (state, ownProps) => ({
 const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)
 
 const Anvil = React.memo(({ project, user, onSubmit }) => (
-  (project.workspaceName || user.isPm) && (user.isAnvil || true) && (
+  (project.workspaceName || user.isPm) && user.isAnvil && (
     <DetailSection
       title="AnVIL Workspace"
       content={project.workspaceName ? (
@@ -335,7 +332,7 @@ Anvil.propTypes = {
   onSubmit: PropTypes.func,
 }
 
-const mapUserStateToProps = state => ({
+const mapAnvilStateToProps = state => ({
   user: getUser(state),
 })
 
@@ -343,40 +340,7 @@ const mapAnvilDispatchToProps = {
   onSubmit: updateAnvilWorkspace,
 }
 
-const AnvilOverview = connect(mapUserStateToProps, mapAnvilDispatchToProps)(Anvil)
-
-const CONSENT_CODE_FIELDS = [{ ...CONSENT_CODE_FIELD, component: ButtonRadioGroup }]
-
-const BaeConsentCode = React.memo(({ project, user, onSubmit }) => (
-  user.isPm && (
-    <DetailSection
-      title="Consent Code"
-      content={CONSENT_CODE_LOOKUP[project.consentCode] || 'None'}
-      button={
-        <UpdateButton
-          onSubmit={onSubmit}
-          formFields={CONSENT_CODE_FIELDS}
-          initialValues={project}
-          modalTitle="Edit Consent Code"
-          modalId="editConsentCode"
-          buttonText="Edit Consent Code"
-        />
-      }
-    />
-  )
-))
-
-BaeConsentCode.propTypes = {
-  project: PropTypes.object.isRequired,
-  user: PropTypes.object.isRequired,
-  onSubmit: PropTypes.func,
-}
-
-const mapConsentCodeDispatchToProps = {
-  onSubmit: updateAnvilWorkspace, // TODO
-}
-
-const ConsentCode = connect(mapUserStateToProps, mapConsentCodeDispatchToProps)(BaeConsentCode)
+const AnvilOverview = connect(mapAnvilStateToProps, mapAnvilDispatchToProps)(Anvil)
 
 const AnalysisStatus = React.memo(({ analysisStatusCounts }) => (
   <DetailSection
@@ -410,8 +374,6 @@ const ProjectOverview = React.memo(({ familiesLoading, ...props }) => (
       {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <AnalysisStatusOverview {...props} />}
       <VerticalSpacer height={10} />
       <AnvilOverview {...props} />
-      <VerticalSpacer height={10} />
-      <ConsentCode {...props} />
     </Grid.Column>
   </Grid>
 ))
