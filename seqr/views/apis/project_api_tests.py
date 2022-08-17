@@ -80,7 +80,8 @@ class ProjectAPITest(object):
         new_project = Project.objects.filter(name='new_project')
         self.assertEqual(len(new_project), 0)
 
-    @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project(self):
         update_project_url = reverse(update_project_handler, args=[PROJECT_GUID])
