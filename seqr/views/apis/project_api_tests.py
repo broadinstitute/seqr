@@ -21,7 +21,8 @@ DEMO_PROJECT_GUID = 'R0003_test'
 PROJECT_PAGE_RESPONSE_KEYS = {'projectsByGuid'}
 
 BASE_CREATE_PROJECT_JSON = {
-    'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True, 'disableMme': True,
+    'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True,
+    'disableMme': True, 'consentCode': 'H',
 }
 WORKSPACE_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNamespace': TEST_WORKSPACE_NAMESPACE}
 WORKSPACE_CREATE_PROJECT_JSON = deepcopy(WORKSPACE_JSON)
@@ -57,6 +58,7 @@ class ProjectAPITest(object):
         new_project = Project.objects.get(name='new_project')
         self.assertEqual(new_project.description, 'new project description')
         self.assertEqual(new_project.genome_version, '38')
+        self.assertEqual(new_project.consent_code, 'H')
         self.assertTrue(new_project.is_demo)
         self.assertFalse(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.pm_user)
@@ -110,6 +112,7 @@ class ProjectAPITest(object):
         self.assertEqual(new_project.genome_version, '38')
         self.assertFalse(new_project.is_demo)
         self.assertTrue(new_project.is_mme_enabled)
+        self.assertIsNone(new_project.consent_code)
         self.assertEqual(new_project.created_by, self.super_user)
         self.assertListEqual([], list(new_project.projectcategory_set.all()))
 

@@ -57,8 +57,10 @@ def create_project_handler(request):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
-    project_args['description'] = request_json.get('description', '')
-    project_args['is_demo'] = request_json.get('isDemo', False)
+    project_args.update({
+        _to_snake_case(field): request_json.get(field, default) for field, default in
+        [('description', ''), ('isDemo', False), ('consentCode', None)]
+    })
     if request_json.get('disableMme'):
         project_args['is_mme_enabled'] = False
 
