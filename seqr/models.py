@@ -173,6 +173,9 @@ class Project(ModelWithGUID):
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    consent_code = models.CharField(max_length=5, null=True, blank=True, choices=[
+        (c, c) for c in ['HMB', 'GRU', 'Other']
+    ])
 
     is_mme_enabled = models.BooleanField(default=True)
     mme_primary_data_owner = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_NAME)
@@ -247,7 +250,7 @@ class Project(ModelWithGUID):
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
-            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
+            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid', 'consent_code',
             'workspace_namespace', 'workspace_name', 'has_case_review', 'enable_hgmd', 'is_demo', 'all_user_demo',
         ]
 
