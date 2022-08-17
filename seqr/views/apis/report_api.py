@@ -595,6 +595,61 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
     return sample_records
 
 
+PARTICIPANT_TABLE_COLUMNS = [
+    'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
+    'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
+    'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+    'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
+]
+GREGOR_FAMILY_TABLE_COLUMNS = [
+    'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail', 'family_history_detail',
+]
+PHENOTYPE_TABLE_COLUMNS = [
+    'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details', 'onset_age_range',
+    'additional_modifiers',
+]
+ANALYTE_TABLE_COLUMNS = [
+    'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
+    'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
+    'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
+    'sample_transformation_detail',
+]
+EXPERIMENT_TABLE_COLUMNS = [
+    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method', 'read_length',
+    'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file', 'date_data_generation',
+    'target_insert_size', 'sequencing_platform',
+]
+READ_TABLE_COLUMNS = [
+    'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
+    'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
+    'analysis_details',
+]
+READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+CALLED_TABLE_COLUMNS = [
+    'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
+    'caller_software', 'variant_types', 'analysis_details',
+]
+
+
+@analyst_required
+def gregor_export(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    rows = [] # TODO
+
+    return export_multiple_files([
+        ['participant', PARTICIPANT_TABLE_COLUMNS, rows],
+        ['family', GREGOR_FAMILY_TABLE_COLUMNS, rows],
+        ['phenotype', PHENOTYPE_TABLE_COLUMNS, rows],
+        ['analyte', ANALYTE_TABLE_COLUMNS, rows],
+        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, rows],
+        ['aligned_dna_short_read', READ_TABLE_COLUMNS, rows],
+        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, rows],
+        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, rows],
+    ], 'GREGoR', # TODO better folder name
+        add_header_prefix=True, file_format='tsv', blank_value='0')
+
+
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
 # See https://hpo.jax.org/app/browse/term/HP:0000118
 HPO_CATEGORY_DISCOVERY_COLUMNS = {
