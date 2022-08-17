@@ -358,7 +358,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                      self.collaborator_user)
 
         # Test valid operation
-        mock_get_file_list.return_value = ['gs://test_bucket/test.vcf', 'gs://test_bucket/data/test.vcf.gz']
+        mock_get_file_list.return_value = ['gs://test_bucket/test.vcf', 'gs://test_bucket/data/test.vcf.gz', 'gs://test_bucket/test.tsv']
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz']})

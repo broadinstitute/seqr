@@ -91,7 +91,6 @@ const DATA_BUCK_FIELD = {
   label: 'Path to the Joint Called VCF',
   labelHelp: 'File path for a joint called VCF available in the workspace "Files".',
   component: AnvilFileSelector,
-  placeholder: 'Click to select',
   validate: validators.required,
 }
 
