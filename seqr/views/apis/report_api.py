@@ -635,18 +635,50 @@ CALLED_TABLE_COLUMNS = [
 def gregor_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    rows = [] # TODO
+    individuals = Individual.objects.filter(family__project=project).prefetch_related('family__project')
+    participant_rows = []
+    family_map = {}
+    for individual in individuals:
+        family = individual.family
+        if family not in family_map:
+            family_map[family] = {
+                'family_id':  f'Broad_{family.family_id}',
+                'pmid_id': '|'.join(family.pubmed_ids or []),
+                'phenotype_description': family.coded_phenotype,
+                # TODO add family table columns
+            }
+
+        participant = {
+            'participant_id': f'Broad_{individual.individual_id}',
+            'internal_project_id': f'Broad_{family.project.name}',
+            'gregor_center': 'Broad',
+            'consent_code': None,  # TODO
+            'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
+            'paternal_id': None, 'maternal_id': None,  # TODO
+            'proband_relationship': individual.get_proband_relationship_display(),
+            'sex': individual.get_sex_display(),
+            'affected_status': individual.get_affected_display(),
+            'reported_race': None, 'reported_ethnicity': None, 'ancestry_detail': None,  # TODO use AnVIL logic
+            'recontactable': None,  # TODO airtable
+        }
+        if individual.birth_year and individual.birth_year > 0:
+            participant.update({
+                'age_at_last_observation': datetime.now().year - individual.birth_year,
+                'age_at_enrollment': None,  # TODO
+            })
+        participant.update(family_map[family])
+        participant_rows.append(participant)
 
     return export_multiple_files([
-        ['participant', PARTICIPANT_TABLE_COLUMNS, rows],
-        ['family', GREGOR_FAMILY_TABLE_COLUMNS, rows],
-        ['phenotype', PHENOTYPE_TABLE_COLUMNS, rows],
-        ['analyte', ANALYTE_TABLE_COLUMNS, rows],
-        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, rows],
-        ['aligned_dna_short_read', READ_TABLE_COLUMNS, rows],
-        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, rows],
-        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, rows],
-    ], 'GREGoR', # TODO better folder name
+        ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
+        ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
+        ['phenotype', PHENOTYPE_TABLE_COLUMNS, []],  # TODO
+        ['analyte', ANALYTE_TABLE_COLUMNS, []], # TODO
+        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, []],  # TODO
+        ['aligned_dna_short_read', READ_TABLE_COLUMNS, []],  # TODO
+        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, []],  # TODO
+        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, []],  # TODO
+    ], 'GREGoR',  # TODO better folder name
         add_header_prefix=True, file_format='tsv', blank_value='0')
 
 
