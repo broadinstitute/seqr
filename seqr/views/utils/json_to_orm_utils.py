@@ -9,9 +9,10 @@ from seqr.views.utils.permissions_utils import user_is_analyst
 logger = SeqrLogger(__name__)
 
 
-def update_project_from_json(project, json, user, allow_unknown_keys=False):
+def update_project_from_json(project, json, user, allow_unknown_keys=False, updated_fields=None):
 
-    update_model_from_json(project, json, user, allow_unknown_keys=allow_unknown_keys, immutable_keys=['genome_version', 'workspace_namespace', 'workspace_name'])
+    update_model_from_json(project, json, user, allow_unknown_keys=allow_unknown_keys, updated_fields=updated_fields,
+                           immutable_keys=['consent_code', 'genome_version', 'workspace_namespace', 'workspace_name'])
 
 
 def update_family_from_json(family, json, user, allow_unknown_keys=False, immutable_keys=None):
