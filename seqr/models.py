@@ -173,8 +173,8 @@ class Project(ModelWithGUID):
     can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-    consent_code = models.CharField(max_length=5, null=True, blank=True, choices=[
-        (c, c) for c in ['HMB', 'GRU', 'Other']
+    consent_code = models.CharField(max_length=1, null=True, blank=True, choices=[
+        (c[0], c) for c in ['HMB', 'GRU', 'Other']
     ])
 
     is_mme_enabled = models.BooleanField(default=True)
