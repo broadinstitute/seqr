@@ -1,10 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Header } from 'semantic-ui-react'
 
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import { CONSENT_CODE_LOOKUP } from 'shared/utils/constants'
 
 import {
   getCurrentProject,
@@ -26,6 +28,18 @@ const PageHeader = React.memo((
   let button = null
   if (match.params.breadcrumb === 'project_page') {
     button = <EditProjectButton project={project} />
+    if (project.consentCode) {
+      description = (
+        <Header.Subheader>
+          {description}
+          <br />
+          <i>
+            Consent Code: &nbsp;
+            {CONSENT_CODE_LOOKUP[project.consentCode]}
+          </i>
+        </Header.Subheader>
+      )
+    }
   } else if (match.params.breadcrumb === 'family_page') {
     if (match.params.breadcrumbIdSection === 'matchmaker_exchange') {
       description = ''
