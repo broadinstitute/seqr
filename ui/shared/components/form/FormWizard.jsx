@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { Header } from 'semantic-ui-react'
 
 import FormWrapper from './FormWrapper'
 
@@ -62,7 +63,11 @@ class FormWizard extends React.PureComponent {
     }
 
     return (formSubmitSucceeded ? (
-      <b>{successMessage}</b>
+      <Header
+        icon="check circle"
+        content="Request Submitted"
+        subheader={successMessage}
+      />
     ) : (
       <FormWrapper
         {...props}
