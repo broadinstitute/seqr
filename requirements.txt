@@ -28,7 +28,7 @@ azure-core==1.22.1
     #   azure-storage-blob
 azure-identity==1.6.0
     # via hail
-azure-storage-blob==12.11.0
+azure-storage-blob==12.13.0
     # via hail
 bokeh==1.4.0
     # via hail
@@ -69,7 +69,7 @@ deprecated==1.2.13
     # via hail
 dill==0.3.4
     # via hail
-django==3.2.14
+django==3.2.15
     # via
     #   -r requirements.in
     #   django-anymail
