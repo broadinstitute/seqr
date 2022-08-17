@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Header } from 'semantic-ui-react'
 
+import { getUser } from 'redux/selectors'
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -18,7 +19,7 @@ import {
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 const PageHeader = React.memo((
-  { project, family, analysisGroup, breadcrumb, match, breadcrumbIdSections, entityLinks },
+  { project, family, analysisGroup, user, breadcrumb, match, breadcrumbIdSections, entityLinks },
 ) => {
   if (!project) {
     return null
@@ -27,8 +28,8 @@ const PageHeader = React.memo((
   let { description } = project
   let button = null
   if (match.params.breadcrumb === 'project_page') {
-    button = <EditProjectButton project={project} />
-    if (project.consentCode) {
+    button = <EditProjectButton project={project} user={user} />
+    if (user.isPm && project.consentCode) {
       description = (
         <Header.Subheader>
           {description}
@@ -80,6 +81,7 @@ PageHeader.propTypes = {
   project: PropTypes.object,
   family: PropTypes.object,
   analysisGroup: PropTypes.object,
+  user: PropTypes.object,
   match: PropTypes.object,
   breadcrumb: PropTypes.string,
   breadcrumbIdSections: PropTypes.arrayOf(PropTypes.object),
@@ -90,6 +92,7 @@ const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   family: getPageHeaderFamily(state, ownProps),
   analysisGroup: getPageHeaderAnalysisGroup(state, ownProps),
+  user: getUser(state),
   breadcrumbIdSections: getPageHeaderBreadcrumbIdSections(state, ownProps),
   entityLinks: getPageHeaderEntityLinks(state, ownProps),
 })

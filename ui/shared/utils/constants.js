@@ -60,6 +60,10 @@ const CONSENT_CODE_FIELD = {
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
   PROJECT_DESC_FIELD,
+]
+
+export const PM_EDITABLE_PROJECT_FIELDS = [
+  ...EDITABLE_PROJECT_FIELDS,
   CONSENT_CODE_FIELD,
 ]
 
