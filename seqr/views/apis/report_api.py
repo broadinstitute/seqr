@@ -647,7 +647,7 @@ GREGOR_ANCESTRY_MAP.update({
 @analyst_required
 def gregor_export(request, consent_code):
     individuals = Individual.objects.filter(
-        family__project__consent_code=consent_code, family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
+        family__project__consent_code=consent_code[0], family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
     ).prefetch_related('family__project', 'mother', 'father')
 
     participant_rows = []
@@ -666,8 +666,8 @@ def gregor_export(request, consent_code):
             'gregor_center': 'Broad',
             'participant_id': f'Broad_{individual.individual_id}',
             'internal_project_id': f'Broad_{family.project.name}',
-            'paternal_id': f'Broad_{individual.father.individual_id}',
-            'maternal_id': f'Broad_{individual.mother.individual_id}',
+            'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else None,
+            'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else None,
             'consent_code': consent_code,
             'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
             'proband_relationship': individual.get_proband_relationship_display(),
@@ -680,7 +680,7 @@ def gregor_export(request, consent_code):
         }
         if individual.birth_year and individual.birth_year > 0:
             participant.update({
-                'age_at_last_observation': datetime.now().year - individual.birth_year,
+                'age_at_last_observation': str(datetime.now().year - individual.birth_year),
                 'age_at_enrollment': None,  # TODO based on samples
             })
         participant.update(family_map[family])
@@ -695,8 +695,7 @@ def gregor_export(request, consent_code):
         ['aligned_dna_short_read', READ_TABLE_COLUMNS, []],  # TODO
         ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, []],  # TODO
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, []],  # TODO
-    ], 'GREGoR Reports',
-        add_header_prefix=True, file_format='tsv', blank_value='0')
+    ], f'GREGoR Reports {consent_code}', file_format='tsv', blank_value='0')
 
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
