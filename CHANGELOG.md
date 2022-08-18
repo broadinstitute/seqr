@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add consent code for projects (REQUIRES DB MIGRATION)
 
 ## 7/19/22
 * Add "Incomplete Penetrance" functional tag type (REQUIRES DB MIGRATION)
