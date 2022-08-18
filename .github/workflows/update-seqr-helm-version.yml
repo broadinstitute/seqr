@@ -6,6 +6,9 @@ on:
       # - master
       # - dev
 
+permissions:
+  id-token: write
+
 jobs:
   docker:
     # needs: unit-tests ?
