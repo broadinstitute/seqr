@@ -16,6 +16,7 @@ const MATCHMAKER_PROJECT_FIELDS = [
   { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'mmeContactUrl' },
 ].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` }))
 
+// Field mapping based on whether project has matchmaker and user is a PM. Usage: FIELD_LOOKUP[isMmeEnabled][isPm]
 const FIELD_LOOKUP = {
   true: {
     true: [...PM_EDITABLE_PROJECT_FIELDS, ...MATCHMAKER_PROJECT_FIELDS],
