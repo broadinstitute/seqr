@@ -136,7 +136,7 @@ const ADD_DATA_WIZARD_PAGES = [
   { fields: [UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const LoadWorkspaceDataForm = React.memo(({ params, onSubmit, ...props }) => (
+const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
@@ -152,7 +152,7 @@ const LoadWorkspaceDataForm = React.memo(({ params, onSubmit, ...props }) => (
     </Segment>
     <FormWizard
       {...props}
-      onSubmit={params.projectGuid ? onSubmit : createProjectFromWorkspace}
+      onSubmit={onAddData || createProjectFromWorkspace}
       pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
       initialValues={params}
       size="small"
@@ -171,11 +171,13 @@ const LoadWorkspaceDataForm = React.memo(({ params, onSubmit, ...props }) => (
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
-  onSubmit: PropTypes.func.isRequired,
+  onAddData: PropTypes.func,
 }
 
 const mapDispatchToProps = {
-  onSubmit: addDataFromWorkspace,
+  onAddData: addDataFromWorkspace,
 }
 
-export default connect(null, mapDispatchToProps)(LoadWorkspaceDataForm)
+export const AddWorkspaceDataForm = connect(null, mapDispatchToProps)(LoadWorkspaceDataForm)
+
+export default LoadWorkspaceDataForm

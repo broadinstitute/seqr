@@ -25,7 +25,7 @@ from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from seqr.views.utils.individual_utils import add_or_update_individuals_and_families, get_updated_response_json
+from seqr.views.utils.individual_utils import add_or_update_individuals_and_families, get_updated_pedigree_json
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs
 from seqr.utils.logging_utils import SeqrLogger
@@ -231,9 +231,9 @@ def add_workspace_data(request, project_guid):
         project, pedigree_records, request.user, request_json['fullDataPath'], previous_samples.first().sample_type,
         previous_loaded_ids=previous_loaded_individuals)
 
-    response = get_updated_response_json(updated_individuals, updated_families, updated_notes, request.user)
+    pedigree_json = get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, request.user)
 
-    return create_json_response(response)
+    return create_json_response(pedigree_json)
 
 
 def _parse_uploaded_pedigree(request_json, user):

@@ -20,7 +20,7 @@ from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families,\
-    get_updated_response_json
+    get_updated_pedigree_json
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -323,9 +323,9 @@ def _update_and_parse_individuals_and_families(project, individual_records, user
         project, individual_records, user
     )
 
-    response = get_updated_response_json(updated_individuals, updated_families, updated_notes, user)
+    pedigree_json = get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user)
 
-    return create_json_response(response)
+    return create_json_response(pedigree_json)
 
 
 FAMILY_ID_COL = 'family_id'

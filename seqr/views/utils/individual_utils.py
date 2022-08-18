@@ -188,7 +188,7 @@ def get_parsed_feature(feature):
     return feature_json
 
 
-def get_updated_response_json(updated_individuals, updated_families, updated_notes, user):
+def get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user):
     individuals_by_guid = {
         individual['individualGuid']: individual for individual in
         _get_json_for_individuals(updated_individuals, user, add_sample_guids_field=True)

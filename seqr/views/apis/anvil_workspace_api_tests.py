@@ -704,10 +704,18 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
     @responses.activate
     def test_create_project_from_workspace_loading_delay_email(self):
-        responses.reset()  # Bypass dag operations
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
 
+        # make sure the task id including the newly created project to avoid infinitely pulling the tasks
+        responses.add(responses.GET,
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
+                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
+                      json={"tasks": [
+                            {"task_id": "pyspark_compute_project_R0007_anvil_no_project_workspace"},
+                            {"task_id": "pyspark_compute_project_R0008_anvil_no_project_workspace"}],
+                            "total_entries": 2},
+                      status=200)
         self._test_not_yet_email_date(url, REQUEST_BODY)
 
         # Remove created project to allow future requests
@@ -722,10 +730,18 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
     @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
     @responses.activate
     def test_add_workspace_data_loading_delay_email(self):
-        responses.reset()  # Bypass dag operations
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
 
+        # make sure the task id including the newly created project to avoid infinitely pulling the tasks
+        responses.add(responses.GET,
+                      '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
+                      headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
+                      json={"tasks": [
+                          {"task_id": "pyspark_compute_project_R0003_test"},
+                          {"task_id": "pyspark_compute_project_R0004_test"}],
+                          "total_entries": 2},
+                      status=200)
         self._test_not_yet_email_date(url, REQUEST_BODY_ADD_DATA)
 
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
