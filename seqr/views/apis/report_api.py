@@ -699,53 +699,30 @@ def gregor_export(request, consent_code):
         # family table
         family = individual.family
         if family not in family_map:
-            family_map[family] = {
-                'family_id':  f'Broad_{family.family_id}',
-                'consanguinity': 'Unknown',
-                'pmid_id': '|'.join(family.pubmed_ids or []),
-                'phenotype_description': family.coded_phenotype,
-            }
+            family_map[family] = _get_gregor_family_row(family)
 
         if individual.consanguinity is not None and family_map[family]['consanguinity'] == 'Unknown':
             family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
 
         # participant table
         participant_id = f'Broad_{individual.individual_id}'
-        participant = {
-            'gregor_center': 'Broad',
-            'participant_id': participant_id,
-            'internal_project_id': f'Broad_{family.project.name}',
-            'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else None,
-            'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else None,
-            'consent_code': consent_code,
-            'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
-            'proband_relationship': individual.get_proband_relationship_display(),
-            'sex': individual.get_sex_display(),
-            'affected_status': individual.get_affected_display(),
-            'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
-            'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
-            'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
-            'recontactable': None,  # TODO airtable
-        }
-        if individual.birth_year and individual.birth_year > 0:
-            participant.update({
-                'age_at_last_observation': str(datetime.now().year - individual.birth_year),
-                'age_at_enrollment': None,  # TODO based on samples
-            })
+        participant = _get_participant_row(individual)
         participant.update(family_map[family])
+        participant.update({
+            'participant_id': participant_id,
+            'consent_code': consent_code,
+        })
         participant_rows.append(participant)
 
         # phenotype table
         base_phenotype_row = {'participant_id': participant_id, 'presence': 'Present', 'ontology': 'HPO'}
-        for feature in individual.features or []:
-            phenotype_row = _get_phenotype_row(feature)
-            phenotype_row.update(base_phenotype_row)
-            phenotype_rows.append(phenotype_row)
+        phenotype_rows += [
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.features or []
+        ]
         base_phenotype_row['presence'] = 'Absent'
-        for feature in individual.absent_features or []:
-            phenotype_row = _get_phenotype_row(feature)
-            phenotype_row.update(base_phenotype_row)
-            phenotype_rows.append(phenotype_row)
+        phenotype_rows += [
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
+        ]
 
     return export_multiple_files([
         ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
@@ -757,6 +734,38 @@ def gregor_export(request, consent_code):
         ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, []],  # TODO
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, []],  # TODO
     ], f'GREGoR Reports {consent_code}', file_format='tsv', blank_value='0')
+
+
+def _get_gregor_family_row(family):
+    return {
+        'family_id':  f'Broad_{family.family_id}',
+        'internal_project_id': f'Broad_{family.project.name}',
+        'consanguinity': 'Unknown',
+        'pmid_id': '|'.join(family.pubmed_ids or []),
+        'phenotype_description': family.coded_phenotype,
+    }
+
+
+def _get_participant_row(individual):
+    participant = {
+        'gregor_center': 'Broad',
+        'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else None,
+        'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else None,
+        'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
+        'proband_relationship': individual.get_proband_relationship_display(),
+        'sex': individual.get_sex_display(),
+        'affected_status': individual.get_affected_display(),
+        'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
+        'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
+        'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
+        'recontactable': None,  # TODO airtable
+    }
+    if individual.birth_year and individual.birth_year > 0:
+        participant.update({
+            'age_at_last_observation': str(datetime.now().year - individual.birth_year),
+            'age_at_enrollment': None,  # TODO based on samples
+        })
+    return participant
 
 
 def _get_phenotype_row(feature):
