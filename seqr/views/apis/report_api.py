@@ -643,6 +643,48 @@ GREGOR_ANCESTRY_MAP.update({
     OTHER_POPULATION: 'Unknown',
 })
 
+HPO_QUALIFIERS = {
+    'age_of_onset': {
+        'Adult onset': 'HP:0003581',
+        'Childhood onset': 'HP:0011463',
+        'Congenital onset': 'HP:0003577',
+        'Embryonal onset': 'HP:0011460',
+        'Fetal onset': 'HP:0011461',
+        'Infantile onset': 'HP:0003593',
+        'Juvenile onset': 'HP:0003621',
+        'Late onset': 'HP:0003584',
+        'Middle age onset': 'HP:0003596',
+        'Neonatal onset': 'HP:0003623',
+        'Young adult onset': 'HP:0011462',
+    },
+    'pace_of_progression': {
+        'Nonprogressive': 'HP:0003680',
+        'Slow progression': 'HP:0003677',
+        'Progressive': 'HP:0003676',
+        'Rapidly progressive': 'HP:0003678',
+        'Variable progression rate': 'HP:0003682',
+    },
+    'severity': {
+        'Borderline': 'HP:0012827',
+        'Mild': 'HP:0012825',
+        'Moderate': 'HP:0012826',
+        'Severe': 'HP:0012828',
+        'Profound': 'HP:0012829',
+    },
+    'temporal_pattern': {
+        'Insidious onset': 'HP:0003587',
+        'Chronic': 'HP:0011010',
+        'Subacute': 'HP:0011011',
+        'Acute': 'HP:0011009',
+    },
+    'spatial_pattern': {
+        'Generalized': 'HP:0012837',
+        'Localized': 'HP:0012838',
+        'Distal': 'HP:0012839',
+        'Proximal': 'HP:0012840',
+    },
+}
+
 
 @analyst_required
 def gregor_export(request, consent_code):
@@ -652,12 +694,14 @@ def gregor_export(request, consent_code):
 
     participant_rows = []
     family_map = {}
+    phenotype_rows = []
     for individual in individuals:
+        # family table
         family = individual.family
         if family not in family_map:
             family_map[family] = {
                 'family_id':  f'Broad_{family.family_id}',
-                 'consanguinity': 'Unknown',
+                'consanguinity': 'Unknown',
                 'pmid_id': '|'.join(family.pubmed_ids or []),
                 'phenotype_description': family.coded_phenotype,
             }
@@ -665,9 +709,11 @@ def gregor_export(request, consent_code):
         if individual.consanguinity is not None and family_map[family]['consanguinity'] == 'Unknown':
             family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
 
+        # participant table
+        participant_id = f'Broad_{individual.individual_id}'
         participant = {
             'gregor_center': 'Broad',
-            'participant_id': f'Broad_{individual.individual_id}',
+            'participant_id': participant_id,
             'internal_project_id': f'Broad_{family.project.name}',
             'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else None,
             'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else None,
@@ -689,10 +735,22 @@ def gregor_export(request, consent_code):
         participant.update(family_map[family])
         participant_rows.append(participant)
 
+        # phenotype table
+        base_phenotype_row = {'participant_id': participant_id, 'presence': 'Present', 'ontology': 'HPO'}
+        for feature in individual.features or []:
+            phenotype_row = _get_phenotype_row(feature)
+            phenotype_row.update(base_phenotype_row)
+            phenotype_rows.append(phenotype_row)
+        base_phenotype_row['presence'] = 'Absent'
+        for feature in individual.absent_features or []:
+            phenotype_row = _get_phenotype_row(feature)
+            phenotype_row.update(base_phenotype_row)
+            phenotype_rows.append(phenotype_row)
+
     return export_multiple_files([
         ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
         ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
-        ['phenotype', PHENOTYPE_TABLE_COLUMNS, []],  # TODO
+        ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
         ['analyte', ANALYTE_TABLE_COLUMNS, []], # TODO
         ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, []],  # TODO
         ['aligned_dna_short_read', READ_TABLE_COLUMNS, []],  # TODO
@@ -700,6 +758,19 @@ def gregor_export(request, consent_code):
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, []],  # TODO
     ], f'GREGoR Reports {consent_code}', file_format='tsv', blank_value='0')
 
+
+def _get_phenotype_row(feature):
+    qualifiers_by_type = {
+        q['type']: HPO_QUALIFIERS[q['type']][q['label']]
+        for q in feature.get('qualifiers') or [] if q['type'] in HPO_QUALIFIERS
+    }
+    onset_age = qualifiers_by_type.pop('age_of_onset', None)
+    return {
+        'term_id': feature['id'],
+        'additional_details': feature.get('notes', '').replace('\r\n', ' ').replace('\n', ' '),
+        'onset_age_range': onset_age,
+        'additional_modifiers': '|'.join(qualifiers_by_type.values()),
+    }
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
 # See https://hpo.jax.org/app/browse/term/HP:0000118
