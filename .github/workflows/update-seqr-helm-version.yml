@@ -1,37 +1,66 @@
-name: Update seqr Version
+name: seqr dev release
+# on:
+#   push:
+#     branches:
+#       - seqr-helm-version  # for testing
+#       # - master
+#       # - dev
+
 on:
-  push:
-    branches:
-      - seqr-helm-version  # for testing
-      - master
-      - dev
+  workflow_dispatch:
+    inputs:
+      custom_branch_tag:
+        description: "custom tag to apply to the docker image"
+        required: true
 jobs:
-  run:
+  docker:
+    # needs: unit-tests ?
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: get seqr version
-        run: |
-          seqr_version=$(grep "SEQR_VERSION[ ]*=[ ]*'.*'" ./settings.py | sed -n "s/^.*'\(.*\)'/\1/p")
-          commit_id=$(git rev-parse --short HEAD)
-          echo "SEQR_VERSION=$seqr_version-$commit_id" >> $GITHUB_ENV
-      - uses: actions/checkout@v3
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: authenticate to google cloud
+        id: 'auth'
+        uses: google-github-actions/auth@v0
         with:
-          repository: broadinstitute/seqr-helm
-          ref: main
-          persist-credentials: false  # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
-          fetch-depth: 0  # otherwise, you will failed to push refs to dest repo
-      - name: Update appVersion in seqr Chart file
-        uses: mikefarah/yq@v4.22.1
-        with:
-          cmd: >
-            yq -i '.appVersion = "${{ env.SEQR_VERSION }}"' charts/seqr/Chart.yaml
-      - name: Commit and Push changes
-        uses: Andro999b/push@v1.3
-        with:
-          repository: broadinstitute/seqr-helm
-          branch: main
-          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
-          author_email: ${{ github.actor }}@users.noreply.github.com
-          author_name: tgg-automation
-          message: 'Update appVersion with seqr version'
+          workload_identity_provider: 'projects/${{ secrets.GOOGLE_PROJECT_ID }}/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
+          service_account: '${{ secrets.RUN_SA_EMAIL }}'
+
+      - name: 'setup gcloud sdk'
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Build and push images
+        run: |-
+          gcloud builds submit --quiet --substitutions="COMMIT_SHA=${{ GITHUB_SHA }},_CUSTOM_BRANCH_TAG=${{ github.event.inputs.custom_branch_tag }}" -f seqr-docker.cloudbuild.yaml .
+
+  # run:
+  #   runs-on: ubuntu-latest
+  #   needs: docker
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: get seqr version
+  #       run: |
+  #         seqr_version=$(grep "SEQR_VERSION[ ]*=[ ]*'.*'" ./settings.py | sed -n "s/^.*'\(.*\)'/\1/p")
+  #         commit_id=$(git rev-parse --short HEAD)
+  #         echo "SEQR_VERSION=$seqr_version-$commit_id" >> $GITHUB_ENV
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         repository: broadinstitute/seqr-helm
+  #         ref: main
+  #         persist-credentials: false  # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+  #         fetch-depth: 0  # otherwise, you will failed to push refs to dest repo
+  #     - name: Update appVersion in seqr Chart file
+  #       uses: mikefarah/yq@v4.22.1
+  #       with:
+  #         cmd: >
+  #           yq -i '.appVersion = "${{ env.SEQR_VERSION }}"' charts/seqr/Chart.yaml
+  #     - name: Commit and Push changes
+  #       uses: Andro999b/push@v1.3
+  #       with:
+  #         repository: broadinstitute/seqr-helm
+  #         branch: main
+  #         github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+  #         author_email: ${{ github.actor }}@users.noreply.github.com
+  #         author_name: tgg-automation
+  #         message: 'Update appVersion with seqr version'
