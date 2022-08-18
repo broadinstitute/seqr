@@ -79,7 +79,7 @@ const getPageHeaderProps = ({ projectsByGuid, familiesByGuid, analysisGroupsByGu
 }
 
 export const PageHeader = React.memo(
-  props => <PageHeaderLayout entity="variant_search" {...getPageHeaderProps(props)} />,
+  props => <PageHeaderLayout entity="variant_search" entityLinkPath={null} {...getPageHeaderProps(props)} />,
 )
 
 PageHeader.propTypes = {
