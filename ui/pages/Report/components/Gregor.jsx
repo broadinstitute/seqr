@@ -8,7 +8,7 @@ const Gregor = () => (
   <div>
     <InlineHeader size="medium" content="Download GREGoR Reports for Consent Code:" />
     {CONSENT_CODES.map(
-      code => <Button key={code} content={code} secondary as="a" href={`/api/report/gregor/${code}`} />,
+      code => <Button key={code} content={code} secondary icon="download" as="a" href={`/api/report/gregor/${code}`} />,
     )}
   </div>
 )
