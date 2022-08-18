@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
@@ -93,22 +94,25 @@ PHENOTYPE_PROJECT_CATEGORIES = [
     'Diabetes', 'Mitochondrial', 'Cardiovascular',
 ]
 
+HISPANIC = 'AMR'
+MIDDLE_EASTERN = 'MDE'
+OTHER_POPULATION = 'OTH'
 ANCESTRY_MAP = {
   'AFR': 'Black or African American',
-  'AMR': 'Hispanic or Latino',
+  HISPANIC: 'Hispanic or Latino',
   'ASJ': 'White',
   'EAS': 'Asian',
   'FIN': 'White',
-  'MDE': 'Other',
+  MIDDLE_EASTERN: 'Other',
   'NFE': 'White',
-  'OTH': 'Other',
+  OTHER_POPULATION: 'Other',
   'SAS': 'Asian',
 }
 ANCESTRY_DETAIL_MAP = {
   'ASJ': 'Ashkenazi Jewish',
   'EAS': 'East Asian',
   'FIN': 'Finnish',
-  'MDE': 'Middle Eastern',
+  MIDDLE_EASTERN: 'Middle Eastern',
   'SAS': 'South Asian',
 }
 
@@ -630,12 +634,21 @@ CALLED_TABLE_COLUMNS = [
     'caller_software', 'variant_types', 'analysis_details',
 ]
 
+GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
+GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
+GREGOR_ANCESTRY_MAP = deepcopy(ANCESTRY_MAP)
+GREGOR_ANCESTRY_MAP.update({
+    MIDDLE_EASTERN: 'Middle Eastern or North African',
+    HISPANIC: 'Unknown',
+    OTHER_POPULATION: 'Unknown',
+})
+
 
 @analyst_required
 def gregor_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    individuals = Individual.objects.filter(family__project=project).prefetch_related('family__project')
+    individuals = Individual.objects.filter(family__project=project).prefetch_related('family', 'mother', 'father')
     participant_rows = []
     family_map = {}
     for individual in individuals:
@@ -649,22 +662,25 @@ def gregor_export(request, project_guid):
             }
 
         participant = {
-            'participant_id': f'Broad_{individual.individual_id}',
-            'internal_project_id': f'Broad_{family.project.name}',
             'gregor_center': 'Broad',
+            'participant_id': f'Broad_{individual.individual_id}',
+            'internal_project_id': f'Broad_{project.name}',
+            'paternal_id': f'Broad_{individual.father.individual_id}',
+            'maternal_id': f'Broad_{individual.mother.individual_id}',
             'consent_code': None,  # TODO
             'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
-            'paternal_id': None, 'maternal_id': None,  # TODO
             'proband_relationship': individual.get_proband_relationship_display(),
             'sex': individual.get_sex_display(),
             'affected_status': individual.get_affected_display(),
-            'reported_race': None, 'reported_ethnicity': None, 'ancestry_detail': None,  # TODO use AnVIL logic
+            'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
+            'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
+            'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
             'recontactable': None,  # TODO airtable
         }
         if individual.birth_year and individual.birth_year > 0:
             participant.update({
                 'age_at_last_observation': datetime.now().year - individual.birth_year,
-                'age_at_enrollment': None,  # TODO
+                'age_at_enrollment': None,  # TODO based on samples
             })
         participant.update(family_map[family])
         participant_rows.append(participant)
