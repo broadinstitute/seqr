@@ -657,10 +657,13 @@ def gregor_export(request, consent_code):
         if family not in family_map:
             family_map[family] = {
                 'family_id':  f'Broad_{family.family_id}',
+                 'consanguinity': 'Unknown',
                 'pmid_id': '|'.join(family.pubmed_ids or []),
                 'phenotype_description': family.coded_phenotype,
-                # TODO add family table columns
             }
+
+        if individual.consanguinity is not None and family_map[family]['consanguinity'] == 'Unknown':
+            family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
 
         participant = {
             'gregor_center': 'Broad',
