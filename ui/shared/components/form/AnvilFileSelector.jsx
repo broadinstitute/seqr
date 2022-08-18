@@ -29,13 +29,13 @@ class AnvilFileSelector extends React.PureComponent {
         this.setState({ loading: false, dataPathList: responseJson.dataPathList })
         if (responseJson.dataPathList?.length === 0) {
           this.setState({
-            errorHeader: 'No Joint Called VCF found in workspace',
+            errorHeader: 'No joint called VCF found in workspace',
             error: 'There are no joint called VCFs in the Files section of this workspace. VCFs must have a .vcf, .vcf.gz, or .vcf.bgz file extension. Please add a VCF to your workspace before proceeding with loading.',
           })
         }
       },
       (e) => {
-        this.setState({ loading: false, errorHeader: 'Exception Error', error: e.message })
+        this.setState({ loading: false, errorHeader: 'Error loading workspace files', error: e.message })
       }).get()
   }
 
