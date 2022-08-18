@@ -8,7 +8,7 @@ import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
-import LoadWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
+import { AddWorkspaceDataForm } from 'shared/components/panel/LoadWorkspaceDataForm'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
@@ -182,7 +182,7 @@ const EditDatasetsButton = React.memo(({ project, user }) => {
         trigger={<ButtonLink>{showLoadWorkspaceData ? 'Load Additional Data' : 'Edit Datasets'}</ButtonLink>}
       >
         {showLoadWorkspaceData ? (
-          <LoadWorkspaceDataForm
+          <AddWorkspaceDataForm
             params={project}
             successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
           />

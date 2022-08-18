@@ -21,7 +21,8 @@ DEMO_PROJECT_GUID = 'R0003_test'
 PROJECT_PAGE_RESPONSE_KEYS = {'projectsByGuid'}
 
 BASE_CREATE_PROJECT_JSON = {
-    'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True, 'disableMme': True,
+    'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True,
+    'disableMme': True, 'consentCode': 'H',
 }
 WORKSPACE_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNamespace': TEST_WORKSPACE_NAMESPACE}
 WORKSPACE_CREATE_PROJECT_JSON = deepcopy(WORKSPACE_JSON)
@@ -33,7 +34,7 @@ class ProjectAPITest(object):
 
     @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
-    def test_create_update_and_delete_project(self):
+    def test_create_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
         self.check_pm_login(create_project_url)
 
@@ -57,6 +58,7 @@ class ProjectAPITest(object):
         new_project = Project.objects.get(name='new_project')
         self.assertEqual(new_project.description, 'new project description')
         self.assertEqual(new_project.genome_version, '38')
+        self.assertEqual(new_project.consent_code, 'H')
         self.assertTrue(new_project.is_demo)
         self.assertFalse(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.pm_user)
@@ -68,21 +70,6 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {project_guid})
         self.assertTrue(response.json()['projectsByGuid'][project_guid]['userIsCreator'])
 
-        # update the project. genome version and workspace should not update
-        update_project_url = reverse(update_project_handler, args=[project_guid])
-        response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
-            {'description': 'updated project description', 'genomeVersion': '37', 'workspaceName': 'test update name'}
-        ))
-        self.assertEqual(response.status_code, 200)
-        updated_json = response.json()['projectsByGuid'][project_guid]
-        self.assertEqual(updated_json['description'], 'updated project description')
-        self.assertEqual(updated_json['genomeVersion'], '38')
-        self.assertEqual(updated_json['workspaceName'], expected_workspace_name)
-        updated_project = Project.objects.get(guid=project_guid)
-        self.assertEqual(updated_project.description, 'updated project description')
-        self.assertEqual(updated_project.genome_version, '38')
-        self.assertEqual(updated_project.workspace_name, expected_workspace_name)
-
         # delete the project
         delete_project_url = reverse(delete_project_handler, args=[project_guid])
         response = self.client.post(delete_project_url, content_type='application/json')
@@ -92,6 +79,44 @@ class ProjectAPITest(object):
         # check that project was deleted
         new_project = Project.objects.filter(name='new_project')
         self.assertEqual(len(new_project), 0)
+
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
+    def test_update_project(self):
+        update_project_url = reverse(update_project_handler, args=[PROJECT_GUID])
+        self.check_manager_login(update_project_url)
+
+        project = Project.objects.get(guid=PROJECT_GUID)
+        expected_workspace_name = project.workspace_name
+        self.assertEqual(project.genome_version, '37')
+
+        response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
+            {'description': 'updated project description', 'genomeVersion': '38', 'workspaceName': 'test update name'}
+        ))
+        self.assertEqual(response.status_code, 200)
+        updated_json = response.json()['projectsByGuid'][PROJECT_GUID]
+        self.assertEqual(updated_json['description'], 'updated project description')
+        # genome version and workspace should not update
+        self.assertEqual(updated_json['genomeVersion'], '37')
+        self.assertEqual(updated_json['workspaceName'], expected_workspace_name)
+        updated_project = Project.objects.get(guid=PROJECT_GUID)
+        self.assertEqual(updated_project.description, 'updated project description')
+        self.assertEqual(updated_project.genome_version, '37')
+        self.assertEqual(updated_project.workspace_name, expected_workspace_name)
+
+        # test consent code
+        response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
+            {'consentCode': 'G'}
+        ))
+        self.assertEqual(response.status_code, 403)
+        self.login_pm_user()
+        response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
+            {'consentCode': 'G'}
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['projectsByGuid'][PROJECT_GUID]['consentCode'], 'G')
+        self.assertEqual(Project.objects.get(guid=PROJECT_GUID).consent_code, 'G')
 
     @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', None)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', None)
@@ -110,6 +135,7 @@ class ProjectAPITest(object):
         self.assertEqual(new_project.genome_version, '38')
         self.assertFalse(new_project.is_demo)
         self.assertTrue(new_project.is_mme_enabled)
+        self.assertIsNone(new_project.consent_code)
         self.assertEqual(new_project.created_by, self.super_user)
         self.assertListEqual([], list(new_project.projectcategory_set.all()))
 
@@ -475,13 +501,22 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
     HAS_EMPTY_PROJECT = False
 
-    def test_create_update_and_delete_project(self):
-        super(AnvilProjectAPITest, self).test_create_update_and_delete_project()
+    def test_create_and_delete_project(self):
+        super(AnvilProjectAPITest, self).test_create_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_ws_access_level.assert_has_calls([
             mock.call(self.pm_user, 'bar', 'foo'),
             mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
+        ])
+
+    def test_update_project(self):
+        super(AnvilProjectAPITest, self).test_update_project()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_has_calls([
+            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
+            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
         ])
 
     def test_project_page_data(self):
@@ -505,13 +540,21 @@ class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [LOCAL_COLLAB]
     HAS_EMPTY_PROJECT = True
 
-    def test_create_update_and_delete_project(self):
-        super(MixProjectAPITest, self).test_create_update_and_delete_project()
+    def test_create_and_delete_project(self):
+        super(MixProjectAPITest, self).test_create_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_ws_access_level.assert_has_calls([
             mock.call(self.pm_user, 'bar', 'foo'),
             mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
+        ])
+
+    def test_update_project(self):
+        super(MixProjectAPITest, self).test_update_project()
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_has_calls([
+            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
         ])
 
     def test_project_page_data(self):
