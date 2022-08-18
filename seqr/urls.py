@@ -117,6 +117,7 @@ from seqr.views.apis.report_api import \
     discovery_sheet, \
     get_cmg_projects, \
     sample_metadata_export, \
+    gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, \
     bulk_update_family_analysed_by
@@ -289,6 +290,7 @@ api_endpoints = {
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
+    'report/gregor/(?P<consent_code>[^/]+)': gregor_export,
     'report/get_cmg_projects': get_cmg_projects,
     'report/seqr_stats': seqr_stats,
 
