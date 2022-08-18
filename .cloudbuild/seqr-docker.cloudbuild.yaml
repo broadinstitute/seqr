@@ -3,7 +3,7 @@ steps:
   args:
   - --destination=gcr.io/seqr-project/seqr:${COMMIT_SHA}
   - --destination=gcr.io/seqr-project/seqr:${_CUSTOM_BRANCH_TAG}
-  - --destination=gcr.io/seqr-project/seqr:latest
+  # - --destination=gcr.io/seqr-project/seqr:latest # TODO uncomment after testing is done
   - --dockerfile=deploy/docker/seqr/Dockerfile
   - --cache=true
   - --cache-ttl=168h
