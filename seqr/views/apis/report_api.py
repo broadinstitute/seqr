@@ -695,6 +695,7 @@ def gregor_export(request, consent_code):
     participant_rows = []
     family_map = {}
     phenotype_rows = []
+    analyte_rows = []
     for individual in individuals:
         # family table
         family = individual.family
@@ -724,15 +725,20 @@ def gregor_export(request, consent_code):
             dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
         ]
 
+        # analyte table
+        analyte_rows.append(dict(participant_id=participant_id, **_get_analyte_row(individual)))
+
+    airtable_rows = []  # TODO populate airtable data once new columns are confirmed
+
     return export_multiple_files([
         ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
         ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
         ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
-        ['analyte', ANALYTE_TABLE_COLUMNS, []], # TODO
-        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, []],  # TODO
-        ['aligned_dna_short_read', READ_TABLE_COLUMNS, []],  # TODO
-        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, []],  # TODO
-        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, []],  # TODO
+        ['analyte', ANALYTE_TABLE_COLUMNS, analyte_rows],
+        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows],
+        ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
+        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
+        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
     ], f'GREGoR Reports {consent_code}', file_format='tsv', blank_value='0')
 
 
@@ -758,12 +764,12 @@ def _get_participant_row(individual):
         'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
         'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
         'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
-        'recontactable': None,  # TODO airtable
+        'recontactable': None,  # TODO populate airtable data once new columns are confirmed
     }
     if individual.birth_year and individual.birth_year > 0:
         participant.update({
             'age_at_last_observation': str(datetime.now().year - individual.birth_year),
-            'age_at_enrollment': None,  # TODO based on samples
+            'age_at_enrollment': str(individual.created_date.year - individual.birth_year),
         })
     return participant
 
@@ -780,6 +786,16 @@ def _get_phenotype_row(feature):
         'onset_age_range': onset_age,
         'additional_modifiers': '|'.join(qualifiers_by_type.values()),
     }
+
+
+def _get_analyte_row(individual):
+    return {
+        'analyte_id': f'Broad_{individual.individual_id}',  # TODO this will change once Sam figures out what to do
+        'analyte_type': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+        'primary_biosample': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+        'tissue_affected_status': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+    }
+
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
 # See https://hpo.jax.org/app/browse/term/HP:0000118
