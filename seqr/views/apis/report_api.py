@@ -65,6 +65,8 @@ def _get_sample_counts(sample_q):
     }
 
 
+# AnVIL metadata
+
 SUBJECT_TABLE_COLUMNS = [
     'entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id', 'dbgap_study_id',
     'dbgap_subject_id', 'multiple_datasets', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
@@ -599,6 +601,8 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
     return sample_records
 
 
+# GREGoR metadata
+
 PARTICIPANT_TABLE_COLUMNS = [
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
@@ -691,7 +695,6 @@ def gregor_export(request, consent_code):
     individuals = Individual.objects.filter(
         family__project__consent_code=consent_code[0], family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
     ).prefetch_related('family__project', 'mother', 'father')
-
     participant_rows = []
     family_map = {}
     phenotype_rows = []
@@ -796,6 +799,8 @@ def _get_analyte_row(individual):
         'tissue_affected_status': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
     }
 
+
+# Discovery Sheet
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
 # See https://hpo.jax.org/app/browse/term/HP:0000118
