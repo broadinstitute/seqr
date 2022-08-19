@@ -6,7 +6,7 @@ import responses
 from settings import AIRTABLE_URL
 
 from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
-    sample_metadata_export
+    sample_metadata_export, gregor_export
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 
@@ -210,6 +210,16 @@ def _get_list_param(call, param):
 class ReportAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
 
+    def _get_zip_files(self, mock_zip, filenames):
+        mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
+        self.assertEqual(mock_write_zip.call_count, len(filenames))
+        mock_write_zip.assert_has_calls([mock.call(file, mock.ANY) for file in filenames])
+
+        return (
+            [row.split('\t') for row in mock_write_zip.call_args_list[i][0][1].split('\n')]
+            for i in range(len(filenames))
+        )
+
     @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -336,70 +346,64 @@ class ReportAPITest(AuthenticationTestCase):
             'attachment; filename="1kg project nme with unide_AnVIL_Metadata.zip"'
         )
 
-        mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
-        self.assertEqual(mock_write_zip.call_count, 4)
-        mock_write_zip.assert_has_calls([
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Subject.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Sample.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Family.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery.tsv', mock.ANY),
+        subject_file, sample_file, family_file, discovery_file = self._get_zip_files(mock_zip, [
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Subject.tsv',
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Sample.tsv',
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Family.tsv',
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery.tsv',
         ])
 
-        subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
-        self.assertEqual(subject_file[0], '\t'.join([
+        self.assertEqual(subject_file[0], [
             'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
             '05-dbgap_study_id', '06-dbgap_subject_id', '07-multiple_datasets',
             '08-family_id', '09-paternal_id', '10-maternal_id', '11-twin_id', '12-proband_relationship', '13-sex',
             '14-ancestry', '15-ancestry_detail', '16-age_at_last_observation', '17-phenotype_group', '18-disease_id',
             '19-disease_description', '20-affected_status', '21-congenital_status', '22-age_of_onset', '23-hpo_present',
-            '24-hpo_absent', '25-phenotype_description', '26-solve_state']))
-        self.assertIn(u'\t'.join([
+            '24-hpo_absent', '25-phenotype_description', '26-solve_state'])
+        self.assertIn([
             'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'dbgap_stady_id_1',
             'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
             'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
             'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
-            'Tier 1']), subject_file)
+            'Tier 1'], subject_file)
 
-        sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
-        self.assertEqual(sample_file[0], '\t'.join([
+        self.assertEqual(sample_file[0], [
             'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
-            '05-sample_source', '06-tissue_affected_status',]))
+            '05-sample_source', '06-tissue_affected_status',])
         self.assertIn(
-            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-']),
+            ['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-'],
             sample_file,
         )
 
-        family_file = mock_write_zip.call_args_list[2][0][1].split('\n')
-        self.assertEqual(family_file[0], '\t'.join([
+        self.assertEqual(family_file[0], [
             'entity:family_id', '01-family_id', '02-consanguinity', '03-consanguinity_detail', '04-pedigree_image',
-            '05-pedigree_detail', '06-family_history', '07-family_onset']))
-        self.assertIn('\t'.join([
+            '05-pedigree_detail', '06-family_history', '07-family_onset'])
+        self.assertIn([
             '1', '1', 'Present', '-', '-', '-', '-', '-',
-        ]), family_file)
+        ], family_file)
 
-        discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
         self.assertEqual(len(discovery_file), 6)
-        self.assertEqual(discovery_file[0], '\t'.join([
+        self.assertEqual(discovery_file[0], [
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
             '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
             '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
-            '17-significance', '18-discovery_notes']))
-        self.assertIn('\t'.join([
+            '17-significance', '18-discovery_notes'])
+        self.assertIn([
             'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
-            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-']), discovery_file)
-        self.assertIn('\t'.join([
+            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
+        self.assertIn([
             'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
-            '-', '-', '-', '-']), discovery_file)
-        self.assertIn('\t'.join([
+            '-', '-', '-', '-'], discovery_file)
+        self.assertIn([
             'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
-        self.assertIn('\t'.join([
+        self.assertIn([
             'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
             '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
 
         # Test non-broad analysts do not have access
@@ -497,3 +501,69 @@ class ReportAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
+    @responses.activate
+    def test_gregor_export(self, mock_zip):
+        url = reverse(gregor_export, args=['HMB'])
+        self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get('content-disposition'),
+            'attachment; filename="GREGoR Reports HMB.zip"'
+        )
+
+        files = self._get_zip_files(mock_zip, [
+            'participant.tsv', 'family.tsv', 'phenotype.tsv', 'analyte.tsv', 'experiment_dna_short_read.tsv',
+            'aligned_dna_short_read.tsv', 'aligned_dna_short_read_set.tsv', 'called_variants_dna_short_read.tsv',
+        ])
+        participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
+
+        self.assertEqual(participant_file[0], [
+            'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
+            'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
+            'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+            'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
+        ])
+
+        self.assertEqual(family_file[0], [
+            'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail',
+            'family_history_detail',
+        ])
+
+        self.assertEqual(phenotype_file[0], [
+            'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details',
+            'onset_age_range', 'additional_modifiers',
+        ])
+
+        self.assertEqual(analyte_file[0], [
+            'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
+            'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
+            'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number',
+            'time_to_freeze', 'sample_transformation_detail',
+        ])
+
+        self.assertEqual(experiment_file[0], [
+            'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
+            'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
+            'date_data_generation', 'target_insert_size', 'sequencing_platform',
+        ])
+
+        self.assertEqual(read_file[0], [
+            'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
+            'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
+            'analysis_details',
+        ])
+
+        self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
+
+        self.assertEqual(called_file[0], [
+            'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
+            'caller_software', 'variant_types', 'analysis_details',
+        ])
+
+        # TODO test file contents
