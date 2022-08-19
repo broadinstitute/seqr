@@ -32,5 +32,5 @@ jobs:
 
       - name: Build and push images
         run: |-
-          gcloud builds submit --quiet --substitutions="COMMIT_SHA=${GITHUB_SHA},_CUSTOM_BRANCH_TAG=test-github-actions" --config .cloudbuild/seqr-docker.cloudbuild.yaml --gcs-log-dir=gs://seqr-github-actions-logs/logs .
+          gcloud builds submit --quiet --substitutions="COMMIT_SHA=${{ github.event.workflow_run.head_sha }},_CUSTOM_BRANCH_TAG=test-github-actions" --config .cloudbuild/seqr-docker.cloudbuild.yaml --gcs-log-dir=gs://seqr-github-actions-logs/logs .
 
