@@ -1,36 +1,36 @@
-name: seqr dev release
-on:
-  workflow_run:
-    workflows: ["Unit Tests"]
-    types:
-      - completed
-    branches:
-      - seqr-helm-version # TODO: trigger this flow on dev
+# name: seqr dev release
+# on:
+#   workflow_run:
+#     workflows: ["Unit Tests"]
+#     types:
+#       - completed
+#     branches:
+#       - seqr-helm-version # TODO: trigger this flow on dev
 
-permissions:
-  id-token: write
+# permissions:
+#   id-token: write
 
-jobs:
-  docker:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+# jobs:
+#   docker:
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+#     steps:
+#       - name: checkout
+#         uses: actions/checkout@v3
 
-      - name: authenticate to google cloud
-        id: 'auth'
-        uses: google-github-actions/auth@v0
-        with:
-          workload_identity_provider: 'projects/${{ secrets.GOOGLE_PROJECT_ID }}/locations/global/workloadIdentityPools/testing-actions-pool/providers/testing-github-actions'
-          service_account: '${{ secrets.RUN_SA_EMAIL }}'
+#       - name: authenticate to google cloud
+#         id: 'auth'
+#         uses: google-github-actions/auth@v0
+#         with:
+#           workload_identity_provider: 'projects/${{ secrets.GOOGLE_PROJECT_ID }}/locations/global/workloadIdentityPools/testing-actions-pool/providers/testing-github-actions'
+#           service_account: '${{ secrets.RUN_SA_EMAIL }}'
 
-      - name: 'setup gcloud sdk'
-        uses: google-github-actions/setup-gcloud@v0
+#       - name: 'setup gcloud sdk'
+#         uses: google-github-actions/setup-gcloud@v0
 
-      - name: Build and push images
-        run: |-
-          gcloud builds submit --quiet --substitutions="COMMIT_SHA=${GITHUB_SHA},_CUSTOM_BRANCH_TAG=test-github-actions" --config .cloudbuild/seqr-docker.cloudbuild.yaml --gcs-log-dir=gs://seqr-github-actions-logs/logs .
+#       - name: Build and push images
+#         run: |-
+#           gcloud builds submit --quiet --substitutions="COMMIT_SHA=${GITHUB_SHA},_CUSTOM_BRANCH_TAG=test-github-actions" --config .cloudbuild/seqr-docker.cloudbuild.yaml --gcs-log-dir=gs://seqr-github-actions-logs/logs .
 
   # run:
   #   runs-on: ubuntu-latest
