@@ -17,7 +17,7 @@ COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 NO_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 
 EXPECTED_DISCOVERY_SHEET_ROW = \
-    {'project_guid': 'R0001_1kg', 'pubmed_ids': '', 'posted_publicly': '',
+    {'project_guid': 'R0001_1kg', 'pubmed_ids': '34415322; 33665635', 'posted_publicly': '',
      'solved': 'TIER 1 GENE', 'head_or_neck': 'N', 'analysis_complete_status': 'complete',
      'cardiovascular_system': 'N', 'n_kindreds_overlapping_sv_similar_phenotype': '2',
      'biochemical_function': 'Y', 'omim_number_post_discovery': '615120,615123',
@@ -41,7 +41,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'Y', 'ear_defects': 'N',
      'thoracic_cavity': 'N', 'non_patient_cell_model': 'N',
      't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped_1.png',
-     'family_id': '1', 'genitourinary_system': 'N', 'coded_phenotype': '',
+     'family_id': '1', 'genitourinary_system': 'N', 'coded_phenotype': 'myopathy',
      'animal_model': 'N', 'non_human_cell_culture_model': 'N', 'expression': 'N',
      'gene_name': 'RP11-206L10.5', 'breast': 'N'}
 
@@ -361,11 +361,11 @@ class ReportAPITest(AuthenticationTestCase):
             '19-disease_description', '20-affected_status', '21-congenital_status', '22-age_of_onset', '23-hpo_present',
             '24-hpo_absent', '25-phenotype_description', '26-solve_state'])
         self.assertIn([
-            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
-            'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
-            'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
-            'Tier 1'], subject_file)
+            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '34415322', 'dbgap_stady_id_1',
+            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Other', 'Middle Eastern', '-',
+            '-', 'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
+            'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508',
+            'myopathy', 'Tier 1'], subject_file)
 
         self.assertEqual(sample_file[0], [
             'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
@@ -504,9 +504,12 @@ class ReportAPITest(AuthenticationTestCase):
 
     @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @responses.activate
-    def test_gregor_export(self, mock_zip):
+    def test_gregor_export(self, mock_zip, mock_datetime):
+        mock_datetime.now.return_value.year = 2020
+
         url = reverse(gregor_export, args=['HMB'])
         self.check_analyst_login(url)
 
@@ -530,11 +533,10 @@ class ReportAPITest(AuthenticationTestCase):
             'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
             'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
         ])
-        # TODO add fixture data for race/ethnicity, pmids, birth_year, coded_phenotype
         self.assertIn([
-            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', '', 'IKBKAP|CCDC102B', '', 'Broad_1',
-            'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '', 'Unknown', 'Unknown', '', '', 'Affected', '',
-            '',
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', '', 'IKBKAP|CCDC102B',
+            '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
+            'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
         ], participant_file)
 
         self.assertEqual(len(family_file), 11)
@@ -549,9 +551,12 @@ class ReportAPITest(AuthenticationTestCase):
             'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details',
             'onset_age_range', 'additional_modifiers',
         ])
-        # TODO add qualifiers and notes to features fixtures
-        self.assertIn(['', 'Broad_NA19675_1', 'HP:0002011', 'Present', 'HPO', '', '', ''], phenotype_file)
-        self.assertIn(['', 'Broad_NA19675_1', 'HP:0011675', 'Absent', 'HPO', '', '', ''], phenotype_file)
+        self.assertIn([
+            '', 'Broad_NA19675_1', 'HP:0002011', 'Present', 'HPO', '', 'HP:0003593', 'HP:0012825|HP:0003680',
+        ], phenotype_file)
+        self.assertIn([
+            '', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', '',
+        ], phenotype_file)
 
         self.assertEqual(len(analyte_file), 15)
         self.assertEqual(analyte_file[0], [
