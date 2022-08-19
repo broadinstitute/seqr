@@ -8,6 +8,7 @@ import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
+import { AddWorkspaceDataForm } from 'shared/components/panel/LoadWorkspaceDataForm'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
@@ -170,20 +171,31 @@ const PANES = [
 
 const IGV_ONLY_PANES = [PANES[1]]
 
-const EditDatasetsButton = React.memo(({ user }) => (
-  (user.isDataManager || user.isPm) ? (
-    <Modal
-      modalName={MODAL_NAME}
-      title="Datasets"
-      size="small"
-      trigger={<ButtonLink>Edit Datasets</ButtonLink>}
-    >
-      <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />
-    </Modal>
-  ) : null
-))
+const EditDatasetsButton = React.memo(({ project, user }) => {
+  const showLoadWorkspaceData = !project?.isAnalystProject && project?.canEdit
+  return (
+    (user.isDataManager || user.isPm || showLoadWorkspaceData) ? (
+      <Modal
+        modalName={MODAL_NAME}
+        title={showLoadWorkspaceData ? 'Load Additional Data From AnVIL Workspace' : 'Datasets'}
+        size="small"
+        trigger={<ButtonLink>{showLoadWorkspaceData ? 'Load Additional Data' : 'Edit Datasets'}</ButtonLink>}
+      >
+        {showLoadWorkspaceData ? (
+          <AddWorkspaceDataForm
+            params={project}
+            successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
+          />
+        ) : (
+          <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />
+        )}
+      </Modal>
+    ) : null
+  )
+})
 
 EditDatasetsButton.propTypes = {
+  project: PropTypes.object,
   user: PropTypes.object,
 }
 
