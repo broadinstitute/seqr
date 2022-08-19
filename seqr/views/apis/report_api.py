@@ -739,7 +739,7 @@ def gregor_export(request, consent_code):
         ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
         ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
-    ], f'GREGoR Reports {consent_code}', file_format='tsv', blank_value='0')
+    ], f'GREGoR Reports {consent_code}', file_format='tsv')
 
 
 def _get_gregor_family_row(family):
@@ -755,8 +755,8 @@ def _get_gregor_family_row(family):
 def _get_participant_row(individual):
     participant = {
         'gregor_center': 'Broad',
-        'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else None,
-        'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else None,
+        'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
+        'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else '0',
         'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
         'proband_relationship': individual.get_proband_relationship_display(),
         'sex': individual.get_sex_display(),
