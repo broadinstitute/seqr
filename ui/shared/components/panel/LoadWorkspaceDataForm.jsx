@@ -22,6 +22,7 @@ import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
+import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
@@ -89,7 +90,7 @@ const DATA_BUCK_FIELD = {
   name: 'dataPath',
   label: 'Path to the Joint Called VCF',
   labelHelp: 'File path for a joint called VCF available in the workspace "Files".',
-  placeholder: '/path-under-Files-of-the-workspace',
+  component: AnvilFileSelector,
   validate: validators.required,
 }
 
