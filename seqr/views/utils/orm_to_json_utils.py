@@ -755,9 +755,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
                 'canEdit': user == locus_list.created_by,
             })
 
-        pa_locus_list = getattr(locus_list, 'palocuslist', None)
-        if pa_locus_list:
-            pa_locus_list_json = _get_json_for_model(pa_locus_list, user=user, is_analyst=is_analyst)
+        if hasattr(locus_list, 'palocuslist'):
+            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user, is_analyst=is_analyst)
             result.update({
                 'paLocusList': pa_locus_list_json,
             })
