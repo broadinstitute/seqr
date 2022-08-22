@@ -39,7 +39,7 @@ def all_locus_list_options(request):
     locus_list_models = LocusList.objects.filter(
         _get_user_list_filter(request.user) | Q(projects__guid__in=get_project_guids_user_can_view(request.user))
     )
-    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_metadata=False)
+    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_metadata=True)
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},
     })
