@@ -13,7 +13,7 @@ from urllib3.exceptions import ReadTimeoutError
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
-from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37
+from seqr.utils.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
 from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
     PARSED_MITO_VARIANT, TRANSCRIPT_2
 
@@ -1846,7 +1846,6 @@ class EsUtilsTest(TestCase):
                                 ]
                             }}
                         ],
-                        '_name': 'F000002_2'
                     }},
                     {'bool': {
                         'must': [
@@ -2709,7 +2708,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        variants, total_results = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        variants, _ = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
         expected_transcript_variant = deepcopy(PARSED_VARIANTS[0])
         expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
         self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_INDEX_VARIANT])
