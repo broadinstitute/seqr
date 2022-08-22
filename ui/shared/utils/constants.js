@@ -46,7 +46,8 @@ export const FILE_FIELD_NAME = 'uploadedFile'
 
 export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
 
-const CONSENT_CODE_OPTIONS = ['HMB', 'GRU', 'Other'].map(text => ({ text, value: text[0] }))
+export const CONSENT_CODES = ['HMB', 'GRU']
+const CONSENT_CODE_OPTIONS = [...CONSENT_CODES, 'Other'].map(text => ({ text, value: text[0] }))
 export const CONSENT_CODE_LOOKUP = CONSENT_CODE_OPTIONS.reduce(
   (acc, { value, text }) => ({ ...acc, [value]: text }), {},
 )
