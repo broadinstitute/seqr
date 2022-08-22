@@ -128,7 +128,7 @@ export const getLocusListOptions = createListEqualSelector(
       text: name,
       value: locusListGuid,
       key: locusListGuid,
-      description: `${numEntries} Genes ${paLocusList ? ' - PanelApp' : ''}`,
+      description: `${numEntries} Genes${paLocusList ? ' - PanelApp' : ''}`,
       icon: { name: isPublic ? 'users' : 'lock', size: 'small' },
       category: `${projectsLocusListGuids.has(locusListGuid) ? 'Project' : 'All'} Lists`,
       categoryRank: projectsLocusListGuids.has(locusListGuid) ? 0 : 1,
