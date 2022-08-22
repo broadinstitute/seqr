@@ -363,7 +363,10 @@ class DataManagerAPITest(AuthenticationTestCase):
             response.json()['errors'],
             ['File not found: gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'])
         mock_file_logger.info.assert_has_calls([
-            mock.call('==> gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv', self.data_manager_user),
+            mock.call(
+                '==> gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv',
+                self.data_manager_user,
+            ),
             mock.call('BucketNotFoundException: 404 gs://seqr-datsets bucket does not exist.', self.data_manager_user),
         ])
 
