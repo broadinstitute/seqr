@@ -262,6 +262,7 @@ class ProjectAPITest(object):
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertIsNone(response_json['locusListsByGuid']['LL00005_retina_proteome'].get('paLocusList'))
         self.assertSetEqual(set(response_json['locusListsByGuid']['LL00005_retina_proteome'].keys()), LOCUS_LIST_FIELDS)
         pa_fields = deepcopy(LOCUS_LIST_FIELDS)
         pa_fields.update(PA_LOCUS_LIST_FIELDS)
