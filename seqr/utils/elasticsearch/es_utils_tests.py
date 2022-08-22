@@ -1150,7 +1150,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
             sort_key = sort[0] if sort else 'xpos'
             if isinstance(sort_key, dict):
                 if '_script' in sort_key:
-                    sort_key = sort_key['_script']['script']['params'].get('field', 'xpos')
+                    sort_key = sort_key['_script']['script']['params'].get('field', 'xpos') # pylint: disable=invalid-sequence-index
                 else:
                     sort_key = next(iter(sort_key.keys()))
             sort_value = jmespath.search(sort_key, hit['_source'])
