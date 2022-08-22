@@ -8,6 +8,7 @@ import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { VerticalSpacer } from '../../Spacers'
 import HpoPanel from '../HpoPanel'
+import { ColoredDiv } from '../../StyledComponents'
 
 const IndividualsContainer = styled.div`
   display: inline-block;
@@ -214,11 +215,6 @@ const SV_GENOTYPE_DETAILS = [
   },
 ]
 
-const Comment = styled.p`
-  margin-left: 1em;
-  color: grey;
-`
-
 const formattedGenotypeDetails = (details, genotype, variant, genesById) => details.map(
   ({ shouldHide, title, field, variantField, format, comment }) => {
     const value = field ? genotype[field] : variant[variantField]
@@ -226,7 +222,7 @@ const formattedGenotypeDetails = (details, genotype, variant, genesById) => deta
       <div key={title}>
         {`${title}:  `}
         <b>{format ? format(value, genesById) : value}</b>
-        {comment && <Comment>{comment}</Comment> }
+        {comment && <ColoredDiv color="grey">{comment}</ColoredDiv> }
       </div>
     ) : null
   },
