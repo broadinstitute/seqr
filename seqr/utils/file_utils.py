@@ -36,7 +36,11 @@ def get_google_project(gs_path):
 def does_file_exist(file_path, user=None):
     if is_google_bucket_file_path(file_path):
         process = _run_gsutil_command('ls', file_path, user=user)
-        return process.wait() == 0
+        success = process.wait() == 0
+        if not success:
+            errors = [line.decode('utf-8').strip() for line in process.stdout]
+            logger.info(' '.join(errors), user)
+        return success
     return os.path.isfile(file_path)
 
 
