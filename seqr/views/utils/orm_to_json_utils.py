@@ -712,7 +712,8 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False, is_analyst=False, include_metadata=True):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False,
+                             is_analyst=False, include_metadata=True):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
