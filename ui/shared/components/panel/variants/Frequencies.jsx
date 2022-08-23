@@ -48,7 +48,7 @@ const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
   } else if (isRegion) {
     const posInt = parseInt(pos, 10)
     const endOffset = variant.end ? variant.end - variant.pos : 0
-    coords = `${chrom}-${posInt - 100}-${posInt + endOffset + 100}`
+    coords = `${chrom}-${Math.max(posInt - 100, 1)}-${posInt + endOffset + 100}`
   } else {
     coords = `${chrom}-${pos}-${variant.ref}-${variant.alt}`
   }
@@ -65,7 +65,10 @@ const FreqSummary = React.memo((props) => {
   }
   const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
   const value = population.id ? population.id.replace('gnomAD-SV_v2.1_', '') : afValue
-  const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
+  const afHetValue = population.af_het > 0 ? population.af_het.toPrecision(precision) : '0.0'
+  const mitoAfDisplay = population.af_het >= 0 ? `hom ${afValue} het ${afHetValue}` : null
+  const displayValue = mitoAfDisplay ||
+      (population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue)
 
   return (
     <div>
@@ -102,7 +105,7 @@ const FreqSummary = React.memo((props) => {
             {`Hemi=${population.hemi}`}
           </span>
         )}
-        {acDisplay && population.ac !== null && population.ac !== undefined && (
+        {!mitoAfDisplay && acDisplay && population.ac !== null && population.ac !== undefined && (
           <span>
             <HorizontalSpacer width={5} />
             {`${acDisplay}=${population.ac} out of ${population.an}`}
@@ -209,6 +212,8 @@ const Frequencies = React.memo(({ variant }) => {
   )
   const hasAcHetPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac_het)
   const hasMaxHlPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].max_hl)
+  const mitoCallType = POPULATIONS.some(pop => populations[pop.field] && populations[pop.field].af_het >= 0)
+  const popupHeader = mitoCallType ? 'Homoplasmy' : 'Allele Counts'
 
   return (
     (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops.length || hasAcHetPops.length ||
@@ -223,7 +228,7 @@ const Frequencies = React.memo(({ variant }) => {
           ))}
         </Popup.Content>
         {hasGlobalAfPops.length > 0 && hasAcPops.length > 0 && <VerticalSpacer height={5} />}
-        {hasAcPops.length > 0 && <Popup.Header content="Allele Counts" />}
+        {hasAcPops.length > 0 && <Popup.Header content={popupHeader} />}
         <Popup.Content>
           {hasAcPops.map(pop => (
             <div key={pop.field}>
@@ -237,8 +242,7 @@ const Frequencies = React.memo(({ variant }) => {
         <Popup.Content>
           {hasAcHetPops.map(pop => (
             <div key={pop.field}>
-              {`${pop.fieldTitle} heteroplasmic AF: ${populations[pop.field].af_het?.toPrecision(pop.precision || 2)}
-              AC_het=${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
+              {`${pop.fieldTitle}: ${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
             </div>
           ))}
           {hasMaxHlPops.map(pop => (
