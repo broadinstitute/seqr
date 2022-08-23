@@ -1,6 +1,6 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
-from django.db.models import F, Q, Value, ExpressionWrapper, BooleanField, CharField
-from django.db.models.functions import Cast, Coalesce, Concat, Left, NullIf
+from django.db.models import F, Q, Case, When, Value, ExpressionWrapper, BooleanField, CharField
+from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, NullIf
 from django.views.decorators.http import require_GET
 
 from reference_data.models import Omim, HumanPhenotypeOntology
@@ -53,12 +53,15 @@ def _get_matching_objects(query, project_guids, object_cls, core_fields, href_ex
         ),
         result_description=Concat(Value('('), *description_content, Value(')')) if description_content else Value(''),
         href=href_expression,
-    ).values('key', 'title', 'href', description=F('result_description'))[:MAX_RESULTS_PER_CATEGORY]
+    ).values(
+        # secondary call to values to prevent field collision for "description"
+        'key', 'title', 'href', description=F('result_description'),
+    ).order_by(
+        Case(When(title__istartswith=query, then=False), default=True),
+        Length('title'),
+    )[:MAX_RESULTS_PER_CATEGORY]
 
-    # TODO order_by
-    results = sorted(results, key=lambda f: len(f.get('title', '')))
-
-    return results
+    return list(results)
 
 
 def _get_matching_projects(query, project_guids):
