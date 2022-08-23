@@ -750,7 +750,7 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
 
         if include_metadata:
             result.update({
-                'numEntries':  gene_set.count() + interval_set.count()
+                'numEntries': gene_set.count() + interval_set.count()
                 if include_genes else locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
                 'canEdit': user == locus_list.created_by,
             })
