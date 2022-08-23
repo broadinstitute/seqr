@@ -7,7 +7,6 @@ on:
     branches:
       - master
       - dev
-      - add-actions-caching # TODO: remove before merge
   pull_request:
     types: [opened, synchronize, reopened]
 
