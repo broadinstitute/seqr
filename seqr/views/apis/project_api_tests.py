@@ -90,6 +90,7 @@ class ProjectAPITest(object):
         project = Project.objects.get(guid=PROJECT_GUID)
         expected_workspace_name = project.workspace_name
         self.assertEqual(project.genome_version, '37')
+        self.assertEqual(project.consent_code, 'H')
 
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
             {'description': 'updated project description', 'genomeVersion': '38', 'workspaceName': 'test update name'}

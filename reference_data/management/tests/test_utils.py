@@ -1,3 +1,4 @@
+import gzip
 import mock
 import responses
 import tempfile
@@ -28,10 +29,14 @@ class ReferenceDataCommandTestCase(TestCase):
     def _test_update_command(self, command_name, model_name, existing_records=1, created_records=1, skipped_records=1):
         # test without a file_path parameter
         responses.add(responses.HEAD, self.URL, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, self.URL, body=''.join(self.DATA))
+        body = ''.join(self.DATA)
+        if self.URL.endswith('gz'):
+            body = gzip.compress(body.encode())
+        responses.add(responses.GET, self.URL, body=body)
 
         call_command(command_name)
 
+        self.mock_logger.error.assert_not_called()
         log_calls = [
             mock.call('Parsing file'),
             mock.call('Deleting {} existing {} records'.format(existing_records, model_name)),
