@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 8/23/22
 * Add consent code for projects (REQUIRES DB MIGRATION)
 
 ## 7/19/22
