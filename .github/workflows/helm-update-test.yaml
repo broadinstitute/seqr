@@ -21,7 +21,7 @@ jobs:
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.seqr.image.tag = "${GITHUB_SHA}"' charts/broad-seqr/values-dev.yaml
+            yq -i '.seqr.image.tag = "$GITHUB_SHA"' charts/broad-seqr/values-dev.yaml
 
       - name: Commit and Push changes
         uses: Andro999b/push@v1.3
@@ -31,4 +31,4 @@ jobs:
           github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           author_email: ${{ github.actor }}@users.noreply.github.com
           author_name: tgg-automation
-          message: "Update seqr dev release docker tag to ${GITHUB_SHA}"
+          message: "Update seqr dev release docker tag to $GITHUB_SHA"
