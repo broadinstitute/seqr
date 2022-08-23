@@ -42,12 +42,13 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: broadinstitute/tgg-helm
+          token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
           ref: main
           persist-credentials: false
           fetch-depth: 0
 
       - name: update image tag in the broad seqr chart
-        uses: mikefarah/yq@4.22.1
+        uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
             yq -i '.seqr.image.tag = "${{ github.event.workflow_run.head_sha }}"' charts/broad-seqr/values-dev.yaml
