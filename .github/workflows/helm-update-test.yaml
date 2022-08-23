@@ -1,0 +1,35 @@
+name: Testing helm update
+on:
+  workflow_dispatch:
+    inputs:
+      image_version:
+        description: "The tag to use for the image update"
+        required: true
+
+jobs:
+  helm_update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve tgg-helm repo for broad seqr chart
+        uses: actions/checkout@v3
+        with:
+          repository: broadinstitute/tgg-helm
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: update image tag in the broad seqr chart
+        uses: mikefarah/yq@4.22.1
+        with:
+          cmd: >
+            yq -i '.seqr.image.tag = "${{ github.event.inputs.image_version }}"' charts/broad-seqr/values-dev.yaml
+
+      - name: Commit and Push changes
+        uses: Andro999b/push@v1.3
+        with:
+          repository: broadinstitute/tgg-helm
+          branch: main
+          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          author_email: ${{ github.actor }}@users.noreply.github.com
+          author_name: tgg-automation
+          message: "Update seqr dev release docker tag to ${{ github.event.inputs.image_version }}"
