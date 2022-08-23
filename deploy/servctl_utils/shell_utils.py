@@ -45,7 +45,7 @@ def run(command, errors_to_ignore=None, print_command=True, verbose=True, **kwar
         if errors_to_ignore:
             should_ignore = all(
                 any([error_to_ignore in error for error_to_ignore in errors_to_ignore])
-                for error in  str(output.strip()).split('\n')
+                for error in str(output.strip()).split('\n')
             )
 
         if should_ignore:
