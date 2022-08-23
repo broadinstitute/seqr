@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Table, Dropdown, Button, Message } from 'semantic-ui-react'
+import { Table, Dropdown, Button, Message, Confirm } from 'semantic-ui-react'
 
 import { updateVariantClassification } from 'redux/rootReducer'
 import { closeModal } from 'redux/utils/modalReducer'
@@ -55,7 +55,7 @@ class AcmgCriteria extends React.PureComponent {
     const { variant } = this.props
     const { classify = 'Unknown', criteria = [] } = variant.acmgClassification || {}
     // eslint-disable-next-line react/state-in-constructor
-    this.state = { formWarning: '', criteria, classify, score: getNewScoreValue(criteria) }
+    this.state = { formWarning: '', confirmDialog: null, criteria, classify, score: getNewScoreValue(criteria) }
   }
 
   setCriteria(criteria) {
@@ -74,6 +74,12 @@ class AcmgCriteria extends React.PureComponent {
   setFormWarning(warning) {
     this.setState({
       formWarning: warning,
+    })
+  }
+
+  setConfirmDialog(warning) {
+    this.setState({
+      confirmDialog: warning,
     })
   }
 
@@ -118,7 +124,7 @@ class AcmgCriteria extends React.PureComponent {
     const { setInactive, dispatchUpdateVariantClassification } = this.props
     const { classify, criteria, score } = this.state
     if (!classify || classify === 'Unknown') {
-      this.setFormWarning('Please select at least one criteria from the table below.')
+      this.setConfirmDialog('No criteria is selected. Would you like to clear the classification?')
     } else if (classify === 'Conflicting') {
       this.setFormWarning('You have conflicting score. Please verify your selections.')
     } else {
@@ -126,6 +132,12 @@ class AcmgCriteria extends React.PureComponent {
       setInactive()
       dispatchUpdateVariantClassification({ score, classify, criteria })
     }
+  }
+
+  submitClearedForm = () => {
+    const { setInactive, dispatchUpdateVariantClassification } = this.props
+    setInactive()
+    dispatchUpdateVariantClassification(null)
   }
 
   getTableRows = () => {
@@ -193,9 +205,14 @@ class AcmgCriteria extends React.PureComponent {
     return dropDownRowns
   }
 
+  hideConfirmDialog = () => {
+    this.setState({
+      confirmDialog: null,
+    })
+  }
+
   render() {
-    const { score, criteria, classify } = this.state
-    const { formWarning } = this.state
+    const { score, criteria, classify, formWarning, confirmDialog } = this.state
 
     return (
       <div>
@@ -225,6 +242,13 @@ class AcmgCriteria extends React.PureComponent {
           )}
         <Button primary onClick={this.submitForm}>Submit</Button>
         <Button onClick={this.clearFields} color="grey">Clear Form</Button>
+        <Confirm
+          key="confirm"
+          content={confirmDialog}
+          open={!!confirmDialog}
+          onConfirm={this.submitClearedForm}
+          onCancel={this.hideConfirmDialog}
+        />
         <Table celled structured textAlign="center">
           <Table.Header>
             <Table.Row key="table-row-headercell">

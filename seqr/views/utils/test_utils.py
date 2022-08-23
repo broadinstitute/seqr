@@ -258,7 +258,7 @@ ANVIL_WORKSPACES = [{
         'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
-            "canShare": True,
+            "canShare": False,
             "canCompute": False
         }
     },
@@ -428,7 +428,7 @@ PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
     'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd', 'isDemo', 'allUserDemo',
-    'userIsCreator',
+    'userIsCreator', 'consentCode', 'isAnalystProject',
 }
 
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}

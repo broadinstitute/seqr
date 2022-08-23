@@ -8,7 +8,7 @@ export const WorkspaceAccessError = ({ match }) => (
   <Segment basic padded="very" textAlign="center">
     <Message error compact size="large">
       <Message.Header>
-        {`User does not have sufficient permissions for workspace "${match.params.name}"`}
+        {`User does not have sufficient permissions for workspace "${match.params.workspaceName}"`}
       </Message.Header>
       <Message.List>
         To submit the initial request to load data to seqr, users require:

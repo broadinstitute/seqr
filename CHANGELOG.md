@@ -2,6 +2,9 @@
 
 ## dev
 
+## 8/23/22
+* Add consent code for projects (REQUIRES DB MIGRATION)
+
 ## 7/19/22
 * Add "Incomplete Penetrance" functional tag type (REQUIRES DB MIGRATION)
 
