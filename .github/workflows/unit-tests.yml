@@ -78,6 +78,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
+          cache-dependency-path: ui/package-lock.json
       - run: npm install -g npm@7.24.2
       - run: npm ci
         working-directory: ./ui
