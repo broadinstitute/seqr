@@ -42,7 +42,7 @@ class AwesomebarAPITest(object):
 
         families = matches['families']['results']
         self.assertEqual(len(families), 5)
-        self.assertListEqual([f['title'] for f in families], ['1', '11', '12', '10_a', '2_1'])
+        self.assertListEqual([f['title'] for f in families], ['1', '10', '11', '12-a', '2_1'])
         self.assertDictEqual(families[0], {
             'key': 'F000001_1',
             'title': '1',
@@ -135,6 +135,13 @@ class AwesomebarAPITest(object):
             'description': '(HP:0001636)',
             'category': 'HP:0033127',
         })
+
+        # Test fuzzy matching
+        response = self.client.get(url + "?q=%202-&categories=families")
+        self.assertEqual(response.status_code, 200)
+        families = response.json()['matches']['families']['results']
+        self.assertEqual(len(families), 3)
+        self.assertListEqual([f['title'] for f in families], ['12-a', '2_1', '42'])
 
 
 # Tests for AnVIL access disabled
