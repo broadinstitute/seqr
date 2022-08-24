@@ -42,14 +42,14 @@ class AwesomebarAPITest(object):
 
         families = matches['families']['results']
         self.assertEqual(len(families), 5)
-        self.assertListEqual([f['title'] for f in families], ['1', '11', '12', '2_1', '10_a'])
+        self.assertListEqual([f['title'] for f in families], ['1', '11', '12', '10_a', '2_1'])
         self.assertDictEqual(families[0], {
             'key': 'F000001_1',
             'title': '1',
             'description': '(1kg project nåme with uniçøde)',
             'href': '/project/R0001_1kg/family_page/F000001_1',
         })
-        self.assertDictEqual(families[3], {
+        self.assertDictEqual(families[4], {
             'key': 'F000002_2',
             'title': '2_1',
             'description': '(1kg project nåme with uniçøde)',
