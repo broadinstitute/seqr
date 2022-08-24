@@ -35,6 +35,7 @@ export const getUserOptionsByUsername = state => state.userOptionsByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
 export const getVersion = state => state.meta.version
 export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
+export const getAnvilEnabled = state => state.meta.anvilEnabled // TODO use instead of project specific triggger
 export const getHijakEnabled = state => state.meta.hijakEnabled
 export const getWarningMessages = state => state.meta.warningMessages
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
