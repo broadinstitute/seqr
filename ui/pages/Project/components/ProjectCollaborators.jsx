@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUserOptionsIsLoading } from 'redux/selectors'
+import { getUserOptionsIsLoading, getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -134,37 +134,31 @@ const getSortedCollabs = (project, isAnvil) => orderBy(
   ['desc', 'asc'],
 )
 
-const ProjectCollaborators = React.memo(({ project, onSubmit, addCollaborator }) => {
-  const localCollabs = getSortedCollabs(project, false)
-  const anvilCollabs = getSortedCollabs(project, true)
+const ProjectCollaborators = React.memo(({ project, user, onSubmit, addCollaborator }) => {
+  const canEdit = project.canEdit && !user.isAnvil
   return [
-    localCollabs.map(
-      c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />,
+    getSortedCollabs(project).map(
+      c => <CollaboratorRow key={c.username} collaborator={c} update={canEdit ? onSubmit : null} />,
     ),
-    ((project.canEdit && !project.workspaceName) ? (
+    (canEdit ? (
       <div key="addButton">
         <br />
         <AddCollaboratorButton onSubmit={addCollaborator} />
       </div>
     ) : null),
-    (localCollabs.length && anvilCollabs.length) ? (
-      <p key="subheader">
-        <br />
-        AnVIL Workspace Users
-      </p>
-    ) : null,
-    anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
   ]
 })
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
+  user: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
   addCollaborator: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
+  user: getUser(state),
 })
 
 const mapDispatchToProps = {
