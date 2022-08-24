@@ -1,5 +1,5 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
-from django.db.models import F, Q, Case, When, Value, ExpressionWrapper, BooleanField, CharField
+from django.db.models import F, Q, Value, ExpressionWrapper, BooleanField, CharField
 from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, NullIf
 from django.views.decorators.http import require_GET
 
@@ -57,7 +57,6 @@ def _get_matching_objects(query, project_guids, object_cls, core_fields, href_ex
         # secondary call to values to prevent field collision for "description"
         'key', 'title', 'href', description=F('result_description'),
     ).order_by(
-        Case(When(title__istartswith=query, then=False), default=True),
         Length('title'),
     )[:MAX_RESULTS_PER_CATEGORY]
 
