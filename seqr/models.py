@@ -230,6 +230,7 @@ class Project(ModelWithGUID):
         self.can_edit_group.delete()
         self.can_view_group.delete()
 
+    # TODO make helper function not class function
     def get_collaborators(self, permissions=None):
         if not permissions:
             permissions = {CAN_VIEW, CAN_EDIT}
