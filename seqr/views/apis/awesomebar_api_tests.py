@@ -26,7 +26,7 @@ class AwesomebarAPITest(object):
         )
 
         self.login_collaborator()
-        response = self.client.get(url + "?q=1")
+        response = self.client.get(url + "?q=%201")
         self.assertEqual(response.status_code, 200)
         matches = response.json()['matches']
         self.assertSetEqual(set(matches.keys()), {'projects', 'families', 'analysis_groups', 'individuals', 'genes'})
@@ -137,7 +137,7 @@ class AwesomebarAPITest(object):
         })
 
         # Test fuzzy matching
-        response = self.client.get(url + "?q=%202-&categories=families")
+        response = self.client.get(url + "?q=2-&categories=families")
         self.assertEqual(response.status_code, 200)
         families = response.json()['matches']['families']['results']
         self.assertEqual(len(families), 3)

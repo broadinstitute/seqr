@@ -32,7 +32,6 @@ def _get_matching_objects(query, project_guids, object_cls, core_fields, href_ex
     Returns:
         Sorted list of matches where each match is a dictionary of strings
     """
-    query = query.strip()
 
     if project_field:
         matching_objects = getattr(object_cls, 'objects')
@@ -228,7 +227,7 @@ DEFAULT_CATEGORIES = ['projects', 'families', 'analysis_groups', 'individuals', 
 def awesomebar_autocomplete_handler(request):
     """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""
 
-    query = request.GET.get('q')
+    query = request.GET.get('q').strip()
     if not query:
         return create_json_response({'matches': {}})
 
