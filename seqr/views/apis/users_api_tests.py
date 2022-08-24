@@ -11,8 +11,7 @@ from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_project_collaborator_options, update_policies, update_user
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, USER_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -396,62 +395,5 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
 
     def test_update_policies(self, *args, **kwargs):
         super(AnvilUsersAPITest, self).test_update_policies(*args, **kwargs)
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-
-class MixUsersAPITest(MixAuthenticationTestCase, UsersAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-    LOCAL_COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_local_user'}
-    COLLABORATOR_NAMES = {'test_user_pure_anvil@test.com'}
-    COLLABORATOR_NAMES.update(LOCAL_COLLABORATOR_NAMES)
-    USERNAME = 'test_local_user'
-    EMAIL_SETUP_MESSAGE = 'Please make sure this account is registered in AnVIL by signing in to https://anvil.terra.bio/ and registering. Once you are registered in AnVIL, you will be able to access seqr at /'
-
-    def test_get_all_collaborator_options(self):
-        super(MixUsersAPITest, self).test_get_all_collaborator_options()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
-
-    def test_get_project_collaborator_options(self, *args, **kwargs):
-        super(MixUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
-        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
-        self.mock_get_ws_acl.assert_called_with(
-            self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-
-    def test_create_project_collaborator(self, *args, **kwargs):
-        super(MixUsersAPITest, self).test_create_project_collaborator(*args, **kwargs)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
-
-    def test_update_project_collaborator(self):
-        super(MixUsersAPITest, self).test_update_project_collaborator()
-        self._test_update_user(USERNAME, can_edit=False, check_access=False)
-
-        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-
-    def test_delete_project_collaborator(self):
-        super(MixUsersAPITest, self).test_delete_project_collaborator()
-        self._test_delete_user(USERNAME, check_access=False)
-
-        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-
-    def test_set_password(self):
-        super(MixUsersAPITest, self).test_set_password()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-    def test_forgot_password(self, *args, **kwargs):
-        super(MixUsersAPITest, self).test_forgot_password(*args, **kwargs)
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-    def test_update_policies(self, *args, **kwargs):
-        super(MixUsersAPITest, self).test_update_policies(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()

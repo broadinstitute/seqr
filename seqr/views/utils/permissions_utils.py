@@ -206,10 +206,10 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
     if is_data_manager and not limit_data_manager:
         project_guids = Project.objects.all().values_list('guid', flat=True)
     else:
-        project_guids = Project.objects.filter(all_user_demo=True, is_demo=True).distinct().values_list('guid', flat=True)
+        project_guids = list(Project.objects.filter(all_user_demo=True, is_demo=True).distinct().values_list('guid', flat=True))
         analyst_projects = get_analyst_projects(user)
         if analyst_projects:
-            project_guids += analyst_projects.values_list('guid', flat=True)
+            project_guids += list(analyst_projects.values_list('guid', flat=True))
 
         if is_anvil_authenticated(user):
             workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
@@ -219,7 +219,7 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
                 workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
                 workspace__in=workspaces).only('guid')]
         else:
-            project_guids += get_local_access_projects(user).values_list('guid', flat=True)
+            project_guids += list(get_local_access_projects(user).values_list('guid', flat=True))
 
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 

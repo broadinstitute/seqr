@@ -14,7 +14,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions, \
-    login_and_policies_required, login_active_required
+    login_and_policies_required, login_active_required, get_analyst_projects
 from seqr.views.utils.terra_api_utils import google_auth_enabled
 from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
@@ -28,7 +28,7 @@ def get_all_collaborator_options(request):
     collaborators = set()
     # TODO restrict endpoint to non-anvil authenticated cases
     projects = get_local_access_projects(request.user)
-    analyst_projects = get_analyst_projects(user)
+    analyst_projects = get_analyst_projects(request.user)
     if analyst_projects:
         projects = (projects | analyst_projects)
 

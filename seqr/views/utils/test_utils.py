@@ -352,9 +352,6 @@ def get_workspaces_side_effect(user):
 
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
-    @classmethod
-    def setUpTestData(cls):
-        _initialize_users(cls)
 
     # mock the terra apis
     def setUp(self):
@@ -383,19 +380,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
-
-
-# inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
-class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
-    LOCAL_USER = 'local_user'
-
-    # use the local permissions set-up by AuthenticationTestCase
-    @classmethod
-    def setUpTestData(cls):
-        AuthenticationTestCase.setUpTestData()
-        cls.local_user = User.objects.get(username = 'test_local_user')
-        view_group = Group.objects.get(pk=3)
-        view_group.user_set.add(cls.local_user)
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)

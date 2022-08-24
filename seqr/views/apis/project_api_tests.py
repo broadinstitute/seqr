@@ -12,7 +12,7 @@ from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshToke
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, \
     SAMPLE_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -477,11 +477,6 @@ ANVIL_COLLABORATORS = [{
 for collab in ANVIL_COLLABORATORS:
     collab['isAnvil'] = True
 
-LOCAL_COLLAB = {
-    'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User', 'email': 'test_local_user@test.com',
-    'firstName': 'Test seqr local User', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14,
-    'isActive': True, 'isAnvil': False, 'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False,
-    'lastLogin': None, 'lastName': '', 'username': 'test_local_user'}
 
 # Tests for AnVIL access disabled
 class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
@@ -537,41 +532,3 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_access_level.call_count, 9)
-
-# Test for permissions from AnVIL and local
-class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [LOCAL_COLLAB]
-    HAS_EMPTY_PROJECT = True
-
-    def test_create_and_delete_project(self):
-        super(MixProjectAPITest, self).test_create_and_delete_project()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.pm_user, 'bar', 'foo'),
-            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
-        ])
-
-    def test_update_project(self):
-        super(MixProjectAPITest, self).test_update_project()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
-        ])
-
-    def test_project_page_data(self):
-        super(MixProjectAPITest, self).test_project_page_data()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-    def test_project_overview(self):
-        super(MixProjectAPITest, self).test_project_overview()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
-            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
-            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
