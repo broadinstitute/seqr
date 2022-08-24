@@ -7,8 +7,9 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class AwesomebarAPITest(object):
 
-    @mock.patch('seqr.views.apis.awesomebar_api.MAX_STRING_LENGTH', 20)
     @mock.patch('seqr.views.apis.awesomebar_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.apis.awesomebar_api.MAX_STRING_LENGTH', 20)
+    @mock.patch('seqr.views.apis.awesomebar_api.MAX_RESULTS_PER_CATEGORY', 5)
     def test_awesomebar_autocomplete_handler(self):
         url = reverse(awesomebar_autocomplete_handler)
         self.check_require_login(url)
@@ -43,6 +44,7 @@ class AwesomebarAPITest(object):
 
         families = matches['families']['results']
         self.assertEqual(len(families), 5)
+        self.assertListEqual([f['title'] for f in families], ['1', '11', '12', '2_1', '10_a'])
         self.assertDictEqual(families[0], {
             'key': 'F000001_1',
             'title': '1',
@@ -58,6 +60,8 @@ class AwesomebarAPITest(object):
 
         individuals = matches['individuals']['results']
         self.assertEqual(len(individuals), 5)
+        self.assertListEqual(
+            [i['title'] for i in individuals], ['NA19678', 'NA19679', 'NA20881', 'NA19675_1', 'HG00731_a'])
         self.assertDictEqual(individuals[3], {
             'key': 'I000001_na19675',
             'title': 'NA19675_1',
@@ -81,14 +85,18 @@ class AwesomebarAPITest(object):
         })
 
         genes = matches['genes']['results']
-        self.assertEqual(len(genes), 8)
+        self.assertEqual(len(genes), 5)
+        self.assertListEqual(
+            [g['title'] for g in genes],
+            ['ENSG00000186092', 'ENSG00000185097', 'ENSG00000237613', 'DDX11L1', 'ENSG00000240361'],
+        )
         self.assertDictEqual(genes[0], {
             'key': 'ENSG00000186092',
             'title': 'ENSG00000186092',
             'description': '(OR4F5)',
             'href': '/summary_data/gene_info/ENSG00000186092',
         })
-        self.assertDictEqual(genes[2], {
+        self.assertDictEqual(genes[3], {
             'key': 'ENSG00000223972',
             'title': 'DDX11L1',
             'description': '(ENSG00000223972)',
@@ -118,7 +126,11 @@ class AwesomebarAPITest(object):
         })
 
         hpo_terms = matches['hpo_terms']['results']
-        self.assertEqual(len(hpo_terms), 8)
+        self.assertEqual(len(hpo_terms), 5)
+        self.assertListEqual([h['title'] for h in hpo_terms], [
+            'Tetralogy of Fallot', 'Arrhythmia', 'Complete atrioventricular canal defect',
+            'Defect in the atrial septum', 'Failure to thrive',
+        ])
         self.assertDictEqual(hpo_terms[0], {
             'key': 'HP:0001636',
             'title': 'Tetralogy of Fallot',
