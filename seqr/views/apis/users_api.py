@@ -26,7 +26,13 @@ USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'em
 @login_and_policies_required
 def get_all_collaborator_options(request):
     collaborators = set()
-    for project in get_local_access_projects(request.user):
+    # TODO restrict endpoint to non-anvil authenticated cases
+    projects = get_local_access_projects(request.user)
+    analyst_projects = get_analyst_projects(user)
+    if analyst_projects:
+        projects = (projects | analyst_projects)
+
+    for project in projects:
         collaborators.update(project.get_collaborators())
 
     return create_json_response({

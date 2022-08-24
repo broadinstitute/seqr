@@ -157,8 +157,13 @@ def has_project_permissions(project, user, can_edit=False):
     return user_is_data_manager(user) or \
            (not can_edit and project.all_user_demo and project.is_demo) or \
            (user_is_analyst(user) and project_has_analyst_access(project)) or \
-           user.has_perm(permission_level, project) or \
-           anvil_has_perm(user, permission_level, project)
+           user_project_permission(user, permission_level, project)
+
+
+def user_project_permission(user, permission_level, project):
+    if anvil_enabled():
+        return anvil_has_perm(user, permission_level, project)
+    return user.has_perm(permission_level, project)
 
 
 def check_project_permissions(project, user, **kwargs):
@@ -185,8 +190,10 @@ def check_multi_project_permissions(obj, user):
     raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
 
 
-def _get_analyst_projects():
-    return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
+def get_analyst_projects(user):
+    if user_is_analyst(user):
+        return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
+    return None
 
 
 def get_project_guids_user_can_view(user, limit_data_manager=True):
@@ -197,19 +204,22 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
 
     is_data_manager = user_is_data_manager(user)
     if is_data_manager and not limit_data_manager:
-        projects = Project.objects.all()
+        project_guids = Project.objects.all().values_list('guid', flat=True)
     else:
-        projects = get_local_access_projects(user)
-        projects = (projects | Project.objects.filter(all_user_demo=True, is_demo=True)).distinct()
+        project_guids = Project.objects.filter(all_user_demo=True, is_demo=True).distinct().values_list('guid', flat=True)
+        analyst_projects = get_analyst_projects(user)
+        if analyst_projects:
+            project_guids += analyst_projects.values_list('guid', flat=True)
 
-    project_guids = [p.guid for p in projects.only('guid')]
-    if is_anvil_authenticated(user) and not is_data_manager:
-        workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
-                      list_anvil_workspaces(user)]
-        project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
-            workspace_name='').exclude(guid__in=project_guids).annotate(
-            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
-            workspace__in=workspaces).only('guid')]
+        if is_anvil_authenticated(user):
+            workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
+                          list_anvil_workspaces(user)]
+            project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
+                workspace_name='').exclude(guid__in=project_guids).annotate(
+                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
+                workspace__in=workspaces).only('guid')]
+        else:
+            project_guids += get_local_access_projects(user).values_list('guid', flat=True)
 
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
@@ -217,10 +227,7 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
 
 
 def get_local_access_projects(user):
-    projects = Project.objects.filter(can_view_group__user=user)
-    if user_is_analyst(user):
-        projects = (projects | _get_analyst_projects())
-    return projects
+    return Project.objects.filter(can_view_group__user=user)
 
 
 def check_mme_permissions(submission, user):
