@@ -24,7 +24,6 @@ jobs:
         id: 'auth'
         uses: google-github-actions/auth@v0
         with:
-          # workload_identity_provider: 'projects/${{ secrets.GOOGLE_PROJECT_ID }}/locations/global/workloadIdentityPools/seqr-actions-pool/providers/seqr-github-actions'
           workload_identity_provider: '${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}'
           service_account: '${{ secrets.RUN_SA_EMAIL }}'
 
@@ -40,13 +39,6 @@ jobs:
     needs: docker
     steps:
       - uses: actions/checkout@v3
-      - name: get seqr version
-        run: |
-          seqr_version=$(grep "SEQR_VERSION[ ]*=[ ]*'.*'" ./settings.py | sed -n "s/^.*'\(.*\)'/\1/p")
-          commit_id=$(git rev-parse --short HEAD)
-          echo "SEQR_VERSION=$seqr_version-$commit_id" >> $GITHUB_ENV
-
-      - uses: actions/checkout@v3
         with:
           repository: broadinstitute/seqr-helm
           ref: main
@@ -57,14 +49,20 @@ jobs:
         uses: mikefarah/yq@v4.22.1
         with:
           cmd: >
-            yq -i '.appVersion = "${{ env.SEQR_VERSION }}"' charts/seqr/Chart.yaml
+            yq -i '.appVersion = "${{ github.event.workflow_run.head_sha }}"' charts/seqr/Chart.yaml
 
-      - name: Commit and Push changes
-        uses: Andro999b/push@v1.3
+      - name: Create Pull Request
+        id: createpr
+        uses: peter-evans/create-pull-request@v3
         with:
-          repository: broadinstitute/seqr-helm
-          branch: main
-          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
-          author_email: ${{ github.actor }}@users.noreply.github.com
-          author_name: tgg-automation
-          message: 'Update appVersion with seqr version'
+          token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          commit-message: Update seqr appVersion to ${{ github.event.workflow_run.head_sha }}
+          committer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          labels: automation
+          title: "Update seqr chart appversion to ${{ github.event.workflow_run.head_sha }}" 
+
+      - name: Check outputs
+        run: |
+          echo "Pull Request Number - ${{ steps.createpr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.createpr.outputs.pull-request-url }}"
