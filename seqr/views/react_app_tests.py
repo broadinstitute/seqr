@@ -11,7 +11,7 @@ class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
 
-    def _check_page_html(self, response,  user, google_enabled=False, user_key='user', ga_token_id=None):
+    def _check_page_html(self, response,  user, google_enabled=False, anvil_enabled=False, user_key='user', ga_token_id=None):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
@@ -21,6 +21,7 @@ class DashboardPageTest(AuthenticationTestCase):
             'version': mock.ANY,
             'hijakEnabled': False,
             'googleLoginEnabled': google_enabled,
+            'anvilEnabled': anvil_enabled,
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
         })
 
@@ -33,9 +34,11 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 5)
 
     @mock.patch('seqr.views.react_app.GA_TOKEN_ID', MOCK_GA_TOKEN)
+    @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL')
     @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
-    def test_react_page(self, mock_oauth_key):
+    def test_react_page(self, mock_oauth_key, mock_terra_url):
         mock_oauth_key.__bool__.return_value = False
+        mock_terra_url.__bool__.return_value = False
         url = reverse(main_app)
         self.check_require_login_no_policies(url, login_redirect_url='/login')
 
@@ -44,8 +47,9 @@ class DashboardPageTest(AuthenticationTestCase):
 
         # test with google auth enabled
         mock_oauth_key.__bool__.return_value = True
+        mock_terra_url.__bool__.return_value = True
         response = self.client.get(url)
-        self._check_page_html(response, 'test_user_no_policies', google_enabled=True, ga_token_id=MOCK_GA_TOKEN)
+        self._check_page_html(response, 'test_user_no_policies', google_enabled=True, anvil_enabled=True, ga_token_id=MOCK_GA_TOKEN)
 
     def test_local_react_page(self):
         url = reverse(no_login_main_app)
