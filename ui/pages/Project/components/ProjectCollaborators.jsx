@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUserOptionsIsLoading, getAnvilEnabled } from 'redux/selectors'
+import { getUserOptionsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
@@ -129,36 +129,42 @@ CollaboratorRow.propTypes = {
   update: PropTypes.func,
 }
 
-const getSortedCollabs = project => orderBy(
-  (project.collaborators || []), [c => c.hasEditPermissions, c => c.email],
+const getSortedCollabs = (project, isAnvil) => orderBy(
+  (project.collaborators || []).filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
   ['desc', 'asc'],
 )
 
-const ProjectCollaborators = React.memo(({ project, anvilEnabled, onSubmit, addCollaborator }) => {
-  const isEditable = project.canEdit && !anvilEnabled
+const ProjectCollaborators = React.memo(({ project, onSubmit, addCollaborator }) => {
+  const localCollabs = getSortedCollabs(project, false)
+  const anvilCollabs = getSortedCollabs(project, true)
   return [
-    getSortedCollabs(project).map(
-      c => <CollaboratorRow key={c.username} collaborator={c} update={isEditable ? onSubmit : null} />,
+    localCollabs.map(
+      c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />,
     ),
-    (isEditable ? (
+    ((project.canEdit && !project.workspaceName) ? (
       <div key="addButton">
         <br />
         <AddCollaboratorButton onSubmit={addCollaborator} />
       </div>
     ) : null),
+    (localCollabs.length && anvilCollabs.length) ? (
+      <p key="subheader">
+        <br />
+        AnVIL Workspace Users
+      </p>
+    ) : null,
+    anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
   ]
 })
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
-  anvilEnabled: PropTypes.bool,
   onSubmit: PropTypes.func,
   addCollaborator: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
-  anvilEnabled: getAnvilEnabled(state),
 })
 
 const mapDispatchToProps = {
