@@ -9,7 +9,7 @@ from settings import SEQR_VERSION, CSRF_COOKIE_NAME, DEBUG, LOGIN_URL, GA_TOKEN_
 from seqr.models import WarningMessage
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 from seqr.views.utils.permissions_utils import login_active_required
-from seqr.views.utils.terra_api_utils import google_auth_enabled, anvil_enabled
+from seqr.views.utils.terra_api_utils import google_auth_enabled
 
 
 @login_active_required(login_url=LOGIN_URL)
@@ -45,7 +45,6 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
         'hijakEnabled': DEBUG or False,
         'googleLoginEnabled': google_auth_enabled(),
-        'anvilEnabled': anvil_enabled(),
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
     }}
     if include_user:
