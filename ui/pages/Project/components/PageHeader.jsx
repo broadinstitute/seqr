@@ -44,7 +44,6 @@ const PageHeader = React.memo((
   } else if (match.params.breadcrumb === 'family_page') {
     if (match.params.breadcrumbIdSection === 'matchmaker_exchange') {
       description = ''
-      button = <EditProjectButton project={project} />
     } else {
       description = family.description
     }
