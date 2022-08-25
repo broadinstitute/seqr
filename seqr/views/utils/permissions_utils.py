@@ -190,12 +190,6 @@ def check_multi_project_permissions(obj, user):
     raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
 
 
-def get_analyst_projects(user):
-    if user_is_analyst(user):
-        return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
-    return None
-
-
 def get_project_guids_user_can_view(user, limit_data_manager=True):
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
@@ -207,9 +201,10 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
         project_guids = Project.objects.all().values_list('guid', flat=True)
     else:
         project_guids = list(Project.objects.filter(all_user_demo=True, is_demo=True).distinct().values_list('guid', flat=True))
-        analyst_projects = get_analyst_projects(user)
-        if analyst_projects:
-            project_guids += list(analyst_projects.values_list('guid', flat=True))
+        if user_is_analyst(user):
+            project_guids += list(
+                ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all().values_list('guid', flat=True)
+            )
 
         if is_anvil_authenticated(user):
             workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
@@ -219,15 +214,11 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
                 workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
                 workspace__in=workspaces).only('guid')]
         else:
-            project_guids += list(get_local_access_projects(user).values_list('guid', flat=True))
+            project_guids += list(Project.objects.filter(can_view_group__user=user).values_list('guid', flat=True))
 
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
     return project_guids
-
-
-def get_local_access_projects(user):
-    return Project.objects.filter(can_view_group__user=user)
 
 
 def check_mme_permissions(submission, user):
