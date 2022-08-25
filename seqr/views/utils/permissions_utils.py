@@ -54,17 +54,17 @@ def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
 def login_and_policies_required(view_func, login_url=API_LOGIN_REQUIRED_URL, policy_url=API_POLICY_REQUIRED_URL):
     return login_active_required(_current_policies_required(view_func, policy_url=policy_url), login_url=login_url)
 
-def _user_has_policies_and_passes_test(user_permission_test_func):
+def active_user_has_policies_and_passes_test(user_permission_test_func):
     def decorator(view_func):
         return login_and_policies_required(user_passes_test(_require_permission(user_permission_test_func))(view_func))
     return decorator
 
-analyst_required = _user_has_policies_and_passes_test(user_is_analyst)
-data_manager_required = _user_has_policies_and_passes_test(user_is_data_manager)
-pm_required = _user_has_policies_and_passes_test(user_is_pm)
-pm_or_data_manager_required = _user_has_policies_and_passes_test(
+analyst_required = active_user_has_policies_and_passes_test(user_is_analyst)
+data_manager_required = active_user_has_policies_and_passes_test(user_is_data_manager)
+pm_required = active_user_has_policies_and_passes_test(user_is_pm)
+pm_or_data_manager_required = active_user_has_policies_and_passes_test(
     lambda user: user_is_data_manager(user) or user_is_pm(user))
-superuser_required = _user_has_policies_and_passes_test(lambda user: user.is_superuser)
+superuser_required = active_user_has_policies_and_passes_test(lambda user: user.is_superuser)
 
 
 def project_has_analyst_access(project):

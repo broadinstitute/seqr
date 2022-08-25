@@ -14,19 +14,21 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
 from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions, \
-    login_and_policies_required, login_active_required, get_analyst_projects
-from seqr.views.utils.terra_api_utils import google_auth_enabled
+    login_and_policies_required, login_active_required, get_analyst_projects, active_user_has_policies_and_passes_test
+from seqr.views.utils.terra_api_utils import google_auth_enabled, anvil_enabled
 from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 logger = SeqrLogger(__name__)
 
 USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_analyst'}
 
+no_anvil_required = active_user_has_policies_and_passes_test(lambda u: not anvil_enabled())
 
-@login_and_policies_required
+
+@no_anvil_required
 def get_all_collaborator_options(request):
     collaborators = set()
-    # TODO restrict endpoint to non-anvil authenticated cases
+    # TODO clean up getting project collaborators
     projects = get_local_access_projects(request.user)
     analyst_projects = get_analyst_projects(request.user)
     if analyst_projects:
@@ -125,12 +127,9 @@ def update_policies(request):
     return create_json_response({'currentPolicies': True})
 
 
-@login_and_policies_required
+@no_anvil_required
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    if project.workspace_name:
-        raise PermissionDenied(
-            'Adding collaborators directly in seqr is disabled. Users can be managed from the associated AnVIL workspace')
 
     request_json = json.loads(request.body)
     if not request_json.get('email'):
@@ -175,7 +174,7 @@ def _update_existing_user(user, project, request_json):
     })
 
 
-@login_and_policies_required
+@no_anvil_required
 def update_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
@@ -184,7 +183,7 @@ def update_project_collaborator(request, project_guid, username):
     return _update_existing_user(user, project, request_json)
 
 
-@login_and_policies_required
+@no_anvil_required
 def delete_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)

@@ -23,8 +23,8 @@ ANALYST_USERNAME = 'test_user'
 TOS_VERSION = 2.2
 PRIVACY_VERSION = 1.1
 
+
 class UsersAPITest(object):
-    USERNAME = USERNAME
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
@@ -59,33 +59,33 @@ class UsersAPITest(object):
         self.check_require_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertListEqual(list(response.json().keys()), [])
+        self._test_logged_in_collaborator_options_response(response)
 
         self.login_collaborator()
         response = self.client.get(url)
+        self._test_collaborator_collaborator_options_response(response)
+
+    def _test_logged_in_collaborator_options_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(list(response.json().keys()), [])
+
+    def _test_collaborator_collaborator_options_response(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), self.LOCAL_COLLABORATOR_NAMES)
-        if self.LOCAL_COLLABORATOR_NAMES:
-            self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
-
-    def test_create_anvil_project_collaborator(self):
-        create_url = reverse(create_project_collaborator, args=[PROJECT_GUID])
-        self.check_manager_login(create_url)
-
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
+        self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
 
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
     def test_create_project_collaborator(self, mock_send_mail, mock_logger):
         create_url = reverse(create_project_collaborator, args=[NON_ANVIL_PROJECT_GUID])
         self.check_manager_login(create_url)
-
-        # send invalid request
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
+        self._test_create_project_collaborator(
+            response, create_url=create_url, mock_send_mail=mock_send_mail, mock_logger=mock_logger)
+
+    def _test_create_project_collaborator(self, response, create_url=None, mock_send_mail=None, mock_logger=None):
+        # send invalid request
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Email is required')
 
@@ -154,41 +154,37 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Connection err')
 
-    def _test_update_user(self, username, can_edit=True, check_access=True):
-        update_url = reverse(update_project_collaborator, args=[PROJECT_GUID, username])
-        if check_access:
-            self.check_manager_login(update_url)
+    def test_update_project_collaborator(self):
+        update_url = reverse(update_project_collaborator, args=[PROJECT_GUID, USERNAME])
+        self.check_manager_login(update_url)
 
         response = self.client.post(update_url, content_type='application/json', data=json.dumps(
             {'firstName': 'Edited', 'lastName': 'Collaborator', 'hasEditPermissions': True}))
+        self._test_update_collaborator_response(response)
+
+    def _test_update_collaborator_response(self, response):
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES))
-        edited_collab = next(collab for collab in collaborators if collab['username'] == username)
+        edited_collab = next(collab for collab in collaborators if collab['username'] == USERNAME)
         self.assertNotEqual(edited_collab['displayName'], 'Edited Collaborator')
         self.assertFalse(edited_collab['isSuperuser'])
         self.assertTrue(edited_collab['hasViewPermissions'])
-        self.assertEqual(edited_collab['hasEditPermissions'], can_edit)
-
-    def test_update_project_collaborator(self):
-        self._test_update_user(self.USERNAME)
-
-
-    def _test_delete_user(self, username, check_access=True, num_removed=1):
-        delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, username])
-        if check_access:
-            self.check_manager_login(delete_url)
-
-        response = self.client.post(delete_url, content_type='application/json')
-
-        self.assertEqual(response.status_code, 200)
-        collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES) - num_removed)
-
-        # check that user still exists
-        self.assertEqual(User.objects.filter(username=username).count(), 1)
+        self.assertEqual(edited_collab['hasEditPermissions'], True)
 
     def test_delete_project_collaborator(self):
-        self._test_delete_user(self.USERNAME)
+        delete_url = reverse(delete_project_collaborator, args=[PROJECT_GUID, USERNAME])
+        self.check_manager_login(delete_url)
+
+        response = self.client.post(delete_url, content_type='application/json')
+        self._test_delete_collaborator_response(response)
+
+    def _test_delete_collaborator_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
+        self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES) - 1)
+
+        # check that user still exists
+        self.assertEqual(User.objects.filter(username=USERNAME).count(), 1)
 
     def test_set_password(self):
         username = 'test_new_user'
@@ -345,11 +341,16 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_user_pure_anvil@test.com'}
     LOCAL_COLLABORATOR_NAMES = set()
 
-    def test_get_all_collaborator_options(self):
-        super(AnvilUsersAPITest, self).test_get_all_collaborator_options()
+    def _assert_403_response(self, response, **kwargs):
+        self.assertEqual(response.status_code, 403)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
+
+    _test_logged_in_collaborator_options_response = _assert_403_response
+    _test_collaborator_collaborator_options_response = _assert_403_response
+    _test_create_project_collaborator = _assert_403_response
+    _test_update_collaborator_response = _assert_403_response
+    _test_delete_collaborator_response = _assert_403_response
 
     def test_get_project_collaborator_options(self, *args, **kwargs):
         super(AnvilUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
@@ -360,28 +361,6 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-
-    def test_create_project_collaborator(self, *args):
-        # Creating project collaborators is only allowed in non-anvil projects, so it always fails for the AnVIL only case
-        create_url = reverse(create_project_collaborator, args=[NON_ANVIL_PROJECT_GUID])
-        self.check_manager_login(create_url)
-
-        response = self.client.post(create_url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 403)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_list_workspaces.assert_not_called()
-
-    def test_update_project_collaborator(self):
-        self._test_update_user(USERNAME, can_edit=False)
-
-        self.assertEqual(self.mock_get_ws_acl.call_count, 1)
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
-
-    def test_delete_project_collaborator(self):
-        self._test_delete_user(USERNAME, num_removed=0)
-
-        self.assertEqual(self.mock_get_ws_acl.call_count, 1)
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
 
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()
