@@ -129,15 +129,15 @@ CollaboratorRow.propTypes = {
   update: PropTypes.func,
 }
 
-const getSortedCollabs = (project, isAnvil) => orderBy(
-  (project.collaborators || []).filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
+const getSortedCollabs = project => orderBy(
+  (project.collaborators || []), [c => c.hasEditPermissions, c => c.email],
   ['desc', 'asc'],
 )
 
 const ProjectCollaborators = React.memo(({ project, user, onSubmit, addCollaborator }) => {
   const canEdit = project.canEdit && !user.isAnvil
   return [
-    getSortedCollabs(project).map(
+    ...getSortedCollabs(project).map(
       c => <CollaboratorRow key={c.username} collaborator={c} update={canEdit ? onSubmit : null} />,
     ),
     (canEdit ? (
