@@ -5,7 +5,7 @@ Utility functions for converting Django ORM object to JSON
 import json
 from collections import defaultdict
 from copy import deepcopy
-from django.db.models import prefetch_related_objects, Prefetch
+from django.db.models import prefetch_related_objects, Prefetch, Count
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Lower
 from django.contrib.auth.models import User
@@ -712,7 +712,8 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False, is_analyst=None, include_metadata=True):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False,
+                             is_analyst=False, include_metadata=True):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -749,7 +750,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
 
         if include_metadata:
             result.update({
-                'numEntries': gene_set.count() + interval_set.count(),
+                'numEntries': gene_set.count() + interval_set.count()
+                if include_genes else locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
                 'canEdit': user == locus_list.created_by,
             })
 
@@ -761,9 +763,13 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
 
     if include_metadata:
         prefetch_related_objects(locus_lists, 'created_by')
-    if include_metadata or include_genes:
+
+    if include_genes:
         prefetch_related_objects(locus_lists, 'locuslistgene_set')
         prefetch_related_objects(locus_lists, 'locuslistinterval_set')
+    elif include_metadata:
+        locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
+
     prefetch_related_objects(locus_lists, 'palocuslist')
 
     if include_pagenes:

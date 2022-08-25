@@ -695,7 +695,6 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
 }}```
         """.format(
             guid=project.guid,
-            airflow_url = MOCK_AIRFLOW_URL,
             version=genome_version,
         )
         self.mock_slack.assert_any_call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure)

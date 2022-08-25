@@ -2,9 +2,9 @@ from reference_data.models import GeneCopyNumberSensitivity
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 
 class UpdateGeneCopyNumberSensitivityTest(ReferenceDataCommandTestCase):
-    URL = 'https://storage.googleapis.com/seqr-reference-data/cn_sensitivity/pHI_pTS_scores.Jan21.txt'
+    URL = 'https://zenodo.org/record/6347673/files/Collins_rCNV_2022.dosage_sensitivity_scores.tsv.gz'
     DATA = [
-        '#gene	pHI	pTS	\n',
+        '#gene	pHaplo	pTriplo	\n',
         'MED13	0.994093950633184	0.999936963165105\n',
         'AL627309.1	0.999298538812066	0.998951301668586\n',
         'OR4F5	0.797834649565694	0.999754074473203\n',

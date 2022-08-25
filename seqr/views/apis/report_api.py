@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
@@ -64,6 +65,8 @@ def _get_sample_counts(sample_q):
     }
 
 
+# AnVIL metadata
+
 SUBJECT_TABLE_COLUMNS = [
     'entity:subject_id', 'subject_id', 'prior_testing', 'project_id', 'pmid_id', 'dbgap_study_id',
     'dbgap_subject_id', 'multiple_datasets', 'family_id', 'paternal_id', 'maternal_id', 'twin_id',
@@ -93,22 +96,25 @@ PHENOTYPE_PROJECT_CATEGORIES = [
     'Diabetes', 'Mitochondrial', 'Cardiovascular',
 ]
 
+HISPANIC = 'AMR'
+MIDDLE_EASTERN = 'MDE'
+OTHER_POPULATION = 'OTH'
 ANCESTRY_MAP = {
   'AFR': 'Black or African American',
-  'AMR': 'Hispanic or Latino',
+  HISPANIC: 'Hispanic or Latino',
   'ASJ': 'White',
   'EAS': 'Asian',
   'FIN': 'White',
-  'MDE': 'Other',
+  MIDDLE_EASTERN: 'Other',
   'NFE': 'White',
-  'OTH': 'Other',
+  OTHER_POPULATION: 'Other',
   'SAS': 'Asian',
 }
 ANCESTRY_DETAIL_MAP = {
   'ASJ': 'Ashkenazi Jewish',
   'EAS': 'East Asian',
   'FIN': 'Finnish',
-  'MDE': 'Middle Eastern',
+  MIDDLE_EASTERN: 'Middle Eastern',
   'SAS': 'South Asian',
 }
 
@@ -594,6 +600,207 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
     return sample_records
 
+
+# GREGoR metadata
+
+PARTICIPANT_TABLE_COLUMNS = [
+    'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
+    'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
+    'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+    'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
+]
+GREGOR_FAMILY_TABLE_COLUMNS = [
+    'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail', 'family_history_detail',
+]
+PHENOTYPE_TABLE_COLUMNS = [
+    'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details', 'onset_age_range',
+    'additional_modifiers',
+]
+ANALYTE_TABLE_COLUMNS = [
+    'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
+    'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
+    'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
+    'sample_transformation_detail',
+]
+EXPERIMENT_TABLE_COLUMNS = [
+    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method', 'read_length',
+    'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file', 'date_data_generation',
+    'target_insert_size', 'sequencing_platform',
+]
+READ_TABLE_COLUMNS = [
+    'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
+    'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
+    'analysis_details',
+]
+READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
+CALLED_TABLE_COLUMNS = [
+    'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
+    'caller_software', 'variant_types', 'analysis_details',
+]
+
+GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
+GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
+GREGOR_ANCESTRY_MAP = deepcopy(ANCESTRY_MAP)
+GREGOR_ANCESTRY_MAP.update({
+    MIDDLE_EASTERN: 'Middle Eastern or North African',
+    HISPANIC: 'Unknown',
+    OTHER_POPULATION: 'Unknown',
+})
+
+HPO_QUALIFIERS = {
+    'age_of_onset': {
+        'Adult onset': 'HP:0003581',
+        'Childhood onset': 'HP:0011463',
+        'Congenital onset': 'HP:0003577',
+        'Embryonal onset': 'HP:0011460',
+        'Fetal onset': 'HP:0011461',
+        'Infantile onset': 'HP:0003593',
+        'Juvenile onset': 'HP:0003621',
+        'Late onset': 'HP:0003584',
+        'Middle age onset': 'HP:0003596',
+        'Neonatal onset': 'HP:0003623',
+        'Young adult onset': 'HP:0011462',
+    },
+    'pace_of_progression': {
+        'Nonprogressive': 'HP:0003680',
+        'Slow progression': 'HP:0003677',
+        'Progressive': 'HP:0003676',
+        'Rapidly progressive': 'HP:0003678',
+        'Variable progression rate': 'HP:0003682',
+    },
+    'severity': {
+        'Borderline': 'HP:0012827',
+        'Mild': 'HP:0012825',
+        'Moderate': 'HP:0012826',
+        'Severe': 'HP:0012828',
+        'Profound': 'HP:0012829',
+    },
+    'temporal_pattern': {
+        'Insidious onset': 'HP:0003587',
+        'Chronic': 'HP:0011010',
+        'Subacute': 'HP:0011011',
+        'Acute': 'HP:0011009',
+    },
+    'spatial_pattern': {
+        'Generalized': 'HP:0012837',
+        'Localized': 'HP:0012838',
+        'Distal': 'HP:0012839',
+        'Proximal': 'HP:0012840',
+    },
+}
+
+
+@analyst_required
+def gregor_export(request, consent_code):
+    individuals = Individual.objects.filter(
+        family__project__consent_code=consent_code[0], family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
+    ).prefetch_related('family__project', 'mother', 'father')
+    participant_rows = []
+    family_map = {}
+    phenotype_rows = []
+    analyte_rows = []
+    for individual in individuals:
+        # family table
+        family = individual.family
+        if family not in family_map:
+            family_map[family] = _get_gregor_family_row(family)
+
+        if individual.consanguinity is not None and family_map[family]['consanguinity'] == 'Unknown':
+            family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
+
+        # participant table
+        participant_id = f'Broad_{individual.individual_id}'
+        participant = _get_participant_row(individual)
+        participant.update(family_map[family])
+        participant.update({
+            'participant_id': participant_id,
+            'consent_code': consent_code,
+        })
+        participant_rows.append(participant)
+
+        # phenotype table
+        base_phenotype_row = {'participant_id': participant_id, 'presence': 'Present', 'ontology': 'HPO'}
+        phenotype_rows += [
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.features or []
+        ]
+        base_phenotype_row['presence'] = 'Absent'
+        phenotype_rows += [
+            dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
+        ]
+
+        # analyte table
+        analyte_rows.append(dict(participant_id=participant_id, **_get_analyte_row(individual)))
+
+    airtable_rows = []  # TODO populate airtable data once new columns are confirmed
+
+    return export_multiple_files([
+        ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
+        ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
+        ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
+        ['analyte', ANALYTE_TABLE_COLUMNS, analyte_rows],
+        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows],
+        ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
+        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
+        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
+    ], f'GREGoR Reports {consent_code}', file_format='tsv')
+
+
+def _get_gregor_family_row(family):
+    return {
+        'family_id':  f'Broad_{family.family_id}',
+        'internal_project_id': f'Broad_{family.project.name}',
+        'consanguinity': 'Unknown',
+        'pmid_id': '|'.join(family.pubmed_ids or []),
+        'phenotype_description': family.coded_phenotype,
+    }
+
+
+def _get_participant_row(individual):
+    participant = {
+        'gregor_center': 'Broad',
+        'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
+        'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else '0',
+        'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
+        'proband_relationship': individual.get_proband_relationship_display(),
+        'sex': individual.get_sex_display(),
+        'affected_status': individual.get_affected_display(),
+        'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
+        'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
+        'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
+        'recontactable': None,  # TODO populate airtable data once new columns are confirmed
+    }
+    if individual.birth_year and individual.birth_year > 0:
+        participant.update({
+            'age_at_last_observation': str(datetime.now().year - individual.birth_year),
+            'age_at_enrollment': str(individual.created_date.year - individual.birth_year),
+        })
+    return participant
+
+
+def _get_phenotype_row(feature):
+    qualifiers_by_type = {
+        q['type']: HPO_QUALIFIERS[q['type']][q['label']]
+        for q in feature.get('qualifiers') or [] if q['type'] in HPO_QUALIFIERS
+    }
+    onset_age = qualifiers_by_type.pop('age_of_onset', None)
+    return {
+        'term_id': feature['id'],
+        'additional_details': feature.get('notes', '').replace('\r\n', ' ').replace('\n', ' '),
+        'onset_age_range': onset_age,
+        'additional_modifiers': '|'.join(qualifiers_by_type.values()),
+    }
+
+
+def _get_analyte_row(individual):
+    return {
+        'analyte_id': f'Broad_{individual.individual_id}',  # TODO this will change once Sam figures out what to do
+        'analyte_type': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+        'primary_biosample': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+        'tissue_affected_status': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+    }
+
+
+# Discovery Sheet
 
 # HPO categories are direct children of HP:0000118 "Phenotypic abnormality".
 # See https://hpo.jax.org/app/browse/term/HP:0000118

@@ -9,8 +9,8 @@ from seqr.views.apis.project_api import create_project_handler, delete_project_h
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
-from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, SAMPLE_FIELDS, \
-    FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, \
+    SAMPLE_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
     TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase, MixAuthenticationTestCase
 
@@ -90,6 +90,7 @@ class ProjectAPITest(object):
         project = Project.objects.get(guid=PROJECT_GUID)
         expected_workspace_name = project.workspace_name
         self.assertEqual(project.genome_version, '37')
+        self.assertEqual(project.consent_code, 'H')
 
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
             {'description': 'updated project description', 'genomeVersion': '38', 'workspaceName': 'test update name'}
@@ -262,7 +263,10 @@ class ProjectAPITest(object):
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
-        self.assertSetEqual(set(next(iter(response_json['locusListsByGuid'].values())).keys()), LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(response_json['locusListsByGuid']['LL00005_retina_proteome'].keys()), LOCUS_LIST_FIELDS)
+        pa_fields = deepcopy(LOCUS_LIST_FIELDS)
+        pa_fields.update(PA_LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(response_json['locusListsByGuid']['LL00049_pid_genes_autosomal_do'].keys()), pa_fields)
         self.assertSetEqual(
             set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
         )

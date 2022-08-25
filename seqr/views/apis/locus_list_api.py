@@ -39,7 +39,7 @@ def all_locus_list_options(request):
     locus_list_models = LocusList.objects.filter(
         _get_user_list_filter(request.user) | Q(projects__guid__in=get_project_guids_user_can_view(request.user))
     )
-    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_metadata=False)
+    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_metadata=True)
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},
     })
@@ -55,13 +55,10 @@ def locus_list_info(request, locus_list_guid):
         check_multi_project_permissions(locus_list, request.user)
 
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
-    pagenes_by_id = {item['geneId']: item.get('pagene', None) for item in locus_list_json['items']
-                     if item.get('geneId')}
 
     return create_json_response({
         'locusListsByGuid': {locus_list_guid: locus_list_json},
         'genesById': _get_locus_lists_genes([locus_list_json]),
-        'pagenesById': pagenes_by_id,
     })
 
 
