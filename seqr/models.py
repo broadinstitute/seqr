@@ -219,6 +219,7 @@ class Project(ModelWithGUID):
             assign_perm(user_or_group=self.can_view_group, perm=CAN_VIEW, obj=self)
 
             # add the user that created this Project to all permissions groups
+            # TODO check anvil enabled
             user = self.created_by
             user.groups.add(self.can_edit_group, self.can_view_group)
 
@@ -229,19 +230,6 @@ class Project(ModelWithGUID):
 
         self.can_edit_group.delete()
         self.can_view_group.delete()
-
-    # TODO make helper function not class function
-    def get_collaborators(self, permissions=None):
-        if not permissions:
-            permissions = {CAN_VIEW, CAN_EDIT}
-
-        collabs = set()
-        if CAN_VIEW in permissions:
-            collabs.update(self.can_view_group.user_set.all())
-        if CAN_EDIT in permissions:
-            collabs.update(self.can_edit_group.user_set.all())
-
-        return collabs
 
     class Meta:
         permissions = (

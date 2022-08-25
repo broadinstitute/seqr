@@ -6,15 +6,15 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from urllib.parse import unquote
 
-from seqr.models import UserPolicy
+from seqr.models import UserPolicy, Project
 from seqr.utils.communication_utils import send_welcome_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
-from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions, \
-    login_and_policies_required, login_active_required, get_analyst_projects, active_user_has_policies_and_passes_test
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, get_project_and_check_permissions, \
+    login_and_policies_required, login_active_required, active_user_has_policies_and_passes_test
 from seqr.views.utils.terra_api_utils import google_auth_enabled, anvil_enabled
 from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
@@ -27,18 +27,13 @@ no_anvil_required = active_user_has_policies_and_passes_test(lambda u: not anvil
 
 @no_anvil_required
 def get_all_collaborator_options(request):
-    collaborators = set()
-    # TODO clean up getting project collaborators
-    projects = get_local_access_projects(request.user)
-    analyst_projects = get_analyst_projects(request.user)
-    if analyst_projects:
-        projects = (projects | analyst_projects)
-
-    for project in projects:
-        collaborators.update(project.get_collaborators())
+    projects = Project.objects.filter(guid__in=get_project_guids_user_can_view(request.user))
+    collaborator_ids = set(projects.values_list('can_view_group__user', flat=True))
+    collaborator_ids.update(projects.values_list('can_edit_group__user', flat=True))
 
     return create_json_response({
-        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in collaborators
+        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS)
+        for user in User.objects.filter(id__in=collaborator_ids)
     })
 
 

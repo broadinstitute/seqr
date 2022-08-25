@@ -825,13 +825,13 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
                         'hasEditPermissions': permission == CAN_EDIT,
                     })
     else:
-        for collaborator in project.get_collaborators(permissions=[CAN_VIEW]):
+        for collaborator in project.can_view_group.user_set.all():
             collaborators[collaborator.username] = _get_collaborator_json(
                 collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, pm_users=pm_users,
                 **kwargs
             )
 
-        for collaborator in project.get_collaborators(permissions=[CAN_EDIT]):
+        for collaborator in project.can_edit_group.user_set.all():
             collaborators[collaborator.username] = _get_collaborator_json(
                 collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, pm_users=pm_users,
                 **kwargs
