@@ -26,7 +26,7 @@ class AwesomebarAPITest(object):
         )
 
         self.login_collaborator()
-        response = self.client.get(url + "?q=%201")
+        response = self.client.get(url + "?q=%201%20")
         self.assertEqual(response.status_code, 200)
         matches = response.json()['matches']
         self.assertSetEqual(set(matches.keys()), {'projects', 'families', 'analysis_groups', 'individuals', 'genes'})
