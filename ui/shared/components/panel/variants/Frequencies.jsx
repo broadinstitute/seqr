@@ -57,7 +57,8 @@ const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
 }
 
 const FreqSummary = React.memo((props) => {
-  const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2 } = props
+  const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2, isMito, isHet } =
+      props
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
   if (population.af === null || population.af === undefined) {
@@ -65,14 +66,12 @@ const FreqSummary = React.memo((props) => {
   }
   const afValue = population.af > 0 ? population.af.toPrecision(precision) : '0.0'
   const value = population.id ? population.id.replace('gnomAD-SV_v2.1_', '') : afValue
-  const afHetValue = population.af_het > 0 ? population.af_het.toPrecision(precision) : '0.0'
-  const mitoAfDisplay = population.af_het >= 0 ? `hom ${afValue} het ${afHetValue}` : null
-  const displayValue = mitoAfDisplay ||
-      (population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue)
+  const displayValue = population.filter_af > 0 ? population.filter_af.toPrecision(precision) : afValue
 
   return (
     <div>
       {titleContainer ? titleContainer(props) : fieldTitle}
+      {isMito && (isHet ? ' heteroplasmy' : ' homoplasmy')}
       <HorizontalSpacer width={5} />
       <FreqValue>
         <b>
@@ -105,7 +104,7 @@ const FreqSummary = React.memo((props) => {
             {`Hemi=${population.hemi}`}
           </span>
         )}
-        {!mitoAfDisplay && acDisplay && population.ac !== null && population.ac !== undefined && (
+        {acDisplay && population.ac !== null && population.ac !== undefined && (
           <span>
             <HorizontalSpacer width={5} />
             {`${acDisplay}=${population.ac} out of ${population.an}`}
@@ -125,6 +124,8 @@ FreqSummary.propTypes = {
   urls: PropTypes.object,
   queryParams: PropTypes.object,
   acDisplay: PropTypes.string,
+  isMito: PropTypes.bool,
+  isHet: PropTypes.bool,
 }
 
 const getGenePath = ({ variant }) => `gene/${getVariantMainGeneId(variant)}`
@@ -142,6 +143,11 @@ const gnomadLink = ({ fieldTitle, ...props }) => {
 
 gnomadLink.propTypes = {
   fieldTitle: PropTypes.string,
+}
+
+const GNOMAD_URL_INFO = {
+  urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
+  queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
 }
 
 const POPULATIONS = [
@@ -186,34 +192,63 @@ const POPULATIONS = [
     helpMessage: GNOMAD_SV_CRITERIA_MESSAGE,
   },
   {
+    field: 'callset_heteroplasmy',
+    fieldTitle: 'This Callset',
+    acDisplay: 'AC',
+    isHet: true,
+    precision: 3,
+  },
+  {
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
     precision: 3,
-    urls: { [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
-    queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
+    ...GNOMAD_URL_INFO,
+  },
+  {
+    field: 'gnomad_mito_heteroplasmy',
+    fieldTitle: 'gnomAD mito',
+    isHet: true,
+    precision: 3,
+    ...GNOMAD_URL_INFO,
   },
   {
     field: 'helix',
     fieldTitle: 'Helix mito',
     precision: 3,
   },
+  {
+    field: 'helix_heteroplasmy',
+    fieldTitle: 'Helix mito',
+    isHet: true,
+    precision: 3,
+  },
 ]
 
 const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
-  const freqContent = <div>{POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>
+  const isMito = POPULATIONS.some(pop => pop.isHet &&
+      (populations[pop.field]?.af !== null && populations[pop.field]?.af !== undefined))
+  const freqContent = (
+    <div>
+      {POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} isMito={isMito} {...pop} />)}
+    </div>
+  )
 
-  const hasAcPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac)
+  const hasAcPops = POPULATIONS.filter(pop => !pop.isHet && populations[pop.field]?.ac)
   const hasGlobalAfPops = POPULATIONS.filter(pop => (
     populations[pop.field] && populations[pop.field].filter_af &&
     (populations[pop.field].filter_af !== populations[pop.field].af)))
   const hasHelpMessagePops = POPULATIONS.filter(
     pop => pop.helpMessage && populations[pop.field] && populations[pop.field].af !== null,
   )
-  const hasAcHetPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].ac_het)
+  const hasAcHetPops = POPULATIONS.filter(pop => pop.isHet && populations[pop.field]?.ac)
   const hasMaxHlPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].max_hl)
-  const mitoCallType = POPULATIONS.some(pop => populations[pop.field] && populations[pop.field].af_het >= 0)
-  const popupHeader = mitoCallType ? 'Homoplasmy' : 'Allele Counts'
+  const popupHeader = isMito ? 'Homoplasmy' : 'Allele Counts'
+  const displayAc = acPops => acPops.map(pop => (
+    <div key={pop.field}>
+      {`${pop.fieldTitle}: ${populations[pop.field].ac} out of ${populations[pop.field].an}`}
+    </div>
+  ))
 
   return (
     (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops.length || hasAcHetPops.length ||
@@ -230,21 +265,13 @@ const Frequencies = React.memo(({ variant }) => {
         {hasGlobalAfPops.length > 0 && hasAcPops.length > 0 && <VerticalSpacer height={5} />}
         {hasAcPops.length > 0 && <Popup.Header content={popupHeader} />}
         <Popup.Content>
-          {hasAcPops.map(pop => (
-            <div key={pop.field}>
-              {`${pop.fieldTitle}: ${populations[pop.field].ac} out of ${populations[pop.field].an}`}
-            </div>
-          ))}
+          {displayAc(hasAcPops)}
         </Popup.Content>
         {((hasGlobalAfPops.length > 0 || hasAcPops.length > 0) &&
             (hasAcHetPops.length > 0 || hasMaxHlPops.length > 0)) && <VerticalSpacer height={5} />}
         {(hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Heteroplasmy" />}
         <Popup.Content>
-          {hasAcHetPops.map(pop => (
-            <div key={pop.field}>
-              {`${pop.fieldTitle}: ${populations[pop.field].ac_het} out of ${populations[pop.field].an}`}
-            </div>
-          ))}
+          {displayAc(hasAcHetPops)}
           {hasMaxHlPops.map(pop => (
             <div key={pop.field}>
               {`${pop.fieldTitle} max observed heteroplasmy:
