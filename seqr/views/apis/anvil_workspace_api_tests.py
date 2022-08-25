@@ -363,8 +363,18 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                      .format(TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1),
                                                      self.collaborator_user)
 
-        # Test valid operation
+        # Test empty bucket
         mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.stdout = b''
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'dataPathList': []})
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
+
+        # Test valid operation
         mock_subprocess.return_value.stdout = [
             b'Warning: some packages are out of date',
             b'gs://test_bucket/test.vcf', b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/test.tsv',
@@ -372,8 +382,16 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz']})
-        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-2, shell=True)
-        mock_file_logger.info.assert_called_with('==> gsutil ls gs://test_bucket/**', self.manager_user)
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+            mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
+        mock_file_logger.info.assert_has_calls([
+            mock.call('==> gsutil ls gs://test_bucket', self.manager_user),
+            mock.call('==> gsutil ls gs://test_bucket/**', self.manager_user),
+        ])
 
 
 class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
