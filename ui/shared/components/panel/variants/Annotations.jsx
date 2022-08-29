@@ -38,7 +38,7 @@ const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) =>
 UcscBrowserLink.propTypes = {
   genomeVersion: PropTypes.string,
   chrom: PropTypes.string,
-  pos: PropTypes.oneOf([PropTypes.string, PropTypes.number]),
+  pos: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   refLength: PropTypes.number,
   endOffset: PropTypes.number,
 }

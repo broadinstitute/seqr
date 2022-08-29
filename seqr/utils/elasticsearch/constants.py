@@ -127,7 +127,7 @@ POPULATIONS = {
 }
 
 POPULATION_FIELD_CONFIGS = {
-    'AF': {'format_value': lambda val: float(val) if val is not None else None, 'default_value': None},
+    'AF': {'format_value': float},
     'filter_AF': {'format_value': lambda val: float(val) if val is not None else None, 'default_value': None},
     'AC': {},
     'AN': {},
