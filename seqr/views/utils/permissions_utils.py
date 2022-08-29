@@ -198,23 +198,22 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
 
     is_data_manager = user_is_data_manager(user)
     if is_data_manager and not limit_data_manager:
-        project_guids = Project.objects.all().values_list('guid', flat=True)
+        projects = Project.objects.all()
     else:
-        project_guids = list(Project.objects.filter(all_user_demo=True, is_demo=True).distinct().values_list('guid', flat=True))
+        projects = Project.objects.filter(all_user_demo=True, is_demo=True)
         if user_is_analyst(user):
-            project_guids += list(
-                ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all().values_list('guid', flat=True)
-            )
+            projects |= ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
 
         if is_anvil_authenticated(user):
             workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
                           list_anvil_workspaces(user)]
-            project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
-                workspace_name='').exclude(guid__in=project_guids).annotate(
+            projects |= Project.objects.filter(workspace_name__isnull=False).exclude(workspace_name='').annotate(
                 workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
-                workspace__in=workspaces).only('guid')]
+                workspace__in=workspaces)
         else:
-            project_guids += list(Project.objects.filter(can_view_group__user=user).values_list('guid', flat=True))
+            projects |= Project.objects.filter(can_view_group__user=user)
+
+    project_guids = [p.guid for p in projects.distinct().only('guid')]
 
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 

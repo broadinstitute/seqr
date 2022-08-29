@@ -803,8 +803,8 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
     collaborators = {}
 
     analyst_users = None
-    if include_analysts or 'is_analyst' in fields:
-        analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP)) if ANALYST_USER_GROUP else None
+    if ANALYST_USER_GROUP and (include_analysts or 'is_analyst' in fields):
+        analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP))
 
     if not anvil_enabled():
         for collaborator in project.can_view_group.user_set.all():
