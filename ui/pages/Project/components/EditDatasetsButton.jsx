@@ -172,22 +172,21 @@ const PANES = [
 const IGV_ONLY_PANES = [PANES[1]]
 
 const EditDatasetsButton = React.memo(({ project, user }) => {
-  const showLoadWorkspaceData = !project?.isAnalystProject && project?.canEdit
+  const showLoadWorkspaceData = project.workspaceName && !project.isAnalystProject && project.canEdit
+  const showEditDatasets = user.isDataManager || user.isPm
   return (
-    (user.isDataManager || user.isPm || showLoadWorkspaceData) ? (
+    (showEditDatasets || showLoadWorkspaceData) ? (
       <Modal
         modalName={MODAL_NAME}
-        title={showLoadWorkspaceData ? 'Load Additional Data From AnVIL Workspace' : 'Datasets'}
+        title={showEditDatasets ? 'Datasets' : 'Load Additional Data From AnVIL Workspace'}
         size="small"
-        trigger={<ButtonLink>{showLoadWorkspaceData ? 'Load Additional Data' : 'Edit Datasets'}</ButtonLink>}
+        trigger={<ButtonLink>{showEditDatasets ? 'Edit Datasets' : 'Load Additional Data'}</ButtonLink>}
       >
-        {showLoadWorkspaceData ? (
+        {showEditDatasets ? <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} /> : (
           <AddWorkspaceDataForm
             params={project}
             successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
           />
-        ) : (
-          <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} />
         )}
       </Modal>
     ) : null
@@ -195,7 +194,7 @@ const EditDatasetsButton = React.memo(({ project, user }) => {
 })
 
 EditDatasetsButton.propTypes = {
-  project: PropTypes.object,
+  project: PropTypes.object.isRequired,
   user: PropTypes.object,
 }
 
