@@ -84,16 +84,23 @@ def mv_file_to_gs(local_path, gs_path, user=None):
 def get_gs_file_list(gs_path, user=None):
     gs_path = gs_path.rstrip('/')
     command = 'ls'
-    process = _run_gsutil_with_wait(command, f'{gs_path}/**', user)
-    all_lines = [line.decode('utf-8').rstrip('\n') for line in process.stdout]
+
+    # If a bucket is empty gsutil throws an error when running ls with ** instead of returning an empty list
+    subfolders = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+    if not subfolders:
+        return []
+
+    all_lines = _run_gsutil_with_wait(command, f'{gs_path}/**', user, get_stdout=True)
     return [line for line in all_lines if line.startswith(gs_path)]
 
 
-def _run_gsutil_with_wait(command, gs_path, user=None):
+def _run_gsutil_with_wait(command, gs_path, user=None, get_stdout=False):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
     process = _run_gsutil_command(command, gs_path, user=user)
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
+    if get_stdout:
+        return [line.decode('utf-8').rstrip('\n') for line in process.stdout]
     return process

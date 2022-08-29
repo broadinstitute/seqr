@@ -121,6 +121,7 @@ def grant_workspace_access(request, namespace, name):
     # Add the seqr service account to the corresponding AnVIL workspace
     added_account_to_workspace = add_service_account(request.user, namespace, name)
     if added_account_to_workspace:
+        logger.info(f'Added service account for {namespace}/{name}, waiting for access to grant', request.user)
         _wait_for_service_account_access(request.user, namespace, name)
 
     return create_json_response({'success': True})
@@ -130,7 +131,7 @@ def grant_workspace_access(request, namespace, name):
 def get_anvil_vcf_list(request, namespace, name, workspace_meta):
     bucket_name = workspace_meta['workspace']['bucketName']
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
-    data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path)
+    data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
                       if path.endswith(VCF_FILE_EXTENSIONS)]
 
     return create_json_response({'dataPathList': data_path_list})

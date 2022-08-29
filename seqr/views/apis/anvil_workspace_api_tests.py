@@ -226,10 +226,11 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.url, '/project/R0001_1kg/project_page')
         self.mock_get_ws_access_level.assert_not_called()
 
+    @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
     @mock.patch('seqr.views.apis.anvil_workspace_api.time')
     @mock.patch('seqr.views.apis.anvil_workspace_api.has_service_account_access')
     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
-    def test_grant_workspace_access(self, mock_add_service_account, mock_has_service_account, mock_time, mock_utils_logger):
+    def test_grant_workspace_access(self, mock_add_service_account, mock_has_service_account, mock_time, mock_logger, mock_utils_logger):
 
         # Requesting to load data from a workspace without an existing project
         url = reverse(grant_workspace_access,
@@ -280,6 +281,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                     TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
+        mock_logger.info.assert_called_with(
+            f'Added service account for {TEST_WORKSPACE_NAMESPACE}/{TEST_NO_PROJECT_WORKSPACE_NAME}, waiting for access to grant',
+            self.manager_user,
+        )
 
         # Test logged in locally
         remove_token(
@@ -348,8 +353,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.url,
                          '/login/google-oauth2?next=/api/create_project_from_workspace/my-seqr-billing/anvil-no-project-workspace1/validate_vcf')
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.get_gs_file_list')
-    def test_get_anvil_vcf_list(self, mock_get_file_list, mock_utils_logger):
+    @mock.patch('seqr.utils.file_utils.logger')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_get_anvil_vcf_list(self, mock_subprocess, mock_file_logger, mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(get_anvil_vcf_list, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
@@ -357,12 +363,35 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                      .format(TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1),
                                                      self.collaborator_user)
 
+        # Test empty bucket
+        mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.stdout = b''
+        response = self.client.get(url, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'dataPathList': []})
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
+
         # Test valid operation
-        mock_get_file_list.return_value = ['gs://test_bucket/test.vcf', 'gs://test_bucket/data/test.vcf.gz', 'gs://test_bucket/test.tsv']
+        mock_subprocess.return_value.stdout = [
+            b'Warning: some packages are out of date',
+            b'gs://test_bucket/test.vcf', b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/test.tsv',
+        ]
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz']})
-        mock_get_file_list.called_with('gs://test_bucket')
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+            mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
+        mock_file_logger.info.assert_has_calls([
+            mock.call('==> gsutil ls gs://test_bucket', self.manager_user),
+            mock.call('==> gsutil ls gs://test_bucket/**', self.manager_user),
+        ])
 
 
 class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
