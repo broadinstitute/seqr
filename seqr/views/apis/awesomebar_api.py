@@ -1,6 +1,6 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
-from django.db.models import F, Q, Value, ExpressionWrapper, BooleanField, CharField
-from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, NullIf
+from django.db.models import F, Q, Case, When, Value, ExpressionWrapper, BooleanField, CharField
+from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, NullIf, Replace
 from django.views.decorators.http import require_GET
 
 from reference_data.models import Omim, HumanPhenotypeOntology
@@ -13,6 +13,8 @@ from settings import ANALYST_PROJECT_CATEGORY
 
 MAX_RESULTS_PER_CATEGORY = 8
 MAX_STRING_LENGTH = 100
+
+FUZZY_MATCH_CHARS = ['-', '_', '.']
 
 
 def _get_matching_objects(query, project_guids, object_cls, core_fields, href_expression, description_content=None,
@@ -32,6 +34,29 @@ def _get_matching_objects(query, project_guids, object_cls, core_fields, href_ex
     for field in core_fields:
         object_filter |= Q(**{'{}__icontains'.format(field): query})
 
+    sort_order = [Case(When(title__istartswith=query, then=False), default=True), Length('title')]
+
+    fuzzy_query = query
+    if any(c in query for c in FUZZY_MATCH_CHARS):
+        fuzzy_annotations = {f'fuzzy_{field}': Cast(field, output_field=CharField()) for field in core_fields}
+        matching_objects = matching_objects.annotate(**fuzzy_annotations)
+        for c in FUZZY_MATCH_CHARS:
+            fuzzy_query = fuzzy_query.replace(c, '')
+            matching_objects = matching_objects.annotate(**{
+                field: Replace(field, Value(c)) for field in fuzzy_annotations.keys()})
+
+        startswith_fuzzy_q = Q()
+        for field in fuzzy_annotations.keys():
+            object_filter |= Q(**{'{}__icontains'.format(field): fuzzy_query})
+            startswith_fuzzy_q |= Q(**{'{}__istartswith'.format(field): fuzzy_query})
+
+        sort_order = [
+            sort_order[0],
+            Case(When(title__icontains=query, then=False), default=True),
+            Case(When(startswith_fuzzy_q, then=False), default=True),
+            sort_order[1],
+        ]
+
     results = matching_objects.filter(object_filter).distinct().values(
         key=F('guid'),
         title=Left(
@@ -43,9 +68,7 @@ def _get_matching_objects(query, project_guids, object_cls, core_fields, href_ex
     ).values(
         # secondary call to values to prevent field collision for "description"
         'key', 'title', 'href', description=F('result_description'),
-    ).order_by(
-        Length('title'),
-    )[:MAX_RESULTS_PER_CATEGORY]
+    ).order_by(*sort_order)[:MAX_RESULTS_PER_CATEGORY]
 
     return list(results)
 
@@ -190,7 +213,7 @@ DEFAULT_CATEGORIES = ['projects', 'families', 'analysis_groups', 'individuals', 
 def awesomebar_autocomplete_handler(request):
     """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""
 
-    query = request.GET.get('q')
+    query = request.GET.get('q').strip()
     if not query:
         return create_json_response({'matches': {}})
 

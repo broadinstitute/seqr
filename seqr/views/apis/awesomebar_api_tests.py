@@ -26,7 +26,7 @@ class AwesomebarAPITest(object):
         )
 
         self.login_collaborator()
-        response = self.client.get(url + "?q=1")
+        response = self.client.get(url + "?q=%201%20")
         self.assertEqual(response.status_code, 200)
         matches = response.json()['matches']
         self.assertSetEqual(set(matches.keys()), {'projects', 'families', 'analysis_groups', 'individuals', 'genes'})
@@ -42,14 +42,14 @@ class AwesomebarAPITest(object):
 
         families = matches['families']['results']
         self.assertEqual(len(families), 5)
-        self.assertListEqual([f['title'] for f in families], ['1', '10', '11', '2_1', '12-a'])
+        self.assertListEqual([f['title'] for f in families], ['1', '10', '11', '12-a', '2_1'])
         self.assertDictEqual(families[0], {
             'key': 'F000001_1',
             'title': '1',
             'description': '(1kg project nåme with uniçøde)',
             'href': '/project/R0001_1kg/family_page/F000001_1',
         })
-        self.assertDictEqual(families[3], {
+        self.assertDictEqual(families[4], {
             'key': 'F000002_2',
             'title': '2_1',
             'description': '(1kg project nåme with uniçøde)',
@@ -135,6 +135,13 @@ class AwesomebarAPITest(object):
             'description': '(HP:0001636)',
             'category': 'HP:0033127',
         })
+
+        # Test fuzzy matching
+        response = self.client.get(url + "?q=2-&categories=families")
+        self.assertEqual(response.status_code, 200)
+        families = response.json()['matches']['families']['results']
+        self.assertEqual(len(families), 3)
+        self.assertListEqual([f['title'] for f in families], ['12-a', '2_1', '42'])
 
 
 # Tests for AnVIL access disabled
