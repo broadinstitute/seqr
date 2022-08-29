@@ -44,9 +44,9 @@ class FileUtilsTest(TestCase):
         with self.assertRaises(Exception) as ee:
             get_gs_file_list('gs://bucket/target_path/', user=None)
         self.assertEqual(str(ee.exception), 'Run command failed: -bash: gsutil: command not found. Please check the path.')
-        mock_subproc.Popen.assert_called_with('gsutil ls gs://bucket/target_path/**', stdout=mock_subproc.PIPE,
+        mock_subproc.Popen.assert_called_with('gsutil ls gs://bucket/target_path', stdout=mock_subproc.PIPE,
                                               stderr=mock_subproc.STDOUT, shell=True)
-        mock_logger.info.assert_called_with('==> gsutil ls gs://bucket/target_path/**', None)
+        mock_logger.info.assert_called_with('==> gsutil ls gs://bucket/target_path', None)
         process.wait.assert_called_with()
 
         mock_subproc.reset_mock()
