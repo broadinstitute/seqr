@@ -28,10 +28,13 @@ WORKSPACE_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNa
 WORKSPACE_CREATE_PROJECT_JSON = deepcopy(WORKSPACE_JSON)
 WORKSPACE_CREATE_PROJECT_JSON.update(BASE_CREATE_PROJECT_JSON)
 
+MOCK_GROUP_UUID = '123abd'
+
 class ProjectAPITest(object):
     CREATE_PROJECT_JSON = WORKSPACE_CREATE_PROJECT_JSON
     REQUIRED_FIELDS = ['name', 'genomeVersion', 'workspaceNamespace', 'workspaceName']
 
+    @mock.patch('seqr.models.uuid.uuid4', lambda: MOCK_GROUP_UUID)
     @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_create_and_delete_project(self):
@@ -65,6 +68,7 @@ class ProjectAPITest(object):
         self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
         expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
         self.assertEqual(new_project.workspace_name, expected_workspace_name)
+        self._check_created_project_groups(new_project)
 
         project_guid = new_project.guid
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {project_guid})
@@ -486,6 +490,12 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     REQUIRED_FIELDS = ['name', 'genomeVersion']
     HAS_EMPTY_PROJECT = True
 
+    def _check_created_project_groups(self, project):
+        self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_123abd')
+        self.assertEqual(project.can_view_group.name, 'new_project_can_view_123abd')
+        self.assertSetEqual(set(project.can_edit_group.user_set.all()), {self.pm_user})
+        self.assertSetEqual(set(project.can_view_group.user_set.all()), {self.pm_user})
+
     def test_update_project_workspace(self):
         url = reverse(update_project_workspace, args=[PROJECT_GUID])
         # For non-AnVIL seqr, updating workspace should always fail
@@ -508,6 +518,10 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
             mock.call(self.pm_user, 'bar', 'foo'),
             mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
         ])
+
+    def _check_created_project_groups(self, project):
+        self.assertIsNone(project.can_edit_group)
+        self.assertIsNone(project.can_view_group)
 
     def test_update_project(self):
         super(AnvilProjectAPITest, self).test_update_project()

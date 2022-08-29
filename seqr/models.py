@@ -15,6 +15,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
+from seqr.views.utils.terra_api_utils import anvil_enabled
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
 
@@ -169,8 +170,8 @@ class Project(ModelWithGUID):
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
-    can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
-    can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
+    can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.CASCADE, null=True, blank=True)
+    can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.CASCADE, null=True, blank=True)
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     consent_code = models.CharField(max_length=1, null=True, blank=True, choices=[
@@ -204,32 +205,25 @@ class Project(ModelWithGUID):
         This could be done with signals, but seems cleaner to do it this way.
         """
         being_created = not self.pk
+        should_create_user_groups = being_created and not anvil_enabled()
 
-        if being_created:
+        if should_create_user_groups:
             # create user groups
             self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_edit', uuid.uuid4()))
             self.can_view_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_view', uuid.uuid4()))
 
         super(Project, self).save(*args, **kwargs)
 
-        if being_created:
+        if should_create_user_groups:
+
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
 
             assign_perm(user_or_group=self.can_view_group, perm=CAN_VIEW, obj=self)
 
             # add the user that created this Project to all permissions groups
-            # TODO check anvil enabled
             user = self.created_by
             user.groups.add(self.can_edit_group, self.can_view_group)
-
-    def delete(self, *args, **kwargs):
-        """Override the delete method to also delete the project-specific user groups"""
-
-        super(Project, self).delete(*args, **kwargs)
-
-        self.can_edit_group.delete()
-        self.can_view_group.delete()
 
     class Meta:
         permissions = (
