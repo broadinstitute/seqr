@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import orderBy from 'lodash/orderBy'
 import { Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
@@ -129,15 +128,10 @@ CollaboratorRow.propTypes = {
   update: PropTypes.func,
 }
 
-const getSortedCollabs = project => orderBy(
-  (project.collaborators || []), [c => c.hasEditPermissions, c => c.email],
-  ['desc', 'asc'],
-)
-
 const ProjectCollaborators = React.memo(({ project, user, onSubmit, addCollaborator }) => {
   const canEdit = project.canEdit && !user.isAnvil
   return [
-    ...getSortedCollabs(project).map(
+    ...(project.collaborators || []).map(
       c => <CollaboratorRow key={c.username} collaborator={c} update={canEdit ? onSubmit : null} />,
     ),
     (canEdit ? (

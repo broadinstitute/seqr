@@ -118,9 +118,8 @@ COMPUTED_USER_FIELDS = {
     'is_pm': lambda user, pm_users=None, **kwargs: user in pm_users if pm_users is not None else user_is_pm(user),
 }
 
-DEFAULT_USER = {_to_camel_case(field): '' for field in MAIN_USER_FIELDS}
-DEFAULT_USER.update({_to_camel_case(field): val for field, val in BOOL_USER_FIELDS.items()})
-DEFAULT_USER.update({_to_camel_case(field): False for field in COMPUTED_USER_FIELDS.keys()})
+DEFAULT_COLLABORATOR_FIELDS = ['username', 'email', 'display_name']
+
 
 def _get_json_for_user(user, is_anvil=None, fields=None, analyst_users=None, pm_users=None):
     """Returns JSON representation of the given User object
@@ -792,30 +791,29 @@ def get_json_for_locus_list(locus_list, user):
 
 def get_json_for_project_collaborator_list(user, project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = list(get_project_collaborators_by_username(user, project).values())
+    collaborator_list = list(
+        get_project_collaborators_by_username(user, project).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (
-        collaborator['lastName'] or '', collaborator['displayName'] or '', collaborator['email']))
+        not collaborator['hasEditPermissions'], (collaborator['displayName'] or collaborator['email']).lower()))
 
 
-def get_project_collaborators_by_username(user, project, include_permissions=True, include_analysts=False, **kwargs):
+def get_project_collaborators_by_username(user, project, include_permissions=True, include_analysts=False, fields=DEFAULT_COLLABORATOR_FIELDS):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
-    analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP)) if ANALYST_USER_GROUP else None
-    pm_users = set(User.objects.filter(groups__name=PM_USER_GROUP) if PM_USER_GROUP else User.objects.filter(is_superuser=True))
+
+    analyst_users = None
+    if include_analysts or 'is_analyst' in fields:
+        analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP)) if ANALYST_USER_GROUP else None
 
     if not anvil_enabled():
         for collaborator in project.can_view_group.user_set.all():
             collaborators[collaborator.username] = _get_collaborator_json(
-                collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, pm_users=pm_users,
-                **kwargs
-            )
+                collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, fields=fields)
 
         for collaborator in project.can_edit_group.user_set.all():
             collaborators[collaborator.username] = _get_collaborator_json(
-                collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, pm_users=pm_users,
-                **kwargs
-            )
+                collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, fields=fields)
     elif project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
         users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
@@ -825,27 +823,31 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
             collaborator = users_by_email.get(email)
             if collaborator:
                 collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
-                    can_edit=permission==CAN_EDIT, is_anvil=True, analyst_users=analyst_users, pm_users=pm_users, **kwargs)})
+                    can_edit=permission==CAN_EDIT, analyst_users=analyst_users, fields=fields)})
             else:
-                collaborators[email] = deepcopy(DEFAULT_USER)
-                collaborators[email].update({
-                    'username': email,  # to ensure everything has a unique ID
-                    'email': email,
-                    'isAnvil': True,
-                    'hasViewPermissions': True,
-                    'hasEditPermissions': permission == CAN_EDIT,
-                })
+                collaborators[email] = {
+                    _to_camel_case(field): False if field in COMPUTED_USER_FIELDS or BOOL_USER_FIELDS else ''
+                    for field in fields
+                }
+                collaborators[email].update({field: email for field in ['username', 'email'] if field in fields})
+                if include_permissions:
+                    collaborators[email].update({
+                        'hasViewPermissions': True,
+                        'hasEditPermissions': permission == CAN_EDIT,
+                    })
 
     if include_analysts and analyst_users and project_has_analyst_access(project):
         collaborators.update({
-            user.username: _get_collaborator_json(user, include_permissions, can_edit=True, **kwargs) for user in analyst_users
+            user.username: _get_collaborator_json(
+                user, include_permissions, can_edit=True, analyst_users=analyst_users, fields=fields,
+            ) for user in analyst_users
         })
 
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False, analyst_users=None, pm_users=None, **kwargs):
-    collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil, analyst_users=analyst_users, pm_users=pm_users, **kwargs)
+def _get_collaborator_json(collaborator, include_permissions, can_edit, **kwargs):
+    collaborator_json = _get_json_for_user(collaborator, **kwargs)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,

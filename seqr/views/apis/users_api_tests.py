@@ -18,6 +18,7 @@ PROJECT_GUID = 'R0001_1kg'
 NON_ANVIL_PROJECT_GUID = 'R0002_empty'
 USERNAME = 'test_user_collaborator'
 USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isAnalyst'}
+COLLABORATOR_FIELDS = {'hasEditPermissions', 'hasViewPermissions', 'displayName', 'username', 'email'}
 ANALYST_USERNAME = 'test_user'
 
 TOS_VERSION = 2.2
@@ -95,17 +96,14 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][NON_ANVIL_PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), 3)
-        expected_fields = {'hasEditPermissions', 'hasViewPermissions'}
-        expected_fields.update(USER_FIELDS)
-        self.assertSetEqual(set(collaborators[0].keys()), expected_fields)
-        self.assertEqual(collaborators[0]['email'], 'test@test.com')
-        self.assertEqual(collaborators[0]['displayName'], 'Test')
-        self.assertFalse(collaborators[0]['isSuperuser'])
-        self.assertFalse(collaborators[0]['isAnalyst'])
-        self.assertFalse(collaborators[0]['isDataManager'])
-        self.assertFalse(collaborators[0]['isPm'])
-        self.assertTrue(collaborators[0]['hasViewPermissions'])
-        self.assertFalse(collaborators[0]['hasEditPermissions'])
+        self.assertListEqual(
+            [c['displayName'] for c in collaborators],
+            ['Test Manager User', 'Test', 'Test Collaborator User'])
+        self.assertSetEqual(set(collaborators[0].keys()), COLLABORATOR_FIELDS)
+        self.assertEqual(collaborators[1]['email'], 'test@test.com')
+        self.assertEqual(collaborators[1]['displayName'], 'Test')
+        self.assertTrue(collaborators[1]['hasViewPermissions'])
+        self.assertFalse(collaborators[1]['hasEditPermissions'])
 
         username = collaborators[0]['username']
         user = User.objects.get(username=username)
@@ -167,7 +165,6 @@ class UsersAPITest(object):
         self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES))
         edited_collab = next(collab for collab in collaborators if collab['username'] == USERNAME)
         self.assertNotEqual(edited_collab['displayName'], 'Edited Collaborator')
-        self.assertFalse(edited_collab['isSuperuser'])
         self.assertTrue(edited_collab['hasViewPermissions'])
         self.assertEqual(edited_collab['hasEditPermissions'], True)
 
