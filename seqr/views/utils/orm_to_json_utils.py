@@ -804,27 +804,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
     analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP)) if ANALYST_USER_GROUP else None
     pm_users = set(User.objects.filter(groups__name=PM_USER_GROUP) if PM_USER_GROUP else User.objects.filter(is_superuser=True))
 
-    if anvil_enabled():
-        if project_has_anvil(project):
-            permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-            users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
-            for email, permission in permission_levels.items():
-                if email == SERVICE_ACCOUNT_FOR_ANVIL:
-                    continue
-                collaborator = users_by_email.get(email)
-                if collaborator:
-                    collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
-                        can_edit=permission==CAN_EDIT, is_anvil=True, analyst_users=analyst_users, pm_users=pm_users, **kwargs)})
-                else:
-                    collaborators[email] = deepcopy(DEFAULT_USER)
-                    collaborators[email].update({
-                        'username': email,  # to ensure everything has a unique ID
-                        'email': email,
-                        'isAnvil': True,
-                        'hasViewPermissions': True,
-                        'hasEditPermissions': permission == CAN_EDIT,
-                    })
-    else:
+    if not anvil_enabled():
         for collaborator in project.can_view_group.user_set.all():
             collaborators[collaborator.username] = _get_collaborator_json(
                 collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, pm_users=pm_users,
@@ -836,6 +816,25 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
                 collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, pm_users=pm_users,
                 **kwargs
             )
+    elif project_has_anvil(project):
+        permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
+        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
+        for email, permission in permission_levels.items():
+            if email == SERVICE_ACCOUNT_FOR_ANVIL:
+                continue
+            collaborator = users_by_email.get(email)
+            if collaborator:
+                collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
+                    can_edit=permission==CAN_EDIT, is_anvil=True, analyst_users=analyst_users, pm_users=pm_users, **kwargs)})
+            else:
+                collaborators[email] = deepcopy(DEFAULT_USER)
+                collaborators[email].update({
+                    'username': email,  # to ensure everything has a unique ID
+                    'email': email,
+                    'isAnvil': True,
+                    'hasViewPermissions': True,
+                    'hasEditPermissions': permission == CAN_EDIT,
+                })
 
     if include_analysts and analyst_users and project_has_analyst_access(project):
         collaborators.update({
