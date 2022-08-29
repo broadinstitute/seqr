@@ -19,20 +19,6 @@ FUZZY_MATCH_CHARS = ['-', '_', '.']
 
 def _get_matching_objects(query, project_guids, object_cls, core_fields, href_expression, description_content=None,
                           project_field=None, select_related_project=True, exclude_criteria=None):
-    """Returns objects that match the given query string, and that the user can view, for the given object criteria.
-
-    Args:
-        user: Django user
-        query: String typed into the awesomebar
-        object_cls: Django model class of the object
-        core_fields: Array of field names to match the query against and display the title
-        href_expression: Function to get the href from the
-        description_content: Optional function to get the description from the db
-        project_field: Optional string defining the relationship between the object and parent project
-    Returns:
-        Sorted list of matches where each match is a dictionary of strings
-    """
-
     if project_field:
         matching_objects = getattr(object_cls, 'objects')
         matching_objects = matching_objects.filter(Q(**{'{}__guid__in'.format(project_field): project_guids}))
