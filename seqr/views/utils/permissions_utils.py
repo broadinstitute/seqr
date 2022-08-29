@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
-from django.db.models import Value, TextField
+from django.db.models import Value, TextField, Q
 
 from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
@@ -197,21 +197,22 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
         return project_guids
 
     is_data_manager = user_is_data_manager(user)
-    if is_data_manager and not limit_data_manager:
-        projects = Project.objects.all()
-    else:
-        projects = Project.objects.filter(all_user_demo=True, is_demo=True)
+    projects = Project.objects.all()
+    if limit_data_manager or not is_data_manager:
+        project_q = Q(all_user_demo=True, is_demo=True)
         if user_is_analyst(user):
-            projects |= ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
+            project_q |= Q(projectcategory__name=ANALYST_PROJECT_CATEGORY)
 
         if is_anvil_authenticated(user):
+            projects = projects.annotate(
+                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name'))
             workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
                           list_anvil_workspaces(user)]
-            projects |= Project.objects.filter(workspace_name__isnull=False).exclude(workspace_name='').annotate(
-                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
-                workspace__in=workspaces)
+            project_q |= Q(workspace__in=workspaces)
         else:
-            projects |= Project.objects.filter(can_view_group__user=user)
+            project_q |= Q(can_view_group__user=user)
+
+        projects = projects.filter(project_q)
 
     project_guids = [p.guid for p in projects.distinct().only('guid')]
 
