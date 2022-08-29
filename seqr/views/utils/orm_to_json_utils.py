@@ -121,7 +121,7 @@ COMPUTED_USER_FIELDS = {
 DEFAULT_COLLABORATOR_FIELDS = ['username', 'email', 'display_name']
 
 
-def _get_json_for_user(user, is_anvil=None, fields=None, analyst_users=None, pm_users=None):
+def _get_json_for_user(user, is_anvil=None, fields=None, analyst_users=None, pm_users=None, **kwargs):
     """Returns JSON representation of the given User object
 
     Args:
@@ -821,20 +821,10 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
             if email == SERVICE_ACCOUNT_FOR_ANVIL:
                 continue
             collaborator = users_by_email.get(email)
-            if collaborator:
-                collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
-                    can_edit=permission==CAN_EDIT, analyst_users=analyst_users, fields=fields)})
-            else:
-                collaborators[email] = {
-                    _to_camel_case(field): False if field in COMPUTED_USER_FIELDS or BOOL_USER_FIELDS else ''
-                    for field in fields
-                }
-                collaborators[email].update({field: email for field in ['username', 'email'] if field in fields})
-                if include_permissions:
-                    collaborators[email].update({
-                        'hasViewPermissions': True,
-                        'hasEditPermissions': permission == CAN_EDIT,
-                    })
+            collaborator_json = _get_collaborator_json(
+                collaborator, include_permissions, can_edit=permission==CAN_EDIT, analyst_users=analyst_users,
+                fields=fields, email=email, get_json_func=_get_json_for_user if collaborator else _get_anvil_user_json)
+            collaborators[collaborator_json['username']] = collaborator_json
 
     if include_analysts and analyst_users and project_has_analyst_access(project):
         collaborators.update({
@@ -846,8 +836,17 @@ def get_project_collaborators_by_username(user, project, include_permissions=Tru
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit, **kwargs):
-    collaborator_json = _get_json_for_user(collaborator, **kwargs)
+def _get_anvil_user_json(collab, fields=None, email=None, **kwargs):
+    user = {
+        _to_camel_case(field): False if field in COMPUTED_USER_FIELDS or BOOL_USER_FIELDS else ''
+        for field in fields
+    }
+    user.update({field: email for field in ['username', 'email']})
+    return user
+
+
+def _get_collaborator_json(collaborator, include_permissions, can_edit, get_json_func=_get_json_for_user, **kwargs):
+    collaborator_json = get_json_func(collaborator, **kwargs)
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,
