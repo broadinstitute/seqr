@@ -57,8 +57,7 @@ const getFreqLinkPath = ({ chrom, pos, variant, value }) => {
 }
 
 const FreqSummary = React.memo((props) => {
-  const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2, isMito, isHet } =
-      props
+  const { field, fieldTitle, variant, urls, queryParams, acDisplay, titleContainer, precision = 2 } = props
   const { populations = {}, chrom } = variant
   const population = populations[field] || {}
   if (population.af === null || population.af === undefined) {
@@ -71,7 +70,6 @@ const FreqSummary = React.memo((props) => {
   return (
     <div>
       {titleContainer ? titleContainer(props) : fieldTitle}
-      {isMito && (isHet ? ' heteroplasmy' : ' homoplasmy')}
       <HorizontalSpacer width={5} />
       <FreqValue>
         <b>
@@ -124,8 +122,6 @@ FreqSummary.propTypes = {
   urls: PropTypes.object,
   queryParams: PropTypes.object,
   acDisplay: PropTypes.string,
-  isMito: PropTypes.bool,
-  isHet: PropTypes.bool,
 }
 
 const getGenePath = ({ variant }) => `gene/${getVariantMainGeneId(variant)}`
@@ -150,9 +146,29 @@ const GNOMAD_URL_INFO = {
   queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
 }
 
+const catalogTitle = ({ fieldTitle, catalog }) => (
+  <span>
+    {fieldTitle}
+    &nbsp;
+    {catalog.toLowerCase()}
+  </span>
+)
+
+catalogTitle.propTypes = {
+  fieldTitle: PropTypes.string,
+  isMito: PropTypes.bool,
+  catalog: PropTypes.string,
+}
+
 const POPULATIONS = [
   { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
-  { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' },
+  {
+    field: 'callset',
+    fieldTitle: 'This Callset',
+    acDisplay: 'AC',
+    titleContainer: catalogTitle,
+    catalog: 'Homoplasmy',
+  },
   { field: 'g1k', fieldTitle: '1kg WGS' },
   {
     field: 'exac',
@@ -194,91 +210,112 @@ const POPULATIONS = [
   {
     field: 'callset_heteroplasmy',
     fieldTitle: 'This Callset',
+    titleContainer: catalogTitle,
+    catalog: 'Heteroplasmy',
     acDisplay: 'AC',
-    isHet: true,
     precision: 3,
   },
   {
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
+    titleContainer: catalogTitle,
+    catalog: 'Homoplasmy',
     precision: 3,
     ...GNOMAD_URL_INFO,
   },
   {
     field: 'gnomad_mito_heteroplasmy',
     fieldTitle: 'gnomAD mito',
-    isHet: true,
+    titleContainer: catalogTitle,
+    catalog: 'Heteroplasmy',
     precision: 3,
     ...GNOMAD_URL_INFO,
   },
   {
     field: 'helix',
     fieldTitle: 'Helix mito',
+    titleContainer: catalogTitle,
+    catalog: 'Homoplasmy',
     precision: 3,
   },
   {
     field: 'helix_heteroplasmy',
     fieldTitle: 'Helix mito',
-    isHet: true,
+    titleContainer: catalogTitle,
+    catalog: 'Heteroplasmy',
     precision: 3,
   },
 ]
 
 const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
-  const isMito = POPULATIONS.some(pop => pop.isHet &&
-      (populations[pop.field]?.af !== null && populations[pop.field]?.af !== undefined))
-  const freqContent = (
-    <div>
-      {POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} isMito={isMito} {...pop} />)}
-    </div>
-  )
+  const callsetHetPop = populations.callset_heteroplasmy
+  const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
+  const popupPoputionByCat = POPULATIONS.reduce((acc, pop) => {
+    let catalog = null
+    let detailField
+    if (!isMito && populations[pop.field]) {
+      if (populations[pop.field].ac) {
+        catalog = 'Allele Counts'
+        detailField = 'ac'
+      }
+      if (populations[pop.field] && populations[pop.field].filter_af &&
+          (populations[pop.field].filter_af !== populations[pop.field].af)) {
+        catalog = 'Global AFs'
+        detailField = 'af'
+      }
+    }
+    if (isMito && pop.catalog && populations[pop.field]) {
+      if (populations[pop.field].ac) {
+        catalog = pop.catalog
+        detailField = 'ac'
+      }
+      if (populations[pop.field].max_hl) {
+        catalog = 'Max Observed Heteroplasmy'
+        detailField = 'max_hl'
+      }
+    }
+    if (catalog) {
+      if (!acc[catalog]) {
+        acc[catalog] = []
+      }
+      acc[catalog].push({ ...pop, detailField })
+    }
+    return acc
+  }, {})
 
-  const hasAcPops = POPULATIONS.filter(pop => !pop.isHet && populations[pop.field]?.ac)
-  const hasGlobalAfPops = POPULATIONS.filter(pop => (
-    populations[pop.field] && populations[pop.field].filter_af &&
-    (populations[pop.field].filter_af !== populations[pop.field].af)))
+  const catalogs = Object.keys(popupPoputionByCat)
+  catalogs.sort()
+
+  const freqContent = <div>{POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>
+
   const hasHelpMessagePops = POPULATIONS.filter(
     pop => pop.helpMessage && populations[pop.field] && populations[pop.field].af !== null,
   )
-  const hasAcHetPops = POPULATIONS.filter(pop => pop.isHet && populations[pop.field]?.ac)
-  const hasMaxHlPops = POPULATIONS.filter(pop => populations[pop.field] && populations[pop.field].max_hl)
-  const popupHeader = isMito ? 'Homoplasmy' : 'Allele Counts'
-  const displayAc = acPops => acPops.map(pop => (
-    <div key={pop.field}>
-      {`${pop.fieldTitle}: ${populations[pop.field].ac} out of ${populations[pop.field].an}`}
-    </div>
-  ))
 
   return (
-    (hasAcPops.length || hasGlobalAfPops.length || hasHelpMessagePops.length || hasAcHetPops.length ||
-    hasMaxHlPops.length) ? (
+    (hasHelpMessagePops.length || catalogs.length) ? (
       <Popup position="top center" wide="very" trigger={freqContent}>
-        {hasGlobalAfPops.length > 0 && <Popup.Header content="Global AFs" />}
-        <Popup.Content>
-          {hasGlobalAfPops.map(pop => (
-            <div key={pop.field}>
-              {`${pop.fieldTitle}: ${populations[pop.field].af.toPrecision(pop.precision || 2)}`}
-            </div>
-          ))}
-        </Popup.Content>
-        {hasGlobalAfPops.length > 0 && hasAcPops.length > 0 && <VerticalSpacer height={5} />}
-        {hasAcPops.length > 0 && <Popup.Header content={popupHeader} />}
-        <Popup.Content>
-          {displayAc(hasAcPops)}
-        </Popup.Content>
-        {((hasGlobalAfPops.length > 0 || hasAcPops.length > 0) &&
-            (hasAcHetPops.length > 0 || hasMaxHlPops.length > 0)) && <VerticalSpacer height={5} />}
-        {(hasAcHetPops.length > 0 || hasMaxHlPops.length > 0) && <Popup.Header content="Heteroplasmy" />}
-        <Popup.Content>
-          {displayAc(hasAcHetPops)}
-          {hasMaxHlPops.map(pop => (
-            <div key={pop.field}>
-              {`${pop.fieldTitle} max observed heteroplasmy:
-              ${populations[pop.field].max_hl.toPrecision(pop.precision || 2)}`}
-            </div>
-          ))}
-        </Popup.Content>
+        {catalogs.map((catalog, i) => (
+          <div key={catalog}>
+            {(i > 0) && <VerticalSpacer height={5} />}
+            <Popup.Header content={catalog} />
+            {popupPoputionByCat[catalog].map((pop) => {
+              if (pop.detailField === 'ac') {
+                return (
+                  <Popup.Content key={pop.field}>
+                    {`${pop.fieldTitle}: ${populations[pop.field].ac} out of ${populations[pop.field].an}`}
+                  </Popup.Content>
+                )
+              }
+              return (
+                <Popup.Content key={pop.field}>
+                  {`${pop.fieldTitle} : ${populations[pop.field][pop.detailField].toPrecision(pop.precision || 2)}`}
+                </Popup.Content>
+              )
+            })}
+          </div>
+        ))}
         {hasHelpMessagePops.map(pop => (
           <Popup.Content key={pop.field}>
             <Divider />
@@ -288,7 +325,7 @@ const Frequencies = React.memo(({ variant }) => {
           </Popup.Content>
         ))}
       </Popup>
-      ) : freqContent
+    ) : freqContent
   )
 })
 
