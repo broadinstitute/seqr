@@ -72,7 +72,7 @@ class UsersAPITest(object):
     def _test_collaborator_collaborator_options_response(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.LOCAL_COLLABORATOR_NAMES)
+        self.assertSetEqual(set(response_json.keys()), self.COLLABORATOR_NAMES)
         self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
 
     @mock.patch('seqr.views.apis.users_api.logger')
@@ -94,7 +94,7 @@ class UsersAPITest(object):
             'email': 'test@test.com', 'firstName': 'Test'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][NON_ANVIL_PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), len(self.LOCAL_COLLABORATOR_NAMES) + 1)
+        self.assertEqual(len(collaborators), 3)
         expected_fields = {'hasEditPermissions', 'hasViewPermissions'}
         expected_fields.update(USER_FIELDS)
         self.assertSetEqual(set(collaborators[0].keys()), expected_fields)
@@ -140,7 +140,7 @@ class UsersAPITest(object):
             'email': 'Test@test.com', 'firstName': 'Test', 'lastName': 'Invalid Name Update'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][NON_ANVIL_PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), len(self.LOCAL_COLLABORATOR_NAMES) + 1)
+        self.assertEqual(len(collaborators), 3)
         new_collab = next(collab for collab in collaborators if collab['email'] == 'test@test.com')
         self.assertEqual(new_collab['username'], username)
         self.assertEqual(new_collab['displayName'], 'Test')
@@ -264,7 +264,6 @@ class UsersAPITest(object):
 class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
-    LOCAL_COLLABORATOR_NAMES = COLLABORATOR_NAMES
     EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /login/set_password/{password_token}'
 
     @mock.patch('django.contrib.auth.models.send_mail')
@@ -339,7 +338,6 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_user_pure_anvil@test.com'}
-    LOCAL_COLLABORATOR_NAMES = set()
 
     def _assert_403_response(self, response, **kwargs):
         self.assertEqual(response.status_code, 403)
