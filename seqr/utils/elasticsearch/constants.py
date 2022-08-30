@@ -112,17 +112,19 @@ POPULATIONS = {
         'AC': 'AC_het',
         'AF': 'AF_het',
     },
-    'gnomad_mito': {},
+    'gnomad_mito': {'max_hl': None},
     'gnomad_mito_heteroplasmy': {
         'AN': 'gnomad_mito_AN',
         'AC': 'gnomad_mito_AC_het',
         'AF': 'gnomad_mito_AF_het',
+        'max_hl': 'gnomad_mito_max_hl'
     },
-    'helix': {},
+    'helix': {'max_hl': None},
     'helix_heteroplasmy': {
         'AN': 'helix_AN',
         'AC': 'helix_AC_het',
         'AF': 'helix_AF_het',
+        'max_hl': 'helix_max_hl',
     }
 }
 

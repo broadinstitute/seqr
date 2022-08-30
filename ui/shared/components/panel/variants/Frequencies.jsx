@@ -159,22 +159,28 @@ sectionTitle.propTypes = {
   section: PropTypes.string,
 }
 
+const HOM_SECTION = 'Homoplasmy'
+const HET_SECTION = 'Heteroplasmy'
+const AC_SECTION = 'Allele Counts'
+const GLABLE_AF_SECTION = 'Global AFs'
+const SECTIONS = [GLABLE_AF_SECTION, AC_SECTION, HOM_SECTION, HET_SECTION]
+
 const POPULATIONS = [
   { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
-  {
-    field: 'callset_heteroplasmy',
-    fieldTitle: 'This Callset',
-    titleContainer: sectionTitle,
-    section: 'Heteroplasmy',
-    acDisplay: 'AC',
-    precision: 3,
-  },
   {
     field: 'callset',
     fieldTitle: 'This Callset',
     acDisplay: 'AC',
     titleContainer: sectionTitle,
-    section: 'Homoplasmy',
+    section: HOM_SECTION,
+  },
+  {
+    field: 'callset_heteroplasmy',
+    fieldTitle: 'This Callset',
+    titleContainer: sectionTitle,
+    section: HET_SECTION,
+    acDisplay: 'AC',
+    precision: 3,
   },
   { field: 'g1k', fieldTitle: '1kg WGS' },
   {
@@ -215,33 +221,33 @@ const POPULATIONS = [
     helpMessage: GNOMAD_SV_CRITERIA_MESSAGE,
   },
   {
-    field: 'gnomad_mito_heteroplasmy',
-    fieldTitle: 'gnomAD mito',
-    titleContainer: sectionTitle,
-    section: 'Heteroplasmy',
-    precision: 3,
-    ...GNOMAD_URL_INFO,
-  },
-  {
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
     titleContainer: sectionTitle,
-    section: 'Homoplasmy',
+    section: HOM_SECTION,
     precision: 3,
     ...GNOMAD_URL_INFO,
   },
   {
-    field: 'helix_heteroplasmy',
-    fieldTitle: 'Helix mito',
+    field: 'gnomad_mito_heteroplasmy',
+    fieldTitle: 'gnomAD mito',
     titleContainer: sectionTitle,
-    section: 'Heteroplasmy',
+    section: HET_SECTION,
     precision: 3,
+    ...GNOMAD_URL_INFO,
   },
   {
     field: 'helix',
     fieldTitle: 'Helix mito',
     titleContainer: sectionTitle,
-    section: 'Homoplasmy',
+    section: HOM_SECTION,
+    precision: 3,
+  },
+  {
+    field: 'helix_heteroplasmy',
+    fieldTitle: 'Helix mito',
+    titleContainer: sectionTitle,
+    section: HET_SECTION,
     precision: 3,
   },
 ]
@@ -260,25 +266,24 @@ const Frequencies = React.memo(({ variant }) => {
   const popupDetailsBySection = POPULATIONS.reduce((acc, pop) => {
     if (!isMito) {
       if (populations[pop.field] && populations[pop.field].ac) {
-        pushDefaultKey(acc, 'Allele Counts', { ...pop, detailField: 'ac' })
+        pushDefaultKey(acc, AC_SECTION, { ...pop, detailField: 'ac' })
       }
       if (populations[pop.field] && populations[pop.field].filter_af &&
           (populations[pop.field].filter_af !== populations[pop.field].af)) {
-        pushDefaultKey(acc, 'Global AFs', { ...pop, detailField: 'af' })
+        pushDefaultKey(acc, GLABLE_AF_SECTION, { ...pop, detailField: 'af' })
       }
     } else if (pop.section && populations[pop.field]) { // Mitochondria populations
       if (populations[pop.field].ac) {
         pushDefaultKey(acc, pop.section, { ...pop, detailField: 'ac' })
       }
       if (populations[pop.field].max_hl) {
-        pushDefaultKey(acc, 'Max Observed Heteroplasmy', { ...pop, detailField: 'max_hl' })
+        pushDefaultKey(acc, HET_SECTION, { ...pop, detailField: 'max_hl' })
       }
     }
     return acc
   }, {})
 
-  const sections = Object.keys(popupDetailsBySection)
-  sections.sort()
+  const sections = SECTIONS.filter(sec => Object.keys(popupDetailsBySection).includes(sec))
 
   const freqContent = <div>{POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>
 
@@ -303,7 +308,8 @@ const Frequencies = React.memo(({ variant }) => {
             }
             return (
               <Popup.Content key={`${section}${pop.field}`}>
-                {`${pop.fieldTitle} : ${populations[pop.field][pop.detailField].toPrecision(pop.precision || 2)}`}
+                {`${pop.fieldTitle} ${pop.detailField === 'max_hl' && 'max observed heteroplasmy'}: 
+                ${populations[pop.field][pop.detailField].toPrecision(pop.precision || 2)}`}
               </Popup.Content>
             )
           }),
