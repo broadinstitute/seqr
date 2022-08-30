@@ -4,21 +4,20 @@ Utility functions for converting Django ORM object to JSON
 
 import json
 from collections import defaultdict
-from copy import deepcopy
 from django.db.models import prefetch_related_objects, Prefetch, Count
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Lower
 from django.contrib.auth.models import User
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW, \
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, \
     get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
     project_has_analyst_access
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
-from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
+from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -102,6 +101,7 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
 
 def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
+
 
 MAIN_USER_FIELDS = [
     'username', 'email', 'first_name', 'last_name', 'last_login', 'date_joined', 'id'
@@ -798,9 +798,10 @@ def get_json_for_project_collaborator_list(user, project):
         not collaborator['hasEditPermissions'], (collaborator['displayName'] or collaborator['email']).lower()))
 
 
-def get_project_collaborators_by_username(user, project, include_permissions=True, include_analysts=False, fields=DEFAULT_COLLABORATOR_FIELDS):
+def get_project_collaborators_by_username(user, project, include_permissions=True, include_analysts=False, fields=None):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
+    fields = fields or DEFAULT_COLLABORATOR_FIELDS
 
     analyst_users = None
     if ANALYST_USER_GROUP and (include_analysts or 'is_analyst' in fields):

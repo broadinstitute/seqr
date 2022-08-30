@@ -3,7 +3,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value, TextField, Q
 
-from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
@@ -58,6 +58,7 @@ def active_user_has_policies_and_passes_test(user_permission_test_func):
     def decorator(view_func):
         return login_and_policies_required(user_passes_test(_require_permission(user_permission_test_func))(view_func))
     return decorator
+
 
 analyst_required = active_user_has_policies_and_passes_test(user_is_analyst)
 data_manager_required = active_user_has_policies_and_passes_test(user_is_data_manager)
