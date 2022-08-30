@@ -102,7 +102,10 @@ def anvil_workspace_page(request, namespace, name):
         return redirect('/project/{}/project_page'.format(project.first().guid))
 
     try:
-        check_workspace_perm(request.user, CAN_EDIT, namespace, name, can_share=True)
+        workspace_meta = check_workspace_perm(
+            request.user, CAN_EDIT, namespace, name, can_share=True, meta_fields=['workspace.authorizationDomain'])
+        if workspace_meta['workspace']['authorizationDomain']:
+            raise PermissionDenied
     except PermissionDenied:
         return render_app_html(request, status=403)
     except TerraRefreshTokenFailedException:
