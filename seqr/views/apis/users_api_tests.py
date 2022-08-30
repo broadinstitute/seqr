@@ -99,13 +99,14 @@ class UsersAPITest(object):
         self.assertListEqual(
             [c['displayName'] for c in collaborators],
             ['Test Manager User', 'Test', 'Test Collaborator User'])
-        self.assertSetEqual(set(collaborators[0].keys()), COLLABORATOR_FIELDS)
-        self.assertEqual(collaborators[1]['email'], 'test@test.com')
-        self.assertEqual(collaborators[1]['displayName'], 'Test')
-        self.assertTrue(collaborators[1]['hasViewPermissions'])
-        self.assertFalse(collaborators[1]['hasEditPermissions'])
+        new_collaborator = collaborators[1]
+        self.assertSetEqual(set(new_collaborator.keys()), COLLABORATOR_FIELDS)
+        self.assertEqual(new_collaborator['email'], 'test@test.com')
+        self.assertEqual(new_collaborator['displayName'], 'Test')
+        self.assertTrue(new_collaborator['hasViewPermissions'])
+        self.assertFalse(new_collaborator['hasEditPermissions'])
 
-        username = collaborators[0]['username']
+        username = new_collaborator['username']
         user = User.objects.get(username=username)
 
         expected_email_content = """
