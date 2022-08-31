@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Icon, Popup } from 'semantic-ui-react'
+import { Icon, Popup, Segment } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 
@@ -12,6 +12,7 @@ import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
 import { validators } from 'shared/components/form/FormHelpers'
+import { HelpIcon } from 'shared/components/StyledComponents'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
 import { updateCollaborator } from '../reducers'
@@ -140,6 +141,19 @@ const ProjectCollaborators = React.memo(({ project, user, onSubmit, addCollabora
         <AddCollaboratorButton onSubmit={addCollaborator} />
       </div>
     ) : null),
+    user.isAnvil && (
+      <Segment key="anvilInfo" basic size="small" textAlign="right">
+        <i>Collaborators fetched from AnVIL</i>
+        {project.canEdit && (
+          <Popup
+            trigger={<HelpIcon color="black" />}
+            content={`Project collaborators are managed in AnVIL. Users with access to the associated workspace have
+            access to this project. Users with "Writer" or "Owner" access to the workspace have Manager level access. 
+            To add or remove users, or to change a user's access level, edit the collaborators directly in AnVIL`}
+          />
+        )}
+      </Segment>
+    ),
   ]
 })
 
