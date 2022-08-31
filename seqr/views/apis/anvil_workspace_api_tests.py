@@ -191,7 +191,8 @@ ADD_DATA_UPDATE_DAG_TASKS_RESP = {
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def test_anvil_workspace_page(self, mock_logger):
+    @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
+    def test_anvil_workspace_page(self, mock_api_logger, mock_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
         collaborator_response = self.check_manager_login(url, login_redirect_url='/login/google-oauth2', policy_redirect_url='/accept_policies')
@@ -206,7 +207,22 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/create_project_from_workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
-        self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        self.mock_get_ws_access_level.assert_called_with(
+            self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.authorizationDomain']
+        )
+        mock_api_logger.warning.assert_not_called()
+
+        # Test workspace with authorization domains
+        auth_domains_url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
+        response = self.client.post(auth_domains_url)
+        self.assertEqual(response.status_code, 403)
+        self.mock_get_ws_access_level.assert_called_with(
+            self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2,
+            meta_fields=['workspace.authorizationDomain']
+        )
+        mock_api_logger.warning.assert_called_with(
+            'Unable to load data from anvil workspace with authorization domains "my-seqr-billing/anvil-no-project-workspace2"',
+            self.manager_user)
 
         # Test error handling when token refresh fails
         self.mock_get_ws_access_level.side_effect = TerraRefreshTokenFailedException('Failed to refresh token')
@@ -216,7 +232,9 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             response.url,
             '/login/google-oauth2?next=/workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
         )
-        self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        self.mock_get_ws_access_level.assert_called_with(
+            self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.authorizationDomain']
+        )
 
         # Requesting to load data for an existing project
         self.mock_get_ws_access_level.reset_mock()
