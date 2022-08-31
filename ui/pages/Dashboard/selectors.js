@@ -38,13 +38,18 @@ export const getVisibleProjects = createSelector(
   },
 )
 
-export const getCategoryOptions = createSelector(
+export const getEditableCategoryOptions = createSelector(
   getProjectCategoriesByGuid,
-  projectCategoriesByGuid => ([
+  projectCategoriesByGuid => Object.values(projectCategoriesByGuid).map(
+    projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }),
+  ),
+)
+
+export const getCategoryOptions = createSelector(
+  getEditableCategoryOptions,
+  options => ([
     { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
     { value: SHOW_DEMO, text: 'Demo', key: SHOW_DEMO },
-    ...Object.values(projectCategoriesByGuid).map(
-      projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }),
-    ),
+    ...options,
   ]),
 )
