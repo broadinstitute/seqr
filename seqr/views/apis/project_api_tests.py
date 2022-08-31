@@ -83,6 +83,9 @@ class ProjectAPITest(object):
         # check that project was deleted
         new_project = Project.objects.filter(name='new_project')
         self.assertEqual(len(new_project), 0)
+        self.assertEqual(
+            Group.objects.filter(name__in=['new_project_can_edit_123abd', 'new_project_can_view_123abd']).count(), 0,
+        )
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')

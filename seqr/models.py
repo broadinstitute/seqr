@@ -170,8 +170,8 @@ class Project(ModelWithGUID):
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
-    can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.CASCADE, null=True, blank=True)
-    can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.CASCADE, null=True, blank=True)
+    can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
+    can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     consent_code = models.CharField(max_length=1, null=True, blank=True, choices=[
@@ -224,6 +224,15 @@ class Project(ModelWithGUID):
             # add the user that created this Project to all permissions groups
             user = self.created_by
             user.groups.add(self.can_edit_group, self.can_view_group)
+
+    def delete(self, *args, **kwargs):
+        """Override the delete method to also delete the project-specific user groups"""
+
+        super(Project, self).delete(*args, **kwargs)
+
+        if self.can_edit_group:
+            self.can_edit_group.delete()
+            self.can_view_group.delete()
 
     class Meta:
         permissions = (
