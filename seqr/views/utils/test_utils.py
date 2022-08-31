@@ -284,6 +284,7 @@ ANVIL_WORKSPACES = [{
         }
     },
     'workspace': {
+        'authorizationDomain': [],
         'bucketName': 'test_bucket'
     },
 }, {
@@ -305,6 +306,7 @@ ANVIL_WORKSPACES = [{
         },
     },
     'workspace': {
+        'authorizationDomain': [{'membersGroupName': 'AUTH_restricted_group'}],
         'bucketName': 'test_bucket'
     },
 }
@@ -334,8 +336,12 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
         'accessLevel': user_acl['accessLevel'],
         'canShare': user_acl['canShare'],
     } if user_acl else {}
-    if meta_fields and 'workspace.bucketName' in meta_fields:
-        access_level['workspace'] = {'bucketName': wss[0]['workspace']['bucketName']}
+    if meta_fields:
+        access_level['workspace'] = {}
+        if 'workspace.bucketName' in meta_fields:
+            access_level['workspace']['bucketName'] = wss[0]['workspace']['bucketName']
+        if meta_fields and 'workspace.authorizationDomain' in meta_fields:
+            access_level['workspace']['authorizationDomain'] = wss[0]['workspace']['authorizationDomain']
     return access_level
 
 
