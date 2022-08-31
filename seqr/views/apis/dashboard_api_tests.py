@@ -4,7 +4,7 @@ from django.urls.base import reverse
 
 from seqr.views.apis.dashboard_api import dashboard_page_data
 from seqr.views.utils.terra_api_utils import TerraAPIException
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase,PROJECT_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, PROJECT_FIELDS
 from seqr.models import Project
 
 DASHBOARD_PROJECT_FIELDS = {

@@ -158,10 +158,10 @@ def has_project_permissions(project, user, can_edit=False):
     return user_is_data_manager(user) or \
            (not can_edit and project.all_user_demo and project.is_demo) or \
            (user_is_analyst(user) and project_has_analyst_access(project)) or \
-           user_project_permission(user, permission_level, project)
+           _user_project_permission(user, permission_level, project)
 
 
-def user_project_permission(user, permission_level, project):
+def _user_project_permission(user, permission_level, project):
     if anvil_enabled():
         return anvil_has_perm(user, permission_level, project)
     return user.has_perm(permission_level, project)

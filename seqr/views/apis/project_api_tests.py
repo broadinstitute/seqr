@@ -2,6 +2,7 @@ import json
 import mock
 from copy import deepcopy
 from datetime import datetime
+from django.contrib.auth.models import Group
 from django.urls.base import reverse
 
 from seqr.models import Project
@@ -77,7 +78,6 @@ class ProjectAPITest(object):
         # delete the project
         delete_project_url = reverse(delete_project_handler, args=[project_guid])
         response = self.client.post(delete_project_url, content_type='application/json')
-
         self.assertEqual(response.status_code, 200)
 
         # check that project was deleted

@@ -22,10 +22,10 @@ logger = SeqrLogger(__name__)
 
 USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_analyst'}
 
-no_anvil_required = active_user_has_policies_and_passes_test(lambda u: not anvil_enabled())
+require_anvil_disabled = active_user_has_policies_and_passes_test(lambda u: not anvil_enabled())
 
 
-@no_anvil_required
+@require_anvil_disabled
 def get_all_collaborator_options(request):
     projects = Project.objects.filter(guid__in=get_project_guids_user_can_view(request.user))
     collaborator_ids = set(projects.values_list('can_view_group__user', flat=True))
@@ -122,7 +122,7 @@ def update_policies(request):
     return create_json_response({'currentPolicies': True})
 
 
-@no_anvil_required
+@require_anvil_disabled
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
@@ -169,7 +169,7 @@ def _update_existing_user(user, project, request_json):
     })
 
 
-@no_anvil_required
+@require_anvil_disabled
 def update_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
@@ -178,7 +178,7 @@ def update_project_collaborator(request, project_guid, username):
     return _update_existing_user(user, project, request_json)
 
 
-@no_anvil_required
+@require_anvil_disabled
 def delete_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
