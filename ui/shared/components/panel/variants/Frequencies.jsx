@@ -296,23 +296,23 @@ const Frequencies = React.memo(({ variant }) => {
   const callsetHetPop = populations.callset_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
   const sections = (isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
-    (acc, section) => {
-      const details = POPULATIONS.reduce((accDisplay, popConfig) => {
-        if (section.hasDetail(populations, popConfig)) {
-          accDisplay.push(...section.display(populations, popConfig).map(detail => (
-            <Popup.Content key={`${section.name}${detail.split(':')[0]}`}>
-              {detail}
-            </Popup.Content>
-          )))
-        }
-        return accDisplay
-      }, [])
-      if (details.length) {
-        acc[section.name] = details
-      }
-      return acc
-    }, {},
-  )
+    (acc, section) => ([
+      ...acc,
+      {
+        name: section.name,
+        details: POPULATIONS.reduce((accDisplay, popConfig) => {
+          if (section.hasDetail(populations, popConfig)) {
+            accDisplay.push(...section.display(populations, popConfig).map(detail => (
+              <Popup.Content key={`${section.name}${detail.split(':')[0]}`}>
+                {detail}
+              </Popup.Content>
+            )))
+          }
+          return accDisplay
+        }, []),
+      },
+    ]), [],
+  ).filter(section => section.details.length)
 
   const freqContent = (
     <div>
@@ -325,12 +325,12 @@ const Frequencies = React.memo(({ variant }) => {
   )
 
   return (
-    (hasHelpMessagePops.length || Object.keys(sections).length) ? (
+    (hasHelpMessagePops.length || sections.length) ? (
       <Popup position="top center" wide="very" trigger={freqContent}>
-        {Object.entries(sections).reduce((acc, [section, details], i) => ([
+        {sections.reduce((acc, { name, details }, i) => ([
           ...acc,
-          (i > 0) && <VerticalSpacer key={section} height={5} />,
-          <Popup.Header key={`${section}_header`} content={section} />,
+          (i > 0) && <VerticalSpacer key={name} height={5} />,
+          <Popup.Header key={`${name}_header`} content={name} />,
           ...details,
         ]
         ), [])}
