@@ -6,31 +6,34 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from urllib.parse import unquote
 
-from seqr.models import UserPolicy
+from seqr.models import UserPolicy, Project
 from seqr.utils.communication_utils import send_welcome_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username
-from seqr.views.utils.permissions_utils import get_local_access_projects, get_project_and_check_permissions, \
-    login_and_policies_required, login_active_required
-from seqr.views.utils.terra_api_utils import google_auth_enabled
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, get_project_and_check_permissions, \
+    login_and_policies_required, login_active_required, active_user_has_policies_and_passes_test
+from seqr.views.utils.terra_api_utils import google_auth_enabled, anvil_enabled
 from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 logger = SeqrLogger(__name__)
 
 USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_analyst'}
 
+require_anvil_disabled = active_user_has_policies_and_passes_test(lambda u: not anvil_enabled())
 
-@login_and_policies_required
+
+@require_anvil_disabled
 def get_all_collaborator_options(request):
-    collaborators = set()
-    for project in get_local_access_projects(request.user):
-        collaborators.update(project.get_collaborators())
+    projects = Project.objects.filter(guid__in=get_project_guids_user_can_view(request.user))
+    collaborator_ids = set(projects.values_list('can_view_group__user', flat=True))
+    collaborator_ids.update(projects.values_list('can_edit_group__user', flat=True))
 
     return create_json_response({
-        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS) for user in collaborators
+        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS)
+        for user in User.objects.filter(id__in=collaborator_ids)
     })
 
 
@@ -119,12 +122,9 @@ def update_policies(request):
     return create_json_response({'currentPolicies': True})
 
 
-@login_and_policies_required
+@require_anvil_disabled
 def create_project_collaborator(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    if project.workspace_name:
-        raise PermissionDenied(
-            'Adding collaborators directly in seqr is disabled. Users can be managed from the associated AnVIL workspace')
 
     request_json = json.loads(request.body)
     if not request_json.get('email'):
@@ -169,7 +169,7 @@ def _update_existing_user(user, project, request_json):
     })
 
 
-@login_and_policies_required
+@require_anvil_disabled
 def update_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)
@@ -178,7 +178,7 @@ def update_project_collaborator(request, project_guid, username):
     return _update_existing_user(user, project, request_json)
 
 
-@login_and_policies_required
+@require_anvil_disabled
 def delete_project_collaborator(request, project_guid, username):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
     user = User.objects.get(username=username)

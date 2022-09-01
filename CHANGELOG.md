@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Disable mixed authorization for local and AnVIL permissions (REQUIRES DB MIGRATION)
 
 ## 8/23/22
 * Add consent code for projects (REQUIRES DB MIGRATION)

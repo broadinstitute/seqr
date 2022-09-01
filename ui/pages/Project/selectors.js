@@ -706,11 +706,6 @@ export const getUserOptions = createSelector(
   ),
 )
 
-export const getCollaborators = createSelector(
-  getCurrentProject,
-  project => project.collaborators,
-)
-
 export const getPageHeaderFamily = createSelector(
   getProjectFamiliesByGuid,
   (state, props) => props.match.params.breadcrumbId,

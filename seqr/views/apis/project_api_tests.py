@@ -2,6 +2,7 @@ import json
 import mock
 from copy import deepcopy
 from datetime import datetime
+from django.contrib.auth.models import Group
 from django.urls.base import reverse
 
 from seqr.models import Project
@@ -12,7 +13,7 @@ from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshToke
 from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, \
     SAMPLE_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -28,10 +29,13 @@ WORKSPACE_JSON = {'workspaceName': TEST_NO_PROJECT_WORKSPACE_NAME2, 'workspaceNa
 WORKSPACE_CREATE_PROJECT_JSON = deepcopy(WORKSPACE_JSON)
 WORKSPACE_CREATE_PROJECT_JSON.update(BASE_CREATE_PROJECT_JSON)
 
+MOCK_GROUP_UUID = '123abd'
+
 class ProjectAPITest(object):
     CREATE_PROJECT_JSON = WORKSPACE_CREATE_PROJECT_JSON
     REQUIRED_FIELDS = ['name', 'genomeVersion', 'workspaceNamespace', 'workspaceName']
 
+    @mock.patch('seqr.models.uuid.uuid4', lambda: MOCK_GROUP_UUID)
     @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_create_and_delete_project(self):
@@ -65,6 +69,7 @@ class ProjectAPITest(object):
         self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
         expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
         self.assertEqual(new_project.workspace_name, expected_workspace_name)
+        self._check_created_project_groups(new_project)
 
         project_guid = new_project.guid
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {project_guid})
@@ -73,12 +78,14 @@ class ProjectAPITest(object):
         # delete the project
         delete_project_url = reverse(delete_project_handler, args=[project_guid])
         response = self.client.post(delete_project_url, content_type='application/json')
-
         self.assertEqual(response.status_code, 200)
 
         # check that project was deleted
         new_project = Project.objects.filter(name='new_project')
         self.assertEqual(len(new_project), 0)
+        self.assertEqual(
+            Group.objects.filter(name__in=['new_project_can_edit_123abd', 'new_project_can_view_123abd']).count(), 0,
+        )
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
@@ -459,29 +466,15 @@ class ProjectAPITest(object):
 
 
 BASE_COLLABORATORS = [
-    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Collaborator User',
-     'email': 'test_user_collaborator@test.com', 'firstName': 'Test Collaborator User',
-     'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 12, 'isActive': True, 'isAnvil': False,
-     'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'lastLogin': mock.ANY,
-     'lastName': '', 'username': 'test_user_collaborator'},
-    {'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test Manager User', 'email': 'test_user_manager@test.com',
-     'firstName': 'Test Manager User', 'hasEditPermissions': True, 'hasViewPermissions': True, 'id': 11,
-     'isActive': True, 'isAnvil': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'isSuperuser': False,
-     'lastLogin': None, 'lastName': '', 'username': 'test_user_manager'}]
+    {'displayName': 'Test Manager User', 'email': 'test_user_manager@test.com',  'username': 'test_user_manager',
+     'hasEditPermissions': True, 'hasViewPermissions': True},
+    {'displayName': 'Test Collaborator User', 'email': 'test_user_collaborator@test.com', 'username': 'test_user_collaborator',
+     'hasEditPermissions': False, 'hasViewPermissions': True}]
 
-ANVIL_COLLABORATORS = [{
-    'dateJoined': '', 'displayName': False, 'email': 'test_user_pure_anvil@test.com',
-    'firstName': '', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': '', 'isAnvil': True,
-    'isActive': True, 'isAnalyst': False, 'isDataManager': False, 'isPm': False, 'isSuperuser': False, 'lastName': '',
-    'lastLogin': '', 'username': 'test_user_pure_anvil@test.com'}] + deepcopy(BASE_COLLABORATORS)
-for collab in ANVIL_COLLABORATORS:
-    collab['isAnvil'] = True
+ANVIL_COLLABORATORS = deepcopy(BASE_COLLABORATORS) + [{
+    'displayName': False, 'email': 'test_user_pure_anvil@test.com', 'username': 'test_user_pure_anvil@test.com',
+    'hasEditPermissions': False, 'hasViewPermissions': True, }]
 
-LOCAL_COLLAB = {
-    'dateJoined': '2017-03-12T23:09:54.180Z', 'displayName': 'Test seqr local User', 'email': 'test_local_user@test.com',
-    'firstName': 'Test seqr local User', 'hasEditPermissions': False, 'hasViewPermissions': True, 'id': 14,
-    'isActive': True, 'isAnvil': False, 'isSuperuser': False, 'isAnalyst': False, 'isDataManager': False, 'isPm': False,
-    'lastLogin': None, 'lastName': '', 'username': 'test_local_user'}
 
 # Tests for AnVIL access disabled
 class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
@@ -490,6 +483,12 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     CREATE_PROJECT_JSON = BASE_CREATE_PROJECT_JSON
     REQUIRED_FIELDS = ['name', 'genomeVersion']
     HAS_EMPTY_PROJECT = True
+
+    def _check_created_project_groups(self, project):
+        self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_123abd')
+        self.assertEqual(project.can_view_group.name, 'new_project_can_view_123abd')
+        self.assertSetEqual(set(project.can_edit_group.user_set.all()), {self.pm_user})
+        self.assertSetEqual(set(project.can_view_group.user_set.all()), {self.pm_user})
 
     def test_update_project_workspace(self):
         url = reverse(update_project_workspace, args=[PROJECT_GUID])
@@ -514,6 +513,10 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
             mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
         ])
 
+    def _check_created_project_groups(self, project):
+        self.assertIsNone(project.can_edit_group)
+        self.assertIsNone(project.can_view_group)
+
     def test_update_project(self):
         super(AnvilProjectAPITest, self).test_update_project()
         self.mock_list_workspaces.assert_not_called()
@@ -537,41 +540,3 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_access_level.call_count, 9)
-
-# Test for permissions from AnVIL and local
-class MixProjectAPITest(MixAuthenticationTestCase, ProjectAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS + [LOCAL_COLLAB]
-    HAS_EMPTY_PROJECT = True
-
-    def test_create_and_delete_project(self):
-        super(MixProjectAPITest, self).test_create_and_delete_project()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.pm_user, 'bar', 'foo'),
-            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
-        ])
-
-    def test_update_project(self):
-        super(MixProjectAPITest, self).test_update_project()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
-        ])
-
-    def test_project_page_data(self):
-        super(MixProjectAPITest, self).test_project_page_data()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-    def test_project_overview(self):
-        super(MixProjectAPITest, self).test_project_overview()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
-            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
-            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
