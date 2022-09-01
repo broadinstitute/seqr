@@ -674,6 +674,7 @@ class IgvSample(ModelWithGUID):
 
 class SavedVariant(ModelWithGUID):
     family = models.ForeignKey('Family', on_delete=models.CASCADE)
+    matchmaker_submission = models.ForeignKey('matchmaker.MatchmakerSubmission', null=True, blank=True, on_delete=models.PROTECT)
 
     xpos = models.BigIntegerField()
     xpos_end = models.BigIntegerField(null=True)
