@@ -12,16 +12,6 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
-def _initialize_users(cls):
-    cls.super_user = User.objects.get(username='test_superuser')
-    cls.analyst_user = User.objects.get(username='test_user')
-    cls.pm_user = User.objects.get(username='test_pm_user')
-    cls.data_manager_user = User.objects.get(username='test_data_manager')
-    cls.manager_user = User.objects.get(username='test_user_manager')
-    cls.collaborator_user = User.objects.get(username='test_user_collaborator')
-    cls.no_access_user = User.objects.get(username='test_user_no_access')
-    cls.inactive_user = User.objects.get(username='test_user_inactive')
-    cls.no_policy_user = User.objects.get(username='test_user_no_policies')
 
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
@@ -54,7 +44,15 @@ class AuthenticationTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        _initialize_users(cls)
+        cls.super_user = User.objects.get(username='test_superuser')
+        cls.analyst_user = User.objects.get(username='test_user')
+        cls.pm_user = User.objects.get(username='test_pm_user')
+        cls.data_manager_user = User.objects.get(username='test_data_manager')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_collaborator')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
+        cls.inactive_user = User.objects.get(username='test_user_inactive')
+        cls.no_policy_user = User.objects.get(username='test_user_no_policies')
 
         edit_group = Group.objects.get(pk=2)
         view_group = Group.objects.get(pk=3)

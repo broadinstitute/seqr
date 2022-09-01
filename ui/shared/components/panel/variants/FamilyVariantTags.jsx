@@ -201,7 +201,7 @@ const FamilyVariantTags = React.memo(({
       <Table.Body>
         <Table.Row verticalAlign="top">
           {!isCompoundHet && (
-            <Table.Cell collapsing rowSpan={2}>
+            <Table.Cell collapsing>
               <FamilyLabel family={family} path={linkToSavedVariants ? `saved_variants/family/${family.familyGuid}` : null} />
             </Table.Cell>
           )}
@@ -255,6 +255,9 @@ const FamilyVariantTags = React.memo(({
           </Table.Cell>
         </Table.Row>
         <Table.Row verticalAlign="top">
+          <Table.Cell>
+             <div className="ui violet small label">MME Submission</div>
+          </Table.Cell>
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Notes:</TagTitle>
           </Table.Cell>
