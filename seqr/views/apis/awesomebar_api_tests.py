@@ -1,7 +1,7 @@
 import mock
 from django.urls.base import reverse
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
@@ -155,22 +155,6 @@ class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
 
     def test_awesomebar_autocomplete_handler(self):
         super(AnvilAwesomebarAPITest, self).test_awesomebar_autocomplete_handler()
-        calls = [
-            mock.call(self.no_access_user),
-            mock.call(self.collaborator_user),
-            mock.call(self.collaborator_user),
-        ]
-        self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
-
-
-# Test for permissions from AnVIL and local
-class MixAwesomebarAPITest(MixAuthenticationTestCase, AwesomebarAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-
-    def test_awesomebar_autocomplete_handler(self):
-        super(MixAwesomebarAPITest, self).test_awesomebar_autocomplete_handler()
         calls = [
             mock.call(self.no_access_user),
             mock.call(self.collaborator_user),

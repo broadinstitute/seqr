@@ -4,7 +4,7 @@ import json
 import mock
 
 from seqr.views.apis.summary_data_api import mme_details, success_story, saved_variants_page, bulk_update_family_analysed_by
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 from seqr.models import FamilyAnalysedBy
 
 
@@ -212,20 +212,3 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
         ])
-
-
-# Test for permissions from AnVIL and local
-class MixSummaryDataAPITest(MixAuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    NUM_MANAGER_SUBMISSIONS = 4
-    MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
-
-    def test_mme_details(self, *args):
-        super(MixSummaryDataAPITest, self).test_mme_details(*args)
-        assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
-
-    def test_saved_variants_page(self):
-        super(MixSummaryDataAPITest, self).test_saved_variants_page()
-        assert_has_expected_calls(self, [
-            self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user])
-
