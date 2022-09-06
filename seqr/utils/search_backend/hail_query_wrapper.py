@@ -914,12 +914,14 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
         variant_ht = VariantHailTableQuery.import_filtered_ht(data_source[VARIANT_DATASET], samples[VARIANT_DATASET], **kwargs)
-        sv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[SV_DATASET], samples[SV_DATASET], **kwargs)
+        gcnv_key = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
+        # TODO work with WGS SVs
+        sv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[gcnv_key], samples[gcnv_key], **kwargs)
 
         ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
 
         variant_sample_ids = {s.sample_id for s in samples[VARIANT_DATASET]}
-        sv_sample_ids = {s.sample_id for s in samples[SV_DATASET]}
+        sv_sample_ids = {s.sample_id for s in samples[gcnv_key]}
         shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
         variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype

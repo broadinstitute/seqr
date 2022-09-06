@@ -6,7 +6,7 @@ from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.search_backend.hail_query_wrapper import STRUCTURAL_ANNOTATION_FIELD, \
-    VariantHailTableQuery, GcnvHailTableQuery, AllDataTypeHailTableQuery
+    VariantHailTableQuery, GcnvHailTableQuery, SvHailTableQuery, AllDataTypeHailTableQuery
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,8 @@ SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NE
 
 QUERY_CLASS_MAP = {
     Sample.DATASET_TYPE_VARIANT_CALLS: VariantHailTableQuery,
-    Sample.DATASET_TYPE_SV_CALLS: GcnvHailTableQuery,
+    f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': GcnvHailTableQuery,
+    f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': SvHailTableQuery,
 }
 
 class HailSearch(object):
@@ -42,7 +43,8 @@ class HailSearch(object):
     def _load_table(self, data_type, **kwargs):
         sample_data_sources_by_type = defaultdict(lambda: defaultdict(list))
         for s in self.samples:
-            sample_data_sources_by_type[s.dataset_type][s.elasticsearch_index].append(s)  # In production: should use a different model field, not elasticsearch_index
+            data_type_key = f'{s.dataset_type}_{s.sample_type}' if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS else s.dataset_type
+            sample_data_sources_by_type[data_type_key][s.elasticsearch_index].append(s)  # In production: should use a different model field, not elasticsearch_index
         multi_data_sources = next(
             (data_sources for data_sources in sample_data_sources_by_type.values() if len(data_sources) > 1), None)
         if multi_data_sources:
@@ -50,6 +52,10 @@ class HailSearch(object):
                 f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources.keys())}')
         data_sources_by_type = {k: list(v.keys())[0] for k, v in sample_data_sources_by_type.items()}
         samples_by_data_type = {k: list(v.values())[0] for k, v in sample_data_sources_by_type.items()}
+
+        if data_type == Sample.DATASET_TYPE_SV_CALLS:
+            data_type = None
+            data_sources_by_type = {k: v for k, v in data_sources_by_type.items() if f.startswith(Sample.DATASET_TYPE_SV_CALLS)}
 
         if not data_type and len(data_sources_by_type) == 1:
             data_type = list(data_sources_by_type.keys())[0]
