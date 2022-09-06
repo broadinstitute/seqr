@@ -78,8 +78,8 @@ class BaseHailTableQuery(object):
         annotation_fields = {
             'populations': lambda r: hl.dict({
                 population: hl.dict({
-                    response_key: hl.or_else(r[population][field], 0) for response_key, field in pop_config.items()
-                    if field is not None
+                    response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
+                    for response_key, field in pop_config.items() if field is not None
                 }) for population, pop_config in self.populations_configs.items()
             }),
             'predictions': lambda r: hl.struct(**{
