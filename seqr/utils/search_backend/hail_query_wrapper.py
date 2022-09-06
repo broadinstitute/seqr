@@ -739,6 +739,7 @@ def _get_genotype_override_field(genotypes, default, field, agg):
         _no_genotype_override(genotypes, field), default, agg(genotypes.values().map(lambda g: g[field]))
     )
 
+
 class GcnvHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
@@ -809,6 +810,54 @@ class GcnvHailTableQuery(BaseHailTableQuery):
             )
         return families_expr
 
+
+class SvHailTableQuery(BaseHailTableQuery):  # TODO use inheritance with GcnvHailTableQuery
+
+    GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
+    GENOTYPE_QUERY_MAP[COMP_HET_ALT] = GENOTYPE_QUERY_MAP[HAS_ALT]
+
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
+    POPULATIONS = {
+        'gnomad_svs': {'ID': 'id', 'AC': None, 'AN': None, 'Hom': None, 'Hemi': None, 'Het': None},
+        'sv_callset': {'hemi': None},
+    }
+    PREDICTION_FIELDS_CONFIG = {
+        'strvctvre': ('strvctvre', 'score'),
+    }
+
+    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + [
+        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'svType', 'svTypeDetail', 'xpos',
+    ]
+    BASE_ANNOTATION_FIELDS = {
+        'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
+        'pos': lambda r: r.interval.start.position,
+        'end': lambda r: r.interval.end.position,
+        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
+        'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
+    }
+    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
+    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD]
+
+    @staticmethod
+    def import_filtered_ht(data_source, samples, intervals=None, exclude_intervals=False):
+        ht = BaseHailTableQuery.import_filtered_ht(data_source, samples)
+        if intervals:
+            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
+                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
+            ht = ht.filter(interval_filter)
+        return ht
+
+    def _parse_pathogenicity_overrides(self, pathogenicity):
+        pass
+
+    def _filter_vcf_filters(self):
+        pass
+
+    @staticmethod
+    def get_x_chrom_filter(mt, x_interval):
+        return mt.interval.overlaps(x_interval)
+
+
 def _annotation_for_data_type(field):
     return lambda r: hl.if_else(
         hl.is_defined(r.locus),
@@ -816,7 +865,7 @@ def _annotation_for_data_type(field):
         GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
     )
 
-class AllDataTypeHailTableQuery(VariantHailTableQuery):
+class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle all? or have special cases for gcnv vs SV
 
     GENOTYPE_QUERY_MAP = GcnvHailTableQuery.GENOTYPE_QUERY_MAP
 
