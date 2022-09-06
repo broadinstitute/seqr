@@ -71,6 +71,7 @@ class BaseHailTableQuery(object):
         }
         for pop, pop_config in self.POPULATIONS.items():
             populations[pop].update(pop_config)
+        print(populations)
         logger.info(populations)
         return populations
 
