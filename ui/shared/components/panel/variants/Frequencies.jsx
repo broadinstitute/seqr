@@ -154,17 +154,14 @@ const sectionTitle = ({ fieldTitle, section }) => (
   </span>
 )
 
-sectionTitle.propTypes = {
-  fieldTitle: PropTypes.string,
-  section: PropTypes.string,
-}
-
 const HOM_SECTION = 'Homoplasmy'
 const HET_SECTION = 'Heteroplasmy'
 
+const CALLSET_POP = { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' }
+
 const POPULATIONS = [
   { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
-  { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' },
+  CALLSET_POP,
   { field: 'g1k', fieldTitle: '1kg WGS' },
   {
     field: 'exac',
@@ -206,9 +203,7 @@ const POPULATIONS = [
 
 const MITO_POPULATIONS = [
   {
-    field: 'callset',
-    fieldTitle: 'This Callset',
-    acDisplay: 'AC',
+    ...CALLSET_POP,
     titleContainer: sectionTitle,
     section: HOM_SECTION,
   },
@@ -218,7 +213,6 @@ const MITO_POPULATIONS = [
     acDisplay: 'AC',
     titleContainer: sectionTitle,
     section: HET_SECTION,
-    precision: 3,
   },
   {
     field: 'gnomad_mito',
@@ -252,18 +246,16 @@ const MITO_POPULATIONS = [
   },
 ]
 
-const acDisplay = pop => ([{ subTitle: '', value: `${pop.ac} out of ${pop.an}` }])
-
 const DETAIL_SECTIONS = [
   {
     name: 'Global AFs',
     hasDetail: pop => pop && pop.filter_af && (pop.filter_af !== pop.af),
-    display: (pop, popConfig) => ([{ subTitle: '', value: `${pop.af.toPrecision(popConfig.precision || 2)}` }]),
+    display: () => [{ subTitle: '', value: 'af' }],
   },
   {
     name: 'Allele Counts',
     hasDetail: pop => pop && pop.ac,
-    display: acDisplay,
+    display: () => [{ subTitle: '', value: 'ac' }],
   },
 ]
 
@@ -271,17 +263,23 @@ const MITO_DETAIL_SECTIONS = [
   {
     name: HOM_SECTION,
     hasDetail: pop => pop && pop.ac,
-    display: acDisplay,
+    display: () => [{ subTitle: '', value: 'ac' }],
   },
   {
     name: HET_SECTION,
     hasDetail: pop => pop && (pop.ac || pop.max_hl),
-    display: (pop, popConfig) => ([
-      pop.ac && acDisplay(pop)[0],
-      pop.max_hl && { subTitle: ' max observed heteroplasmy', value: `${pop.max_hl.toPrecision(popConfig.precision || 2)}` },
+    display: pop => ([
+      pop.ac && { subTitle: '', value: 'ac' },
+      pop.max_hl && { subTitle: ' max observed heteroplasmy', value: 'max_hl' },
     ].filter(d => d)),
   },
 ]
+
+const DISPLAY_VALUE = {
+  ac: pop => `${pop.ac} out of ${pop.an}`,
+  af: (pop, popConfig) => `${pop.af.toPrecision(popConfig.precision || 2)}`,
+  max_hl: (pop, popConfig) => `${pop.max_hl.toPrecision(popConfig.precision || 2)}`,
+}
 
 const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
@@ -297,7 +295,7 @@ const Frequencies = React.memo(({ variant }) => {
           (!popConfig.section || popConfig.section === section.name) &&
           section.display(populations[popConfig.field], popConfig).map(({ subTitle, value }) => (
             <Popup.Content key={`${section.name}${popConfig.field}${subTitle}`}>
-              {`${popConfig.fieldTitle}${subTitle}: ${value}`}
+              {`${popConfig.fieldTitle}${subTitle}: ${DISPLAY_VALUE[value](populations[popConfig.field], popConfig)}`}
             </Popup.Content>
           ))
         )).filter(d => d).reduce((displayAcc, d) => ([...displayAcc, ...d]), []),
