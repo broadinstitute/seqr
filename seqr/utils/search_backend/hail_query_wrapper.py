@@ -71,8 +71,6 @@ class BaseHailTableQuery(object):
         }
         for pop, pop_config in self.POPULATIONS.items():
             populations[pop].update(pop_config)
-        print(populations)
-        logger.info(populations)
         return populations
 
     @property
@@ -820,7 +818,7 @@ class SvHailTableQuery(BaseHailTableQuery):  # TODO use inheritance with GcnvHai
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
     POPULATIONS = {
-        'gnomad_svs': {'ID': 'id', 'AC': None, 'AN': None, 'Hom': None, 'Hemi': None, 'Het': None},
+        'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None},
         'sv_callset': {'hemi': None},
     }
     PREDICTION_FIELDS_CONFIG = {
