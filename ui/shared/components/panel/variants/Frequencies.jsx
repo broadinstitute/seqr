@@ -146,44 +146,25 @@ const GNOMAD_URL_INFO = {
   queryParams: { [GENOME_VERSION_38]: 'dataset=gnomad_r3' },
 }
 
-const sectionTitle = ({ fieldTitle, section, isMito }) => (
-  isMito ? (
-    <span>
-      {fieldTitle}
-      &nbsp;
-      {section.toLowerCase()}
-    </span>
-  ) : <span>{fieldTitle}</span>
+const sectionTitle = ({ fieldTitle, section }) => (
+  <span>
+    {fieldTitle}
+    &nbsp;
+    {section.toLowerCase()}
+  </span>
 )
 
 sectionTitle.propTypes = {
   fieldTitle: PropTypes.string,
   section: PropTypes.string,
-  isMito: PropTypes.bool,
 }
 
 const HOM_SECTION = 'Homoplasmy'
 const HET_SECTION = 'Heteroplasmy'
-const AC_SECTION = 'Allele Counts'
-const GLOBAL_AF_SECTION = 'Global AFs'
 
 const POPULATIONS = [
   { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
-  {
-    field: 'callset',
-    fieldTitle: 'This Callset',
-    acDisplay: 'AC',
-    titleContainer: sectionTitle,
-    section: HOM_SECTION,
-  },
-  {
-    field: 'callset_heteroplasmy',
-    fieldTitle: 'This Callset',
-    titleContainer: sectionTitle,
-    section: HET_SECTION,
-    acDisplay: 'AC',
-    precision: 3,
-  },
+  { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' },
   { field: 'g1k', fieldTitle: '1kg WGS' },
   {
     field: 'exac',
@@ -221,6 +202,24 @@ const POPULATIONS = [
     queryParams: { [GENOME_VERSION_37]: 'dataset=gnomad_sv_r2_1' },
     helpMessage: GNOMAD_SV_CRITERIA_MESSAGE,
   },
+]
+
+const MITO_POPULATIONS = [
+  {
+    field: 'callset',
+    fieldTitle: 'This Callset',
+    acDisplay: 'AC',
+    titleContainer: sectionTitle,
+    section: HOM_SECTION,
+  },
+  {
+    field: 'callset_heteroplasmy',
+    fieldTitle: 'This Callset',
+    acDisplay: 'AC',
+    titleContainer: sectionTitle,
+    section: HET_SECTION,
+    precision: 3,
+  },
   {
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
@@ -253,21 +252,17 @@ const POPULATIONS = [
   },
 ]
 
-const acDisplay = (populations, popConfig) => ([
-  `${popConfig.fieldTitle}: ${populations[popConfig.field].ac} out of ${populations[popConfig.field].an}`,
-])
+const acDisplay = pop => ([{ subTitle: '', value: `${pop.ac} out of ${pop.an}` }])
+
 const DETAIL_SECTIONS = [
   {
-    name: GLOBAL_AF_SECTION,
-    hasDetail: (populations, popConfig) => populations[popConfig.field] && populations[popConfig.field].filter_af &&
-      (populations[popConfig.field].filter_af !== populations[popConfig.field].af),
-    display: (populations, popConfig) => ([
-      `${popConfig.fieldTitle} : ${populations[popConfig.field].af.toPrecision(popConfig.precision || 2)}`,
-    ]),
+    name: 'Global AFs',
+    hasDetail: pop => pop && pop.filter_af && (pop.filter_af !== pop.af),
+    display: (pop, popConfig) => ([{ subTitle: '', value: `${pop.af.toPrecision(popConfig.precision || 2)}` }]),
   },
   {
-    name: AC_SECTION,
-    hasDetail: (populations, popConfig) => populations[popConfig.field] && populations[popConfig.field].ac,
+    name: 'Allele Counts',
+    hasDetail: pop => pop && pop.ac,
     display: acDisplay,
   },
 ]
@@ -275,18 +270,15 @@ const DETAIL_SECTIONS = [
 const MITO_DETAIL_SECTIONS = [
   {
     name: HOM_SECTION,
-    hasDetail: (populations, popConfig) => populations[popConfig.field] && popConfig.section === HOM_SECTION &&
-      populations[popConfig.field].ac,
+    hasDetail: pop => pop && pop.ac,
     display: acDisplay,
   },
   {
     name: HET_SECTION,
-    hasDetail: (populations, popConfig) => populations[popConfig.field] && popConfig.section === HET_SECTION &&
-        (populations[popConfig.field].ac || populations[popConfig.field].max_hl),
-    display: (populations, popConfig) => ([
-      populations[popConfig.field].ac && acDisplay(populations, popConfig)[0],
-      populations[popConfig.field].max_hl &&
-      `${popConfig.fieldTitle} max observed heteroplasmy: ${populations[popConfig.field].max_hl.toPrecision(popConfig.precision || 2)}`,
+    hasDetail: pop => pop && (pop.ac || pop.max_hl),
+    display: (pop, popConfig) => ([
+      pop.ac && acDisplay(pop)[0],
+      pop.max_hl && { subTitle: ' max observed heteroplasmy', value: `${pop.max_hl.toPrecision(popConfig.precision || 2)}` },
     ].filter(d => d)),
   },
 ]
@@ -295,32 +287,28 @@ const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
   const callsetHetPop = populations.callset_heteroplasmy
   const isMito = callsetHetPop && callsetHetPop.af !== null && callsetHetPop.af !== undefined
+  const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
   const sections = (isMito ? MITO_DETAIL_SECTIONS : DETAIL_SECTIONS).reduce(
     (acc, section) => ([
       ...acc,
       {
         name: section.name,
-        details: POPULATIONS.reduce((accDisplay, popConfig) => {
-          if (section.hasDetail(populations, popConfig)) {
-            accDisplay.push(...section.display(populations, popConfig).map(detail => (
-              <Popup.Content key={`${section.name}${detail.split(':')[0]}`}>
-                {detail}
-              </Popup.Content>
-            )))
-          }
-          return accDisplay
-        }, []),
+        details: popConfigs.map((accDisplay, popConfig) => ([
+          section.hasDetail(populations[popConfig.field]) &&
+          (!popConfig.section || popConfig.section === section.name) &&
+          section.display(populations[popConfig.field], popConfig).map(({ subTitle, value }) => (
+            <Popup.Content key={`${section.name}${popConfig.field}${subTitle}`}>
+              {`${popConfig.fieldTitle}${subTitle}: ${value}`}
+            </Popup.Content>
+          )),
+        ])).filter(d => d).reduce((displayAcc, d) => ([...displayAcc, ...d]), []),
       },
     ]), [],
   ).filter(section => section.details.length)
 
-  const freqContent = (
-    <div>
-      {POPULATIONS.map(pop => <FreqSummary key={pop.field} variant={variant} isMito={isMito} {...pop} />)}
-    </div>
-  )
+  const freqContent = (<div>{popConfigs.map(pop => <FreqSummary key={pop.field} variant={variant} {...pop} />)}</div>)
 
-  const hasHelpMessagePops = POPULATIONS.filter(
+  const hasHelpMessagePops = popConfigs.filter(
     pop => pop.helpMessage && populations[pop.field] && populations[pop.field].af !== null,
   )
 
