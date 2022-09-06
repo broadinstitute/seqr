@@ -329,7 +329,7 @@ KIBANA_SERVER = '{host}:{port}'.format(
 KIBANA_ELASTICSEARCH_PASSWORD = os.environ.get('KIBANA_ES_PASSWORD')
 
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
-REDIS_SERVICE_PORT = os.environ.get('REDIS_SERVICE_PORT', '6379')
+REDIS_SERVICE_PORT = int(os.environ.get('REDIS_SERVICE_PORT', '6379'))
 
 # Matchmaker
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
