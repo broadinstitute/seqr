@@ -5,7 +5,9 @@ from seqr.utils.search_backend.write_data.write_project_samples_utils import wri
 
 
 def _read_table(file, subset_ht=None):
-    mt = hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').select_globals().select_rows()
+    mt = hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt')
+    mt = mt.rename({'rsid': 'variantId'})
+    mt = mt.select_globals().key_rows_by('variantId').select_rows()
     mt = mt.semi_join_cols(subset_ht)
     return mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
 

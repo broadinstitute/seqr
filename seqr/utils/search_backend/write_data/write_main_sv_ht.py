@@ -8,7 +8,7 @@ CHROMOSOMES = [
 CHROM_NUMBER_TO_CHROM = hl.literal({i: chrom for i, chrom in enumerate(CHROMOSOMES)})
 
 SEQR_FIELDS = [
-    'filters', 'rg37_locus', 'rg37_locus_end', 'sortedTranscriptConsequences', 'svType', 'variantId', 'xpos',
+    'filters', 'rg37_locus', 'rg37_locus_end', 'sortedTranscriptConsequences', 'svType', 'xpos',
 ]
 RENAME_FIELDS = {
     'bothsides_support': 'bothsidesSupport', 'cpx_intervals': 'cpxIntervals', 'sv_type_detail': 'svTypeDetail',
@@ -45,6 +45,7 @@ def write_main_ht(file):
     }
     ht = ht.annotate(**variant_annotations)
     ht = ht.rename(RENAME_FIELDS)
+    ht = ht.key_by('variantId')
     ht = ht.select_globals().select(*variant_annotations.keys(), *RENAME_FIELDS.values(), *SEQR_FIELDS)
 
     ht.write(f'gs://hail-backend-datasets/{file}_parsed.ht')
