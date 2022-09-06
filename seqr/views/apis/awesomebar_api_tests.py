@@ -1,7 +1,7 @@
 import mock
 from django.urls.base import reverse
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
@@ -26,7 +26,7 @@ class AwesomebarAPITest(object):
         )
 
         self.login_collaborator()
-        response = self.client.get(url + "?q=1")
+        response = self.client.get(url + "?q=%201%20")
         self.assertEqual(response.status_code, 200)
         matches = response.json()['matches']
         self.assertSetEqual(set(matches.keys()), {'projects', 'families', 'analysis_groups', 'individuals', 'genes'})
@@ -42,14 +42,14 @@ class AwesomebarAPITest(object):
 
         families = matches['families']['results']
         self.assertEqual(len(families), 5)
-        self.assertListEqual([f['title'] for f in families], ['1', '10', '11', '2_1', '12-a'])
+        self.assertListEqual([f['title'] for f in families], ['1', '10', '11', '12-a', '2_1'])
         self.assertDictEqual(families[0], {
             'key': 'F000001_1',
             'title': '1',
             'description': '(1kg project nåme with uniçøde)',
             'href': '/project/R0001_1kg/family_page/F000001_1',
         })
-        self.assertDictEqual(families[3], {
+        self.assertDictEqual(families[4], {
             'key': 'F000002_2',
             'title': '2_1',
             'description': '(1kg project nåme with uniçøde)',
@@ -136,6 +136,13 @@ class AwesomebarAPITest(object):
             'category': 'HP:0033127',
         })
 
+        # Test fuzzy matching
+        response = self.client.get(url + "?q=2-&categories=families")
+        self.assertEqual(response.status_code, 200)
+        families = response.json()['matches']['families']['results']
+        self.assertEqual(len(families), 3)
+        self.assertListEqual([f['title'] for f in families], ['12-a', '2_1', '42'])
+
 
 # Tests for AnVIL access disabled
 class LocalAwesomebarAPITest(AuthenticationTestCase, AwesomebarAPITest):
@@ -148,22 +155,6 @@ class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
 
     def test_awesomebar_autocomplete_handler(self):
         super(AnvilAwesomebarAPITest, self).test_awesomebar_autocomplete_handler()
-        calls = [
-            mock.call(self.no_access_user),
-            mock.call(self.collaborator_user),
-            mock.call(self.collaborator_user),
-        ]
-        self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
-
-
-# Test for permissions from AnVIL and local
-class MixAwesomebarAPITest(MixAuthenticationTestCase, AwesomebarAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-
-    def test_awesomebar_autocomplete_handler(self):
-        super(MixAwesomebarAPITest, self).test_awesomebar_autocomplete_handler()
         calls = [
             mock.call(self.no_access_user),
             mock.call(self.collaborator_user),
