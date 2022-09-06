@@ -76,7 +76,7 @@ class BaseHailTableQuery(object):
     @property
     def annotation_fields(self):
         annotation_fields = {
-            'populations': lambda r: hl.dict({
+            'populations': lambda r: hl.struct(**{
                 population: hl.struct(**{
                     response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
                     for response_key, field in pop_config.items() if field is not None
