@@ -119,6 +119,10 @@ class BaseHailTableQuery(object):
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
+
+        if self._filtered_genes:
+            mt = self._filter_gene_ids(mt, self._filtered_genes)
+
         return mt
 
     @staticmethod
@@ -130,6 +134,10 @@ class BaseHailTableQuery(object):
             for s in samples
         }
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
+
+    @staticmethod
+    def _filter_gene_ids(mt, gene_ids):
+        return mt.filter_rows(mt.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
 
     def _should_add_chr_prefix(self):
         reference_genome = hl.get_reference(self._genome_version)
