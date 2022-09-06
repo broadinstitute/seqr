@@ -293,15 +293,14 @@ const Frequencies = React.memo(({ variant }) => {
       ...acc,
       {
         name: section.name,
-        details: popConfigs.map((accDisplay, popConfig) => ([
-          section.hasDetail(populations[popConfig.field]) &&
+        details: popConfigs.map(popConfig => (section.hasDetail(populations[popConfig.field]) &&
           (!popConfig.section || popConfig.section === section.name) &&
           section.display(populations[popConfig.field], popConfig).map(({ subTitle, value }) => (
             <Popup.Content key={`${section.name}${popConfig.field}${subTitle}`}>
               {`${popConfig.fieldTitle}${subTitle}: ${value}`}
             </Popup.Content>
-          )),
-        ])).filter(d => d).reduce((displayAcc, d) => ([...displayAcc, ...d]), []),
+          ))
+        )).filter(d => d).reduce((displayAcc, d) => ([...displayAcc, ...d]), []),
       },
     ]), [],
   ).filter(section => section.details.length)
