@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 9/6/22
 * Disable mixed authorization for local and AnVIL permissions (REQUIRES DB MIGRATION)
 
 ## 8/23/22
