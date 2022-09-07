@@ -900,18 +900,25 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
     @property
     def annotation_fields(self):
         annotation_fields = super(AllDataTypeHailTableQuery, self).annotation_fields
-        snp_populations = set(VariantHailTableQuery.POPULATIONS.keys())
-        sv_populations = set(GcnvHailTableQuery.POPULATIONS.keys())
-        population_annotation = annotation_fields['populations']
-        annotation_fields['populations'] = lambda r: hl.bind(
-            # lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
-            #     hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
-            lambda populations: hl.if_else(
-                hl.is_defined(r.svType),
-                hl.dict({k: populations[k] for k in sv_populations}),
-                hl.dict({k: populations[k] for k in snp_populations})),
-            population_annotation(r),
-        )
+        snp_populations = hl.set(set(VariantHailTableQuery.POPULATIONS.keys()))
+        sv_populations = hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
+        # population_annotation = annotation_fields['populations']
+        # annotation_fields['populations'] = lambda r: hl.bind(
+        #     lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
+        #         hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
+        #     population_annotation(r),
+        # )
+
+        annotation_fields['populations'] = lambda r: hl.struct(**{
+            population: hl.or_missing(
+                hl.if_else(hl.is_defined(r.svType), sv_populations.contains(population), snp_populations.contains(population)),
+                hl.struct(**{
+                    response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
+                    for response_key, field in pop_config.items() if field is not None
+                })
+            ) for population, pop_config in self.populations_configs.items()
+        })
+
         return annotation_fields
 
     def _save_samples(self, samples):
