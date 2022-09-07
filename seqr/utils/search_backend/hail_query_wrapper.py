@@ -910,8 +910,8 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
             #     hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
             lambda populations: hl.if_else(
                 hl.is_defined(r.svType),
-                hl.dict({k: hl.dict({field: populations[k][field] for field in POPULATION_SUBFIELDS}) for k in sv_populations}),
-                hl.dict({k: hl.dict({field: populations[k][field] for field in POPULATION_SUBFIELDS}) for k in snp_populations})),
+                hl.dict({k: hl.dict({field.lower(): populations[k][field.lower()] for field in POPULATION_SUBFIELDS}) for k in sv_populations}),
+                hl.dict({k: hl.dict({field.lower(): populations[k][field.lower()] for field in POPULATION_SUBFIELDS}) for k in snp_populations})),
             population_annotation(r),
         )
         return annotation_fields
