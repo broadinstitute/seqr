@@ -27,6 +27,8 @@ COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
 INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
 
+POPULATION_SUBFIELDS = ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het', 'filter_af']
+
 
 class BaseHailTableQuery(object):
 
@@ -66,7 +68,7 @@ class BaseHailTableQuery(object):
     @property
     def populations_configs(self):
         populations = {
-            pop: {field.lower(): field for field in ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']}
+            pop: {field.lower(): field for field in POPULATION_SUBFIELDS}
             for pop in self.POPULATIONS.keys()
         }
         for pop, pop_config in self.POPULATIONS.items():
@@ -626,8 +628,8 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'DP', 'PL', 'GQ']}
     POPULATIONS = {
-        'callset': {'hom': None, 'hemi': None, 'het': None},
-        'topmed': {'hemi': None, 'het': None},
+        'callset': {'filter_af': None, 'hom': None, 'hemi': None, 'het': None},
+        'topmed': {'filter_af': None, 'hemi': None, 'het': None},
         'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
@@ -757,7 +759,7 @@ class GcnvHailTableQuery(BaseHailTableQuery):
         f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
     }
     POPULATIONS = {
-        'sv_callset': {'hom': None, 'hemi': None, 'het': None},
+        'sv_callset': {'filter_af': None, 'hom': None, 'hemi': None, 'het': None},
     }
     PREDICTION_FIELDS_CONFIG = {
         'strvctvre': ('strvctvre', 'score'),
@@ -826,8 +828,8 @@ class SvHailTableQuery(BaseHailTableQuery):  # TODO use inheritance with GcnvHai
 
     GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
     POPULATIONS = {
-        'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None},
-        'sv_callset': {'hemi': None},
+        'gnomad_svs': {'id': 'ID', 'filter_af': None, 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None},
+        'sv_callset': {'filter_af': None, 'hemi': None},
     }
     PREDICTION_FIELDS_CONFIG = {
         'strvctvre': ('strvctvre', 'score'),
@@ -908,8 +910,8 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
             #     hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
             lambda populations: hl.if_else(
                 hl.is_defined(r.svType),
-                hl.dict({k: populations[k] for k in sv_populations}),
-                hl.dict({k: populations[k] for k in snp_populations})),
+                hl.dict({k: hl.dict({field: populations[k][field] for field in POPULATION_SUBFIELDS}) for k in sv_populations}),
+                hl.dict({k: hl.dict({field: populations[k][field] for field in POPULATION_SUBFIELDS}) for k in snp_populations})),
             population_annotation(r),
         )
         return annotation_fields
