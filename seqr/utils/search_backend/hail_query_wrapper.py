@@ -858,9 +858,6 @@ class SvHailTableQuery(BaseHailTableQuery):  # TODO use inheritance with GcnvHai
     def _parse_pathogenicity_overrides(self, pathogenicity):
         pass
 
-    def _filter_vcf_filters(self):
-        pass
-
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):
         return mt.interval.overlaps(x_interval)

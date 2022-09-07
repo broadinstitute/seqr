@@ -14,7 +14,7 @@ def _read_table(file, subset_ht=None):
 
 def _get_sample_table(mt, sample_id):
     sample_ht = mt.filter_cols(mt.s == sample_id).key_cols_by().entries()
-    return sample_ht.select('GQ', 'GT', 'CN')
+    return sample_ht.select('GQ', 'GT', CN=sample_ht.RD_CN)
 
 
 if __name__ == "__main__":

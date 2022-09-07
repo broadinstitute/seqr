@@ -27,7 +27,7 @@ def write_main_ht(file):
 
     variant_annotations = {
         'algorithms': hl.str(',').join(ht.algorithms),
-        'gnomad_svs': hl.struct(AF=ht.gnomad_svs_AF, ID=ht.gnomad_svs_ID),
+        'gnomad_svs': hl.or_missing(hl.is_defined(ht.gnomad_svs_AF), hl.struct(AF=ht.gnomad_svs_AF, ID=ht.gnomad_svs_ID)),
         'interval': hl.interval(
             hl.locus(hl.format('chr%s', ht.contig), ht.start, reference_genome='GRCh38'),
             hl.if_else(
