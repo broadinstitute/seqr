@@ -862,6 +862,10 @@ class SvHailTableQuery(BaseHailTableQuery):  # TODO use inheritance with GcnvHai
     def get_x_chrom_filter(mt, x_interval):
         return mt.interval.overlaps(x_interval)
 
+    def _get_quality_filter_expr(self, mt, quality_filter):
+        quality_filter = {'min_gq' if k == 'min_gq_sv' else k: v for k, v in (quality_filter or {}).items()}
+        return super(SvHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
+
 
 def _annotation_for_data_type(field):
     return lambda r: hl.if_else(
@@ -935,6 +939,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
             **{k: hl.missing(sv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
         add_missing_variant_entries = lambda sample: sample.annotate(
             **{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
+        # TODO merge these so filtering and returning GQ works for merges SNPs/SVs
 
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
