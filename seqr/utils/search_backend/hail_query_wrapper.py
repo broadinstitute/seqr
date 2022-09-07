@@ -900,13 +900,15 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
     @property
     def annotation_fields(self):
         annotation_fields = super(AllDataTypeHailTableQuery, self).annotation_fields
-        snp_populations = hl.set(set(VariantHailTableQuery.POPULATIONS.keys()))
-        sv_populations = hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
+        snp_populations = set(VariantHailTableQuery.POPULATIONS.keys())
+        sv_populations = set(GcnvHailTableQuery.POPULATIONS.keys())
         population_annotation = annotation_fields['populations']
         annotation_fields['populations'] = lambda r: hl.bind(
-            lambda populations: hl.dict(hl.dict(populations.items()).items().filter(lambda p: hl.if_else(
-                hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
+            # lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
+            #     hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
+            lambda populations, fields: populations.select(*fields),
             population_annotation(r),
+            hl.if_else(hl.is_defined(r.svType), sv_populations, snp_populations),
         )
         return annotation_fields
 
