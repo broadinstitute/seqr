@@ -903,13 +903,15 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
         snp_populations = set(VariantHailTableQuery.POPULATIONS.keys())
         sv_populations = set(GcnvHailTableQuery.POPULATIONS.keys())
         population_annotation = annotation_fields['populations']
-        # annotation_fields['populations'] = lambda r: hl.bind(
-        #     # lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
-        #     #     hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
-        #     lambda populations, fields: populations.select(*fields),
-        #     population_annotation(r),
-        #     hl.if_else(hl.is_defined(r.svType), sv_populations, snp_populations),
-        # )
+        annotation_fields['populations'] = lambda r: hl.bind(
+            # lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
+            #     hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
+            lambda populations: hl.if_else(
+                hl.is_defined(r.svType),
+                hl.dict({k: populations[k] for k in sv_populations}),
+                hl.dict({k: populations[k] for k in snp_populations})),
+            population_annotation(r),
+        )
         return annotation_fields
 
     def _save_samples(self, samples):
