@@ -632,7 +632,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
         },
-        'gnomad_exomes': {'filter_AF': 'AF_POPMAX_OR_GLOBAL', 'het': None},
+        'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
         'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
     }
     PREDICTION_FIELDS_CONFIG = {
