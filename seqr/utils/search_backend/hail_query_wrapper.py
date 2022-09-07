@@ -77,10 +77,8 @@ class BaseHailTableQuery(object):
     def annotation_fields(self):
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
-                population: hl.struct(**{
-                    response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
-                    for response_key, field in pop_config.items() if field is not None
-                }) for population, pop_config in self.populations_configs.items()
+                population: self.population_expression(r, population, pop_config)
+                for population, pop_config in self.populations_configs.items()
             }),
             'predictions': lambda r: hl.struct(**{
                 prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
@@ -93,6 +91,12 @@ class BaseHailTableQuery(object):
         if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
+
+    def population_expression(self, r, population, pop_config):
+        return hl.struct(**{
+            response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
+            for response_key, field in pop_config.items() if field is not None
+        })
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, **kwargs):
         self._genome_version = genome_version
@@ -898,28 +902,18 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
     }
 
     @property
-    def annotation_fields(self):
-        annotation_fields = super(AllDataTypeHailTableQuery, self).annotation_fields
-        snp_populations = hl.set(set(VariantHailTableQuery.POPULATIONS.keys()))
-        sv_populations = hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
-        # population_annotation = annotation_fields['populations']
-        # annotation_fields['populations'] = lambda r: hl.bind(
-        #     lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
-        #         hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
-        #     population_annotation(r),
-        # )
+    def snp_populations(self):
+        return hl.set(set(VariantHailTableQuery.POPULATIONS.keys()))
 
-        annotation_fields['populations'] = lambda r: hl.struct(**{
-            population: hl.or_missing(
-                hl.if_else(hl.is_defined(r.svType), sv_populations.contains(population), snp_populations.contains(population)),
-                hl.struct(**{
-                    response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
-                    for response_key, field in pop_config.items() if field is not None
-                })
-            ) for population, pop_config in self.populations_configs.items()
-        })
+    @property
+    def sv_populations(self):
+        return hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
 
-        return annotation_fields
+    def population_expression(self, r, population, pop_config):
+        return hl.or_missing(
+            hl.if_else(hl.is_defined(r.svType), self.sv_populations.contains(population), self.snp_populations.contains(population)),
+            super(AllDataTypeHailTableQuery, cls).population_expression(r, population, pop_config),
+        )
 
     def _save_samples(self, samples):
         self._individuals_by_sample_id = {}
