@@ -916,7 +916,10 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
             for s in data_type_samples:
                 self._individuals_by_sample_id[s.sample_id] = s.individual
 
-        self._sample_ids_by_dataset_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
+        # TODO work with WGS SVs
+        self._sample_ids_by_dataset_type = {
+            SV_DATASET if k.startswith(SV_DATASET) else k: {s.sample_id for s in v} for k, v in samples.items()
+        }
         if self._sample_ids_by_dataset_type[VARIANT_DATASET] == self._sample_ids_by_dataset_type[SV_DATASET]:
             self._sample_ids_by_dataset_type = None
 
