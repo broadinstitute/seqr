@@ -911,8 +911,8 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
 
     def population_expression(self, r, population, pop_config):
         return hl.or_missing(
-            hl.if_else(hl.is_defined(r.svType), self.sv_populations.contains(population), self.snp_populations.contains(population)),
-            super(AllDataTypeHailTableQuery, cls).population_expression(r, population, pop_config),
+            hl.if_else(hl.is_defined(r.svType), self.sv_populations, self.snp_populations).contains(population),
+            super(AllDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
     def _save_samples(self, samples):
