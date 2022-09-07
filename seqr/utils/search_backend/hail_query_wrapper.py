@@ -904,7 +904,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
         sv_populations = hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
         population_annotation = annotation_fields['populations']
         annotation_fields['populations'] = lambda r: hl.bind(
-            lambda populations: hl.dict(populations.items().filter(lambda p: hl.if_else(
+            lambda populations: hl.dict(hl.dict(populations).items().filter(lambda p: hl.if_else(
                 hl.is_defined(r.svType), sv_populations.contains(p[0]), snp_populations.contains(p[0])))),
             population_annotation(r),
         )
