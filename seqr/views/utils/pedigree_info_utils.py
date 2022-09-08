@@ -90,7 +90,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     try:
         if is_merged_pedigree_sample_manifest:
             logger.info("Parsing merged pedigree-sample-manifest file", user)
-            rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows)
+            rows, sample_manifest_rows, kit_id, consent_codes = _parse_merged_pedigree_sample_manifest_format(rows)
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
@@ -104,6 +104,17 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings)
 
     if is_merged_pedigree_sample_manifest:
+        error = None
+        if len(consent_codes) > 1:
+            error = f'Multiple consent codes specified in manifest: {", ".join(consent_codes)}'
+        else:
+            consent_code = consent_codes.pop()
+            project_consent_code = project.get_consent_code_display()
+            if consent_code != project_consent_code:
+                error = f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"'
+        if error:
+            raise ErrorsWarningsException([error], [])
+
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
     return json_records, warnings
@@ -174,6 +185,15 @@ def _convert_fam_file_rows_to_json(rows):
                     json_record[JsonConstants.PROBAND_RELATIONSHIP], i + 1))
             json_record[JsonConstants.PROBAND_RELATIONSHIP] = relationship
 
+        if json_record.get(JsonConstants.PRIMARY_BIOSAMPLE):
+            full_biosample = json_record[JsonConstants.PRIMARY_BIOSAMPLE]
+            biosample_code = next(
+                (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if full_biosample.startswith(uberon_code)),
+                None)
+            if not biosample_code:
+                raise ValueError(f'Invalid value "{full_biosample}" for proband relationship in row #{i + 1}')
+            json_record[JsonConstants.PRIMARY_BIOSAMPLE] = biosample_code
+
         json_results.append(json_record)
 
     return json_results
@@ -204,6 +224,11 @@ def _parse_row_dict(row_dict):
             json_record[JsonConstants.MATERNAL_ID_COLUMN] = value if value != "." else ""
         elif "sex" in key or "gender" in key:
             json_record[JsonConstants.SEX_COLUMN] = value
+        elif 'tissue' in key and 'affected' in key and 'status' in key:
+            json_record[JsonConstants.TISSUE_AFFECTED_STATUS] = {'Yes': True, 'No': False}.get(value)
+        elif 'primary' in key and 'biosample' in key:
+            json_record[JsonConstants.PRIMARY_BIOSAMPLE] = value
+        # TODO add parsing for analyte type!
         elif "affected" in key:
             json_record[JsonConstants.AFFECTED_COLUMN] = value
         elif key.startswith("notes"):
@@ -324,29 +349,21 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
     c = MergedPedigreeSampleManifestConstants
     kit_id = rows[0][c.KIT_ID_COLUMN]
 
-    RENAME_COLUMNS = {
-        MergedPedigreeSampleManifestConstants.FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
-        MergedPedigreeSampleManifestConstants.SEX_COLUMN: JsonConstants.SEX_COLUMN,
-        MergedPedigreeSampleManifestConstants.AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
-        MergedPedigreeSampleManifestConstants.NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
-        MergedPedigreeSampleManifestConstants.CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
-    }
-
     pedigree_rows = []
     sample_manifest_rows = []
+    consent_codes = set()
     for row in rows:
         sample_manifest_rows.append({
             column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
         })
 
         pedigree_rows.append({
-            RENAME_COLUMNS.get(column_name, column_name): row[column_name] for column_name in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_NAMES
+            key: row[column_name] for column_name, key in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.items()
         })
 
-    return pedigree_rows, sample_manifest_rows, kit_id
+        consent_codes.add(row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN])
+
+    return pedigree_rows, sample_manifest_rows, kit_id, consent_codes
 
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
@@ -675,6 +692,8 @@ class JsonConstants:
     DEATH_YEAR = 'deathYear'
     ONSET_AGE = 'onsetAge'
     AFFECTED_RELATIVES = 'affectedRelatives'
+    PRIMARY_BIOSAMPLE = 'primaryBiosample'
+    TISSUE_AFFECTED_STATUS = 'tissueAffectedStatus'
 
 
 class MergedPedigreeSampleManifestConstants:
@@ -690,10 +709,14 @@ class MergedPedigreeSampleManifestConstants:
     MATERNAL_ID_COLUMN = "Maternal Sample ID"
     SEX_COLUMN = "Gender"
     AFFECTED_COLUMN = "Affected Status"
+    BIOSAMPLE_COLUMN = 'Primary Biosample'
+    TISSUE_AFFECTED_COLUMN = 'Tissue Affected Status'
+    RECONTACTABLE_COLUMN = 'recontactable'
     VOLUME_COLUMN = "Volume"
     CONCENTRATION_COLUMN = "Concentration"
     NOTES_COLUMN = "Notes"
     CODED_PHENOTYPE_COLUMN = "Coded Phenotype"
+    CONSENT_CODE_COLUMN = 'Consent Code'
     DATA_USE_RESTRICTIONS_COLUMN = "Data Use Restrictions"
 
 
@@ -708,25 +731,29 @@ class MergedPedigreeSampleManifestConstants:
         MATERNAL_ID_COLUMN,
         SEX_COLUMN,
         AFFECTED_COLUMN,
+        BIOSAMPLE_COLUMN,
+        TISSUE_AFFECTED_COLUMN,
+        RECONTACTABLE_COLUMN,
         VOLUME_COLUMN,
         CONCENTRATION_COLUMN,
         NOTES_COLUMN,
         CODED_PHENOTYPE_COLUMN,
+        CONSENT_CODE_COLUMN,
         DATA_USE_RESTRICTIONS_COLUMN,
     ]
 
-    MERGED_PEDIGREE_COLUMN_NAMES = [
-        FAMILY_ID_COLUMN,
-        COLLABORATOR_PARTICIPANT_ID_COLUMN,
-        PATERNAL_ID_COLUMN,
-        MATERNAL_ID_COLUMN,
-        SEX_COLUMN,
-        AFFECTED_COLUMN,
-        COLLABORATOR_SAMPLE_ID_COLUMN,
-        NOTES_COLUMN,
-        CODED_PHENOTYPE_COLUMN,
-        DATA_USE_RESTRICTIONS_COLUMN,
-    ]
+    MERGED_PEDIGREE_COLUMN_MAP = {
+        FAMILY_ID_COLUMN: JsonConstants.FAMILY_ID_COLUMN,
+        COLLABORATOR_SAMPLE_ID_COLUMN: JsonConstants.INDIVIDUAL_ID_COLUMN,
+        PATERNAL_ID_COLUMN: JsonConstants.PATERNAL_ID_COLUMN,
+        MATERNAL_ID_COLUMN: JsonConstants.MATERNAL_ID_COLUMN,
+        SEX_COLUMN: JsonConstants.SEX_COLUMN,
+        AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
+        NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
+        CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
+        BIOSAMPLE_COLUMN: JsonConstants.PRIMARY_BIOSAMPLE,
+        TISSUE_AFFECTED_COLUMN: JsonConstants.TISSUE_AFFECTED_STATUS,
+    }
 
     SAMPLE_MANIFEST_COLUMN_NAMES = [
         WELL_POSITION_COLUMN,
