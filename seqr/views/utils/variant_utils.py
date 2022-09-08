@@ -11,7 +11,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_
     _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
-from settings import REDIS_SERVICE_HOSTNAME
+from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
 
 def reset_cached_search_results(project, reset_index_metadata=False):
     try:
-        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, port=REDIS_SERVICE_PORT, socket_connect_timeout=3)
         keys_to_delete = []
         if project:
             result_guids = [res.guid for res in VariantSearchResults.objects.filter(families__project=project)]
