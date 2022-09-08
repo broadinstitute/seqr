@@ -250,12 +250,12 @@ const DETAIL_SECTIONS = [
   {
     name: 'Global AFs',
     hasDetail: pop => pop && pop.filter_af && (pop.filter_af !== pop.af),
-    display: () => [{ subTitle: '', value: 'af' }],
+    display: () => [{ valueField: 'af' }],
   },
   {
     name: 'Allele Counts',
     hasDetail: pop => pop && pop.ac,
-    display: () => [{ subTitle: '', value: 'ac' }],
+    display: () => [{ valueField: 'ac' }],
   },
 ]
 
@@ -263,23 +263,20 @@ const MITO_DETAIL_SECTIONS = [
   {
     name: HOM_SECTION,
     hasDetail: pop => pop && pop.ac,
-    display: () => [{ subTitle: '', value: 'ac' }],
+    display: () => [{ valueField: 'ac' }],
   },
   {
     name: HET_SECTION,
     hasDetail: pop => pop && (pop.ac || pop.max_hl),
     display: pop => ([
-      pop.ac && { subTitle: '', value: 'ac' },
-      pop.max_hl && { subTitle: ' max observed heteroplasmy', value: 'max_hl' },
+      pop.ac && { valueField: 'ac' },
+      pop.max_hl && { subTitle: ' max observed heteroplasmy', valueField: 'max_hl' },
     ].filter(d => d)),
   },
 ]
 
-const DISPLAY_VALUE = {
-  ac: pop => `${pop.ac} out of ${pop.an}`,
-  af: (pop, popConfig) => `${pop.af.toPrecision(popConfig.precision || 2)}`,
-  max_hl: (pop, popConfig) => `${pop.max_hl.toPrecision(popConfig.precision || 2)}`,
-}
+const getValueDisplay = (pop, valueField, precision) => (valueField === 'ac' ?
+  `${pop.ac} out of ${pop.an}` : `${pop[valueField].toPrecision(precision || 2)}`)
 
 const Frequencies = React.memo(({ variant }) => {
   const { populations = {} } = variant
@@ -293,9 +290,10 @@ const Frequencies = React.memo(({ variant }) => {
         name: section.name,
         details: popConfigs.map(popConfig => (section.hasDetail(populations[popConfig.field]) &&
           (!popConfig.section || popConfig.section === section.name) &&
-          section.display(populations[popConfig.field], popConfig).map(({ subTitle, value }) => (
+          section.display(populations[popConfig.field]).map(({ subTitle, valueField }) => (
             <Popup.Content key={`${section.name}${popConfig.field}${subTitle}`}>
-              {`${popConfig.fieldTitle}${subTitle}: ${DISPLAY_VALUE[value](populations[popConfig.field], popConfig)}`}
+              {`${popConfig.fieldTitle}${subTitle || ''}: ${
+                getValueDisplay(populations[popConfig.field], valueField, popConfig.precision)}`}
             </Popup.Content>
           ))
         )).filter(d => d).reduce((displayAcc, d) => ([...displayAcc, ...d]), []),
