@@ -48,6 +48,8 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         if is_merged_pedigree_sample_manifest:
             if not user_is_pm(user):
                 raise ValueError('Unsupported file format')
+            if not project:
+                raise ValueError('Project argument required for parsing sample manifest')
             # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
             headers = rows[:2]
             rows = rows[2:]
@@ -91,6 +93,13 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         if is_merged_pedigree_sample_manifest:
             logger.info("Parsing merged pedigree-sample-manifest file", user)
             rows, sample_manifest_rows, kit_id, consent_codes = _parse_merged_pedigree_sample_manifest_format(rows)
+
+            if len(consent_codes) > 1:
+                raise ValueError(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
+            consent_code = consent_codes.pop()
+            project_consent_code = project.get_consent_code_display()
+            if consent_code != project_consent_code:
+                raise ValueError(f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
@@ -104,17 +113,6 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings)
 
     if is_merged_pedigree_sample_manifest:
-        error = None
-        if len(consent_codes) > 1:
-            error = f'Multiple consent codes specified in manifest: {", ".join(consent_codes)}'
-        else:
-            consent_code = consent_codes.pop()
-            project_consent_code = project.get_consent_code_display()
-            if consent_code != project_consent_code:
-                error = f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"'
-        if error:
-            raise ErrorsWarningsException([error], [])
-
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
     return json_records, warnings

@@ -99,6 +99,9 @@ class PedigreeInfoUtilsTest(TestCase):
             parse_pedigree_table(no_error_data, FILENAME, user, fail_on_warnings=True)
         self.assertListEqual(ec.exception.errors, no_error_warnings)
 
+    def _assert_errors_warnings_exception(self, ec, error):
+        self.assertListEqual(ec.exception.errors, [error])
+        self.assertListEqual(ec.exception.warnings, [])
 
     @mock.patch('seqr.views.utils.pedigree_info_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
@@ -106,70 +109,81 @@ class PedigreeInfoUtilsTest(TestCase):
     def test_parse_sample_manifest(self, mock_email, mock_pm_group):
         header_1 = [
             'Do not modify - Broad use', '', '', 'Please fill in columns D - O', '', '', '', '', '', '', '', '', '',
-            '', '']
+            '', '', '', '', '', '']
         header_2 = [
             'Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Alias', 'Paternal Sample ID', 'Maternal Sample ID',
-            'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype', 'Data Use Restrictions']
+            'Gender', 'Affected Status', 'Primary Biosample', 'Tissue Affected Status', 'recontactable',
+            'Volume', 'Concentration', 'Notes', 'Coded Phenotype', 'Consent Code', 'Data Use Restrictions']
         header_3 = [
-            '', 'Position', '', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', '', '', '', 'ul',
-            'ng/ul', '', '', 'indicate study/protocol number']
+            '', 'Position', '', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', '', '', '', '',
+            '(i.e yes, no)', '(i.e yes, no, unknown)', 'ul', 'ng/ul', '', '', '', 'indicate study/protocol number']
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([header_1], FILENAME, user = User.objects.get(id=10))
-        self.assertListEqual(ec.exception.errors, ['Error while parsing file: {}. Unsupported file format'.format(FILENAME)])
-        self.assertListEqual(ec.exception.warnings, [])
+        self._assert_errors_warnings_exception(ec, f'Error while parsing file: {FILENAME}. Unsupported file format')
 
         user = User.objects.get(username='test_pm_user')
+        incomplete_header_data = [
+            header_1,
+            ['Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Maternal Sample ID',
+             'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype', 'Consent Code',
+             'Data Use Restrictions'],
+            header_3,
+        ]
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table([
-                header_1,
-                ['Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Maternal Sample ID',
-                 'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype',
-                 'Data Use Restrictions'],
-                header_3,
-            ], FILENAME, user)
-        self.assertListEqual(ec.exception.errors, ['Error while parsing file: {}. Unsupported file format'.format(FILENAME)])
-        self.assertListEqual(ec.exception.warnings, [])
+            parse_pedigree_table(incomplete_header_data, FILENAME, user)
+        self._assert_errors_warnings_exception(ec, f'Error while parsing file: {FILENAME}. Unsupported file format')
 
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table([
-                header_1,
-                ['Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Maternal Sample ID',
-                 'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype',
-                 'Data Use Restrictions'],
-                header_3,
-            ], FILENAME, user)
-        self.assertListEqual(ec.exception.errors, [
-            'Error while parsing file: {}. Expected vs. actual header columns: | Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status'.format(
-                FILENAME)])
-        self.assertListEqual(ec.exception.warnings, [])
+            parse_pedigree_table(incomplete_header_data, FILENAME, user)
+        self._assert_errors_warnings_exception(
+            ec, f'Error while parsing file: {FILENAME}. Project argument required for parsing sample manifest')
+
+        project = Project.objects.get(id=1)
+        with self.assertRaises(ErrorsWarningsException) as ec:
+            parse_pedigree_table(incomplete_header_data, FILENAME, user, project=project)
+        self._assert_errors_warnings_exception(
+            ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: | Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|-Primary Biosample|-Tissue Affected Status|-recontactable| Volume| Concentration| Notes')
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
                 header_1, header_2, ['', 'Position', '', '', 'Collaborator Sample ID', '', '', '', '', 'ul', 'ng/ul', '',
-                                     '', 'indicate study/protocol number']], FILENAME, user)
-        self.assertListEqual(ec.exception.errors, [
-            'Error while parsing file: {}. Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+'.format(
-                FILENAME)])
-        self.assertListEqual(ec.exception.warnings, [])
+                                     '', 'indicate study/protocol number']], FILENAME, user, project=project)
+        self._assert_errors_warnings_exception(
+            ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+')
 
         original_data = [
             header_1, header_2, header_3,
             ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
-             'unaffected', '20', '94.8', 'probably dad', '', '1234'],
+             'unaffected', 'UBERON:0000479 (tissue)', 'No', 'Unknown', '20', '94.8', 'probably dad', '', 'GMB', '1234'],
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
-             'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', '20', '98', '', 'Perinatal death', ''
+             'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
+             'Yes', 'No', '20', '98', '', 'Perinatal death', 'HMB', '',
              ]]
+        with self.assertRaises(ErrorsWarningsException) as ec:
+            parse_pedigree_table(original_data, FILENAME, user, project=project)
+        self._assert_errors_warnings_exception(
+            ec, f'Error while converting {FILENAME} rows to json: Multiple consent codes specified in manifest: GMB, HMB')
 
+        original_data[4][-2] = 'GMB'
+        with self.assertRaises(ErrorsWarningsException) as ec:
+            parse_pedigree_table(original_data, FILENAME, user, project=project)
+        self._assert_errors_warnings_exception(
+            ec, f'Error while converting {FILENAME} rows to json: Consent code in manifest "GMB" does not match project consent code "HMB"')
+
+        original_data[3][-2] = 'HMB'
+        original_data[4][-2] = 'HMB'
         records, warnings = parse_pedigree_table(
-            original_data, FILENAME, user, project=Project.objects.get(id=1))
+            original_data, FILENAME, user, project=project)
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
-             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': ''},
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': '',
+             'primaryBiosample': 'T', 'tissueAffectedStatus': False,},
             {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': '', 'individualId': 'SCO_PED073C_GA0340_1',
-             'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death'
+             'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
+             'primaryBiosample': 'BM', 'tissueAffectedStatus': True,
              }])
         self.assertListEqual(
             warnings,
