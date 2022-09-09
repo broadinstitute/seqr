@@ -81,6 +81,7 @@ def _get_vcf_meta_data(line):
 def validate_vcf_and_get_samples(vcf_filename):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     samples = {}
+    header = []
     meta = defaultdict(dict)
     for line in file_iter(vcf_filename, byte_range=byte_range):
         if line[0] != '#':
