@@ -10,11 +10,11 @@ asgiref==3.5.2
     #   django
 build==0.8.0
     # via pip-tools
-certifi==2022.6.15
+certifi==2022.6.15.1
     # via
     #   -c requirements.txt
     #   requests
-charset-normalizer==2.1.0
+charset-normalizer==2.1.1
     # via
     #   -c requirements.txt
     #   requests
@@ -55,7 +55,7 @@ pyparsing==3.0.9
     # via
     #   -c requirements.txt
     #   packaging
-pytz==2022.1
+pytz==2022.2.1
     # via
     #   -c requirements.txt
     #   django
@@ -78,7 +78,7 @@ tomli==2.0.1
     # via
     #   build
     #   pep517
-urllib3==1.26.11
+urllib3==1.26.12
     # via
     #   -c requirements.txt
     #   requests

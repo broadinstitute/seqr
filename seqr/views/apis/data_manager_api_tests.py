@@ -372,58 +372,6 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_upload_qc_pipeline_output(self, mock_subprocess):
-        url = reverse(upload_qc_pipeline_output,)
-        self.check_data_manager_login(url)
-
-        request_data =json.dumps({
-            'file': ' gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'
-        })
-
-        # Test missing file
-        mock_does_file_exist = mock.MagicMock()
-        mock_subprocess.side_effect = [mock_does_file_exist]
-        mock_does_file_exist.wait.return_value = 1
-        response = self.client.post(url, content_type='application/json', data=request_data)
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(
-            response.json()['errors'],
-            ['File not found: gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'])
-
-        # Test missing columns
-        mock_does_file_exist.wait.return_value = 0
-        mock_file_iter = mock.MagicMock()
-        mock_file_iter.stdout = [b'', b'']
-        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-        response = self.client.post(url, content_type='application/json', data=request_data)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.reason_phrase,
-            'The following required columns are missing: seqr_id, data_type, filter_flags, qc_metrics_filters, qc_pop')
-
-        # Test no data type error
-        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-        mock_file_iter.stdout = SAMPLE_QC_DATA_NO_DATA_TYPE
-        response = self.client.post(url, content_type='application/json', data=request_data)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'No data type detected')
-
-        # Test multiple data types error
-        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-        mock_file_iter.stdout = SAMPLE_QC_DATA_MORE_DATA_TYPE
-        response = self.client.post(url, content_type='application/json', data=request_data)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Multiple data types detected: wes ,wgs')
-
-        # Test unexpected data type error
-        mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
-        mock_file_iter.stdout = SAMPLE_QC_DATA_UNEXPECTED_DATA_TYPE
-        response = self.client.post(url, content_type='application/json', data=request_data)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Unexpected data type detected: "unknown" (should be "exome" or "genome")')
-
-
     # 2022-04-05 mfranklin: disabled because we don't have access to gs://seqr-datasets/
     # @mock.patch('seqr.utils.file_utils.logger')
     # @mock.patch('seqr.utils.file_utils.subprocess.Popen')
