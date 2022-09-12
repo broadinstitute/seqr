@@ -85,8 +85,6 @@ POPULATIONS = {
         'filter_AF': [],
         'AC': 'AC',
         'AN': 'AN',
-        'AC_het': 'AC_het',
-        'AF_het': 'AF_het',
     },
     'topmed': {
         'filter_AF': [],
@@ -109,13 +107,26 @@ POPULATIONS = {
         'filter_AF': ['gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_svs': {},
+    'callset_heteroplasmy': {
+        'AN': 'AN',
+        'AC': 'AC_het',
+        'AF': 'AF_het',
+    },
+    'gnomad_mito': {'max_hl': None},
+    'gnomad_mito_heteroplasmy': {
+        'AN': 'gnomad_mito_AN',
+        'AC': 'gnomad_mito_AC_het',
+        'AF': 'gnomad_mito_AF_het',
+        'max_hl': 'gnomad_mito_max_hl'
+    },
+    'helix': {'max_hl': None},
+    'helix_heteroplasmy': {
+        'AN': 'helix_AN',
+        'AC': 'helix_AC_het',
+        'AF': 'helix_AF_het',
+        'max_hl': 'helix_max_hl',
+    }
 }
-
-MITO_POPULATION = {
-    'gnomad_mito': {},
-    'helix': {},
-}
-POPULATIONS.update(MITO_POPULATION)
 
 POPULATION_FIELD_CONFIGS = {
     'AF': {'format_value': float},
@@ -126,8 +137,6 @@ POPULATION_FIELD_CONFIGS = {
     'Hemi': {},
     'Het': {},
     'ID': {'format_value': str, 'default_value': None},
-    'AC_het': {},
-    'AF_het': {'format_value': float},
     'max_hl': {'format_value': float},
 }
 for population, pop_config in POPULATIONS.items():
