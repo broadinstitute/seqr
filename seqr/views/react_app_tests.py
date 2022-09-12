@@ -11,11 +11,11 @@ class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
 
-    def _check_page_html(self, response,  user, google_enabled=False, user_key='user', ga_token_id=None):
+    def _check_page_html(self, response,  user, google_enabled=False, user_key='user', user_fields=USER_FIELDS, ga_token_id=None):
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
-        self.assertSetEqual(set(initial_json[user_key].keys()), USER_FIELDS)
+        self.assertSetEqual(set(initial_json[user_key].keys()), user_fields)
         self.assertEqual(initial_json[user_key]['username'], user)
         self.assertDictEqual(initial_json['meta'], {
             'version': mock.ANY,
@@ -69,7 +69,10 @@ class DashboardPageTest(AuthenticationTestCase):
         response = self.client.get(
             '/login/set_password/pbkdf2_sha256$30000$y85kZgvhQ539$jrEC343555Itp+14w/T7U6u5XUxtpBZXKv8eh4=')
         self.assertEqual(response.status_code, 200)
-        self._check_page_html(response, 'test_user_manager', user_key='newUser')
+        self._check_page_html(
+            response, 'test_user_manager', user_key='newUser',
+            user_fields={'id', 'firstName', 'lastName', 'username', 'email'},
+        )
 
         response = self.client.get('/login/set_password/invalid_pwd')
         self.assertEqual(response.status_code, 404)

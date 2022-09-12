@@ -28,8 +28,7 @@ PRIVACY_VERSION = 1.1
 class UsersAPITest(object):
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_get_project_collaborator_options(self, mock_analyst_group):
         url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
@@ -250,13 +249,15 @@ class UsersAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'email': 'Test@test.com', 'firstName': 'New', 'lastName': 'Username', 'isSuperuser': True}))
         self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), USER_FIELDS)
-        self.assertEqual(response_json['firstName'], 'New')
-        self.assertEqual(response_json['lastName'], 'Username')
-        self.assertEqual(response_json['displayName'], 'New Username')
-        self.assertEqual(response_json['email'], 'test_user_no_access@test.com')
-        self.assertFalse(response_json['isSuperuser'])
+        self.assertDictEqual(response.json(), {
+            'firstName': 'New',
+            'lastName': 'Username',
+            'displayName': 'New Username',
+        })
+
+        user = User.objects.get(email='test_user_no_access@test.com')
+        self.assertEqual(user.get_full_name(), 'New Username')
+        self.assertFalse(user.is_superuser)
 
 
 # Tests for AnVIL access disabled

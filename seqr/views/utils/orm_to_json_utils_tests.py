@@ -4,7 +4,7 @@ import mock
 from copy import deepcopy
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \
     VariantNote, LocusList, VariantSearch
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, \
+from seqr.views.utils.orm_to_json_utils import get_json_for_current_user, _get_json_for_project, _get_json_for_family, \
     _get_json_for_individual, get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tags, \
     get_json_for_variant_functional_data_tags, get_json_for_variant_note, get_json_for_locus_list, \
  get_json_for_saved_search, get_json_for_saved_variants_with_tags
@@ -19,7 +19,7 @@ class JSONUtilsTest(TestCase):
 
     def test_json_for_user(self):
         for user in User.objects.all():
-            user_json = _get_json_for_user(user)
+            user_json = get_json_for_current_user(user)
             user_json_keys = set(user_json.keys())
 
             self.assertSetEqual(user_json_keys, USER_FIELDS)
