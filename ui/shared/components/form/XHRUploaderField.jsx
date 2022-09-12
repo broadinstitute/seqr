@@ -27,9 +27,8 @@ class UploaderFieldComponent extends React.PureComponent {
     const { url = '/api/upload_temp_file', returnParsedData, ...uploaderComponentProps } = uploaderProps
     const path = returnParsedData ? '?parsedData=true' : ''
     return ([
-      <React.Suspense fallback={<Loader />}>
+      <React.Suspense key="uploader" fallback={<Loader />}>
         <XHRUploaderWithEvents
-          key="uploader"
           onUploadFinished={this.onFinished}
           initialState={input.value ? input.value.uploaderState : null}
           url={`${url}${path}`}

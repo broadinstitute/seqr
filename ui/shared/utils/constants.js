@@ -95,8 +95,12 @@ export const MATCHMAKER_CONTACT_URL_FIELD = {
 
 export const DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
 export const DATASET_TYPE_SV_CALLS = 'SV'
+export const DATASET_TYPE_MITO_CALLS = 'MITO'
 
-export const DATASET_TITLE_LOOKUP = { [DATASET_TYPE_SV_CALLS]: ' SV' }
+export const DATASET_TITLE_LOOKUP = {
+  [DATASET_TYPE_SV_CALLS]: ' SV',
+  [DATASET_TYPE_MITO_CALLS]: ' Mitochondria',
+}
 
 export const SAMPLE_TYPE_EXOME = 'WES'
 export const SAMPLE_TYPE_GENOME = 'WGS'
@@ -117,18 +121,18 @@ export const SAMPLE_TYPE_LOOKUP = SAMPLE_TYPE_OPTIONS.reduce(
 
 // ANALYSIS STATUS
 
-export const FAMILY_STATUS_SOLVED = 'S'
-export const FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE = 'S_kgfp'
-export const FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'S_kgdp'
-export const FAMILY_STATUS_SOLVED_NOVEL_GENE = 'S_ng'
-export const FAMILY_STATUS_EXTERNAL_SOLVE = 'ES'
-export const FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_KNOWN_PHENOTYPE = 'Sc_kgfp'
-export const FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'Sc_kgdp'
-export const FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE = 'Sc_ng'
-export const FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES = 'Rcpc'
-export const FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE = 'Rncc'
-export const FAMILY_STATUS_CLOSED = 'C'
-export const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
+const FAMILY_STATUS_SOLVED = 'S'
+const FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE = 'S_kgfp'
+const FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'S_kgdp'
+const FAMILY_STATUS_SOLVED_NOVEL_GENE = 'S_ng'
+const FAMILY_STATUS_EXTERNAL_SOLVE = 'ES'
+const FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_KNOWN_PHENOTYPE = 'Sc_kgfp'
+const FAMILY_STATUS_STRONG_CANDIDATE_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'Sc_kgdp'
+const FAMILY_STATUS_STRONG_CANDIDATE_NOVEL_GENE = 'Sc_ng'
+const FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES = 'Rcpc'
+const FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE = 'Rncc'
+const FAMILY_STATUS_CLOSED = 'C'
+const FAMILY_STATUS_ANALYSIS_IN_PROGRESS = 'I'
 const FAMILY_STATUS_WAITING_FOR_DATA = 'Q'
 const FAMILY_STATUS_NO_DATA = 'N'
 
@@ -1127,6 +1131,13 @@ const MUTTASTER_MAP = {
   P: { color: 'green', value: 'polymorphism automatic' },
 }
 
+const MITOTIP_MAP = {
+  likely_pathogenic: { color: 'red', value: 'likely pathogenic' },
+  possibly_pathogenic: { color: 'red', value: 'possibly pathogenic' },
+  possibly_benign: { color: 'green', value: 'possibly benign' },
+  likely_benign: { color: 'green', value: 'likely benign' },
+}
+
 const MISSENSE_IN_SILICO_GROUP = 'Missense'
 const CODING_IN_SILICO_GROUP = 'Coding/Noncoding'
 const SPLICING_IN_SILICO_GROUP = 'Splicing'
@@ -1158,6 +1169,10 @@ export const PREDICTOR_FIELDS = [
   { field: 'metasvm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
   { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
+  { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
+  { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
+  { field: 'mitotip', indicatorMap: MITOTIP_MAP },
+  { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },
 ]
 
 export const getVariantMainGeneId = ({ transcripts = {}, mainTranscriptId, selectedMainTranscriptId }) => {
@@ -1291,6 +1306,33 @@ export const PANEL_APP_CONFIDENCE_LEVELS = {
 export const PANEL_APP_CONFIDENCE_LEVEL_COLORS = Object.entries(PANEL_APP_CONFIDENCE_LEVELS).reduce(
   (acc, [confidence, color]) => ({ ...acc, [confidence]: VARIANT_ICON_COLORS[color] }), {},
 )
+
+export const AD_MOI = 'AD'
+export const AR_MOI = 'AR'
+export const XD_MOI = 'XD'
+export const XR_MOI = 'XR'
+export const OTHER_MOI = 'other'
+
+export const PANEL_APP_MOI_OPTIONS = [{
+  text: 'Autosomal Dominant',
+  value: AD_MOI,
+},
+{
+  text: 'Autosomal Recessive',
+  value: AR_MOI,
+},
+{
+  text: 'X-Linked Dominant',
+  value: XD_MOI,
+},
+{
+  text: 'X-Linked Recessive',
+  value: XR_MOI,
+},
+{
+  text: 'Other Modes of Inheritance',
+  value: OTHER_MOI,
+}]
 
 // Users
 

@@ -7,8 +7,6 @@ import { draftToMarkdown, markdownToDraft } from 'markdown-draft-js'
 
 import 'draft-js/dist/Draft.css'
 
-const TAB = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
-
 const ButtonContainer = styled(Segment)`
   padding: 0 !important;
 `
@@ -70,9 +68,7 @@ class RichTextEditor extends React.PureComponent {
   getMarkdown() {
     const { editorState } = this.state
     const content = editorState.getCurrentContent()
-    const markdown = draftToMarkdown(convertToRaw(content), { preserveNewlines: true })
-    // Support for tabs. Required for RGP datstat imported notes
-    return markdown ? markdown.replace(/' '{5}/g, TAB).replace(/\u00A0{5}/g, TAB) : markdown
+    return draftToMarkdown(convertToRaw(content), { preserveNewlines: true })
   }
 
   updateEditorState = (editorState) => {

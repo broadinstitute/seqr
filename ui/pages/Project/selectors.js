@@ -5,8 +5,8 @@ import {
   FAMILY_FIELD_ID,
   INDIVIDUAL_FIELD_ID,
   FAMILY_FIELD_FIRST_SAMPLE,
+  FAMILY_FIELD_ANALYSED_BY,
   FAMILY_NOTES_FIELDS,
-  SHOW_ALL,
   GENOME_VERSION_DISPLAY_LOOKUP,
   getVariantMainTranscript,
   INDIVIDUAL_EXPORT_DATA,
@@ -25,6 +25,7 @@ import {
 import {
   SORT_BY_FAMILY_NAME,
   CASE_REVIEW_STATUS_OPTIONS,
+  CASE_REVIEW_FILTER_LOOKUP,
   FAMILY_FILTER_LOOKUP,
   FAMILY_SORT_OPTIONS,
   FAMILY_EXPORT_DATA,
@@ -32,6 +33,7 @@ import {
   CASE_REVIEW_TABLE_NAME,
   CASE_REVIEW_INDIVIDUAL_EXPORT_DATA,
   SAMPLE_EXPORT_DATA,
+  CATEGORY_FAMILY_FILTERS,
 } from './constants'
 
 const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
@@ -56,6 +58,7 @@ export const getMmeSubmissionsLoading = state => state.mmeSubmissionsLoading.isL
 export const getSamplesLoading = state => state.samplesLoading.isLoading
 export const getTagTypesLoading = state => state.tagTypesLoading.isLoading
 export const getFamilyTagTypeCounts = state => state.familyTagTypeCounts
+export const getFamiliesTableFilters = state => state.familyTableFilterState
 
 export const getCurrentProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
@@ -292,10 +295,7 @@ export const getFamiliesTableState = createSelector(
   (state, ownProps) => state[`${toCamelcase((ownProps || {}).tableName) || 'family'}TableState`],
   tableState => tableState,
 )
-export const getFamiliesFilter = createSelector(
-  getFamiliesTableState,
-  familyTableState => familyTableState.familiesFilter || SHOW_ALL,
-)
+
 const getFamiliesSearch = createSelector(
   getFamiliesTableState,
   familyTableState => (familyTableState.familiesSearch || '').toLowerCase(),
@@ -332,27 +332,128 @@ const getFamiliesBySearchString = createSelector(
   },
 )
 
+const getFamilyAnalysers = createSelector(
+  getProjectFamiliesByGuid,
+  familiesByGuid => new Set(Object.values(familiesByGuid).reduce(
+    (acc, family) => ([...acc, ...family.analysedBy.map(({ createdBy }) => createdBy)]), [],
+  )),
+)
+
+export const getFamiliesFilterOptionsByCategory = createSelector(
+  getFamilyAnalysers,
+  analysedByOptions => ({
+    ...CATEGORY_FAMILY_FILTERS,
+    [FAMILY_FIELD_ANALYSED_BY]: [
+      ...CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY],
+      ...[...analysedByOptions].map(analysedBy => ({ value: analysedBy, category: 'Analysed By' })),
+    ],
+  }),
+)
+
+const ANALYSED_BY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.forEach((opt) => {
+      acc[opt.value] = opt.analysedByFilter
+    })
+    return acc
+  }, {},
+)
+
+const NO_ANALYSED_BY_FIELDS = Object.values(CATEGORY_FAMILY_FILTERS).reduce(
+  (acc, options) => {
+    options.filter(opt => opt.requireNoAnalysedBy).forEach((opt) => {
+      acc.add(opt.value)
+    })
+    return acc
+  }, new Set(),
+)
+
+const ANALYSED_BY_CATEGORY_OPTION_LOOKUP = CATEGORY_FAMILY_FILTERS[FAMILY_FIELD_ANALYSED_BY].reduce(
+  (acc, { value, category }) => ({ ...acc, [value]: category || 'Analysed By' }), {},
+)
+
+const analysedByFilters = (filter, analysedByOptions) => {
+  const filterGroups = []
+
+  const otherFilters = filter.map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val)
+  if (otherFilters.length) {
+    filterGroups.push(otherFilters)
+  }
+
+  let requireNoAnalysedBy = false
+  const analsedByGroups = Object.values(filter.reduce(
+    (acc, val) => {
+      const optFilter = analysedByOptions.has(val) ? () => ({ createdBy }) => createdBy === val :
+        ANALYSED_BY_FILTER_LOOKUP[val]
+      if (optFilter) {
+        const category = ANALYSED_BY_CATEGORY_OPTION_LOOKUP[val]
+        if (!acc[category]) {
+          acc[category] = []
+        }
+        acc[category].push(optFilter)
+      }
+      if (NO_ANALYSED_BY_FIELDS.has(val)) {
+        requireNoAnalysedBy = true
+      }
+      return acc
+    }, {},
+  ))
+  if (analsedByGroups.length) {
+    filterGroups.push([(...args) => (family) => {
+      const filteredAnalysedBy = analsedByGroups.reduce(
+        (acc, filterGroup) => acc.filter(analysedBy => filterGroup.some(f => f(...args)(analysedBy))),
+        family.analysedBy,
+      )
+      return requireNoAnalysedBy ? filteredAnalysedBy.length === 0 : filteredAnalysedBy.length > 0
+    }])
+  }
+  return filterGroups
+}
+
+const getFamiliesFilterFunc = createSelector(
+  (state, ownProps) => ownProps?.tableName === CASE_REVIEW_TABLE_NAME,
+  state => state.caseReviewTableState.familiesFilter,
+  getFamiliesTableFilters,
+  getFamilyAnalysers,
+  (isCaseReview, caseReviewFilter, familyTableFilters, analysedByOptions) => {
+    if (isCaseReview) {
+      return CASE_REVIEW_FILTER_LOOKUP[caseReviewFilter]
+    }
+
+    const { analysedBy, ...tableFilters } = familyTableFilters || {}
+    const filterGroups = Object.values(tableFilters).map(
+      groupVals => (groupVals || []).map(val => FAMILY_FILTER_LOOKUP[val]).filter(val => val),
+    ).filter(groupVals => groupVals.length)
+    if (analysedBy) {
+      const filters = analysedByFilters(analysedBy, analysedByOptions)
+      if (filters.length) {
+        filterGroups.push(...filters)
+      }
+    }
+    if (!filterGroups.length) {
+      return null
+    }
+
+    return (...args) => family => filterGroups.every(filters => filters.some(filter => filter(...args)(family)))
+  },
+)
+
 export const getVisibleFamilies = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getFamiliesBySearchString,
   getIndividualsByGuid,
   getSamplesByFamily,
   getUser,
-  getFamiliesFilter,
   getFamiliesSearch,
+  getFamiliesFilterFunc,
   (
-    familiesByGuid, familiesBySearchString, individualsByGuid, samplesByFamily, user, familiesFilter, familiesSearch,
+    familiesByGuid, familiesBySearchString, individualsByGuid, samplesByFamily, user, familiesSearch, familyFilter,
   ) => {
     const searchedFamilies = familiesBySearchString ? Object.keys(familiesBySearchString).filter(
       familySearchString => familySearchString.includes(familiesSearch),
     ).map(familySearchString => familiesBySearchString[familySearchString]) : Object.values(familiesByGuid)
-
-    if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
-      return searchedFamilies
-    }
-
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter].createFilter(individualsByGuid, user, samplesByFamily)
-    return searchedFamilies.filter(familyFilter)
+    return familyFilter ?
+      searchedFamilies.filter(familyFilter(individualsByGuid, user, samplesByFamily)) : searchedFamilies
   },
 )
 

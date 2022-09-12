@@ -231,59 +231,59 @@ class PedigreeInfoUtilsTest(TestCase):
         self.assertListEqual(warnings, [])
 
         note_1 = """#### Clinical Information
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Patient is my:__ Grandchild (male)
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Current Age:__ Patient is deceased, age 33, due to heart attack, sample not available
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Age of Onset:__ 21
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Race/Ethnicity:__ White, Asian, Pacific; Not Hispanic
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Case Description:__ I have a really debilitating probably genetic condition. Ive seen many specialists.
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Clinical Diagnoses:__ Yes; SMAs
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Genetic Diagnoses:__ Yes; Dwarfism
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Website/Blog:__ Yes
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Additional Information:__ patients uncle (dads brother) died from Fahrs disease at 70
+* __Patient is my:__ Grandchild (male)
+* __Current Age:__ Patient is deceased, age 33, due to heart attack, sample not available
+* __Age of Onset:__ 21
+* __Race/Ethnicity:__ White, Asian, Pacific; Not Hispanic
+* __Case Description:__ I have a really debilitating probably genetic condition. Ive seen many specialists.
+* __Clinical Diagnoses:__ Yes; SMAs
+* __Genetic Diagnoses:__ Yes; Dwarfism
+* __Website/Blog:__ Yes
+* __Additional Information:__ patients uncle (dads brother) died from Fahrs disease at 70
 #### Prior Testing
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Referring Physician:__ Dr John Smith
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Doctors Seen:__ Clinical geneticist, Neurologist, Cardiologist, Other: Pediatrician
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Previous Testing:__ Yes;
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Single gene testing
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Gene panel testing
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole exome sequencing. Year: 2018, Lab: UDNs lab, Relatives: Parent, Aunt or Uncle, Niece or Nephew, Other: Grandmother
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Whole genome sequencing. Year: unspecified, Lab: unspecified, Relatives: None Specified
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Other tests: Blood work
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Biopsies Available:__ Muscle Biopsy, Skin Biopsy, Other Tissue Biopsy: Bones
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Other Research Studies:__ Yes, Name of studies: Undiagnosed Diseases Network, Expecting results: No
+* __Referring Physician:__ Dr John Smith
+* __Doctors Seen:__ Clinical geneticist, Neurologist, Cardiologist, Other: Pediatrician
+* __Previous Testing:__ Yes;
+* * Single gene testing
+* * Gene panel testing
+* * Whole exome sequencing. Year: 2018, Lab: UDNs lab, Relatives: Parent, Aunt or Uncle, Niece or Nephew, Other: Grandmother
+* * Whole genome sequencing. Year: unspecified, Lab: unspecified, Relatives: None Specified
+* * Other tests: Blood work
+* __Biopsies Available:__ Muscle Biopsy, Skin Biopsy, Other Tissue Biopsy: Bones
+* __Other Research Studies:__ Yes, Name of studies: Undiagnosed Diseases Network, Expecting results: No
 #### Family Information
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Mother:__ affected, onset age 19, available
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Father:__ unaffected, unavailable, deceased, sample not available
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Siblings:__ 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sister, age 21, affected, unavailable
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sibling (unspecified sex), age 17, unspecified affected status, available
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Children:__ None
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Relatives:__ 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Male, age 44, affected, unspecified availability"""
+* __Mother:__ affected, onset age 19, available
+* __Father:__ unaffected, unavailable, deceased, sample not available
+* __Siblings:__ 
+* * Sister, age 21, affected, unavailable
+* * Sibling (unspecified sex), age 17, unspecified affected status, available
+* __Children:__ None
+* __Relatives:__ 
+* * Male, age 44, affected, unspecified availability"""
 
         note_2 = """#### Clinical Information
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Patient is my:__ Adult Child (unspecified sex) - unable to provide consent
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Current Age:__ 47
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Age of Onset:__ 2
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Race/Ethnicity:__ White; Unknown
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Case Description:__ 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Clinical Diagnoses:__ Unsure
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Genetic Diagnoses:__ No
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Website/Blog:__ No
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Additional Information:__ None specified
+* __Patient is my:__ Adult Child (unspecified sex) - unable to provide consent
+* __Current Age:__ 47
+* __Age of Onset:__ 2
+* __Race/Ethnicity:__ White; Unknown
+* __Case Description:__ 
+* __Clinical Diagnoses:__ Unsure
+* __Genetic Diagnoses:__ No
+* __Website/Blog:__ No
+* __Additional Information:__ None specified
 #### Prior Testing
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Referring Physician:__ None
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Doctors Seen:__ 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Previous Testing:__ Not sure
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Biopsies Available:__ None
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Other Research Studies:__ No
+* __Referring Physician:__ None
+* __Doctors Seen:__ 
+* __Previous Testing:__ Not sure
+* __Biopsies Available:__ None
+* __Other Research Studies:__ No
 #### Family Information
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Mother:__ unknown affected status, unavailable, unknown deceased status
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Father:__ unknown affected status, unavailable, unspecified deceased status
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Siblings:__ None
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Children:__ 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Son, age 12, unaffected, unspecified availability
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; __Relatives:__ None"""
+* __Mother:__ unknown affected status, unavailable, unknown deceased status
+* __Father:__ unknown affected status, unavailable, unspecified deceased status
+* __Siblings:__ None
+* __Children:__ 
+* * Son, age 12, unaffected, unspecified availability
+* __Relatives:__ None"""
 
         self.assertListEqual(records, [
             {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N'},
