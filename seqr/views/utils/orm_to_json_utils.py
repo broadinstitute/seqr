@@ -115,7 +115,7 @@ COMPUTED_USER_FIELDS = {
 def get_json_for_user(user, fields):
     invalid_fields = [field for field in fields if field not in MODEL_USER_FIELDS and field not in COMPUTED_USER_FIELDS]
     if invalid_fields:
-        raise ValueError(f'Invalid user fields {", ".join(invalid_fields)}')
+        raise ValueError(f'Invalid user fields: {", ".join(invalid_fields)}')
 
     user_json = {
         _to_camel_case(field): getattr(user, field) for field in fields if field in MODEL_USER_FIELDS
