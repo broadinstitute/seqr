@@ -22,6 +22,10 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
+deprecated==1.2.13
+    # via hail
+dill==0.3.4
+    # via hail
 django==3.2.15
     # via
     #   -r requirements.in

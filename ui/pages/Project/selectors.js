@@ -335,7 +335,7 @@ const getFamiliesBySearchString = createSelector(
 const getFamilyAnalysers = createSelector(
   getProjectFamiliesByGuid,
   familiesByGuid => new Set(Object.values(familiesByGuid).reduce(
-    (acc, family) => ([...acc, ...family.analysedBy.map(({ createdBy }) => createdBy)]), [],
+    (acc, family) => ([...acc, ...(family.analysedBy || []).map(({ createdBy }) => createdBy)]), [],
   )),
 )
 
@@ -704,11 +704,6 @@ export const getUserOptions = createSelector(
   usersOptionsByUsername => Object.values(usersOptionsByUsername).map(
     user => ({ key: user.username, value: user, text: user.email }),
   ),
-)
-
-export const getCollaborators = createSelector(
-  getCurrentProject,
-  project => project.collaborators,
 )
 
 export const getPageHeaderFamily = createSelector(

@@ -4,17 +4,28 @@ import PropTypes from 'prop-types'
 
 import { updateProject } from 'redux/rootReducer'
 import UpdateButton from './UpdateButton'
-import { EDITABLE_PROJECT_FIELDS, MATCHMAKER_CONTACT_NAME_FIELD, MATCHMAKER_CONTACT_URL_FIELD } from '../../utils/constants'
+import {
+  EDITABLE_PROJECT_FIELDS,
+  PM_EDITABLE_PROJECT_FIELDS,
+  MATCHMAKER_CONTACT_NAME_FIELD,
+  MATCHMAKER_CONTACT_URL_FIELD,
+} from '../../utils/constants'
 
 const MATCHMAKER_PROJECT_FIELDS = [
-  ...EDITABLE_PROJECT_FIELDS,
-  ...[
-    { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'mmePrimaryDataOwner' },
-    { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'mmeContactUrl' },
-  ].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` })),
-]
+  { ...MATCHMAKER_CONTACT_NAME_FIELD, name: 'mmePrimaryDataOwner' },
+  { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'mmeContactUrl' },
+].map(({ label, ...field }) => ({ ...field, label: `Matchmaker ${label}` }))
 
-const EDITABLE_FIELD_KEYS = ['projectGuid', ...MATCHMAKER_PROJECT_FIELDS.map(({ name }) => name)]
+// Field mapping based on whether project has matchmaker and user is a PM. Usage: FIELD_LOOKUP[isMmeEnabled][isPm]
+const FIELD_LOOKUP = {
+  true: {
+    true: [...PM_EDITABLE_PROJECT_FIELDS, ...MATCHMAKER_PROJECT_FIELDS],
+    false: [...EDITABLE_PROJECT_FIELDS, ...MATCHMAKER_PROJECT_FIELDS],
+  },
+  false: { true: PM_EDITABLE_PROJECT_FIELDS, false: EDITABLE_PROJECT_FIELDS },
+}
+
+const EDITABLE_FIELD_KEYS = ['projectGuid', ...FIELD_LOOKUP.true.true.map(({ name }) => name)]
 
 const EditProjectButton = React.memo(props => (
   props.project && props.project.canEdit ? (
@@ -23,7 +34,7 @@ const EditProjectButton = React.memo(props => (
       modalTitle="Edit Project"
       modalId={`editProject-${props.project.projectGuid}`}
       onSubmit={props.updateProject}
-      formFields={props.project.isMmeEnabled ? MATCHMAKER_PROJECT_FIELDS : EDITABLE_PROJECT_FIELDS}
+      formFields={FIELD_LOOKUP[props.project.isMmeEnabled][props.user.isPm]}
       initialValues={props.project}
       trigger={props.trigger}
       submitButtonText="Save"
@@ -33,6 +44,7 @@ const EditProjectButton = React.memo(props => (
 
 EditProjectButton.propTypes = {
   project: PropTypes.object,
+  user: PropTypes.object,
   updateProject: PropTypes.func,
   trigger: PropTypes.node,
 }

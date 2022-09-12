@@ -234,19 +234,10 @@ class EsSearch(object):
     def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
-        has_location_filter = genes or intervals
 
         self._filter_custom(custom_query)
 
-        if has_location_filter:
-            exclude_locations = locus and locus.get('excludeLocations')
-            self._filter(_location_filter(genes, intervals, exclude_locations))
-            if genes and not exclude_locations:
-                self._filtered_gene_ids = set(genes.keys())
-        elif variant_ids:
-            self.filter_by_variant_ids(variant_ids)
-        elif rs_ids:
-            self._filter(Q('terms', rsid=rs_ids))
+        self._filter_by_location(genes, intervals, variant_ids, rs_ids, locus)
 
         clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
         self._filter_by_frequency(frequencies, clinvar_terms=clinvar_terms)
@@ -256,16 +247,7 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self._filter(~Q('exists', field='filters'))
 
-        annotations = {k: v for k, v in (annotations or {}).items() if v}
-        new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
-        splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
-        self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
-        if clinvar_terms:
-            self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
-        if hgmd_classes:
-            self._consequence_overrides[HGMD_KEY] = hgmd_classes
-        if splice_ai:
-            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
+        annotations, new_svs = self._parse_annotation_overrides(annotations, clinvar_terms, hgmd_classes)
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
@@ -282,7 +264,7 @@ class EsSearch(object):
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
             comp_het_dataset_type = self._filter_compound_hets(
-                quality_filters_by_family, annotations, annotations_secondary, has_location_filter)
+                quality_filters_by_family, annotations, annotations_secondary, bool(genes or intervals))
             if inheritance_mode == COMPOUND_HET:
                 if comp_het_dataset_type:
                     self.update_dataset_type(comp_het_dataset_type)
@@ -297,6 +279,31 @@ class EsSearch(object):
 
         if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
             self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
+
+    def _parse_annotation_overrides(self, annotations, clinvar_terms, hgmd_classes):
+        annotations = {k: v for k, v in (annotations or {}).items() if v}
+        new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
+        splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
+        self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
+        if clinvar_terms:
+            self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
+        if hgmd_classes:
+            self._consequence_overrides[HGMD_KEY] = hgmd_classes
+        if splice_ai:
+            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
+
+        return annotations, new_svs
+
+    def _filter_by_location(self, genes, intervals, variant_ids, rs_ids, locus):
+        if genes or intervals:
+            exclude_locations = locus and locus.get('excludeLocations')
+            self._filter(_location_filter(genes, intervals, exclude_locations))
+            if genes and not exclude_locations:
+                self._filtered_gene_ids = set(genes.keys())
+        elif variant_ids:
+            self.filter_by_variant_ids(variant_ids)
+        elif rs_ids:
+            self._filter(Q('terms', rsid=rs_ids))
 
     def _filter_custom(self, custom_query):
         if custom_query:

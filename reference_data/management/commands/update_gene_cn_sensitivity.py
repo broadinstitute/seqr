@@ -8,14 +8,14 @@ logger = logging.getLogger(__name__)
 class CNSensitivityReferenceDataHandler(ReferenceDataHandler):
 
     model_cls = GeneCopyNumberSensitivity
-    url = 'https://storage.googleapis.com/seqr-reference-data/cn_sensitivity/pHI_pTS_scores.Jan21.txt'
+    url = 'https://zenodo.org/record/6347673/files/Collins_rCNV_2022.dosage_sensitivity_scores.tsv.gz'
 
     @staticmethod
     def parse_record(record):
         yield {
             'gene_symbol': record['#gene'],
-            'pHI': float(record['pHI']),
-            'pTS': float(record['pTS']),
+            'pHI': float(record['pHaplo']),
+            'pTS': float(record['pTriplo']),
         }
 
 

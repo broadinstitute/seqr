@@ -11,7 +11,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_NOTE_FIELDS, AnvilAuthenticationTestCase, MixAuthenticationTestCase
+    FAMILY_NOTE_FIELDS, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -971,64 +971,3 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
     def test_update_variant_acmg_classification(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
         assert_no_list_ws_has_al(self, 2)
-
-
-# Test for permissions from AnVIL and local
-class MixSavedVariantAPITest(MixAuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-
-    def test_saved_variant_data(self, *args):
-        super(MixSavedVariantAPITest, self).test_saved_variant_data(*args)
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_create_saved_variant(self):
-        super(MixSavedVariantAPITest, self).test_create_saved_variant()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_create_saved_sv_variant(self):
-        super(MixSavedVariantAPITest, self).test_create_saved_sv_variant()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_create_saved_compound_hets(self):
-        super(MixSavedVariantAPITest, self).test_create_saved_compound_hets()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_create_update_and_delete_variant_note(self):
-        super(MixSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_create_partially_saved_compound_het_variant_note(self):
-        super(MixSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_create_update_and_delete_compound_hets_variant_note(self):
-        super(MixSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_update_variant_tags(self):
-        super(MixSavedVariantAPITest, self).test_update_variant_tags()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_update_variant_functional_data(self):
-        super(MixSavedVariantAPITest, self).test_update_variant_functional_data()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_update_compound_hets_variant_tags(self):
-        super(MixSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_update_compound_hets_variant_functional_data(self):
-        super(MixSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_update_saved_variant_json(self, *args):
-        super(MixSavedVariantAPITest, self).test_update_saved_variant_json(*args)
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_update_variant_main_transcript(self):
-        super(MixSavedVariantAPITest, self).test_update_variant_main_transcript()
-        assert_no_list_ws_has_al(self, 1)
-
-    def test_update_variant_acmg_classification(self):
-        super(MixSavedVariantAPITest, self).test_update_variant_acmg_classification()
-        assert_no_list_ws_has_al(self, 1)
