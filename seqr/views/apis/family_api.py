@@ -18,7 +18,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_f
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
-    login_and_policies_required, user_is_analyst, has_case_review_permissions
+    login_and_policies_required, service_account_access, user_is_analyst, has_case_review_permissions
 
 
 FAMILY_ID_FIELD = 'familyId'
@@ -78,6 +78,9 @@ def family_variant_tag_summary(request, family_guid):
 
 @login_and_policies_required
 def edit_families_handler(request, project_guid):
+    return edit_families_handler_base(request, project_guid)
+
+def edit_families_handler_base(request, project_guid):
     """Edit or one or more Family records.
 
     Args:
@@ -312,6 +315,9 @@ def update_family_analysis_groups(request, family_guid):
 
 @login_and_policies_required
 def receive_families_table_handler(request, project_guid):
+    return receive_families_table_handler_base(request, project_guid)
+
+def receive_families_table_handler_base(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of families. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
     a temporary file and sends a 'uploadedFileId' representing this file back to the client.
@@ -420,3 +426,13 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
             RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene_id).order_by('tpm').values_list('tpm', flat=True))
 
     return create_json_response(response)
+
+
+# SERVICE ACCOUNT METHODS
+@service_account_access
+def sa_edit_families(request, project_guid):
+    return edit_families_handler_base(request, project_guid)
+
+@service_account_access
+def sa_receive_families_table(request, project_guid):
+    return receive_families_table_handler_base(request, project_guid)
