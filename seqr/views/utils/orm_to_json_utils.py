@@ -636,19 +636,6 @@ def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True):
     return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
 
 
-def get_json_for_variant_functional_data_tag_types():
-    functional_tag_types = []
-    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
-        functional_tag_types += [{
-            'category': category,
-            'name': name,
-            'metadataTitle': json.loads(tag_json).get('metadata_title', 'Notes'),
-            'color': json.loads(tag_json)['color'],
-            'description': json.loads(tag_json).get('description'),
-        } for name, tag_json in tags]
-    return functional_tag_types
-
-
 def get_json_for_variant_notes(notes, add_variant_guids=True):
     """Returns a JSON representation of the given variant notes.
 
