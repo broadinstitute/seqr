@@ -7,11 +7,10 @@ import openpyxl as xl
 from datetime import date
 from django.contrib.auth.models import User
 
-from settings import PM_USER_GROUP
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.permissions_utils import user_is_pm
+from seqr.views.utils.permissions_utils import user_is_pm, get_pm_users
 from seqr.models import Individual
 
 logger = SeqrLogger(__name__)
@@ -351,7 +350,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
 
-    recipients = [u.email for u in User.objects.filter(groups__name=PM_USER_GROUP)]
+    recipients = [u.email for u in get_pm_users()]
 
     # write out the sample manifest file
     wb = xl.Workbook()
