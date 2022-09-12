@@ -17,7 +17,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
 PROJECT_GUID = 'R0001_1kg'
 NON_ANVIL_PROJECT_GUID = 'R0002_empty'
 USERNAME = 'test_user_collaborator'
-USER_OPTION_FIELDS = {'displayName', 'firstName', 'lastName', 'username', 'email', 'isAnalyst'}
+USER_OPTION_FIELDS = {'displayName', 'username', 'email'}
 COLLABORATOR_FIELDS = {'hasEditPermissions', 'hasViewPermissions', 'displayName', 'username', 'email'}
 ANALYST_USERNAME = 'test_user'
 
@@ -53,7 +53,6 @@ class UsersAPITest(object):
         users.update(self.COLLABORATOR_NAMES)
         self.assertSetEqual(set(response_json.keys()), users)
         self.assertSetEqual(set(response_json[ANALYST_USERNAME].keys()), USER_OPTION_FIELDS)
-        self.assertTrue(response_json[ANALYST_USERNAME]['isAnalyst'])
 
     def test_get_all_collaborator_options(self):
         url = reverse(get_all_collaborator_options)
@@ -74,7 +73,8 @@ class UsersAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), self.COLLABORATOR_NAMES)
-        self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
+        self.assertSetEqual(
+            set(response_json['test_user_manager'].keys()), {'firstName', 'lastName', 'username', 'email'})
 
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
@@ -136,13 +136,13 @@ class UsersAPITest(object):
 
         # calling create again just updates the existing user
         response = self.client.post(create_url, content_type='application/json', data=json.dumps({
-            'email': 'Test@test.com', 'firstName': 'Test', 'lastName': 'Invalid Name Update'}))
+            'email': 'Test@test.com', 'firstName': 'Test', 'lastName': 'Name Update'}))
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][NON_ANVIL_PROJECT_GUID]['collaborators']
         self.assertEqual(len(collaborators), 3)
         new_collab = next(collab for collab in collaborators if collab['email'] == 'test@test.com')
         self.assertEqual(new_collab['username'], username)
-        self.assertEqual(new_collab['displayName'], 'Test')
+        self.assertEqual(new_collab['displayName'], 'Test Name Update')
         mock_send_mail.assert_not_called()
         mock_logger.info.assert_not_called()
 
@@ -158,7 +158,8 @@ class UsersAPITest(object):
         self.check_manager_login(update_url)
 
         response = self.client.post(update_url, content_type='application/json', data=json.dumps(
-            {'firstName': 'Edited', 'lastName': 'Collaborator', 'hasEditPermissions': True}))
+            {'hasEditPermissions': True}
+        ))
         self._test_update_collaborator_response(response)
 
     def _test_update_collaborator_response(self, response):

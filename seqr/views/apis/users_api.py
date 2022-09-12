@@ -20,7 +20,7 @@ from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
 logger = SeqrLogger(__name__)
 
-USER_OPTION_FIELDS = {'display_name', 'first_name', 'last_name', 'username', 'email', 'is_analyst'}
+UPDATE_USER_FIELDS = ['firstName', 'lastName']
 
 require_anvil_disabled = active_user_has_policies_and_passes_test(lambda u: not anvil_enabled())
 
@@ -32,7 +32,7 @@ def get_all_collaborator_options(request):
     collaborator_ids.update(projects.values_list('can_edit_group__user', flat=True))
 
     return create_json_response({
-        user.username: _get_json_for_user(user, fields=USER_OPTION_FIELDS)
+        user.username: _get_json_for_user(user, fields={'first_name', 'last_name', 'username', 'email'})
         for user in User.objects.filter(id__in=collaborator_ids)
     })
 
@@ -41,7 +41,8 @@ def get_all_collaborator_options(request):
 def get_project_collaborator_options(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     users = get_project_collaborators_by_username(
-        request.user, project, include_permissions=False, include_analysts=True, fields=USER_OPTION_FIELDS,
+        request.user, project, include_permissions=False, include_analysts=True,
+        fields={'display_name', 'username', 'email'},
     )
     return create_json_response(users)
 
@@ -153,7 +154,7 @@ def create_project_collaborator(request, project_guid):
 
 
 def _update_user_from_json(user, request_json, **kwargs):
-    user_json = {k: request_json.get(k) or '' for k in ['firstName', 'lastName']}
+    user_json = {k: request_json.get(k) or '' for k in UPDATE_USER_FIELDS}
     update_model_from_json(user, user_json, user=user, **kwargs)
 
 
@@ -164,6 +165,8 @@ def _update_existing_user(user, project, request_json):
     else:
         project.can_edit_group.user_set.remove(user)
 
+    if any(k in UPDATE_USER_FIELDS for k in request_json.keys()):
+        _update_user_from_json(user, request_json)
     return create_json_response({
         'projectsByGuid': {project.guid: {'collaborators': get_json_for_project_collaborator_list(user, project)}}
     })
