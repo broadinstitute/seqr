@@ -8,7 +8,10 @@ from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 @superuser_required
 def get_all_users(request):
-    user_tups = [(user, _get_json_for_user(user, is_anvil=False)) for user in User.objects.exclude(email='')]
+    user_tups = [(user, _get_json_for_user(user, fields=[
+        'username', 'email', 'last_login', 'date_joined', 'id', 'display_name', 'is_superuser', 'is_active',
+        'is_analyst', 'is_data_manager', 'is_pm',
+    ])) for user in User.objects.exclude(email='')]
     users = [dict(hasGoogleAuth=is_google_authenticated(user), **user_json) for user, user_json in user_tups]
 
     return create_json_response({'users': users})

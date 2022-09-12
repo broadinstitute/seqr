@@ -5,6 +5,8 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
 
 SUPERUSER_FIELDS = {'hasGoogleAuth'}
 SUPERUSER_FIELDS.update(USER_FIELDS)
+SUPERUSER_FIELDS -= {'firstName', 'lastName', 'isAnvil'}
+
 
 class SuperusersAPITest(AuthenticationTestCase):
     fixtures = ['users']

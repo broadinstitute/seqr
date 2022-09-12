@@ -131,9 +131,6 @@ def _get_json_for_user(user, is_anvil=None, fields=None, analyst_users=None, pm_
         dict: json object
     """
 
-    if hasattr(user, '_wrapped'):
-        user = user._wrapped   # Django request.user actually stores the Django User objects in a ._wrapped attribute
-
     model_fields = [field for field in fields if field in MODEL_USER_FIELDS] if fields else MODEL_USER_FIELDS
     computed_fields = [field for field in fields if field in COMPUTED_USER_FIELDS] if fields else COMPUTED_USER_FIELDS
 
