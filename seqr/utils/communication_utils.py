@@ -29,28 +29,16 @@ def _post_to_slack(channel, message):
 
 
 def send_welcome_email(user, referrer):
-    if anvil_enabled():
-        setup_message = 'Please make sure this account is registered in AnVIL by signing in to {} and registering.'.format(
-            ANVIL_UI_URL
-        )
-        setup_message += ' Once you are registered in AnVIL, you will be able to access seqr at {}'.format(BASE_URL)
-    else:
-        setup_message = 'Please click this link to set up your account:\n    {}login/set_password/{}'.format(
-            BASE_URL, user.password)
+    email_content = f"""
+    Hi there {user.get_full_name()}--
 
-    email_content = """
-    Hi there {full_name}--
+    {referrer.get_full_name() or referrer.email} has added you as a collaborator in seqr.
 
-    {referrer} has added you as a collaborator in seqr.
-
-    {setup_message}
+    Please click this link to set up your account:
+    {BASE_URL}login/set_password/{user.password}
 
     Thanks!
-    """.format(
-        full_name=user.get_full_name(),
-        referrer=referrer.get_full_name() or referrer.email,
-        setup_message=setup_message,
-    )
+    """
     user.email_user('Set up your seqr account', email_content, fail_silently=False)
 
 
