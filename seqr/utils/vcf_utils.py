@@ -33,9 +33,9 @@ def _validate_vcf_header(header):
 
 def _validate_vcf_meta(meta):
     for field, sub_field_meta in EXPECTED_META_FIELDS.items():
-        for sub_field, type in sub_field_meta.items():
-            if meta.get(field, {}).get(sub_field) != type:
-                error = f'VCF header field {field}.{sub_field} and meta information Type={type} is expected.'
+        for sub_field, field_type in sub_field_meta.items():
+            if meta.get(field, {}).get(sub_field) != field_type:
+                error = f'VCF header field {field}.{sub_field} and meta information Type={field_type} is expected.'
                 raise ErrorsWarningsException([error], [])
 
 
