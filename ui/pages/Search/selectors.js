@@ -124,11 +124,11 @@ export const getLocusListOptions = createListEqualSelector(
       (acc, { projectGuid }) => ((projectsByGuid[projectGuid] || {}).locusListGuids ?
         [...acc, ...projectsByGuid[projectGuid].locusListGuids] : acc), [],
     ))
-    return Object.values(locusListsByGuid).map(({ locusListGuid, name, isPublic, paLocusList }) => ({
+    return Object.values(locusListsByGuid).map(({ locusListGuid, name, numEntries, isPublic, paLocusList }) => ({
       text: name,
       value: locusListGuid,
       key: locusListGuid,
-      description: paLocusList && 'PanelApp',
+      description: `${numEntries} Genes${paLocusList ? ' - PanelApp' : ''}`,
       icon: { name: isPublic ? 'users' : 'lock', size: 'small' },
       category: `${projectsLocusListGuids.has(locusListGuid) ? 'Project' : 'All'} Lists`,
       categoryRank: projectsLocusListGuids.has(locusListGuid) ? 0 : 1,

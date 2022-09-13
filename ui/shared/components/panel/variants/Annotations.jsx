@@ -176,7 +176,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       const endOffset = variant.endChrom ? 0 : variant.end - variant.pos
       const start = useLiftover ? variant.liftedOverPos : variant.pos
       const region = `${variant.chrom}-${start}-${start + endOffset}`
-      addDividedLink(links, 'gnomad', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
+      addDividedLink(links, 'gnomAD', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
     }
   } else {
     seqrLinkProps.variantId = variant.variantId

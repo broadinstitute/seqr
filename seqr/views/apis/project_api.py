@@ -18,7 +18,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
     get_json_for_family_notes, _get_json_for_individuals
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required, \
+    check_user_created_object_permissions, pm_required, user_is_pm, user_is_analyst, login_and_policies_required, \
     has_workspace_perm
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups
@@ -57,8 +57,10 @@ def create_project_handler(request):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
-    project_args['description'] = request_json.get('description', '')
-    project_args['is_demo'] = request_json.get('isDemo', False)
+    project_args.update({
+        _to_snake_case(field): request_json.get(field, default) for field, default in
+        [('description', ''), ('isDemo', False), ('consentCode', None)]
+    })
     if request_json.get('disableMme'):
         project_args['is_mme_enabled'] = False
 
@@ -109,7 +111,15 @@ def update_project_handler(request, project_guid):
     check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
-    update_project_from_json(project, request_json, request.user, allow_unknown_keys=True)
+    updated_fields = None
+    consent_code = request_json.get('consentCode')
+    if consent_code and consent_code != project.consent_code:
+        if not user_is_pm(request.user):
+            raise PermissionDenied('User is not authorized to edit consent code')
+        project.consent_code = consent_code
+        updated_fields = {'consent_code'}
+
+    update_project_from_json(project, request_json, request.user, allow_unknown_keys=True, updated_fields=updated_fields)
 
     return create_json_response({
         'projectsByGuid': {

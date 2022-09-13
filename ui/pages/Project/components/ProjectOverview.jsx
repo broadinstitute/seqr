@@ -285,7 +285,7 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
   return datasetSections.map((sectionProps, i) => (
     <DetailSection
       {...sectionProps}
-      button={(datasetSections.length - 1 === i) ? <EditDatasetsButton user={user} /> : null}
+      button={(datasetSections.length - 1 === i) ? <EditDatasetsButton project={project} user={user} /> : null}
     />
   ))
 })

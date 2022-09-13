@@ -6,7 +6,8 @@ import { Multiselect } from 'shared/components/form/Inputs'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 
 import { updateProject } from 'redux/rootReducer'
-import { getProjectCategoriesByGuid } from 'redux/selectors'
+
+import { getEditableCategoryOptions } from '../selectors'
 
 const FIELD_PROPS = {
   component: Multiselect,
@@ -44,9 +45,7 @@ EditProjectCategoriesModal.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  categories: Object.values(getProjectCategoriesByGuid(state)).map(
-    projectCategory => ({ value: projectCategory.guid, text: projectCategory.name }),
-  ),
+  categories: getEditableCategoryOptions(state),
 })
 
 const mapDispatchToProps = {
