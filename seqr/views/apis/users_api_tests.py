@@ -17,9 +17,17 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
 PROJECT_GUID = 'R0001_1kg'
 NON_ANVIL_PROJECT_GUID = 'R0002_empty'
 USERNAME = 'test_user_collaborator'
-USER_OPTION_FIELDS = {'displayName', 'username', 'email'}
 COLLABORATOR_FIELDS = {'hasEditPermissions', 'hasViewPermissions', 'displayName', 'username', 'email'}
 ANALYST_USERNAME = 'test_user'
+
+MAIN_COLLABORATOR_JSON = {
+    'test_user_manager': {
+        'displayName': 'Test Manager User', 'username': 'test_user_manager', 'email': 'test_user_manager@test.com',
+    },
+    'test_user_collaborator': {
+        'displayName': 'Test Collaborator User', 'username': 'test_user_collaborator', 'email': 'test_user_collaborator@test.com',
+    },
+}
 
 TOS_VERSION = 2.2
 PRIVACY_VERSION = 1.1
@@ -40,18 +48,23 @@ class UsersAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.COLLABORATOR_NAMES)
-        self.assertSetEqual(set(response_json['test_user_manager'].keys()), USER_OPTION_FIELDS)
+        self.assertDictEqual(response_json, self.COLLABORATOR_JSON)
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        users = {ANALYST_USERNAME, 'test_pm_user'}
-        users.update(self.COLLABORATOR_NAMES)
-        self.assertSetEqual(set(response_json.keys()), users)
-        self.assertSetEqual(set(response_json[ANALYST_USERNAME].keys()), USER_OPTION_FIELDS)
+        users = {
+            ANALYST_USERNAME: {
+                'displayName': 'Test User', 'username': 'test_user', 'email': 'test_user@broadinstitute.org',
+            },
+            'test_pm_user': {
+                'displayName': 'Test PM User', 'username': 'test_pm_user', 'email': 'test_pm_user@test.com',
+            },
+        }
+        users.update(self.COLLABORATOR_JSON)
+        self.assertDictEqual(response_json, users)
 
     def test_get_all_collaborator_options(self):
         url = reverse(get_all_collaborator_options)
@@ -71,7 +84,7 @@ class UsersAPITest(object):
     def _test_collaborator_collaborator_options_response(self, response):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), self.COLLABORATOR_NAMES)
+        self.assertSetEqual(set(response_json.keys()), set(self.COLLABORATOR_JSON.keys()))
         self.assertSetEqual(
             set(response_json['test_user_manager'].keys()), {'firstName', 'lastName', 'username', 'email'})
 
@@ -164,7 +177,7 @@ class UsersAPITest(object):
 
     def _test_update_collaborator_response(self, response):
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES))
+        self.assertEqual(len(collaborators), len(self.COLLABORATOR_JSON))
         edited_collab = next(collab for collab in collaborators if collab['username'] == USERNAME)
         self.assertNotEqual(edited_collab['displayName'], 'Edited Collaborator')
         self.assertTrue(edited_collab['hasViewPermissions'])
@@ -180,7 +193,7 @@ class UsersAPITest(object):
     def _test_delete_collaborator_response(self, response):
         self.assertEqual(response.status_code, 200)
         collaborators = response.json()['projectsByGuid'][PROJECT_GUID]['collaborators']
-        self.assertEqual(len(collaborators), len(self.COLLABORATOR_NAMES) - 1)
+        self.assertEqual(len(collaborators), len(self.COLLABORATOR_JSON) - 1)
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=USERNAME).count(), 1)
@@ -264,7 +277,7 @@ class UsersAPITest(object):
 # Tests for AnVIL access disabled
 class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
+    COLLABORATOR_JSON = MAIN_COLLABORATOR_JSON
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def _test_forgot_password(self, url, mock_send_mail): # pylint: disable=arguments-differ
@@ -337,7 +350,10 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator', 'test_user_pure_anvil@test.com'}
+    COLLABORATOR_JSON = {'test_user_pure_anvil@test.com': {
+        'displayName': '', 'username': 'test_user_pure_anvil@test.com', 'email': 'test_user_pure_anvil@test.com',
+    }}
+    COLLABORATOR_JSON.update(MAIN_COLLABORATOR_JSON)
 
     def _assert_403_response(self, response, **kwargs):
         self.assertEqual(response.status_code, 403)

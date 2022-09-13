@@ -4,9 +4,9 @@ import mock
 from seqr.views.apis.superuser_api import get_all_users
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
-SUPERUSER_FIELDS = {'hasGoogleAuth'}
-SUPERUSER_FIELDS.update(USER_FIELDS)
-SUPERUSER_FIELDS -= {'firstName', 'lastName', 'isAnvil'}
+ALL_USERS_USER_FIELDS = {'hasGoogleAuth'}
+ALL_USERS_USER_FIELDS.update(USER_FIELDS)
+ALL_USERS_USER_FIELDS -= {'firstName', 'lastName', 'isAnvil'}
 
 EXPECTED_USERS = {
     'test_user_manager', 'test_user_collaborator', 'test_user_no_access', 'test_user', 'test_local_user',
@@ -38,7 +38,7 @@ class SuperusersAPITest(object):
         self.assertSetEqual(set(users_by_username.keys()), EXPECTED_USERS)
 
         pm_user = users_by_username['test_pm_user']
-        self.assertSetEqual(set(pm_user.keys()), SUPERUSER_FIELDS)
+        self.assertSetEqual(set(pm_user.keys()), ALL_USERS_USER_FIELDS)
         self.assertEqual(pm_user['hasGoogleAuth'], self.HAS_GOOGLE_AUTH)
         self.assertEqual(pm_user['isPm'], analyst_enabled)
         self.assertEqual(pm_user['isAnalyst'], analyst_enabled)

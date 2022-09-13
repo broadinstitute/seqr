@@ -103,7 +103,7 @@ def update_user(request):
     request_json = json.loads(request.body)
     _update_user_from_json(request.user, request_json)
 
-    return create_json_response(get_json_for_user(request.user, ['first_name', 'last_name', 'display_name']))
+    return create_json_response(get_json_for_user(request.user, {'first_name', 'last_name', 'display_name'}))
 
 
 @login_active_required

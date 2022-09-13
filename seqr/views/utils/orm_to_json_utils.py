@@ -117,13 +117,10 @@ def get_json_for_user(user, fields):
     if invalid_fields:
         raise ValueError(f'Invalid user fields: {", ".join(invalid_fields)}')
 
-    user_json = {
-        _to_camel_case(field): getattr(user, field) for field in fields if field in MODEL_USER_FIELDS
+    return {
+        _to_camel_case(field): COMPUTED_USER_FIELDS[field](user) if field in COMPUTED_USER_FIELDS else getattr(user, field)
+        for field in fields
     }
-    user_json.update({
-        _to_camel_case(field): COMPUTED_USER_FIELDS[field](user) for field in fields if field in COMPUTED_USER_FIELDS
-    })
-    return user_json
 
 
 def get_json_for_current_user(user):
@@ -806,7 +803,6 @@ def _set_collaborator_permissions(collaborator_json, include_permissions, can_ed
             'hasEditPermissions': can_edit,
         })
     return collaborator_json
-
 
 
 def get_json_for_saved_searches(searches, user):
