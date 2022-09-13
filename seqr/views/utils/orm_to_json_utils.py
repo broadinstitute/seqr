@@ -193,7 +193,7 @@ def _get_case_review_fields(model, has_case_review_perm, user, get_project):
     return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, skip_nested=False, is_analyst=None, has_case_review_perm=None):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -239,10 +239,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     kwargs = {'additional_model_fields': _get_case_review_fields(
         families[0], has_case_review_perm, user, lambda family: family.project)
     }
-    if project_guid or not skip_nested:
-        kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
-    else:
-        kwargs['additional_model_fields'].append('project_id')
+    kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
 
     return _get_json_for_models(families, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
 
@@ -287,7 +284,7 @@ def _process_individual_result(add_sample_guids_field):
     return _process_result
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
-                              family_fields=None, skip_nested=False, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
+                              family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -307,17 +304,14 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         'additional_model_fields': _get_case_review_fields(
             individuals[0], has_case_review_perm, user, lambda indiv: indiv.family.project)
     }
-    if project_guid or not skip_nested:
-        nested_fields = [
-            {'fields': ('family', 'guid'), 'value': family_guid},
-            {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
-        ]
-        if family_fields:
-            for field in family_fields:
-                nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-        kwargs.update({'nested_fields': nested_fields})
-    else:
-        kwargs['additional_model_fields'].append('family_id')
+    nested_fields = [
+        {'fields': ('family', 'guid'), 'value': family_guid},
+        {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
+    ]
+    if family_fields:
+        for field in family_fields:
+            nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
+    kwargs.update({'nested_fields': nested_fields})
 
     if add_hpo_details:
         kwargs['additional_model_fields'] += [
@@ -465,13 +459,12 @@ def get_json_for_saved_variant(saved_variant, **kwargs):
     return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
-def get_json_for_saved_variants_with_tags(saved_variants, include_missing_variants=False, **kwargs):
+def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
         for variant in get_json_for_saved_variants(saved_variants, **kwargs)
     }
 
-    missing_ids = set()
     saved_variant_id_map = {var.id: var.guid for var in saved_variants}
 
     variant_tag_id_map = defaultdict(list)
@@ -486,12 +479,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         tag['variantGuids'] = []
         variant_ids = variant_tag_id_map[tag_id_map[tag_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
-                tag['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
+            tag['variantGuids'].append(variant_guid)
 
     variant_functional_id_map = defaultdict(list)
     for functional_mapping in VariantFunctionalData.saved_variants.through.objects.filter(
@@ -506,12 +496,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         tag['variantGuids'] = []
         variant_ids = variant_functional_id_map[functional_id_map[tag_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
-                tag['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
+            tag['variantGuids'].append(variant_guid)
 
     variant_note_id_map = defaultdict(list)
     for note_mapping in VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
@@ -525,18 +512,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         note['variantGuids'] = []
         variant_ids = variant_note_id_map[note_id_map[note_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
-                note['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
-
-    if include_missing_variants and missing_ids:
-        variants_by_guid.update({
-            variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
-            for variant in get_json_for_saved_variants(SavedVariant.objects.filter(id__in=missing_ids), **kwargs)
-        })
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
+            note['variantGuids'].append(variant_guid)
 
     response = {
         'variantTagsByGuid': {tag['tagGuid']: tag for tag in tags},
@@ -640,19 +618,6 @@ def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True):
         prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
 
     return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
-
-
-def get_json_for_variant_functional_data_tag_types():
-    functional_tag_types = []
-    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
-        functional_tag_types += [{
-            'category': category,
-            'name': name,
-            'metadataTitle': json.loads(tag_json).get('metadata_title', 'Notes'),
-            'color': json.loads(tag_json)['color'],
-            'description': json.loads(tag_json).get('description'),
-        } for name, tag_json in tags]
-    return functional_tag_types
 
 
 def get_json_for_variant_notes(notes, add_variant_guids=True):
