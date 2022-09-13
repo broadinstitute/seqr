@@ -114,10 +114,11 @@ class UsersAPITest(object):
 
     Test Manager User has added you as a collaborator in seqr.
 
-    {setup_message}
+    Please click this link to set up your account:
+    /login/set_password/{password_token}
 
     Thanks!
-    """.format(setup_message=self.EMAIL_SETUP_MESSAGE.format(password_token=user.password))
+    """.format(password_token=user.password)
         mock_send_mail.assert_called_with(
             'Set up your seqr account',
             expected_email_content,
@@ -262,7 +263,6 @@ class UsersAPITest(object):
 class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
     fixtures = ['users', '1kg_project']
     COLLABORATOR_NAMES = {'test_user_manager', 'test_user_collaborator'}
-    EMAIL_SETUP_MESSAGE = 'Please click this link to set up your account:\n    /login/set_password/{password_token}'
 
     @mock.patch('django.contrib.auth.models.send_mail')
     def _test_forgot_password(self, url, mock_send_mail): # pylint: disable=arguments-differ

@@ -47,7 +47,7 @@ const Detail = styled.div`
 
 const CaseReviewDropdownContainer = styled.div`
   float: right;
-  width: 220px;
+  width: 100%;
 `
 
 const FLAG_TITLE = {
