@@ -54,16 +54,15 @@ def get_project_analysis_groups(projects, project_guid):
     return {ag['analysisGroupGuid']: ag for ag in analysis_groups}
 
 
-def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True, skip_child_ids=False):
+def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True):
     families = _get_json_for_families(
-        family_models, user, project_guid=project_guid, skip_nested=skip_child_ids,
-        is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+        family_models, user, project_guid=project_guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__in=family_models), is_analyst=is_analyst)
 
     individual_models = Individual.objects.filter(family__in=family_models)
     individuals = _get_json_for_individuals(
-        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=skip_child_ids,
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     response.update({
@@ -74,12 +73,10 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
 
     if include_igv:
         igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=skip_child_ids,
-                                       is_analyst=is_analyst)
+        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, is_analyst=is_analyst)
         response['igvSamplesByGuid'] = {s['sampleGuid']: s for s in igv_samples}
 
-    if not skip_child_ids:
-        add_child_ids(response)
+    add_child_ids(response)
 
     return individual_models
 

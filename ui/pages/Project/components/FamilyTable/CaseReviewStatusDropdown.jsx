@@ -17,7 +17,7 @@ import {
 const StatusContainer = styled.span`
   display: inline-block;
   whitespace: nowrap;
-  min-width: 220px;
+  width: 100%;
   
   .ui.form {
     width: 100%;
