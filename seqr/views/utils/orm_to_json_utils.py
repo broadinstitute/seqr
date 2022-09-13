@@ -459,13 +459,12 @@ def get_json_for_saved_variant(saved_variant, **kwargs):
     return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
-def get_json_for_saved_variants_with_tags(saved_variants, include_missing_variants=False, **kwargs):
+def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
         for variant in get_json_for_saved_variants(saved_variants, **kwargs)
     }
 
-    missing_ids = set()
     saved_variant_id_map = {var.id: var.guid for var in saved_variants}
 
     variant_tag_id_map = defaultdict(list)
@@ -480,12 +479,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         tag['variantGuids'] = []
         variant_ids = variant_tag_id_map[tag_id_map[tag_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
-                tag['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
+            tag['variantGuids'].append(variant_guid)
 
     variant_functional_id_map = defaultdict(list)
     for functional_mapping in VariantFunctionalData.saved_variants.through.objects.filter(
@@ -500,12 +496,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         tag['variantGuids'] = []
         variant_ids = variant_functional_id_map[functional_id_map[tag_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
-                tag['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
+            tag['variantGuids'].append(variant_guid)
 
     variant_note_id_map = defaultdict(list)
     for note_mapping in VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
@@ -519,18 +512,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         note['variantGuids'] = []
         variant_ids = variant_note_id_map[note_id_map[note_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
-                note['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
-
-    if include_missing_variants and missing_ids:
-        variants_by_guid.update({
-            variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
-            for variant in get_json_for_saved_variants(SavedVariant.objects.filter(id__in=missing_ids), **kwargs)
-        })
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
+            note['variantGuids'].append(variant_guid)
 
     response = {
         'variantTagsByGuid': {tag['tagGuid']: tag for tag in tags},
