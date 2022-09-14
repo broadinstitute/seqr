@@ -345,25 +345,22 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
 
         mock_file_exist.return_value = True
-        # mock_file_iter.return_value = ['##fileformat=VCFv4.2\n',
-        #                                '#CHROM	POS	ID	REF	ALT	QUAL']  # incomplete header line
         mock_vcf_validate.return_value = {}
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'],
                          'No samples found in the provided VCF. This may be due to a malformed file')
-        # mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
-        # mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
+        mock_vcf_validate.assert_called_with('gs://test_bucket/test_path.vcf.gz')
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         # Test valid operation
         mock_file_exist.return_value = True
-        # mock_file_iter.return_value = FILE_DATA
         mock_vcf_validate.return_value = {'NA19675', 'NA19678', 'HG00735'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
         mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf', user=self.manager_user)
-        # mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf', byte_range=None)
+        mock_vcf_validate.assert_called_with('gs://test_bucket/test_path.vcf')
 
         # Test logged in locally
         remove_token(
