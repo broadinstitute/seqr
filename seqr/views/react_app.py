@@ -7,7 +7,7 @@ from django.template import loader
 from django.http import HttpResponse
 from settings import SEQR_VERSION, CSRF_COOKIE_NAME, DEBUG, LOGIN_URL, GA_TOKEN_ID
 from seqr.models import WarningMessage
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user
+from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_current_user
 from seqr.views.utils.permissions_utils import login_active_required
 from seqr.views.utils.terra_api_utils import google_auth_enabled
 
@@ -23,7 +23,9 @@ def no_login_main_app(request, *args, **kwargs):
     render_kwargs = {'include_user': False}
     user_token = kwargs.get('user_token')
     if user_token:
-        render_kwargs['additional_json'] = {'newUser': _get_json_for_user(User.objects.get(password=user_token))}
+        render_kwargs['additional_json'] = {'newUser': get_json_for_user(
+            User.objects.get(password=user_token), fields=['id', 'first_name', 'last_name', 'username', 'email'],
+        )}
     elif not request.user.is_anonymous:
         render_kwargs['include_user'] = True
     if not request.META.get(CSRF_COOKIE_NAME):
@@ -48,7 +50,7 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
     }}
     if include_user:
-        initial_json['user'] = _get_json_for_user(request.user)
+        initial_json['user'] = get_json_for_current_user(request.user)
     if additional_json:
         initial_json.update(additional_json)
 

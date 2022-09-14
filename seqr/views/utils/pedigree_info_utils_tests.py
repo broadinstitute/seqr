@@ -103,7 +103,6 @@ class PedigreeInfoUtilsTest(TestCase):
         self.assertListEqual(ec.exception.errors, [error])
         self.assertListEqual(ec.exception.warnings, [])
 
-    @mock.patch('seqr.views.utils.pedigree_info_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     def test_parse_sample_manifest(self, mock_email, mock_pm_group):
