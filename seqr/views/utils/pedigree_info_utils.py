@@ -11,6 +11,7 @@ from settings import PM_USER_GROUP
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
+from seqr.views.utils.json_utils import _to_snake_case
 from seqr.views.utils.permissions_utils import user_is_pm
 from seqr.models import Individual
 
@@ -92,15 +93,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     try:
         if is_merged_pedigree_sample_manifest:
             logger.info("Parsing merged pedigree-sample-manifest file", user)
-            rows, sample_manifest_rows, kit_id, consent_codes = _parse_merged_pedigree_sample_manifest_format(rows)
-
-            if consent_codes:
-                if len(consent_codes) > 1:
-                    raise ValueError(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
-                consent_code = consent_codes.pop()
-                project_consent_code = project.get_consent_code_display()
-                if consent_code != project_consent_code:
-                    raise ValueError(f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
+            rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows, project)
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
@@ -117,6 +110,26 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
     return json_records, warnings
+
+
+def _parse_sex(sex):
+    if sex == '1' or sex.upper().startswith('M'):
+        return 'M'
+    elif sex == '2' or sex.upper().startswith('F'):
+        return 'F'
+    elif sex == '0' or not sex or sex.lower() in {'unknown', 'prefer_not_answer'}:
+        return 'U'
+    return None
+
+
+def _parse_affected(affected):
+    if affected == '1' or affected.upper() == "U" or affected.lower() == 'unaffected':
+        return 'N'
+    elif affected == '2' or affected.upper().startswith('A'):
+        return 'A'
+    elif affected == '0' or not affected or affected.lower() == 'unknown':
+        return 'U'
+    return None
 
 
 def _convert_fam_file_rows_to_json(rows):
@@ -149,7 +162,7 @@ def _convert_fam_file_rows_to_json(rows):
     json_results = []
     for i, row_dict in enumerate(rows):
 
-        json_record = _parse_row_dict(row_dict)
+        json_record = _parse_row_dict(row_dict, i)
 
         # validate
         if not json_record.get(JsonConstants.FAMILY_ID_COLUMN):
@@ -157,92 +170,38 @@ def _convert_fam_file_rows_to_json(rows):
         if not json_record.get(JsonConstants.INDIVIDUAL_ID_COLUMN):
             raise ValueError("Individual Id not specified in row #%d:\n%s" % (i+1, json_record))
 
-        if JsonConstants.SEX_COLUMN in json_record:
-            if json_record[JsonConstants.SEX_COLUMN] == '1' or json_record[JsonConstants.SEX_COLUMN].upper().startswith('M'):
-                json_record[JsonConstants.SEX_COLUMN] = 'M'
-            elif json_record[JsonConstants.SEX_COLUMN] == '2' or json_record[JsonConstants.SEX_COLUMN].upper().startswith('F'):
-                json_record[JsonConstants.SEX_COLUMN] = 'F'
-            elif json_record[JsonConstants.SEX_COLUMN] == '0' or not json_record[JsonConstants.SEX_COLUMN] or json_record[JsonConstants.SEX_COLUMN].lower() in {'unknown', 'prefer_not_answer'}:
-                json_record[JsonConstants.SEX_COLUMN] = 'U'
-            else:
-                raise ValueError("Invalid value '%s' for sex in row #%d" % (json_record[JsonConstants.SEX_COLUMN], i+1))
-
-        if JsonConstants.AFFECTED_COLUMN in json_record:
-            if json_record[JsonConstants.AFFECTED_COLUMN] == '1' or json_record[JsonConstants.AFFECTED_COLUMN].upper() == "U" or json_record[JsonConstants.AFFECTED_COLUMN].lower() == 'unaffected':
-                json_record[JsonConstants.AFFECTED_COLUMN] = 'N'
-            elif json_record[JsonConstants.AFFECTED_COLUMN] == '2' or json_record[JsonConstants.AFFECTED_COLUMN].upper().startswith('A'):
-                json_record[JsonConstants.AFFECTED_COLUMN] = 'A'
-            elif json_record[JsonConstants.AFFECTED_COLUMN] == '0' or not json_record[JsonConstants.AFFECTED_COLUMN] or json_record[JsonConstants.AFFECTED_COLUMN].lower() == 'unknown':
-                json_record[JsonConstants.AFFECTED_COLUMN] = 'U'
-            elif json_record[JsonConstants.AFFECTED_COLUMN]:
-                raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record[JsonConstants.AFFECTED_COLUMN], i+1))
-
-        if json_record.get(JsonConstants.PROBAND_RELATIONSHIP):
-            relationship =  RELATIONSHIP_REVERSE_LOOKUP.get(json_record[JsonConstants.PROBAND_RELATIONSHIP].lower())
-            if not relationship:
-                raise ValueError('Invalid value "{}" for proband relationship in row #{}'.format(
-                    json_record[JsonConstants.PROBAND_RELATIONSHIP], i + 1))
-            json_record[JsonConstants.PROBAND_RELATIONSHIP] = relationship
-
-        if json_record.get(JsonConstants.PRIMARY_BIOSAMPLE):
-            full_biosample = json_record[JsonConstants.PRIMARY_BIOSAMPLE]
-            biosample_code = next(
-                (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if full_biosample.startswith(uberon_code)),
-                None)
-            if not biosample_code:
-                raise ValueError(f'Invalid value "{full_biosample}" for proband relationship in row #{i + 1}')
-            json_record[JsonConstants.PRIMARY_BIOSAMPLE] = biosample_code
-
-        if json_record.get(JsonConstants.ANALYTE_TYPE):
-            analyte_type = Individual.ANALYTE_REVERSE_LOOKUP.get(json_record[JsonConstants.ANALYTE_TYPE])
-            if not analyte_type:
-                raise ValueError(f'Invalid value "{json_record[JsonConstants.ANALYTE_TYPE]}" for analyte type in row #{i + 1}')
-            json_record[JsonConstants.ANALYTE_TYPE] = analyte_type
-
         json_results.append(json_record)
 
     return json_results
 
 
-def _parse_row_dict(row_dict):
+def _parse_row_dict(row_dict, i):
     json_record = {}
     for key, value in row_dict.items():
         full_key = key
         key = key.lower()
         value = (value or '').strip()
-        if key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
-            json_record[JsonConstants.FAMILY_NOTES_COLUMN] = value
-        elif "family" in key:
-            json_record[JsonConstants.FAMILY_ID_COLUMN] = value
-        elif "indiv" in key:
-            if "previous" in key:
-                json_record[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = value
-            else:
-                json_record[JsonConstants.INDIVIDUAL_ID_COLUMN] = value
-        elif full_key in {
-            JsonConstants.MATERNAL_ETHNICITY, JsonConstants.PATERNAL_ETHNICITY, JsonConstants.BIRTH_YEAR,
-            JsonConstants.DEATH_YEAR, JsonConstants.ONSET_AGE, JsonConstants.AFFECTED_RELATIVES}:
-            json_record[full_key] = json.loads(value)
-        elif "father" in key or "paternal" in key:
-            json_record[JsonConstants.PATERNAL_ID_COLUMN] = value if value != "." else ""
-        elif "mother" in key or "maternal" in key:
-            json_record[JsonConstants.MATERNAL_ID_COLUMN] = value if value != "." else ""
-        elif "sex" in key or "gender" in key:
-            json_record[JsonConstants.SEX_COLUMN] = value
-        elif 'tissue' in key and 'affected' in key and 'status' in key:
-            json_record[JsonConstants.TISSUE_AFFECTED_STATUS] = {'Yes': True, 'No': False}.get(value)
-        elif 'primary' in key and 'biosample' in key:
-            json_record[JsonConstants.PRIMARY_BIOSAMPLE] = value
-        elif 'analyte' in key and 'type' in key:
-            json_record[JsonConstants.ANALYTE_TYPE] = value
-        elif "affected" in key:
-            json_record[JsonConstants.AFFECTED_COLUMN] = value
+
+        if full_key in JsonConstants.JSON_COLUMNS:
+            column = full_key
+        elif key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
+            column = JsonConstants.FAMILY_NOTES_COLUMN
         elif key.startswith("notes"):
-            json_record[JsonConstants.NOTES_COLUMN] = value
-        elif "coded" in key and "phenotype" in key:
-            json_record[JsonConstants.CODED_PHENOTYPE_COLUMN] = value
-        elif 'proband' in key and 'relation' in key:
-            json_record[JsonConstants.PROBAND_RELATIONSHIP] = value
+            column = JsonConstants.NOTES_COLUMN
+        else:
+            column = next((
+                col for col, substrings in JsonConstants.COLUMN_SUBSTRINGS
+                if all(substring in key for substring in substrings)
+            ), None)
+
+        if column:
+            format = JsonConstants.FORMAT_COLUMNS.get(column)
+            if format and (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
+                parsed_value = format(value)
+                if parsed_value is None and column not in JsonConstants.JSON_COLUMNS:
+                    raise ValueError(f'Invalid value "{value}" for {_to_snake_case(column)} in row #{i + 1}')
+                value = parsed_value
+            json_record[column] = value
     return json_record
 
 
@@ -338,7 +297,7 @@ def _is_header_row(row):
         return False
 
 
-def _parse_merged_pedigree_sample_manifest_format(rows):
+def _parse_merged_pedigree_sample_manifest_format(rows, project):
     """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
 
     Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
@@ -371,7 +330,16 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
         if consent_code:
             consent_codes.add(consent_code)
 
-    return pedigree_rows, sample_manifest_rows, kit_id, consent_codes
+    if consent_codes:
+        if len(consent_codes) > 1:
+            raise ValueError(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
+        consent_code = consent_codes.pop()
+        project_consent_code = project.get_consent_code_display()
+        if consent_code != project_consent_code:
+            raise ValueError(
+                f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
+
+    return pedigree_rows, sample_manifest_rows, kit_id
 
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
@@ -703,6 +671,39 @@ class JsonConstants:
     PRIMARY_BIOSAMPLE = 'primaryBiosample'
     ANALYTE_TYPE = 'analyteType'
     TISSUE_AFFECTED_STATUS = 'tissueAffectedStatus'
+
+    JSON_COLUMNS = {MATERNAL_ETHNICITY, PATERNAL_ETHNICITY, BIRTH_YEAR, DEATH_YEAR, ONSET_AGE, AFFECTED_RELATIVES}
+
+    FORMAT_COLUMNS = {
+        SEX_COLUMN: _parse_sex,
+        AFFECTED_COLUMN: _parse_affected,
+        PATERNAL_ID_COLUMN: lambda value: value if value != '.' else '',
+        MATERNAL_ID_COLUMN: lambda value: value if value != '.' else '',
+        PROBAND_RELATIONSHIP: lambda value: RELATIONSHIP_REVERSE_LOOKUP.get(value.lower()),
+        PRIMARY_BIOSAMPLE: lambda value: next(
+            (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
+        ANALYTE_TYPE: lambda value: Individual.ANALYTE_REVERSE_LOOKUP.get(value),
+        TISSUE_AFFECTED_STATUS: lambda value: {'Yes': True, 'No': False}.get(value),
+    }
+    FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
+
+    COLUMN_SUBSTRINGS = [
+        (FAMILY_ID_COLUMN, ['family']),
+        (PREVIOUS_INDIVIDUAL_ID_COLUMN, ['indiv', 'previous']),
+        (INDIVIDUAL_ID_COLUMN, ['indiv']),
+        (PATERNAL_ID_COLUMN, ['father']),
+        (PATERNAL_ID_COLUMN, ['paternal']),
+        (MATERNAL_ID_COLUMN, ['mother']),
+        (MATERNAL_ID_COLUMN, ['maternal']),
+        (SEX_COLUMN, ['sex']),
+        (SEX_COLUMN, ['gender']),
+        (TISSUE_AFFECTED_STATUS, ['tissue', 'affected', 'status']),
+        (PRIMARY_BIOSAMPLE, ['primary', 'biosample']),
+        (ANALYTE_TYPE, ['analyte', 'type']),
+        (AFFECTED_COLUMN, ['affected']),
+        (CODED_PHENOTYPE_COLUMN, ['coded', 'phenotype']),
+        (PROBAND_RELATIONSHIP, ['proband', 'relation']),
+    ]
 
 
 class MergedPedigreeSampleManifestConstants:

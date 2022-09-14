@@ -47,7 +47,7 @@ class PedigreeInfoUtilsTest(TestCase):
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                  ['fam1', 'ind1', 'boy', 'u', '.', 'ind2']], FILENAME, user)
         self.assertListEqual(
-            ec.exception.errors, ["Error while converting {} rows to json: Invalid value 'boy' for sex in row #1".format(FILENAME)])
+            ec.exception.errors, ['Error while converting {} rows to json: Invalid value "boy" for sex in row #1'.format(FILENAME)])
         self.assertListEqual(ec.exception.warnings, [])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
@@ -55,14 +55,14 @@ class PedigreeInfoUtilsTest(TestCase):
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                  ['fam1', 'ind1', 'male', 'no', '.', 'ind2']], FILENAME, user)
         self.assertListEqual(
-            ec.exception.errors, ["Error while converting {} rows to json: Invalid value 'no' for affected status in row #1".format(FILENAME)])
+            ec.exception.errors, ['Error while converting {} rows to json: Invalid value "no" for affected in row #1'.format(FILENAME)])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
                  ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mom']], FILENAME, user)
         self.assertListEqual(ec.exception.errors, [
-            'Error while converting {} rows to json: Invalid value "mom" for proband relationship in row #1'.format(
+            'Error while converting {} rows to json: Invalid value "mom" for proband_relationship in row #1'.format(
                 FILENAME)])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
