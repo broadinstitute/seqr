@@ -284,3 +284,10 @@ def get_anvil_group_members(user, group, use_sa_credentials=False):
         return [email for email in r['adminsEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL]
 
     return terra_caching(_get_members, f'api/groups/{group}', user, user_cache_key='SA' if use_sa_credentials else None)
+
+
+def user_get_anvil_groups(user):
+    return terra_caching(
+        lambda p, u: [group['groupName'] for group in _user_anvil_call('get', p, u)],
+        'api/groups', user,
+    )
