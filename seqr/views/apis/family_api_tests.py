@@ -31,7 +31,6 @@ class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_family_page_data(self, mock_analyst_group):
         url = reverse(family_page_data, args=[FAMILY_GUID])

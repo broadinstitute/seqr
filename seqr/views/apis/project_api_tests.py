@@ -308,7 +308,6 @@ class ProjectAPITest(object):
 
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_project_families(self, mock_analyst_group):
         url = reverse(project_families, args=[PROJECT_GUID])
@@ -365,7 +364,6 @@ class ProjectAPITest(object):
 
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_project_individuals(self, mock_analyst_group):
         url = reverse(project_individuals, args=[PROJECT_GUID])
@@ -472,7 +470,7 @@ BASE_COLLABORATORS = [
      'hasEditPermissions': False, 'hasViewPermissions': True}]
 
 ANVIL_COLLABORATORS = deepcopy(BASE_COLLABORATORS) + [{
-    'displayName': False, 'email': 'test_user_pure_anvil@test.com', 'username': 'test_user_pure_anvil@test.com',
+    'displayName': '', 'email': 'test_user_pure_anvil@test.com', 'username': 'test_user_pure_anvil@test.com',
     'hasEditPermissions': False, 'hasViewPermissions': True, }]
 
 

@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import user_passes_test, login_required
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value, TextField, Q
@@ -13,6 +14,15 @@ from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, 
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
 
 logger = SeqrLogger(__name__)
+
+
+def get_analyst_users():
+    return set(User.objects.filter(groups__name=ANALYST_USER_GROUP))
+
+
+def get_pm_users():
+    return set(User.objects.filter(groups__name=PM_USER_GROUP))
+
 
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
