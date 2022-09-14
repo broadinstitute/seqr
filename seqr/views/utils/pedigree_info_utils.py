@@ -94,12 +94,13 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
             logger.info("Parsing merged pedigree-sample-manifest file", user)
             rows, sample_manifest_rows, kit_id, consent_codes = _parse_merged_pedigree_sample_manifest_format(rows)
 
-            if len(consent_codes) > 1:
-                raise ValueError(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
-            consent_code = consent_codes.pop()
-            project_consent_code = project.get_consent_code_display()
-            if consent_code != project_consent_code:
-                raise ValueError(f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
+            if consent_codes:
+                if len(consent_codes) > 1:
+                    raise ValueError(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
+                consent_code = consent_codes.pop()
+                project_consent_code = project.get_consent_code_display()
+                if consent_code != project_consent_code:
+                    raise ValueError(f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
@@ -192,7 +193,13 @@ def _convert_fam_file_rows_to_json(rows):
                 raise ValueError(f'Invalid value "{full_biosample}" for proband relationship in row #{i + 1}')
             json_record[JsonConstants.PRIMARY_BIOSAMPLE] = biosample_code
 
-        json_results.append(json_record)
+        if json_record.get(JsonConstants.ANALYTE_TYPE):
+            type = Individual.ANALYTE_REVERSE_LOOKUP.get(json_record[JsonConstants.ANALYTE_TYPE])
+            if not type:
+                raise ValueError(f'Invalid value "{json_record[JsonConstants.ANALYTE_TYPE]}" for analyte type in row #{i + 1}')
+            json_record[JsonConstants.ANALYTE_TYPE] = type
+
+            json_results.append(json_record)
 
     return json_results
 
@@ -226,7 +233,8 @@ def _parse_row_dict(row_dict):
             json_record[JsonConstants.TISSUE_AFFECTED_STATUS] = {'Yes': True, 'No': False}.get(value)
         elif 'primary' in key and 'biosample' in key:
             json_record[JsonConstants.PRIMARY_BIOSAMPLE] = value
-        # TODO add parsing for analyte type!
+        elif 'analyte' in key and 'type' in key:
+            json_record[JsonConstants.ANALYTE_TYPE] = value
         elif "affected" in key:
             json_record[JsonConstants.AFFECTED_COLUMN] = value
         elif key.startswith("notes"):
@@ -359,7 +367,9 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
             key: row[column_name] for column_name, key in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.items()
         })
 
-        consent_codes.add(row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN])
+        consent_code = row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN]
+        if consent_code:
+            consent_codes.add(consent_code)
 
     return pedigree_rows, sample_manifest_rows, kit_id, consent_codes
 
@@ -691,6 +701,7 @@ class JsonConstants:
     ONSET_AGE = 'onsetAge'
     AFFECTED_RELATIVES = 'affectedRelatives'
     PRIMARY_BIOSAMPLE = 'primaryBiosample'
+    ANALYTE_TYPE = 'analyteType'
     TISSUE_AFFECTED_STATUS = 'tissueAffectedStatus'
 
 
@@ -708,8 +719,9 @@ class MergedPedigreeSampleManifestConstants:
     SEX_COLUMN = "Gender"
     AFFECTED_COLUMN = "Affected Status"
     BIOSAMPLE_COLUMN = 'Primary Biosample'
+    ANALYTE_TYPE_COLUMN = 'Analyte Type'
     TISSUE_AFFECTED_COLUMN = 'Tissue Affected Status'
-    RECONTACTABLE_COLUMN = 'recontactable'
+    RECONTACTABLE_COLUMN = 'Recontactable'
     VOLUME_COLUMN = "Volume"
     CONCENTRATION_COLUMN = "Concentration"
     NOTES_COLUMN = "Notes"
@@ -730,6 +742,7 @@ class MergedPedigreeSampleManifestConstants:
         SEX_COLUMN,
         AFFECTED_COLUMN,
         BIOSAMPLE_COLUMN,
+        ANALYTE_TYPE_COLUMN,
         TISSUE_AFFECTED_COLUMN,
         RECONTACTABLE_COLUMN,
         VOLUME_COLUMN,
@@ -750,6 +763,7 @@ class MergedPedigreeSampleManifestConstants:
         NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
         CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
         BIOSAMPLE_COLUMN: JsonConstants.PRIMARY_BIOSAMPLE,
+        ANALYTE_TYPE_COLUMN: JsonConstants.ANALYTE_TYPE,
         TISSUE_AFFECTED_COLUMN: JsonConstants.TISSUE_AFFECTED_STATUS,
     }
 
