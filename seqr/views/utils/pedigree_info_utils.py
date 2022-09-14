@@ -9,7 +9,7 @@ from datetime import date
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.permissions_utils import user_is_pm, get_pm_users
+from seqr.views.utils.permissions_utils import user_is_pm, get_pm_user_emails
 from seqr.models import Individual
 
 logger = SeqrLogger(__name__)
@@ -349,7 +349,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
 
-    recipients = [u.email for u in get_pm_users()]
+    recipients = get_pm_user_emails(user)
 
     # write out the sample manifest file
     wb = xl.Workbook()
