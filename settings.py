@@ -405,11 +405,12 @@ AIRFLOW_API_AUDIENCE = os.environ.get('AIRFLOW_API_AUDIENCE')
 AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
 
 if TERRA_API_ROOT_URL:
-    if not os.path.exists('/.config/service-account-key.json'):
+    service_account_file = '/.config/service-account-key.json'
+    if not os.path.exists(service_account_file):
         raise Exception('Error starting seqr - gcloud auth is not properly configured')
 
     SERVICE_ACCOUNT_CREDENTIALS = service_account.Credentials.from_service_account_file(
-        '/.config/service-account-key.json', scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+        service_account_file, scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
     SERVICE_ACCOUNT_FOR_ANVIL = SERVICE_ACCOUNT_CREDENTIALS.service_account_email
     if not SERVICE_ACCOUNT_FOR_ANVIL:
         raise Exception('Error starting seqr - gcloud auth credentials are not properly configured')
@@ -419,7 +420,7 @@ if TERRA_API_ROOT_URL:
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if not activated_service_account:
             auth_output = subprocess.run([
-                'gcloud', 'auth', 'activate-service-account', '--key-file', '/.config/service-account-key.json'
+                'gcloud', 'auth', 'activate-service-account', '--key-file', service_account_file
             ], capture_output=True, text=True).stderr  # nosec
             activated_service_account = re.findall(r'\[(.*)\]', auth_output)[0]
     if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:

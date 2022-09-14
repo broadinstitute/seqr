@@ -283,4 +283,4 @@ def get_anvil_group_members(user, group, use_sa_credentials=False):
     path = f'api/groups/{group}'
     access_token = _get_service_account_access_token() if use_sa_credentials else _get_social_access_token(user)
     r = anvil_call('get', path, access_token, user)
-    return r['adminEmails'] + r['membersEmails']
+    return [email for email in r['adminEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL]
