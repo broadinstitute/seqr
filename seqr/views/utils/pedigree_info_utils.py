@@ -194,10 +194,10 @@ def _convert_fam_file_rows_to_json(rows):
             json_record[JsonConstants.PRIMARY_BIOSAMPLE] = biosample_code
 
         if json_record.get(JsonConstants.ANALYTE_TYPE):
-            type = Individual.ANALYTE_REVERSE_LOOKUP.get(json_record[JsonConstants.ANALYTE_TYPE])
-            if not type:
+            analyte_type = Individual.ANALYTE_REVERSE_LOOKUP.get(json_record[JsonConstants.ANALYTE_TYPE])
+            if not analyte_type:
                 raise ValueError(f'Invalid value "{json_record[JsonConstants.ANALYTE_TYPE]}" for analyte type in row #{i + 1}')
-            json_record[JsonConstants.ANALYTE_TYPE] = type
+            json_record[JsonConstants.ANALYTE_TYPE] = analyte_type
 
         json_results.append(json_record)
 

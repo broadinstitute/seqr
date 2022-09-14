@@ -145,7 +145,9 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(incomplete_header_data, FILENAME, user, project=project)
         self._assert_errors_warnings_exception(
-            ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: | Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes')
+            ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: | '
+                f'Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|'
+                f'-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes')
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
