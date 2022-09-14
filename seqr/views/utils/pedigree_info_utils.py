@@ -682,7 +682,7 @@ class JsonConstants:
         PROBAND_RELATIONSHIP: lambda value: RELATIONSHIP_REVERSE_LOOKUP.get(value.lower()),
         PRIMARY_BIOSAMPLE: lambda value: next(
             (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
-        ANALYTE_TYPE: lambda value: Individual.ANALYTE_REVERSE_LOOKUP.get(value),
+        ANALYTE_TYPE: Individual.ANALYTE_REVERSE_LOOKUP.get,
         TISSUE_AFFECTED_STATUS: {'Yes': True, 'No': False}.get,
     }
     FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
