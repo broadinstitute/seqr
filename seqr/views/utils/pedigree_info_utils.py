@@ -5,7 +5,6 @@ import json
 import tempfile
 import openpyxl as xl
 from datetime import date
-from django.contrib.auth.models import User
 
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger

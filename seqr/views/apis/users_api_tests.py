@@ -11,7 +11,7 @@ from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_project_collaborator_options, update_policies, update_user
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'

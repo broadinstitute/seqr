@@ -11,7 +11,8 @@ class DashboardPageTest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users']
 
-    def _check_page_html(self, response,  user, google_enabled=False, user_key='user', user_fields=USER_FIELDS, ga_token_id=None):
+    def _check_page_html(self, response,  user, google_enabled=False, user_key='user', user_fields=None, ga_token_id=None):
+        user_fields = user_fields or USER_FIELDS
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
