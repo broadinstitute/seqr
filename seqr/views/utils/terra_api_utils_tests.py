@@ -1,3 +1,4 @@
+import json
 import mock
 import responses
 
@@ -102,6 +103,10 @@ class TerraApiUtilsCallsCase(TestCase):
         mock_logger.info.assert_called_with('GET https://terra.api/api/workspaces?fields=public,workspace.name,workspace.namespace 200 276', user)
         self.assertEqual(len(mock_logger.method_calls), 1)
         responses.assert_call_count(url, 1)
+        mock_redis.return_value.set.assert_called_with(
+            'terra_req__test_user__api/workspaces?fields=public,workspace.name,workspace.namespace', json.dumps(workspaces))
+        mock_redis.return_value.expire.assert_called_with(
+            'terra_req__test_user__api/workspaces?fields=public,workspace.name,workspace.namespace', 300)
 
         mock_logger.reset_mock()
         responses.reset()
@@ -205,6 +210,11 @@ class TerraApiUtilsCallsCase(TestCase):
             'GET https://terra.api/api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare 200 24', user)
         self.assertEqual(len(mock_logger.method_calls), 1)
         responses.assert_call_count(url, 1)
+        mock_redis.return_value.set.assert_called_with(
+            'terra_req__test_user__api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare',
+            json.dumps(permission))
+        mock_redis.return_value.expire.assert_called_with(
+            'terra_req__test_user__api/workspaces/my-seqr-billing/my-seqr-workspace?fields=accessLevel,canShare', 60)
 
         mock_logger.reset_mock()
         responses.replace(responses.GET, url, status=404)

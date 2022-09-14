@@ -160,6 +160,26 @@ def _user_anvil_call(method, path, user, data=None, handle_errors=False):
     return anvil_call(method, path, access_token, user=user, data=data, handle_errors=handle_errors)
 
 
+def terra_caching(func, path, user, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, user_cache_key=None):
+    cache_key = f'terra_req__{user_cache_key or user}__{path}'
+    r = safe_redis_get_json(cache_key)
+    if r:
+        logger.info(f'Terra API cache hit for: GET {path} {user}', user)
+        return r
+
+    r = func(path, user)
+
+    safe_redis_set_json(cache_key, r, expire)
+
+    return r
+
+
+def _list_workspaces(path, user):
+    r = _user_anvil_call('get', path, user)
+    # remove the public workspaces which can't be the projects in seqr
+    return [{'workspace': ws['workspace']} for ws in r if not ws.get('public', True)]
+
+
 def list_anvil_workspaces(user):
     """Get all the workspaces accessible by the logged-in user.
 
@@ -170,40 +190,17 @@ def list_anvil_workspaces(user):
     its name and namespace.
 
     """
-    path = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
-    cache_key = 'terra_req__{}__{}'.format(user, path)
-    r = safe_redis_get_json(cache_key)
-    if r:
-        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), user)
-        return r
-
-    r = _user_anvil_call('get', path, user)
-
-    # remove the public workspaces which can't be the projects in seqr
-    r = [{'workspace': ws['workspace']} for ws in r if not ws.get('public', True)]
-
-    safe_redis_set_json(cache_key, r, TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
-
-    return r
+    return terra_caching(_list_workspaces, 'api/workspaces?fields=public,workspace.name,workspace.namespace', user)
 
 
 def user_get_workspace_access_level(user, workspace_namespace, workspace_name, meta_fields=None):
     fields = ',{}'.format(','.join(meta_fields)) if meta_fields else ''
     path = "api/workspaces/{0}/{1}?fields=accessLevel,canShare{2}".format(workspace_namespace, workspace_name, fields)
 
-    cache_key = 'terra_req__{}__{}'.format(user, path)
-    r = safe_redis_get_json(cache_key)
-    if r:
-        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), user)
-        return r
-
-    # Exceptions are handled to return an empty result for users who have no permission to access the workspace
-    r = _user_anvil_call('get', path, user, handle_errors=True)
-
-    if r:
-        safe_redis_set_json(cache_key, r, TERRA_PERMS_CACHE_EXPIRE_SECONDS)
-
-    return r
+    return terra_caching(
+        lambda p, u: _user_anvil_call('get', p, u, handle_errors=True),
+        path, user, expire=TERRA_PERMS_CACHE_EXPIRE_SECONDS,
+    )
 
 
 def user_get_workspace_acl(user, workspace_namespace, workspace_name):
@@ -280,18 +277,10 @@ def has_service_account_access(user, workspace_namespace, workspace_name):
 
 
 def get_anvil_group_members(user, group, use_sa_credentials=False):
-    path = f'api/groups/{group}'
-
-    cache_key = f'terra_req__{"SA" if use_sa_credentials else user}__{path}'
-    data = safe_redis_get_json(cache_key)
-    if data:
-        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), user)
-        return data
-
     access_token = _get_service_account_access_token() if use_sa_credentials else _get_social_access_token(user)
-    r = anvil_call('get', path, access_token, user)
-    members = [email for email in r['adminsEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL]
 
-    safe_redis_set_json(cache_key, members, TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+    def _get_members(path, u):
+        r = anvil_call('get', path, access_token, u)
+        return [email for email in r['adminsEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL]
 
-    return members
+    return terra_caching(_get_members, f'api/groups/{group}', user, user_cache_key='SA' if use_sa_credentials else None)
