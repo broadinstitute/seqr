@@ -413,7 +413,7 @@ if TERRA_API_ROOT_URL:
         SERVICE_ACCOUNT_CREDENTIALS = service_account.Credentials.from_service_account_file(
             service_account_file, scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
         SERVICE_ACCOUNT_FOR_ANVIL = SERVICE_ACCOUNT_CREDENTIALS.service_account_email
-   except Exception:
+    except Exception:
         raise Exception('Error starting seqr - gcloud auth credentials are not properly configured')
 
     # activate command line account if failed on start up
