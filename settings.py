@@ -409,19 +409,20 @@ if TERRA_API_ROOT_URL:
     if not os.path.exists(service_account_file):
         raise Exception('Error starting seqr - gcloud auth is not properly configured')
 
-    SERVICE_ACCOUNT_CREDENTIALS = service_account.Credentials.from_service_account_file(
-        service_account_file, scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
-    SERVICE_ACCOUNT_FOR_ANVIL = SERVICE_ACCOUNT_CREDENTIALS.service_account_email
-    if not SERVICE_ACCOUNT_FOR_ANVIL:
+    try:
+        SERVICE_ACCOUNT_CREDENTIALS = service_account.Credentials.from_service_account_file(
+            service_account_file, scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+        SERVICE_ACCOUNT_FOR_ANVIL = SERVICE_ACCOUNT_CREDENTIALS.service_account_email
+    except Exception:
         raise Exception('Error starting seqr - gcloud auth credentials are not properly configured')
 
     # activate command line account if failed on start up
     activated_service_account = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if not activated_service_account:
-            auth_output = subprocess.run([
+            auth_output = subprocess.run([  # nosec
                 'gcloud', 'auth', 'activate-service-account', '--key-file', service_account_file
-            ], capture_output=True, text=True).stderr  # nosec
+            ], capture_output=True, text=True).stderr
             activated_service_account = re.findall(r'\[(.*)\]', auth_output)[0]
     if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:
         raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
