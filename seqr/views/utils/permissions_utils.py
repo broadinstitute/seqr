@@ -31,13 +31,16 @@ def get_pm_user_emails(user):
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
 
+
 def user_is_data_manager(user):
     return user.is_staff
+
 
 def user_is_pm(user):
     if anvil_enabled():
         return PM_USER_GROUP in user_get_anvil_groups(user)
     return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
+
 
 def _has_current_policies(user):
     if not hasattr(user, 'userpolicy'):
