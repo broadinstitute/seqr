@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
             model_name='individual',
             name='analyte_type',
             field=models.CharField(blank=True, choices=[
-                ('D', 'DNA'), ('R', 'RNA'), ('B', 'blood plasma'), ('F', 'frozen whole blood'), 
+                ('D', 'DNA'), ('R', 'RNA'), ('B', 'blood plasma'), ('F', 'frozen whole blood'),
                 ('H', 'high molecular weight DNA'), ('U', 'urine')], max_length=1, null=True),
         ),
         migrations.AddField(

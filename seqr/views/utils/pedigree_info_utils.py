@@ -195,9 +195,9 @@ def _parse_row_dict(row_dict, i):
             ), None)
 
         if column:
-            format = JsonConstants.FORMAT_COLUMNS.get(column)
-            if format and (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
-                parsed_value = format(value)
+            format_func = JsonConstants.FORMAT_COLUMNS.get(column)
+            if format_func and (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
+                parsed_value = format_func(value)
                 if parsed_value is None and column not in JsonConstants.JSON_COLUMNS:
                     raise ValueError(f'Invalid value "{value}" for {_to_snake_case(column)} in row #{i + 1}')
                 value = parsed_value
@@ -683,7 +683,7 @@ class JsonConstants:
         PRIMARY_BIOSAMPLE: lambda value: next(
             (code for code, uberon_code in Individual.BIOSAMPLE_CHOICES if value.startswith(uberon_code)), None),
         ANALYTE_TYPE: lambda value: Individual.ANALYTE_REVERSE_LOOKUP.get(value),
-        TISSUE_AFFECTED_STATUS: lambda value: {'Yes': True, 'No': False}.get(value),
+        TISSUE_AFFECTED_STATUS: {'Yes': True, 'No': False}.get,
     }
     FORMAT_COLUMNS.update({col: json.loads for col in JSON_COLUMNS})
 
