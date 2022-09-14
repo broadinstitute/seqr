@@ -281,6 +281,17 @@ def has_service_account_access(user, workspace_namespace, workspace_name):
 
 def get_anvil_group_members(user, group, use_sa_credentials=False):
     path = f'api/groups/{group}'
+
+    cache_key = f'terra_req__{"SA" if use_sa_credentials else user}__{path}'
+    data = safe_redis_get_json(cache_key)
+    if data:
+        logger.info('Terra API cache hit for: GET {} {}'.format(path, user), user)
+        return data
+
     access_token = _get_service_account_access_token() if use_sa_credentials else _get_social_access_token(user)
     r = anvil_call('get', path, access_token, user)
-    return [email for email in r['adminsEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL]
+    members = [email for email in r['adminsEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL]
+
+    safe_redis_set_json(cache_key, members, TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+
+    return members
