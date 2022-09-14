@@ -6,8 +6,7 @@ from io import StringIO
 
 from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
-from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase
+from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
@@ -455,14 +454,4 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_anvil_calls(self)
-
-
-# Test for permissions from AnVIL and local
-class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-    ANVIL_DISABLED = False
-
-    def test_add_variants_dataset(self, *args):
-        super(MixDatasetAPITest, self).test_add_variants_dataset(*args)
         assert_no_anvil_calls(self)

@@ -12,7 +12,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase, GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
+    GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
     VARIANT_NOTE_FIELDS, TAG_FIELDS
 
@@ -772,41 +772,5 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-
-
-# Test for permissions from AnVIL and local
-class MixSavedVariantSearchAPITest(MixAuthenticationTestCase, VariantSearchAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
-
-    def test_query_variants(self, *args):
-        super(MixSavedVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_query_all_projects_variants(self, *args):
-        super(MixSavedVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        calls = [
-            mock.call(self.no_access_user),
-            mock.call(self.collaborator_user),
-        ]
-        self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_get_ws_acl.assert_not_called()
-
-    def test_query_all_project_families_variants(self, *args):
-        super(MixSavedVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
-        assert_no_list_ws_has_al(self, 1, workspace_name='anvil-project 1000 Genomes Demo')
-
-    def test_search_context(self):
-        super(MixSavedVariantSearchAPITest, self).test_search_context()
-        self.mock_list_workspaces.assert_called_with(self.collaborator_user)
-        assert_ws_has_al(self, 9)
-
-    def test_query_single_variant(self, *args):
-        super(MixSavedVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_saved_search(self):
-        super(MixSavedVariantSearchAPITest, self).test_saved_search()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()

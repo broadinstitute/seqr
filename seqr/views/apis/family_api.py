@@ -14,7 +14,7 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
-    get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_models
+    get_json_for_matchmaker_submissions, get_json_for_analysis_groups
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \

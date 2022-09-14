@@ -12,16 +12,6 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
-def _initialize_users(cls):
-    cls.super_user = User.objects.get(username='test_superuser')
-    cls.analyst_user = User.objects.get(username='test_user')
-    cls.pm_user = User.objects.get(username='test_pm_user')
-    cls.data_manager_user = User.objects.get(username='test_data_manager')
-    cls.manager_user = User.objects.get(username='test_user_manager')
-    cls.collaborator_user = User.objects.get(username='test_user_collaborator')
-    cls.no_access_user = User.objects.get(username='test_user_no_access')
-    cls.inactive_user = User.objects.get(username='test_user_inactive')
-    cls.no_policy_user = User.objects.get(username='test_user_no_policies')
 
 class AuthenticationTestCase(TestCase):
     databases = '__all__'
@@ -54,7 +44,15 @@ class AuthenticationTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        _initialize_users(cls)
+        cls.super_user = User.objects.get(username='test_superuser')
+        cls.analyst_user = User.objects.get(username='test_user')
+        cls.pm_user = User.objects.get(username='test_pm_user')
+        cls.data_manager_user = User.objects.get(username='test_data_manager')
+        cls.manager_user = User.objects.get(username='test_user_manager')
+        cls.collaborator_user = User.objects.get(username='test_user_collaborator')
+        cls.no_access_user = User.objects.get(username='test_user_no_access')
+        cls.inactive_user = User.objects.get(username='test_user_inactive')
+        cls.no_policy_user = User.objects.get(username='test_user_no_policies')
 
         edit_group = Group.objects.get(pk=2)
         view_group = Group.objects.get(pk=3)
@@ -258,7 +256,7 @@ ANVIL_WORKSPACES = [{
         'test_user_collaborator@test.com': {
             "accessLevel": "READER",
             "pending": False,
-            "canShare": True,
+            "canShare": False,
             "canCompute": False
         }
     },
@@ -284,6 +282,7 @@ ANVIL_WORKSPACES = [{
         }
     },
     'workspace': {
+        'authorizationDomain': [],
         'bucketName': 'test_bucket'
     },
 }, {
@@ -305,6 +304,7 @@ ANVIL_WORKSPACES = [{
         },
     },
     'workspace': {
+        'authorizationDomain': [{'membersGroupName': 'AUTH_restricted_group'}],
         'bucketName': 'test_bucket'
     },
 }
@@ -334,8 +334,12 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
         'accessLevel': user_acl['accessLevel'],
         'canShare': user_acl['canShare'],
     } if user_acl else {}
-    if meta_fields and 'workspace.bucketName' in meta_fields:
-        access_level['workspace'] = {'bucketName': wss[0]['workspace']['bucketName']}
+    if meta_fields:
+        access_level['workspace'] = {}
+        if 'workspace.bucketName' in meta_fields:
+            access_level['workspace']['bucketName'] = wss[0]['workspace']['bucketName']
+        if meta_fields and 'workspace.authorizationDomain' in meta_fields:
+            access_level['workspace']['authorizationDomain'] = wss[0]['workspace']['authorizationDomain']
     return access_level
 
 
@@ -352,9 +356,6 @@ def get_workspaces_side_effect(user):
 
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
-    @classmethod
-    def setUpTestData(cls):
-        _initialize_users(cls)
 
     # mock the terra apis
     def setUp(self):
@@ -383,19 +384,6 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
-
-
-# inherit AnvilAuthenticationTestCase for the mocks of AnVIL permissions.
-class MixAuthenticationTestCase(AnvilAuthenticationTestCase):
-    LOCAL_USER = 'local_user'
-
-    # use the local permissions set-up by AuthenticationTestCase
-    @classmethod
-    def setUpTestData(cls):
-        AuthenticationTestCase.setUpTestData()
-        cls.local_user = User.objects.get(username = 'test_local_user')
-        view_group = Group.objects.get(pk=3)
-        view_group.user_set.add(cls.local_user)
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
@@ -428,7 +416,7 @@ PROJECT_FIELDS = {
     'projectGuid', 'projectCategoryGuids', 'canEdit', 'name', 'description', 'createdDate', 'lastModifiedDate',
     'lastAccessedDate',  'mmeContactUrl', 'genomeVersion', 'mmePrimaryDataOwner', 'mmeContactInstitution',
     'isMmeEnabled', 'workspaceName', 'workspaceNamespace', 'hasCaseReview', 'enableHgmd', 'isDemo', 'allUserDemo',
-    'userIsCreator',
+    'userIsCreator', 'consentCode', 'isAnalystProject',
 }
 
 ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}

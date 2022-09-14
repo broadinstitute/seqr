@@ -124,6 +124,7 @@ from seqr.views.apis.report_api import \
     discovery_sheet, \
     get_cmg_projects, \
     sample_metadata_export, \
+    gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, \
     bulk_update_family_analysed_by
@@ -139,7 +140,7 @@ from seqr.views.apis.project_api import create_project_handler, update_project_h
     project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
-    grant_workspace_access, validate_anvil_vcf
+    grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
 from matchmaker.views import external_api
 from seqr.views.utils.file_utils import save_temp_file
 
@@ -229,6 +230,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
+    'project/(?P<project_guid>[^/]+)/add_workspace_data': add_workspace_data,
 
     'search/variant/(?P<variant_id>[^/]+)': query_single_variant_handler,
     'search/(?P<search_hash>[^/]+)': query_variants_handler,
@@ -296,6 +298,7 @@ api_endpoints = {
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
+    'report/gregor/(?P<consent_code>[^/]+)': gregor_export,
     'report/get_cmg_projects': get_cmg_projects,
     'report/seqr_stats': seqr_stats,
 
@@ -314,6 +317,7 @@ api_endpoints = {
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/submit': create_project_from_workspace,
+    'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/get_vcf_list': get_anvil_vcf_list,
 
     # service-account access
     'project/(?P<project_guid>[^/]+)/upload_families_table/sa': sa_receive_families_table,

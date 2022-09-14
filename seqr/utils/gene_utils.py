@@ -55,7 +55,7 @@ def get_filtered_gene_ids(gene_filter):
 def get_queried_genes(query, max_results):
     matching_genes = GeneInfo.objects.filter(
         Q(gene_id__icontains=query) | Q(gene_symbol__icontains=query)
-    ).only('gene_id', 'gene_symbol').order_by(Length('gene_symbol').asc()).distinct()
+    ).only('gene_id', 'gene_symbol').order_by(Length('gene_symbol').asc(), 'gene_symbol').distinct()
     return [{'gene_id': gene.gene_id, 'gene_symbol': gene.gene_symbol} for gene in matching_genes[:max_results]]
 
 
