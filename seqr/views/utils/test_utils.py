@@ -62,6 +62,15 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
 
+        cls.add_analyst_pm_groups()
+
+    @classmethod
+    def add_analyst_pm_groups(cls):
+        analyst_group = Group.objects.get(pk=4)
+        analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
+        pm_group = Group.objects.get(pk=5)
+        pm_group.user_set.add(cls.pm_user)
+
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
 
@@ -311,6 +320,12 @@ ANVIL_WORKSPACES = [{
 ]
 
 
+ANVIL_GROUPS = {
+    'project-managers': ['test_pm_user@test.com'],
+    'analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
+}
+
+
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
 TEST_OAUTH2_KEY = 'abc123'
 
@@ -355,6 +370,10 @@ def get_workspaces_side_effect(user):
     ]
 
 
+def get_groups_side_effect(user):
+    return [group for group, users in ANVIL_GROUPS.items() if user.email in users]
+
+
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
     # mock the terra apis
@@ -383,7 +402,18 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_access_level = patcher.start()
         self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_anvil_groups')
+        self.mock_get_groups = patcher.start()
+        self.mock_get_groups.side_effect = get_groups_side_effect
+        self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
+
+    @classmethod
+    def add_analyst_pm_groups(cls):
+        analyst_group = Group.objects.get(pk=4)
+        analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
+        pm_group = Group.objects.get(pk=5)
+        pm_group.user_set.add(cls.pm_user)
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
