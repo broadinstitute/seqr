@@ -199,7 +199,7 @@ def _convert_fam_file_rows_to_json(rows):
                 raise ValueError(f'Invalid value "{json_record[JsonConstants.ANALYTE_TYPE]}" for analyte type in row #{i + 1}')
             json_record[JsonConstants.ANALYTE_TYPE] = type
 
-            json_results.append(json_record)
+        json_results.append(json_record)
 
     return json_results
 
