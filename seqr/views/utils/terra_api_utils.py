@@ -122,7 +122,8 @@ def _get_social_access_token(user):
 
 
 def _get_service_account_access_token():
-    if (not SERVICE_ACCOUNT_CREDENTIALS.token) or (SERVICE_ACCOUNT_CREDENTIALS.expiry - datetime.now()).seconds < 60:
+    if (not SERVICE_ACCOUNT_CREDENTIALS.token) or \
+            (SERVICE_ACCOUNT_CREDENTIALS.expiry - datetime.now()).total_seconds() < 60:
         SERVICE_ACCOUNT_CREDENTIALS.refresh(google.auth.transport.requests.Request())
     return SERVICE_ACCOUNT_CREDENTIALS.token
 
