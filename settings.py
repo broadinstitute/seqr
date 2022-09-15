@@ -406,9 +406,6 @@ AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
 
 if TERRA_API_ROOT_URL:
     service_account_file = '/.config/service-account-key.json'
-    if not os.path.exists(service_account_file):
-        raise Exception('Error starting seqr - gcloud auth is not properly configured')
-
     try:
         SERVICE_ACCOUNT_CREDENTIALS = service_account.Credentials.from_service_account_file(
             service_account_file, scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)

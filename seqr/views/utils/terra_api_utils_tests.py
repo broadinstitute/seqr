@@ -2,6 +2,7 @@ import json
 import mock
 import responses
 
+from datetime import datetime
 from django.test import TestCase
 from django.contrib.auth.models import User
 
@@ -10,13 +11,14 @@ from seqr.views.utils.test_utils import TEST_TERRA_API_ROOT_URL, GOOGLE_TOKEN_RE
 from seqr.views.utils.terra_api_utils import list_anvil_workspaces, user_get_workspace_acl,\
     anvil_call, user_get_workspace_access_level, TerraNotFoundException, TerraAPIException, \
     TerraRefreshTokenFailedException,  is_anvil_authenticated, is_google_authenticated, remove_token, \
-    add_service_account, has_service_account_access
+    add_service_account, has_service_account_access, get_anvil_group_members
 
 GET_WORKSPACE_PATH = 'api/workspaces?fields=public,workspace.name,workspace.namespace'
 AUTH_EXTRA_DATA = {"expires": 3599, "auth_time": TOKEN_AUTH_TIME, "token_type": "Bearer", "access_token": "ya29.EXAMPLE"}
 LIST_WORKSPACE_RESPONSE = '[{"accessLevel": "PROJECT_OWNER", "public": false, "workspace": {"attributes": {"description": "Workspace for seqr project"}, "authorizationDomain": [], "bucketName": "fc-237998e6-663d-40b9-bd13-57c3bb6ac593", "createdBy": "test1@test.com", "createdDate": "2020-09-09T15:10:32.816Z", "isLocked": false, "lastModified": "2020-09-09T15:10:32.818Z", "name": "1000 Genomes Demo", "namespace": "my-seqr-billing", "workflowCollectionName": "237998e6-663d-40b9-bd13-57c3bb6ac593", "workspaceId": "237998e6-663d-40b9-bd13-57c3bb6ac593" }, "workspaceSubmissionStats": {"runningSubmissionsCount": 0}},\
 {"accessLevel": "READER","public": true, "workspace": {"attributes": {"tag:tags": {"itemsType": "AttributeValue","items": ["differential-expression","tutorial"]},"description": "[DEGenome](https://github.com/eweitz/degenome) transforms differential expression data into inputs for [exploratory genome analysis with Ideogram.js](https://eweitz.github.io/ideogram/differential-expression?annots-url=https://www.googleapis.com/storage/v1/b/degenome/o/GLDS-4_array_differential_expression_ideogram_annots.json).  \\n\\nTry the [Notebook tutorial](https://app.terra.bio/#workspaces/degenome/degenome/notebooks/launch/degenome-tutorial.ipynb), where you can step through using DEGenome to analyze expression for mice flown in space!"},"authorizationDomain": [],"bucketName": "fc-2706d493-5fce-4fb2-9993-457c30364a06","createdBy": "test2@test.com","createdDate": "2020-01-14T10:21:14.575Z","isLocked": false,"lastModified": "2020-02-01T13:28:27.309Z","name": "degenome","namespace": "degenome","workflowCollectionName": "2706d493-5fce-4fb2-9993-457c30364a06","workspaceId": "2706d493-5fce-4fb2-9993-457c30364a06"},"workspaceSubmissionStats": {"runningSubmissionsCount": 0}},\
 {"accessLevel": "PROJECT_OWNER","public": false, "workspace": {"attributes": {"description": "A workspace for seqr project"},"authorizationDomain": [],"bucketName": "fc-6a048145-c134-4004-a009-42824f826ee8","createdBy": "test3@test.com","createdDate": "2020-09-09T15:12:30.142Z","isLocked": false,"lastModified": "2020-09-09T15:12:30.145Z","name": "seqr-project 1000 Genomes Demo","namespace": "my-seqr-billing","workflowCollectionName": "6a048145-c134-4004-a009-42824f826ee8","workspaceId": "6a048145-c134-4004-a009-42824f826ee8"},"workspaceSubmissionStats": {"runningSubmissionsCount": 0}}]'
+USERS_GROUP = 'TGG_USERS'
 
 class TerraApiUtilsHelpersCase(TestCase):
     fixtures = ['users', 'social_auth']
@@ -278,3 +280,41 @@ class TerraApiUtilsCallsCase(TestCase):
         r = has_service_account_access(user, 'my-seqr-billing', 'my-seqr-workspace')
         self.assertFalse(r)
 
+    @responses.activate
+    @mock.patch('seqr.views.utils.terra_api_utils.SERVICE_ACCOUNT_CREDENTIALS')
+    @mock.patch('seqr.views.utils.terra_api_utils.datetime')
+    @mock.patch('seqr.views.utils.terra_api_utils.logger')
+    def test_get_anvil_group_members(self, mock_logger, mock_datetime, mock_credentials):
+        user = User.objects.get(username='test_user')
+
+        url = '{}{}'.format(TEST_TERRA_API_ROOT_URL, 'api/groups/TGG_USERS')
+        responses.add(responses.GET, url, status=200, body=json.dumps({
+            'adminsEmails': ['test_user@broadinstitute.org'],
+            'groupEmail': 'TGG_USERS@firecloud.org',
+            'membersEmails': ['test@test.com', TEST_SERVICE_ACCOUNT]
+        }))
+        members = get_anvil_group_members(user, USERS_GROUP)
+        self.assertListEqual(members, ['test_user@broadinstitute.org', 'test@test.com'])
+        mock_logger.info.assert_called_with('GET https://terra.api/api/groups/TGG_USERS 200 175', user)
+        self.assertEqual(len(mock_logger.method_calls), 1)
+        responses.assert_call_count(url, 1)
+        self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer ya29.EXAMPLE')
+
+        # test with service account credentials
+        mock_datetime.now.return_value = datetime(2021, 1, 1)
+        mock_credentials.expiry = datetime(2021, 1, 2)
+        mock_credentials.token = 'ya29.SA_EXAMPLE'
+        get_anvil_group_members(user, USERS_GROUP, use_sa_credentials=True)
+        self.assertEqual(responses.calls[1].request.headers['Authorization'], 'Bearer ya29.SA_EXAMPLE')
+        mock_credentials.refresh.assert_not_called()
+
+        mock_credentials.expiry = datetime(2021, 1, 1)
+        get_anvil_group_members(user, USERS_GROUP, use_sa_credentials=True)
+        mock_credentials.refresh.assert_called_once()
+
+        responses.add(responses.GET, url, status=401)
+        with self.assertRaises(TerraAPIException) as ec:
+            get_anvil_group_members(user, USERS_GROUP)
+        self.assertEqual(
+            str(ec.exception),
+            'Error: called Terra API: GET /api/groups/TGG_USERS got status: 401 with a reason: Unauthorized')
