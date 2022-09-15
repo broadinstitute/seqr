@@ -186,6 +186,47 @@ ADD_DATA_UPDATE_DAG_TASKS_RESP = {
             "total_entries": 6
         }
 
+BASIC_META = [
+    '##fileformat=VCFv4.3\n'
+    '##source=myImputationProgramV3.1\n',
+    '##FILTER=<ID=q10,Description="Quality below 10">',
+    '##FILTER=<ID=s50,Description="Less than 50% of samples have data">',
+]
+
+BAD_INFO_META = [
+    '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+    '##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">',
+    '##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">',
+    '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+    '##INFO=<ID=AF,Number=A,Type=Integer,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+]
+
+INFO_META = [
+    '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+    '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+    '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+    '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+]
+
+BAD_FORMAT_META = [
+    '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+    '##FORMAT=<ID=DP,Number=1,Type=String,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+]
+
+FORMAT_META = [
+    '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+    '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+    '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+]
+
+BAD_HEADER_LINE = ['#CHROM\tID\tREF\tALT\tQUAL\n']
+HEADER_LINE = ['#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675\tNA19678\n']
+
+DATA_LINES = [
+    'chr1\t10333\t.\tCT\tC\t1895\tPASS\tAC=5;AF=0.045;AN=112;DP=22546\tGT:AD:DP:GQ\t./.:63,0:63\t./.:44,0:44\t./.:44,0:44\n'
+]
+
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
 class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
@@ -313,8 +354,8 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          '/login/google-oauth2?next=/api/create_project_from_workspace/my-seqr-billing/anvil-no-project-workspace1/grant_access')
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.validate_vcf_and_get_samples')
-    def test_validate_anvil_vcf(self, mock_vcf_validate, mock_file_exist, mock_utils_logger):
+    @mock.patch('seqr.utils.vcf_utils.file_iter')
+    def test_validate_anvil_vcf(self, mock_file_iter, mock_file_exist, mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(validate_anvil_vcf,
                       args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -345,22 +386,27 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
 
         mock_file_exist.return_value = True
-        mock_vcf_validate.return_value = {}
+        mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'],
-                         'No samples found in the provided VCF. This may be due to a malformed file')
-        mock_vcf_validate.assert_called_with('gs://test_bucket/test_path.vcf.gz')
+        self.assertListEqual(response.json()['errors'], [
+            'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.',
+            'Missing required INFO field(s) AN',
+            'Incorrect meta Type for INFO.AF - expected "Float", got "Integer"',
+            'Missing required FORMAT field(s) GQ, GT',
+            'Incorrect meta Type for FORMAT.DP - expected "Integer", got "String"'
+        ])
+        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
         mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         # Test valid operation
         mock_file_exist.return_value = True
-        mock_vcf_validate.return_value = {'NA19675', 'NA19678', 'HG00735'}
+        mock_file_iter.return_value = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
         mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf', user=self.manager_user)
-        mock_vcf_validate.assert_called_with('gs://test_bucket/test_path.vcf')
+        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf', byte_range=None)
 
         # Test logged in locally
         remove_token(
