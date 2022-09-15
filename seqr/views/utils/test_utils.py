@@ -1,4 +1,5 @@
 # Utilities used for unit and integration tests.
+from copy import deepcopy
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
@@ -487,10 +488,15 @@ INDIVIDUAL_FIELDS_NO_FEATURES = {
 INDIVIDUAL_FIELDS = {'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures'}
 INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS_NO_FEATURES)
 
-INTERNAL_INDIVIDUAL_FIELDS = {
+CASE_REVIEW_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-    'probandRelationship',
 }
+CORE_INTERNAL_INDIVIDUAL_FIELDS = {
+    'probandRelationship', 'analyteType', 'primaryBiosample', 'tissueAffectedStatus',
+}
+
+INTERNAL_INDIVIDUAL_FIELDS = deepcopy(CORE_INTERNAL_INDIVIDUAL_FIELDS)
+INTERNAL_INDIVIDUAL_FIELDS.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
 INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
