@@ -375,10 +375,10 @@ def get_groups_side_effect(user):
 
 
 def get_group_members_side_effect(user, group, use_sa_credentials=False):
-    members = ANVIL_GROUPS[group]
+    members = ANVIL_GROUPS[str(group)]
     if user in group or use_sa_credentials:
         return members
-    raise Exception('No access')
+    return {}
 
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):

@@ -278,7 +278,7 @@ def has_service_account_access(user, workspace_namespace, workspace_name):
 def get_anvil_group_members(user, group, use_sa_credentials=False):
     access_token = _get_service_account_access_token() if use_sa_credentials else _get_social_access_token(user)
     return anvil_call(
-        'get', f'api/groups/{group}', access_token, user,
+        'get', f'api/groups/{group}', access_token, user, handle_errors=True,
         cache_time=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, cache_key_id='SA' if use_sa_credentials else None,
         process_response=lambda r: [
             email for email in r['adminsEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL
