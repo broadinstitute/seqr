@@ -62,10 +62,10 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
 
-        cls.add_analyst_pm_groups()
+        cls.add_additional_user_groups()
 
     @classmethod
-    def add_analyst_pm_groups(cls):
+    def add_additional_user_groups(cls):
         analyst_group = Group.objects.get(pk=4)
         analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
         pm_group = Group.objects.get(pk=5)
@@ -409,11 +409,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         super(AnvilAuthenticationTestCase, self).setUp()
 
     @classmethod
-    def add_analyst_pm_groups(cls):
+    def add_additional_user_groups(cls):
         analyst_group = Group.objects.get(pk=4)
         analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
-        pm_group = Group.objects.get(pk=5)
-        pm_group.user_set.add(cls.pm_user)
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
