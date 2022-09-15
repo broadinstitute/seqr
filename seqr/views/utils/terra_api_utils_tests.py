@@ -283,8 +283,9 @@ class TerraApiUtilsCallsCase(TestCase):
     @responses.activate
     @mock.patch('seqr.views.utils.terra_api_utils.SERVICE_ACCOUNT_CREDENTIALS')
     @mock.patch('seqr.views.utils.terra_api_utils.datetime')
+    @mock.patch('seqr.utils.redis_utils.redis.StrictRedis')
     @mock.patch('seqr.views.utils.terra_api_utils.logger')
-    def test_get_anvil_group_members(self, mock_logger, mock_datetime, mock_credentials):
+    def test_get_anvil_group_members(self, mock_logger, mock_redis, mock_datetime, mock_credentials):
         user = User.objects.get(username='test_user')
 
         url = '{}{}'.format(TEST_TERRA_API_ROOT_URL, 'api/groups/TGG_USERS')
@@ -293,12 +294,17 @@ class TerraApiUtilsCallsCase(TestCase):
             'groupEmail': 'TGG_USERS@firecloud.org',
             'membersEmails': ['test@test.com', TEST_SERVICE_ACCOUNT]
         }))
+        mock_redis.return_value.get.return_value = None
         members = get_anvil_group_members(user, USERS_GROUP)
         self.assertListEqual(members, ['test_user@broadinstitute.org', 'test@test.com'])
         mock_logger.info.assert_called_with('GET https://terra.api/api/groups/TGG_USERS 200 175', user)
         self.assertEqual(len(mock_logger.method_calls), 1)
         responses.assert_call_count(url, 1)
         self.assertEqual(responses.calls[0].request.headers['Authorization'], 'Bearer ya29.EXAMPLE')
+        mock_redis.return_value.get.assert_called_with('terra_req__test_user__api/groups/TGG_USERS')
+        mock_redis.return_value.set.assert_called_with(
+            'terra_req__test_user__api/groups/TGG_USERS', json.dumps(members))
+        mock_redis.return_value.expire.assert_called_with('terra_req__test_user__api/groups/TGG_USERS', 300)
 
         # test with service account credentials
         mock_datetime.now.return_value = datetime(2021, 1, 1)
@@ -307,14 +313,24 @@ class TerraApiUtilsCallsCase(TestCase):
         get_anvil_group_members(user, USERS_GROUP, use_sa_credentials=True)
         self.assertEqual(responses.calls[1].request.headers['Authorization'], 'Bearer ya29.SA_EXAMPLE')
         mock_credentials.refresh.assert_not_called()
+        mock_redis.return_value.get.assert_called_with('terra_req__SA__api/groups/TGG_USERS')
+        mock_redis.return_value.set.assert_called_with('terra_req__SA__api/groups/TGG_USERS', json.dumps(members))
+        mock_redis.return_value.expire.assert_called_with('terra_req__SA__api/groups/TGG_USERS', 300)
 
         mock_credentials.expiry = datetime(2021, 1, 1)
         get_anvil_group_members(user, USERS_GROUP, use_sa_credentials=True)
         mock_credentials.refresh.assert_called_once()
 
         responses.add(responses.GET, url, status=401)
-        with self.assertRaises(TerraAPIException) as ec:
-            get_anvil_group_members(user, USERS_GROUP)
-        self.assertEqual(
-            str(ec.exception),
-            'Error: called Terra API: GET /api/groups/TGG_USERS got status: 401 with a reason: Unauthorized')
+        self.assertDictEqual(get_anvil_group_members(user, USERS_GROUP), {})
+        mock_logger.warning.assert_called_with(
+            'Error: called Terra API: GET /api/groups/TGG_USERS got status: 401 with a reason: Unauthorized', user)
+
+        responses.reset()
+        cached_members = ['test@other_test.com']
+        mock_redis.return_value.get.return_value = json.dumps(cached_members)
+        members = get_anvil_group_members(user, USERS_GROUP)
+        self.assertListEqual(members, cached_members)
+        mock_logger.info.assert_called_with('Terra API cache hit for: GET api/groups/TGG_USERS test_user', user)
+        mock_redis.return_value.get.assert_called_with('terra_req__test_user__api/groups/TGG_USERS')
+        responses.assert_call_count(url, 0)  # no call to the Terra API
