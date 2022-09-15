@@ -1,5 +1,7 @@
 """Provide python bindings for the AnVIL Terra API."""
 
+from datetime import datetime
+import google.auth.transport.requests
 import json
 import time
 import requests
@@ -11,7 +13,7 @@ from social_django.utils import load_strategy
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 
-from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, \
+from settings import SEQR_VERSION, TERRA_API_ROOT_URL, TERRA_PERMS_CACHE_EXPIRE_SECONDS, SERVICE_ACCOUNT_CREDENTIALS, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SOCIAL_AUTH_GOOGLE_OAUTH2_KEY, SERVICE_ACCOUNT_FOR_ANVIL, SOCIAL_AUTH_PROVIDER
 
 SEQR_USER_AGENT = "seqr/" + SEQR_VERSION
@@ -117,6 +119,13 @@ def _get_social_access_token(user):
             logger.warning('Refresh token failed. {}'.format(str(ee)), user)
             raise TerraRefreshTokenFailedException('Refresh token failed. {}'.format(str(ee)))
     return social.extra_data['access_token']
+
+
+def _get_service_account_access_token():
+    if (not SERVICE_ACCOUNT_CREDENTIALS.token) or \
+            (SERVICE_ACCOUNT_CREDENTIALS.expiry - datetime.now()).total_seconds() < 60:
+        SERVICE_ACCOUNT_CREDENTIALS.refresh(google.auth.transport.requests.Request())
+    return SERVICE_ACCOUNT_CREDENTIALS.token
 
 
 def anvil_call(method, path, access_token, user=None, headers=None, root_url=None, data=None, handle_errors=False):
@@ -270,3 +279,10 @@ def has_service_account_access(user, workspace_namespace, workspace_name):
     acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
     service_account = acl.get(SERVICE_ACCOUNT_FOR_ANVIL)
     return bool(service_account and (not service_account['pending']))
+
+
+def get_anvil_group_members(user, group, use_sa_credentials=False):
+    path = f'api/groups/{group}'
+    access_token = _get_service_account_access_token() if use_sa_credentials else _get_social_access_token(user)
+    r = anvil_call('get', path, access_token, user)
+    return [email for email in r['adminsEmails'] + r['membersEmails'] if email != SERVICE_ACCOUNT_FOR_ANVIL]
