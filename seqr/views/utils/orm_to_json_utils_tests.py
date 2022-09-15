@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from django.test import TestCase
 import mock
 from copy import deepcopy
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \

@@ -1,18 +1,17 @@
 import datetime
 from django.contrib.auth.models import User
-from django.test import TestCase
 import mock
 from openpyxl import load_workbook
 from io import BytesIO
 
 from seqr.models import Project
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, ErrorsWarningsException
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 FILENAME = 'test.csv'
 
 
-class PedigreeInfoUtilsTest(TestCase):
-    fixtures = ['users', '1kg_project']
+class PedigreeInfoUtilsTest(object):
 
     def test_parse_pedigree_table(self):
         user = User.objects.get(id=10)
@@ -103,6 +102,8 @@ class PedigreeInfoUtilsTest(TestCase):
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     def test_parse_sample_manifest(self, mock_email, mock_pm_group):
+        mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
+
         header_1 = [
             'Do not modify - Broad use', '', '', 'Please fill in columns D - O', '', '', '', '', '', '', '', '', '',
             '', '']
@@ -114,11 +115,10 @@ class PedigreeInfoUtilsTest(TestCase):
             'ng/ul', '', '', 'indicate study/protocol number']
 
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table([header_1], FILENAME, user = User.objects.get(id=10))
+            parse_pedigree_table([header_1], FILENAME, user=self.analyst_user)
         self.assertListEqual(ec.exception.errors, ['Error while parsing file: {}. Unsupported file format'.format(FILENAME)])
         self.assertListEqual(ec.exception.warnings, [])
 
-        user = User.objects.get(username='test_pm_user')
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
                 header_1,
@@ -126,11 +126,12 @@ class PedigreeInfoUtilsTest(TestCase):
                  'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype',
                  'Data Use Restrictions'],
                 header_3,
-            ], FILENAME, user)
+            ], FILENAME, self.pm_user)
         self.assertListEqual(ec.exception.errors, ['Error while parsing file: {}. Unsupported file format'.format(FILENAME)])
         self.assertListEqual(ec.exception.warnings, [])
 
         mock_pm_group.__bool__.return_value = True
+        mock_pm_group.__str__.return_value = 'project-managers'
         mock_pm_group.resolve_expression.return_value = 'project-managers'
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
@@ -139,7 +140,7 @@ class PedigreeInfoUtilsTest(TestCase):
                  'Gender', 'Affected Status', 'Volume', 'Concentration', 'Notes', 'Coded Phenotype',
                  'Data Use Restrictions'],
                 header_3,
-            ], FILENAME, user)
+            ], FILENAME, self.pm_user)
         self.assertListEqual(ec.exception.errors, [
             'Error while parsing file: {}. Expected vs. actual header columns: | Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status'.format(
                 FILENAME)])
@@ -148,7 +149,7 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
                 header_1, header_2, ['', 'Position', '', '', 'Collaborator Sample ID', '', '', '', '', 'ul', 'ng/ul', '',
-                                     '', 'indicate study/protocol number']], FILENAME, user)
+                                     '', 'indicate study/protocol number']], FILENAME, self.pm_user)
         self.assertListEqual(ec.exception.errors, [
             'Error while parsing file: {}. Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+'.format(
                 FILENAME)])
@@ -163,7 +164,7 @@ class PedigreeInfoUtilsTest(TestCase):
              ]]
 
         records, warnings = parse_pedigree_table(
-            original_data, FILENAME, user, project=Project.objects.get(id=1))
+            original_data, FILENAME, self.pm_user, project=Project.objects.get(id=1))
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
              'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': ''},
@@ -302,3 +303,11 @@ class PedigreeInfoUtilsTest(TestCase):
                 'onsetAge': 'C', 'affectedRelatives': False,
             },
         ])
+
+
+class LocalPedigreeInfoUtilsTest(AuthenticationTestCase, PedigreeInfoUtilsTest):
+    fixtures = ['users', '1kg_project']
+
+
+class AnvilPedigreeInfoUtilsTest(AnvilAuthenticationTestCase, PedigreeInfoUtilsTest):
+    fixtures = ['users', 'social_auth', '1kg_project']

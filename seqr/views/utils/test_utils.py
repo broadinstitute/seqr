@@ -376,7 +376,7 @@ def get_groups_side_effect(user):
 
 def get_group_members_side_effect(user, group, use_sa_credentials=False):
     members = ANVIL_GROUPS[str(group)]
-    if user.email in group or use_sa_credentials:
+    if user.email in members or use_sa_credentials:
         return members
     return {}
 

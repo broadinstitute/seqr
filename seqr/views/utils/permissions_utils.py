@@ -25,7 +25,7 @@ def get_pm_user_emails(user):
         return []
     if anvil_enabled():
         return get_anvil_group_members(user, PM_USER_GROUP)
-    return set(User.objects.filter(groups__name=PM_USER_GROUP).values_list('email', flat=True))
+    return list(User.objects.filter(groups__name=PM_USER_GROUP).values_list('email', flat=True))
 
 
 def user_is_analyst(user):
