@@ -734,6 +734,8 @@ def assert_ws_has_al(self, acl_call_count, workspace_name=None):
     self.mock_get_ws_access_level.assert_called_with(mock.ANY, 'my-seqr-billing', workspace_name)
     self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
     self.mock_get_ws_acl.assert_not_called()
+    self.mock_get_groups.assert_not_called()
+    self.mock_get_group_members.assert_not_called()
 
 
 # Test for permissions from AnVIL only
@@ -756,6 +758,8 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         ])
         self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
@@ -774,3 +778,5 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
         super(AnvilVariantSearchAPITest, self).test_saved_search()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()

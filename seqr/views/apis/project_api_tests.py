@@ -507,6 +507,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         super(AnvilProjectAPITest, self).test_create_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
         self.mock_get_groups.assert_has_calls([
             mock.call(self.collaborator_user), mock.call(self.manager_user), mock.call(self.analyst_user),
             mock.call(self.pm_user)])
@@ -527,6 +528,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         super(AnvilProjectAPITest, self).test_update_project()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
         self.mock_get_groups.assert_has_calls([mock.call(self.manager_user), mock.call(self.pm_user)])
         self.mock_get_ws_access_level.assert_has_calls([
             mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
@@ -538,11 +540,13 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
 
     def test_project_overview(self):
         super(AnvilProjectAPITest, self).test_project_overview()
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_acl.call_count, 4)

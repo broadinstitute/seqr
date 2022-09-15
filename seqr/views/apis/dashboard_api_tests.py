@@ -102,6 +102,8 @@ def assert_has_anvil_calls(self):
     ]
     self.mock_get_ws_access_level.assert_has_calls(calls, any_order=True)
     self.mock_get_ws_acl.assert_not_called()
+    self.mock_get_groups.assert_not_called()
+    self.mock_get_group_members.assert_not_called()
 
 
 # Test for permissions from AnVIL only

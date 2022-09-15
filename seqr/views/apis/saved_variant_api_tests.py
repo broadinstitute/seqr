@@ -910,6 +910,8 @@ def assert_no_list_ws_has_al(self, acl_call_count):
         'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
     self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
     self.mock_get_ws_acl.assert_not_called()
+    self.mock_get_groups.assert_not_called()
+    self.mock_get_group_members.assert_not_called()
 
 
 # Test for permissions from AnVIL only
