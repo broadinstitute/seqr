@@ -417,10 +417,10 @@ if TERRA_API_ROOT_URL:
     activated_service_account = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if not activated_service_account:
-            auth_output = subprocess.run([  # nosec
-                'gcloud', 'auth', 'activate-service-account', '--key-file', service_account_file
-            ], capture_output=True, text=True).stderr
-            activated_service_account = re.findall(r'\[(.*)\]', auth_output)[0]
+        auth_output = subprocess.run([  # nosec
+            'gcloud', 'auth', 'activate-service-account', '--key-file', service_account_file
+        ], capture_output=True, text=True).stderr
+        activated_service_account = re.findall(r'\[(.*)\]', auth_output)[0]
     if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:
         raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
 
