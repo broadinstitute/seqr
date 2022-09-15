@@ -26,11 +26,9 @@ REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO
 
 def _validate_vcf_header(header):
     missing_headers = [h for h in REQUIRED_HEADERS if h not in header]
-    errors = []
     if missing_headers:
         missing_fields = ', '.join(missing_headers)
-        errors = [f'Missing required VCF header field(s) {missing_fields}.']
-    return errors
+        raise ErrorsWarningsException([f'Missing required VCF header field(s) {missing_fields}.'], [])
 
 
 def _validate_vcf_meta(meta):
@@ -44,7 +42,8 @@ def _validate_vcf_meta(meta):
             value = meta.get(field, {}).get(sub_field)
             if value and value != expected:
                 errors.append(f'Incorrect meta Type for {field}.{sub_field} - expected "{expected}", got "{value}"')
-    return errors
+    if errors:
+        raise ErrorsWarningsException(errors, [])
 
 
 def _get_vcf_meta_data(line):
@@ -72,9 +71,7 @@ def validate_vcf_and_get_samples(vcf_filename):
         else:
             break
 
-    errors = _validate_vcf_header(header[0:len(REQUIRED_HEADERS)])
-    errors += _validate_vcf_meta(meta)
-    if errors:
-        raise ErrorsWarningsException(errors, [])
+    _validate_vcf_header(header[0:len(REQUIRED_HEADERS)])
+    _validate_vcf_meta(meta)
 
     return samples

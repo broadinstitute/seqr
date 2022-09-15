@@ -385,19 +385,27 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.json()['error'],
                          'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
 
+        # test header errors
         mock_file_exist.return_value = True
         mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.',
+            'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.'
+        ])
+        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
+
+        # test meta info errors
+        mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
             'Missing required INFO field(s) AN',
             'Incorrect meta Type for INFO.AF - expected "Float", got "Integer"',
             'Missing required FORMAT field(s) GQ, GT',
             'Incorrect meta Type for FORMAT.DP - expected "Integer", got "String"'
         ])
-        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
-        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         # Test valid operation
         mock_file_exist.return_value = True
