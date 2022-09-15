@@ -794,9 +794,9 @@ def _get_phenotype_row(feature):
 def _get_analyte_row(individual):
     return {
         'analyte_id': f'Broad_{individual.individual_id}',  # TODO this will change once Sam figures out what to do
-        'analyte_type': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
-        'primary_biosample': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
-        'tissue_affected_status': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+        'analyte_type': individual.get_analyte_type_display(),
+        'primary_biosample': individual.get_primary_biosample_display(),
+        'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
     }
 
 
