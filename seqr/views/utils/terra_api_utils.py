@@ -161,6 +161,7 @@ def _user_anvil_call(method, path, user, data=None, handle_errors=False):
     return anvil_call(method, path, access_token, user=user, data=data, handle_errors=handle_errors)
 
 
+# TODO do better
 def terra_caching(func, path, user, expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, user_cache_key=None):
     cache_key = f'terra_req__{user_cache_key or user}__{path}'
     r = safe_redis_get_json(cache_key)

@@ -374,6 +374,13 @@ def get_groups_side_effect(user):
     return [group for group, users in ANVIL_GROUPS.items() if user.email in users]
 
 
+def get_group_members_side_effect(user, group, use_sa_credentials=False):
+    members = ANVIL_GROUPS[group]
+    if user in group or use_sa_credentials:
+        return members
+    raise Exception('No access')
+
+
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
     # mock the terra apis
@@ -405,6 +412,10 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_anvil_groups')
         self.mock_get_groups = patcher.start()
         self.mock_get_groups.side_effect = get_groups_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.get_anvil_group_members')
+        self.mock_get_group_members = patcher.start()
+        self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
 
