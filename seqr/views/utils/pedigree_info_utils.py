@@ -10,7 +10,6 @@ from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_utils import _to_snake_case
-from seqr.views.utils.permissions_utils import user_is_pm
 from seqr.views.utils.permissions_utils import user_is_pm, get_pm_users
 from seqr.models import Individual
 
