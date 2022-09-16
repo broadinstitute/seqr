@@ -13,7 +13,6 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import get_variants_response
-from settings import ANALYST_PROJECT_CATEGORY
 
 MAX_SAVED_VARIANTS = 10000
 

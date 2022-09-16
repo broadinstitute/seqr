@@ -23,7 +23,6 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
-from settings import ANALYST_PROJECT_CATEGORY
 
 
 @pm_required
@@ -65,8 +64,6 @@ def create_project_handler(request):
         project_args['is_mme_enabled'] = False
 
     project = create_model_from_json(Project, project_args, user=request.user)
-    if ANALYST_PROJECT_CATEGORY:
-        ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.add(project)
 
     return create_json_response({
         'projectsByGuid': {

@@ -4,7 +4,6 @@ from seqr.views.apis.project_categories_api import update_project_categories_han
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
 from seqr.models import Project
-from settings import ANALYST_PROJECT_CATEGORY
 
 PROJECT_GUID = 'R0003_test'
 ADDED_PROJECT_CAT_GUID = 'PC000002_categry_with_unicde'
@@ -33,7 +32,7 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
         project = Project.objects.get(guid=PROJECT_GUID)
 
         project_categories = [project_category for project_category in
-                              project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY).order_by('guid')]
+                              project.projectcategory_set.all().values_list('guid', flat=True)]
         self.assertEqual(project_categories[0].guid, ADDED_PROJECT_CAT_GUID)
         self.assertNotIn(project_categories[0].guid, updated_guid_set)
         self.assertEqual(project_categories[1].guid, EXISTING_PROJECT_CAT_GUID)
@@ -60,6 +59,6 @@ class ProjectCategoriesAPITest(AuthenticationTestCase):
 
         project = Project.objects.get(guid=PROJECT_GUID)
         project_category_guids_in_db = [
-            project_category.guid for project_category in project.projectcategory_set.exclude(name=ANALYST_PROJECT_CATEGORY)]
+            project_category.guid for project_category in project.projectcategory_set.all()]
         self.assertListEqual(project_category_guids_in_db, [])
         self.assertIsNone(response_json['projectCategoriesByGuid'][new_guid])
