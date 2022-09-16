@@ -88,6 +88,7 @@ superuser_required = active_user_has_policies_and_passes_test(lambda user: user.
 
 
 def is_internal_anvil_project(project):
+    # TODO INTERNAL_NAMESPACES should only be imported in this file and should be mocked in the base AnvilAuthentication class
     return project.workspace_namespace in INTERNAL_NAMESPACES
 
 

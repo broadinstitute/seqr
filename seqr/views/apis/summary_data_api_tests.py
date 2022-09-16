@@ -31,8 +31,6 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(object):
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
@@ -65,8 +63,7 @@ class SummaryDataAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
         self.assertEqual(len(response_json['submissions']), 3)
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.apis.summary_data_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_success_story(self, mock_analyst_group):
         url = reverse(success_story, args=['all'])
@@ -95,8 +92,6 @@ class SummaryDataAPITest(object):
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.apis.summary_data_api.MAX_SAVED_VARIANTS', 1)
     def test_saved_variants_page(self):
@@ -143,8 +138,6 @@ class SummaryDataAPITest(object):
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
     def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file, mock_analyst_group):

@@ -100,7 +100,6 @@ class JSONUtilsTest(object):
 
         self.assertSetEqual(set(json.keys()), PROJECT_FIELDS)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_json_for_family(self, mock_analyst_group):
         family = Family.objects.filter(project__has_case_review=False).first()
@@ -126,7 +125,6 @@ class JSONUtilsTest(object):
         json = _get_json_for_family(case_review_family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), fields)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_json_for_individual(self, mock_analyst_group):
         individual = Individual.objects.first()
@@ -234,7 +232,6 @@ class JSONUtilsTest(object):
         json = get_json_for_variant_note(tag)
         self.assertSetEqual(set(json.keys()), VARIANT_NOTE_FIELDS)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_json_for_saved_search(self):
         search = VariantSearch.objects.first()

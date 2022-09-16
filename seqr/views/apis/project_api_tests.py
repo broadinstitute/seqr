@@ -36,7 +36,6 @@ class ProjectAPITest(object):
     REQUIRED_FIELDS = ['name', 'genomeVersion', 'workspaceNamespace', 'workspaceName']
 
     @mock.patch('seqr.models.uuid.uuid4', lambda: MOCK_GROUP_UUID)
-    @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_create_and_delete_project(self):
         create_project_url = reverse(create_project_handler)
@@ -87,7 +86,6 @@ class ProjectAPITest(object):
             Group.objects.filter(name__in=['new_project_can_edit_123abd', 'new_project_can_view_123abd']).count(), 0,
         )
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project(self):
@@ -126,7 +124,6 @@ class ProjectAPITest(object):
         self.assertEqual(response.json()['projectsByGuid'][PROJECT_GUID]['consentCode'], 'G')
         self.assertEqual(Project.objects.get(guid=PROJECT_GUID).consent_code, 'G')
 
-    @mock.patch('seqr.views.apis.project_api.ANALYST_PROJECT_CATEGORY', None)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', None)
     def test_create_project_no_pm(self):
         create_project_url = reverse(create_project_handler)
@@ -149,7 +146,6 @@ class ProjectAPITest(object):
 
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {new_project.guid})
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project_workspace(self):
@@ -307,7 +303,6 @@ class ProjectAPITest(object):
             self.assertEqual(response.json()['error'], '/login')
 
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_project_families(self, mock_analyst_group):
         url = reverse(project_families, args=[PROJECT_GUID])
@@ -363,7 +358,6 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
 
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_project_individuals(self, mock_analyst_group):
         url = reverse(project_individuals, args=[PROJECT_GUID])

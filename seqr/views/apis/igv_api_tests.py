@@ -14,7 +14,6 @@ STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc
 PROJECT_GUID = 'R0001_1kg'
 
 
-@mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
 @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class IgvAPITest(AuthenticationTestCase):

@@ -5,6 +5,7 @@ import pytz
 import responses
 from settings import AIRTABLE_URL
 
+from seqr.models import Project
 from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
     sample_metadata_export, gregor_export
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
@@ -221,9 +222,12 @@ class ReportAPITest(object):
         )
 
     @mock.patch('seqr.views.apis.report_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_seqr_stats(self, mock_analyst_group):
+        no_access_project = Project.objects.get(id=2)
+        no_access_project.workspace_namespace = None
+        no_access_project.save()
+
         url = reverse(seqr_stats)
         self.check_analyst_login(url)
 
@@ -241,7 +245,6 @@ class ReportAPITest(object):
         self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
         self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_get_cmg_projects(self, mock_analyst_group):
         url = reverse(get_cmg_projects)
@@ -258,7 +261,6 @@ class ReportAPITest(object):
         self.assertListEqual(list(response_json.keys()), ['projectGuids'])
         self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.apis.report_api.timezone')
     def test_discovery_sheet(self, mock_timezone, mock_analyst_group):
@@ -309,7 +311,6 @@ class ReportAPITest(object):
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
@@ -412,7 +413,6 @@ class ReportAPITest(object):
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
@@ -502,7 +502,6 @@ class ReportAPITest(object):
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.apis.report_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')

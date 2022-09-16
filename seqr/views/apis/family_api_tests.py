@@ -30,7 +30,6 @@ INDIVIDUAL_GUID = 'I000001_na19675'
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_family_page_data(self, mock_analyst_group):
         url = reverse(family_page_data, args=[FAMILY_GUID])
@@ -312,7 +311,6 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertIsNone(response_json[FAMILY_GUID]['assignedAnalyst'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_update_success_story_types(self, mock_analyst_group):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])

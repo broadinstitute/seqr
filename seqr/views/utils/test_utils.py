@@ -242,6 +242,18 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         },
+        'test_user@broadinstitute.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
+        'test_pm_user@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
         'test_user_pure_anvil@test.com': {
             "accessLevel": "READER",
             "pending": False,
@@ -268,7 +280,19 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": False,
             "canCompute": False
-        }
+        },
+        'test_user@broadinstitute.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
+        'test_pm_user@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
     'workspace': {
         'bucketName': 'test_bucket'
@@ -289,7 +313,7 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": False,
             "canCompute": True
-        }
+        },
     },
     'workspace': {
         'authorizationDomain': [],

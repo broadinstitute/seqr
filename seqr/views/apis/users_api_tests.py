@@ -35,7 +35,7 @@ PRIVACY_VERSION = 1.1
 
 class UsersAPITest(object):
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_get_project_collaborator_options(self, mock_analyst_group):
         url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])

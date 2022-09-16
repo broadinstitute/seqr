@@ -53,7 +53,7 @@ def success_story(request, success_story_types):
     else:
         success_story_types = success_story_types.split(',')
         families = Family.objects.filter(success_story_types__overlap=success_story_types)
-    families = families.filter(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).order_by('family_id')
+    families = families.filter(project__guid__in=get_project_guids_user_can_view(request.user)).order_by('family_id')
 
     rows = [{
         "project_guid": family.project.guid,
