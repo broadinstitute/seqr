@@ -1,5 +1,4 @@
 from django.contrib.auth.models import User
-from django.test import TestCase
 import mock
 from copy import deepcopy
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \
@@ -8,14 +7,14 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_
     _get_json_for_individual, get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tags, \
     get_json_for_variant_functional_data_tags, get_json_for_variant_note, get_json_for_locus_list, \
     get_json_for_saved_search, get_json_for_saved_variants_with_tags, get_json_for_current_user
-from seqr.views.utils.test_utils import PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
+    PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
     FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS
 
-class JSONUtilsTest(TestCase):
+class JSONUtilsTest(object):
     databases = '__all__'
-    fixtures = ['users.json', 'social_auth', '1kg_project', 'variant_searches']
 
     def test_json_for_user(self):
         users = User.objects.all()
@@ -31,17 +30,15 @@ class JSONUtilsTest(TestCase):
                 {'firstName', 'email', 'displayName', 'isActive', 'isDataManager'},
             )
 
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'enabled')
-    @mock.patch('seqr.views.utils.terra_api_utils.TERRA_API_ROOT_URL')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_json_for_current_user(self, mock_analyst_group, mock_pm_group, mock_terra_url):
+    def test_json_for_current_user(self, mock_analyst_group, mock_pm_group):
         pm_user = User.objects.get(username='test_pm_user')
         superuser = User.objects.get(username='test_superuser')
 
         mock_analyst_group.__bool__.return_value = False
         mock_pm_group.__bool__.return_value = False
-        mock_terra_url.__bool__.return_value = False
+        mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
 
         pm_json = {
             'id': 17,
@@ -54,7 +51,7 @@ class JSONUtilsTest(TestCase):
             'lastLogin': None,
             'isActive': True,
             'isAnalyst': False,
-            'isAnvil': False,
+            'isAnvil': self.IS_ANVIL,
             'isDataManager': False,
             'isPm': False,
             'isSuperuser': False,
@@ -72,9 +69,9 @@ class JSONUtilsTest(TestCase):
             'lastLogin': mock.ANY,
             'isActive': True,
             'isAnalyst': False,
-            'isAnvil': False,
+            'isAnvil': self.IS_ANVIL,
             'isDataManager': True,
-            'isPm': True,
+            'isPm': False if self.IS_ANVIL else True,
             'isSuperuser': True,
         }
         self.assertDictEqual(get_json_for_current_user(superuser), superuser_json)
@@ -83,12 +80,11 @@ class JSONUtilsTest(TestCase):
         mock_analyst_group.resolve_expression.return_value = 'analysts'
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
-        mock_terra_url.__bool__.return_value = True
+        mock_pm_group.__str__.return_value = 'project-managers'
 
         pm_json.update({
-            'isAnvil': True,
-            'isPm': True,
             'isAnalyst': True,
+            'isPm': True,
         })
         self.assertDictEqual(get_json_for_current_user(pm_user), pm_json)
 
@@ -260,3 +256,14 @@ class JSONUtilsTest(TestCase):
         exp_detail_fields = deepcopy(LOCUS_LIST_DETAIL_FIELDS)
         exp_detail_fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(json.keys()), exp_detail_fields)
+
+
+class LocalJSONUtilsTest(AuthenticationTestCase, JSONUtilsTest):
+    fixtures = ['users', '1kg_project', 'variant_searches']
+    IS_ANVIL = False
+
+
+class AnvilJSONUtilsTest(AnvilAuthenticationTestCase, JSONUtilsTest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches']
+    IS_ANVIL = True
+

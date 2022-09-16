@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_user
-from seqr.views.utils.permissions_utils import superuser_required, get_analyst_users, get_pm_users
+from seqr.views.utils.permissions_utils import superuser_required, get_analyst_users, get_pm_user_emails
 from seqr.views.utils.terra_api_utils import is_google_authenticated
 
 
@@ -13,11 +13,11 @@ def get_all_users(request):
         'display_name', 'is_data_manager',
     ])) for user in User.objects.exclude(email='')]
     analyst_users = get_analyst_users()
-    pm_users = get_pm_users()
+    pm_users = get_pm_user_emails(request.user)
     users = [dict(
         hasGoogleAuth=is_google_authenticated(user),
         isAnalyst=user in analyst_users,
-        isPm=user in pm_users,
+        isPm=user.email in pm_users,
         **user_json
     ) for user, user_json in user_tups]
 

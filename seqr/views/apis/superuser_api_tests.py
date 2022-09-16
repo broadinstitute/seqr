@@ -19,18 +19,28 @@ class SuperusersAPITest(object):
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_get_all_users(self, mock_analyst_group, mock_pm_group):
+        mock_pm_group.__bool__.return_value = False
+
         url = reverse(get_all_users)
         self.check_superuser_login(url)
 
         response = self.client.get(url)
-        self._test_superuser_response(response, analyst_enabled=False)
+        self._test_superuser_response(response)
 
         mock_analyst_group.resolve_expression.return_value = 'analysts'
-        mock_pm_group.resolve_expression.return_value = 'project-managers'
         response = self.client.get(url)
         self._test_superuser_response(response, analyst_enabled=True)
 
-    def _test_superuser_response(self, response, analyst_enabled):
+        mock_pm_group.__bool__.return_value = True
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__str__.return_value = 'project-managers'
+        self._test_pm_users(url)
+
+    def _test_pm_users(self, url):
+        response = self.client.get(url)
+        self._test_superuser_response(response, analyst_enabled=True, pm_enabled=True)
+
+    def _test_superuser_response(self, response, analyst_enabled=False, pm_enabled=False):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'users'})
@@ -40,7 +50,7 @@ class SuperusersAPITest(object):
         pm_user = users_by_username['test_pm_user']
         self.assertSetEqual(set(pm_user.keys()), ALL_USERS_USER_FIELDS)
         self.assertEqual(pm_user['hasGoogleAuth'], self.HAS_GOOGLE_AUTH)
-        self.assertEqual(pm_user['isPm'], analyst_enabled)
+        self.assertEqual(pm_user['isPm'], pm_enabled)
         self.assertEqual(pm_user['isAnalyst'], analyst_enabled)
 
     def test_admin(self):
@@ -61,3 +71,19 @@ class AnvilSuperusersAPITest(AnvilAuthenticationTestCase, SuperusersAPITest):
     fixtures = ['users', 'social_auth']
     HAS_GOOGLE_AUTH = True
 
+    def _test_pm_users(self, url):
+        self.mock_get_group_members.assert_not_called()
+
+        # Test the case where the superuser does not have access to the PM group in AnVIL
+        # In that case, the request should succeed but not populate any PM users
+        response = self.client.get(url)
+        self._test_superuser_response(response, analyst_enabled=True, pm_enabled=False)
+        mock_pm_group = self.mock_get_group_members.call_args.args[1]
+        self.assertEqual(str(mock_pm_group), 'project-managers')
+        self.mock_get_group_members.assert_called_with(self.super_user, mock_pm_group)
+
+        # Test if the superuser does have access to the PM group it populates properly
+        self.mock_get_group_members.side_effect = lambda *args, **kwargs: [self.pm_user.email]
+        super(AnvilSuperusersAPITest, self)._test_pm_users(url)
+        self.mock_get_group_members.assert_called_with(self.super_user, mock_pm_group)
+        self.assertEqual(self.mock_get_group_members.call_count, 2)

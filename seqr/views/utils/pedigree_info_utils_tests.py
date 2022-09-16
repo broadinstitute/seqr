@@ -1,25 +1,23 @@
 import datetime
 from django.contrib.auth.models import User
-from django.test import TestCase
 import mock
 from openpyxl import load_workbook
 from io import BytesIO
 
 from seqr.models import Project
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, ErrorsWarningsException
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 FILENAME = 'test.csv'
 
 
-class PedigreeInfoUtilsTest(TestCase):
-    fixtures = ['users', '1kg_project']
+class PedigreeInfoUtilsTest(object):
 
     def test_parse_pedigree_table(self):
-        user = User.objects.get(id=10)
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected'],
-                 ['fam1', 'ind1', 'male']], FILENAME, user)
+                 ['fam1', 'ind1', 'male']], FILENAME, self.collaborator_user)
         self.assertListEqual(
             ec.exception.errors, ['Error while parsing file: {}. Row 1 contains 3 columns: fam1, ind1, male, while header contains 4: family_id, individual_id, sex, affected'.format(FILENAME)])
         self.assertListEqual(ec.exception.warnings, [])
@@ -27,7 +25,7 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
-                ['', '', 'male', 'u', '.', 'ind2']], FILENAME, user)
+                ['', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertEqual(len(ec.exception.errors), 1)
         self.assertEqual(ec.exception.errors[0].split('\n')[0],
                          "Error while converting {} rows to json: Family Id not specified in row #1:".format(FILENAME))
@@ -36,7 +34,7 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
-                 ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME, user)
+                 ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertEqual(len(ec.exception.errors), 1)
         self.assertEqual(ec.exception.errors[0].split('\n')[0],
                          "Error while converting {} rows to json: Individual Id not specified in row #1:".format(FILENAME))
@@ -45,7 +43,7 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
-                 ['fam1', 'ind1', 'boy', 'u', '.', 'ind2']], FILENAME, user)
+                 ['fam1', 'ind1', 'boy', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertListEqual(
             ec.exception.errors, ['Error while converting {} rows to json: Invalid value "boy" for sex in row #1'.format(FILENAME)])
         self.assertListEqual(ec.exception.warnings, [])
@@ -53,14 +51,14 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
-                 ['fam1', 'ind1', 'male', 'no', '.', 'ind2']], FILENAME, user)
+                 ['fam1', 'ind1', 'male', 'no', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertListEqual(
             ec.exception.errors, ['Error while converting {} rows to json: Invalid value "no" for affected in row #1'.format(FILENAME)])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
-                 ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mom']], FILENAME, user)
+                 ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mom']], FILENAME, self.collaborator_user)
         self.assertListEqual(ec.exception.errors, [
             'Error while converting {} rows to json: Invalid value "mom" for proband_relationship in row #1'.format(
                 FILENAME)])
@@ -70,7 +68,7 @@ class PedigreeInfoUtilsTest(TestCase):
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
                  ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mother'],
                  ['fam2', 'ind2', 'male', 'unknown', 'ind2', '.', '']],
-                FILENAME, user)
+                FILENAME, self.collaborator_user)
         self.assertListEqual(ec.exception.errors, [
             'Invalid proband relationship "Mother" for ind1 with given gender Male',
             'ind2 is recorded as Male and also as the mother of ind1',
@@ -84,7 +82,7 @@ class PedigreeInfoUtilsTest(TestCase):
              ['fam1', 'ind1', 'ind1_old_id', 'some notes', 'some more notes', 'male', 'aff.', '.', 'ind2', 'HPO:12345', ''],
              ['fam1', 'ind2', '', ' ', '', 'female', 'u', '.', 'ind3', 'HPO:56789', 'mother']]
         no_error_warnings = ["ind3 is the mother of ind2 but doesn't have a separate record in the table"]
-        records, warnings = parse_pedigree_table(no_error_data, FILENAME, user)
+        records, warnings = parse_pedigree_table(no_error_data, FILENAME, self.collaborator_user)
         self.assertListEqual(records, [
             {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': '',
              'maternalId': 'ind2', 'notes': 'some notes', 'codedPhenotype': 'HPO:12345', 'probandRelationship': '',
@@ -96,7 +94,7 @@ class PedigreeInfoUtilsTest(TestCase):
         self.assertListEqual(warnings, no_error_warnings)
 
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(no_error_data, FILENAME, user, fail_on_warnings=True)
+            parse_pedigree_table(no_error_data, FILENAME, self.collaborator_user, fail_on_warnings=True)
         self.assertListEqual(ec.exception.errors, no_error_warnings)
 
     def _assert_errors_warnings_exception(self, ec, error):
@@ -106,6 +104,8 @@ class PedigreeInfoUtilsTest(TestCase):
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
     def test_parse_sample_manifest(self, mock_email, mock_pm_group):
+        mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
+
         header_1 = [
             'Do not modify - Broad use', '', '', 'Please fill in columns D - O', '', '', '', '', '', '', '', '', '',
             '', '', '', '', '', '', '']
@@ -118,10 +118,9 @@ class PedigreeInfoUtilsTest(TestCase):
             '(i.e yes, no)', '(i.e yes, no, unknown)', 'ul', 'ng/ul', '', '', '', 'indicate study/protocol number']
 
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table([header_1], FILENAME, user = User.objects.get(id=10))
+            parse_pedigree_table([header_1], FILENAME, user=self.analyst_user)
         self._assert_errors_warnings_exception(ec, f'Error while parsing file: {FILENAME}. Unsupported file format')
 
-        user = User.objects.get(username='test_pm_user')
         incomplete_header_data = [
             header_1,
             ['Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Maternal Sample ID',
@@ -130,19 +129,20 @@ class PedigreeInfoUtilsTest(TestCase):
             header_3,
         ]
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(incomplete_header_data, FILENAME, user)
+            parse_pedigree_table(incomplete_header_data, FILENAME, self.pm_user)
         self._assert_errors_warnings_exception(ec, f'Error while parsing file: {FILENAME}. Unsupported file format')
 
         mock_pm_group.__bool__.return_value = True
+        mock_pm_group.__str__.return_value = 'project-managers'
         mock_pm_group.resolve_expression.return_value = 'project-managers'
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(incomplete_header_data, FILENAME, user)
+            parse_pedigree_table(incomplete_header_data, FILENAME, self.pm_user)
         self._assert_errors_warnings_exception(
             ec, f'Error while parsing file: {FILENAME}. Project argument required for parsing sample manifest')
 
         project = Project.objects.get(id=1)
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(incomplete_header_data, FILENAME, user, project=project)
+            parse_pedigree_table(incomplete_header_data, FILENAME, self.pm_user, project=project)
         self._assert_errors_warnings_exception(
             ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: | '
                 f'Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|'
@@ -151,7 +151,7 @@ class PedigreeInfoUtilsTest(TestCase):
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
                 header_1, header_2, ['', 'Position', '', '', 'Collaborator Sample ID', '', '', '', '', 'ul', 'ng/ul', '',
-                                     '', 'indicate study/protocol number']], FILENAME, user, project=project)
+                                     '', 'indicate study/protocol number']], FILENAME, self.pm_user, project=project)
         self._assert_errors_warnings_exception(
             ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: |-Collaborator Participant ID| Collaborator Sample ID|+')
 
@@ -165,19 +165,19 @@ class PedigreeInfoUtilsTest(TestCase):
              'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'HMB', '',
              ]]
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(original_data, FILENAME, user, project=project)
+            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self._assert_errors_warnings_exception(
             ec, f'Error while converting {FILENAME} rows to json: Multiple consent codes specified in manifest: GMB, HMB')
 
         original_data[4][-2] = 'GMB'
         with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(original_data, FILENAME, user, project=project)
+            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self._assert_errors_warnings_exception(
             ec, f'Error while converting {FILENAME} rows to json: Consent code in manifest "GMB" does not match project consent code "HMB"')
 
         original_data[3][-2] = ''
         original_data[4][-2] = 'HMB'
-        records, warnings = parse_pedigree_table(original_data, FILENAME, user, project=project)
+        records, warnings = parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
              'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': '',
@@ -235,13 +235,12 @@ class PedigreeInfoUtilsTest(TestCase):
     @mock.patch('seqr.views.utils.pedigree_info_utils.date')
     def test_parse_datstat_pedigree_table(self, mock_date):
         mock_date.today.return_value = datetime.date(2020, 1, 1)
-        user = User.objects.get(id=10)
 
         records, warnings = parse_pedigree_table(
         [['participant_guid', 'familyId', 'RELATIONSHIP', 'RELATIONSHIP_OTHER_DETAILS', 'WEBSITE', 'DESCRIPTION', 'CLINICAL_DIAGNOSES', 'CLINICAL_DIAGNOSES_DETAILS', 'GENETIC_DIAGNOSES', 'GENETIC_DIAGNOSES_DETAILS', 'FIND_OUT_DOCTOR_DETAILS', 'PATIENT_AGE', 'CONDITION_AGE', 'PATIENT_DECEASED', 'DECEASED_AGE', 'DECEASED_CAUSE', 'DECEASED_DNA', 'PATIENT_SEX', 'RACE', 'ETHNICITY', 'DOCTOR_TYPES', 'DOCTOR_TYPES_OTHER_DETAILS', 'TESTS', 'TESTS_MICROARRAY_YEAR', 'TESTS_MICROARRAY_LAB', 'TESTS_MICROARRAY_FAMILY', 'TESTS_MICROARRAY_FAMILY_OTHER_DETAILS',  'TESTS_WEXOME_YEAR', 'TESTS_WEXOME_LAB', 'TESTS_WEXOME_FAMILY', 'TESTS_WEXOME_FAMILY_OTHER_DETAILS', 'TESTS_WGENOME_YEAR', 'TESTS_WGENOME_LAB', 'TESTS_WGENOME_FAMILY', 'TESTS_WGENOME_FAMILY_OTHER_DETAILS', 'TESTS_OTHER_DETAILS', 'BIOPSY', 'BIOPSY_OTHER_DETAILS', 'OTHER_STUDIES', 'OTHER_STUDIES_DESCRIBE', 'EXPECT_RESULTS', 'MOTHER_SAME_CONDITION', 'MOTHER_CONDITION_AGE', 'MOTHER_RACE', 'MOTHER_ETHNICITY', 'MOTHER_CAN_PARTICIPATE', 'MOTHER_DECEASED', 'MOTHER_DECEASED_DNA', 'FATHER_SAME_CONDITION', 'FATHER_CONDITION_AGE', 'FATHER_RACE', 'FATHER_ETHNICITY', 'FATHER_CAN_PARTICIPATE', 'FATHER_DECEASED', 'FATHER_DECEASED_DNA', 'NO_SIBLINGS', 'SIBLING', 'NO_CHILDREN', 'CHILD', 'NO_RELATIVE_AFFECTED', 'RELATIVE', 'FAMILY_INFO'],
         ['1518231365', '123', 'OTHER', 'Grandchild', 'wwww.myblog.com', 'I have a really debilitating probably genetic condition. I\xe2ve seen many specialists.', 'YES', 'SMA\xe2s', 'YES', 'Dwarfism\xe2', 'Dr John Smith', '34', '21', 'YES', '33', 'heart attack', 'NO', 'MALE', 'WHITE,ASIAN,PACIFIC', 'NOT_HISPANIC', 'CLIN_GEN,NEURO,CARDIO,OTHER', 'Pediatrician', 'SINGLE_GENE,GENE_PANEL,WEXOME,WGENOME,OTHER', '', '', '', '', '2018', 'UDN\xe2s lab', 'PARENT,AUNT_UNCLE,NIECE_NEPHEW,OTHER', 'Grandmother',  '', '', '', 'Grandmother', 'Blood work', 'MUSCLE,SKIN,OTHER', 'Bone\xe2s', 'YES', 'Undiagnosed Diseases Network', 'NO', 'YES', '19', 'WHITE,ASIAN', 'NOT_HISPANIC', 'YES', '', '', 'NO', '', '', 'BLACK', 'PREFER_NOT_ANSWER', 'YES', 'NO', '', '[{"SIBLING_SEX":"FEMALE","SIBLING_AGE":"21","SIBLING_RACE":"WHITE","SIBLING_ETHNICITY":"NOT_HISPANIC","SIBLING_SAME_CONDITION":"YES","SIBLING_CONDITION_AGE":null,"SIBLING_CAN_PARTICIPATE":"NO"},{"SIBLING_SEX":"","SIBLING_AGE":"17","SIBLING_RACE": "WHITE","SIBLING_ETHNICITY":"NOT_HISPANIC","SIBLING_SAME_CONDITION":"","SIBLING_CONDITION_AGE":"","SIBLING_CAN_PARTICIPATE":"YES"}]', 'YES', '', 'NO', '[{"RELATIVE_SEX":"MALE","RELATIVE_AGE":"44","RELATIVE_RACE": "WHITE", "RELATIVE_ETHNICITY":"NOT_HISPANIC","RELATIVE_CONDITION_AGE":null,"RELATIVE_CAN_PARTICIPATE":null}]', 'patient\xe2s uncle (dads brother) died from Fahrs disease at 70'],
         ['b392fd78b440', '987', 'ADULT_CHILD', 'Grandchild', '', '', 'UNSURE', 'SMA', 'NO', 'Dwarfism', '', '47', '2', '', '33', 'heart attack', 'NO', 'PREFER_NOT_ANSWER', 'WHITE', 'UNKNOWN', '', 'Pediatrician', 'NOT_SURE,MICROARRAY,WEXOME', '', '', '', '', '2018', 'UDN', 'PARENT,AUNT_UNCLE,OTHER', 'Grandmother', '', '', '', 'Grandmother', 'Blood work', 'NONE', '', 'NO', 'Undiagnosed Diseases Network', 'NO', 'UNSURE', '19', '', 'UNKNOWN', 'NO', 'UNSURE', '', '', '', '', '', '', '', 'YES', 'YES', '[{"SIBLING_SEX":"FEMALE","SIBLING_AGE":"21","SIBLING_RACE":"WHITE","SIBLING_ETHNICITY":"NOT_HISPANIC","SIBLING_SAME_CONDITION":"YES","SIBLING_CONDITION_AGE":null,"SIBLING_CAN_PARTICIPATE":"NO"}]', 'NO', '[{"CHILD_SEX":"MALE","CHILD_AGE":"12","CHILD_RACE":"WHITE","CHILD_ETHNICITY":"NOT_HISPANIC","CHILD_SAME_CONDITION":"NO","CHILD_CONDITION_AGE":null,"CHILD_CAN_PARTICIPATE":"UNSURE"}]', 'YES', '', '']],
-            FILENAME, user)
+            FILENAME, self.collaborator_user)
 
         self.assertListEqual(warnings, [])
 
@@ -318,3 +317,11 @@ class PedigreeInfoUtilsTest(TestCase):
                 'onsetAge': 'C', 'affectedRelatives': False,
             },
         ])
+
+
+class LocalPedigreeInfoUtilsTest(AuthenticationTestCase, PedigreeInfoUtilsTest):
+    fixtures = ['users', '1kg_project']
+
+
+class AnvilPedigreeInfoUtilsTest(AnvilAuthenticationTestCase, PedigreeInfoUtilsTest):
+    fixtures = ['users', 'social_auth', '1kg_project']

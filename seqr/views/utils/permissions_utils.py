@@ -8,8 +8,8 @@ from seqr.models import Project, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
-    anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
-    PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
+    anvil_enabled, user_get_workspace_access_level, get_anvil_group_members, user_get_anvil_groups, \
+    WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL, PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
 
@@ -20,18 +20,27 @@ def get_analyst_users():
     return set(User.objects.filter(groups__name=ANALYST_USER_GROUP))
 
 
-def get_pm_users():
-    return set(User.objects.filter(groups__name=PM_USER_GROUP))
+def get_pm_user_emails(user):
+    if not PM_USER_GROUP:
+        return []
+    if anvil_enabled():
+        return get_anvil_group_members(user, PM_USER_GROUP)
+    return list(User.objects.filter(groups__name=PM_USER_GROUP).values_list('email', flat=True))
 
 
 def user_is_analyst(user):
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
 
+
 def user_is_data_manager(user):
     return user.is_staff
 
+
 def user_is_pm(user):
+    if anvil_enabled():
+        return PM_USER_GROUP in user_get_anvil_groups(user)
     return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
+
 
 def _has_current_policies(user):
     if not hasattr(user, 'userpolicy'):
