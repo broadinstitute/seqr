@@ -16,6 +16,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
     check_project_permissions
+from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
@@ -33,15 +34,22 @@ HEMI = 'Hemizygous'
 @analyst_required
 def seqr_stats(request):
     non_demo_projects = Project.objects.filter(is_demo=False)
-    is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
-    anvil_projects = non_demo_projects.exclude(is_anvil_q)
 
     project_models = {
         'demo': Project.objects.filter(is_demo=True),
-        'internal': anvil_projects.filter(workspace_namespace__in=INTERNAL_NAMESPACES),
-        'external': anvil_projects.exclude(workspace_namespace__in=INTERNAL_NAMESPACES),
-        'no_access': non_demo_projects.filter(is_anvil_q),
     }
+    if anvil_enabled():
+        is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
+        anvil_projects = non_demo_projects.exclude(is_anvil_q)
+        project_models.update({
+            'internal': anvil_projects.filter(workspace_namespace__in=INTERNAL_NAMESPACES),
+            'external': anvil_projects.exclude(workspace_namespace__in=INTERNAL_NAMESPACES),
+            'no_access': non_demo_projects.filter(is_anvil_q),
+        })
+    else:
+        project_models.update({
+            'non_demo': non_demo_projects,
+        })
 
     grouped_sample_counts = defaultdict(dict)
     for project_key, projects in project_models.items():
