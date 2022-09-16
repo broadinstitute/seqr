@@ -8,23 +8,30 @@ import { DATASET_TITLE_LOOKUP } from 'shared/utils/constants'
 import { getSeqrStatsLoading, getSeqrStatsLoadingError, getSeqrStats } from '../selectors'
 import { loadSeqrStats } from '../reducers'
 
+const COLUMNS = [
+  { title: 'Internal Projects', key: 'internal' },
+  { title: 'External AnVIL Projects', key: 'external' },
+  { title: 'Demo Projects', key: 'demo' },
+  { title: 'No Access Projects', key: 'no_access' },
+]
+
 const SeqrStats = React.memo(({ stats, error, loading, load }) => (
   <div>
     <Header size="large" content="Seqr Stats:" />
     <DataLoader load={load} content={Object.keys(stats).length} loading={loading} errorMessage={error}>
-      <Table collapsing basic="very">
+      <Table collapsing basic="very" textAlign="right">
         <Table.Header>
           <Table.Row>
             <Table.HeaderCell />
-            <Table.HeaderCell content="Internal Projects" />
-            <Table.HeaderCell content="External AnVIL Projects" />
+            {COLUMNS.map(({ title }) => <Table.HeaderCell key={title} content={title} />)}
           </Table.Row>
         </Table.Header>
         {['Projects', 'Families', 'Individuals'].map(field => (
           <Table.Row key={field}>
             <Table.HeaderCell textAlign="right" content={field} />
-            <Table.Cell content={stats[`${field.toLowerCase()}Count`]?.internal} />
-            <Table.Cell content={stats[`${field.toLowerCase()}Count`]?.external} />
+            {COLUMNS.map(({ key }) => (
+              <Table.Cell key={key} content={(stats[`${field.toLowerCase()}Count`] || {})[key]} />
+            ))}
           </Table.Row>
         ))}
         {Object.keys(stats.sampleCountsByType || {}).sort().map(sampleTypes => (
@@ -33,8 +40,9 @@ const SeqrStats = React.memo(({ stats, error, loading, load }) => (
               textAlign="right"
               content={`${sampleTypes.split('__')[0]}${DATASET_TITLE_LOOKUP[sampleTypes.split('__')[1]] || ''} samples`}
             />
-            <Table.Cell content={stats.sampleCountsByType[sampleTypes].internal} />
-            <Table.Cell content={stats.sampleCountsByType[sampleTypes].external} />
+            {COLUMNS.map(({ key }) => (
+              <Table.Cell key={key} content={stats.sampleCountsByType[sampleTypes][key]} />
+            ))}
           </Table.Row>
         ))}
       </Table>

@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch, Count, Q
 from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
@@ -21,7 +21,7 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import ANALYST_PROJECT_CATEGORY
+from settings import ANALYST_PROJECT_CATEGORY, INTERNAL_NAMESPACES
 
 logger = SeqrLogger(__name__)
 
@@ -32,31 +32,34 @@ HEMI = 'Hemizygous'
 
 @analyst_required
 def seqr_stats(request):
-    internal_samples_counts = _get_sample_counts(
-        Sample.objects.filter(individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY))
-    external_samples_counts = _get_sample_counts(
-        Sample.objects.exclude(individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY))
+    non_demo_projects = Project.objects.filter(is_demo=False)
+    is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
+    anvil_projects = non_demo_projects.exclude(is_anvil_q)
+
+    project_models = {
+        'demo': Project.objects.filter(is_demo=True),
+        'internal': anvil_projects.filter(workspace_namespace__in=INTERNAL_NAMESPACES),
+        'external': anvil_projects.exclude(workspace_namespace__in=INTERNAL_NAMESPACES),
+        'no_access': non_demo_projects.filter(is_anvil_q),
+    }
+
     grouped_sample_counts = defaultdict(dict)
-    for k, v in internal_samples_counts.items():
-        grouped_sample_counts[k]['internal'] = v
-    for k, v in external_samples_counts.items():
-        grouped_sample_counts[k]['external'] = v
+    for project_key, projects in project_models.items():
+        samples_counts = _get_sample_counts(Sample.objects.filter(individual__family__project__in=projects))
+        for k, v in samples_counts.items():
+            grouped_sample_counts[k][project_key] = v
 
     return create_json_response({
-        'projectsCount': {
-            'internal': Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-            'external': Project.objects.exclude(projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-        },
+        'projectsCount': {k: projects.count() for k, projects in project_models.items()},
         'familiesCount': {
-            'internal': Family.objects.filter(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-            'external': Family.objects.exclude(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+            k: Family.objects.filter(project__in=projects).count() for k, projects in project_models.items()
         },
         'individualsCount': {
-            'internal': Individual.objects.filter(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-            'external': Individual.objects.exclude(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+            k: Individual.objects.filter(family__project__in=projects).count() for k, projects in project_models.items()
         },
         'sampleCountsByType': grouped_sample_counts,
     })
+
 
 def _get_sample_counts(sample_q):
     samples_agg = sample_q.filter(is_active=True).values('sample_type', 'dataset_type').annotate(count=Count('*'))
