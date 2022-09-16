@@ -17,7 +17,7 @@ from seqr.views.utils.permissions_utils import has_project_permissions, has_case
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
     project_has_analyst_access, get_analyst_users
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
-from settings import ANALYST_PROJECT_CATEGORY, SERVICE_ACCOUNT_FOR_ANVIL
+from settings import ANALYST_PROJECT_CATEGORY, INTERNAL_NAMESPACES, SERVICE_ACCOUNT_FOR_ANVIL
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -144,9 +144,9 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
     """
     def _process_result(result, project):
         result.update({
-            'projectCategoryGuids': [
-                c.guid for c in project.projectcategory_set.all() if c.name != ANALYST_PROJECT_CATEGORY
-            ] if add_project_category_guids_field else [],
+            'projectCategoryGuids': list(
+                project.projectcategory_set.values_list('guid', flat=True)
+            ) if add_project_category_guids_field else [],
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
             'canEdit': has_project_permissions(project, user, can_edit=True),
             'userIsCreator': project.created_by == user,
@@ -520,7 +520,7 @@ def get_json_for_discovery_tags(variants):
     tag_models = VariantTag.objects.filter(
         variant_tag_type__category='CMG Discovery Tags',
         saved_variants__variant_id__in={variant['variantId'] for variant in variants},
-        saved_variants__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
+        saved_variants__family__project__workspace_namespace__in=INTERNAL_NAMESPACES,
     )
     if tag_models:
         discovery_tag_json = get_json_for_variant_tags(tag_models, add_variant_guids=False)
