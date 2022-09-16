@@ -266,7 +266,7 @@ class DatasetAPITest(object):
         else:
             mock_send_email.assert_called_with("""Hi Test Manager User,
 We are following up on your request to load data from AnVIL on March 12, 2017.
-We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bio/#workspaces/my-seqr-billing/anvil-non-analyst-project 1000 Genomes Demo>my-seqr-billing/anvil-non-analyst-project 1000 Genomes Demo</a> to the corresponding seqr project <a href=https://seqr.broadinstitute.org/project/{guid}/project_page>Non-Analyst Project</a>. Let us know if you have any questions.
+We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bio/#workspaces/ext-data/anvil-non-analyst-project 1000 Genomes Demo>ext-data/anvil-non-analyst-project 1000 Genomes Demo</a> to the corresponding seqr project <a href=https://seqr.broadinstitute.org/project/{guid}/project_page>Non-Analyst Project</a>. Let us know if you have any questions.
 - The seqr team\n""".format(guid=NON_ANALYST_PROJECT_GUID),
                                                subject='New data available in seqr',
                                                to=['test_user_manager@test.com'])

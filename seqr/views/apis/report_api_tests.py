@@ -7,7 +7,7 @@ from settings import AIRTABLE_URL
 
 from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
     sample_metadata_export, gregor_export
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -207,8 +207,8 @@ def _get_list_param(call, param):
     param_str = f'{param}='
     return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
 
-class ReportAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+
+class ReportAPITest(object):
 
     def _get_zip_files(self, mock_zip, filenames):
         mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
@@ -220,7 +220,7 @@ class ReportAPITest(AuthenticationTestCase):
             for i in range(len(filenames))
         )
 
-    @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.apis.report_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_seqr_stats(self, mock_analyst_group):
@@ -236,13 +236,10 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'projectsCount', 'individualsCount', 'familiesCount', 'sampleCountsByType'})
-        self.assertEqual(response_json['projectsCount'], {'internal': 3, 'external': 1})
-        self.assertEqual(response_json['individualsCount'], {'internal': 17, 'external': 1})
-        self.assertEqual(response_json['familiesCount'], {'internal': 13, 'external': 1})
-        self.assertDictEqual(
-            response_json['sampleCountsByType'],
-            {'WES__VARIANTS': {'internal': 8}, 'WGS__MITO': {'internal': 1}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 2}},
-        )
+        self.assertDictEqual(response_json['projectsCount'], self.STATS_DATA['projectsCount'])
+        self.assertDictEqual(response_json['individualsCount'], self.STATS_DATA['individualsCount'])
+        self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
+        self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
 
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
@@ -593,3 +590,35 @@ class ReportAPITest(AuthenticationTestCase):
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
         ])
+
+
+class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    STATS_DATA = {
+        'projectsCount': {'non_demo': 3, 'demo': 1},
+        'familiesCount': {'non_demo': 12, 'demo': 2},
+        'individualsCount': {'non_demo': 15, 'demo': 3},
+        'sampleCountsByType': {
+            'WES__VARIANTS': {'demo': 1, 'non_demo': 7},
+            'WGS__MITO': {'non_demo': 1},
+            'WES__SV': {'non_demo': 3},
+            'WGS__SV': {'non_demo': 1},
+            'RNA__VARIANTS': {'demo': 1, 'non_demo': 1},
+        },
+    }
+
+
+class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    STATS_DATA = {
+        'projectsCount': {'internal': 1, 'external': 1, 'no_access': 1, 'demo': 1},
+        'familiesCount': {'internal': 11, 'external': 1, 'no_access': 0, 'demo': 2},
+        'individualsCount': {'internal': 14, 'external': 1, 'no_access': 0, 'demo': 3},
+        'sampleCountsByType': {
+            'WES__VARIANTS': {'internal': 7, 'demo': 1},
+            'WGS__MITO': {'internal': 1},
+            'WES__SV': {'internal': 3},
+            'WGS__SV': {'external': 1},
+            'RNA__VARIANTS': {'internal': 1, 'demo': 1},
+        },
+    }
