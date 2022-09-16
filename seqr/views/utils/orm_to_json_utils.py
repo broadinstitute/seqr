@@ -775,7 +775,7 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
                 get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
             collaborators[collaborator_json['username']] = collaborator_json
 
-    if include_analysts and project_has_analyst_access(project):
+    if include_analysts and project_has_analyst_access(project):  # TODO sould work differently with new local access
         analyst_users = get_analyst_users()
         collaborators.update({
             user.username: _get_collaborator_json(

@@ -10,7 +10,7 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, ANALYST_PROJECT_CATEGORY, \
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
 
 logger = SeqrLogger(__name__)
@@ -84,7 +84,7 @@ def is_internal_anvil_project(project):
 
 def project_has_analyst_access(project):
     # TODO update to work for local installs, maybe can be fully deprecated
-    return is_internal_anvil_project()
+    return is_internal_anvil_project(project)
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
@@ -173,7 +173,6 @@ def has_project_permissions(project, user, can_edit=False):
 
     return user_is_data_manager(user) or \
            (not can_edit and project.all_user_demo and project.is_demo) or \
-           (user_is_analyst(user) and project_has_analyst_access(project)) or \
            _user_project_permission(user, permission_level, project)
 
 
@@ -217,9 +216,6 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
     projects = Project.objects.all()
     if limit_data_manager or not is_data_manager:
         project_q = Q(all_user_demo=True, is_demo=True)
-        if user_is_analyst(user):
-            project_q |= Q(projectcategory__name=ANALYST_PROJECT_CATEGORY)
-
         if is_anvil_authenticated(user):
             projects = projects.annotate(
                 workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name'))
@@ -228,6 +224,7 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
             project_q |= Q(workspace__in=workspaces)
         else:
             project_q |= Q(can_view_group__user=user)
+            # TODO local access for analyst group?
 
         projects = projects.filter(project_q)
 
