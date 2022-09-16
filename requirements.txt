@@ -167,7 +167,7 @@ numpy==1.21.5
     #   hail
     #   pandas
     #   scipy
-oauthlib==3.2.0
+oauthlib==3.2.1
     # via
     #   requests-oauthlib
     #   social-auth-core
