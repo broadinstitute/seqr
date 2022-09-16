@@ -17,7 +17,7 @@ from seqr.views.utils.permissions_utils import has_project_permissions, has_case
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
     project_has_analyst_access, get_analyst_users
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
-from settings import ANALYST_PROJECT_CATEGORY, INTERNAL_NAMESPACES, SERVICE_ACCOUNT_FOR_ANVIL
+from settings import INTERNAL_NAMESPACES, SERVICE_ACCOUNT_FOR_ANVIL
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -150,11 +150,12 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
             'canEdit': has_project_permissions(project, user, can_edit=True),
             'userIsCreator': project.created_by == user,
-            'isAnalystProject': any(c.name == ANALYST_PROJECT_CATEGORY for c in project.projectcategory_set.all())
+            'isAnalystProject': project.workspace_namespace in INTERNAL_NAMESPACES,
         })
 
     prefetch_related_objects(projects, 'created_by')
-    prefetch_related_objects(projects, 'projectcategory_set')
+    if add_project_category_guids_field:
+        prefetch_related_objects(projects, 'projectcategory_set')
 
     return _get_json_for_models(projects, user=user, is_analyst=is_analyst, process_result=_process_result)
 
