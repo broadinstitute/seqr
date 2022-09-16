@@ -358,7 +358,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     def _assert_403_response(self, response, **kwargs):
         self.assertEqual(response.status_code, 403)
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
+        self.assert_no_extra_anvil_calls()
 
     _test_logged_in_collaborator_options_response = _assert_403_response
     _test_collaborator_collaborator_options_response = _assert_403_response
@@ -375,6 +375,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
 
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()
@@ -390,3 +392,5 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         super(AnvilUsersAPITest, self).test_update_policies(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
