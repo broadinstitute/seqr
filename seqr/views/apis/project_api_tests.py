@@ -502,7 +502,6 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
     HAS_EMPTY_PROJECT = False
 
-
     def test_create_and_delete_project(self):
         super(AnvilProjectAPITest, self).test_create_and_delete_project()
         self.mock_list_workspaces.assert_not_called()
