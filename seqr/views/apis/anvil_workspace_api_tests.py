@@ -385,16 +385,25 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.json()['error'],
                          'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
 
-        # test header errors
+        # test no header line
         mock_file_exist.return_value = True
+        mock_file_iter.return_value = BASIC_META + DATA_LINES
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'No header found in the VCF file.'
+        ])
+        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
+        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
+
+        # test header errors
         mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
+            'No samples found in the provided VCF.',
             'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.'
         ])
-        mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
-        mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
         # test meta info errors
         mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES

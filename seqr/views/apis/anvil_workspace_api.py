@@ -151,11 +151,9 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
 
     # Validate the VCF to see if it contains all the required samples
     samples = validate_vcf_and_get_samples(data_path)
-    if not samples:
-        return create_json_response(
-            {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
+
 
 @anvil_workspace_access_required
 def create_project_from_workspace(request, namespace, name):

@@ -25,10 +25,15 @@ REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO
 
 
 def _validate_vcf_header(header):
-    missing_headers = [h for h in REQUIRED_HEADERS if h not in header]
+    errors = []
+    if len(header) <= len(REQUIRED_HEADERS):
+        errors = ['No samples found in the provided VCF.']
+    missing_headers = [h for h in REQUIRED_HEADERS if h not in header[0:len(REQUIRED_HEADERS)]]
     if missing_headers:
         missing_fields = ', '.join(missing_headers)
-        raise ErrorsWarningsException([f'Missing required VCF header field(s) {missing_fields}.'], [])
+        errors.append(f'Missing required VCF header field(s) {missing_fields}.')
+    if errors:
+        raise ErrorsWarningsException(errors, [])
 
 
 def _validate_vcf_meta(meta):
@@ -46,32 +51,30 @@ def _validate_vcf_meta(meta):
         raise ErrorsWarningsException(errors, [])
 
 
-def _get_vcf_meta_data(line):
+def _get_vcf_meta_info(line):
     r = re.search(r'##(?P<field>.*?)=<ID=(?P<id>[^,]*).*Type=(?P<type>[^,]*).*>$', line)
     if r:
-        matches = r.groupdict()
-        return matches['field'], {matches['id']: matches['type']}
-    return None, None
+        return r.groupdict()
+    return None
 
 
 def validate_vcf_and_get_samples(vcf_filename):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
-    samples = set()
     header = []
     meta = defaultdict(dict)
     for line in file_iter(vcf_filename, byte_range=byte_range):
         if line.startswith('#'):
             if line.startswith('#CHROM'):
                 header = line.rstrip().split('\t')
-                samples = set(header[len(REQUIRED_HEADERS):])
+                break;
             else:
-                field, sub_field_type = _get_vcf_meta_data(line)
-                if field:
-                    meta[field].update(sub_field_type)
+                meta_info = _get_vcf_meta_info(line)
+                if meta_info:
+                    meta[meta_info['field']].update({meta_info['id']: meta_info['type']})
         else:
-            break
+            raise ErrorsWarningsException(['No header found in the VCF file.'], [])
 
-    _validate_vcf_header(header[0:len(REQUIRED_HEADERS)])
+    _validate_vcf_header(header)
     _validate_vcf_meta(meta)
 
-    return samples
+    return set(header[len(REQUIRED_HEADERS):])
