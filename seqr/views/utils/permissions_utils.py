@@ -10,7 +10,7 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
     PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, ANALYST_PROJECT_CATEGORY, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
 
 logger = SeqrLogger(__name__)
@@ -78,8 +78,14 @@ pm_or_data_manager_required = active_user_has_policies_and_passes_test(
 superuser_required = active_user_has_policies_and_passes_test(lambda user: user.is_superuser)
 
 
+def is_internal_anvil_project(project):
+    return project.workspace_namespace in INTERNAL_NAMESPACES
+
+
 def project_has_analyst_access(project):
-    return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
+    # TODO update to work for local installs, maybe can be fully deprecated
+    return is_internal_anvil_project()
+
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
     """Retrieves Project with the given guid after checking that the given user has permission to

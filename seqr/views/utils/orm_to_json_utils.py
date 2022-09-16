@@ -15,7 +15,7 @@ from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
-    project_has_analyst_access, get_analyst_users
+    is_internal_anvil_project, project_has_analyst_access, get_analyst_users
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import INTERNAL_NAMESPACES, SERVICE_ACCOUNT_FOR_ANVIL
 
@@ -150,7 +150,7 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
             'canEdit': has_project_permissions(project, user, can_edit=True),
             'userIsCreator': project.created_by == user,
-            'isAnalystProject': project.workspace_namespace in INTERNAL_NAMESPACES,
+            'isAnalystProject': is_internal_anvil_project(project),
         })
 
     prefetch_related_objects(projects, 'created_by')
