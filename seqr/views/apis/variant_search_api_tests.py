@@ -727,15 +727,16 @@ class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
 def assert_no_list_ws_has_al(self, acl_call_count, workspace_name=None):
     self.mock_list_workspaces.assert_not_called()
     assert_ws_has_al(self, acl_call_count, workspace_name)
+    self.mock_get_groups.assert_not_called()
+    self.mock_get_group_members.assert_not_called()
+
 
 def assert_ws_has_al(self, acl_call_count, workspace_name=None):
     if not workspace_name:
         workspace_name = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
     self.mock_get_ws_access_level.assert_called_with(mock.ANY, 'my-seqr-billing', workspace_name)
     self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
-    self.mock_get_ws_acl.assert_not_called()
-    self.mock_get_groups.assert_not_called()
-    self.mock_get_group_members.assert_not_called()
+    self.assert_no_extra_anvil_calls()
 
 
 # Test for permissions from AnVIL only
@@ -757,9 +758,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
             mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
         ])
         self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_groups.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
+        self.assert_no_extra_anvil_calls()
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
@@ -777,6 +776,4 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_groups.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
+        self.assert_no_extra_anvil_calls()

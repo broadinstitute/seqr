@@ -194,10 +194,8 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
 def assert_has_expected_calls(self, users):
     calls = [mock.call(user) for user in users]
     self.mock_list_workspaces.assert_has_calls(calls)
-    self.mock_get_ws_acl.assert_not_called()
+    self.assert_no_extra_anvil_calls()
     self.mock_get_ws_access_level.assert_not_called()
-    self.mock_get_groups.assert_not_called()
-    self.mock_get_group_members.assert_not_called()
 
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):

@@ -358,7 +358,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     def _assert_403_response(self, response, **kwargs):
         self.assertEqual(response.status_code, 403)
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
+        self.assert_no_extra_anvil_calls()
 
     _test_logged_in_collaborator_options_response = _assert_403_response
     _test_collaborator_collaborator_options_response = _assert_403_response

@@ -425,6 +425,11 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         analyst_group = Group.objects.get(pk=4)
         analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
 
+    def assert_no_extra_anvil_calls(self):
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
+
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
 # The urllib3_mock library works for those requests, but it has limited functionality, so this extension adds helper

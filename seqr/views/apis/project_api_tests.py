@@ -537,9 +537,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     def test_project_page_data(self):
         super(AnvilProjectAPITest, self).test_project_page_data()
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_groups.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
+        self.assert_no_extra_anvil_calls()
 
     def test_project_overview(self):
         super(AnvilProjectAPITest, self).test_project_overview()
