@@ -501,7 +501,8 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
-    @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
+    @mock.patch('seqr.views.apis.report_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')

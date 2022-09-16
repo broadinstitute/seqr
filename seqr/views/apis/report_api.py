@@ -15,14 +15,14 @@ from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
-    check_project_permissions
+    check_project_permissions, get_project_guids_user_can_view
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import ANALYST_PROJECT_CATEGORY, INTERNAL_NAMESPACES
+from settings import INTERNAL_NAMESPACES
 
 logger = SeqrLogger(__name__)
 
@@ -704,7 +704,9 @@ HPO_QUALIFIERS = {
 @analyst_required
 def gregor_export(request, consent_code):
     individuals = Individual.objects.filter(
-        family__project__consent_code=consent_code[0], family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
+        family__project__consent_code=consent_code[0],
+        family__project__workspace_namespace__in=INTERNAL_NAMESPACES,
+        family__project__guid__in=get_project_guids_user_can_view(request.user),
     ).prefetch_related('family__project', 'mother', 'father')
     participant_rows = []
     family_map = {}
