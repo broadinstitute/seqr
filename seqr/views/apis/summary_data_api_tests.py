@@ -63,7 +63,6 @@ class SummaryDataAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
         self.assertEqual(len(response_json['submissions']), 3)
 
-    @mock.patch('seqr.views.apis.summary_data_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_success_story(self, mock_analyst_group):
         url = reverse(success_story, args=['all'])

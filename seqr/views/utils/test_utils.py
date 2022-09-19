@@ -437,6 +437,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher = mock.patch('seqr.views.utils.orm_to_json_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
         patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing'])
+        patcher.start()
+        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
         patcher.start().return_value = TOKEN_AUTH_TIME + 10
         self.addCleanup(patcher.stop)

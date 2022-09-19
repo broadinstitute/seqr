@@ -221,7 +221,6 @@ class ReportAPITest(object):
             for i in range(len(filenames))
         )
 
-    @mock.patch('seqr.views.apis.report_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     def test_seqr_stats(self, mock_analyst_group):
         no_access_project = Project.objects.get(id=2)
@@ -501,7 +500,6 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
-    @mock.patch('seqr.views.apis.report_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')

@@ -180,7 +180,6 @@ class VariantSearchAPITest(object):
             self.assertSetEqual(set(next(iter(response_json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
 
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')

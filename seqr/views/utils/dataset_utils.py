@@ -10,7 +10,7 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
-from settings import INTERNAL_NAMESPACES
+from seqr.views.utils.permissions_utils import get_internal_anvil_projects
 
 logger = SeqrLogger(__name__)
 
@@ -401,7 +401,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
     samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
-        projects=Project.objects.filter(workspace_namespace__in=INTERNAL_NAMESPACES),
+        projects=get_internal_anvil_projects(),
         user=user,
         sample_ids=samples_by_id.keys(),
         data_source=data_source,

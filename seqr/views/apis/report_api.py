@@ -15,14 +15,13 @@ from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
-    check_project_permissions, get_project_guids_user_can_view
+    check_project_permissions, get_project_guids_user_can_view, get_internal_anvil_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import INTERNAL_NAMESPACES
 
 logger = SeqrLogger(__name__)
 
@@ -41,9 +40,10 @@ def seqr_stats(request):
     if anvil_enabled():
         is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
         anvil_projects = non_demo_projects.exclude(is_anvil_q)
+        internal_ids = get_internal_anvil_projects().values_list('id', flat=True)
         project_models.update({
-            'internal': anvil_projects.filter(workspace_namespace__in=INTERNAL_NAMESPACES),
-            'external': anvil_projects.exclude(workspace_namespace__in=INTERNAL_NAMESPACES),
+            'internal': anvil_projects.filter(id__in=internal_ids),
+            'external': anvil_projects.exclude(id__in=internal_ids),
             'no_access': non_demo_projects.filter(is_anvil_q),
         })
     else:
@@ -703,10 +703,10 @@ HPO_QUALIFIERS = {
 
 @analyst_required
 def gregor_export(request, consent_code):
+    projects = get_internal_anvil_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
     individuals = Individual.objects.filter(
         family__project__consent_code=consent_code[0],
-        family__project__workspace_namespace__in=INTERNAL_NAMESPACES,
-        family__project__guid__in=get_project_guids_user_can_view(request.user),
+        family__project__in=projects,
     ).prefetch_related('family__project', 'mother', 'father')
     participant_rows = []
     family_map = {}

@@ -588,7 +588,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    @mock.patch('seqr.views.apis.report_api.INTERNAL_NAMESPACES', ['my-seqr-billing'])
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
