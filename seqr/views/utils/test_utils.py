@@ -212,6 +212,7 @@ class AuthenticationTestCase(TestCase):
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
 TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
+TEST_EMPTY_PROJECT_WORKSPACE = 'empty'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
 
@@ -322,6 +323,24 @@ ANVIL_WORKSPACES = [{
     'workspace': {
         'authorizationDomain': [],
         'bucketName': 'test_bucket'
+    },
+}, {
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_EMPTY_PROJECT_WORKSPACE,
+    'public': False,
+    'acl': {
+        'test_user@broadinstitute.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
+        'test_pm_user@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
@@ -450,7 +469,8 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
 
     @classmethod
     def add_additional_user_groups(cls):
-        pass
+        analyst_group = Group.objects.get(pk=4)
+        analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
 
     def assert_no_extra_anvil_calls(self):
         self.mock_get_ws_acl.assert_not_called()
