@@ -25,15 +25,10 @@ REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO
 
 
 def _validate_vcf_header(header):
-    errors = []
-    if len(header) <= len(REQUIRED_HEADERS):
-        errors = ['No samples found in the provided VCF.']
-    missing_headers = [h for h in REQUIRED_HEADERS if h not in header[0:len(REQUIRED_HEADERS)]]
+    missing_headers = [h for h in REQUIRED_HEADERS if h not in header]
     if missing_headers:
         missing_fields = ', '.join(missing_headers)
-        errors.append(f'Missing required VCF header field(s) {missing_fields}.')
-    if errors:
-        raise ErrorsWarningsException(errors, [])
+        raise ErrorsWarningsException([f'Missing required VCF header field(s) {missing_fields}.'], [])
 
 
 def _validate_vcf_meta(meta):
@@ -60,13 +55,18 @@ def _get_vcf_meta_info(line):
 
 def validate_vcf_and_get_samples(vcf_filename):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
+    samples = {}
     header = []
     meta = defaultdict(dict)
     for line in file_iter(vcf_filename, byte_range=byte_range):
         if line.startswith('#'):
             if line.startswith('#CHROM'):
-                header = line.rstrip().split('\t')
-                break;
+                header_cols = line.rstrip().split('\t')
+                format_indices = [index for index, col in enumerate(header_cols) if col == 'FORMAT']
+                format_index = format_indices[0] + 1 if format_indices else len(header_cols)
+                header = header_cols[0:format_index]
+                samples = set(header_cols[format_index:])
+                break
             else:
                 meta_info = _get_vcf_meta_info(line)
                 if meta_info:
@@ -75,6 +75,8 @@ def validate_vcf_and_get_samples(vcf_filename):
             raise ErrorsWarningsException(['No header found in the VCF file.'], [])
 
     _validate_vcf_header(header)
+    if not samples:
+        raise ErrorsWarningsException(['No samples found in the provided VCF.'], [])
     _validate_vcf_meta(meta)
 
-    return set(header[len(REQUIRED_HEADERS):])
+    return samples

@@ -221,6 +221,7 @@ FORMAT_META = [
 ]
 
 BAD_HEADER_LINE = ['#CHROM\tID\tREF\tALT\tQUAL\n']
+NO_SAMPLE_HEADER_LINE = ['#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n']
 HEADER_LINE = ['#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675\tNA19678\n']
 
 DATA_LINES = [
@@ -401,9 +402,14 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'No samples found in the provided VCF.',
             'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.'
         ])
+
+        # test no samples
+        mock_file_iter.return_value = BASIC_META + NO_SAMPLE_HEADER_LINE + DATA_LINES
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['No samples found in the provided VCF.'])
 
         # test meta info errors
         mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES
