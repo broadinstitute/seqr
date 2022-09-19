@@ -22,7 +22,7 @@ ELASTICSEARCH_PROTOCOL: http
 SEQR_GIT_BRANCH: 'master'
 POSTGRES_USERNAME: postgres
 
-ANALYST_PROJECT_CATEGORY: analyst-projects
+INTERNAL_NAMESPACES: gregor-consortium,seqr-access
 ANALYST_USER_GROUP: analysts
 PM_USER_GROUP: TGG_PM
 
