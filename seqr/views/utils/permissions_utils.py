@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value, TextField, Q
+from guardian.shortcuts import get_objects_for_user
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
@@ -225,18 +226,16 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
     is_data_manager = user_is_data_manager(user)
     projects = Project.objects.all()
     if limit_data_manager or not is_data_manager:
-        project_q = Q(all_user_demo=True, is_demo=True)
         if is_anvil_authenticated(user):
-            projects = projects.annotate(
-                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name'))
             workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
                           list_anvil_workspaces(user)]
-            project_q |= Q(workspace__in=workspaces)
+            projects = projects.annotate(
+                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
+            ).filter(workspace__in=workspaces)
         else:
-            project_q |= Q(can_view_group__user=user)
-            # TODO local access for analyst group?
+            projects = get_objects_for_user(user, CAN_VIEW, projects)
 
-        projects = projects.filter(project_q)
+        projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
 
     project_guids = [p.guid for p in projects.distinct().only('guid')]
 
