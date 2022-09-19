@@ -15,7 +15,7 @@ from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
-    check_project_permissions, get_project_guids_user_can_view, get_internal_anvil_projects
+    check_project_permissions, get_project_guids_user_can_view, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from matchmaker.models import MatchmakerSubmission
@@ -40,7 +40,7 @@ def seqr_stats(request):
     if anvil_enabled():
         is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
         anvil_projects = non_demo_projects.exclude(is_anvil_q)
-        internal_ids = get_internal_anvil_projects().values_list('id', flat=True)
+        internal_ids = get_internal_projects().values_list('id', flat=True)
         project_models.update({
             'internal': anvil_projects.filter(id__in=internal_ids),
             'external': anvil_projects.exclude(id__in=internal_ids),
@@ -703,7 +703,7 @@ HPO_QUALIFIERS = {
 
 @analyst_required
 def gregor_export(request, consent_code):
-    projects = get_internal_anvil_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
+    projects = get_internal_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
     individuals = Individual.objects.filter(
         family__project__consent_code=consent_code[0],
         family__project__in=projects,

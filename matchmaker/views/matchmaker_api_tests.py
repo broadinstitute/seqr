@@ -174,8 +174,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_get_individual_mme_matches(self, mock_analyst_group):
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+    def test_get_individual_mme_matches(self):
         url = reverse(get_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
 
@@ -256,11 +256,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         })
 
         self.login_analyst_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()

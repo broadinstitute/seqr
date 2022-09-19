@@ -12,7 +12,7 @@ from seqr.views.apis.family_api import update_family_pedigree_image, update_fami
     family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
-    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
+    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
 from seqr.models import FamilyAnalysedBy, AnalysisGroup
 
 FAMILY_GUID = 'F000001_1'
@@ -88,7 +88,12 @@ class FamilyAPITest(AuthenticationTestCase):
         # Test analyst users have internal fields returned
         self.login_analyst_user()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        individual_fields.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), family_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
@@ -97,7 +102,6 @@ class FamilyAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         family_fields.update(INTERNAL_FAMILY_FIELDS)
-        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
         individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), family_fields)
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
@@ -321,7 +325,8 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
 
         self.login_analyst_user()
-        response = self.client.get(url)
+        response = self.client.post(url, content_type='application/json',
+                                    data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 403)
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'

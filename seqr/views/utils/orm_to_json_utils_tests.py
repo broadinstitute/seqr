@@ -11,7 +11,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
     FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
-    CASE_REVIEW_FAMILY_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS
+    CASE_REVIEW_FAMILY_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS
 
 class JSONUtilsTest(object):
     databases = '__all__'
@@ -136,7 +136,7 @@ class JSONUtilsTest(object):
 
         user = User.objects.get(username='test_user')
         json = _get_json_for_individual(individual, user, add_hpo_details=True)
-        self.assertSetEqual(set(json.keys()), INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(json.keys()), NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS)
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'

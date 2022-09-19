@@ -180,11 +180,11 @@ class VariantSearchAPITest(object):
             self.assertSetEqual(set(next(iter(response_json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
 
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
-    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger, mock_analyst_group):
+    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
@@ -385,11 +385,6 @@ class VariantSearchAPITest(object):
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants
-        response = self.client.get('{}?sort=pathogenicity'.format(url))
-        self.assertEqual(response.status_code, 403)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -725,8 +720,6 @@ class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
 def assert_no_list_ws_has_al(self, acl_call_count, workspace_name=None):
     self.mock_list_workspaces.assert_not_called()
     assert_ws_has_al(self, acl_call_count, workspace_name)
-    self.mock_get_groups.assert_not_called()
-    self.mock_get_group_members.assert_not_called()
 
 
 def assert_ws_has_al(self, acl_call_count, workspace_name=None):
@@ -743,7 +736,8 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 17)
+        assert_ws_has_al(self, 18)
+        self.mock_list_workspaces.assert_called_once_with(self.analyst_user)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)

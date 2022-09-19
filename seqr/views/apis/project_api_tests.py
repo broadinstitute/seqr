@@ -10,10 +10,11 @@ from seqr.views.apis.project_api import create_project_handler, delete_project_h
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
-from seqr.views.utils.test_utils import AuthenticationTestCase, PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
+    PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
     SAMPLE_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     CASE_REVIEW_FAMILY_FIELDS, FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2, AnvilAuthenticationTestCase
+    TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2
 
 PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
@@ -65,7 +66,7 @@ class ProjectAPITest(object):
         self.assertTrue(new_project.is_demo)
         self.assertFalse(new_project.is_mme_enabled)
         self.assertEqual(new_project.created_by, self.pm_user)
-        self.assertSetEqual({'analyst-projects'}, {pc.name for pc in new_project.projectcategory_set.all()})
+        self.assertEqual(new_project.projectcategory_set.count(), 0)
         expected_workspace_name = self.CREATE_PROJECT_JSON.get('workspaceName')
         self.assertEqual(new_project.workspace_name, expected_workspace_name)
         self._check_created_project_groups(new_project)
@@ -345,7 +346,9 @@ class ProjectAPITest(object):
         # Test analyst users have internal fields returned
         self.login_analyst_user()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        self.assertSetEqual(set(next(iter(response.json()['familiesByGuid'].values())).keys()), family_fields)
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
@@ -354,7 +357,6 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         family_fields.update(INTERNAL_FAMILY_FIELDS)
-        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
 
 
@@ -388,7 +390,11 @@ class ProjectAPITest(object):
         # Test analyst users have internal fields returned
         self.login_analyst_user()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(
+            set(next(iter(response.json()['individualsByGuid'].values())).keys()),
+            NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS,
+        )
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
@@ -463,7 +469,10 @@ BASE_COLLABORATORS = [
     {'displayName': 'Test Collaborator User', 'email': 'test_user_collaborator@test.com', 'username': 'test_user_collaborator',
      'hasEditPermissions': False, 'hasViewPermissions': True}]
 
-ANVIL_COLLABORATORS = deepcopy(BASE_COLLABORATORS) + [{
+ANVIL_COLLABORATORS = [
+    {'displayName': '', 'email': 'analysts@firecloud.org', 'username': 'analysts@firecloud.org',
+    'hasEditPermissions': True, 'hasViewPermissions': True, },
+] + deepcopy(BASE_COLLABORATORS) + [{
     'displayName': '', 'email': 'test_user_pure_anvil@test.com', 'username': 'test_user_pure_anvil@test.com',
     'hasEditPermissions': False, 'hasViewPermissions': True, }]
 
@@ -543,4 +552,4 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 4)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 9)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 10)

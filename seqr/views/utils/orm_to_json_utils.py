@@ -11,12 +11,12 @@ from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, \
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
-    is_internal_anvil_project, get_internal_anvil_projects, get_analyst_users
+    is_internal_anvil_project, get_project_guids_user_can_view, get_analyst_users
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
@@ -514,7 +514,7 @@ def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     return response
 
 
-def get_json_for_discovery_tags(variants):
+def get_json_for_discovery_tags(variants, user):
     from seqr.views.utils.variant_utils import get_variant_key
     response = {}
     discovery_tags = defaultdict(list)
@@ -522,7 +522,7 @@ def get_json_for_discovery_tags(variants):
     tag_models = VariantTag.objects.filter(
         variant_tag_type__category='CMG Discovery Tags',
         saved_variants__variant_id__in={variant['variantId'] for variant in variants},
-        saved_variants__family__project__in=get_internal_anvil_projects(),
+        saved_variants__family__project__guid__in=get_project_guids_user_can_view(user),
     )
     if tag_models:
         discovery_tag_json = get_json_for_variant_tags(tag_models, add_variant_guids=False)

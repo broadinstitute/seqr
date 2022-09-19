@@ -92,7 +92,7 @@ def is_internal_anvil_project(project):
     return anvil_enabled() and project.workspace_namespace in INTERNAL_NAMESPACES
 
 
-def get_internal_anvil_projects():
+def get_internal_projects():
     if anvil_enabled():
         return Project.objects.filter(workspace_namespace__in=INTERNAL_NAMESPACES)
     return Project.objects.all()
