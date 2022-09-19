@@ -8,7 +8,7 @@ from django.db.models import prefetch_related_objects, Prefetch, Count
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Lower
 from django.contrib.auth.models import User
-from guardian.shortcuts import get_users_with_perms
+from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_VIEW, CAN_EDIT, \
@@ -742,6 +742,20 @@ def get_json_for_locus_list(locus_list, user):
                                include_pagenes=True)
 
 
+def get_json_for_project_collaborator_groups(project):
+    if anvil_enabled():
+        return None
+    group_json = [
+        _get_collaborator_json(
+            group, fields=['name'], include_permissions=True, can_edit=CAN_EDIT in perms,
+            get_json_func=lambda g, fields: {field: getattr(g, field) for field in fields},
+        )
+        for group, perms in get_groups_with_perms(project, attach_perms=True).items()
+        if not group.name.startswith('_')
+    ]
+    return sorted(group_json, key=lambda group: (not group['hasEditPermissions'], group['name'].lower()))
+
+
 def get_json_for_project_collaborator_list(user, project):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborator_list = list(
@@ -760,9 +774,9 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
         if expand_user_groups:
             collaborator_perms = get_users_with_perms(project, attach_perms=True)
         else:
-            collaborator_perms = {user: [CAN_VIEW] for user in project.can_view_group.user_set.all()}
-            for user in project.can_edit_group.user_set.all():
-                collaborator_perms[user].append(CAN_EDIT)
+            collaborator_perms = {collab: [CAN_VIEW] for collab in project.can_view_group.user_set.all()}
+            for collab in project.can_edit_group.user_set.all():
+                collaborator_perms[collab].append(CAN_EDIT)
 
         for collaborator, perms in collaborator_perms.items():
             collaborators[collaborator.username] = _get_collaborator_json(

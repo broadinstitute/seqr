@@ -16,7 +16,7 @@ from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
-    get_json_for_family_notes, _get_json_for_individuals
+    get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, user_is_analyst, login_and_policies_required, \
     has_workspace_perm
@@ -213,6 +213,7 @@ def project_overview(request, project_guid):
     project_json.update({
         'detailsLoaded': True,
         'collaborators': get_json_for_project_collaborator_list(request.user, project),
+        'collaboratorGroups': get_json_for_project_collaborator_groups(project),
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
     })
