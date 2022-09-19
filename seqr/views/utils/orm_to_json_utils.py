@@ -8,6 +8,7 @@ from django.db.models import prefetch_related_objects, Prefetch, Count
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Lower
 from django.contrib.auth.models import User
+from guardian.shortcuts import get_users_with_perms
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, \
@@ -15,9 +16,9 @@ from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
-    is_internal_anvil_project, project_has_analyst_access, get_analyst_users
+    is_internal_anvil_project, get_analyst_users
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
-from settings import INTERNAL_NAMESPACES, SERVICE_ACCOUNT_FOR_ANVIL
+from settings import ANALYST_USER_GROUP, INTERNAL_NAMESPACES, SERVICE_ACCOUNT_FOR_ANVIL
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -752,17 +753,21 @@ def get_json_for_project_collaborator_list(user, project):
         not collaborator['hasEditPermissions'], (collaborator['displayName'] or collaborator['email']).lower()))
 
 
-def get_project_collaborators_by_username(user, project, fields, include_permissions=False, include_analysts=False):
+def get_project_collaborators_by_username(user, project, fields, include_permissions=False, expand_user_groups=False):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
     if not anvil_enabled():
-        for collaborator in project.can_view_group.user_set.all():
-            collaborators[collaborator.username] = _get_collaborator_json(
-                collaborator, fields, include_permissions, can_edit=False)
+        if expand_user_groups:
+            collaborator_perms = get_users_with_perms(project, attach_perms=True)
+        else:
+            collaborator_perms = {user: [CAN_VIEW] for user in project.can_view_group.user_set.all()}
+            for user in project.can_edit_group.user_set.all():
+                collaborator_perms[user].append(CAN_EDIT)
 
-        for collaborator in project.can_edit_group.user_set.all():
+        for collaborator, perms in collaborator_perms.items():
             collaborators[collaborator.username] = _get_collaborator_json(
-                collaborator, fields, include_permissions, can_edit=True)
+                collaborator, fields, include_permissions, can_edit=CAN_EDIT in perms)
+
     elif project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
         users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
@@ -775,13 +780,13 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
                 get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
             collaborators[collaborator_json['username']] = collaborator_json
 
-    if include_analysts and project_has_analyst_access(project):  # TODO sould work differently with new local access
-        analyst_users = get_analyst_users()
-        collaborators.update({
-            user.username: _get_collaborator_json(
-                user, fields, include_permissions, can_edit=True,
-            ) for user in analyst_users
-        })
+        if expand_user_groups and collaborators.pop(f'{ANALYST_USER_GROUP}@firecloud.org', None):
+            analyst_users = get_analyst_users()
+            collaborators.update({
+                user.username: _get_collaborator_json(
+                    user, fields, include_permissions, can_edit=True,
+                ) for user in analyst_users
+            })
 
     return collaborators
 

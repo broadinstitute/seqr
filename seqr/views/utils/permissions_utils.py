@@ -93,11 +93,6 @@ def is_internal_anvil_project(project):
     return project.workspace_namespace in INTERNAL_NAMESPACES
 
 
-def project_has_analyst_access(project):
-    # TODO update to work for local installs, maybe can be fully deprecated
-    return is_internal_anvil_project(project)
-
-
 def get_project_and_check_permissions(project_guid, user, **kwargs):
     """Retrieves Project with the given guid after checking that the given user has permission to
      retrieve the given project.

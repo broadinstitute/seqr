@@ -1,4 +1,5 @@
 # Utilities used for unit and integration tests.
+from collections import defaultdict
 from copy import deepcopy
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
@@ -247,13 +248,7 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         },
-        'test_user@broadinstitute.org': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": False,
-            "canCompute": False
-        },
-        'test_pm_user@test.com': {
+        'analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -286,13 +281,7 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": False
         },
-        'test_user@broadinstitute.org': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": False,
-            "canCompute": False
-        },
-        'test_pm_user@test.com': {
+        'analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -329,13 +318,7 @@ ANVIL_WORKSPACES = [{
     'workspace_name': TEST_EMPTY_PROJECT_WORKSPACE,
     'public': False,
     'acl': {
-        'test_user@broadinstitute.org': {
-            "accessLevel": "WRITER",
-            "pending": False,
-            "canShare": False,
-            "canCompute": False
-        },
-        'test_pm_user@test.com': {
+        'analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -372,6 +355,10 @@ ANVIL_GROUPS = {
     'project-managers': ['test_pm_user@test.com'],
     'analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
 }
+ANVIL_GROUP_LOOKUP = defaultdict(list)
+for group, users in ANVIL_GROUPS.items():
+    for user in users:
+        ANVIL_GROUP_LOOKUP[user].append(group)
 
 
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
@@ -392,7 +379,11 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
     acl = wss[0]['acl'] if wss else {}
-    user_acl = next((v for k, v in acl.items() if user.email.lower() == k.lower()), None)
+    email = user.email.lower()
+    user_acl = next((v for k, v in acl.items() if email == k.lower()), None)
+    for user_group in ANVIL_GROUP_LOOKUP[email]:
+        if not user_acl:
+            user_acl = next((v for k, v in acl.items() if k == f'{user_group}@firecloud.org'), None)
     access_level = {
         'accessLevel': user_acl['accessLevel'],
         'canShare': user_acl['canShare'],
@@ -407,6 +398,7 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
 
 
 def get_workspaces_side_effect(user):
+    email = user.email.lower()
     return [
         {
             'public': ws['public'],
@@ -414,8 +406,11 @@ def get_workspaces_side_effect(user):
                 'namespace': ws['workspace_namespace'],
                 'name': ws['workspace_name']
             }
-        } for ws in ANVIL_WORKSPACES if any(user.email.lower() == k.lower() for k in ws['acl'].keys())
+        } for ws in ANVIL_WORKSPACES if any(
+            email == k.lower() or k.lower().replace('@firecloud.org', '') in ANVIL_GROUP_LOOKUP[email]
+            for k in ws['acl'].keys())
     ]
+
 
 
 def get_groups_side_effect(user):

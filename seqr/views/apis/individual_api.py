@@ -587,7 +587,7 @@ def _parse_individual_hpo_terms(json_records, project, user):
     if any(record.get(ASSIGNED_ANALYST_COL) for record in json_records):
         allowed_assigned_analysts = {
             u['email'] for u in get_project_collaborators_by_username(
-                user, project, fields=['email'], include_analysts=True,
+                user, project, fields=['email'], expand_user_groups=True,
             ).values()
         }
 

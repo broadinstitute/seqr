@@ -36,8 +36,9 @@ PRIVACY_VERSION = 1.1
 class UsersAPITest(object):
 
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing'])
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_get_project_collaborator_options(self, mock_analyst_group):
+    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
+    def test_get_project_collaborator_options(self):
         url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
@@ -45,13 +46,6 @@ class UsersAPITest(object):
             self.mock_get_ws_acl.reset_mock()
             self.mock_get_ws_access_level.reset_mock()
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertDictEqual(response_json, self.COLLABORATOR_JSON)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -64,6 +58,7 @@ class UsersAPITest(object):
             },
         }
         users.update(self.COLLABORATOR_JSON)
+        users.pop('analysts@firecloud.org', None)
         self.assertDictEqual(response_json, users)
 
     def test_get_all_collaborator_options(self):
@@ -350,9 +345,14 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_JSON = {'test_user_pure_anvil@test.com': {
-        'displayName': '', 'username': 'test_user_pure_anvil@test.com', 'email': 'test_user_pure_anvil@test.com',
-    }}
+    COLLABORATOR_JSON = {
+        'test_user_pure_anvil@test.com': {
+            'displayName': '', 'username': 'test_user_pure_anvil@test.com', 'email': 'test_user_pure_anvil@test.com',
+        },
+        'analysts@firecloud.org': {
+            'displayName': '', 'username': 'analysts@firecloud.org', 'email': 'analysts@firecloud.org',
+        },
+    }
     COLLABORATOR_JSON.update(MAIN_COLLABORATOR_JSON)
 
     def _assert_403_response(self, response, **kwargs):
@@ -369,10 +369,10 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     def test_get_project_collaborator_options(self, *args, **kwargs):
         super(AnvilUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
-        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 1)
         self.mock_get_ws_acl.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.mock_get_groups.assert_not_called()

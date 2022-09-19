@@ -41,7 +41,7 @@ def get_all_collaborator_options(request):
 def get_project_collaborator_options(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     users = get_project_collaborators_by_username(
-        request.user, project, fields={'display_name', 'username', 'email'}, include_analysts=True,
+        request.user, project, fields={'display_name', 'username', 'email'}, expand_user_groups=True,
     )
     return create_json_response(users)
 
