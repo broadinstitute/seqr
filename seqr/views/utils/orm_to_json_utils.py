@@ -751,7 +751,7 @@ def get_json_for_project_collaborator_groups(project):
             get_json_func=lambda g, fields: {field: getattr(g, field) for field in fields},
         )
         for group, perms in get_groups_with_perms(project, attach_perms=True).items()
-        if not group.name.startswith('_')
+        # if not group.name.startswith('_')
     ]
     return sorted(group_json, key=lambda group: (not group['hasEditPermissions'], group['name'].lower()))
 
