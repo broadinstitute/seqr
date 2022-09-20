@@ -37,6 +37,7 @@ class JSONUtilsTest(object):
         superuser = User.objects.get(username='test_superuser')
 
         mock_analyst_group.__bool__.return_value = False
+        mock_analyst_group.__eq__.side_effect = lambda s: str(mock_analyst_group) == s
         mock_pm_group.__bool__.return_value = False
         mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
 
@@ -78,6 +79,7 @@ class JSONUtilsTest(object):
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
+        mock_analyst_group.__str__.return_value = 'analysts'
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
         mock_pm_group.__str__.return_value = 'project-managers'
@@ -112,6 +114,7 @@ class JSONUtilsTest(object):
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
+        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
         json = _get_json_for_family(family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_FAMILY_FIELDS)
 
@@ -139,6 +142,7 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(json.keys()), NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS)
 
         mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
         mock_analyst_group.resolve_expression.return_value = 'analysts'
         json = _get_json_for_individual(individual, user, add_hpo_details=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_INDIVIDUAL_FIELDS)

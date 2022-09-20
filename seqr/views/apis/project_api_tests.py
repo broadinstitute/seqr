@@ -353,6 +353,7 @@ class ProjectAPITest(object):
 
         mock_analyst_group.__bool__.return_value = True
         mock_analyst_group.resolve_expression.return_value = 'analysts'
+        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -398,6 +399,7 @@ class ProjectAPITest(object):
         )
 
         mock_analyst_group.__bool__.return_value = True
+        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
         mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)

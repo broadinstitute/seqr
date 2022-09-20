@@ -25,10 +25,12 @@ ANALYST_GROUP_ANVIL_EMAIL = f'{ANALYST_USER_GROUP}@firecloud.org'
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
     fields = set(model_class._meta.json_fields)
-    if is_analyst is None:
-        is_analyst = user and user_is_analyst(user)
-    if is_analyst:
-        fields.update(getattr(model_class._meta, 'internal_json_fields', []))
+    internal_fields = getattr(model_class._meta, 'internal_json_fields', [])
+    if internal_fields:
+        if is_analyst is None:
+            is_analyst = user and user_is_analyst(user)
+        if is_analyst:
+            fields.update(internal_fields)
     if additional_model_fields:
         fields.update(additional_model_fields)
     audit_fields = [field for field in getattr(model_class._meta, 'audit_fields', set()) if field in fields]
