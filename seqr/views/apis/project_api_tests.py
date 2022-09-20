@@ -243,7 +243,7 @@ class ProjectAPITest(object):
         project_fields = {
             'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',
             'workspaceName', 'workspaceNamespace', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
-            'analysisGroupsLoaded',
+            'analysisGroupsLoaded', 'collaboratorGroups'
         }
         project_fields.update(PROJECT_FIELDS)
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -262,6 +262,7 @@ class ProjectAPITest(object):
             'numTags': 1,
         })
         self.assertListEqual(project_response['collaborators'], self.PROJECT_COLLABORATORS)
+        self.assertEqual(project_response['collaboratorGroups'], self.PROJECT_COLLABORATOR_GROUPS)
         self.assertListEqual(project_response['locusListGuids'], ['LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'])
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
@@ -482,6 +483,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = BASE_COLLABORATORS
     CREATE_PROJECT_JSON = BASE_CREATE_PROJECT_JSON
+    PROJECT_COLLABORATOR_GROUPS = [{'name': 'analysts', 'hasViewPermissions': True, 'hasEditPermissions': True}]
     REQUIRED_FIELDS = ['name', 'genomeVersion']
     HAS_EMPTY_PROJECT = True
 
@@ -503,6 +505,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
 class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
     PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
+    PROJECT_COLLABORATOR_GROUPS = None
     HAS_EMPTY_PROJECT = False
 
     def test_create_and_delete_project(self):
