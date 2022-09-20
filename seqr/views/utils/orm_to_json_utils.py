@@ -16,9 +16,11 @@ from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
-    is_internal_anvil_project, get_project_guids_user_can_view, get_analyst_users
+    is_internal_anvil_project, get_project_guids_user_can_view, get_anvil_analyst_user_emails
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
+
+ANALYST_GROUP_ANVIL_EMAIL = f'{ANALYST_USER_GROUP}@firecloud.org'
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -787,7 +789,11 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
 
     elif project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
+        if expand_user_groups and ANALYST_GROUP_ANVIL_EMAIL in permission_levels:
+            analyst_permission = permission_levels.pop(ANALYST_GROUP_ANVIL_EMAIL)
+            permission_levels.update({email.lower(): analyst_permission for email in get_anvil_analyst_user_emails()})
+
+        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in=permission_levels.keys())}
         for email, permission in permission_levels.items():
             if email == SERVICE_ACCOUNT_FOR_ANVIL:
                 continue
@@ -796,14 +802,6 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
                 collaborator or email, fields, include_permissions, can_edit=permission == CAN_EDIT,
                 get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
             collaborators[collaborator_json['username']] = collaborator_json
-
-        if expand_user_groups and collaborators.pop(f'{ANALYST_USER_GROUP}@firecloud.org', None):
-            analyst_users = get_analyst_users()
-            collaborators.update({
-                user.username: _get_collaborator_json(
-                    user, fields, include_permissions, can_edit=True,
-                ) for user in analyst_users
-            })
 
     return collaborators
 
