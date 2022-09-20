@@ -101,6 +101,7 @@ from seqr.views.apis.variant_search_api import \
 
 from seqr.views.apis.users_api import \
     get_all_collaborator_options, \
+    get_all_user_group_options, \
     get_project_collaborator_options, \
     create_project_collaborator, \
     update_project_collaborator, \
@@ -279,6 +280,7 @@ api_endpoints = {
     'users/update_policies': update_policies,
 
     'users/get_options': get_all_collaborator_options,
+    'users/get_group_options': get_all_user_group_options,
     'users/get_options/(?P<project_guid>[^/]+)': get_project_collaborator_options,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,

@@ -61,7 +61,6 @@ const EDIT_FIELDS = [
     label: 'Access Level',
     component: RadioGroup,
     options: [{ value: false, text: 'Collaborator' }, { value: true, text: 'Manager' }],
-    validate: validators.required,
   },
 ]
 
@@ -72,8 +71,8 @@ const CREATE_GROUP_FIELDS = [
     component: LoadOptionsSelect,
     url: '/api/users/get_group_options',
     optionsResponseKey: 'groups',
-    validationErrorHeader: 'No User Groups Found',
-    validationErrorMessage: 'There are no user groups available to add. Contact your system administrator to have them configure user groups.',
+    validationErrorHeader: 'No User Groups Available',
+    validationErrorMessage: 'Contact your system administrator to have them configure user groups',
     validate: validators.required,
   },
   ...EDIT_FIELDS,
@@ -179,9 +178,9 @@ const ProjectCollaborators = React.memo(({ project, user, onSubmit, onGroupSubmi
         addEntityFields={CREATE_FIELDS}
         rowDisplay={collaboratorDisplay}
       />
-      {project.collaboratorGroups && <Header subheader="Groups" size="small" />}
+      {project.collaboratorGroups?.length > 0 && <Header subheader="Groups" size="small" />}
       <ProjectAccessSection
-        title="Group"
+        title="Collaborator Group"
         idField="name"
         entities={project.collaboratorGroups}
         canEdit={canEdit}

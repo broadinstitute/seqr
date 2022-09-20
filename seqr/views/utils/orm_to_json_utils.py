@@ -742,6 +742,9 @@ def get_json_for_locus_list(locus_list, user):
                                include_pagenes=True)
 
 
+PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit']
+
+
 def get_json_for_project_collaborator_groups(project):
     if anvil_enabled():
         return None
@@ -751,7 +754,7 @@ def get_json_for_project_collaborator_groups(project):
             get_json_func=lambda g, fields: {field: getattr(g, field) for field in fields},
         )
         for group, perms in get_groups_with_perms(project, attach_perms=True).items()
-        # if not group.name.startswith('_')
+        if not any(substring in group.name for substring in PROJECT_ACCESS_GROUP_NAMES)
     ]
     return sorted(group_json, key=lambda group: (not group['hasEditPermissions'], group['name'].lower()))
 

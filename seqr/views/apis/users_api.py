@@ -2,7 +2,7 @@ from requests.utils import quote
 
 import json
 from django.contrib.auth import login, authenticate
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.core.exceptions import PermissionDenied
 from urllib.parse import unquote
 
@@ -12,7 +12,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_project_collaborator_list, \
-    get_project_collaborators_by_username
+    get_project_collaborators_by_username, PROJECT_ACCESS_GROUP_NAMES
 from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, get_project_and_check_permissions, \
     login_and_policies_required, login_active_required, active_user_has_policies_and_passes_test
 from seqr.views.utils.terra_api_utils import google_auth_enabled, anvil_enabled
@@ -35,6 +35,14 @@ def get_all_collaborator_options(request):
         user.username: get_json_for_user(user, fields={'first_name', 'last_name', 'username', 'email'})
         for user in User.objects.filter(id__in=collaborator_ids)
     })
+
+
+@require_anvil_disabled
+def get_all_user_group_options(request):
+    groups = Group.objects.all()
+    for substring in PROJECT_ACCESS_GROUP_NAMES:
+        groups = groups.exclude(name__contains=substring)
+    return create_json_response({'groups': sorted(groups.values_list('name', flat=True))})
 
 
 @login_and_policies_required

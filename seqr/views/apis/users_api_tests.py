@@ -10,7 +10,7 @@ from urllib.parse import quote_plus
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_project_collaborator_options, update_policies, update_user
+    get_project_collaborator_options, update_policies, update_user, get_all_user_group_options
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
@@ -81,6 +81,17 @@ class UsersAPITest(object):
         self.assertSetEqual(set(response_json.keys()), set(self.COLLABORATOR_JSON.keys()))
         self.assertSetEqual(
             set(response_json['test_user_manager'].keys()), {'firstName', 'lastName', 'username', 'email'})
+
+    def test_get_all_user_group_options(self):
+        url = reverse(get_all_user_group_options)
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self._test_user_group_options_response(response)
+
+    def _test_user_group_options_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'groups': ['analysts', 'project-managers']})
 
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
@@ -361,6 +372,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
 
     _test_logged_in_collaborator_options_response = _assert_403_response
     _test_collaborator_collaborator_options_response = _assert_403_response
+    _test_user_group_options_response = _assert_403_response
     _test_create_project_collaborator = _assert_403_response
     _test_update_collaborator_response = _assert_403_response
     _test_delete_collaborator_response = _assert_403_response
