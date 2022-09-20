@@ -3,14 +3,15 @@ import mock
 
 from anymail.exceptions import AnymailError
 from django.contrib import auth
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.urls.base import reverse
 from urllib.parse import quote_plus
 
 from seqr.models import UserPolicy, Project
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_project_collaborator_options, update_policies, update_user, get_all_user_group_options
+    get_project_collaborator_options, update_policies, update_user, get_all_user_group_options, \
+    update_project_collaborator_group, delete_project_collaborator_group
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
@@ -203,6 +204,45 @@ class UsersAPITest(object):
         # check that user still exists
         self.assertEqual(User.objects.filter(username=USERNAME).count(), 1)
 
+    def test_update_project_collaborator_group(self):
+        update_url = reverse(update_project_collaborator_group, args=[PROJECT_GUID, 'project-managers'])
+        self.check_manager_login(update_url)
+
+        response = self.client.post(update_url, content_type='application/json', data=json.dumps(
+            {'hasEditPermissions': True}
+        ))
+        self._test_update_collaborator_group_response(response, update_url=update_url)
+
+    def _test_update_collaborator_group_response(self, response, update_url=None):
+        self.assertEqual(response.status_code, 200)
+        groups = response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups']
+        self.assertEqual(len(groups), 2)
+        self.assertDictEqual(
+            groups[1], {'name': 'project-managers', 'hasViewPermissions': True, 'hasEditPermissions': True})
+
+        response = self.client.post(update_url, content_type='application/json', data=json.dumps(
+            {'hasEditPermissions': False}
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups'][1],
+            {'name': 'project-managers', 'hasViewPermissions': True, 'hasEditPermissions': False},
+        )
+
+    def test_delete_project_collaborator_group(self):
+        delete_url = reverse(delete_project_collaborator_group, args=[PROJECT_GUID, 'analysts'])
+        self.check_manager_login(delete_url)
+
+        response = self.client.post(delete_url, content_type='application/json')
+        self._test_delete_collaborator_group_response(response)
+
+    def _test_delete_collaborator_group_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups'], [])
+
+        # check that group still exists
+        self.assertEqual(Group.objects.filter(name='analysts').count(), 1)
+
     def test_set_password(self):
         username = 'test_new_user'
         user = User.objects.create_user(username)
@@ -376,6 +416,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     _test_create_project_collaborator = _assert_403_response
     _test_update_collaborator_response = _assert_403_response
     _test_delete_collaborator_response = _assert_403_response
+    _test_update_collaborator_group_response = _assert_403_response
+    _test_delete_collaborator_group_response = _assert_403_response
 
     def test_get_project_collaborator_options(self, *args, **kwargs):
         super(AnvilUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)

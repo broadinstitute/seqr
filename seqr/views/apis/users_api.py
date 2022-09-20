@@ -4,15 +4,16 @@ import json
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import PermissionDenied
+from guardian.shortcuts import assign_perm, remove_perm
 from urllib.parse import unquote
 
-from seqr.models import UserPolicy, Project
+from seqr.models import UserPolicy, Project, CAN_VIEW, CAN_EDIT
 from seqr.utils.communication_utils import send_welcome_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_project_collaborator_list, \
-    get_project_collaborators_by_username, PROJECT_ACCESS_GROUP_NAMES
+    get_project_collaborators_by_username, get_json_for_project_collaborator_groups, PROJECT_ACCESS_GROUP_NAMES
 from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, get_project_and_check_permissions, \
     login_and_policies_required, login_active_required, active_user_has_policies_and_passes_test
 from seqr.views.utils.terra_api_utils import google_auth_enabled, anvil_enabled
@@ -198,4 +199,34 @@ def delete_project_collaborator(request, project_guid, username):
 
     return create_json_response({
         'projectsByGuid': {project_guid: {'collaborators': get_json_for_project_collaborator_list(request.user, project)}}
+    })
+
+
+@require_anvil_disabled
+def update_project_collaborator_group(request, project_guid, name):
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    group = Group.objects.get(name=name)
+    request_json = json.loads(request.body)
+
+    assign_perm(user_or_group=group, perm=CAN_VIEW, obj=project)
+    if request_json.get('hasEditPermissions'):
+        assign_perm(user_or_group=group, perm=CAN_EDIT, obj=project)
+    else:
+        remove_perm(user_or_group=group, perm=CAN_EDIT, obj=project)
+
+    return create_json_response({
+        'projectsByGuid': {project.guid: {'collaboratorGroups': get_json_for_project_collaborator_groups(project)}}
+    })
+
+
+@require_anvil_disabled
+def delete_project_collaborator_group(request, project_guid, name):
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    group = Group.objects.get(name=name)
+
+    remove_perm(user_or_group=group, perm=CAN_VIEW, obj=project)
+    remove_perm(user_or_group=group, perm=CAN_EDIT, obj=project)
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'collaboratorGroups': get_json_for_project_collaborator_groups(project)}}
     })

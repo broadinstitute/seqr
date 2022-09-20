@@ -106,6 +106,8 @@ from seqr.views.apis.users_api import \
     create_project_collaborator, \
     update_project_collaborator, \
     delete_project_collaborator, \
+    update_project_collaborator_group, \
+    delete_project_collaborator_group, \
     set_password, \
     update_policies, \
     update_user, \
@@ -285,6 +287,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,
+    'project/(?P<project_guid>[^/]+)/collaboratorGroups/(?P<name>[^/]+)/update': update_project_collaborator_group,
+    'project/(?P<project_guid>[^/]+)/collaboratorGroups/(?P<name>[^/]+)/delete': delete_project_collaborator_group,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

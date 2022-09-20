@@ -70,7 +70,6 @@ class AuthenticationTestCase(TestCase):
     def add_additional_user_groups(cls):
         analyst_group = Group.objects.get(pk=4)
         analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
-        # TODO make sure this matches whats done to actually add user groups
         assign_perm(user_or_group=analyst_group, perm=CAN_EDIT, obj=Project.objects.filter(id__in=[1, 2, 3]))
         assign_perm(user_or_group=analyst_group, perm=CAN_VIEW, obj=Project.objects.filter(id__in=[1, 2, 3]))
 
