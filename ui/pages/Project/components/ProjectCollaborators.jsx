@@ -10,12 +10,12 @@ import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
+import { RadioGroup, AddableSelect, Select } from 'shared/components/form/Inputs'
 import { validators } from 'shared/components/form/FormHelpers'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
-import { updateCollaborator } from '../reducers'
+import { updateCollaborator, updateCollaboratorGroup } from '../reducers'
 import { getUserOptions, getCurrentProject } from '../selectors'
 
 const CollaboratorEmailDropdown = React.memo(({ load, ...props }) => (
@@ -40,6 +40,25 @@ const mapDropdownDispatchToProps = {
   load: loadUserOptions,
 }
 
+const GroupDropdown = React.memo(({ load, ...props }) => (
+  <DataLoader load={load} loading={false} content>
+    <Select {...props} />
+  </DataLoader>
+))
+
+GroupDropdown.propTypes = {
+  load: PropTypes.func,
+}
+
+const mapGroupDropdownStateToProps = state => ({
+  loading: getUserOptionsIsLoading(state), // TODO
+  options: getUserOptions(state), // TODO
+})
+
+const mapGroupDropdownDispatchToProps = {
+  load: loadUserOptions, // TODO
+}
+
 const CREATE_FIELDS = [
   {
     name: 'user',
@@ -60,7 +79,18 @@ const EDIT_FIELDS = [
     label: 'Access Level',
     component: RadioGroup,
     options: [{ value: false, text: 'Collaborator' }, { value: true, text: 'Manager' }],
+    validate: validators.required,
   },
+]
+
+const CREATE_GROUP_FIELDS = [
+  {
+    name: 'name',
+    label: 'Group',
+    component: connect(mapGroupDropdownStateToProps, mapGroupDropdownDispatchToProps)(GroupDropdown),
+    validate: validators.required,
+  },
+  ...EDIT_FIELDS,
 ]
 
 const CollaboratorContainer = styled.div`
@@ -91,7 +121,7 @@ const ProjectAccessSection = (
             hideNoRequestStatus
             confirmDialog={
               <div className="content">
-                Are you sure you want to delete &nbsp;
+                Are you sure you want to remove &nbsp;
                 <b>{entity[displayField] || entity[idField]}</b>
                 ?
                 {deleteMessage}
@@ -147,7 +177,7 @@ const collaboratorDisplay = ({ displayName, email }) => (
 
 const groupNameDisplay = ({ name }) => name
 
-const ProjectCollaborators = React.memo(({ project, user, onSubmit, addCollaborator }) => {
+const ProjectCollaborators = React.memo(({ project, user, onSubmit, onGroupSubmit, addCollaborator }) => {
   const canEdit = project.canEdit && !user.isAnvil
   return (
     <div>
@@ -169,9 +199,9 @@ const ProjectCollaborators = React.memo(({ project, user, onSubmit, addCollabora
         idField="name"
         entities={project.collaboratorGroups}
         canEdit={canEdit}
-        onSubmit={onSubmit} // TODO
-        onAdd={addCollaborator} // TODO
-        addEntityFields={CREATE_FIELDS} // TODO
+        onSubmit={onGroupSubmit}
+        onAdd={onGroupSubmit}
+        addEntityFields={CREATE_GROUP_FIELDS}
         rowDisplay={groupNameDisplay}
       />
       {user.isAnvil && project.workspaceName && (
@@ -195,6 +225,7 @@ ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
+  onGroupSubmit: PropTypes.func,
   addCollaborator: PropTypes.func,
 }
 
@@ -205,6 +236,7 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = {
   onSubmit: updateCollaborator,
+  onGroupSubmit: updateCollaboratorGroup,
   addCollaborator: updates => updateCollaborator(updates.user),
 }
 
