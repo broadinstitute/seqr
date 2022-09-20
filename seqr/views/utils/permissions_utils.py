@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
-from django.db.models import Value, TextField, Q
+from django.db.models import Value, TextField
 from guardian.shortcuts import get_objects_for_user
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT

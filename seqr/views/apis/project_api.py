@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
-    ProjectCategory, FamilyNote, CAN_EDIT
+    FamilyNote, CAN_EDIT
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \

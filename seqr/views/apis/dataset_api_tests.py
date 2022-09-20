@@ -265,8 +265,11 @@ class DatasetAPITest(object):
         else:
             mock_send_email.assert_called_with("""Hi Test Manager User,
 We are following up on your request to load data from AnVIL on March 12, 2017.
-We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bio/#workspaces/ext-data/anvil-non-analyst-project 1000 Genomes Demo>ext-data/anvil-non-analyst-project 1000 Genomes Demo</a> to the corresponding seqr project <a href=https://seqr.broadinstitute.org/project/{guid}/project_page>Non-Analyst Project</a>. Let us know if you have any questions.
-- The seqr team\n""".format(guid=NON_ANALYST_PROJECT_GUID),
+We have loaded 1 samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}. Let us know if you have any questions.
+- The seqr team\n""".format(
+                anvil_link='<a href=https://anvil.terra.bio/#workspaces/ext-data/anvil-non-analyst-project 1000 Genomes Demo>ext-data/anvil-non-analyst-project 1000 Genomes Demo</a>',
+                seqr_link=f'<a href=https://seqr.broadinstitute.org/project/{NON_ANALYST_PROJECT_GUID}/project_page>Non-Analyst Project</a>',
+            ),
                                                subject='New data available in seqr',
                                                to=['test_user_manager@test.com'])
         mock_send_slack.assert_not_called()
@@ -448,7 +451,10 @@ def assert_no_anvil_calls(self):
 class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     ANVIL_DISABLED = False
-    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in https://seqr.broadinstitute.org/project/{PROJECT_GUID}/project_page\n            ```{{samples}}```\n            '
+
+    SEQR_URL = 'https://seqr.broadinstitute.org'
+    BREAK = '\n            '
+    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page{BREAK}```{{samples}}```{BREAK}'
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
