@@ -10,8 +10,9 @@ import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
-import { RadioGroup, AddableSelect, Select } from 'shared/components/form/Inputs'
+import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
 import { validators } from 'shared/components/form/FormHelpers'
+import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
@@ -38,25 +39,6 @@ const mapDropdownStateToProps = state => ({
 
 const mapDropdownDispatchToProps = {
   load: loadUserOptions,
-}
-
-const GroupDropdown = React.memo(({ load, ...props }) => (
-  <DataLoader load={load} loading={false} content>
-    <Select {...props} />
-  </DataLoader>
-))
-
-GroupDropdown.propTypes = {
-  load: PropTypes.func,
-}
-
-const mapGroupDropdownStateToProps = state => ({
-  loading: getUserOptionsIsLoading(state), // TODO
-  options: getUserOptions(state), // TODO
-})
-
-const mapGroupDropdownDispatchToProps = {
-  load: loadUserOptions, // TODO
 }
 
 const CREATE_FIELDS = [
@@ -87,7 +69,11 @@ const CREATE_GROUP_FIELDS = [
   {
     name: 'name',
     label: 'Group',
-    component: connect(mapGroupDropdownStateToProps, mapGroupDropdownDispatchToProps)(GroupDropdown),
+    component: LoadOptionsSelect,
+    url: '/api/users/get_group_options',
+    optionsResponseKey: 'groups',
+    validationErrorHeader: 'No User Groups Found',
+    validationErrorMessage: 'There are no user groups available to add. Contact your system administrator to have them configure user groups.',
     validate: validators.required,
   },
   ...EDIT_FIELDS,
