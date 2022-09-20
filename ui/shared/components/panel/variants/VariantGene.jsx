@@ -491,7 +491,7 @@ const GeneSearchLinkWithPopup = props => (
 )
 
 const getGeneConsequence = (geneId, variant) => {
-  const geneTranscripts = variant.transcripts[geneId]
+  const geneTranscripts = (variant.transcripts || {})[geneId]
   return geneTranscripts && geneTranscripts.length > 0 &&
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
