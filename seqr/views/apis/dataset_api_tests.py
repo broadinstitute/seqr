@@ -263,11 +263,12 @@ class DatasetAPITest(object):
         if self.ANVIL_DISABLED:
             mock_send_email.assert_not_called()
         else:
+            namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
             mock_send_email.assert_called_with("""Hi Test Manager User,
 We are following up on your request to load data from AnVIL on March 12, 2017.
 We have loaded 1 samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}. Let us know if you have any questions.
 - The seqr team\n""".format(
-                anvil_link='<a href=https://anvil.terra.bio/#workspaces/ext-data/anvil-non-analyst-project 1000 Genomes Demo>ext-data/anvil-non-analyst-project 1000 Genomes Demo</a>',
+                anvil_link=f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>',
                 seqr_link=f'<a href=https://seqr.broadinstitute.org/project/{NON_ANALYST_PROJECT_GUID}/project_page>Non-Analyst Project</a>',
             ),
                                                subject='New data available in seqr',
