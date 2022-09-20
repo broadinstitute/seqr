@@ -9,15 +9,15 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json
     get_json_for_family_notes, get_json_for_saved_variants
 
 
-def get_projects_child_entities(projects, project_guid, user, is_analyst, include_samples=True, include_locus_list_metadata=True):
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
+def get_projects_child_entities(projects, project_guid, user, include_samples=True, include_locus_list_metadata=True):
+    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user)}
 
     if include_samples:
         sample_models = Sample.objects.filter(individual__family__project__in=projects)
-        samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
+        samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
 
     locus_lists_models = LocusList.objects.filter(projects__in=projects).order_by('name')
-    locus_lists = get_json_for_locus_lists(locus_lists_models, user, is_analyst=is_analyst, include_metadata=include_locus_list_metadata)
+    locus_lists = get_json_for_locus_lists(locus_lists_models, user, include_metadata=include_locus_list_metadata)
 
     response = {
         'projectsByGuid': projects_by_guid,
