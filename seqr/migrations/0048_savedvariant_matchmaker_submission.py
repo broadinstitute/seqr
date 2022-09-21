@@ -16,5 +16,4 @@ class Migration(migrations.Migration):
             name='matchmaker_submission',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, to='matchmaker.matchmakersubmission'),
         ),
-        # TODO add correct references
     ]

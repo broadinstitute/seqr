@@ -183,7 +183,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
         saved_variants_by_guid[saved_variant.guid] = {'noteGuids': [n.guid for n in notes]}
         if not notes:
             if not saved_variant.varianttag_set.count() > 0:
-                saved_variant.delete_model(request.user, user_can_delete=True)
+                saved_variant.delete_model(request.user, user_can_delete=True)  # TOD protect if mme submission
                 saved_variants_by_guid[saved_variant.guid] = None
 
     return create_json_response({
@@ -263,7 +263,7 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
     for saved_variant in saved_variants:
         tags = _get_tag_set(saved_variant, tag_type).all()
         saved_variants_by_guid[saved_variant.guid] = {response_guid_key: [t.guid for t in tags]}
-        if delete_variants_if_empty and not tags:
+        if delete_variants_if_empty and not tags:  # TODO protect if submitted to MME
             if not saved_variant.variantnote_set.count() > 0:
                 saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
