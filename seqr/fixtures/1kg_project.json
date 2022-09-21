@@ -446,6 +446,8 @@
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "proband_relationship": "S",
+        "primary_biosample": "NT",
+        "analyte_type": "D",
         "birth_year": 1999,
         "death_year": null,
         "onset_age": "A",

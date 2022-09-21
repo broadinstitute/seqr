@@ -1,6 +1,9 @@
 # _seqr_ Changes
 
 ## dev
+* Add Gregor fields to sample manifest (REQUIRES DB MIGRATION)
+
+## 9/6/22
 * Disable mixed authorization for local and AnVIL permissions (REQUIRES DB MIGRATION)
 
 ## 8/23/22

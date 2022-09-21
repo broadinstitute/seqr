@@ -485,6 +485,29 @@ class Individual(ModelWithGUID):
         ('U', 'Unknown'),
     ]
 
+    BIOSAMPLE_CHOICES = [
+        ('T', 'UBERON:0000479'),  # tissue
+        ('NT', 'UBERON:0003714'),  # neural tissue
+        ('S', 'UBERON:0001836'),  # saliva
+        ('SE', 'UBERON:0001003'),  # skin epidermis
+        ('MT', 'UBERON:0002385'),  # muscle tissue
+        ('WB', 'UBERON:0000178'),  # whole blood
+        ('BM', 'UBERON:0002371'),  # bone marrow
+        ('CC', 'UBERON:0006956'),  # buccal mucosa
+        ('CF', 'UBERON:0001359'),  # cerebrospinal fluid
+        ('U', 'UBERON:0001088'),  # urine
+        ('NE', 'UBERON:0019306'),  # nose epithelium
+    ]
+
+    ANALYTE_CHOICES = [
+        ('D', 'DNA'),
+        ('R', 'RNA'),
+        ('B', 'blood plasma'),
+        ('F', 'frozen whole blood'),
+        ('H', 'high molecular weight DNA'),
+        ('U', 'urine'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
@@ -494,6 +517,7 @@ class Individual(ModelWithGUID):
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
     INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
     RELATIONSHIP_LOOKUP = dict(RELATIONSHIP_CHOICES)
+    ANALYTE_REVERSE_LOOKUP = {name: key for key, name in ANALYTE_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -515,6 +539,10 @@ class Individual(ModelWithGUID):
     case_review_discussion = models.TextField(null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
+
+    primary_biosample = models.CharField(max_length=2, choices=BIOSAMPLE_CHOICES, null=True, blank=True)
+    analyte_type = models.CharField(max_length=1, choices=ANALYTE_CHOICES, null=True, blank=True)
+    tissue_affected_status = models.BooleanField(null=True)
 
     birth_year = YearField()
     death_year = YearField()
@@ -571,7 +599,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship'
+            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type',
         ]
         audit_fields = {'case_review_status'}
 

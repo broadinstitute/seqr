@@ -441,7 +441,7 @@ class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
 def assert_no_anvil_calls(self):
     self.mock_list_workspaces.assert_not_called()
     self.mock_get_ws_access_level.assert_not_called()
-    self.mock_get_ws_acl.assert_not_called()
+    self.assert_no_extra_anvil_calls()
 
 
 # Test for permissions from AnVIL only

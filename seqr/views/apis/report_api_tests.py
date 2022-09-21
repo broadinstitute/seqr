@@ -568,7 +568,8 @@ class ReportAPITest(AuthenticationTestCase):
             'time_to_freeze', 'sample_transformation_detail',
         ])
         self.assertIn(
-            ['Broad_NA19675_1', 'Broad_NA19675_1', '', '', '', '', '', '', '', '', '', '', '', '', ''], analyte_file)
+            ['Broad_NA19675_1', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
+            analyte_file)
 
         self.assertEqual(len(experiment_file), 1)
         self.assertEqual(experiment_file[0], [
