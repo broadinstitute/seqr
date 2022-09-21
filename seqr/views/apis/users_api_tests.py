@@ -429,7 +429,8 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.mock_get_groups.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
+        self.mock_get_group_members.assert_called_with(self.collaborator_user, 'analysts', use_sa_credentials=True)
+
 
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()

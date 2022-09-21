@@ -17,13 +17,15 @@ from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, 
 logger = SeqrLogger(__name__)
 
 
-def get_anvil_analyst_user_emails():
+def get_anvil_analyst_user_emails(user):
     return get_anvil_group_members(user, ANALYST_USER_GROUP, use_sa_credentials=True)
 
 
-def get_analyst_user_emails():
+def get_analyst_user_emails(user):
+    if not ANALYST_USER_GROUP:
+        return []
     if anvil_enabled():
-        return get_anvil_analyst_user_emails()
+        return get_anvil_analyst_user_emails(user)
     return set(User.objects.filter(groups__name=ANALYST_USER_GROUP).values_list('email', flat=True))
 
 

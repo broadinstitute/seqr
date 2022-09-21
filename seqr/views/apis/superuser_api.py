@@ -12,7 +12,7 @@ def get_all_users(request):
         'username', 'email', 'last_login', 'date_joined', 'id', 'is_superuser', 'is_active',
         'display_name', 'is_data_manager',
     ])) for user in User.objects.exclude(email='')]
-    analyst_users = get_analyst_user_emails()
+    analyst_users = get_analyst_user_emails(request.user)
     pm_users = get_pm_user_emails(request.user)
     users = [dict(
         hasGoogleAuth=is_google_authenticated(user),

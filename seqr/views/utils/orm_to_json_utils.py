@@ -20,8 +20,6 @@ from seqr.views.utils.permissions_utils import has_project_permissions, has_case
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
-ANALYST_GROUP_ANVIL_EMAIL = f'{ANALYST_USER_GROUP}@firecloud.org'
-
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
     fields = set(model_class._meta.json_fields)
@@ -791,9 +789,9 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
 
     elif project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-        if expand_user_groups and ANALYST_GROUP_ANVIL_EMAIL in permission_levels:
-            analyst_permission = permission_levels.pop(ANALYST_GROUP_ANVIL_EMAIL)
-            permission_levels.update({email.lower(): analyst_permission for email in get_anvil_analyst_user_emails()})
+        if expand_user_groups and f'{ANALYST_USER_GROUP}@firecloud.org' in permission_levels:
+            analyst_permission = permission_levels.pop(f'{ANALYST_USER_GROUP}@firecloud.org')
+            permission_levels.update({email.lower(): analyst_permission for email in get_anvil_analyst_user_emails(user)})
 
         users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in=permission_levels.keys())}
         for email, permission in permission_levels.items():
