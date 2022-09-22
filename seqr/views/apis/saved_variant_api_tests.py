@@ -119,7 +119,6 @@ INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 
 class SavedVariantAPITest(object):
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)

@@ -70,7 +70,6 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 class IndividualAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_update_individual_handler(self):
         edit_individuals_url = reverse(update_individual_handler, args=[INDIVIDUAL_UPDATE_GUID])
         self.check_collaborator_login(edit_individuals_url)

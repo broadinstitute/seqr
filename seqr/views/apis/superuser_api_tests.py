@@ -17,27 +17,23 @@ EXPECTED_USERS = {
 class SuperusersAPITest(object):
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_get_all_users(self, mock_analyst_group, mock_pm_group):
-        mock_analyst_group.__bool__.return_value = False
-        mock_pm_group.__bool__.return_value = False
-
+    def test_get_all_users(self, mock_pm_group):
         url = reverse(get_all_users)
         self.check_superuser_login(url)
-
-        response = self.client.get(url)
-        self._test_superuser_response(response)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-        mock_analyst_group.__str__.return_value = 'analysts'
-        response = self.client.get(url)
-        self._test_superuser_response(response, analyst_enabled=True)
 
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
         mock_pm_group.__str__.return_value = 'project-managers'
         self._test_pm_users(url)
+
+        mock_pm_group.__bool__.return_value = False
+        response = self.client.get(url)
+        self._test_superuser_response(response, analyst_enabled=True)
+
+        self.mock_analyst_group.__str__.return_value = ''
+        mock_pm_group.__bool__.return_value = False
+        response = self.client.get(url)
+        self._test_superuser_response(response)
 
     def _test_pm_users(self, url):
         response = self.client.get(url)
@@ -75,17 +71,13 @@ class AnvilSuperusersAPITest(AnvilAuthenticationTestCase, SuperusersAPITest):
     HAS_GOOGLE_AUTH = True
 
     def _test_pm_users(self, url):
-        mock_analyst_group = self.mock_get_group_members.call_args.args[1]
-        self.assertEqual(str(mock_analyst_group), 'analysts')
-        self.mock_get_group_members.assert_called_with(self.super_user, mock_analyst_group, use_sa_credentials=True)
-        self.assertEqual(self.mock_get_group_members.call_count, 1)
 
         # Test the case where the superuser does not have access to the PM group in AnVIL
         # In that case, the request should succeed but not populate any PM users
-        self.mock_get_group_members.reset_mock()
         response = self.client.get(url)
         self._test_superuser_response(response, analyst_enabled=True, pm_enabled=False)
-        mock_pm_group = self.mock_get_group_members.call_args.args[1]
+        mock_analyst_group = self.mock_get_group_members.call_args_list[0].args[1]
+        mock_pm_group = self.mock_get_group_members.call_args_list[1].args[1]
         self.assertEqual(str(mock_pm_group), 'project-managers')
         self.mock_get_group_members.assert_has_calls([
             mock.call(self.super_user, mock_analyst_group, use_sa_credentials=True),

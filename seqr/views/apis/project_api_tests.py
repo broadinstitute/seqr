@@ -87,7 +87,6 @@ class ProjectAPITest(object):
             Group.objects.filter(name__in=['new_project_can_edit_123abd', 'new_project_can_view_123abd']).count(), 0,
         )
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project(self):
         update_project_url = reverse(update_project_handler, args=[PROJECT_GUID])
@@ -147,7 +146,6 @@ class ProjectAPITest(object):
 
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {new_project.guid})
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project_workspace(self):
         url = reverse(update_project_workspace, args=[PROJECT_GUID])
@@ -305,8 +303,7 @@ class ProjectAPITest(object):
             self.assertEqual(response.json()['error'], '/login')
 
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_project_families(self, mock_analyst_group):
+    def test_project_families(self):
         url = reverse(project_families, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
@@ -348,22 +345,19 @@ class ProjectAPITest(object):
         self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
-        self.assertSetEqual(set(next(iter(response.json()['familiesByGuid'].values())).keys()), family_fields)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        family_fields.update(INTERNAL_FAMILY_FIELDS)
-        self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), family_fields)
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        internal_fields = deepcopy(family_fields)
+        internal_fields.update(INTERNAL_FAMILY_FIELDS)
+        self.assertSetEqual(set(next(iter(response_json['familiesByGuid'].values())).keys()), internal_fields)
 
+        self.mock_analyst_group.__str__.return_value = ''
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertSetEqual(set(next(iter(response.json()['familiesByGuid'].values())).keys()), family_fields)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_project_individuals(self, mock_analyst_group):
+    def test_project_individuals(self):
         url = reverse(project_individuals, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
@@ -393,19 +387,18 @@ class ProjectAPITest(object):
         self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), INTERNAL_INDIVIDUAL_FIELDS)
+
+        self.mock_analyst_group.__str__.return_value = ''
+        self.mock_analyst_group.resolve_expression.return_value = ''
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
         self.assertSetEqual(
             set(next(iter(response.json()['individualsByGuid'].values())).keys()),
             NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS,
         )
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        response_json = response.json()
-        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), INTERNAL_INDIVIDUAL_FIELDS)
 
     def test_project_analysis_groups(self):
         url = reverse(project_analysis_groups, args=[PROJECT_GUID])

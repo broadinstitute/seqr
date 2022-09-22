@@ -37,7 +37,6 @@ PRIVACY_VERSION = 1.1
 
 class UsersAPITest(object):
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
     def test_get_project_collaborator_options(self):
         url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])

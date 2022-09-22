@@ -15,7 +15,6 @@ DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json')
 class DashboardPageTest(object):
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.safe_redis_set_json')
     def test_dashboard_page_data(self, mock_set_redis, mock_get_redis):
         mock_get_redis.return_value = None

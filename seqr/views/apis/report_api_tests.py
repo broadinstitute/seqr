@@ -209,17 +209,7 @@ def _get_list_param(call, param):
     return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
 
 
-@mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
 class ReportAPITest(object):
-
-    def _check_analyst_access(self, url, mock_analyst_group):
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
     def _get_zip_files(self, mock_zip, filenames):
         mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
@@ -231,14 +221,13 @@ class ReportAPITest(object):
             for i in range(len(filenames))
         )
 
-    def test_seqr_stats(self, mock_analyst_group):
+    def test_seqr_stats(self):
         no_access_project = Project.objects.get(id=2)
         no_access_project.workspace_namespace = None
         no_access_project.save()
 
         url = reverse(seqr_stats)
         self.check_analyst_login(url)
-        self._check_analyst_access(url, mock_analyst_group)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -249,10 +238,11 @@ class ReportAPITest(object):
         self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
         self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
 
-    def test_get_cmg_projects(self, mock_analyst_group):
+        self.check_no_analyst_no_access(url)
+
+    def test_get_cmg_projects(self):
         url = reverse(get_cmg_projects)
         self.check_analyst_login(url)
-        self._check_analyst_access(url, mock_analyst_group)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -260,11 +250,12 @@ class ReportAPITest(object):
         self.assertListEqual(list(response_json.keys()), ['projectGuids'])
         self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
 
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.apis.report_api.timezone')
-    def test_discovery_sheet(self, mock_timezone, mock_analyst_group):
+    def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
         self.check_analyst_login(non_project_url)
-        self._check_analyst_access(non_project_url, mock_analyst_group)
 
         mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
@@ -305,14 +296,15 @@ class ReportAPITest(object):
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_anvil_export(self, mock_google_authenticated,  mock_zip, mock_analyst_group):
+    def test_anvil_export(self, mock_google_authenticated,  mock_zip):
         mock_google_authenticated.return_value = False
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
-        self._check_analyst_access(url, mock_analyst_group)
 
         unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
@@ -394,6 +386,8 @@ class ReportAPITest(object):
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
 
+        self.check_no_analyst_no_access(url)
+
         # Test non-broad analysts do not have access
         self.login_pm_user()
         response = self.client.get(url)
@@ -403,11 +397,10 @@ class ReportAPITest(object):
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
+    def test_sample_metadata_export(self, mock_google_authenticated):
         mock_google_authenticated.return_value = False
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_analyst_login(url)
-        self._check_analyst_access(url, mock_analyst_group)
 
         unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
@@ -477,6 +470,8 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
 
+        self.check_no_analyst_no_access(url)
+
         # Test non-broad analysts do not have access
         self.login_pm_user()
         response = self.client.get(url)
@@ -486,12 +481,11 @@ class ReportAPITest(object):
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @responses.activate
-    def test_gregor_export(self, mock_zip, mock_datetime, mock_analyst_group):
+    def test_gregor_export(self, mock_zip, mock_datetime):
         mock_datetime.now.return_value.year = 2020
 
         url = reverse(gregor_export, args=['HMB'])
         self.check_analyst_login(url)
-        self._check_analyst_access(url, mock_analyst_group)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -571,6 +565,8 @@ class ReportAPITest(object):
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
         ])
+
+        self.check_no_analyst_no_access(url)
 
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):

@@ -31,7 +31,6 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(object):
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
         url = reverse(mme_details)
@@ -63,16 +62,9 @@ class SummaryDataAPITest(object):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
         self.assertEqual(len(response_json['submissions']), 3)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_success_story(self, mock_analyst_group):
+    def test_success_story(self):
         url = reverse(success_story, args=['all'])
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -92,7 +84,8 @@ class SummaryDataAPITest(object):
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.apis.summary_data_api.MAX_SAVED_VARIANTS', 1)
     def test_saved_variants_page(self):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
@@ -138,17 +131,10 @@ class SummaryDataAPITest(object):
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
-    def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file, mock_analyst_group):
+    def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file):
         url = reverse(bulk_update_family_analysed_by)
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.__eq__.side_effect = lambda s: s == 'analysts'
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         mock_load_uploaded_file.return_value = [['foo', 'bar']]
         response = self.client.post(url, content_type='application/json', data=json.dumps(
@@ -177,6 +163,8 @@ class SummaryDataAPITest(object):
         self.assertEqual(len(models), 2)
         self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
         self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
+
+        self.check_no_analyst_no_access(url)
 
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):

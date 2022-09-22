@@ -43,6 +43,13 @@ class AuthenticationTestCase(TestCase):
         patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_TOS_VERSION', 1.3)
         patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+        self.mock_analyst_group = patcher.start()
+        self.mock_analyst_group.__str__.return_value = 'analysts'
+        self.mock_analyst_group.__eq__.side_effect = lambda s: str(self.mock_analyst_group) == s
+        self.mock_analyst_group.__bool__.side_effect = lambda: bool(str(self.mock_analyst_group))
+        self.mock_analyst_group.resolve_expression.return_value = 'analysts'
+        self.addCleanup(patcher.stop)
 
     @classmethod
     def setUpTestData(cls):
@@ -208,6 +215,13 @@ class AuthenticationTestCase(TestCase):
 
     def get_initial_page_json(self, response):
         return self.get_initial_page_window('initialJSON', response)
+
+    def check_no_analyst_no_access(self, url, get_response=None):
+        self.mock_analyst_group.__str__.return_value = ''
+
+        response = get_response() if get_response else self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
@@ -382,7 +396,7 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
     user_acl = next((v for k, v in acl.items() if email == k.lower()), None)
     for user_group in ANVIL_GROUP_LOOKUP[email]:
         if not user_acl:
-            user_acl = next((v for k, v in acl.items() if k == f'{user_group}@firecloud.org'), None)
+            user_acl = acl.get(f'{user_group}@firecloud.org')
     access_level = {
         'accessLevel': user_acl['accessLevel'],
         'canShare': user_acl['canShare'],
