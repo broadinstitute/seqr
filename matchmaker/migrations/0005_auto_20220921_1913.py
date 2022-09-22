@@ -48,6 +48,12 @@ def _get_linked_variant(submission, variant, family_variants):
         if len(tagged_models) == 1:
             return tagged_models[0]
 
+        # For gCNV we have variants tagged in both the original loading and a newer loading that have different IDs
+        # but represent the same variant. It doesn't matter which of those is tagged if they are really the same
+        sv_types = {sv.saved_variant_json.get('svType') for sv in variant_models}
+        if len(sv_types) == 1 and sv_types.pop():
+            return sorted(variant_models, key=lambda sv: sv.varianttag_set.count(), reverse=True)[0]
+
         raise Exception(f'{len(variant_models)} matches found for {submission.guid} '
                         f'(family {submission.individual.family.family_id}) - {json.dumps(variant)}: '
                         f'{", ".join([sv.guid for sv in variant_models])}')
