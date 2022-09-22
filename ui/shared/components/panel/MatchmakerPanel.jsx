@@ -50,7 +50,7 @@ const variantSummary = (variant, includeGenomeVersion) => (
 const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesById, dispatch, ...listProps }) => (
   <List {...listProps}>
     {Object.entries(geneVariants.reduce(
-      (acc, variant) => ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant] }), {},
+      (acc, variant) => ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant.variant || {}] }), {},
     )).map(([geneId, variants]) => (
       <TopAlignedItem key={geneId}>
         <ShowGeneModal gene={genesById[geneId]} modalId={modalId} />

@@ -16,7 +16,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
-    get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions
+    get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions, get_json_for_saved_variant
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, analyst_required, \
     has_project_permissions, login_and_policies_required, get_project_and_check_permissions
 
@@ -411,10 +411,12 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
+    submission_genes = submission.matchmakersubmissiongenes_set.all().select_related('saved_variant')
+
     additional_hpo_ids = {feature['id'] for feature in (submission.features or []) if feature.get('id')}
     if not additional_genes:
         additional_genes = set()
-    additional_genes.update({gene_feature['gene']['id'] for gene_feature in (submission.genomic_features or [])})
+    additional_genes.update(submission_genes.values_list('gene_id', flat=True))
 
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(
         results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
@@ -425,11 +427,16 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     contact_notes = {note.institution: _get_json_for_model(note, user=user)
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
+    gene_variants = [
+        {'geneId': o.gene_id, 'variant': get_json_for_saved_variant(o.saved_variant, add_details=True)}
+        for o in submission_genes
+    ]
+
     submission_json = get_json_for_matchmaker_submission(submission)
     submission_json.update({
         'mmeResultGuids': list(parsed_results_gy_guid.keys()),
         'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
-        'geneVariants': parse_mme_gene_variants(submission.genomic_features, gene_symbols_to_ids),
+        'geneVariants': gene_variants,
     })
 
     response = {
