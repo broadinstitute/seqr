@@ -257,16 +257,14 @@ def project_family_notes(request, project_guid):
 @login_and_policies_required
 def project_mme_submisssions(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    models = MatchmakerSubmission.objects.filter(individual__family__project=project)
+    models = MatchmakerSubmission.objects.filter(
+        individual__family__project=project).prefetch_related('matchmakersubmissiongenes_set')
 
-    submissions = get_json_for_matchmaker_submissions(models, additional_model_fields=['genomic_features'])
+    submissions_by_guid = {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(models)}
 
-    submissions_by_guid = {}
-    for s in submissions:
-        genomic_features = s.pop('genomicFeatures') or []
-        s['geneIds'] = [feature['gene']['id'] for feature in genomic_features if feature.get('gene', {}).get('id')]
-        guid = s['submissionGuid']
-        submissions_by_guid[guid] = s
+    for model in models:
+        gene_ids = model.matchmakersubmissiongenes_set.values_list('gene_id', flat=True)
+        submissions_by_guid[model.guid]['geneIds'] = list(gene_ids)
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project))
 
