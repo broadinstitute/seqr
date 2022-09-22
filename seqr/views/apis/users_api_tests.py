@@ -5,9 +5,10 @@ from anymail.exceptions import AnymailError
 from django.contrib import auth
 from django.contrib.auth.models import User, Group
 from django.urls.base import reverse
+from guardian.shortcuts import get_perms
 from urllib.parse import quote_plus
 
-from seqr.models import UserPolicy, Project
+from seqr.models import UserPolicy, Project, CAN_VIEW, CAN_EDIT
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
     get_project_collaborator_options, update_policies, update_user, get_all_user_group_options, \
@@ -219,6 +220,8 @@ class UsersAPITest(object):
         self.assertEqual(len(groups), 2)
         self.assertDictEqual(
             groups[1], {'name': 'project-managers', 'hasViewPermissions': True, 'hasEditPermissions': True})
+        project = Project.objects.get(guid=PROJECT_GUID)
+        self.assertSetEqual(set(get_perms(Group.objects.get(name='project-managers'), project)), {CAN_VIEW, CAN_EDIT})
 
         response = self.client.post(update_url, content_type='application/json', data=json.dumps(
             {'hasEditPermissions': False}
@@ -228,6 +231,7 @@ class UsersAPITest(object):
             response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups'][1],
             {'name': 'project-managers', 'hasViewPermissions': True, 'hasEditPermissions': False},
         )
+        self.assertSetEqual(set(get_perms(Group.objects.get(name='project-managers'), project)), {CAN_VIEW})
 
     def test_delete_project_collaborator_group(self):
         delete_url = reverse(delete_project_collaborator_group, args=[PROJECT_GUID, 'analysts'])
