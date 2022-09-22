@@ -92,7 +92,7 @@ UPDATED_ANVIL_VARIABLES = {
     "value": json.dumps({
         "active_projects": [TEST_GUID],
         "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1".format(guid=TEST_GUID),
+        "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v20210301".format(guid=TEST_GUID),
         "projects_to_run": [TEST_GUID] })
 }
 
@@ -159,7 +159,7 @@ ADD_DATA_UPDATED_ANVIL_VARIABLES = {
     "value": json.dumps({
         "active_projects": [PROJECT1_GUID],
         "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh37/AnVIL_WES/{guid}/v1".format(guid=PROJECT1_GUID),
+        "project_path": "gs://seqr-datasets/v02/GRCh37/AnVIL_WES/{guid}/v20210301".format(guid=PROJECT1_GUID),
         "projects_to_run": [PROJECT1_GUID] })
 }
 ADD_DATA_UPDATE_DAG_TASKS_RESP = {
@@ -762,7 +762,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         "{guid}"
     ],
     "vcf_path": "gs://test_bucket/test_path.vcf",
-    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v1",
+    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301",
     "projects_to_run": [
         "{guid}"
     ]
@@ -803,7 +803,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         "{guid}"
     ],
     "vcf_path": "gs://test_bucket/test_path.vcf",
-    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v1",
+    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301",
     "projects_to_run": [
         "{guid}"
     ]

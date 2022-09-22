@@ -393,14 +393,16 @@ def _check_dag_running_state(dag_id):
     if lastest_dag_runs['state'] == 'running':
         raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
+
 def _construct_dag_variables(project, data_path, sample_type):
     dag_variables = {
         "active_projects": [project.guid],
         "vcf_path": data_path,
-        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
+        "project_path": '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
         "projects_to_run": [project.guid],
     }
     return dag_variables
+
 
 def _wait_for_dag_variable_update(dag_id, project):
     updated_project = project.guid
