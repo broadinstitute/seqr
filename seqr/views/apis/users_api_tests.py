@@ -245,7 +245,9 @@ class UsersAPITest(object):
         self.assertListEqual(response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups'], [])
 
         # check that group still exists
-        self.assertEqual(Group.objects.filter(name='analysts').count(), 1)
+        groups = Group.objects.filter(name='analysts')
+        self.assertEqual(groups.count(), 1)
+        self.assertListEqual(get_perms(groups.first(), Project.objects.get(guid=PROJECT_GUID)), [])
 
     def test_set_password(self):
         username = 'test_new_user'
