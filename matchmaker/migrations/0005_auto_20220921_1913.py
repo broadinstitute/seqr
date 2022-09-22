@@ -28,6 +28,11 @@ def _is_match(model, variant_json):
 
 
 def _get_linked_variant(submission, variant, family_variants):
+    # Fix malformed submissions
+    if variant['referenceName'] == 'GRCh37':
+        variant['referenceName'] = variant['assembly']
+        variant['assembly'] = 'GRCh37'
+
     variant_models = [sv for sv in family_variants if _is_match(sv, variant)]
 
     if not variant_models and \
@@ -38,10 +43,11 @@ def _get_linked_variant(submission, variant, family_variants):
         variant_models = [sv for sv in family_variants if _is_match(sv, lifted_variant)]
 
     if not variant_models:
-        return None
-        # raise Exception(
-        #     f'No matches found for {submission.guid} (family {submission.individual.family.family_id}) - '
-        #     f'{json.dumps(f["variant"])}: {", ".join([sv.guid for sv in variants_by_family[family_id]])}')
+        if submission.deleted_date:
+            return None
+        raise Exception(
+            f'No matches found for {submission.guid} (family {submission.individual.family.family_id}) - {json.dumps(f["variant"])}'
+        )
 
     if len(variant_models) > 1:
         tagged_models = [sv for sv in variant_models if sv.varianttag_set.filter(variant_tag_type__name='seqr MME')]
@@ -54,9 +60,10 @@ def _get_linked_variant(submission, variant, family_variants):
         if len(sv_types) == 1 and sv_types.pop():
             return sorted(variant_models, key=lambda sv: sv.varianttag_set.count(), reverse=True)[0]
 
-        raise Exception(f'{len(variant_models)} matches found for {submission.guid} '
-                        f'(family {submission.individual.family.family_id}) - {json.dumps(variant)}: '
-                        f'{", ".join([sv.guid for sv in variant_models])}')
+        raise Exception(
+            f'{len(variant_models)} matches found for {submission.guid} (family {submission.individual.family.family_id})'
+            f' - {json.dumps(variant)}: {", ".join([sv.guid for sv in variant_models])}'
+        )
 
     return variant_models[0]
 
@@ -84,24 +91,17 @@ def update_mme_variant_links(apps, schema_editor):
         variants_by_family[sv.family_id].append(sv)
 
     models = []
-    no_match_by_project = defaultdict(list)
     print('Mapping variants')
     for family_id, submissions in tqdm(submissions_by_family.items()):
         for submission in submissions:
             for f in submission.genomic_features:
                 saved_variant = _get_linked_variant(submission, f['variant'], variants_by_family[family_id])
-                if not saved_variant:
-                    no_match_by_project[submission.individual.family.project.name].append(submission)
-                else:
+                if saved_variant:
                     models.append(MatchmakerSubmissionGenes(
                         matchmaker_submission=submission,
                         saved_variant=saved_variant,
                         gene_id=f['gene']['id'],
                     ))
-
-    if no_match_by_project:
-        missing = [f'{project} ({len(s)})' for project, s in no_match_by_project.items()]
-        raise Exception(f'No matches found for submissions in the following projects: {" , ".join(missing)}')
 
     print('Creating models')
     MatchmakerSubmissionGenes.objects.using(db_alias).bulk_create(models)
@@ -126,6 +126,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunPython(update_mme_variant_links, reverse_code=migrations.RunPython.noop),
+        # TODO write reverse migration and re-enable this
         # migrations.RemoveField(
         #     model_name='matchmakersubmission',
         #     name='genomic_features',
