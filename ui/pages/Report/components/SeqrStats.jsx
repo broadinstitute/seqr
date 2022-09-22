@@ -15,7 +15,7 @@ const COLUMN_MAP = {
     { title: 'Internal Projects', key: 'internal' },
     { title: 'External AnVIL Projects', key: 'external' },
     DEMO_COLUMN,
-    { title: 'No Access Projects', key: 'no_access' },
+    { title: 'No AnVIL Projects', key: 'no_anvil' },
   ],
   [false]: [
     { title: 'Data Projects', key: 'non_demo' },

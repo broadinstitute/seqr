@@ -44,7 +44,7 @@ def seqr_stats(request):
         project_models.update({
             'internal': anvil_projects.filter(id__in=internal_ids),
             'external': anvil_projects.exclude(id__in=internal_ids),
-            'no_access': non_demo_projects.filter(is_anvil_q),
+            'no_anvil': non_demo_projects.filter(is_anvil_q),
         })
     else:
         project_models.update({

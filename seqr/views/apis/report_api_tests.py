@@ -592,9 +592,9 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
     STATS_DATA = {
-        'projectsCount': {'internal': 1, 'external': 1, 'no_access': 1, 'demo': 1},
-        'familiesCount': {'internal': 11, 'external': 1, 'no_access': 0, 'demo': 2},
-        'individualsCount': {'internal': 14, 'external': 1, 'no_access': 0, 'demo': 3},
+        'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
+        'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
+        'individualsCount': {'internal': 14, 'external': 1, 'no_anvil': 0, 'demo': 3},
         'sampleCountsByType': {
             'WES__VARIANTS': {'internal': 7, 'demo': 1},
             'WGS__MITO': {'internal': 1},
