@@ -44,7 +44,7 @@ class ExternalAPITest(TestCase):
             'metrics': {
                 'numberOfCases': 4,
                 'numberOfSubmitters': 2,
-                'numberOfUniqueGenes': 4,
+                'numberOfUniqueGenes': 3,
                 'numberOfUniqueFeatures': 4,
                 'numberOfRequestsReceived': 3,
                 'numberOfPotentialMatchesSent': 1,

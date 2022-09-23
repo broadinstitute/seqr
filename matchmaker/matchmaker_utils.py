@@ -185,7 +185,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
             feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
         get_submission_kwargs = {
             'query_ids': list(genes_by_id.keys()),
-            'filter_key': 'genomic_features',
+            'filter_key': 'genomic_features',  # TODO
             'id_filter_func': lambda gene_id: {'gene': {'id': gene_id}},
         }
     else:

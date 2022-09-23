@@ -217,12 +217,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             ],
             'geneVariants': [{
                 'geneId': 'ENSG00000186092',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'end': 77027548,
-                'genomeVersion': 'GRCh38',
+                'variantGuid': 'SV0059956_11560662_f019313_1',
             }],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
