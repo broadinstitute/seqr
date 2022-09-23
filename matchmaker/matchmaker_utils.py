@@ -4,9 +4,10 @@ from copy import deepcopy
 from datetime import datetime
 from django.db.models import prefetch_related_objects, Q, F
 
-from reference_data.models import HumanPhenotypeOntology
+from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols, get_filtered_gene_ids
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
@@ -160,7 +161,7 @@ def get_submission_json_for_external_match(submission, score=None):
             },
             'species': 'NCBITaxon:9606',
             'features': submission.features,
-            'genomicFeatures': submission.genomic_features,  # TODO
+            'genomicFeatures': _submission_genes_to_external_genomic_features(submission),
         }
     }
     sex = MatchmakerSubmission.SEX_LOOKUP.get(submission.individual.sex)
@@ -169,6 +170,40 @@ def get_submission_json_for_external_match(submission, score=None):
     if score:
         submission_json['score'] = score
     return submission_json
+
+
+def _submission_genes_to_external_genomic_features(submission):
+    features = []
+    individual = submission.individual
+    for submission_gene in submission.matchmakersubmissiongenes_set.all().select_related('saved_variant'):
+        variant = submission_gene.saved_variant
+        chrom, pos = get_chrom_pos(variant.xpos)
+        genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.guid)
+
+        feature = {
+            'gene': {'id': submission_gene.gene_id},
+            'variant': {
+                'referenceName': chrom,
+                'start': pos,
+                'assembly': GENOME_VERSION_LOOKUP.get(genome_version),
+            },
+        }
+        if variant.alt:
+            feature['variant'].update({
+                'alternateBases': variant.alt,
+                'referenceBases': variant.ref,
+            })
+        elif variant.xpos_end:
+            _, end = get_chrom_pos(variant.xpos_end)
+            feature['variant']['end'] = end
+
+        genotype = variant.saved_variant_json.get('genotypes', {}).get(individual.guid)
+        if genotype and genotype.get('numAlt', -1) > 0:
+            feature['zygosity'] = genotype['numAlt']
+
+        features.append(feature)
+
+    return features
 
 
 def get_mme_matches(patient_data, origin_request_host=None, user=None, originating_submission=None):
@@ -206,7 +241,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
     incoming_query = _create_incoming_query(
         patient_data, origin_request_host, user, patient_id=query_patient_id if scored_matches else None)
 
-    prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set')
+    prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set', 'matchmakersubmissiongenes_set', 'individual')
     for match_submission in scored_matches.keys():
         if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
             create_model_from_json( MatchmakerResult, {
