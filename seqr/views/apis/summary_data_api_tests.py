@@ -14,7 +14,7 @@ EXPECTED_SUCCESS_STORY = {'project_guid': 'R0001_1kg', 'family_guid': 'F000013_1
 
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
-    u'numberOfUniqueGenes': 4,
+    u'numberOfUniqueGenes': 3,
     u'numberOfCases': 4,
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
@@ -37,17 +37,17 @@ class SummaryDataAPITest(object):
         self.check_require_login(url)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'genesById': {}, 'submissions': []})
+        self.assertDictEqual(response.json(), {'genesById': {}, 'savedVariantsByGuid': {}, 'submissions': []})
 
         # Test behavior for non-analysts
         self.login_manager()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'genesById', 'submissions'})
-        self.assertEqual(len(response_json['genesById']), 4)
+        response_keys = {'genesById', 'submissions', 'savedVariantsByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertSetEqual(set(response_json['genesById'].keys()),
-                            {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
+                            {'ENSG00000240361', 'ENSG00000135953', 'ENSG00000186092'})
         self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
 
         # Test analyst behavior
@@ -56,10 +56,10 @@ class SummaryDataAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'metrics', 'genesById', 'submissions'})
+        response_keys.add('metrics')
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertDictEqual(response_json['metrics'], EXPECTED_MME_DETAILS_METRICS)
-        self.assertEqual(len(response_json['genesById']), 4)
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000240361', 'ENSG00000135953', 'ENSG00000186092'})
         self.assertEqual(len(response_json['submissions']), 3)
 
     def test_success_story(self):

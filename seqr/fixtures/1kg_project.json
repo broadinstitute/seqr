@@ -1551,7 +1551,7 @@
             "liftedOverChrom": "",
             "originalAltAlleles": ["T"],
             "transcripts": {
-                "ENSG00000197530": [
+                "ENSG00000186092": [
                     {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "splice_region_variant", "canonical": "YES", "hgvs": "ENST00000505820.2:c.1067-4G>A", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000505820.2:c.1067-4G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             },
@@ -2079,23 +2079,16 @@
                 "id": "HP:0012469",
                 "observed": "yes"
             }
-        ],
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000186092"
-                },
-                "variant": {
-                    "end": 77027548,
-                    "start": 77027549,
-                    "assembly": "GRCh38",
-                    "referenceName": "14",
-                    "alternateBases": "C",
-                    "referenceBases": "CCACT"
-                },
-                "zygosity": 1
-            }
         ]
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 1,
+    "fields": {
+        "matchmaker_submission": 1,
+        "saved_variant": 4,
+        "gene_id": "ENSG00000186092"
     }
 },
 {
@@ -2121,26 +2114,25 @@
                 "label": "Nausea and vomiting",
                 "observed": "yes"
             }
-        ],
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000227232"
-                },
-                "variant": {
-                    "end": 38739601,
-                    "start": 38739601,
-                    "assembly": "GRCh38",
-                    "referenceName": "17",
-                    "alternateBases": "A",
-                    "referenceBases": "G"
-                },
-                "zygosity": 1
-            }
         ]
     }
-},
-    {
+}, {
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 2,
+    "fields": {
+        "matchmaker_submission": 2,
+        "saved_variant": 6,
+        "gene_id": "ENSG00000240361"
+    }
+}, {
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 3,
+    "fields": {
+        "matchmaker_submission": 2,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000135953"
+    }
+},{
     "model": "matchmaker.matchmakersubmission",
     "pk": 3,
     "fields": {
@@ -2152,29 +2144,16 @@
         "label": "P0004515",
         "contact_name": "Baylor UDN Clinical Site",
         "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
-        "genomic_features": [
+        "features": [
             {
-                "gene": {
-                    "id": "ENSG00000186092"
-                }, "variant": {
-                    "referenceName": "14",
-                    "start": 77027630
-                }
+                "id": "HP:0001252",
+                "label": "Muscular hypotonia",
+                "observed": "yes"
             },
             {
-                "gene": {
-                    "id": "ENSG00000233750"
-                }
-            },
-            {
-                "gene": {
-                    "id": "ENSG00000223972"
-                }
-            },
-            {
-                "gene": {
-                    "id": "ABC"
-                }
+                "id": "HP:0002017",
+                "label": "Nausea and vomiting",
+                "observed": "yes"
             }
         ]
     }
@@ -2190,14 +2169,16 @@
         "submission_id": "P0004517",
         "label": "P0004517",
         "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@broadinstitute.org",
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000186092"
-                }
-            }
-        ]
+        "contact_href": "mailto:matchmaker@broadinstitute.org"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 5,
+    "fields": {
+        "matchmaker_submission": 4,
+        "saved_variant": 8,
+        "gene_id": "ENSG00000135953"
     }
 },
 {
