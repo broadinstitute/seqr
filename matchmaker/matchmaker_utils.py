@@ -2,7 +2,7 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
-from django.db.models import prefetch_related_objects, Q
+from django.db.models import prefetch_related_objects, Q, F
 
 from reference_data.models import HumanPhenotypeOntology
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult
@@ -102,7 +102,14 @@ def parse_mme_features(features, hpo_terms_by_id):
     return phenotypes
 
 
+def get_submission_gene_variants(submission):
+    return list(submission.matchmakersubmissiongenes_set.values(
+        geneId=F('gene_id'), variantGuid=F('saved_variant__guid'),
+    ))
+
+
 def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
+    # TODO make private, optimize for externl matches
     gene_variants = []
     for gene_feature in (genomic_features or []):
         gene_ids = get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)

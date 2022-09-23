@@ -6,7 +6,7 @@ from django.db.models import prefetch_related_objects
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
-    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, \
+    get_submission_json_for_external_match, parse_mme_features, get_submission_gene_variants, get_mme_matches, \
     get_gene_ids_for_feature, validate_patient_data, MME_DISCLAIMER
 from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
@@ -411,13 +411,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
-    submission_genes = submission.matchmakersubmissiongenes_set.all().select_related('saved_variant')
-
     additional_hpo_ids = {feature['id'] for feature in (submission.features or []) if feature.get('id')}
-    if not additional_genes:
-        additional_genes = set()
-    additional_genes.update(submission_genes.values_list('gene_id', flat=True))
-
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(
         results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
 
@@ -431,7 +425,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     submission_json.update({
         'mmeResultGuids': list(parsed_results_gy_guid.keys()),
         'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
-        'geneVariants': [{'geneId': o.gene_id, 'variantGuid': o.saved_variant.guid} for o in submission_genes],
+        'geneVariants': get_submission_gene_variants(submission),
     })
 
     response = {
