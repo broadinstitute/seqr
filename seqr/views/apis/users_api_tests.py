@@ -3,14 +3,16 @@ import mock
 
 from anymail.exceptions import AnymailError
 from django.contrib import auth
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.urls.base import reverse
+from guardian.shortcuts import get_perms
 from urllib.parse import quote_plus
 
-from seqr.models import UserPolicy, Project
+from seqr.models import UserPolicy, Project, CAN_VIEW, CAN_EDIT
 from seqr.views.apis.users_api import get_all_collaborator_options, set_password, \
     create_project_collaborator, update_project_collaborator, delete_project_collaborator, forgot_password, \
-    get_project_collaborator_options, update_policies, update_user
+    get_project_collaborator_options, update_policies, update_user, get_all_user_group_options, \
+    update_project_collaborator_group, delete_project_collaborator_group
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
@@ -35,9 +37,8 @@ PRIVACY_VERSION = 1.1
 
 class UsersAPITest(object):
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_get_project_collaborator_options(self, mock_analyst_group):
+    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
+    def test_get_project_collaborator_options(self):
         url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
@@ -45,13 +46,6 @@ class UsersAPITest(object):
             self.mock_get_ws_acl.reset_mock()
             self.mock_get_ws_access_level.reset_mock()
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertDictEqual(response_json, self.COLLABORATOR_JSON)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -64,6 +58,7 @@ class UsersAPITest(object):
             },
         }
         users.update(self.COLLABORATOR_JSON)
+        users.pop('analysts@firecloud.org', None)
         self.assertDictEqual(response_json, users)
 
     def test_get_all_collaborator_options(self):
@@ -87,6 +82,17 @@ class UsersAPITest(object):
         self.assertSetEqual(set(response_json.keys()), set(self.COLLABORATOR_JSON.keys()))
         self.assertSetEqual(
             set(response_json['test_user_manager'].keys()), {'firstName', 'lastName', 'username', 'email'})
+
+    def test_get_all_user_group_options(self):
+        url = reverse(get_all_user_group_options)
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self._test_user_group_options_response(response)
+
+    def _test_user_group_options_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'groups': ['analysts', 'project-managers']})
 
     @mock.patch('seqr.views.apis.users_api.logger')
     @mock.patch('django.contrib.auth.models.send_mail')
@@ -197,6 +203,50 @@ class UsersAPITest(object):
 
         # check that user still exists
         self.assertEqual(User.objects.filter(username=USERNAME).count(), 1)
+
+    def test_update_project_collaborator_group(self):
+        update_url = reverse(update_project_collaborator_group, args=[PROJECT_GUID, 'project-managers'])
+        self.check_manager_login(update_url)
+
+        response = self.client.post(update_url, content_type='application/json', data=json.dumps(
+            {'hasEditPermissions': True}
+        ))
+        self._test_update_collaborator_group_response(response, update_url=update_url)
+
+    def _test_update_collaborator_group_response(self, response, update_url=None):
+        self.assertEqual(response.status_code, 200)
+        groups = response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups']
+        self.assertEqual(len(groups), 2)
+        self.assertDictEqual(
+            groups[1], {'name': 'project-managers', 'hasViewPermissions': True, 'hasEditPermissions': True})
+        project = Project.objects.get(guid=PROJECT_GUID)
+        self.assertSetEqual(set(get_perms(Group.objects.get(name='project-managers'), project)), {CAN_VIEW, CAN_EDIT})
+
+        response = self.client.post(update_url, content_type='application/json', data=json.dumps(
+            {'hasEditPermissions': False}
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups'][1],
+            {'name': 'project-managers', 'hasViewPermissions': True, 'hasEditPermissions': False},
+        )
+        self.assertSetEqual(set(get_perms(Group.objects.get(name='project-managers'), project)), {CAN_VIEW})
+
+    def test_delete_project_collaborator_group(self):
+        delete_url = reverse(delete_project_collaborator_group, args=[PROJECT_GUID, 'analysts'])
+        self.check_manager_login(delete_url)
+
+        response = self.client.post(delete_url, content_type='application/json')
+        self._test_delete_collaborator_group_response(response)
+
+    def _test_delete_collaborator_group_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(response.json()['projectsByGuid'][PROJECT_GUID]['collaboratorGroups'], [])
+
+        # check that group still exists
+        groups = Group.objects.filter(name='analysts')
+        self.assertEqual(groups.count(), 1)
+        self.assertListEqual(get_perms(groups.first(), Project.objects.get(guid=PROJECT_GUID)), [])
 
     def test_set_password(self):
         username = 'test_new_user'
@@ -350,9 +400,14 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
 
 class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
-    COLLABORATOR_JSON = {'test_user_pure_anvil@test.com': {
-        'displayName': '', 'username': 'test_user_pure_anvil@test.com', 'email': 'test_user_pure_anvil@test.com',
-    }}
+    COLLABORATOR_JSON = {
+        'test_user_pure_anvil@test.com': {
+            'displayName': '', 'username': 'test_user_pure_anvil@test.com', 'email': 'test_user_pure_anvil@test.com',
+        },
+        'analysts@firecloud.org': {
+            'displayName': '', 'username': 'analysts@firecloud.org', 'email': 'analysts@firecloud.org',
+        },
+    }
     COLLABORATOR_JSON.update(MAIN_COLLABORATOR_JSON)
 
     def _assert_403_response(self, response, **kwargs):
@@ -362,21 +417,25 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
 
     _test_logged_in_collaborator_options_response = _assert_403_response
     _test_collaborator_collaborator_options_response = _assert_403_response
+    _test_user_group_options_response = _assert_403_response
     _test_create_project_collaborator = _assert_403_response
     _test_update_collaborator_response = _assert_403_response
     _test_delete_collaborator_response = _assert_403_response
+    _test_update_collaborator_group_response = _assert_403_response
+    _test_delete_collaborator_group_response = _assert_403_response
 
     def test_get_project_collaborator_options(self, *args, **kwargs):
         super(AnvilUsersAPITest, self).test_get_project_collaborator_options(*args, **kwargs)
         self.mock_list_workspaces.assert_not_called()
-        self.assertEqual(self.mock_get_ws_acl.call_count, 2)
+        self.assertEqual(self.mock_get_ws_acl.call_count, 1)
         self.mock_get_ws_acl.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.mock_get_groups.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
+        self.mock_get_group_members.assert_called_with(self.collaborator_user, 'analysts', use_sa_credentials=True)
+
 
     def test_set_password(self):
         super(AnvilUsersAPITest, self).test_set_password()

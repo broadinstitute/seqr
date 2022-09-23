@@ -11,7 +11,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
     FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
-    CASE_REVIEW_FAMILY_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS
+    CASE_REVIEW_FAMILY_FIELDS, TAG_FIELDS, VARIANT_NOTE_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS
 
 class JSONUtilsTest(object):
     databases = '__all__'
@@ -31,14 +31,14 @@ class JSONUtilsTest(object):
             )
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_json_for_current_user(self, mock_analyst_group, mock_pm_group):
+    def test_json_for_current_user(self, mock_pm_group):
         pm_user = User.objects.get(username='test_pm_user')
         superuser = User.objects.get(username='test_superuser')
 
-        mock_analyst_group.__bool__.return_value = False
-        mock_pm_group.__bool__.return_value = False
         mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
+        mock_pm_group.__bool__.return_value = True
+        mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__str__.return_value = 'project-managers'
 
         pm_json = {
             'id': 17,
@@ -50,10 +50,10 @@ class JSONUtilsTest(object):
             'dateJoined': mock.ANY,
             'lastLogin': None,
             'isActive': True,
-            'isAnalyst': False,
+            'isAnalyst': True,
             'isAnvil': self.IS_ANVIL,
             'isDataManager': False,
-            'isPm': False,
+            'isPm': True,
             'isSuperuser': False,
         }
         self.assertDictEqual(get_json_for_current_user(pm_user), pm_json)
@@ -71,25 +71,23 @@ class JSONUtilsTest(object):
             'isAnalyst': False,
             'isAnvil': self.IS_ANVIL,
             'isDataManager': True,
-            'isPm': False if self.IS_ANVIL else True,
+            'isPm': False,
             'isSuperuser': True,
         }
         self.assertDictEqual(get_json_for_current_user(superuser), superuser_json)
 
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-        mock_pm_group.__bool__.return_value = True
-        mock_pm_group.resolve_expression.return_value = 'project-managers'
-        mock_pm_group.__str__.return_value = 'project-managers'
+        self.mock_analyst_group.__str__.return_value = ''
+        mock_pm_group.__str__.return_value = ''
+        mock_pm_group.__bool__.return_value = False
 
         pm_json.update({
-            'isAnalyst': True,
-            'isPm': True,
+            'isAnalyst': False,
+            'isPm': False,
         })
         self.assertDictEqual(get_json_for_current_user(pm_user), pm_json)
 
         superuser_json.update({
-            'isPm': False,
+            'isPm': False if self.IS_ANVIL else True,
         })
         self.assertDictEqual(get_json_for_current_user(superuser), superuser_json)
 
@@ -100,19 +98,12 @@ class JSONUtilsTest(object):
 
         self.assertSetEqual(set(json.keys()), PROJECT_FIELDS)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_json_for_family(self, mock_analyst_group):
+    def test_json_for_family(self):
         family = Family.objects.filter(project__has_case_review=False).first()
         json = _get_json_for_family(family)
         self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
 
         user = User.objects.get(username='test_user')
-        json = _get_json_for_family(family, user)
-        self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
         json = _get_json_for_family(family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_FAMILY_FIELDS)
 
@@ -126,9 +117,11 @@ class JSONUtilsTest(object):
         json = _get_json_for_family(case_review_family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), fields)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_json_for_individual(self, mock_analyst_group):
+        self.mock_analyst_group.__str__.return_value = ''
+        json = _get_json_for_family(family, user)
+        self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
+
+    def test_json_for_individual(self):
         individual = Individual.objects.first()
         json = _get_json_for_individual(individual)
         self.assertSetEqual(set(json.keys()), INDIVIDUAL_FIELDS_NO_FEATURES)
@@ -136,13 +129,10 @@ class JSONUtilsTest(object):
         json = _get_json_for_individual(individual, add_hpo_details=True)
         self.assertSetEqual(set(json.keys()), INDIVIDUAL_FIELDS)
 
-        user = User.objects.get(username='test_user')
-        json = _get_json_for_individual(individual, user, add_hpo_details=True)
-        self.assertSetEqual(set(json.keys()), INDIVIDUAL_FIELDS)
+        json = _get_json_for_individual(individual, self.manager_user, add_hpo_details=True)
+        self.assertSetEqual(set(json.keys()), NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS)
 
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-        json = _get_json_for_individual(individual, user, add_hpo_details=True)
+        json = _get_json_for_individual(individual, self.analyst_user, add_hpo_details=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_INDIVIDUAL_FIELDS)
 
     def test_json_for_sample(self):
@@ -234,8 +224,6 @@ class JSONUtilsTest(object):
         json = get_json_for_variant_note(tag)
         self.assertSetEqual(set(json.keys()), VARIANT_NOTE_FIELDS)
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_json_for_saved_search(self):
         search = VariantSearch.objects.first()
         user = User.objects.get(username='test_user')

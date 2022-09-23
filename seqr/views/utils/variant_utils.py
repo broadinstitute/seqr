@@ -174,7 +174,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     discovery_tags = None
     is_analyst = user_is_analyst(request.user)
     if is_analyst:
-        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
+        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
         response.update(discovery_response)
 
     genes = _saved_variant_genes(variants)

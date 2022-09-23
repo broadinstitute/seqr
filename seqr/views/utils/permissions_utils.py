@@ -2,7 +2,8 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
-from django.db.models import Value, TextField, Q
+from django.db.models import Value, TextField
+from guardian.shortcuts import get_objects_for_user
 
 from seqr.models import Project, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
@@ -10,14 +11,22 @@ from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level, get_anvil_group_members, user_get_anvil_groups, \
     WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL, PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
 
 logger = SeqrLogger(__name__)
 
 
-def get_analyst_users():
-    return set(User.objects.filter(groups__name=ANALYST_USER_GROUP))
+def get_anvil_analyst_user_emails(user):
+    return get_anvil_group_members(user, ANALYST_USER_GROUP, use_sa_credentials=True)
+
+
+def get_analyst_user_emails(user):
+    if not ANALYST_USER_GROUP:
+        return []
+    if anvil_enabled():
+        return get_anvil_analyst_user_emails(user)
+    return set(User.objects.filter(groups__name=ANALYST_USER_GROUP).values_list('email', flat=True))
 
 
 def get_pm_user_emails(user):
@@ -29,6 +38,8 @@ def get_pm_user_emails(user):
 
 
 def user_is_analyst(user):
+    if anvil_enabled():
+        return ANALYST_USER_GROUP in user_get_anvil_groups(user)
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
 
 
@@ -87,8 +98,15 @@ pm_or_data_manager_required = active_user_has_policies_and_passes_test(
 superuser_required = active_user_has_policies_and_passes_test(lambda user: user.is_superuser)
 
 
-def project_has_analyst_access(project):
-    return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
+def is_internal_anvil_project(project):
+    return anvil_enabled() and project.workspace_namespace in INTERNAL_NAMESPACES
+
+
+def get_internal_projects():
+    if anvil_enabled():
+        return Project.objects.filter(workspace_namespace__in=INTERNAL_NAMESPACES)
+    return Project.objects.all()
+
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
     """Retrieves Project with the given guid after checking that the given user has permission to
@@ -176,7 +194,6 @@ def has_project_permissions(project, user, can_edit=False):
 
     return user_is_data_manager(user) or \
            (not can_edit and project.all_user_demo and project.is_demo) or \
-           (user_is_analyst(user) and project_has_analyst_access(project)) or \
            _user_project_permission(user, permission_level, project)
 
 
@@ -219,20 +236,16 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
     is_data_manager = user_is_data_manager(user)
     projects = Project.objects.all()
     if limit_data_manager or not is_data_manager:
-        project_q = Q(all_user_demo=True, is_demo=True)
-        if user_is_analyst(user):
-            project_q |= Q(projectcategory__name=ANALYST_PROJECT_CATEGORY)
-
         if is_anvil_authenticated(user):
-            projects = projects.annotate(
-                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name'))
             workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
                           list_anvil_workspaces(user)]
-            project_q |= Q(workspace__in=workspaces)
+            projects = projects.annotate(
+                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
+            ).filter(workspace__in=workspaces)
         else:
-            project_q |= Q(can_view_group__user=user)
+            projects = get_objects_for_user(user, CAN_VIEW, projects)
 
-        projects = projects.filter(project_q)
+        projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
 
     project_guids = [p.guid for p in projects.distinct().only('guid')]
 

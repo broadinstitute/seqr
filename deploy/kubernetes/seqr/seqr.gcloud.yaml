@@ -177,8 +177,8 @@ spec:
           value: "{{ TERRA_PERMS_CACHE_EXPIRE_SECONDS }}"
         - name: TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
           value: "{{ TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS }}"
-        - name: ANALYST_PROJECT_CATEGORY
-          value: "{{ ANALYST_PROJECT_CATEGORY }}"
+        - name: INTERNAL_NAMESPACES
+          value: "{{ INTERNAL_NAMESPACES }}"
         - name: ANALYST_USER_GROUP
           value: "{{ ANALYST_USER_GROUP }}"
         - name: PM_USER_GROUP

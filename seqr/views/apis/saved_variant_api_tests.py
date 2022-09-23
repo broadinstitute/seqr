@@ -119,10 +119,7 @@ INVALID_CREATE_VARIANT_REQUEST_BODY['variant']['chrom'] = '27'
 
 class SavedVariantAPITest(object):
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_saved_variant_data(self, mock_analyst_group):
+    def test_saved_variant_data(self):
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
@@ -248,10 +245,6 @@ class SavedVariantAPITest(object):
 
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -918,7 +911,14 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
-        assert_no_list_ws_has_al(self, 12)
+        self.mock_list_workspaces.assert_called_once_with(self.analyst_user)
+        self.mock_get_ws_access_level.assert_called_with(
+            mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 12)
+        self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
+        self.assertEqual(self.mock_get_groups.call_count, 9)
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
