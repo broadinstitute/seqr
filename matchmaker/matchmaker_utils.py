@@ -180,35 +180,31 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
         feature.get('observed', 'yes') == 'yes' and feature['id'] in hpo_terms_by_id
     ]
 
+    match_q = None
     if genomic_features:
-        for feature in genomic_features:
-            feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
-        get_submission_kwargs = {
-            'query_ids': list(genes_by_id.keys()),
-            'filter_key': 'genomic_features',  # TODO
-            'id_filter_func': lambda gene_id: {'gene': {'id': gene_id}},
-        }
-    else:
-        get_submission_kwargs = {
-            'query_ids': feature_ids,
-            'filter_key': 'features',
-            'id_filter_func': lambda feature_id: {'id': feature_id, 'observed': 'yes'},
-        }
+        if genes_by_id:
+            for feature in genomic_features:
+                feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
+            match_q = Q(matchmakersubmissiongenes__gene_id__in=genes_by_id.keys())
+    elif features:
+        match_q = Q(features__contains={'id': feature_ids[0], 'observed': 'yes'})
+        for feature_id in feature_ids:
+            match_q |= Q(features__contains={'id': feature_id, 'observed': 'yes'})
+
+    if not match_q:
+        return [], _create_incoming_query(patient_data, origin_request_host, user)
 
     query_patient_id = patient_data['patient']['id']
+    matches = MatchmakerSubmission.objects.filter(
+        match_q, deleted_date__isnull=True).exclude(submission_id=query_patient_id)
     scored_matches = _get_matched_submissions(
-        query_patient_id,
+        matches,
         get_match_genotype_score=lambda match: _get_genotype_score(genomic_features, match) if genomic_features else 0,
         get_match_phenotype_score=lambda match: _get_phenotype_score(feature_ids, match) if feature_ids else 0,
-        **get_submission_kwargs
     )
 
-    incoming_query = create_model_from_json(MatchmakerIncomingQuery, {
-        'institution': patient_data['patient']['contact'].get('institution') or origin_request_host,
-        'patient_id': query_patient_id if scored_matches else None,
-    }, user)
-    if not scored_matches:
-        return [], incoming_query
+    incoming_query = _create_incoming_query(
+        patient_data, origin_request_host, user, patient_id=query_patient_id if scored_matches else None)
 
     prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set')
     for match_submission in scored_matches.keys():
@@ -225,17 +221,14 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
             for match_submission, score in scored_matches.items()], incoming_query
 
 
-def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phenotype_score, query_ids, filter_key, id_filter_func):
-    if not query_ids:
-        # no valid entities found for provided features
-        return {}
+def _create_incoming_query(patient_data, origin_request_host, user, patient_id=None):
+    return create_model_from_json(MatchmakerIncomingQuery, {
+        'institution': patient_data['patient']['contact'].get('institution') or origin_request_host,
+        'patient_id': patient_id,
+    }, user)
 
-    matches = []
-    for item_id in query_ids:
-        matches += MatchmakerSubmission.objects.filter(deleted_date__isnull=True, **{
-            '{}__contains'.format(filter_key): [id_filter_func(item_id)]
-        }).exclude(submission_id=patient_id)
 
+def _get_matched_submissions(matches, get_match_genotype_score, get_match_phenotype_score):
     scored_matches = {}
     for match in matches:
         genotype_score = get_match_genotype_score(match)
@@ -251,6 +244,7 @@ def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phe
 
 
 def _get_genotype_score(genomic_features, match):
+    return 0.15  # TODO
     match_features_by_gene_id = defaultdict(list)
     for feature in match.genomic_features:  # TODO
         match_features_by_gene_id[feature['gene']['id']].append(feature)

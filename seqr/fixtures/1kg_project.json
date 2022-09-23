@@ -2200,6 +2200,13 @@
                     {
                         "gene": {
                             "id": "OR4F5"
+                        },
+                        "variant": {
+                            "alternateBases":  "A",
+                            "referenceBases": "G",
+                            "referenceName": "2",
+                            "start": 100379086,
+                            "assembly": "GRCh37"
                         }
                     },
                     {

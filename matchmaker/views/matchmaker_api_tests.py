@@ -53,7 +53,9 @@ PARSED_RESULT = {
     'submissionGuid': SUBMISSION_GUID,
     'patient': {
         'genomicFeatures': [
-            {'gene': {'id': 'OR4F5'}},
+            {'gene': {'id': 'OR4F5'}, 'variant': {
+                'alternateBases': 'A', 'assembly': 'GRCh37', 'referenceBases': 'G', 'referenceName': '2', 'start': 100379086,
+            }},
             {'gene': {'id': 'CICP27'}},
             {'gene': {'id': 'DDX11L1'}},
         ],
@@ -72,7 +74,14 @@ PARSED_RESULT = {
         {'id': 'HP:0003273', 'label': 'Hip contracture', 'observed': 'no'},
     ],
     'geneVariants': [
-        {'geneId': 'ENSG00000186092'},
+        {'geneId': 'ENSG00000186092', 'variant': {
+            'alt':  'A',
+            'ref': 'G',
+            'chrom': '2',
+            'pos': 100379086,
+            'end': None,
+            'genomeVersion': 'GRCh37'
+        }},
         {'geneId': 'ENSG00000233750'},
         {'geneId': 'ENSG00000223972'},
     ],
