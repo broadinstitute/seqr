@@ -54,7 +54,9 @@ const BaseSubmissionGeneVariants = React.memo((
     {Object.entries(geneVariants.reduce(
       (acc, variant) => ({
         ...acc,
-        [variant.geneId]: [...(acc[variant.geneId] || []), savedVariantsByGuid[variant.variantGuid] || {}],
+        [variant.geneId]: [
+          ...(acc[variant.geneId] || []), variant.variant || savedVariantsByGuid[variant.variantGuid] || {},
+        ],
       }), {},
     )).map(([geneId, variants]) => (
       <TopAlignedItem key={geneId}>
