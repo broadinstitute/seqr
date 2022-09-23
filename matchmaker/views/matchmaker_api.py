@@ -427,16 +427,11 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     contact_notes = {note.institution: _get_json_for_model(note, user=user)
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
-    gene_variants = [
-        {'geneId': o.gene_id, 'variant': get_json_for_saved_variant(o.saved_variant, add_details=True)}
-        for o in submission_genes
-    ]
-
     submission_json = get_json_for_matchmaker_submission(submission)
     submission_json.update({
         'mmeResultGuids': list(parsed_results_gy_guid.keys()),
         'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
-        'geneVariants': gene_variants,
+        'geneVariants': [{'geneId': o.gene_id, 'variantGuid': o.saved_variant.guid} for o in submission_genes],
     })
 
     response = {

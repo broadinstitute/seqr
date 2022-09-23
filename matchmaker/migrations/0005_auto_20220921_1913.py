@@ -126,6 +126,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunPython(update_mme_variant_links, reverse_code=migrations.RunPython.noop),
+        # TODO remove "seqr MME" tags from linked saved variants
         # TODO write reverse migration and re-enable this
         # migrations.RemoveField(
         #     model_name='matchmakersubmission',

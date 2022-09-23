@@ -643,7 +643,7 @@ export const getMmeDefaultContactEmail = createSelector(
     const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid]
     const {
       geneVariants: submissionGeneVariants, phenotypes, individualGuid, contactHref, submissionId,
-    } = mmeSubmissionsByGuid[submissionGuid]
+    } = mmeSubmissionsByGuid[submissionGuid] // TODO
     const { familyGuid } = individualsByGuid[individualGuid]
 
     const submittedGenes = [...new Set((submissionGeneVariants || []).map(

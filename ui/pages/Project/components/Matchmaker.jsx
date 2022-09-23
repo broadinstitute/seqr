@@ -127,7 +127,7 @@ const SUBMISSION_EDIT_FIELDS = [
   { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'contactHref' },
   {
     name: 'geneVariants',
-    component: EditGenotypesTable,
+    component: EditGenotypesTable, // TODO
     idField: 'variantId',
     columns: GENOTYPE_FIELDS,
     includeSelectedRowData: true,
