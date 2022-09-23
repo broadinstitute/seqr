@@ -13,7 +13,6 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import get_variants_response
-from settings import ANALYST_PROJECT_CATEGORY
 
 MAX_SAVED_VARIANTS = 10000
 
@@ -54,7 +53,7 @@ def success_story(request, success_story_types):
     else:
         success_story_types = success_story_types.split(',')
         families = Family.objects.filter(success_story_types__overlap=success_story_types)
-    families = families.filter(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).order_by('family_id')
+    families = families.filter(project__guid__in=get_project_guids_user_can_view(request.user)).order_by('family_id')
 
     rows = [{
         "project_guid": family.project.guid,

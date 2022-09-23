@@ -367,11 +367,9 @@ def search_context_handler(request):
     for project in projects:
         check_project_permissions(project, request.user)
 
-    is_analyst = user_is_analyst(request.user)
-
     project_guid = projects[0].guid if len(projects) == 1 else None
     response.update(get_projects_child_entities(
-        projects, project_guid, request.user, is_analyst, include_samples=False, include_locus_list_metadata=False,
+        projects, project_guid, request.user, include_samples=False, include_locus_list_metadata=False,
     ))
 
     family_models = Family.objects.filter(project__in=projects)

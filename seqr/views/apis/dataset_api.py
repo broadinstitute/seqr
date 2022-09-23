@@ -8,7 +8,7 @@ from seqr.views.utils.dataset_utils import match_and_update_samples, load_mappin
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, \
-    project_has_analyst_access, project_has_anvil
+    is_internal_anvil_project, project_has_anvil
 
 
 @data_manager_required
@@ -73,7 +73,7 @@ def add_variants_dataset_handler(request, project_guid):
 
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
-    if project_has_analyst_access(project):
+    if is_internal_anvil_project(project):
         updated_individuals = {sample.individual_id for sample in updated_samples}
         previous_loaded_individuals = {
             sample.individual_id for sample in Sample.objects.filter(

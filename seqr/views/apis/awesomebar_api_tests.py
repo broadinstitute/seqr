@@ -7,7 +7,6 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class AwesomebarAPITest(object):
 
-    @mock.patch('seqr.views.apis.awesomebar_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.apis.awesomebar_api.MAX_STRING_LENGTH', 20)
     @mock.patch('seqr.views.apis.awesomebar_api.MAX_RESULTS_PER_CATEGORY', 5)
     def test_awesomebar_autocomplete_handler(self):
