@@ -199,6 +199,7 @@ def update_mme_submission(request, submission_guid=None):
     """
     Create or update the submission for the given individual.
     """
+    # TODO
     submission_json = json.loads(request.body)
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])

@@ -640,7 +640,7 @@ export const getMmeDefaultContactEmail = createSelector(
   getUser,
   (state, ownProps) => ownProps.matchmakerResultGuid,
   (mmeResultsByGuid, mmeSubmissionsByGuid, individualsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
-    const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid]
+    const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid] // TODO
     const {
       geneVariants: submissionGeneVariants, phenotypes, individualGuid, contactHref, submissionId,
     } = mmeSubmissionsByGuid[submissionGuid] // TODO

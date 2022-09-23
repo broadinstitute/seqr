@@ -160,7 +160,7 @@ def get_submission_json_for_external_match(submission, score=None):
             },
             'species': 'NCBITaxon:9606',
             'features': submission.features,
-            'genomicFeatures': submission.genomic_features,
+            'genomicFeatures': submission.genomic_features,  # TODO
         }
     }
     sex = MatchmakerSubmission.SEX_LOOKUP.get(submission.individual.sex)
@@ -252,7 +252,7 @@ def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phe
 
 def _get_genotype_score(genomic_features, match):
     match_features_by_gene_id = defaultdict(list)
-    for feature in match.genomic_features:
+    for feature in match.genomic_features:  # TODO
         match_features_by_gene_id[feature['gene']['id']].append(feature)
 
     score = 0
