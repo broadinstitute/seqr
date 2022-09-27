@@ -10,6 +10,7 @@ import ElasticsearchStatus from './components/ElasticsearchStatus'
 import RnaSeq from './components/RnaSeq'
 import SampleQc from './components/SampleQc'
 import Users from './components/Users'
+import PhenotypePri from './components/PhenotypePri'
 
 const IFRAME_STYLE = { position: 'fixed', left: '0', top: '95px' }
 
@@ -22,6 +23,7 @@ export const DATA_MANAGEMENT_PAGES = [
   { path: 'sample_qc', component: SampleQc },
   { path: 'rna_seq', component: RnaSeq },
   { path: 'users', component: Users },
+  { path: 'lirical_exomiser', component: PhenotypePri },
 ]
 
 const DataManagement = ({ match, user }) => (

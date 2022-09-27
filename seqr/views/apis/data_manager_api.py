@@ -23,7 +23,9 @@ from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, l
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm
+from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
+
+from reference_data.models import Omim
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -393,6 +395,98 @@ def load_rna_seq_sample_data(request, sample_guid):
     })
 
     return create_json_response({'success': True})
+
+
+@data_manager_required
+def load_phenotype_pri_data(request):
+    request_json = json.loads(request.body)
+
+    file_name = request_json['file']
+    ignore_extra_samples = request_json['ignoreExtraSamples']
+
+    logger.info(f'Loading phenotype prioritization data from {file_name}', request.user)
+    records = _load_phenotype_pri_file(file_name, ignore_extra_samples)
+    models = PhenotypePrioritization.objects.bulk_create([PhenotypePrioritization(**data) for data in records])
+    sample_guids = [data['sample'].guid for data in records]
+    logger.info(f'create {len(models)} PhenotypePrioritization', request.user, db_update={
+        'dbEntity': PhenotypePrioritization, 'numEntities': len(models), 'parentEntityIds': sample_guids,
+        'updateType': 'bulk_create',
+    })
+
+    return create_json_response({
+        'info': ['Phenotype prioritization data loaded'],
+        'warnings': [],
+        'fileName': file_name,
+    })
+
+
+
+EXPECTED_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName',
+                   PhenotypePrioritization.SCORE_NAME1, 'score1',
+                   PhenotypePrioritization.SCORE_NAME2, 'score2',
+                   PhenotypePrioritization.SCORE_NAME3, 'score3']
+
+
+def _get_phenotype_pri(record, i, ignore_extra_samples):
+    tool = next((k for k, v in PhenotypePrioritization.TOOL_CHOICES if v == record['tool']), None)
+    if not tool:
+        raise ValueError('Expecting {} for the "tool" column but found {} (record {})'.format(
+            ', '.join([v for k, v in PhenotypePrioritization.TOOL_CHOICES]), record['tool'], i))
+
+    project_name = record['project']
+    projects = Project.objects.filter(name=project_name)
+    if len(projects) < 1:
+        raise ValueError(f'Project {project_name} is not found (record {i})')
+    project = projects[0]
+
+    sample_id = record['sampleId']
+    samples = Sample.objects.filter(sample_id=sample_id, individual__family__project=project, is_active=True,
+                                    dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+    if len(samples) != 1:
+        if ignore_extra_samples:
+            return
+        raise ValueError(f'Sample with ID {sample_id} is not found (record {i})')
+
+    disease_id = record['diseaseId']
+    if disease_id.startswith('OMIM:'):
+        omim_recs = Omim.objects.filter(phenotype_mim_number=int(disease_id.replace('OMIM:', '')))
+        if len(omim_recs) < 1:
+            raise ValueError(f'Disease ID {disease_id} can\'t be found in Omim (record {i})')
+    else:
+        raise ValueError(f'Unknown disease ID {disease_id} (record {i})')
+
+    for score_name, value in PhenotypePrioritization.SCORE_NAMES[tool].items():
+        if record.get(score_name) != value:
+            raise ValueError(f'Expecting {value} for {score_name} but {record[score_name]} found (record {i})')
+
+    return {
+        'sample': samples[0],
+        'gene_id': record['geneId'],
+        'tool': tool,
+        'rank': int(record['rank']),
+        'disease_id': disease_id,
+        'score1': float(record['score1']),
+        'score2': float(record['score2']) if PhenotypePrioritization.SCORE_NAMES[tool][PhenotypePrioritization.SCORE_NAME2] else None,
+        'score3': float(record['score3']) if PhenotypePrioritization.SCORE_NAMES[tool][PhenotypePrioritization.SCORE_NAME3] else None,
+    }
+
+
+def _load_phenotype_pri_file(file_name, ignore_extra_samples):
+    lines = file_iter(file_name)
+
+    header = next(lines).rstrip().split('\t')
+    missing_header = [h for h in EXPECTED_HEADER if h not in header]
+    if len(missing_header):
+        raise ValueError('The following required columns are missing: {}'.format(', '.join(missing_header)))
+
+    records = []
+    for i, line in enumerate(lines):
+            row = line.rstrip().split('\t')
+            record = {header[cnt]: col for cnt, col in enumerate(row)}
+            record = _get_phenotype_pri(record, i, ignore_extra_samples)
+            if record:
+                records.append(record)
+    return records
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

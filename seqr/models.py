@@ -1053,3 +1053,41 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         unique_together = ('sample', 'gene_id')
 
         json_fields = ['gene_id', 'tpm']
+
+
+class PhenotypePrioritization(DeletableSampleMetadataModel):
+    EXOMISER = 'exomiser'
+    LIRICAL = 'lirical'
+    EXOMISER_CHOICE = 'E'
+    LIRICAL_CHOICE = 'L'
+    SCORE_NAME1 = 'scoreName1'
+    SCORE_NAME2 = 'scoreName2'
+    SCORE_NAME3 = 'scoreName3'
+    TOOL_CHOICES = (
+        (EXOMISER_CHOICE, EXOMISER),
+        (LIRICAL_CHOICE, LIRICAL)
+    )
+    SCORE_NAMES = {
+        EXOMISER_CHOICE: {
+            SCORE_NAME1: 'exomiser_score',
+            SCORE_NAME2: 'phenotype_score',
+            SCORE_NAME3: 'variant_score',
+        },
+        LIRICAL_CHOICE: {
+            SCORE_NAME1: 'post_test_probability',
+            SCORE_NAME2: 'compositeLR',
+            SCORE_NAME3: None,
+        }
+    }
+
+    tool = models.CharField(max_length=1, choices=TOOL_CHOICES)
+    rank = models.IntegerField()
+    disease_id = models.CharField(max_length=32)
+    score1 = models.FloatField(null=True)
+    score2 = models.FloatField(null=True)
+    score3 = models.FloatField(null=True)
+
+    class Meta:
+        unique_together = ('sample', 'gene_id', 'disease_id')
+
+        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'score1', 'score2', 'score3']
