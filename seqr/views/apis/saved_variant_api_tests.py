@@ -259,7 +259,7 @@ class SavedVariantAPITest(object):
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], [{
             'savedVariant': {
                 'variantGuid': 'SV0000006_1248367227_r0003_tes',
-                'familyGuid': 'F000011_11',
+                'familyGuid': 'F000012_12',
                 'projectGuid': 'R0003_test',
             },
             'tagGuid': 'VT1726961_2103343353_r0003_tes',

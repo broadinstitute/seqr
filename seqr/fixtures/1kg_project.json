@@ -806,6 +806,8 @@
         "last_modified_date": "2017-03-13T09:07:50.270Z",
         "family": 12,
         "individual_id": "NA20889",
+        "population": "ASJ",
+        "features": [{"id": "HP:0011675"}, {"id": "HP:0001509"}],
         "mother_id": null,
         "father_id": null,
         "sex": "F",
@@ -1688,7 +1690,7 @@
                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             }, "chrom": "1", "genotypes": {
-                "I000015_na20885": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
+                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
         "family": 12
     }
 },
@@ -1716,7 +1718,7 @@
             "genomeVersion": "37", "genotypeFilters": [],
             "ref": null,
             "genotypes": {
-                "I000015_na20885": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
             },
             "liftedOverPos": null,
             "liftedOverChrom": null,
