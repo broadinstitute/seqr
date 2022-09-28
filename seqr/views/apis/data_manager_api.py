@@ -420,11 +420,8 @@ def load_phenotype_pri_data(request):
     })
 
 
-
 EXPECTED_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName',
-                   PhenotypePrioritization.SCORE_NAME1, 'score1',
-                   PhenotypePrioritization.SCORE_NAME2, 'score2',
-                   PhenotypePrioritization.SCORE_NAME3, 'score3']
+                   'scoreName1', 'score1', 'scoreName2', 'score2', 'scoreName3', 'score3']
 
 
 def _get_phenotype_pri(record, i, ignore_extra_samples):
@@ -455,9 +452,15 @@ def _get_phenotype_pri(record, i, ignore_extra_samples):
     else:
         raise ValueError(f'Unknown disease ID {disease_id} (record {i})')
 
-    for score_name, value in PhenotypePrioritization.SCORE_NAMES[tool].items():
-        if record.get(score_name) != value:
-            raise ValueError(f'Expecting {value} for {score_name} but {record[score_name]} found (record {i})')
+    scores = {}
+    for score in ['1', '2', '3']:
+        scoreName = record.get('scoreName' + score)
+        if scoreName:
+            score_field = PhenotypePrioritization.SCORE_FIELDS[tool][scoreName]
+            if not score_field:
+                raise ValueError(f'Unexpected score name {scoreName} (record {i})')
+            score = record.get('score' + score)
+            scores[score_field] = float(score)
 
     return {
         'sample': samples[0],
@@ -465,9 +468,7 @@ def _get_phenotype_pri(record, i, ignore_extra_samples):
         'tool': tool,
         'rank': int(record['rank']),
         'disease_id': disease_id,
-        'score1': float(record['score1']),
-        'score2': float(record['score2']) if PhenotypePrioritization.SCORE_NAMES[tool][PhenotypePrioritization.SCORE_NAME2] else None,
-        'score3': float(record['score3']) if PhenotypePrioritization.SCORE_NAMES[tool][PhenotypePrioritization.SCORE_NAME3] else None,
+        'scores': scores,
     }
 
 
