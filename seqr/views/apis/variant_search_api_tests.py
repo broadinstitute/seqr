@@ -180,13 +180,10 @@ class VariantSearchAPITest(object):
             self.assertSetEqual(set(next(iter(response_json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
 
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
-    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger, mock_analyst_group):
+    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
@@ -387,11 +384,6 @@ class VariantSearchAPITest(object):
         # Test cross-project discovery for analyst users
         self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants
-        response = self.client.get('{}?sort=pathogenicity'.format(url))
-        self.assertEqual(response.status_code, 403)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
         response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -724,16 +716,22 @@ class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
 
 
-def assert_no_list_ws_has_al(self, acl_call_count, workspace_name=None):
+def assert_no_list_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None):
     self.mock_list_workspaces.assert_not_called()
-    assert_ws_has_al(self, acl_call_count, workspace_name)
+    assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name)
 
-def assert_ws_has_al(self, acl_call_count, workspace_name=None):
+
+def assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None, user=None):
     if not workspace_name:
         workspace_name = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
-    self.mock_get_ws_access_level.assert_called_with(mock.ANY, 'my-seqr-billing', workspace_name)
+    self.mock_get_ws_access_level.assert_called_with(user or self.collaborator_user, 'my-seqr-billing', workspace_name)
     self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+
+    self.assertEqual(self.mock_get_groups.call_count, group_call_count)
+    self.mock_get_groups.assert_called_with(user or self.collaborator_user)
+
     self.mock_get_ws_acl.assert_not_called()
+    self.mock_get_group_members.assert_not_called()
 
 
 # Test for permissions from AnVIL only
@@ -742,7 +740,8 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 17)
+        assert_ws_has_al(self, 18, 9, user=self.analyst_user)
+        self.mock_list_workspaces.assert_called_once_with(self.analyst_user)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
@@ -755,22 +754,31 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
             mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
         ])
         self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
+        self.mock_list_workspaces.assert_has_calls(calls)
+        self.mock_get_groups.assert_has_calls([
+            mock.call(self.collaborator_user),
+        ])
+        self.assertEqual(self.mock_get_groups.call_count, 1)
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
-        assert_no_list_ws_has_al(self, 3, workspace_name='anvil-project 1000 Genomes Demo')
+        assert_no_list_ws_has_al(self, 3, 1, workspace_name='anvil-project 1000 Genomes Demo')
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
         self.mock_list_workspaces.assert_called_with(self.collaborator_user)
-        assert_ws_has_al(self, 17)
+        assert_ws_has_al(self, 17, 12)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 4)
+        assert_no_list_ws_has_al(self, 4, 1)
 
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
+        self.mock_get_groups.assert_called_with(self.no_access_user)
+        self.assertEqual(self.mock_get_groups.call_count, 6)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()

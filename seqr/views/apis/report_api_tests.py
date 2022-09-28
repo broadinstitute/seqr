@@ -5,9 +5,10 @@ import pytz
 import responses
 from settings import AIRTABLE_URL
 
+from seqr.models import Project
 from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
     sample_metadata_export, gregor_export
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -207,8 +208,8 @@ def _get_list_param(call, param):
     param_str = f'{param}='
     return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
 
-class ReportAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+
+class ReportAPITest(object):
 
     def _get_zip_files(self, mock_zip, filenames):
         mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
@@ -220,40 +221,28 @@ class ReportAPITest(AuthenticationTestCase):
             for i in range(len(filenames))
         )
 
-    @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_seqr_stats(self, mock_analyst_group):
+    def test_seqr_stats(self):
+        no_access_project = Project.objects.get(id=2)
+        no_access_project.workspace_namespace = None
+        no_access_project.save()
+
         url = reverse(seqr_stats)
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'projectsCount', 'individualsCount', 'familiesCount', 'sampleCountsByType'})
-        self.assertEqual(response_json['projectsCount'], {'internal': 3, 'external': 1})
-        self.assertEqual(response_json['individualsCount'], {'internal': 17, 'external': 1})
-        self.assertEqual(response_json['familiesCount'], {'internal': 13, 'external': 1})
-        self.assertDictEqual(
-            response_json['sampleCountsByType'],
-            {'WES__VARIANTS': {'internal': 8}, 'WGS__MITO': {'internal': 1}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 2}},
-        )
+        self.assertDictEqual(response_json['projectsCount'], self.STATS_DATA['projectsCount'])
+        self.assertDictEqual(response_json['individualsCount'], self.STATS_DATA['individualsCount'])
+        self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
+        self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_get_cmg_projects(self, mock_analyst_group):
+        self.check_no_analyst_no_access(url)
+
+    def test_get_cmg_projects(self):
         url = reverse(get_cmg_projects)
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -261,17 +250,12 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), ['projectGuids'])
         self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.apis.report_api.timezone')
-    def test_discovery_sheet(self, mock_timezone, mock_analyst_group):
+    def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
         self.check_analyst_login(non_project_url)
-
-        response = self.client.get(non_project_url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
@@ -312,21 +296,15 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_anvil_export(self, mock_google_authenticated,  mock_zip, mock_analyst_group):
+    def test_anvil_export(self, mock_google_authenticated,  mock_zip):
         mock_google_authenticated.return_value = False
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
@@ -408,6 +386,8 @@ class ReportAPITest(AuthenticationTestCase):
             'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
 
+        self.check_no_analyst_no_access(url)
+
         # Test non-broad analysts do not have access
         self.login_pm_user()
         response = self.client.get(url)
@@ -415,20 +395,12 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
+    def test_sample_metadata_export(self, mock_google_authenticated):
         mock_google_authenticated.return_value = False
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
@@ -498,14 +470,14 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
 
+        self.check_no_analyst_no_access(url)
+
         # Test non-broad analysts do not have access
         self.login_pm_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
-    @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @responses.activate
@@ -568,7 +540,8 @@ class ReportAPITest(AuthenticationTestCase):
             'time_to_freeze', 'sample_transformation_detail',
         ])
         self.assertIn(
-            ['Broad_NA19675_1', 'Broad_NA19675_1', '', '', '', '', '', '', '', '', '', '', '', '', ''], analyte_file)
+            ['Broad_NA19675_1', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
+            analyte_file)
 
         self.assertEqual(len(experiment_file), 1)
         self.assertEqual(experiment_file[0], [
@@ -592,3 +565,37 @@ class ReportAPITest(AuthenticationTestCase):
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
         ])
+
+        self.check_no_analyst_no_access(url)
+
+
+class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    STATS_DATA = {
+        'projectsCount': {'non_demo': 3, 'demo': 1},
+        'familiesCount': {'non_demo': 12, 'demo': 2},
+        'individualsCount': {'non_demo': 15, 'demo': 3},
+        'sampleCountsByType': {
+            'WES__VARIANTS': {'demo': 1, 'non_demo': 7},
+            'WGS__MITO': {'non_demo': 1},
+            'WES__SV': {'non_demo': 3},
+            'WGS__SV': {'non_demo': 1},
+            'RNA__VARIANTS': {'demo': 1, 'non_demo': 1},
+        },
+    }
+
+
+class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    STATS_DATA = {
+        'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
+        'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
+        'individualsCount': {'internal': 14, 'external': 1, 'no_anvil': 0, 'demo': 3},
+        'sampleCountsByType': {
+            'WES__VARIANTS': {'internal': 7, 'demo': 1},
+            'WGS__MITO': {'internal': 1},
+            'WES__SV': {'internal': 3},
+            'WGS__SV': {'external': 1},
+            'RNA__VARIANTS': {'internal': 1, 'demo': 1},
+        },
+    }

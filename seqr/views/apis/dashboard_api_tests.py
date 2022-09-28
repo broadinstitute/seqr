@@ -15,8 +15,6 @@ DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json')
 class DashboardPageTest(object):
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.views.utils.permissions_utils.safe_redis_set_json')
     def test_dashboard_page_data(self, mock_set_redis, mock_get_redis):
         mock_get_redis.return_value = None
@@ -101,7 +99,7 @@ def assert_has_anvil_calls(self):
         mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo')
     ]
     self.mock_get_ws_access_level.assert_has_calls(calls, any_order=True)
-    self.mock_get_ws_acl.assert_not_called()
+    self.assert_no_extra_anvil_calls()
 
 
 # Test for permissions from AnVIL only

@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch, Count, Q
 from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
@@ -15,13 +15,13 @@ from seqr.views.utils.export_utils import export_multiple_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
-    check_project_permissions
+    check_project_permissions, get_project_guids_user_can_view, get_internal_projects
+from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
 
-from settings import ANALYST_PROJECT_CATEGORY
 
 logger = SeqrLogger(__name__)
 
@@ -32,31 +32,42 @@ HEMI = 'Hemizygous'
 
 @analyst_required
 def seqr_stats(request):
-    internal_samples_counts = _get_sample_counts(
-        Sample.objects.filter(individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY))
-    external_samples_counts = _get_sample_counts(
-        Sample.objects.exclude(individual__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY))
+    non_demo_projects = Project.objects.filter(is_demo=False)
+
+    project_models = {
+        'demo': Project.objects.filter(is_demo=True),
+    }
+    if anvil_enabled():
+        is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
+        anvil_projects = non_demo_projects.exclude(is_anvil_q)
+        internal_ids = get_internal_projects().values_list('id', flat=True)
+        project_models.update({
+            'internal': anvil_projects.filter(id__in=internal_ids),
+            'external': anvil_projects.exclude(id__in=internal_ids),
+            'no_anvil': non_demo_projects.filter(is_anvil_q),
+        })
+    else:
+        project_models.update({
+            'non_demo': non_demo_projects,
+        })
+
     grouped_sample_counts = defaultdict(dict)
-    for k, v in internal_samples_counts.items():
-        grouped_sample_counts[k]['internal'] = v
-    for k, v in external_samples_counts.items():
-        grouped_sample_counts[k]['external'] = v
+    for project_key, projects in project_models.items():
+        samples_counts = _get_sample_counts(Sample.objects.filter(individual__family__project__in=projects))
+        for k, v in samples_counts.items():
+            grouped_sample_counts[k][project_key] = v
 
     return create_json_response({
-        'projectsCount': {
-            'internal': Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-            'external': Project.objects.exclude(projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-        },
+        'projectsCount': {k: projects.count() for k, projects in project_models.items()},
         'familiesCount': {
-            'internal': Family.objects.filter(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-            'external': Family.objects.exclude(project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+            k: Family.objects.filter(project__in=projects).count() for k, projects in project_models.items()
         },
         'individualsCount': {
-            'internal': Individual.objects.filter(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
-            'external': Individual.objects.exclude(family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY).count(),
+            k: Individual.objects.filter(family__project__in=projects).count() for k, projects in project_models.items()
         },
         'sampleCountsByType': grouped_sample_counts,
     })
+
 
 def _get_sample_counts(sample_q):
     samples_agg = sample_q.filter(is_active=True).values('sample_type', 'dataset_type').annotate(count=Count('*'))
@@ -692,8 +703,10 @@ HPO_QUALIFIERS = {
 
 @analyst_required
 def gregor_export(request, consent_code):
+    projects = get_internal_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
     individuals = Individual.objects.filter(
-        family__project__consent_code=consent_code[0], family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
+        family__project__consent_code=consent_code[0],
+        family__project__in=projects,
     ).prefetch_related('family__project', 'mother', 'father')
     participant_rows = []
     family_map = {}
@@ -794,9 +807,9 @@ def _get_phenotype_row(feature):
 def _get_analyte_row(individual):
     return {
         'analyte_id': f'Broad_{individual.individual_id}',  # TODO this will change once Sam figures out what to do
-        'analyte_type': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
-        'primary_biosample': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
-        'tissue_affected_status': None,  # TODO https://github.com/broadinstitute/seqr-private/issues/1171
+        'analyte_type': individual.get_analyte_type_display(),
+        'primary_biosample': individual.get_primary_biosample_display(),
+        'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
     }
 
 

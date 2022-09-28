@@ -77,9 +77,9 @@ always starts up with the correct configuration.
 
 ```bash
 # Mirrors production configuration
-export ANALYST_PROJECT_CATEGORY=analyst-projects
-export ANALYST_USER_GROUP=analysts
-export PM_USER_GROUP=project-managers
+export INTERNAL_NAMESPACES=gregor-consortium,seqr-access
+export ANALYST_USER_GROUP=TGG_Users
+export PM_USER_GROUP=TGG_PM
     
 # Set the client ID and secret for the seqr-local OAuth client (from GCP)
 export SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID=

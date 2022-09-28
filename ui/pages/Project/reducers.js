@@ -234,6 +234,10 @@ export const updateCollaborator = values => updateEntity(
   values, RECEIVE_DATA, null, 'username', null, state => `/api/project/${state.currentProjectGuid}/collaborators`,
 )
 
+export const updateCollaboratorGroup = values => updateEntity(
+  values, RECEIVE_DATA, null, 'name', null, state => `/api/project/${state.currentProjectGuid}/collaboratorGroups`,
+)
+
 export const updateAnalysisGroup = values => updateEntity(
   values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/analysis_groups`,
 )

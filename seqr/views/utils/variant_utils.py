@@ -159,9 +159,8 @@ LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
-                          add_locus_list_detail=False, include_rna_seq=True, include_missing_variants=False,
-                          include_project_name=False):
-    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, include_missing_variants=include_missing_variants)
+                          add_locus_list_detail=False, include_rna_seq=True, include_project_name=False):
+    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
 
@@ -175,7 +174,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     discovery_tags = None
     is_analyst = user_is_analyst(request.user)
     if is_analyst:
-        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
+        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
         response.update(discovery_response)
 
     genes = _saved_variant_genes(variants)
