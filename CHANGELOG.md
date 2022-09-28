@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 9/28/22
 * Add Gregor fields to sample manifest (REQUIRES DB MIGRATION)
 * Deprecate auto-granting project access for analysts (removes ANALYST_PROJECT_CATEGORY env variable)
 * Add support for adding user groups for project access
