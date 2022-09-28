@@ -46,19 +46,26 @@ class DashboardPageTest(object):
         self.login_analyst_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['projectsByGuid']), 3)
-
-        self.login_data_manager_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()['projectsByGuid']), 4)
+        response_json = response.json()
+        self.assertEqual(len(response_json['projectsByGuid']), 3)
+        mock_get_redis.assert_called_with('projects__test_user')
+        mock_set_redis.assert_called_with('projects__test_user', list(response_json['projectsByGuid'].keys()), expire=300)
 
         mock_get_redis.return_value = ['R0001_1kg']
         mock_set_redis.reset_mock()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {'R0001_1kg'})
-        mock_get_redis.assert_called_with('projects__test_data_manager')
+        mock_get_redis.assert_called_with('projects__test_user')
+        mock_set_redis.assert_not_called()
+
+        mock_get_redis.reset_mock()
+        mock_set_redis.reset_mock()
+        self.login_data_manager_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['projectsByGuid']), 4)
+        mock_get_redis.assert_not_called()
         mock_set_redis.assert_not_called()
 
         # Test all user projects
