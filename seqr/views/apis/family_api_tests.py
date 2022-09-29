@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import mock
+from copy import deepcopy
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
@@ -12,7 +13,7 @@ from seqr.views.apis.family_api import update_family_pedigree_image, update_fami
     family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
-    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
+    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
 from seqr.models import FamilyAnalysedBy, AnalysisGroup
 
 FAMILY_GUID = 'F000001_1'
@@ -30,10 +31,7 @@ INDIVIDUAL_GUID = 'I000001_na19675'
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_family_page_data(self, mock_analyst_group):
+    def test_family_page_data(self):
         url = reverse(family_page_data, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
 
@@ -90,17 +88,22 @@ class FamilyAPITest(AuthenticationTestCase):
         # Test analyst users have internal fields returned
         self.login_analyst_user()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        internal_family_fields = deepcopy(family_fields)
+        internal_family_fields.update(INTERNAL_FAMILY_FIELDS)
+        individual_fields.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
+        internal_individual_fields = deepcopy(individual_fields)
+        internal_individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), internal_family_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), internal_individual_fields)
 
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        self.mock_analyst_group.__str__.return_value = ''
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        family_fields.update(INTERNAL_FAMILY_FIELDS)
-        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
-        individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), family_fields)
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
 
@@ -313,9 +316,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertIsNone(response_json[FAMILY_GUID]['assignedAnalyst'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_update_success_story_types(self, mock_analyst_group):
+    def test_update_success_story_types(self):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
 
@@ -324,17 +325,14 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
 
         self.login_analyst_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-
-        # send valid request
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json[FAMILY_GUID]['successStoryTypes'], ['O', 'D'])
+
+        self.check_no_analyst_no_access(url, get_response=lambda: self.client.post(
+            url, content_type='application/json', data=json.dumps({'successStoryTypes': []})))
 
     @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_family_fields(self):

@@ -33,6 +33,8 @@
         "name": "Empty Project",
         "description": "",
         "consent_code": "H",
+        "workspace_name": "empty",
+        "workspace_namespace": "my-seqr-billing",
 	"can_edit_group": 2,
 	"can_view_group": 3,
 	"is_mme_enabled": false,
@@ -75,21 +77,7 @@
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
         "consent_code": "H",
     "workspace_name": "anvil-non-analyst-project 1000 Genomes Demo",
-    "workspace_namespace": "my-seqr-billing"
-    }
-},
-{
-    "model": "seqr.projectcategory",
-    "pk": 1,
-    "fields": {
-        "guid": "PC000001_analyst_projects",
-        "created_date": "2020-03-12T23:52:36.401Z",
-        "created_by": null,
-        "last_modified_date": "2020-03-12T23:52:36.401Z",
-        "name": "analyst-projects",
-        "projects": [
-            1, 2, 3
-        ]
+    "workspace_namespace": "ext-data"
     }
 },
 {
@@ -446,6 +434,8 @@
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "proband_relationship": "S",
+        "primary_biosample": "NT",
+        "analyte_type": "D",
         "birth_year": 1999,
         "death_year": null,
         "onset_age": "A",

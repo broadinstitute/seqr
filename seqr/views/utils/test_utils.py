@@ -1,4 +1,6 @@
 # Utilities used for unit and integration tests.
+from collections import defaultdict
+from copy import deepcopy
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
@@ -41,6 +43,13 @@ class AuthenticationTestCase(TestCase):
         patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_TOS_VERSION', 1.3)
         patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+        self.mock_analyst_group = patcher.start()
+        self.mock_analyst_group.__str__.return_value = 'analysts'
+        self.mock_analyst_group.__eq__.side_effect = lambda s: str(self.mock_analyst_group) == s
+        self.mock_analyst_group.__bool__.side_effect = lambda: bool(str(self.mock_analyst_group))
+        self.mock_analyst_group.resolve_expression.return_value = 'analysts'
+        self.addCleanup(patcher.stop)
 
     @classmethod
     def setUpTestData(cls):
@@ -61,6 +70,18 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.filter(can_edit_group=edit_group))
         assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
+
+        cls.add_additional_user_groups()
+
+    @classmethod
+    def add_additional_user_groups(cls):
+        analyst_group = Group.objects.get(pk=4)
+        analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
+        assign_perm(user_or_group=analyst_group, perm=CAN_EDIT, obj=Project.objects.filter(id__in=[1, 2, 3]))
+        assign_perm(user_or_group=analyst_group, perm=CAN_VIEW, obj=Project.objects.filter(id__in=[1, 2, 3]))
+
+        pm_group = Group.objects.get(pk=5)
+        pm_group.user_set.add(cls.pm_user)
 
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
@@ -195,9 +216,17 @@ class AuthenticationTestCase(TestCase):
     def get_initial_page_json(self, response):
         return self.get_initial_page_window('initialJSON', response)
 
+    def check_no_analyst_no_access(self, url, get_response=None):
+        self.mock_analyst_group.__str__.return_value = ''
+
+        response = get_response() if get_response else self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
 TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
+TEST_EMPTY_PROJECT_WORKSPACE = 'empty'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
 
@@ -232,6 +261,12 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         },
+        'analysts@firecloud.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
         'test_user_pure_anvil@test.com': {
             "accessLevel": "READER",
             "pending": False,
@@ -258,7 +293,13 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": False,
             "canCompute": False
-        }
+        },
+        'analysts@firecloud.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
     'workspace': {
         'bucketName': 'test_bucket'
@@ -279,11 +320,23 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": False,
             "canCompute": True
-        }
+        },
     },
     'workspace': {
         'authorizationDomain': [],
         'bucketName': 'test_bucket'
+    },
+}, {
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_EMPTY_PROJECT_WORKSPACE,
+    'public': False,
+    'acl': {
+        'analysts@firecloud.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
@@ -311,6 +364,16 @@ ANVIL_WORKSPACES = [{
 ]
 
 
+ANVIL_GROUPS = {
+    'project-managers': ['test_pm_user@test.com'],
+    'analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
+}
+ANVIL_GROUP_LOOKUP = defaultdict(list)
+for group, users in ANVIL_GROUPS.items():
+    for user in users:
+        ANVIL_GROUP_LOOKUP[user].append(group)
+
+
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
 TEST_OAUTH2_KEY = 'abc123'
 
@@ -329,7 +392,11 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
     acl = wss[0]['acl'] if wss else {}
-    user_acl = next((v for k, v in acl.items() if user.email.lower() == k.lower()), None)
+    email = user.email.lower()
+    user_acl = next((v for k, v in acl.items() if email == k.lower()), None)
+    for user_group in ANVIL_GROUP_LOOKUP[email]:
+        if not user_acl:
+            user_acl = acl.get(f'{user_group}@firecloud.org')
     access_level = {
         'accessLevel': user_acl['accessLevel'],
         'canShare': user_acl['canShare'],
@@ -344,6 +411,7 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
 
 
 def get_workspaces_side_effect(user):
+    email = user.email.lower()
     return [
         {
             'public': ws['public'],
@@ -351,8 +419,22 @@ def get_workspaces_side_effect(user):
                 'namespace': ws['workspace_namespace'],
                 'name': ws['workspace_name']
             }
-        } for ws in ANVIL_WORKSPACES if any(user.email.lower() == k.lower() for k in ws['acl'].keys())
+        } for ws in ANVIL_WORKSPACES if any(
+            email == k.lower() or k.lower().replace('@firecloud.org', '') in ANVIL_GROUP_LOOKUP[email]
+            for k in ws['acl'].keys())
     ]
+
+
+
+def get_groups_side_effect(user):
+    return [group for group, users in ANVIL_GROUPS.items() if user.email in users]
+
+
+def get_group_members_side_effect(user, group, use_sa_credentials=False):
+    members = ANVIL_GROUPS[str(group)]
+    if user.email in members or use_sa_credentials:
+        return members
+    return {}
 
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
@@ -366,6 +448,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.orm_to_json_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing'])
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
@@ -383,7 +468,25 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_access_level = patcher.start()
         self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_anvil_groups')
+        self.mock_get_groups = patcher.start()
+        self.mock_get_groups.side_effect = get_groups_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.get_anvil_group_members')
+        self.mock_get_group_members = patcher.start()
+        self.mock_get_group_members.side_effect = get_group_members_side_effect
+        self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
+
+    @classmethod
+    def add_additional_user_groups(cls):
+        analyst_group = Group.objects.get(pk=4)
+        analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
+
+    def assert_no_extra_anvil_calls(self):
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
@@ -448,11 +551,18 @@ INDIVIDUAL_FIELDS_NO_FEATURES = {
 INDIVIDUAL_FIELDS = {'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures'}
 INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS_NO_FEATURES)
 
-INTERNAL_INDIVIDUAL_FIELDS = {
+CASE_REVIEW_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-    'probandRelationship',
 }
-INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
+CORE_INTERNAL_INDIVIDUAL_FIELDS = {
+    'probandRelationship', 'analyteType', 'primaryBiosample', 'tissueAffectedStatus',
+}
+
+NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS = deepcopy(INDIVIDUAL_FIELDS)
+NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
+
+INTERNAL_INDIVIDUAL_FIELDS = deepcopy(NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS)
+INTERNAL_INDIVIDUAL_FIELDS.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
     'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',

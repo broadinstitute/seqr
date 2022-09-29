@@ -27,7 +27,8 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families, get_updated_pedigree_json
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
-from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs, get_gs_file_list
+from seqr.utils.file_utils import does_file_exist, mv_file_to_gs, get_gs_file_list
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
@@ -38,21 +39,9 @@ logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
-BLOCK_SIZE = 65536
-
 ANVIL_LOADING_EMAIL_DATE = None
 ANVIL_LOADING_DELAY_EMAIL = None
 DAG_VERSION = '0.0.1'
-
-def get_vcf_samples(vcf_filename):
-    byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
-    for line in file_iter(vcf_filename, byte_range=byte_range):
-        if line[0] != '#':
-            break
-        if line.startswith('#CHROM'):
-            header = line.rstrip().split('FORMAT\t', 2)
-            return set(header[1].split('\t')) if len(header) == 2 else {}
-    return {}
 
 
 def save_temp_data(data):
@@ -161,12 +150,10 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = get_vcf_samples(data_path)
-    if not samples:
-        return create_json_response(
-            {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
+    samples = validate_vcf_and_get_samples(data_path)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
+
 
 @anvil_workspace_access_required
 def create_project_from_workspace(request, namespace, name):
@@ -406,14 +393,16 @@ def _check_dag_running_state(dag_id):
     if lastest_dag_runs['state'] == 'running':
         raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
+
 def _construct_dag_variables(project, data_path, sample_type):
     dag_variables = {
         "active_projects": [project.guid],
         "vcf_path": data_path,
-        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
+        "project_path": '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
         "projects_to_run": [project.guid],
     }
     return dag_variables
+
 
 def _wait_for_dag_variable_update(dag_id, project):
     updated_project = project.guid

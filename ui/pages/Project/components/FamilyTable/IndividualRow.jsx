@@ -47,7 +47,7 @@ const Detail = styled.div`
 
 const CaseReviewDropdownContainer = styled.div`
   float: right;
-  width: 220px;
+  width: 100%;
 `
 
 const FLAG_TITLE = {
@@ -437,6 +437,48 @@ const NON_CASE_REVIEW_FIELDS = [
     individualFields: ({ caseReviewStatus }) => ({
       isVisible: caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
     }),
+  },
+  {
+    field: 'analyteType',
+    fieldName: 'Analyte Type',
+    isEditable: true,
+    isPrivate: true,
+    component: OptionFieldView,
+    tagOptions: [
+      { value: 'D', text: 'DNA' },
+      { value: 'R', text: 'RNA' },
+      { value: 'B', text: 'blood plasma' },
+      { value: 'F', text: 'frozen whole blood' },
+      { value: 'H', text: 'high molecular weight DNA' },
+      { value: 'U', text: 'urine' },
+    ],
+  },
+  {
+    field: 'primaryBiosample',
+    fieldName: 'Primary Biosample',
+    isEditable: true,
+    isPrivate: true,
+    component: OptionFieldView,
+    tagOptions: [
+      { value: 'T', text: 'UBERON:0000479 (tissue)' },
+      { value: 'NT', text: 'UBERON:0003714 (neural tissue)' },
+      { value: 'S', text: 'UBERON:0001836 (saliva)' },
+      { value: 'SE', text: 'UBERON:0001003 (skin epidermis)' },
+      { value: 'MT', text: 'UBERON:0002385 (muscle tissue)' },
+      { value: 'WB', text: 'UBERON:0000178 (whole blood)' },
+      { value: 'BM', text: 'UBERON:0002371 (bone marrow)' },
+      { value: 'CC', text: 'UBERON:0006956 (buccal mucosa)' },
+      { value: 'CF', text: 'UBERON:0001359 (cerebrospinal fluid)' },
+      { value: 'U', text: 'UBERON:0001088 (urine)' },
+      { value: 'NE', text: 'UBERON:0019306 (nose epithelium)' },
+    ],
+  },
+  {
+    field: 'tissueAffectedStatus',
+    fieldName: 'Tissue Affected Status',
+    isEditable: true,
+    isPrivate: true,
+    component: NullableBoolFieldView,
   },
   ...INDIVIDUAL_FIELDS,
 ]

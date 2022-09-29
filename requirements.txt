@@ -167,7 +167,7 @@ numpy==1.21.5
     #   hail
     #   pandas
     #   scipy
-oauthlib==3.2.0
+oauthlib==3.2.1
     # via
     #   requests-oauthlib
     #   social-auth-core
@@ -191,7 +191,7 @@ plotly==5.5.0
     # via hail
 portalocker==2.4.0
     # via msal-extensions
-protobuf==3.19.4
+protobuf==3.19.5
     # via google-api-core
 psycopg2==2.9.3
     # via -r requirements.in
