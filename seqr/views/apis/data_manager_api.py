@@ -25,8 +25,6 @@ from seqr.views.utils.permissions_utils import data_manager_required
 
 from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
 
-from reference_data.models import Omim
-
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
 logger = SeqrLogger(__name__)
@@ -445,22 +443,14 @@ def _get_phenotype_pri(record, i, ignore_extra_samples):
         raise ValueError(f'Sample with ID {sample_id} is not found (record {i})')
 
     disease_id = record['diseaseId']
-    if disease_id.startswith('OMIM:'):
-        omim_recs = Omim.objects.filter(phenotype_mim_number=int(disease_id.replace('OMIM:', '')))
-        if len(omim_recs) < 1:
-            raise ValueError(f'Disease ID {disease_id} can\'t be found in Omim (record {i})')
-    else:
-        raise ValueError(f'Unknown disease ID {disease_id} (record {i})')
+    disease_name = record['diseaseName']
 
     scores = {}
     for score in ['1', '2', '3']:
-        scoreName = record.get('scoreName' + score)
-        if scoreName:
-            score_field = PhenotypePrioritization.SCORE_FIELDS[tool][scoreName]
-            if not score_field:
-                raise ValueError(f'Unexpected score name {scoreName} (record {i})')
+        score_name = record.get('scoreName' + score)
+        if score_name:
             score = record.get('score' + score)
-            scores[score_field] = float(score)
+            scores[score_name] = float(score)
 
     return {
         'sample': samples[0],
@@ -468,6 +458,7 @@ def _get_phenotype_pri(record, i, ignore_extra_samples):
         'tool': tool,
         'rank': int(record['rank']),
         'disease_id': disease_id,
+        'disease_name': disease_name,
         'scores': scores,
     }
 
