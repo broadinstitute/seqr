@@ -806,6 +806,8 @@
         "last_modified_date": "2017-03-13T09:07:50.270Z",
         "family": 12,
         "individual_id": "NA20889",
+        "population": "ASJ",
+        "features": [{"id": "HP:0011675"}, {"id": "HP:0001509"}],
         "mother_id": null,
         "father_id": null,
         "sex": "F",
@@ -1551,7 +1553,7 @@
             "liftedOverChrom": "",
             "originalAltAlleles": ["T"],
             "transcripts": {
-                "ENSG00000186092": [
+                "ENSG00000197530": [
                     {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "splice_region_variant", "canonical": "YES", "hgvs": "ENST00000505820.2:c.1067-4G>A", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000505820.2:c.1067-4G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             },
@@ -1688,8 +1690,8 @@
                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             }, "chrom": "1", "genotypes": {
-                "I000015_na20885": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
-        "family": 11
+                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
+        "family": 12
     }
 },
 {
@@ -1716,16 +1718,16 @@
             "genomeVersion": "37", "genotypeFilters": [],
             "ref": null,
             "genotypes": {
-                "I000015_na20885": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
             },
             "liftedOverPos": null,
             "liftedOverChrom": null,
             "svType": "DEL",
             "variantId": "prefix_19107_DEL",
             "chrom": "12",
-            "transcripts": {"ENSG00000240361": [], "ENSG00000135953": []}
+            "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
         },
-        "family": 11
+        "family": 12
     }
 },
 {
@@ -2087,15 +2089,15 @@
     "pk": 1,
     "fields": {
         "matchmaker_submission": 1,
-        "saved_variant": 4,
-        "gene_id": "ENSG00000186092"
+        "saved_variant": 1,
+        "gene_id": "ENSG00000135953"
     }
 },
 {
     "model": "matchmaker.matchmakersubmission",
     "pk": 2,
     "fields": {
-        "individual": 15,
+        "individual": 17,
         "guid": "MS000015_na20885",
         "created_date": "2019-02-05T06:42:55.397Z",
         "last_modified_date": "2019-02-05T06:42:55.397Z",
@@ -2124,15 +2126,8 @@
         "saved_variant": 6,
         "gene_id": "ENSG00000240361"
     }
-}, {
-    "model": "matchmaker.matchmakersubmissiongenes",
-    "pk": 3,
-    "fields": {
-        "matchmaker_submission": 2,
-        "saved_variant": 7,
-        "gene_id": "ENSG00000135953"
-    }
-},{
+},
+    {
     "model": "matchmaker.matchmakersubmission",
     "pk": 3,
     "fields": {
@@ -2143,19 +2138,34 @@
         "submission_id": "P0004515",
         "label": "P0004515",
         "contact_name": "Baylor UDN Clinical Site",
-        "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
-        "features": [
-            {
-                "id": "HP:0001252",
-                "label": "Muscular hypotonia",
-                "observed": "yes"
-            },
-            {
-                "id": "HP:0002017",
-                "label": "Nausea and vomiting",
-                "observed": "yes"
-            }
-        ]
+        "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 3,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000135953"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 4,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000223972"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 5,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000240361"
     }
 },
 {
@@ -2174,7 +2184,7 @@
 },
 {
     "model": "matchmaker.matchmakersubmissiongenes",
-    "pk": 5,
+    "pk": 6,
     "fields": {
         "matchmaker_submission": 4,
         "saved_variant": 8,

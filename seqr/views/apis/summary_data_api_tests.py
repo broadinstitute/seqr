@@ -47,7 +47,7 @@ class SummaryDataAPITest(object):
         response_keys = {'genesById', 'submissions', 'savedVariantsByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertSetEqual(set(response_json['genesById'].keys()),
-                            {'ENSG00000240361', 'ENSG00000135953', 'ENSG00000186092'})
+                            {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
 
         # Test analyst behavior
@@ -59,7 +59,8 @@ class SummaryDataAPITest(object):
         response_keys.add('metrics')
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertDictEqual(response_json['metrics'], EXPECTED_MME_DETAILS_METRICS)
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000240361', 'ENSG00000135953', 'ENSG00000186092'})
+        self.assertEqual(len(response_json['genesById']), 3)
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), 3)
 
     def test_success_story(self):

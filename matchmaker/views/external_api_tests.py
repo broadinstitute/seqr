@@ -63,7 +63,7 @@ class ExternalAPITest(TestCase):
                 'id': '12345',
                 'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
                 'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {
-                    'gene': {'id': 'OR4F29'},
+                    'gene': {'id': 'RP11'},
                     'zygosity': 1,
                     'variant': {'start': 77027549, 'end': 77027550, 'referenceName': '14'},
                 }],
@@ -159,7 +159,7 @@ class ExternalAPITest(TestCase):
                 'genomicFeatures': [
                     {
                         'gene': {
-                            'id': 'ENSG00000186092'
+                            'id': 'ENSG00000135953'
                         },
                         'variant': {
                             'end': 77027548,
@@ -194,7 +194,7 @@ class ExternalAPITest(TestCase):
                 'genomicFeatures': [
                     {
                         'gene': {
-                            'id': 'ENSG00000186092'
+                            'id': 'ENSG00000135953'
                         }, 'variant': {
                             'referenceName': '14',
                             'start': 77027630
@@ -202,17 +202,12 @@ class ExternalAPITest(TestCase):
                     },
                     {
                         'gene': {
-                            'id': 'ENSG00000233750'
+                            'id': 'ENSG00000240361'
                         }
                     },
                     {
                         'gene': {
                             'id': 'ENSG00000223972'
-                        }
-                    },
-                    {
-                        'gene': {
-                            'id': 'ABC'
                         }
                     }
                 ],
@@ -231,7 +226,7 @@ class ExternalAPITest(TestCase):
     matchbox found a match between a patient from Test Institute and the following 3 case(s) 
     in matchbox. The following information was included with the query,
 
-    genes: FAM138A, OR4F29, OR4F5
+    genes: FAM138A, RP11
     phenotypes: HP:0001252 (Muscular hypotonia), HP:0003273 (Hip contracture)
     contact: PI
     email: test@test.com

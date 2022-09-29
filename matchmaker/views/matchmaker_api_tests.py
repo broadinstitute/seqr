@@ -110,7 +110,7 @@ NEW_MATCH_JSON = {
         "genomicFeatures": [
             {
                 "gene": {
-                    "id": "OR4F29"
+                    "id": "RP11"
                 }
             }
         ],
@@ -134,7 +134,7 @@ PARSED_NEW_MATCH_JSON = {
     'patient': NEW_MATCH_JSON['patient'],
     'submissionGuid': SUBMISSION_GUID,
     'phenotypes': [{'observed': 'yes', 'id': 'HP:0012469', 'label': 'Infantile spasms'}],
-    'geneVariants': [{'geneId': 'ENSG00000235249'}],
+    'geneVariants': [{'geneId': 'ENSG00000135953'}],
     'matchStatus': {
         'matchmakerResultGuid': mock.ANY,
         'comments': None,
@@ -225,7 +225,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000186092',
+                'geneId': 'ENSG00000135953',
                 'variantGuid': 'SV0059956_11560662_f019313_1',
             }],
         }})
@@ -331,7 +331,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'id': 'P0004517',
             'score': 0.35,
             'patient': {
-                'genomicFeatures': [{'gene': {'id': 'ENSG00000186092'}}],
+                'genomicFeatures': [{'gene': {'id': 'ENSG00000135953'}}],
                 'features': None,
                 'contact': {
                     'href': 'mailto:matchmaker@broadinstitute.org',
@@ -347,7 +347,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'phenotypes': [],
             'geneVariants': [
                 {
-                    'geneId': 'ENSG00000186092',
+                    'geneId': 'ENSG00000135953',
                 }
             ],
             'matchStatus': {
@@ -377,7 +377,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000186092',
+                'geneId': 'ENSG00000135953',
                 'alt': 'C',
                 'ref': 'CCACT',
                 'chrom': '14',
@@ -395,7 +395,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
-            {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000235249'}
+            {'ENSG00000135953', 'ENSG00000240361', 'ENSG00000223972'}
         )
         # non-analyst users can't see contact notes
         self.assertDictEqual(response_json['mmeContactNotes'], {'st georges, university of london': {}})
@@ -421,7 +421,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
                     {'id': 'HP:0012469', 'observed': 'yes'}
                 ],
                 'genomicFeatures': [{
-                    'gene': {'id': 'ENSG00000186092'},
+                    'gene': {'id': 'ENSG00000135953'},
                     'variant': {
                         'end': 77027548, 'start': 77027549, 'assembly': 'GRCh38', 'referenceName': '14',
                         'alternateBases': 'C', 'referenceBases': 'CCACT',
@@ -447,9 +447,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
         message = """
     A search from a seqr user from project 1kg project n\xe5me with uni\xe7\xf8de individual NA19675_1 had the following new match(es):
     
-     - From Sam Baxter at institution Broad Center for Mendelian Genomics with genes OR4F5.
+     - From Sam Baxter at institution Broad Center for Mendelian Genomics with genes RP11.
 
- - From Reza Maroofian at institution St Georges, University of London with genes OR4F29 with phenotypes HP:0012469 (Infantile spasms).
+ - From Reza Maroofian at institution St Georges, University of London with genes RP11 with phenotypes HP:0012469 (Infantile spasms).
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
