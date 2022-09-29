@@ -2,16 +2,17 @@ from django.urls.base import reverse
 import mock
 
 from seqr.views.react_app import main_app, no_login_main_app
-from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
+from seqr.views.utils.terra_api_utils import TerraRefreshTokenFailedException
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
 MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
 @mock.patch('seqr.views.react_app.DEBUG', False)
-class DashboardPageTest(AuthenticationTestCase):
+class AppPageTest(object):
     databases = '__all__'
     fixtures = ['users']
 
-    def _check_page_html(self, response,  user, google_enabled=False, user_key='user', user_fields=None, ga_token_id=None):
+    def _check_page_html(self, response,  user, user_key='user', user_fields=None, ga_token_id=None):
         user_fields = user_fields or USER_FIELDS
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
@@ -21,7 +22,7 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertDictEqual(initial_json['meta'], {
             'version': mock.ANY,
             'hijakEnabled': False,
-            'googleLoginEnabled': google_enabled,
+            'googleLoginEnabled': self.GOOGLE_ENABLED,
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
         })
 
@@ -34,19 +35,12 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 5)
 
     @mock.patch('seqr.views.react_app.GA_TOKEN_ID', MOCK_GA_TOKEN)
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
-    def test_react_page(self, mock_oauth_key):
-        mock_oauth_key.__bool__.return_value = False
+    def test_react_page(self):
         url = reverse(main_app)
         self.check_require_login_no_policies(url, login_redirect_url='/login')
 
         response = self.client.get(url)
         self._check_page_html(response, 'test_user_no_policies', ga_token_id=MOCK_GA_TOKEN)
-
-        # test with google auth enabled
-        mock_oauth_key.__bool__.return_value = True
-        response = self.client.get(url)
-        self._check_page_html(response, 'test_user_no_policies', google_enabled=True, ga_token_id=MOCK_GA_TOKEN)
 
     def test_local_react_page(self):
         url = reverse(no_login_main_app)
@@ -82,3 +76,27 @@ class DashboardPageTest(AuthenticationTestCase):
         self.login_analyst_user()
         response = self.client.get(url)
         self._check_page_html(response, 'test_user')
+
+
+class LocalAppPageTest(AuthenticationTestCase, AppPageTest):
+    fixtures = ['users']
+    GOOGLE_ENABLED = False
+
+
+class AnvilAppPageTest(AnvilAuthenticationTestCase, AppPageTest):
+    fixtures = ['users']
+    GOOGLE_ENABLED = True
+
+    def test_react_page(self, *args, **kwargs):
+        super(AnvilAppPageTest, self).test_react_page(*args, **kwargs)
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
+
+        self.mock_get_groups.assert_called_with(self.no_policy_user)
+
+        # check behavior if AnVIL API calls fail
+        self.mock_get_groups.side_effect = TerraRefreshTokenFailedException('Refresh Error')
+        response = self.client.get('/dashboard')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login?next=/dashboard')
