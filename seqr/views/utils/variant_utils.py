@@ -128,6 +128,12 @@ def _get_rna_seq_outliers(gene_ids, families):
     return data_by_individual_gene
 
 
+def _get_phenotype_pri_data(gene_ids, families):
+    data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
+
+    return data_by_individual_gene
+
+
 def _add_family_has_rna_tpm(families_by_guid):
     tpm_families = RnaSeqTpm.objects.filter(
         sample__individual__family__guid__in=families_by_guid.keys()
@@ -159,7 +165,8 @@ LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
-                          add_locus_list_detail=False, include_rna_seq=True, include_project_name=False):
+                          add_locus_list_detail=False, include_rna_seq=True, include_project_name=False,
+                          include_phe_pri=True):
     response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
@@ -203,5 +210,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid)
+
+    if include_phe_pri:
+        response['phePriData'] = _get_phenotype_pri_data(genes.keys(), families)
 
     return response

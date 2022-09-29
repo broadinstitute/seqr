@@ -14,13 +14,29 @@ import {
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
-  getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual,
+  getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual, getPhePriDataByIndividual,
 } from 'redux/selectors'
 
 export const getRnaSeqOutilerDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
   (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
+    (acc, [individualGuid, rnaSeqData]) => {
+      const { familyGuid, displayName } = individualsByGuid[individualGuid]
+      acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
+        (acc2, [geneId, data]) => (data.isSignificant ?
+          { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
+        ), acc[familyGuid] || {},
+      )
+      return acc
+    }, {},
+  ),
+)
+
+export const getPhePriDataByFamilyGene = createSelector(
+  getIndividualsByGuid,
+  getPhePriDataByIndividual,
+  (individualsByGuid, phePriDataByIndividual) => Object.entries(phePriDataByIndividual).reduce(
     (acc, [individualGuid, rnaSeqData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
       acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
