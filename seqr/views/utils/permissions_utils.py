@@ -228,8 +228,7 @@ def check_multi_project_permissions(obj, user):
 
 
 def get_project_guids_user_can_view(user, limit_data_manager=True):
-    is_data_manager = user_is_data_manager(user)
-    if is_data_manager and not limit_data_manager:
+    if user_is_data_manager(user) and not limit_data_manager:
         return list(Project.objects.values_list('guid', flat=True))
 
     cache_key = 'projects__{}'.format(user)
