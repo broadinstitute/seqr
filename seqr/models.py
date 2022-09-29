@@ -1062,21 +1062,11 @@ class PhenotypePrioritization(DeletableSampleMetadataModel):
         (EXOMISER_CHOICE, 'exomiser'),
         (LIRICAL_CHOICE, 'lirical')
     )
-    SCORE_FIELDS = {
-        EXOMISER_CHOICE: {
-            'exomiser_score': 'e',
-            'phenotype_score': 'p',
-            'variant_score': 'v',
-        },
-        LIRICAL_CHOICE: {
-            'post_test_probability': 'p',
-            'compositeLR': 'c',
-        }
-    }
 
     tool = models.CharField(max_length=1, choices=TOOL_CHOICES)
     rank = models.IntegerField()
     disease_id = models.CharField(max_length=32)
+    disease_name = models.TextField()
     scores = models.JSONField()
 
     class Meta:
