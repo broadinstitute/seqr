@@ -43,8 +43,6 @@ def _get_linked_variant(submission, variant, family_variants):
         variant_models = [sv for sv in family_variants if _is_match(sv, lifted_variant)]
 
     if not variant_models:
-        if submission.deleted_date:
-            return None
         raise Exception(
             f'No matches found for {submission.guid} (family {submission.individual.family.family_id}) - {json.dumps(f["variant"])}'
         )
@@ -74,10 +72,9 @@ def update_mme_variant_links(apps, schema_editor):
     MatchmakerSubmissionGenes = apps.get_model('matchmaker', 'MatchmakerSubmissionGenes')
     db_alias = schema_editor.connection.alias
 
-    # TODO only migrate non-deleted submissions
-
     gene_submissions = MatchmakerSubmission.objects.using(db_alias).filter(
-        genomic_features__isnull=False).prefetch_related('individual', 'individual__family__project')
+        genomic_features__isnull=False, deleted_date__isnull=True,
+    ).prefetch_related('individual', 'individual__family__project')
     if not gene_submissions:
         return
     print(f'Migrating variants for {len(gene_submissions)} submissions')
@@ -97,17 +94,24 @@ def update_mme_variant_links(apps, schema_editor):
     for family_id, submissions in tqdm(submissions_by_family.items()):
         for submission in submissions:
             for f in submission.genomic_features:
-                saved_variant = _get_linked_variant(submission, f['variant'], variants_by_family[family_id])
-                if saved_variant:
-                    models.append(MatchmakerSubmissionGenes(
-                        matchmaker_submission=submission,
-                        saved_variant=saved_variant,
-                        gene_id=f['gene']['id'],
-                    ))
+                models.append(MatchmakerSubmissionGenes(
+                    matchmaker_submission=submission,
+                    saved_variant=_get_linked_variant(submission, f['variant'], variants_by_family[family_id]),
+                    gene_id=f['gene']['id'],
+                ))
 
     print('Creating models')
     MatchmakerSubmissionGenes.objects.using(db_alias).bulk_create(models)
     print('Done')
+
+
+def clear_deprecated_mme_tags(apps, schema_editor):
+    VariantTag = apps.get_model('seqr', 'VariantTag')
+    db_alias = schema_editor.connection.alias
+
+    VariantTag.objects.using(db_alias).filter(
+        saved_variants__matchmakersubmissiongenes__isnull=False, variant_tag_type__name='seqr MME',
+    ).delete()
 
 
 class Migration(migrations.Migration):
@@ -128,6 +132,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.RunPython(update_mme_variant_links, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(clear_deprecated_mme_tags, reverse_code=migrations.RunPython.noop),
         # TODO remove "seqr MME" tags from linked saved variants
         # TODO write reverse migration and re-enable this
         # migrations.RemoveField(
