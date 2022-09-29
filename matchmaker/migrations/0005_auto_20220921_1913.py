@@ -74,6 +74,8 @@ def update_mme_variant_links(apps, schema_editor):
     MatchmakerSubmissionGenes = apps.get_model('matchmaker', 'MatchmakerSubmissionGenes')
     db_alias = schema_editor.connection.alias
 
+    # TODO only migrate non-deleted submissions
+
     gene_submissions = MatchmakerSubmission.objects.using(db_alias).filter(
         genomic_features__isnull=False).prefetch_related('individual', 'individual__family__project')
     if not gene_submissions:

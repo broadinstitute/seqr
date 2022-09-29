@@ -1,14 +1,17 @@
 from collections import defaultdict
+from django.db.models import F
 import logging
 import redis
 
+from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags
+    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
+    get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
@@ -184,6 +187,19 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
+
+    mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
+        saved_variant__in=saved_variants).values(
+        geneId=F('gene_id'), variantGuid=F('saved_variant__guid'), submissionGuid=F('matchmaker_submission__guid'))
+    for s in mme_submission_genes:
+        response_variant = response['savedVariantsByGuid'][s['variantGuid']]
+        if 'mmeSubmissions' not in response_variant:
+            response_variant['mmeSubmissions'] = []
+        response_variant['mmeSubmissions'].append(s)
+
+    submissions = get_json_for_matchmaker_submissions(
+        MatchmakerSubmission.objects.filter(matchmakersubmissiongenes__saved_variant__in=saved_variants))
+    response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
         project_fields = {'projectGuid': lambda p: p.guid}
