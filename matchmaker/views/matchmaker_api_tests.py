@@ -226,7 +226,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             ],
             'geneVariants': [{
                 'geneId': 'ENSG00000135953',
-                'variantGuid': 'SV0059956_11560662_f019313_1',
+                'variantGuid': 'SV0000001_2103343353_r0390_100',
             }],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
@@ -329,9 +329,19 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertFalse(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['matchStatus']['matchRemoved'])
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid], {
             'id': 'P0004517',
-            'score': 0.35,
+            'score': 0.075,
             'patient': {
-                'genomicFeatures': [{'gene': {'id': 'ENSG00000135953'}}],
+                'genomicFeatures': [{
+                    'gene': {'id': 'ENSG00000135953'},
+                    'variant': {
+                        'referenceName': '1',
+                        'start': 248367227,
+                        'referenceBases': 'TC',
+                        'alternateBases': 'T',
+                        'assembly': 'GRCh37',
+                    },
+                    'zygosity': 1,
+                }],
                 'features': None,
                 'contact': {
                     'href': 'mailto:matchmaker@broadinstitute.org',
@@ -348,6 +358,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'geneVariants': [
                 {
                     'geneId': 'ENSG00000135953',
+                    'variant': {
+                        'chrom': '1',
+                        'pos': 248367227,
+                        'ref': 'TC',
+                        'alt': 'T',
+                        'end': None,
+                        'genomeVersion': 'GRCh37',
+                    }
                 }
             ],
             'matchStatus': {
@@ -378,12 +396,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             ],
             'geneVariants': [{
                 'geneId': 'ENSG00000135953',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'end': 77027548,
-                'genomeVersion': 'GRCh38',
+                'variantGuid': 'SV0000001_2103343353_r0390_100',
             }],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
@@ -423,8 +436,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'genomicFeatures': [{
                     'gene': {'id': 'ENSG00000135953'},
                     'variant': {
-                        'end': 77027548, 'start': 77027549, 'assembly': 'GRCh38', 'referenceName': '14',
-                        'alternateBases': 'C', 'referenceBases': 'CCACT',
+                        'referenceName': '21', 'start':  3343353, 'assembly': 'GRCh37',
+                        'alternateBases': 'G', 'referenceBases': 'GAGA',
                     },
                     'zygosity': 1
                 }],

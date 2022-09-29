@@ -175,7 +175,7 @@ def get_submission_json_for_external_match(submission, score=None):
 def _submission_genes_to_external_genomic_features(submission):
     features = []
     individual = submission.individual
-    for submission_gene in submission.matchmakersubmissiongenes_set.all().select_related('saved_variant'):
+    for submission_gene in submission.matchmakersubmissiongenes_set.all().order_by('gene_id').select_related('saved_variant'):
         variant = submission_gene.saved_variant
         chrom, pos = get_chrom_pos(variant.xpos)
         genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.guid)

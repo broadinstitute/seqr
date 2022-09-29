@@ -162,21 +162,20 @@ class ExternalAPITest(TestCase):
                             'id': 'ENSG00000135953'
                         },
                         'variant': {
-                            'end': 77027548,
-                            'start': 77027549,
-                            'assembly': 'GRCh38',
-                            'referenceName': '14',
-                            'alternateBases': 'C',
-                            'referenceBases': 'CCACT'
+                            'start': 3343353,
+                            'assembly': 'GRCh37',
+                            'referenceName': '21',
+                            'alternateBases': 'G',
+                            'referenceBases': 'GAGA'
                         },
                         'zygosity': 1
                     }
                 ],
             },
             'score': {
-                '_genotypeScore': 0.5,
+                '_genotypeScore': 0.15,
                 '_phenotypeScore': 0.5,
-                'patient': 0.25,
+                'patient': 0.075,
             }
         })
         self.assertDictEqual(results[1], {
@@ -196,26 +195,38 @@ class ExternalAPITest(TestCase):
                         'gene': {
                             'id': 'ENSG00000135953'
                         }, 'variant': {
-                            'referenceName': '14',
-                            'start': 77027630
+                            'referenceName': '1',
+                            'start': 249045487,
+                            'end': 249045898,
+                            'assembly': 'GRCh37',
+                        },
+                    },
+                    {
+                        'gene': {
+                            'id': 'ENSG00000223972'
+                        }, 'variant': {
+                            'referenceName': '1',
+                            'start': 249045487,
+                            'end': 249045898,
+                            'assembly': 'GRCh37',
                         },
                     },
                     {
                         'gene': {
                             'id': 'ENSG00000240361'
-                        }
-                    },
-                    {
-                        'gene': {
-                            'id': 'ENSG00000223972'
-                        }
+                        }, 'variant': {
+                            'referenceName': '1',
+                            'start': 249045487,
+                            'end': 249045898,
+                            'assembly': 'GRCh37',
+                        },
                     }
                 ],
             },
             'score': {
-                '_genotypeScore': 0.35,
+                '_genotypeScore': 0.15,
                 '_phenotypeScore': 0.5,
-                'patient': 0.175,
+                'patient': 0.075,
             }
         })
 
