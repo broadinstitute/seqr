@@ -26,7 +26,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      't0': '2017-02-05T06:42:55.397Z', 'months_since_t0': 38, 'sample_source': 'CMG',
      'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
      'expected_inheritance_model': 'Autosomal recessive inheritance',
-     'extras_variant_tag_list': ['21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
+     'extras_variant_tag_list': ['21-3343353-GAGA-G  RP11  tier 1 - novel gene and phenotype'],
      'protein_interaction': 'N', 'n_kindreds': '1', 'num_individuals_sequenced': 3,
      'musculature': 'Y', 'sequencing_approach': 'WES', 'neoplasm': 'N',
      'collaborator': '1kg project n\xe5me with uni\xe7\xf8de',
@@ -44,26 +44,26 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped_1.png',
      'family_id': '1', 'genitourinary_system': 'N', 'coded_phenotype': 'myopathy',
      'animal_model': 'N', 'non_human_cell_culture_model': 'N', 'expression': 'N',
-     'gene_name': 'RP11-206L10.5', 'breast': 'N'}
+     'gene_name': 'RP11', 'breast': 'N'}
 
 EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW = {
     'project_guid': 'R0003_test', 'pubmed_ids': '', 'posted_publicly': '', 'solved': 'TIER 1 GENE', 'head_or_neck': 'N',
     'analysis_complete_status': 'complete', 'cardiovascular_system': 'Y',
     'n_kindreds_overlapping_sv_similar_phenotype': 'NA', 'biochemical_function': 'N', 'omim_number_post_discovery': 'NA',
-    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2020-02-05T06:42:55.397Z',
-    'months_since_t0': 2, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
-    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 1, 'sequencing_approach': 'REAN',
+    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2017-02-05T06:42:55.397Z',
+    'months_since_t0': 38, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
+    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 2, 'sequencing_approach': 'REAN',
     'extras_variant_tag_list': ['1-248367227-TC-T  OR4G11P  tier 1 - novel gene and phenotype',
         'prefix_19107_DEL  OR4G11P  tier 1 - novel gene and phenotype'], 'protein_interaction': 'N', 'n_kindreds': '1',
     'neoplasm': 'N', 'collaborator': 'Test Reprocessed Project', 'actual_inheritance_model': 'AR-comphet',
     'novel_mendelian_gene': 'Y', 'endocrine_system': 'N', 'komp_early_release': 'N', 'connective_tissue': 'N',
-    'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000011_11', 'immune_system': 'N',
+    'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000012_12', 'immune_system': 'N',
     'analysis_summary': '', 'gene_count': 'NA', 'gene_id': 'ENSG00000240361', 'abdomen': 'N', 'limbs': 'N',
     'phenotype_class': 'New', 'submitted_to_mme': 'Y', 'n_unrelated_kindreds_with_causal_variants_in_gene': '1',
-    'blood': 'N',  'row_id': 'F000011_11ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
+    'blood': 'N',  'row_id': 'F000012_12ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
     'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'N', 'ear_defects': 'N', 'thoracic_cavity': 'N',
-    'non_patient_cell_model': 'N', 't0_copy': '2020-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped.png',
-    'family_id': '11', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
+    'non_patient_cell_model': 'N', 't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '',
+    'family_id': '12', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
     'non_human_cell_culture_model': 'N', 'gene_name': 'OR4G11P', 'breast': 'N', 'musculature': 'N', 'patient_cells': 'N',}
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -152,7 +152,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "num_saved_variants": 2,
     "dbgap_submission": "No",
     "solve_state": "Tier 1",
-    "sample_id": "NA20885",
+    "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
     "sample_provider": "",
@@ -162,7 +162,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "novel_mendelian_gene-1": "Y",
     "novel_mendelian_gene-2": "Y",
     "hgvsc-1": "c.3955G>A",
-    "date_data_generation": "2020-02-05",
+    "date_data_generation": "2017-02-05",
     "Zygosity-1": "Heterozygous",
     "Zygosity-2": "Heterozygous",
     "variant_genome_build-1": "GRCh37",
@@ -175,29 +175,30 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "maternal_id": "",
     "paternal_id": "",
     "hgvsp-1": "c.1586-17C>G",
-    "entity:family_id": "11",
-    "entity:discovery_id": "NA20885",
+    "entity:family_id": "12",
+    "entity:discovery_id": "NA20889",
     "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
     "data_type": "WES",
-    "family_guid": "F000011_11",
+    "family_guid": "F000012_12",
     "congenital_status": "Unknown",
+    "family_history": "Yes",
     "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
     "Transcript-1": "ENST00000505820",
     "ancestry": "Ashkenazi Jewish",
     "phenotype_group": "",
-    "sex": "Male",
-    "entity:subject_id": "NA20885",
-    "entity:sample_id": "NA20885",
+    "sex": "Female",
+    "entity:subject_id": "NA20889",
+    "entity:sample_id": "NA20889",
     "Chrom-1": "1",
     "Alt-1": "T",
     "Gene-1": "OR4G11P",
     "pmid_id": "",
     "phenotype_description": "",
     "affected_status": "Affected",
-    "family_id": "11",
+    "family_id": "12",
     "MME": "Y",
-    "subject_id": "NA20885",
+    "subject_id": "NA20889",
     "proband_relationship": "",
     "consanguinity": "None suspected",
     "sequencing_center": "Broad",
@@ -292,7 +293,9 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
-        self.assertListEqual(response_json['errors'], ['HPO category field not set for some HPO terms in 11'])
+        self.assertListEqual(response_json['errors'], [
+            'HPO category field not set for some HPO terms in 11', 'HPO category field not set for some HPO terms in 12',
+        ])
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
@@ -367,10 +370,10 @@ class ReportAPITest(object):
             '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
             '17-significance', '18-discovery_notes'])
         self.assertIn([
-            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
+            'HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'Autosomal recessive (homozygous)',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
+            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Tier 1 - Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
             '-', '-', '-', '-'], discovery_file)
         self.assertIn([
