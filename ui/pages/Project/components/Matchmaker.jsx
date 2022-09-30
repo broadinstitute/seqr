@@ -37,7 +37,7 @@ import {
   getMmeResultsBySubmission,
   getMmeDefaultContactEmail,
   getMatchmakerContactNotes,
-  getVariantUniqueId,
+  getVariantGeneId,
 } from '../selectors'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 
@@ -127,13 +127,13 @@ const SUBMISSION_EDIT_FIELDS = [
   { ...MATCHMAKER_CONTACT_URL_FIELD, name: 'contactHref' },
   {
     name: 'geneVariants',
-    component: EditGenotypesTable, // TODO
+    component: EditGenotypesTable,
     idField: 'variantId',
     columns: GENOTYPE_FIELDS,
     includeSelectedRowData: true,
     parse: val => Object.values(val || {}).filter(v => v),
     format: value => (value || []).reduce(
-      (acc, variant) => ({ ...acc, [variant.variantId || getVariantUniqueId(variant)]: variant }), {},
+      (acc, variant) => ({ ...acc, [getVariantGeneId(variant)]: variant }), {},
     ),
   },
   {

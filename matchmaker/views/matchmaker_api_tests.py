@@ -632,9 +632,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertIsNone(submission.deleted_date)
         self.assertListEqual(submission.features, SUBMISSION_DATA['phenotypes'])
         submission_genes = submission.matchmakersubmissiongenes_set.all()
-        # TODO
-        # self.assertEqual(submission_genes.count(), 2)
-        # self.assertSetEqual(set(submission_genesvalues_list('gene_id', flat=True)), {'ENSG00000235249'})
+        self.assertEqual(submission_genes.count(), 2)
+        self.assertSetEqual(set(submission_genesvalues_list('gene_id', flat=True)), {'ENSG00000235249'})
 
         # Test successful update
         url = reverse(update_mme_submission, args=[new_submission_guid])
@@ -704,8 +703,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         submission = MatchmakerSubmission.objects.get(guid=SUBMISSION_GUID)
         self.assertEqual(submission.deleted_date.strftime('%Y-%m-%d'), today)
         self.assertEqual(submission.deleted_by, self.collaborator_user)
-        submission_genes = submission.matchmakersubmissiongenes_set.all()
-        # self.assertEqual(submission_genes.count(), 0) # TODO
+        # self.assertEqual(submission.matchmakersubmissiongenes_set.count(), 0) # TODO
 
         # Test do not delete if already deleted
         response = self.client.post(url)

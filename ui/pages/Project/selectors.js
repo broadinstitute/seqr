@@ -240,9 +240,7 @@ export const getTagTypeCounts = createSelector(
   tagTypes => tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
 )
 
-export const getVariantUniqueId = (
-  { chrom, pos, ref, alt, end, geneId }, variantGeneId,
-) => `${chrom}-${pos}-${ref ? `${ref}-${alt}` : end}-${variantGeneId || geneId}`
+export const getVariantGeneId = ({ variantGuid, geneId }, variantGeneId) => `${variantGuid}-${variantGeneId || geneId}`
 
 export const getIndividualTaggedVariants = createSelector(
   getTaggedVariantsByFamily,
@@ -257,7 +255,7 @@ export const getIndividualTaggedVariants = createSelector(
       }
       return [...acc, ...variant.genes.map(gene => ({
         ...variantDetail,
-        variantId: getVariantUniqueId(variant, gene.geneId),
+        variantId: getVariantGeneId(variant, gene.geneId),
         ...gene,
       }))]
     }, [])
