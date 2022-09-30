@@ -123,6 +123,7 @@ class TagFieldView extends React.PureComponent {
     tagAnnotation: PropTypes.func,
     simplifiedValue: PropTypes.bool,
     validate: PropTypes.func,
+    disabledTagType: PropTypes.string,
     linkTagType: PropTypes.string,
     tagLinkUrl: PropTypes.string,
   }
@@ -163,12 +164,16 @@ class TagFieldView extends React.PureComponent {
   }
 
   tagSelectOptions = () => {
-    const { tagOptions } = this.props
+    const { tagOptions, disabledTagType } = this.props
     const fieldValues = this.fieldValues()
 
-    return tagOptions.map(
-      (tag, i) => ({ ...tag, ...fieldValues.find(val => val.name === tag.name), optionIndex: i }),
-    )
+    return tagOptions.reduce((acc, tag, i) => {
+      const fieldValue = fieldValues.find(val => val.name === tag.name)
+      if (disabledTagType && tag.name === disabledTagType && !fieldValue) {
+        return acc
+      }
+      return [...acc, { ...tag, ...fieldValue, optionIndex: i }]
+    }, [])
   }
 
   fieldDisplay = (displayFieldValues) => {

@@ -204,7 +204,14 @@ const MatchmakerLabel = ({ variant, family, mmeSubmissionsByGuid, genesById }) =
       content={[...new Set(variantSubmissions.map(
         ({ gene, submission }) => `${gene.geneSymbol} submitted ${new Date(submission.lastModifiedDate).toLocaleDateString()}`,
       ))].join('; ')}
-      trigger={<Label content="MME Submission" color="violet" size="small" />}
+      trigger={<Label
+        as={NavLink}
+        to={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
+        target="_blank"
+        content="MME Submission"
+        color="violet"
+        size="small"
+      />}
     />
   ) : null
 }
@@ -250,8 +257,7 @@ const FamilyVariantTags = React.memo(({
               variantId={variantId}
               tagOptions={projectTagTypes}
               displayMetadata
-              linkTagType="seqr MME"
-              tagLinkUrl={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
+              disabledTagType="seqr MME (old)"
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
