@@ -3,12 +3,12 @@ import logging
 import redis
 
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqOutlier, RnaSeqTpm
+    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags
+    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, get_json_for_phenotype_pri
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
@@ -129,7 +129,15 @@ def _get_rna_seq_outliers(gene_ids, families):
 
 
 def _get_phenotype_pri_data(gene_ids, families):
-    data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
+    data_by_individual_gene = defaultdict(lambda: {'phepri': {}})
+
+    phe_pri_data = get_json_for_phenotype_pri(
+        PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, sample__individual__family__in=families),
+        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}],
+    )
+
+    for data in phe_pri_data:
+        data_by_individual_gene[data.pop('individualGuid')]['phepri'][data['geneId']] = data
 
     return data_by_individual_gene
 

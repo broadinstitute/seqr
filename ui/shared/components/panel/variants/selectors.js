@@ -37,9 +37,9 @@ export const getPhePriDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getPhePriDataByIndividual,
   (individualsByGuid, phePriDataByIndividual) => Object.entries(phePriDataByIndividual).reduce(
-    (acc, [individualGuid, rnaSeqData]) => {
+    (acc, [individualGuid, phePriData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
+      acc[familyGuid] = Object.entries(phePriData.outliers || {}).reduce(
         (acc2, [geneId, data]) => (data.isSignificant ?
           { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
         ), acc[familyGuid] || {},

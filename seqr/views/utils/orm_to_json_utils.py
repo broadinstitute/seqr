@@ -866,3 +866,10 @@ def get_json_for_rna_seq_outliers(models, **kwargs):
         data['isSignificant'] = data['pAdjust'] < model.SIGNIFICANCE_THRESHOLD
 
     return _get_json_for_models(models, process_result=_process_result, **kwargs)
+
+
+def get_json_for_phenotype_pri(models, **kwargs):
+    def _process_result(data):
+        data['scores'] = {_to_camel_case(score) for score, value in data['scores'].items()}
+
+    return _get_json_for_models(models, process_result=_process_result, **kwargs)
