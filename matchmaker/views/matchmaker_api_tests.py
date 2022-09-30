@@ -329,7 +329,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertFalse(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['matchStatus']['matchRemoved'])
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid], {
             'id': 'P0004517',
-            'score': 0.075,
+            'score': 0.425,
             'patient': {
                 'genomicFeatures': [{
                     'gene': {'id': 'ENSG00000135953'},

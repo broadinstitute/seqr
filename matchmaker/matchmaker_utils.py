@@ -149,7 +149,7 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_g
     return parsed_result
 
 
-def get_submission_json_for_external_match(submission, score=None):
+def get_submission_json_for_external_match(submission, score=None, genomic_features=None):
     submission_json = {
         'patient': {
             'id': submission.submission_id,
@@ -161,7 +161,7 @@ def get_submission_json_for_external_match(submission, score=None):
             },
             'species': 'NCBITaxon:9606',
             'features': submission.features,
-            'genomicFeatures': _submission_genes_to_external_genomic_features(submission),
+            'genomicFeatures': genomic_features or _submission_genes_to_external_genomic_features(submission),
         }
     }
     sex = MatchmakerSubmission.SEX_LOOKUP.get(submission.individual.sex)
@@ -237,9 +237,12 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
     query_patient_id = patient_data['patient']['id']
     matches = MatchmakerSubmission.objects.filter(
         match_q, deleted_date__isnull=True).exclude(submission_id=query_patient_id)
+
+    match_genomic_features = {match: _submission_genes_to_external_genomic_features(match) for match in matches}
+
     scored_matches = _get_matched_submissions(
         matches,
-        get_match_genotype_score=lambda match: _get_genotype_score(genomic_features, match) if genomic_features else 0,
+        get_match_genotype_score=lambda match: _get_genotype_score(genomic_features, match_genomic_features[match]) if genomic_features else 0,
         get_match_phenotype_score=lambda match: _get_phenotype_score(feature_ids, match) if feature_ids else 0,
     )
 
@@ -257,8 +260,11 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
                 'last_modified_by': user,
             }, user)
 
-    return [get_submission_json_for_external_match(match_submission, score=score)
-            for match_submission, score in scored_matches.items()], incoming_query
+    return sorted(
+        [get_submission_json_for_external_match(match, score=score, genomic_features=match_genomic_features[match])
+         for match, score in scored_matches.items()],
+        key=lambda submission: (submission['score']['patient'], submission['patient']['id'])
+    ), incoming_query
 
 
 def _create_incoming_query(patient_data, origin_request_host, user, patient_id=None):
@@ -283,10 +289,9 @@ def _get_matched_submissions(matches, get_match_genotype_score, get_match_phenot
     return scored_matches
 
 
-def _get_genotype_score(genomic_features, match):
-    return 0.15  # TODO
+def _get_genotype_score(genomic_features, match_genomic_features):
     match_features_by_gene_id = defaultdict(list)
-    for feature in match.genomic_features:  # TODO
+    for feature in match_genomic_features:
         match_features_by_gene_id[feature['gene']['id']].append(feature)
 
     score = 0

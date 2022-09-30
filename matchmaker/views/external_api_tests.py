@@ -173,12 +173,12 @@ class ExternalAPITest(TestCase):
                 ],
             },
             'score': {
-                '_genotypeScore': 0.15,
+                '_genotypeScore': 0.425,
                 '_phenotypeScore': 0.5,
-                'patient': 0.075,
+                'patient': 0.2125,
             }
         })
-        self.assertDictEqual(results[1], {
+        self.assertDictEqual(results[2], {
             'patient': {
                 'id': 'P0004515',
                 'label': 'P0004515',
@@ -224,9 +224,9 @@ class ExternalAPITest(TestCase):
                 ],
             },
             'score': {
-                '_genotypeScore': 0.15,
+                '_genotypeScore': 0.35,
                 '_phenotypeScore': 0.5,
-                'patient': 0.075,
+                'patient': 0.175,
             }
         })
 
