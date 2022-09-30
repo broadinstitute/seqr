@@ -8,6 +8,7 @@ import json
 from pyliftover.liftover import LiftOver
 from tqdm import tqdm
 
+from matchmaker.matchmaker_utils import _submission_gene_to_external_genomic_features
 from seqr.utils.xpos_utils import get_chrom_pos
 
 liftover_to_38 = LiftOver('hg19', 'hg38')
@@ -105,6 +106,29 @@ def update_mme_variant_links(apps, schema_editor):
     print('Done')
 
 
+def set_genomic_features(apps, schema_editor):
+    MatchmakerSubmission = apps.get_model('matchmaker', 'MatchmakerSubmission')
+    MatchmakerSubmissionGenes = apps.get_model('matchmaker', 'MatchmakerSubmissionGenes')
+    db_alias = schema_editor.connection.alias
+
+    submission_genes = MatchmakerSubmissionGenes.objects.using(db_alias).all().prefetch_related('saved_variant', 'matchmaker_submission')
+    if not submission_genes:
+        return
+    print(f'Migrating {len(submission_genes)} genomic_features')
+
+    submissions_by_id = {}
+    for sg in submission_genes:
+        submission = sg.matchmaker_submission
+        if submission.id not in submissions_by_id:
+            submissions_by_id[submission.id] = submission
+            submission.genomic_features = []
+        submission.genomic_features.append(_submission_gene_to_external_genomic_features(sg, submission.individual))
+
+    print(f'Updating {len(submissions_by_id)} submissions')
+    MatchmakerSubmission.objects.using(db_alias).bulk_update(submissions_by_id.values(), ['genomic_features'])
+    print('Done')
+
+
 def clear_deprecated_mme_tags(apps, schema_editor):
     VariantTag = apps.get_model('seqr', 'VariantTag')
     db_alias = schema_editor.connection.alias
@@ -112,6 +136,30 @@ def clear_deprecated_mme_tags(apps, schema_editor):
     VariantTag.objects.using(db_alias).filter(
         saved_variants__matchmakersubmissiongenes__isnull=False, variant_tag_type__name='seqr MME',
     ).delete()
+
+
+def add_deprecated_mme_tags(apps, schema_editor):
+    SavedVariant = apps.get_model('seqr', 'SavedVariant')
+    VariantTag = apps.get_model('seqr', 'VariantTag')
+    VariantTagType = apps.get_model('seqr', 'VariantTagType')
+    db_alias = schema_editor.connection.alias
+
+    mme_tag_types = VariantTagType.objects.using(db_alias).filter(name='seqr MME')
+    if not mme_tag_types:
+        return
+    if mme_tag_types.count() > 1:
+        raise Exception('Invalid MME tags - found multiple')
+    mme_tag_type = mme_tag_types.first()
+
+    variants = SavedVariant.objects.using(db_alias).filter(matchmakersubmissiongenes__isnull=False)
+    print(f'Adding {variants.count()} MME tags')
+    tags = VariantTag.objects.using(db_alias).bulk_create([
+        VariantTag(guid=f'VT{i+9000000:07}_{variant.xpos}_{variant.family.guid}:seqr_mme'[:30], variant_tag_type=mme_tag_type)
+        for i, variant in enumerate(variants)
+    ])
+    for i, variant in enumerate(variants):
+        tag = tags[i]
+        tag.saved_variants.set([variant])
 
 
 class Migration(migrations.Migration):
@@ -131,12 +179,10 @@ class Migration(migrations.Migration):
                 ('saved_variant', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='seqr.savedvariant')),
             ],
         ),
-        migrations.RunPython(update_mme_variant_links, reverse_code=migrations.RunPython.noop),
-        migrations.RunPython(clear_deprecated_mme_tags, reverse_code=migrations.RunPython.noop),
-        # TODO remove "seqr MME" tags from linked saved variants
-        # TODO write reverse migration and re-enable this
-        # migrations.RemoveField(
-        #     model_name='matchmakersubmission',
-        #     name='genomic_features',
-        # ),
+        migrations.RunPython(update_mme_variant_links, reverse_code=set_genomic_features),
+        migrations.RunPython(clear_deprecated_mme_tags, reverse_code=add_deprecated_mme_tags),
+        migrations.RemoveField(
+            model_name='matchmakersubmission',
+            name='genomic_features',
+        ),
     ]

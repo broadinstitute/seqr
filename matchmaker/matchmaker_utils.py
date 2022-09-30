@@ -173,37 +173,42 @@ def get_submission_json_for_external_match(submission, score=None):
 
 
 def _submission_genes_to_external_genomic_features(submission):
-    features = []
     individual = submission.individual
-    for submission_gene in submission.matchmakersubmissiongenes_set.all().order_by('gene_id').select_related('saved_variant'):
-        variant = submission_gene.saved_variant
-        chrom, pos = get_chrom_pos(variant.xpos)
-        genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.guid)
+    submission_genes = submission.matchmakersubmissiongenes_set.all().order_by('gene_id').select_related('saved_variant')
 
-        feature = {
-            'gene': {'id': submission_gene.gene_id},
-            'variant': {
-                'referenceName': chrom,
-                'start': pos,
-                'assembly': GENOME_VERSION_LOOKUP.get(genome_version),
-            },
-        }
-        if variant.alt:
-            feature['variant'].update({
-                'alternateBases': variant.alt,
-                'referenceBases': variant.ref,
-            })
-        elif variant.xpos_end:
-            _, end = get_chrom_pos(variant.xpos_end)
-            feature['variant']['end'] = end
+    return [
+        _submission_gene_to_external_genomic_features(submission_gene, individual)
+        for submission_gene in submission_genes
+    ]
 
-        genotype = variant.saved_variant_json.get('genotypes', {}).get(individual.guid)
-        if genotype and genotype.get('numAlt', -1) > 0:
-            feature['zygosity'] = genotype['numAlt']
 
-        features.append(feature)
+def _submission_gene_to_external_genomic_features(submission_gene, individual):
+    variant = submission_gene.saved_variant
+    chrom, pos = get_chrom_pos(variant.xpos)
+    genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.guid)
 
-    return features
+    feature = {
+        'gene': {'id': submission_gene.gene_id},
+        'variant': {
+            'referenceName': chrom,
+            'start': pos,
+            'assembly': GENOME_VERSION_LOOKUP.get(genome_version),
+        },
+    }
+    if variant.alt:
+        feature['variant'].update({
+            'alternateBases': variant.alt,
+            'referenceBases': variant.ref,
+        })
+    elif variant.xpos_end:
+        _, end = get_chrom_pos(variant.xpos_end)
+        feature['variant']['end'] = end
+
+    genotype = variant.saved_variant_json.get('genotypes', {}).get(individual.guid)
+    if genotype and genotype.get('numAlt', -1) > 0:
+        feature['zygosity'] = genotype['numAlt']
+
+    return feature
 
 
 def get_mme_matches(patient_data, origin_request_host=None, user=None, originating_submission=None):
