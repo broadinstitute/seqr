@@ -129,13 +129,32 @@ def set_genomic_features(apps, schema_editor):
     print('Done')
 
 
+def _get_tag_type(name, variant_tag_type_q):
+    mme_tag_types =variant_tag_type_q.filter(name=name)
+    if mme_tag_types.count() > 1:
+        raise Exception('Invalid MME tags - found multiple')
+    if not mme_tag_types:
+        return None
+    return mme_tag_types.first()
+
+
 def clear_deprecated_mme_tags(apps, schema_editor):
     VariantTag = apps.get_model('seqr', 'VariantTag')
+    VariantTagType = apps.get_model('seqr', 'VariantTagType')
     db_alias = schema_editor.connection.alias
 
-    VariantTag.objects.using(db_alias).filter(
-        saved_variants__matchmakersubmissiongenes__isnull=False, variant_tag_type__name='seqr MME',
-    ).delete()
+    mme_tag_type = _get_tag_type('seqr MME', VariantTagType.objects.using(db_alias))
+    if not mme_tag_type:
+        return
+
+    tags = VariantTag.objects.using(db_alias).filter(
+        saved_variants__matchmakersubmissiongenes__isnull=False, variant_tag_type=mme_tag_type,
+    )
+    print(f'Deleting {tags.count()} MME tags')
+    tags.delete()
+
+    mme_tag_type.name = 'seqr MME (old)'
+    mme_tag_type.save()
 
 
 def add_deprecated_mme_tags(apps, schema_editor):
@@ -144,12 +163,11 @@ def add_deprecated_mme_tags(apps, schema_editor):
     VariantTagType = apps.get_model('seqr', 'VariantTagType')
     db_alias = schema_editor.connection.alias
 
-    mme_tag_types = VariantTagType.objects.using(db_alias).filter(name='seqr MME')
-    if not mme_tag_types:
+    mme_tag_type = _get_tag_type('seqr MME (old)', VariantTagType.objects.using(db_alias))
+    if not mme_tag_type:
         return
-    if mme_tag_types.count() > 1:
-        raise Exception('Invalid MME tags - found multiple')
-    mme_tag_type = mme_tag_types.first()
+    mme_tag_type.name = 'seqr MME'
+    mme_tag_type.save()
 
     variants = SavedVariant.objects.using(db_alias).filter(matchmakersubmissiongenes__isnull=False)
     print(f'Adding {variants.count()} MME tags')
