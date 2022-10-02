@@ -345,6 +345,8 @@ urlpatterns += [
     url(API_POLICY_REQUIRED_URL.lstrip('/'), policies_required_error),
 ]
 
+handler401 = 'seqr.views.apis.auth_api.app_login_required_error'
+
 kibana_urls = '^(?:{})'.format('|'.join([
     'app', '\d+/built_assets', '\d+/bundles', 'bundles', 'elasticsearch', 'es_admin', 'node_modules/@kbn', 'internal',
     'plugins', 'translations', 'ui', 'api/apm', 'api/console', 'api/core', 'api/index_management', 'api/index_patterns',

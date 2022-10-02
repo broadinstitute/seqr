@@ -228,24 +228,24 @@ def check_multi_project_permissions(obj, user):
 
 
 def get_project_guids_user_can_view(user, limit_data_manager=True):
+    if user_is_data_manager(user) and not limit_data_manager:
+        return list(Project.objects.values_list('guid', flat=True))
+
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:
         return project_guids
 
-    is_data_manager = user_is_data_manager(user)
-    projects = Project.objects.all()
-    if limit_data_manager or not is_data_manager:
-        if is_anvil_authenticated(user):
-            workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
-                          list_anvil_workspaces(user)]
-            projects = projects.annotate(
-                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
-            ).filter(workspace__in=workspaces)
-        else:
-            projects = get_objects_for_user(user, CAN_VIEW, projects)
+    if is_anvil_authenticated(user):
+        workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
+                      list_anvil_workspaces(user)]
+        projects = Project.objects.annotate(
+            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
+        ).filter(workspace__in=workspaces)
+    else:
+        projects = get_objects_for_user(user, CAN_VIEW, Project)
 
-        projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
+    projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
 
     project_guids = [p.guid for p in projects.distinct().only('guid')]
 

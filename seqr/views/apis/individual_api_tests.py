@@ -269,6 +269,15 @@ class IndividualAPITest(AuthenticationTestCase):
             pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
                 'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
             }))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA20889'])
+
+        response = self.client.post(
+            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [{'individualGuid': 'I000015_na20885'}]
+            }))
+
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')

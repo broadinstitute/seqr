@@ -284,7 +284,7 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
             response.json()['familyTagTypeCounts'],
-            {'F000011_11': {'Tier 1 - Novel gene and phenotype': 1}},
+            {'F000012_12': {'Tier 1 - Novel gene and phenotype': 1}},
         )
 
         # Test empty project
