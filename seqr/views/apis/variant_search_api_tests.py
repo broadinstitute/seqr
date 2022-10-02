@@ -26,7 +26,7 @@ VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(VARIANTS)
 VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'savedVariant': {
         'variantGuid': 'SV0000006_1248367227_r0003_tes',
-        'familyGuid': 'F000011_11',
+        'familyGuid': 'F000012_12',
         'projectGuid': 'R0003_test',
     },
     'tagGuid': 'VT1726961_2103343353_r0003_tes',
@@ -389,7 +389,7 @@ class VariantSearchAPITest(object):
         response_json = response.json()
         expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
-        expected_search_results['familiesByGuid'] = {'F000011_11': mock.ANY}
+        expected_search_results['familiesByGuid'] = {'F000012_12': mock.ANY}
         self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
         self.assertDictEqual(response_json, expected_search_results)
         self._assert_expected_results_context(response_json)
