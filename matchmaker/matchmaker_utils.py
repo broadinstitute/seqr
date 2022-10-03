@@ -101,7 +101,7 @@ def get_submission_gene_variants(submission, gene_id_only=False):
     values_expr = {'geneId': F('gene_id')}
     if not gene_id_only:
         values_expr.update({'variantGuid': F('saved_variant__guid')})
-    return list(submission.matchmakersubmissiongenes_set.values(**values_expr))
+    return list(submission.matchmakersubmissiongenes_set.order_by('gene_id').values(**values_expr))
 
 
 def _parse_mme_gene_variants(result, gene_symbols_to_ids):

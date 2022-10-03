@@ -28,22 +28,10 @@ SUBMISSION_DATA = {
     ],
     'geneVariants': [{
         'geneId': 'ENSG00000235249',
-        'alt': 'C',
-        'ref': 'CCACT',
-        'chrom': '14',
-        'pos': 77027549,
-        'genomeVersion': '38',
-        'numAlt': 2,
+        'variantGuid': 'SV0000002_1248367227_r0390_100',
     }, {
-        'geneId': 'ENSG00000235249',
-        'alt': None,
-        'ref': None,
-        'chrom': '14',
-        'pos': 77027623,
-        'end': 77028137,
-        'genomeVersion': '38',
-        'numAlt': -1,
-        'cn': 3,
+        'geneId': 'ENSG00000135953',
+        'variantGuid': 'SV0000002_1248367227_r0390_100',
     }],
 }
 
@@ -562,7 +550,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'geneVariants': [{'pos': 123345}],
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Gene id is required for genomic features')
+        self.assertEqual(response.reason_phrase, 'Gene and variant IDs are required for genomic features')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'phenotypes': [{'id': 'HP:0012469'}]
@@ -591,23 +579,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000235249',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'genomeVersion': '38',
-                'numAlt': 2,
+                'geneId': 'ENSG00000135953',
+                'variantGuid': 'SV0000002_1248367227_r0390_100',
             }, {
                 'geneId': 'ENSG00000235249',
-                'alt': None,
-                'ref': None,
-                'chrom': '14',
-                'pos': 77027623,
-                'end': 77028137,
-                'genomeVersion': '38',
-                'numAlt': -1,
-                'cn': 3,
+                'variantGuid': 'SV0000002_1248367227_r0390_100',
             }],
         }})
         self.assertEqual(
@@ -633,7 +609,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertListEqual(submission.features, SUBMISSION_DATA['phenotypes'])
         submission_genes = submission.matchmakersubmissiongenes_set.all()
         self.assertEqual(submission_genes.count(), 2)
-        self.assertSetEqual(set(submission_genesvalues_list('gene_id', flat=True)), {'ENSG00000235249'})
+        self.assertSetEqual(
+            set(submission_genes.values_list('gene_id', flat=True)), {'ENSG00000135953', 'ENSG00000235249'})
 
         # Test successful update
         url = reverse(update_mme_submission, args=[new_submission_guid])
@@ -712,7 +689,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         update_url = reverse(update_mme_submission, args=[SUBMISSION_GUID])
         response = self.client.post(update_url, content_type='application/json',  data=json.dumps({
-            'geneVariants': [{'geneId': 'ENSG00000235249'}]
+            'geneVariants': [{'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000001_2103343353_r0390_100'}]
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -727,7 +704,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [],
-            'geneVariants': [{'geneId': 'ENSG00000235249'}],
+            'geneVariants': [{'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000001_2103343353_r0390_100'}],
         }})
         self.assertEqual(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['lastModifiedDate'][:10], today)
 
