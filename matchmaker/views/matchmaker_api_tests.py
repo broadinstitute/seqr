@@ -680,7 +680,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         submission = MatchmakerSubmission.objects.get(guid=SUBMISSION_GUID)
         self.assertEqual(submission.deleted_date.strftime('%Y-%m-%d'), today)
         self.assertEqual(submission.deleted_by, self.collaborator_user)
-        # self.assertEqual(submission.matchmakersubmissiongenes_set.count(), 0) # TODO
+        self.assertEqual(submission.matchmakersubmissiongenes_set.count(), 0)
 
         # Test do not delete if already deleted
         response = self.client.post(url)

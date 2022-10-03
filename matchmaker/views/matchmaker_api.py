@@ -280,6 +280,8 @@ def delete_mme_submission(request, submission_guid):
     deleted_date = datetime.now()
     update_model_from_json(submission, {'deleted_date': deleted_date, 'deleted_by': request.user}, request.user)
 
+    MatchmakerSubmissionGenes.objects.filter(matchmaker_submission=submission).delete()
+
     for saved_result in MatchmakerResult.objects.filter(submission=submission):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
             saved_result.delete_model(request.user, user_can_delete=True)
