@@ -691,7 +691,7 @@ class SavedVariantAPITest(object):
             {"Review", "Excluded"}, {vt.variant_tag_type.name for vt in
                                      VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
 
-        # test delete all
+        # test delete all - with MME submission
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [],
             'familyGuid': 'F000001_1'
@@ -699,10 +699,23 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'variantTagsByGuid': {excluded_guid: None, 'VT1708633_2103343353_r0390_100': None},
-            'savedVariantsByGuid': {VARIANT_GUID: None},
+            'savedVariantsByGuid': {VARIANT_GUID: {'tagGuids': []}},
         })
         self.assertEqual(VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID).count(), 0)
-        self.assertEqual(SavedVariant.objects.filter(guid=VARIANT_GUID).count(), 0)
+        self.assertEqual(SavedVariant.objects.filter(guid=VARIANT_GUID).count(), 1)
+
+        # test delete all - no MME submission
+        update_no_submission_variant_tags_url = reverse(update_variant_tags_handler, args=[COMPOUND_HET_1_GUID])
+        response = self.client.post(update_no_submission_variant_tags_url, content_type='application/json', data=json.dumps({
+            'tags': [],
+            'familyGuid': 'F000001_1'
+        }))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'savedVariantsByGuid': {COMPOUND_HET_1_GUID: None}, 'variantTagsByGuid': {},
+        })
+        self.assertEqual(VariantTag.objects.filter(saved_variants__guid__contains=COMPOUND_HET_1_GUID).count(), 0)
+        self.assertEqual(SavedVariant.objects.filter(guid=COMPOUND_HET_1_GUID).count(), 0)
 
     def test_update_variant_functional_data(self):
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
@@ -946,7 +959,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_update_variant_tags(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_tags()
-        assert_no_list_ws_has_al(self, 3)
+        assert_no_list_ws_has_al(self, 4)
 
     def test_update_variant_functional_data(self):
         super(AnvilSavedVariantAPITest, self).test_update_variant_functional_data()
