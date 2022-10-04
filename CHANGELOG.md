@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Link MME submissions to saved variants (REQUIRES DB MIGRATION)
 
 ## 9/28/22
 * Add Gregor fields to sample manifest (REQUIRES DB MIGRATION)
