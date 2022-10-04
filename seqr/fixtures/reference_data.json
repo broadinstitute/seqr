@@ -944,7 +944,7 @@
     "pk": 48,
     "fields": {
         "gene_id": "ENSG00000135953",
-        "gene_symbol": "RP11-206L10.5",
+        "gene_symbol": "RP11",
         "chrom_grch37": "1",
         "start_grch37": 694412,
         "end_grch37": 700305,
