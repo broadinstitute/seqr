@@ -8,7 +8,6 @@ from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, Matchmak
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, get_submission_gene_variants, get_mme_matches, \
     get_gene_ids_for_feature, validate_patient_data, MME_DISCLAIMER
-from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.logging_utils import SeqrLogger
@@ -16,7 +15,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants_with_tags, \
-    get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions, get_json_for_saved_variant
+    get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, analyst_required, \
     has_project_permissions, login_and_policies_required, get_project_and_check_permissions
 

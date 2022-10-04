@@ -45,7 +45,7 @@ def _get_linked_variant(submission, variant, family_variants):
 
     if not variant_models:
         raise Exception(
-            f'No matches found for {submission.guid} (family {submission.individual.family.family_id}) - {json.dumps(f["variant"])}'
+            f'No matches found for {submission.guid} (family {submission.individual.family.family_id}) - {json.dumps(variant)}'
         )
 
     if len(variant_models) > 1:

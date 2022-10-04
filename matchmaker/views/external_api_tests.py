@@ -365,7 +365,9 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
 
         self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 1)
 
-        message = """Dear collaborators,
+        match = 'seqr ID NA20889 from project Test Reprocessed Project in family 12 inserted into matchbox on Feb 05, 2019, ' \
+                'with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange'
+        message = f"""Dear collaborators,
 
     matchbox found a match between a patient from Test Institute and the following 1 case(s) 
     in matchbox. The following information was included with the query,
@@ -377,7 +379,7 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
 
     We sent back the following:
 
-    seqr ID NA20889 from project Test Reprocessed Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange
+    {match}
 
     We sent this email alert to: matchmaker@broadinstitute.org
 
