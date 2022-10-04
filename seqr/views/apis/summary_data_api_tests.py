@@ -25,6 +25,7 @@ EXPECTED_MME_DETAILS_METRICS = {
 SAVED_VARIANT_RESPONSE_KEYS = {
     'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
     'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid', 'familyNotesByGuid',
+    'mmeSubmissionsByGuid',
 }
 
 
