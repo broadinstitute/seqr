@@ -226,10 +226,10 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
             for feature in genomic_features:
                 feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
             match_q = Q(matchmakersubmissiongenes__gene_id__in=genes_by_id.keys())
-    elif features:
-        match_q = Q(features__contains={'id': feature_ids[0], 'observed': 'yes'})
+    elif feature_ids:
+        match_q = Q(features__contains=[{'id': feature_ids[0], 'observed': 'yes'}])
         for feature_id in feature_ids:
-            match_q |= Q(features__contains={'id': feature_id, 'observed': 'yes'})
+            match_q |= Q(features__contains=[{'id': feature_id, 'observed': 'yes'}])
 
     if not match_q:
         return [], _create_incoming_query(patient_data, origin_request_host, user)

@@ -65,7 +65,7 @@ class ExternalAPITest(TestCase):
                 'genomicFeatures': [{'gene': {'id': 'ENSG00000237613'}}, {
                     'gene': {'id': 'RP11'},
                     'zygosity': 1,
-                    'variant': {'start': 77027549, 'end': 77027550, 'referenceName': '14'},
+                    'variant': {'start': 3343353, 'end': 3343355, 'referenceName': '21'},
                 }],
                 'features': [{'id': 'HP:0003273'}, {'id': 'HP:0001252'}]
             }}
@@ -173,9 +173,9 @@ class ExternalAPITest(TestCase):
                 ],
             },
             'score': {
-                '_genotypeScore': 0.425,
+                '_genotypeScore': 0.5,
                 '_phenotypeScore': 0.5,
-                'patient': 0.2125,
+                'patient': 0.25,
             }
         })
         self.assertDictEqual(results[2], {
@@ -301,6 +301,101 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
         We found 3 existing matching individuals but no new ones, *so no results were sent back*."""
         )
         mock_email.assert_not_called()
+
+    @mock.patch('matchmaker.views.external_api.EmailMessage')
+    @mock.patch('matchmaker.views.external_api.safe_post_to_slack')
+    def test_mme_match_proxy_phenotype_only(self, mock_post_to_slack, mock_email):
+        url = '/api/matchmaker/v1/match'
+        request_body = {
+            'patient': {
+                'id': '12345',
+                'contact': {'institution': 'Test Institute', 'href': 'test@test.com', 'name': 'PI'},
+                'features': [
+                    {'id': 'HP:0002017'},
+                    {'id': 'HP:0001252', 'observed': 'yes'},
+                    {'id': 'HP:0001263', 'observed': 'yes'},
+                    {'id': 'HP:0012469', 'observed': 'no'},
+                ]
+            }}
+
+        self._check_mme_authenticated(url)
+
+        response = self._make_mme_request(url, 'post', content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 200)
+        results = response.json()['results']
+
+        self.assertEqual(len(results), 1)
+        self.assertDictEqual(results[0], {
+            'patient': {
+                'id': 'NA20885',
+                'label': 'NA20885',
+                'contact': {
+                    'href': 'mailto:matchmaker@broadinstitute.org',
+                    'name': 'Sam Baxter',
+                    'institution': 'Broad Center for Mendelian Genomics',
+                },
+                'species': 'NCBITaxon:9606',
+                'sex': 'FEMALE',
+                'features': [
+                    {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
+                    {'id': 'HP:0002017',  'label': 'Nausea and vomiting', 'observed': 'yes'},
+                ],
+                'genomicFeatures': [
+                    {
+                        'gene': {
+                            'id': 'ENSG00000240361'
+                        },
+                        'variant': {
+                            'start': 248367227,
+                            'assembly': 'GRCh37',
+                            'referenceName': '1',
+                            'alternateBases': 'T',
+                            'referenceBases': 'TC'
+                        },
+                        'zygosity': 1
+                    }
+                ],
+            },
+            'score': {
+                '_genotypeScore': 0,
+                '_phenotypeScore': 0.6666666666666666,
+                'patient': 0.0,
+            }
+        })
+
+        self.assertEqual(MatchmakerIncomingQuery.objects.filter(patient_id='12345').count(), 1)
+
+        message = """Dear collaborators,
+
+    matchbox found a match between a patient from Test Institute and the following 1 case(s) 
+    in matchbox. The following information was included with the query,
+
+    genes: 
+    phenotypes: HP:0002017 (Nausea and vomiting), HP:0012469 (Infantile spasms), HP:0001252 (Muscular hypotonia), HP:0001263 (Global developmental delay)
+    contact: PI
+    email: test@test.com
+
+    We sent back the following:
+
+    seqr ID NA20889 from project Test Reprocessed Project in family 12 inserted into matchbox on Feb 05, 2019, with seqr link /project/R0003_test/family_page/F000012_12/matchmaker_exchange
+
+    We sent this email alert to: matchmaker@broadinstitute.org
+
+Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
+Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
+be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
+
+        mock_post_to_slack.assert_called_with('matchmaker_matches', message)
+
+        mock_email.assert_has_calls([
+            mock.call(
+                subject='Received new MME match',
+                body=message,
+                to=['matchmaker@broadinstitute.org'],
+                from_email='matchmaker@broadinstitute.org',
+            ),
+            mock.call().send(),
+        ])
 
     @mock.patch('matchmaker.views.external_api.logger')
     @mock.patch('matchmaker.views.external_api.EmailMessage')
