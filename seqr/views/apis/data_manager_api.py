@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_pri_file
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
@@ -403,7 +403,7 @@ def load_phenotype_pri_data(request):
     ignore_extra_samples = request_json['ignoreExtraSamples']
 
     logger.info(f'Loading phenotype prioritization data from {file_name}', request.user)
-    records = _load_phenotype_pri_file(file_name, ignore_extra_samples)
+    records = load_phenotype_pri_file(file_name, ignore_extra_samples)
     models = PhenotypePrioritization.objects.bulk_create([PhenotypePrioritization(**data) for data in records])
     sample_guids = [data['sample'].guid for data in records]
     logger.info(f'create {len(models)} PhenotypePrioritization', request.user, db_update={
@@ -416,69 +416,6 @@ def load_phenotype_pri_data(request):
         'warnings': [],
         'fileName': file_name,
     })
-
-
-EXPECTED_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName',
-                   'scoreName1', 'score1', 'scoreName2', 'score2', 'scoreName3', 'score3']
-
-
-def _get_phenotype_pri(record, i, ignore_extra_samples):
-    tool = next((k for k, v in PhenotypePrioritization.TOOL_CHOICES if v == record['tool']), None)
-    if not tool:
-        raise ValueError('Expecting {} for the "tool" column but found {} (record {})'.format(
-            ', '.join([v for k, v in PhenotypePrioritization.TOOL_CHOICES]), record['tool'], i))
-
-    project_name = record['project']
-    projects = Project.objects.filter(name=project_name)
-    if len(projects) < 1:
-        raise ValueError(f'Project {project_name} is not found (record {i})')
-    project = projects[0]
-
-    sample_id = record['sampleId']
-    samples = Sample.objects.filter(sample_id=sample_id, individual__family__project=project, is_active=True,
-                                    dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    if len(samples) != 1:
-        if ignore_extra_samples:
-            return
-        raise ValueError(f'Sample with ID {sample_id} is not found (record {i})')
-
-    disease_id = record['diseaseId']
-    disease_name = record['diseaseName']
-
-    scores = {}
-    for score in ['1', '2', '3']:
-        score_name = record.get('scoreName' + score)
-        if score_name:
-            score = record.get('score' + score)
-            scores[score_name] = float(score)
-
-    return {
-        'sample': samples[0],
-        'gene_id': record['geneId'],
-        'tool': tool,
-        'rank': int(record['rank']),
-        'disease_id': disease_id,
-        'disease_name': disease_name,
-        'scores': scores,
-    }
-
-
-def _load_phenotype_pri_file(file_name, ignore_extra_samples):
-    lines = file_iter(file_name)
-
-    header = next(lines).rstrip().split('\t')
-    missing_header = [h for h in EXPECTED_HEADER if h not in header]
-    if len(missing_header):
-        raise ValueError('The following required columns are missing: {}'.format(', '.join(missing_header)))
-
-    records = []
-    for i, line in enumerate(lines):
-            row = line.rstrip().split('\t')
-            record = {header[cnt]: col for cnt, col in enumerate(row)}
-            record = _get_phenotype_pri(record, i, ignore_extra_samples)
-            if record:
-                records.append(record)
-    return records
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.

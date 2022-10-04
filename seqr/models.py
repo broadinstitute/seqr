@@ -1062,6 +1062,10 @@ class PhenotypePrioritization(DeletableSampleMetadataModel):
         (EXOMISER_CHOICE, 'exomiser'),
         (LIRICAL_CHOICE, 'lirical')
     )
+    TOOL_LOOKUP = {v: k for k, v in TOOL_CHOICES}
+
+    individual = models.ForeignKey('Individual', on_delete=models.CASCADE, db_index=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
 
     tool = models.CharField(max_length=1, choices=TOOL_CHOICES)
     rank = models.IntegerField()
@@ -1070,6 +1074,4 @@ class PhenotypePrioritization(DeletableSampleMetadataModel):
     scores = models.JSONField()
 
     class Meta:
-        unique_together = ('sample', 'gene_id', 'disease_id')
-
         json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'scores']
