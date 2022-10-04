@@ -9,7 +9,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
-from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, AnvilAuthenticationTestCase
 
@@ -133,14 +133,9 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', VARIANT_GUID})
 
         variant = variants[VARIANT_GUID]
-        fields = {
-            'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
-            'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd',
-            'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
-        }
-        fields.update(SAVED_VARIANT_FIELDS)
-        self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
-        fields |= {'mainTranscriptId', 'mmeSubmissions'}
+        self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), SAVED_VARIANT_DETAIL_FIELDS)
+        fields = {'mainTranscriptId', 'mmeSubmissions'}
+        fields.update(SAVED_VARIANT_DETAIL_FIELDS)
         self.assertSetEqual(set(variant.keys()), fields)
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
