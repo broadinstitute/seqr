@@ -11,7 +11,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_NOTE_FIELDS, AnvilAuthenticationTestCase
+    FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -27,7 +27,7 @@ GENE_GUID_2 = 'ENSG00000197530'
 
 SAVED_VARIANT_RESPONSE_KEYS = {
     'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-    'genesById', 'locusListsByGuid', 'rnaSeqData'
+    'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid',
 }
 
 COMPOUND_HET_3_JSON = {
@@ -130,9 +130,9 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
 
         variants = response_json['savedVariantsByGuid']
-        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'})
+        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', VARIANT_GUID})
 
-        variant = variants['SV0000001_2103343353_r0390_100']
+        variant = variants[VARIANT_GUID]
         fields = {
             'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
             'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd',
@@ -140,16 +140,23 @@ class SavedVariantAPITest(object):
         }
         fields.update(SAVED_VARIANT_FIELDS)
         self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
-        fields.add('mainTranscriptId')
+        fields |= {'mainTranscriptId', 'mmeSubmissions'}
         self.assertSetEqual(set(variant.keys()), fields)
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
             set(variant['tagGuids']), {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'},
         )
         self.assertListEqual(variant['noteGuids'], [])
+        self.assertListEqual(variant['mmeSubmissions'], [
+            {'geneId': 'ENSG00000135953', 'submissionGuid': 'MS000001_na19675', 'variantGuid': VARIANT_GUID}
+        ])
 
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
+
+        submissions = response_json['mmeSubmissionsByGuid']
+        self.assertSetEqual(set(submissions.keys()), {'MS000001_na19675'})
+        self.assertSetEqual(set(submissions['MS000001_na19675'].keys()), MATCHMAKER_SUBMISSION_FIELDS)
 
         locus_list_fields = {'intervals'}
         self.assertEqual(len(response_json['locusListsByGuid']), 1)
@@ -254,7 +261,7 @@ class SavedVariantAPITest(object):
         variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
             set(variants.keys()),
-            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'}
+            {'SV0000002_1248367227_r0390_100', VARIANT_GUID}
         )
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], [{
             'savedVariant': {

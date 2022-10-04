@@ -64,6 +64,7 @@ EXPECTED_SEARCH_RESPONSE = {
     },
     'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
+    'mmeSubmissionsByGuid': {'MS000001_na19675': mock.ANY},
 }
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
@@ -375,6 +376,7 @@ class VariantSearchAPITest(object):
             },
             'variantFunctionalDataByGuid': {},
             'rnaSeqData': {},
+            'mmeSubmissionsByGuid': {},
         })
         expected_search_response['search']['totalResults'] = 1
         self.assertDictEqual(response_json, expected_search_response)
