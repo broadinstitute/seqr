@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Add PhenotypePrioritization model (REQUIRES DB MIGRATION)
 
 ## 9/28/22
 * Add Gregor fields to sample manifest (REQUIRES DB MIGRATION)
