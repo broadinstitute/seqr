@@ -18,12 +18,12 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_pri_file
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_pri
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
 
-from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
+from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -400,21 +400,22 @@ def load_phenotype_pri_data(request):
     request_json = json.loads(request.body)
 
     file_name = request_json['file']
-    ignore_extra_samples = request_json['ignoreExtraSamples']
+    ignore_extra_samples = request_json.get('ignoreExtraSamples', False)
 
     logger.info(f'Loading phenotype prioritization data from {file_name}', request.user)
-    records = load_phenotype_pri_file(file_name, ignore_extra_samples)
+    records, info, warnings = load_phenotype_pri(file_name, request.user, ignore_extra_samples)
     models = PhenotypePrioritization.objects.bulk_create([PhenotypePrioritization(**data) for data in records])
-    sample_guids = [data['sample'].guid for data in records]
-    logger.info(f'create {len(models)} PhenotypePrioritization', request.user, db_update={
-        'dbEntity': PhenotypePrioritization, 'numEntities': len(models), 'parentEntityIds': sample_guids,
+    ind_guids = {data['individual'].guid for data in records}
+    logger.info(f'create {len(models)} {PhenotypePrioritization.__name__}', request.user, db_update={
+        'dbEntity': PhenotypePrioritization.__name__, 'numEntities': len(models), 'parentEntityIds': sorted(ind_guids),
         'updateType': 'bulk_create',
     })
+    info.append(f'Loaded {len(models)} LIRICAL/Exomiser data records')
 
     return create_json_response({
-        'info': ['Phenotype prioritization data loaded'],
-        'warnings': [],
-        'fileName': file_name,
+        'info': info,
+        'warnings': warnings,
+        'success': True
     })
 
 

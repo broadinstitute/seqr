@@ -1,6 +1,6 @@
 import elasticsearch_dsl
 from collections import defaultdict
-from django.db.models import prefetch_related_objects, Value, TextField
+from django.db.models import prefetch_related_objects, TextField
 from django.db.models.functions import Concat
 from django.utils import timezone
 from tqdm import tqdm
@@ -452,8 +452,9 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     return samples_to_load, info, warnings
 
 
+TOOL_FIELD = 'tool'
 PHENOTYPE_PRI_HEADER = {
-    'tool': 'tool', 'project': 'project', 'sampleId': 'sample_id', 'rank': 'rank', 'geneId': 'gene_id',
+    'tool': TOOL_FIELD, 'project': 'project', 'sampleId': 'sample_id', 'rank': 'rank', 'geneId': 'gene_id',
     'diseaseId': 'disease_id', 'diseaseName': 'disease_name', 'scoreName1': 'score_name1', 'score1': 'score1',
     'scoreName2': 'score_name2', 'score2': 'score2', 'scoreName3': 'score_name3', 'score3': 'score3'}
 
@@ -461,29 +462,32 @@ PHENOTYPE_PRI_HEADER = {
 def _parse_phenotype_pri_row(row):
     record = {mapped_key: row[key] for key, mapped_key in PHENOTYPE_PRI_HEADER.items()}
 
-    tool = PhenotypePrioritization.TOOL_LOOKUP.get(record.get('tool'), None)
+    tool = PhenotypePrioritization.TOOL_LOOKUP.get(record[TOOL_FIELD], None)
     if not tool:
         raise ValueError('Expecting {} for the "tool" column but found {}'.format(
-            ', '.join([v for k, v in PhenotypePrioritization.TOOL_CHOICES]), row['tool']))
-    record['tool'] = tool
+            ', '.join([v for k, v in PhenotypePrioritization.TOOL_CHOICES]), record[TOOL_FIELD]))
+    record[TOOL_FIELD] = tool
 
-    scores = {}
-    for score in ['1', '2', '3']:
-        score_name = record.pop('scoreName' + score, None)
+    scores = {record.pop('score_name1'): record.pop('score1')}
+    for score_index in ['2', '3']:
+        score_name = record.pop('score_name' + score_index, None)
+        score = record.pop('score' + score_index, None)
         if score_name:
-            scores[score_name] = record.pop('score' + score, None)
+            scores[score_name] = score
+    record['scores'] = scores
 
     return record
 
 
-def load_phenotype_pri_file(file_path, user, ignore_extra_samples):
-    samples_by_id = defaultdict(dict)
+def _load_phenotype_pri_file(file_path):
+    data_by_id = defaultdict(dict)
     f = file_iter(file_path)
     header = _parse_tsv_row(next(f))
     missing_cols = [col for col in PHENOTYPE_PRI_HEADER.keys() if col not in header]
     if missing_cols:
         raise ValueError(f'Invalid file: missing column(s) {", ".join(missing_cols)}')
 
+    count = 0
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         record = _parse_phenotype_pri_row(row)
@@ -491,63 +495,70 @@ def load_phenotype_pri_file(file_path, user, ignore_extra_samples):
         project = record.pop('project', None)
         if not sample_id or not project:
             raise ValueError('Both sample ID and project fields are required.')
-        if samples_by_id[sample_id]:
-            if project != samples_by_id[sample_id]['project']:
+        if data_by_id[sample_id]:
+            if project != data_by_id[sample_id]['project']:  # a sample must belong to a single project
                 raise ValueError(f'Invalid project name for sample {sample_id}')
-            samples_by_id[sample_id]['records'].append(record)
+            data_by_id[sample_id]['records'].append(record)
         else:
-            samples_by_id[sample_id]['project'] = project
-            samples_by_id[sample_id]['records'] = [record]
+            data_by_id[sample_id]['project'] = project
+            data_by_id[sample_id]['records'] = [record]
+        count += 1
 
-    message = f'Parsed {len(samples_by_id)} LIRICAL/Exomiser phenotype-based prioritization samples'
+    return count, data_by_id
+
+
+def load_phenotype_pri(file_path, user, ignore_extra_samples):
+    count, data_by_id = _load_phenotype_pri_file(file_path)
+
+    message = f'Parsed {count} LIRICAL/Exomiser data records in {len(data_by_id)} samples'
     info = [message]
     logger.info(message, user)
 
-    existing_inds = Individual.objects.annotate(
-        indv_project=Concat('individual_id', Value('/', output_field=TextField()), 'family__project__name')
-    ).filter(
-        indv_project__in={sample_id + '/' + value['project'] for sample_id, value in samples_by_id}
-    )
+    indivs = Individual.objects.filter(individual_id__in=data_by_id.keys())
+    prefetch_related_objects(indivs, 'family__project')
+    existing_indivs_by_id = {ind.individual_id: ind for ind in indivs
+                             if ind.family.project.name == data_by_id[ind.individual_id]['project']}
 
-    for ind in existing_inds:
-        samples_by_id[ind.individual_id]['individual'] = ind
+    extra_ids = set()
+    extra_records = 0
+    for sample_id, value in data_by_id.items():
+        if existing_indivs_by_id[sample_id]:
+            for rec in value['records']:
+                rec['individual'] = existing_indivs_by_id[sample_id]
+        else:
+            data_by_id.pop(sample_id)
+            extra_ids.add(sample_id)
+            extra_records += len(value['records'])
 
     warnings = []
-    extra_ids = set()
-    records_to_load_by_id = defaultdict(lambda: defaultdict(list))
-    for sample_id, value in samples_by_id.items():
-        if value['individual']:
-            for rec in value['records']:
-                rec['individual'] = value['individual']
-                records_to_load_by_id[sample_id][rec['tool']].append(rec)
-        else:
-            extra_ids.add(sample_id)
-
-    if extra_ids:
+    if extra_records:
         skipped_samples = ', '.join(sorted(extra_ids))
         if ignore_extra_samples:
-            warnings = [f'Skipped loading for the following {len(extra_ids)} unmatched samples: {skipped_samples}']
+            warnings = [f'Skipped loading {extra_records} records for the following {len(extra_ids)} unmatched samples: {skipped_samples}']
         else:
             raise ValueError(f'Unable to find matches for the following samples: {skipped_samples}')
 
     # Delete old data
-    to_delete = PhenotypePrioritization.objects.annotate(tool_ind=Concat('tool', 'individual')).filter(
-        tool_ind__in=[tool+sample_id for sample_id, value in records_to_load_by_id.items() for tool in value.keys()],
+    to_delete = PhenotypePrioritization.objects.annotate(
+        tool_ind=Concat('tool', 'individual__individual_id', output_field=TextField())
+    ).filter(
+        tool_ind__in={rec[TOOL_FIELD]+sample_id for sample_id, values in data_by_id.items() for rec in values['records']},
     )
     if to_delete:
         prefetch_related_objects(to_delete, 'individual')
+        info.append(f'Deleted {len(to_delete)} existing LIRICAL/Exomiser records')
         logger.info(f'delete {len(to_delete)} {PhenotypePrioritization.__name__}s', user, db_update={
             'dbEntity': PhenotypePrioritization.__name__, 'numEntities': len(to_delete), 'updateType': 'bulk_delete',
             'parentEntityIds': list({model.individual.guid for model in to_delete}),
         })
         to_delete.delete()
 
-    prefetch_related_objects(existing_inds, 'family__project')
-    projects = {ind.family.project.name for ind in existing_inds}
+    records_to_load = [rec for value in data_by_id.values() for rec in value['records']]
+    projects = {value['project'] for value in data_by_id.values()}
     project_names = ', '.join(sorted(projects))
     message = 'Attempted data loading for {} LIRICAL/Exomiser records in the following {} projects: {}'.format(
-        len(records_to_load_by_id), len(projects), project_names)
+        len(records_to_load), len(projects), project_names)
     info.append(message)
     logger.info(message, user)
 
-    return [rec for tools in records_to_load_by_id.values() for recs in tools.values() for rec in recs]
+    return records_to_load, info, warnings

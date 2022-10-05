@@ -1055,12 +1055,10 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         json_fields = ['gene_id', 'tpm']
 
 
-class PhenotypePrioritization(DeletableSampleMetadataModel):
-    EXOMISER_CHOICE = 'E'
-    LIRICAL_CHOICE = 'L'
+class PhenotypePrioritization(models.Model):
     TOOL_CHOICES = (
-        (EXOMISER_CHOICE, 'exomiser'),
-        (LIRICAL_CHOICE, 'lirical')
+        ('E', 'exomiser'),
+        ('L', 'lirical')
     )
     TOOL_LOOKUP = {v: k for k, v in TOOL_CHOICES}
 
@@ -1072,6 +1070,9 @@ class PhenotypePrioritization(DeletableSampleMetadataModel):
     disease_id = models.CharField(max_length=32)
     disease_name = models.TextField()
     scores = models.JSONField()
+
+    def __unicode__(self):
+        return "%s:%s:%s" % (self.individual.individual_id, self.gene_id, self.disease_id)
 
     class Meta:
         json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'scores']
