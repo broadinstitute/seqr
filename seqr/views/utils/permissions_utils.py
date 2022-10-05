@@ -13,6 +13,7 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL, PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
+from typing import Callable, Optional
 
 logger = SeqrLogger(__name__)
 
@@ -63,7 +64,7 @@ def _has_current_policies(user):
 
 
 # User access decorators
-def _require_permission(user_permission_test_func, error='User has insufficient permission'):
+def _require_permission(user_permission_test_func: Callable, error: str = 'User has insufficient permission') -> Callable:
     def test_user(user):
         if not user_permission_test_func(user):
             raise PermissionDenied(error)
@@ -71,20 +72,20 @@ def _require_permission(user_permission_test_func, error='User has insufficient 
     return test_user
 
 _active_required = user_passes_test(_require_permission(lambda user: user.is_active, error='User is no longer active'))
-def _current_policies_required(view_func, policy_url=API_POLICY_REQUIRED_URL):
+def _current_policies_required(view_func: Callable, policy_url: str = API_POLICY_REQUIRED_URL) -> Callable:
     return user_passes_test(_has_current_policies, login_url=policy_url)(view_func)
 
-def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
+def login_active_required(wrapped_func: Optional[Callable] = None, login_url: str = API_LOGIN_REQUIRED_URL) -> Callable:
     def decorator(view_func):
         return login_required(_active_required(view_func), login_url=login_url)
     if wrapped_func:
         return decorator(wrapped_func)
     return decorator
 
-def login_and_policies_required(view_func, login_url=API_LOGIN_REQUIRED_URL, policy_url=API_POLICY_REQUIRED_URL):
+def login_and_policies_required(view_func: Callable, login_url: str = API_LOGIN_REQUIRED_URL, policy_url: str = API_POLICY_REQUIRED_URL) -> Callable:
     return login_active_required(_current_policies_required(view_func, policy_url=policy_url), login_url=login_url)
 
-def active_user_has_policies_and_passes_test(user_permission_test_func):
+def active_user_has_policies_and_passes_test(user_permission_test_func: Callable) -> Callable:
     def decorator(view_func):
         return login_and_policies_required(user_passes_test(_require_permission(user_permission_test_func))(view_func))
     return decorator
@@ -228,24 +229,24 @@ def check_multi_project_permissions(obj, user):
 
 
 def get_project_guids_user_can_view(user, limit_data_manager=True):
+    if user_is_data_manager(user) and not limit_data_manager:
+        return list(Project.objects.values_list('guid', flat=True))
+
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:
         return project_guids
 
-    is_data_manager = user_is_data_manager(user)
-    projects = Project.objects.all()
-    if limit_data_manager or not is_data_manager:
-        if is_anvil_authenticated(user):
-            workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
-                          list_anvil_workspaces(user)]
-            projects = projects.annotate(
-                workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
-            ).filter(workspace__in=workspaces)
-        else:
-            projects = get_objects_for_user(user, CAN_VIEW, projects)
+    if is_anvil_authenticated(user):
+        workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
+                      list_anvil_workspaces(user)]
+        projects = Project.objects.annotate(
+            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
+        ).filter(workspace__in=workspaces)
+    else:
+        projects = get_objects_for_user(user, CAN_VIEW, Project)
 
-        projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
+    projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
 
     project_guids = [p.guid for p in projects.distinct().only('guid')]
 
