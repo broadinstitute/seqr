@@ -65,11 +65,15 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
         individual_models, user=user, project_guid=project_guid, add_hpo_details=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    response.update({
+    context = {
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
-    })
+    }
+    for k, v in context.items():
+        if k not in response:
+            response[k] = {}
+        response[k].update(v)
 
     if include_igv:
         igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)

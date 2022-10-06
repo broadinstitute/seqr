@@ -192,14 +192,15 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json['locusListsByGuid'][LOCUS_LIST_GUID].keys()), locus_list_fields)
 
         # include family context info
-        response = self.client.get('{}?loadFamilyContext=true'.format(url))
+        load_family_context_url = '{}?loadFamilyContext=true'.format(url)
+        response = self.client.get(load_family_context_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        response_keys = {
+        family_context_response_keys = {
             'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'igvSamplesByGuid', 'projectsByGuid'
         }
-        response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
-        self.assertSetEqual(set(response_json.keys()), response_keys)
+        family_context_response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
         family_fields = {'individualGuids', 'hasRnaTpmData'}
@@ -271,6 +272,15 @@ class SavedVariantAPITest(object):
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
         }])
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
+
+        # Test discovery tags with family context
+        response = self.client.get(load_family_context_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
+        self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
+        self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2', 'F000012_12'})
 
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
@@ -911,12 +921,12 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_saved_variant_data(self, *args):
         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
-        self.mock_list_workspaces.assert_called_once_with(self.analyst_user)
+        self.mock_list_workspaces.assert_called_with(self.analyst_user)
         self.mock_get_ws_access_level.assert_called_with(
             mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 12)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 14)
         self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
-        self.assertEqual(self.mock_get_groups.call_count, 9)
+        self.assertEqual(self.mock_get_groups.call_count, 10)
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_group_members.assert_not_called()
 
