@@ -257,7 +257,7 @@ class SavedVariantAPITest(object):
             set(variants.keys()),
             {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'}
         )
-        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], [{
+        discovery_tags = [{
             'savedVariant': {
                 'variantGuid': 'SV0000006_1248367227_r0003_tes',
                 'familyGuid': 'F000012_12',
@@ -271,7 +271,8 @@ class SavedVariantAPITest(object):
             'metadata': None,
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
-        }])
+        }]
+        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
 
         # Test discovery tags with family context
@@ -279,7 +280,11 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
-        self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
+        self.assertSetEqual(
+            set(response_json['savedVariantsByGuid'].keys()),
+            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'}
+        )
+        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2', 'F000012_12'})
 
     def test_create_saved_variant(self):
