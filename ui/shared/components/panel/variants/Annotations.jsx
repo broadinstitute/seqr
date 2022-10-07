@@ -19,6 +19,12 @@ const LargeText = styled.div`
   font-size: 1.2em;
 `
 
+const SCREEN_VALUES = {
+  PLS: 'Promotor-like signatures',
+  pELS: 'proximal Enhancer-like signatures',
+  dELS: 'distal Enhancer-like signatures',
+}
+
 const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) => {
   const posInt = parseInt(pos, 10)
   const ucscGenomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
@@ -375,6 +381,14 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           <HorizontalSpacer width={12} />
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
+      )}
+      {variant.screenRegionType && (
+        <div>
+          <b>
+            SCREEN: &nbsp;
+            {SCREEN_VALUES[variant.screenRegionType] || variant.screenRegionType}
+          </b>
+        </div>
       )}
       {mainTranscript.hgvsc && (
         <div>
