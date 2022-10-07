@@ -114,6 +114,10 @@ ES_VARIANTS = [
               ]
             }
           ],
+          'screen_region_type' : [
+            'dELS',
+            'CTCF-bound'
+          ],
           'hgmd_class': 'DM',
           'AC': 2,
           'exac_AN_Adj': 121308,
@@ -781,6 +785,7 @@ MAPPING_FIELDS = [
     'dbnsfp_Polyphen2_HVAR_pred',
     'cadd_PHRED',
     'sortedTranscriptConsequences',
+    'screen_region_type',
     'genotypes',
     'samples_no_call',
     'samples_num_alt_1',
