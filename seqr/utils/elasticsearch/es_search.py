@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS
+    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -284,6 +284,7 @@ class EsSearch(object):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
+        screen = annotations.pop(SCREEN_KEY, None)
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
         if clinvar_terms:
             self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
@@ -291,6 +292,8 @@ class EsSearch(object):
             self._consequence_overrides[HGMD_KEY] = hgmd_classes
         if splice_ai:
             self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
+        if screen:
+            self._consequence_overrides[SCREEN_KEY] = screen
 
         return annotations, new_svs
 
@@ -349,16 +352,24 @@ class EsSearch(object):
         self._filter(q)
 
     def _get_annotation_override_filter(self):
+        filters = []
         pathogenicity_filter = _pathogenicity_filter(
             self._consequence_overrides.get(CLINVAR_KEY), self._consequence_overrides.get(HGMD_KEY),
         )
+        if pathogenicity_filter:
+            filters.append(pathogenicity_filter)
         splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
-        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
-        if pathogenicity_filter and splice_ai_filter:
-            return _or_filters([pathogenicity_filter, splice_ai_filter])
-        else:
-            return pathogenicity_filter or splice_ai_filter
+        if splice_ai:
+            filters.append(_in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False))
+        screen = self._consequence_overrides.get(SCREEN_KEY)
+        if screen:
+            filters.append(Q('terms', screen_region_type=screen))
 
+        if not filters:
+            return None
+        if len(filters) == 1:
+            return filters[0]
+        return _or_filters(filters)
 
     def _filter_by_annotations(self, annotations, new_svs):
         dataset_type = None
@@ -371,7 +382,9 @@ class EsSearch(object):
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
                 consequences_filter |= annotation_override_filter
             self._filter(consequences_filter)
-            dataset_type = _dataset_type_for_annotations(annotations, new_svs=new_svs)
+            dataset_type = _dataset_type_for_annotations(
+                annotations, new_svs=new_svs, screen=self._consequence_overrides.get(SCREEN_KEY)
+            )
         elif new_svs:
             dataset_type = Sample.DATASET_TYPE_SV_CALLS
         elif annotation_override_filter:
@@ -1466,9 +1479,9 @@ def _annotations_filter(vep_consequences):
     return consequences_filter
 
 
-def _dataset_type_for_annotations(annotations, new_svs=False):
+def _dataset_type_for_annotations(annotations, new_svs=False, screen=False):
     sv = new_svs or bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
-    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
+    non_sv = bool(screen) or any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS
     elif not sv and non_sv:
