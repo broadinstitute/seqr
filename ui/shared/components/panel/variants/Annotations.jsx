@@ -13,17 +13,11 @@ import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
 import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
-import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
 
 const LargeText = styled.div`
   font-size: 1.2em;
 `
-
-const SCREEN_VALUES = {
-  PLS: 'Promotor-like signatures',
-  pELS: 'proximal Enhancer-like signatures',
-  dELS: 'distal Enhancer-like signatures',
-}
 
 const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) => {
   const posInt = parseInt(pos, 10)
@@ -386,7 +380,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
         <div>
           <b>
             SCREEN: &nbsp;
-            {SCREEN_VALUES[variant.screenRegionType] || variant.screenRegionType}
+            {SCREEN_LABELS[variant.screenRegionType] || variant.screenRegionType}
           </b>
         </div>
       )}
