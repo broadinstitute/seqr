@@ -209,9 +209,13 @@ POSTGRES_DB_CONFIG = {
     'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
     'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'pgtest'),
 }
+
+DATABASE_NAME = os.environ.get('POSTGRES_DATABASE', 'seqrdb')
+REFERENCE_DATABASE_NAME = os.environ.get('POSTGRES_REFERENCE_DATABASE', 'reference_data_db')
+
 DATABASES = {
-    'default': dict(NAME=os.environ.get('POSTGRES_DATABASE', 'seqrdb'), **POSTGRES_DB_CONFIG),
-    'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
+    'default': dict(NAME=DATABASE_NAME, **POSTGRES_DB_CONFIG),
+    'reference_data': dict(NAME=REFERENCE_DATABASE_NAME, **POSTGRES_DB_CONFIG),
 }
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter']
 
