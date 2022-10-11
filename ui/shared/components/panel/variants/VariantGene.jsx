@@ -9,6 +9,7 @@ import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/sele
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
+  LIRICAL, EXOMISER,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
@@ -313,9 +314,6 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
     ),
   },
 ]
-
-const LIRICAL = 'L'
-const EXOMISER = 'E'
 
 const SAMPLE_GENE_DETAIL_FIELDS = {
   rnaSeqData: { infos: [], scores: ['zScore', 'pValue', 'pAdjust'] },

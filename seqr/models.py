@@ -1056,9 +1056,11 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class PhenotypePrioritization(models.Model):
+    EXOMISER_CHOICE = 'E'
+    LIRICAL_CHOICE = 'L'
     TOOL_CHOICES = (
-        ('E', 'exomiser'),
-        ('L', 'lirical')
+        (EXOMISER_CHOICE, 'exomiser'),
+        (LIRICAL_CHOICE, 'lirical')
     )
     TOOL_LOOKUP = {v: k for k, v in TOOL_CHOICES}
 

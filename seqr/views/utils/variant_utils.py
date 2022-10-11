@@ -129,15 +129,16 @@ def _get_rna_seq_outliers(gene_ids, families):
 
 
 def _get_phenotype_pri_data(gene_ids, families):
-    data_by_individual_gene = defaultdict(lambda: {'phepri': {}})
+    data_by_individual_gene = defaultdict(lambda: {PhenotypePrioritization.LIRICAL_CHOICE: {},
+                                                   PhenotypePrioritization.EXOMISER_CHOICE: {}})
 
     phe_pri_data = get_json_for_phenotype_pri(
-        PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, sample__individual__family__in=families),
-        nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'}],
+        PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, individual__family__in=families),
+        nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 
     for data in phe_pri_data:
-        data_by_individual_gene[data.pop('individualGuid')]['phepri'][data['geneId']] = data
+        data_by_individual_gene[data.pop('individualGuid')][data['tool']][data['geneId']] = data
 
     return data_by_individual_gene
 

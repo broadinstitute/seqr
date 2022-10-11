@@ -460,7 +460,7 @@ PHENOTYPE_PRI_HEADER = {
 
 
 def _parse_phenotype_pri_row(row):
-    record = {mapped_key: row[key] for key, mapped_key in PHENOTYPE_PRI_HEADER.items()}
+    record = {mapped_key: row.get(key, None) for key, mapped_key in PHENOTYPE_PRI_HEADER.items()}
 
     tool = PhenotypePrioritization.TOOL_LOOKUP.get(record[TOOL_FIELD], None)
     if not tool:
