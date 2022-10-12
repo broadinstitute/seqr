@@ -73,11 +73,14 @@ def log_model_update(logger, model, user, update_type, update_fields=None):
     logger.info('{} {} {}'.format(update_type, db_entity, entity_id), user, db_update=db_update)
 
 
-def log_model_bulk_update(logger, models, user, update_type, update_fields=None):
+def log_model_bulk_update(logger, models, user, update_type, update_fields=None, parent=None):
     if not models:
         return []
     db_entity = type(models[0]).__name__
-    entity_ids = [o.guid for o in models]
+    if parent:
+        entity_ids = list({getattr(o, parent).guid for o in models})
+    else:
+        entity_ids = [o.guid for o in models]
     db_update = {
         'dbEntity': db_entity, 'entityIds': entity_ids, 'updateType': 'bulk_{}'.format(update_type),
     }

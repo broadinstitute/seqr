@@ -8,7 +8,7 @@ const REQUEST_ELASTICSEARCH_STATUS = 'REQUEST_ELASTICSEARCH_STATUS'
 const RECEIVE_ELASTICSEARCH_STATUS = 'RECEIVE_ELASTICSEARCH_STATUS'
 const RECEIVE_PIPELINE_UPLOAD_STATS = 'RECEIVE_PIPELINE_UPLOAD_STATS'
 const RECEIVE_RNA_SEQ_UPLOAD_STATS = 'RECEIVE_RNA_SEQ_UPLOAD_STATS'
-const RECEIVE_PHENO_PRI_UPLOAD_STATS = 'RECEIVE_PHENO_PRI_UPLOAD_STATS'
+const RECEIVE_PHE_PRI_UPLOAD_STATS = 'RECEIVE_PHE_PRI_UPLOAD_STATS'
 const REQUEST_ALL_USERS = 'REQUEST_ALL_USERS'
 const RECEIVE_ALL_USERS = 'RECEIVE_ALL_USERS'
 
@@ -76,27 +76,16 @@ export const uploadRnaSeq = values => (dispatch) => {
   })
 }
 
-export const uploadPhenoPri = values => (dispatch) => {
-  let successResponseJson = null
-  return new HttpRequestHelper(
-    '/api/data_management/load_phenotype_pri_data',
-    (responseJson) => {
-      successResponseJson = responseJson
-    },
-    (e) => {
-      successResponseJson = { warnings: [e.message] }
-    },
-  ).post(values).then(() => {
-    dispatch({ type: RECEIVE_PHENO_PRI_UPLOAD_STATS, newValue: successResponseJson })
-  })
-}
+export const uploadPhenotypePrioritization = values => submitRequest(
+  'load_phenotype_prioritization_data', RECEIVE_PHE_PRI_UPLOAD_STATS, values,
+)
 
 export const reducers = {
   elasticsearchStatusLoading: loadingReducer(REQUEST_ELASTICSEARCH_STATUS, RECEIVE_ELASTICSEARCH_STATUS),
   elasticsearchStatus: createSingleObjectReducer(RECEIVE_ELASTICSEARCH_STATUS),
   qcUploadStats: createSingleValueReducer(RECEIVE_PIPELINE_UPLOAD_STATS, {}),
   rnaSeqUploadStats: createSingleValueReducer(RECEIVE_RNA_SEQ_UPLOAD_STATS, {}),
-  phenoPriUploadStats: createSingleValueReducer(RECEIVE_PHENO_PRI_UPLOAD_STATS, {}),
+  phePriUploadStats: createSingleValueReducer(RECEIVE_PHE_PRI_UPLOAD_STATS, {}),
   allUsers: createSingleValueReducer(RECEIVE_ALL_USERS, [], 'users'),
   allUsersLoading: loadingReducer(REQUEST_ALL_USERS, RECEIVE_ALL_USERS),
 }

@@ -45,6 +45,28 @@ def get_audit_field_names(audit_field):
     return list(_get_audit_fields(audit_field).keys())
 
 
+class BulkOperationBase:
+    @classmethod
+    def bulk_create(cls, user, new_models, parent=None):
+        """Helper bulk create method that logs the creation"""
+        for model in new_models:
+            model.created_by = user
+        models = cls.objects.bulk_create(new_models)
+        log_model_bulk_update(logger, models, user, 'create', parent=parent)
+        return models
+
+    @classmethod
+    def bulk_delete(cls, user, queryset=None, parent=None, **filter_kwargs):
+        """Helper bulk delete method that logs the deletion"""
+        if queryset is None:
+            queryset = cls.objects.filter(**filter_kwargs)
+        log_model_bulk_update(logger, queryset, user, 'delete', parent=parent)
+        return queryset.delete()
+
+    class Meta:
+        abstract = True
+
+
 class CustomModelBase(base.ModelBase):
     def __new__(cls, name, bases, attrs, **kwargs):
         audit_fields = getattr(attrs.get('Meta'), 'audit_fields', None)
@@ -1055,19 +1077,11 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         json_fields = ['gene_id', 'tpm']
 
 
-class PhenotypePrioritization(models.Model):
-    EXOMISER_CHOICE = 'E'
-    LIRICAL_CHOICE = 'L'
-    TOOL_CHOICES = (
-        (EXOMISER_CHOICE, 'exomiser'),
-        (LIRICAL_CHOICE, 'lirical')
-    )
-    TOOL_LOOKUP = {v: k for k, v in TOOL_CHOICES}
-
+class PhenotypePrioritization(models.Model, BulkOperationBase):
     individual = models.ForeignKey('Individual', on_delete=models.CASCADE, db_index=True)
     gene_id = models.CharField(max_length=20)  # ensembl ID
 
-    tool = models.CharField(max_length=1, choices=TOOL_CHOICES)
+    tool = models.CharField(max_length=20)
     rank = models.IntegerField()
     disease_id = models.CharField(max_length=32)
     disease_name = models.TextField()
@@ -1077,4 +1091,4 @@ class PhenotypePrioritization(models.Model):
         return "%s:%s:%s" % (self.individual.individual_id, self.gene_id, self.disease_id)
 
     class Meta:
-        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'scores']
+        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores']
