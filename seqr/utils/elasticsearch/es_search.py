@@ -367,8 +367,6 @@ class EsSearch(object):
 
         if not filters:
             return None
-        if len(filters) == 1:
-            return filters[0]
         return _or_filters(filters)
 
     def _filter_by_annotations(self, annotations, new_svs):
