@@ -936,6 +936,12 @@ export const SVTYPE_DETAILS = {
   },
 }
 
+export const SCREEN_LABELS = {
+  PLS: 'Promotor-like signatures',
+  pELS: 'proximal Enhancer-like signatures',
+  dELS: 'distal Enhancer-like signatures',
+}
+
 export const SHOW_ALL = 'ALL'
 export const NOTE_TAG_NAME = 'Has Notes'
 export const EXCLUDED_TAG_NAME = 'Excluded'

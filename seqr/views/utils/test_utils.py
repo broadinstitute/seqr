@@ -895,6 +895,7 @@ PARSED_VARIANTS = [
                         'splice_ai_consequence': None},
         'ref': 'TC',
         'rsid': None,
+        'screenRegionType': 'dELS',
         'transcripts': {
             'ENSG00000135953': [TRANSCRIPT_3],
             'ENSG00000228198': [TRANSCRIPT_2],
@@ -980,6 +981,7 @@ PARSED_VARIANTS = [
         },
         'ref': 'GAGA',
         'rsid': None,
+        'screenRegionType': None,
         'transcripts': {
             'ENSG00000135953': [TRANSCRIPT_1],
             'ENSG00000228198': [TRANSCRIPT_2],
@@ -1065,6 +1067,7 @@ PARSED_SV_VARIANT = {
                     'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
+    'screenRegionType': None,
     'transcripts': {
         'ENSG00000228198': [
             {
@@ -1152,6 +1155,7 @@ PARSED_SV_WGS_VARIANT = {
                     'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
+    'screenRegionType': None,
     'transcripts': {
         'ENSG00000228198': [
             {
@@ -1232,6 +1236,7 @@ PARSED_MITO_VARIANT = {
     'ref': 'C',
     'rg37LocusEnd': None,
     'rsid': None,
+    'screenRegionType': None,
     'selectedMainTranscriptId': None,
     'svType': None,
     'svTypeDetail': None,

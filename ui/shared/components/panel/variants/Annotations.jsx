@@ -13,7 +13,7 @@ import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
 import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
-import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
 
 const LargeText = styled.div`
   font-size: 1.2em;
@@ -375,6 +375,14 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           <HorizontalSpacer width={12} />
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
+      )}
+      {variant.screenRegionType && (
+        <div>
+          <b>
+            SCREEN: &nbsp;
+            {SCREEN_LABELS[variant.screenRegionType] || variant.screenRegionType}
+          </b>
+        </div>
       )}
       {mainTranscript.hgvsc && (
         <div>

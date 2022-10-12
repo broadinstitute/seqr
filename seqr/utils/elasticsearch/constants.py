@@ -274,6 +274,7 @@ SORT_FIELDS.update({
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
 
+SCREEN_KEY = 'SCREEN'
 CLINVAR_KEY = 'clinvar'
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_KEY = 'hgmd'
@@ -301,6 +302,7 @@ CORE_FIELDS_CONFIG = {
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},
+    'screen_region_type': {'response_key': 'screenRegionType', 'format_value': lambda types: types[0] if types else None},
     'start': {'response_key': 'pos', 'format_value': int},
     'svType': {},
     'variantId': {},
