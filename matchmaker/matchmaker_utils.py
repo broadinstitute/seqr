@@ -185,7 +185,7 @@ def _submission_genes_to_external_genomic_features(submission):
 def _submission_gene_to_external_genomic_features(submission_gene, individual):
     variant = submission_gene.saved_variant
     chrom, pos = get_chrom_pos(variant.xpos)
-    genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.guid) # TODO
+    genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.genome_version)
 
     feature = {
         'gene': {'id': submission_gene.gene_id},

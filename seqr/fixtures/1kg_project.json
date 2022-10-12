@@ -1715,7 +1715,7 @@
             "predictions": {"strvctvre": 0.374},
             "alt": null,
             "numExon": 2,
-            "genomeVersion": "37", "genotypeFilters": [],
+            "genotypeFilters": [],
             "ref": null,
             "genotypes": {
                 "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
