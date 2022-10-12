@@ -334,6 +334,7 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
     'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
+    'gnomad_non_coding_constraint_z_score': {'response_key': 'gnomad_noncoding'},
     'primate_ai_score': {'response_key': 'primate_ai'},
     'splice_ai_delta_score': {'response_key': SPLICE_AI_FIELD},
     'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},
