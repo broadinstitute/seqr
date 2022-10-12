@@ -9,7 +9,8 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max
+from django.db.models import Max, TextField
+from django.db.models.functions import Concat
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -18,7 +19,7 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_pri
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required
@@ -395,26 +396,65 @@ def load_rna_seq_sample_data(request, sample_guid):
     return create_json_response({'success': True})
 
 
+def _load_phenotype_prioritization(file_path, user):
+    data_by_id = load_phenotype_prioritization_data_file(file_path)
+
+    all_samples = [sample for project_samples in data_by_id.values() for sample in project_samples.values()]
+    all_records = [rec for sample_records in all_samples for rec in sample_records]
+    message = f'Parsed {len(all_records)} LIRICAL/Exomiser data records in {len(all_samples)} samples'
+    info = [message]
+    logger.info(message, user)
+
+    for project, project_samples in data_by_id.items():
+        indivs = Individual.objects.filter(family__project__name=project, individual_id__in=project_samples.keys())
+        existing_indivs_by_id = {ind.individual_id: ind for ind in indivs}
+
+        tool_sample_id_set = set()
+        for sample_id, records in project_samples.items():
+            if existing_indivs_by_id[sample_id]:
+                for rec in records:
+                    rec['individual'] = existing_indivs_by_id[sample_id]
+                    tool_sample_id_set.add(f'{rec["tool"]}{sample_id}')
+            else:
+                raise ValueError(f'Individual {sample_id} doesn\'t exist in project {project}')
+
+        # Delete old data
+        to_delete = PhenotypePrioritization.objects.annotate(
+            tool_ind=Concat('tool', 'individual__individual_id', output_field=TextField())
+        ).filter(
+            tool_ind__in=tool_sample_id_set,
+        )
+        if to_delete:
+            deleted, _ = PhenotypePrioritization.bulk_delete(user, to_delete, parent='individual')
+            message = f'Deleted {deleted} existing phenotype-based prioritization records from project {project}'
+            info.append(message)
+            logger.info(message, user)
+
+
+    project_names = ', '.join(sorted(data_by_id.keys()))
+    message = 'Attempted data loading for {} phenotype-based prioritization records in the following {} projects: {}'.format(
+        len(all_records), len(data_by_id.keys()), project_names)
+    info.append(message)
+    logger.info(message, user)
+
+    return all_records, info
+
+
 @data_manager_required
-def load_phenotype_pri_data(request):
+def load_phenotype_prioritization_data(request):
     request_json = json.loads(request.body)
 
     file_name = request_json['file']
-    ignore_extra_samples = request_json.get('ignoreExtraSamples', False)
 
     logger.info(f'Loading phenotype prioritization data from {file_name}', request.user)
-    records, info, warnings = load_phenotype_pri(file_name, request.user, ignore_extra_samples)
-    models = PhenotypePrioritization.objects.bulk_create([PhenotypePrioritization(**data) for data in records])
-    ind_guids = {data['individual'].guid for data in records}
-    logger.info(f'create {len(models)} {PhenotypePrioritization.__name__}', request.user, db_update={
-        'dbEntity': PhenotypePrioritization.__name__, 'numEntities': len(models), 'parentEntityIds': sorted(ind_guids),
-        'updateType': 'bulk_create',
-    })
+    records, info = _load_phenotype_prioritization(file_name, request.user)
+    models = PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in records],
+                                                 parent='individual')
+
     info.append(f'Loaded {len(models)} LIRICAL/Exomiser data records')
 
     return create_json_response({
         'info': info,
-        'warnings': warnings,
         'success': True
     })
 
