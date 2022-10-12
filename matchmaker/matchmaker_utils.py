@@ -2,79 +2,74 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime
-from django.db.models import prefetch_related_objects, Q
+from django.db.models import prefetch_related_objects, Q, F
 
-from reference_data.models import HumanPhenotypeOntology
+from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_LOOKUP
 from matchmaker.models import MatchmakerSubmission, MatchmakerIncomingQuery, MatchmakerResult
 from seqr.utils.gene_utils import get_genes, get_gene_ids_for_gene_symbols, get_filtered_gene_ids
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from settings import MME_DEFAULT_CONTACT_INSTITUTION
 
 logger = logging.getLogger(__name__)
 
 
-def get_mme_genes_phenotypes_for_results(results, **kwargs):
-    return _get_mme_genes_phenotypes(
-        results, _get_patient_features, _get_patient_genomic_features, include_matched_symbol_genes=True,  **kwargs)
-
-
-def get_mme_genes_phenotypes_for_submissions(submissions):
-    return _get_mme_genes_phenotypes(submissions, _get_submisson_features, _get_submisson_genomic_features)
-
-
-def _get_patient_features(result):
-    return deepcopy(result['patient'].get('features'))
-
-
-def _get_patient_genomic_features(result):
-    return deepcopy(result['patient'].get('genomicFeatures'))
-
-
-def _get_submisson_features(submisson):
-    return submisson.features
-
-
-def _get_submisson_genomic_features(submisson):
-    return submisson.genomic_features
-
-
-def _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, additional_genes=None, additional_hpo_ids=None):
+def get_mme_genes_phenotypes_for_results(results, additional_genes=None, additional_hpo_ids=None):
     hpo_ids = additional_hpo_ids if additional_hpo_ids else set()
     genes = additional_genes if additional_genes else set()
     for result in results:
-        hpo_ids.update({feature['id'] for feature in (get_features(result) or []) if feature.get('id')})
-        genes.update({gene_feature['gene']['id'] for gene_feature in (get_genomic_features(result) or [])
+        hpo_ids.update({feature['id'] for feature in _get_patient_features(result) if feature.get('id')})
+        genes.update({gene_feature['gene']['id'] for gene_feature in _get_patient_genomic_features(result)
                       if gene_feature.get('gene', {}).get('id')})
 
     gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
-    gene_symols = {gene for gene in genes if not gene.startswith('ENSG')}
-    return hpo_ids, gene_ids, gene_symols
+    gene_symbols = set(genes) - gene_ids
 
-
-def _get_mme_genes_phenotypes(results, get_features, get_genomic_features, include_matched_symbol_genes=False, **kwargs):
-    hpo_ids, gene_ids, gene_symbols = _get_mme_gene_phenotype_ids(results, get_features, get_genomic_features, **kwargs)
     gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
-    if include_matched_symbol_genes:
-        # Include all gene IDs associated with the given symbol
-        for new_gene_ids in gene_symbols_to_ids.values():
-            gene_ids.update(new_gene_ids)
-        # Include any gene IDs whose legacy id is the given symbol
-        for gene_symbol in gene_symbols:
-            legacy_gene_ids = get_filtered_gene_ids(
-                Q(dbnsfpgene__gene_names__startswith='{};'.format(gene_symbol)) |
-                Q(dbnsfpgene__gene_names__endswith=';{}'.format(gene_symbol)) |
-                Q(dbnsfpgene__gene_names__contains=';{};'.format(gene_symbol))
-            )
-            gene_symbols_to_ids[gene_symbol] += legacy_gene_ids
-            gene_ids.update(legacy_gene_ids)
-    else:
-        gene_ids.update({new_gene_ids[0] for new_gene_ids in gene_symbols_to_ids.values()})
 
-    genes_by_id = get_genes(gene_ids)
+    # Include all gene IDs associated with the given symbol
+    for new_gene_ids in gene_symbols_to_ids.values():
+        gene_ids.update(new_gene_ids)
 
-    hpo_terms_by_id = {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
+    # Include any gene IDs whose legacy id is the given symbol
+    for gene_symbol in gene_symbols:
+        legacy_gene_ids = get_filtered_gene_ids(
+            Q(dbnsfpgene__gene_names__startswith='{};'.format(gene_symbol)) |
+            Q(dbnsfpgene__gene_names__endswith=';{}'.format(gene_symbol)) |
+            Q(dbnsfpgene__gene_names__contains=';{};'.format(gene_symbol))
+        )
+        gene_symbols_to_ids[gene_symbol] += legacy_gene_ids
+        gene_ids.update(legacy_gene_ids)
 
-    return hpo_terms_by_id, genes_by_id, gene_symbols_to_ids
+    return get_hpo_terms_by_id(hpo_ids), get_genes(gene_ids), gene_symbols_to_ids
+
+
+def get_hpo_terms_by_id(hpo_ids):
+    return {hpo.hpo_id: hpo.name for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=hpo_ids)}
+
+
+def _get_patient_features(result):
+    return deepcopy(result['patient'].get('features')) or []
+
+
+def _get_patient_genomic_features(result):
+    return deepcopy(result['patient'].get('genomicFeatures')) or []
+
+
+def get_mme_gene_phenotype_ids_for_submissions(submissions, get_gene_variants=False):
+    submissions = submissions.prefetch_related('matchmakersubmissiongenes_set')
+
+    hpo_ids = set()
+    gene_ids = set()
+    submission_gene_variants = {}
+    for submission in submissions:
+        hpo_ids.update({feature['id'] for feature in (submission.features or []) if feature.get('id')})
+        gene_variants = get_submission_gene_variants(submission, gene_id_only=not get_gene_variants)
+        gene_ids.update({gv['geneId'] for gv in gene_variants})
+        if get_gene_variants:
+            submission_gene_variants[submission.guid] = gene_variants
+
+    return hpo_ids, gene_ids, submission_gene_variants
 
 
 def validate_patient_data(json_data):
@@ -102,22 +97,30 @@ def parse_mme_features(features, hpo_terms_by_id):
     return phenotypes
 
 
-def parse_mme_gene_variants(genomic_features, gene_symbols_to_ids):
+def get_submission_gene_variants(submission, gene_id_only=False):
+    values_expr = {'geneId': F('gene_id')}
+    if not gene_id_only:
+        values_expr.update({'variantGuid': F('saved_variant__guid')})
+    return list(submission.matchmakersubmissiongenes_set.order_by('gene_id').values(**values_expr))
+
+
+def _parse_mme_gene_variants(result, gene_symbols_to_ids):
+    genomic_features = _get_patient_genomic_features(result)
     gene_variants = []
-    for gene_feature in (genomic_features or []):
+    for gene_feature in genomic_features:
         gene_ids = get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)
         gene_id = gene_ids[0] if gene_ids else None
         if gene_id:
             gene_variant = {'geneId': gene_id}
             if gene_feature.get('variant'):
-                gene_variant.update({
+                gene_variant['variant'] = {
                     'alt': gene_feature['variant'].get('alternateBases'),
                     'ref': gene_feature['variant'].get('referenceBases'),
                     'chrom': gene_feature['variant'].get('referenceName'),
                     'pos': gene_feature['variant'].get('start'),
                     'end': gene_feature['variant'].get('end'),
                     'genomeVersion': gene_feature['variant'].get('assembly'),
-                })
+                }
             gene_variants.append(gene_variant)
     return gene_variants
 
@@ -135,7 +138,7 @@ def get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids):
 
 def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_guid):
     phenotypes = parse_mme_features(_get_patient_features(result), hpo_terms_by_id)
-    gene_variants = parse_mme_gene_variants(_get_patient_genomic_features(result), gene_symbols_to_ids)
+    gene_variants = _parse_mme_gene_variants(result, gene_symbols_to_ids)
 
     parsed_result = {
         'geneVariants': gene_variants,
@@ -146,7 +149,7 @@ def parse_mme_patient(result, hpo_terms_by_id, gene_symbols_to_ids, submission_g
     return parsed_result
 
 
-def get_submission_json_for_external_match(submission, score=None):
+def get_submission_json_for_external_match(submission, score=None, genomic_features=None):
     submission_json = {
         'patient': {
             'id': submission.submission_id,
@@ -158,7 +161,7 @@ def get_submission_json_for_external_match(submission, score=None):
             },
             'species': 'NCBITaxon:9606',
             'features': submission.features,
-            'genomicFeatures': submission.genomic_features,
+            'genomicFeatures': genomic_features or _submission_genes_to_external_genomic_features(submission),
         }
     }
     sex = MatchmakerSubmission.SEX_LOOKUP.get(submission.individual.sex)
@@ -169,46 +172,84 @@ def get_submission_json_for_external_match(submission, score=None):
     return submission_json
 
 
+def _submission_genes_to_external_genomic_features(submission):
+    individual = submission.individual
+    submission_genes = submission.matchmakersubmissiongenes_set.all().order_by('gene_id').select_related('saved_variant')
+
+    return [
+        _submission_gene_to_external_genomic_features(submission_gene, individual)
+        for submission_gene in submission_genes
+    ]
+
+
+def _submission_gene_to_external_genomic_features(submission_gene, individual):
+    variant = submission_gene.saved_variant
+    chrom, pos = get_chrom_pos(variant.xpos)
+    genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.genome_version)
+
+    feature = {
+        'gene': {'id': submission_gene.gene_id},
+        'variant': {
+            'referenceName': chrom,
+            'start': pos,
+            'assembly': GENOME_VERSION_LOOKUP.get(genome_version),
+        },
+    }
+    if variant.alt:
+        feature['variant'].update({
+            'alternateBases': variant.alt,
+            'referenceBases': variant.ref,
+        })
+    elif variant.xpos_end:
+        _, end = get_chrom_pos(variant.xpos_end)
+        feature['variant']['end'] = end
+
+    genotype = variant.saved_variant_json.get('genotypes', {}).get(individual.guid)
+    if genotype and genotype.get('numAlt', -1) > 0:
+        feature['zygosity'] = genotype['numAlt']
+
+    return feature
+
+
 def get_mme_matches(patient_data, origin_request_host=None, user=None, originating_submission=None):
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results([patient_data])
 
     genomic_features = _get_patient_genomic_features(patient_data)
     feature_ids = [
-        feature['id'] for feature in (_get_patient_features(patient_data) or []) if
+        feature['id'] for feature in _get_patient_features(patient_data) if
         feature.get('observed', 'yes') == 'yes' and feature['id'] in hpo_terms_by_id
     ]
 
+    match_q = None
     if genomic_features:
-        for feature in genomic_features:
-            feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
-        get_submission_kwargs = {
-            'query_ids': list(genes_by_id.keys()),
-            'filter_key': 'genomic_features',
-            'id_filter_func': lambda gene_id: {'gene': {'id': gene_id}},
-        }
-    else:
-        get_submission_kwargs = {
-            'query_ids': feature_ids,
-            'filter_key': 'features',
-            'id_filter_func': lambda feature_id: {'id': feature_id, 'observed': 'yes'},
-        }
+        if genes_by_id:
+            for feature in genomic_features:
+                feature['gene_ids'] = get_gene_ids_for_feature(feature, gene_symbols_to_ids)
+            match_q = Q(matchmakersubmissiongenes__gene_id__in=genes_by_id.keys())
+    elif feature_ids:
+        match_q = Q(features__contains=[{'id': feature_ids[0], 'observed': 'yes'}])
+        for feature_id in feature_ids[1:]:
+            match_q |= Q(features__contains=[{'id': feature_id, 'observed': 'yes'}])
+
+    if not match_q:
+        return [], _create_incoming_query(patient_data, origin_request_host, user)
 
     query_patient_id = patient_data['patient']['id']
+    matches = MatchmakerSubmission.objects.filter(
+        match_q, deleted_date__isnull=True).exclude(submission_id=query_patient_id)
+
+    match_genomic_features = {match: _submission_genes_to_external_genomic_features(match) for match in matches}
+
     scored_matches = _get_matched_submissions(
-        query_patient_id,
-        get_match_genotype_score=lambda match: _get_genotype_score(genomic_features, match) if genomic_features else 0,
+        matches,
+        get_match_genotype_score=lambda match: _get_genotype_score(genomic_features, match_genomic_features[match]) if genomic_features else 0,
         get_match_phenotype_score=lambda match: _get_phenotype_score(feature_ids, match) if feature_ids else 0,
-        **get_submission_kwargs
     )
 
-    incoming_query = create_model_from_json(MatchmakerIncomingQuery, {
-        'institution': patient_data['patient']['contact'].get('institution') or origin_request_host,
-        'patient_id': query_patient_id if scored_matches else None,
-    }, user)
-    if not scored_matches:
-        return [], incoming_query
+    incoming_query = _create_incoming_query(
+        patient_data, origin_request_host, user, patient_id=query_patient_id if scored_matches else None)
 
-    prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set')
+    prefetch_related_objects(list(scored_matches.keys()), 'matchmakerresult_set', 'matchmakersubmissiongenes_set', 'individual')
     for match_submission in scored_matches.keys():
         if not match_submission.matchmakerresult_set.filter(result_data__patient__id=query_patient_id):
             create_model_from_json( MatchmakerResult, {
@@ -219,21 +260,21 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
                 'last_modified_by': user,
             }, user)
 
-    return [get_submission_json_for_external_match(match_submission, score=score)
-            for match_submission, score in scored_matches.items()], incoming_query
+    return sorted(
+        [get_submission_json_for_external_match(match, score=score, genomic_features=match_genomic_features[match])
+         for match, score in scored_matches.items()],
+        key=lambda submission: (submission['score']['patient'], submission['patient']['id'])
+    ), incoming_query
 
 
-def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phenotype_score, query_ids, filter_key, id_filter_func):
-    if not query_ids:
-        # no valid entities found for provided features
-        return {}
+def _create_incoming_query(patient_data, origin_request_host, user, patient_id=None):
+    return create_model_from_json(MatchmakerIncomingQuery, {
+        'institution': patient_data['patient']['contact'].get('institution') or origin_request_host,
+        'patient_id': patient_id,
+    }, user)
 
-    matches = []
-    for item_id in query_ids:
-        matches += MatchmakerSubmission.objects.filter(deleted_date__isnull=True, **{
-            '{}__contains'.format(filter_key): [id_filter_func(item_id)]
-        }).exclude(submission_id=patient_id)
 
+def _get_matched_submissions(matches, get_match_genotype_score, get_match_phenotype_score):
     scored_matches = {}
     for match in matches:
         genotype_score = get_match_genotype_score(match)
@@ -248,9 +289,9 @@ def _get_matched_submissions(patient_id, get_match_genotype_score, get_match_phe
     return scored_matches
 
 
-def _get_genotype_score(genomic_features, match):
+def _get_genotype_score(genomic_features, match_genomic_features):
     match_features_by_gene_id = defaultdict(list)
-    for feature in match.genomic_features:
+    for feature in match_genomic_features:
         match_features_by_gene_id[feature['gene']['id']].append(feature)
 
     score = 0
@@ -292,11 +333,7 @@ def _get_phenotype_score(hpo_ids, match):
 def get_mme_metrics():
     submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True)
 
-    hpo_ids, gene_ids, gene_symols = _get_mme_gene_phenotype_ids(
-        submissions, _get_submisson_features, _get_submisson_genomic_features
-    )
-    if gene_symols:
-        logger.error('Found unexpected gene in MME: {}'.format(', '.join(gene_symols)))
+    hpo_ids, gene_ids, _ = get_mme_gene_phenotype_ids_for_submissions(submissions)
 
     submitters = set()
     for submission in submissions:

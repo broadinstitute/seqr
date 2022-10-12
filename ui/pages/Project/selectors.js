@@ -240,9 +240,7 @@ export const getTagTypeCounts = createSelector(
   tagTypes => tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
 )
 
-export const getVariantUniqueId = (
-  { chrom, pos, ref, alt, end, geneId }, variantGeneId,
-) => `${chrom}-${pos}-${ref ? `${ref}-${alt}` : end}-${variantGeneId || geneId}`
+export const getVariantGeneId = ({ variantGuid, geneId }, variantGeneId) => `${variantGuid}-${variantGeneId || geneId}`
 
 export const getIndividualTaggedVariants = createSelector(
   getTaggedVariantsByFamily,
@@ -257,7 +255,7 @@ export const getIndividualTaggedVariants = createSelector(
       }
       return [...acc, ...variant.genes.map(gene => ({
         ...variantDetail,
-        variantId: getVariantUniqueId(variant, gene.geneId),
+        variantId: getVariantGeneId(variant, gene.geneId),
         ...gene,
       }))]
     }, [])
@@ -634,17 +632,15 @@ export const getMmeResultsBySubmission = createSelector(
 export const getMmeDefaultContactEmail = createSelector(
   getMmeResultsByGuid,
   getMmeSubmissionsByGuid,
-  getIndividualsByGuid,
   getGenesById,
   getSavedVariantsByGuid,
   getUser,
   (state, ownProps) => ownProps.matchmakerResultGuid,
-  (mmeResultsByGuid, mmeSubmissionsByGuid, individualsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
+  (mmeResultsByGuid, mmeSubmissionsByGuid, genesById, savedVariants, user, matchmakerResultGuid) => {
     const { patient, geneVariants, submissionGuid } = mmeResultsByGuid[matchmakerResultGuid]
     const {
       geneVariants: submissionGeneVariants, phenotypes, individualGuid, contactHref, submissionId,
     } = mmeSubmissionsByGuid[submissionGuid]
-    const { familyGuid } = individualsByGuid[individualGuid]
 
     const submittedGenes = [...new Set((submissionGeneVariants || []).map(
       ({ geneId }) => (genesById[geneId] || {}).geneSymbol,
@@ -654,11 +650,9 @@ export const getMmeDefaultContactEmail = createSelector(
       geneSymbol => geneSymbol && submittedGenes.includes(geneSymbol),
     )
 
-    const submittedVariants = (submissionGeneVariants || []).map(({ alt, ref, chrom, pos, end, genomeVersion }) => {
-      const savedVariant = Object.values(savedVariants).find(
-        o => o.chrom === chrom && o.pos === pos && (ref ? o.ref === ref && o.alt === alt : end === o.end) &&
-          o.familyGuids.includes(familyGuid),
-      ) || {}
+    const submittedVariants = (submissionGeneVariants || []).map(({ variantGuid }) => {
+      const savedVariant = savedVariants[variantGuid]
+      const { alt, ref, chrom, pos, end, genomeVersion } = savedVariant
       const genotype = (savedVariant.genotypes || {})[individualGuid] || {}
       const mainTranscript = getVariantMainTranscript(savedVariant)
       let consequence = `${(mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')} variant`
