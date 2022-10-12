@@ -118,6 +118,7 @@ ES_VARIANTS = [
             'dELS',
             'CTCF-bound'
           ],
+          'gnomad_non_coding_constraint_z_score': 1.01272,
           'hgmd_class': 'DM',
           'AC': 2,
           'exac_AN_Adj': 121308,
@@ -784,6 +785,7 @@ MAPPING_FIELDS = [
     'dbnsfp_SIFT_pred',
     'dbnsfp_Polyphen2_HVAR_pred',
     'cadd_PHRED',
+    'gnomad_non_coding_constraint_z_score',
     'sortedTranscriptConsequences',
     'screen_region_type',
     'genotypes',
