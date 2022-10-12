@@ -430,7 +430,6 @@ def _load_phenotype_prioritization(file_path, user):
             info.append(message)
             logger.info(message, user)
 
-
     project_names = ', '.join(sorted(data_by_id.keys()))
     message = 'Attempted data loading for {} phenotype-based prioritization records in the following {} projects: {}'.format(
         len(all_records), len(data_by_id.keys()), project_names)
