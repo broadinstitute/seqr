@@ -57,6 +57,8 @@ const VARIANT_NOTE_FIELDS = [{
   component: BooleanCheckbox,
 }]
 
+const DEPRECATED_MME_TAG = 'seqr MME (old)'
+
 export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
   <Popup
     position="top right"
@@ -257,7 +259,7 @@ const FamilyVariantTags = React.memo(({
               variantId={variantId}
               tagOptions={projectTagTypes}
               displayMetadata
-              disabledTagType="seqr MME (old)"
+              disabledTagType={DEPRECATED_MME_TAG}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />

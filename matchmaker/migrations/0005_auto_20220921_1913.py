@@ -11,6 +11,8 @@ from tqdm import tqdm
 from matchmaker.matchmaker_utils import _submission_gene_to_external_genomic_features
 from seqr.utils.xpos_utils import get_chrom_pos
 
+MAX_GUID_SIZE = 30
+
 liftover_to_38 = LiftOver('hg19', 'hg38')
 
 
@@ -172,7 +174,10 @@ def add_deprecated_mme_tags(apps, schema_editor):
     variants = SavedVariant.objects.using(db_alias).filter(matchmakersubmissiongenes__isnull=False)
     print(f'Adding {variants.count()} MME tags')
     tags = VariantTag.objects.using(db_alias).bulk_create([
-        VariantTag(guid=f'VT{i+9000000:07}_{variant.xpos}_{variant.family.guid}:seqr_mme'[:30], variant_tag_type=mme_tag_type)
+        VariantTag(
+            guid=f'VT{i+9000000:07}_{variant.xpos}_{variant.family.guid}:seqr_mme'[:MAX_GUID_SIZE],
+            variant_tag_type=mme_tag_type,
+        )
         for i, variant in enumerate(variants)
     ])
     for i, variant in enumerate(variants):

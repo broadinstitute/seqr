@@ -18,12 +18,12 @@ def get_mme_genes_phenotypes_for_results(results, additional_genes=None, additio
     hpo_ids = additional_hpo_ids if additional_hpo_ids else set()
     genes = additional_genes if additional_genes else set()
     for result in results:
-        hpo_ids.update({feature['id'] for feature in (_get_patient_features(result) or []) if feature.get('id')})
-        genes.update({gene_feature['gene']['id'] for gene_feature in (_get_patient_genomic_features(result) or [])
+        hpo_ids.update({feature['id'] for feature in _get_patient_features(result) if feature.get('id')})
+        genes.update({gene_feature['gene']['id'] for gene_feature in _get_patient_genomic_features(result)
                       if gene_feature.get('gene', {}).get('id')})
 
     gene_ids = {gene for gene in genes if gene.startswith('ENSG')}
-    gene_symbols = {gene for gene in genes if not gene.startswith('ENSG')}
+    gene_symbols = set(genes) - gene_ids
 
     gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols)
 
@@ -49,11 +49,11 @@ def get_hpo_terms_by_id(hpo_ids):
 
 
 def _get_patient_features(result):
-    return deepcopy(result['patient'].get('features'))
+    return deepcopy(result['patient'].get('features')) or []
 
 
 def _get_patient_genomic_features(result):
-    return deepcopy(result['patient'].get('genomicFeatures'))
+    return deepcopy(result['patient'].get('genomicFeatures')) or []
 
 
 def get_mme_gene_phenotype_ids_for_submissions(submissions, get_gene_variants=False):
@@ -107,7 +107,7 @@ def get_submission_gene_variants(submission, gene_id_only=False):
 def _parse_mme_gene_variants(result, gene_symbols_to_ids):
     genomic_features = _get_patient_genomic_features(result)
     gene_variants = []
-    for gene_feature in (genomic_features or []):
+    for gene_feature in genomic_features:
         gene_ids = get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids)
         gene_id = gene_ids[0] if gene_ids else None
         if gene_id:
@@ -185,7 +185,7 @@ def _submission_genes_to_external_genomic_features(submission):
 def _submission_gene_to_external_genomic_features(submission_gene, individual):
     variant = submission_gene.saved_variant
     chrom, pos = get_chrom_pos(variant.xpos)
-    genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.guid)
+    genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.guid) # TODO
 
     feature = {
         'gene': {'id': submission_gene.gene_id},
@@ -216,7 +216,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
 
     genomic_features = _get_patient_genomic_features(patient_data)
     feature_ids = [
-        feature['id'] for feature in (_get_patient_features(patient_data) or []) if
+        feature['id'] for feature in _get_patient_features(patient_data) if
         feature.get('observed', 'yes') == 'yes' and feature['id'] in hpo_terms_by_id
     ]
 
@@ -228,7 +228,7 @@ def get_mme_matches(patient_data, origin_request_host=None, user=None, originati
             match_q = Q(matchmakersubmissiongenes__gene_id__in=genes_by_id.keys())
     elif feature_ids:
         match_q = Q(features__contains=[{'id': feature_ids[0], 'observed': 'yes'}])
-        for feature_id in feature_ids:
+        for feature_id in feature_ids[1:]:
             match_q |= Q(features__contains=[{'id': feature_id, 'observed': 'yes'}])
 
     if not match_q:
