@@ -45,7 +45,7 @@ class AuthenticationTestCase(TestCase):
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
         self.mock_analyst_group = patcher.start()
-        self.mock_analyst_group.__str__.return_value = 'analysts'
+        self.mock_analyst_group.__str__.return_value = 'Analysts'
         self.mock_analyst_group.__eq__.side_effect = lambda s: str(self.mock_analyst_group) == s
         self.mock_analyst_group.__bool__.side_effect = lambda: bool(str(self.mock_analyst_group))
         self.mock_analyst_group.resolve_expression.return_value = 'analysts'
@@ -261,7 +261,7 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         },
-        'analysts@firecloud.org': {
+        'Analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -294,7 +294,7 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": False
         },
-        'analysts@firecloud.org': {
+        'Analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -331,7 +331,7 @@ ANVIL_WORKSPACES = [{
     'workspace_name': TEST_EMPTY_PROJECT_WORKSPACE,
     'public': False,
     'acl': {
-        'analysts@firecloud.org': {
+        'Analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -366,7 +366,7 @@ ANVIL_WORKSPACES = [{
 
 ANVIL_GROUPS = {
     'project-managers': ['test_pm_user@test.com'],
-    'analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
+    'Analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
 }
 ANVIL_GROUP_LOOKUP = defaultdict(list)
 for group, users in ANVIL_GROUPS.items():
@@ -420,7 +420,7 @@ def get_workspaces_side_effect(user):
                 'name': ws['workspace_name']
             }
         } for ws in ANVIL_WORKSPACES if any(
-            email == k.lower() or k.lower().replace('@firecloud.org', '') in ANVIL_GROUP_LOOKUP[email]
+            email == k.lower() or k.replace('@firecloud.org', '') in ANVIL_GROUP_LOOKUP[email]
             for k in ws['acl'].keys())
     ]
 
