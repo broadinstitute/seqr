@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+
+## 10/13/22
 * Link MME submissions to saved variants (REQUIRES DB MIGRATION)
 
 ## 9/28/22
