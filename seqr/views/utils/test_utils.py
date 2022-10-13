@@ -1238,7 +1238,7 @@ PARSED_MITO_VARIANT = {
                     'gerp_rs': '5.07', 'haplogroup_defining': None, 'metasvm': None, 'mitotip': None,
                     'mpc': None, 'mut_taster': 'N', 'phastcons_100_vert': '0.958000', 'polyphen': None,
                     'primate_ai': None, 'revel': None, 'sift': 'D', 'splice_ai': None, 'splice_ai_consequence': None,
-                    'strvctvre': None,'gnomad_noncoding': None,},
+                    'strvctvre': None, 'gnomad_noncoding': None,},
     'ref': 'C',
     'rg37LocusEnd': None,
     'rsid': None,
