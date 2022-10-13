@@ -116,27 +116,10 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     chrom, endChrom, pos, end, ref, alt, genomeVersion, liftedOverGenomeVersion, liftedOverPos,
     svType, variantId, transcripts,
   } = variant
-  const isSv = !!svType
-  const links = [(
-    <Popup
-      key="seqr-search"
-      trigger={(
-        <SearchResultsLink
-          buttonText="seqr"
-          genomeVersion={genomeVersion}
-          svType={svType}
-          variantId={isSv ? null : variantId}
-          location={svType && (
-            (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` : `${chrom}:${pos}-${end}%20`)}
-        />
-      )}
-      content={`Search for this variant across all your seqr projects${isSv ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
-      size="tiny"
-    />
-  )]
 
   const mainGene = genesById[mainTranscript.geneId]
   let geneNames
+  const links = []
   const variations = []
 
   if (mainGene) {
@@ -174,50 +157,51 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     let pubmedSearch = `(${geneNames.join(' OR ')})`
     if (variations.length) {
       pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
-      links.push(
-        <DividedLink key="google" href={`https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}`}>
-          google
-        </DividedLink>,
-      )
+      links.push({ name: 'google', href: `https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}` })
     }
 
-    links.push(
-      <DividedLink key="pubmed" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`}>pubmed</DividedLink>,
-    )
+    links.push({ name: 'pubmed', href: `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}` })
   }
 
+  const isSv = !!svType
   if (isSv) {
     const useLiftover = liftedOverGenomeVersion === GENOME_VERSION_37
     if (genomeVersion === GENOME_VERSION_37 || (useLiftover && liftedOverPos)) {
       const endOffset = endChrom ? 0 : end - pos
       const start = useLiftover ? liftedOverPos : pos
       const region = `${chrom}-${start}-${start + endOffset}`
-      links.push(
-        <DividedLink key="gnomAD" href={`https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`}>
-          gnomAD
-        </DividedLink>,
-      )
+      links.push({ name: 'gnomAD', href: `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1` })
     }
   } else if (chrom === 'M') {
-    links.push(
-      <DividedLink key="mitomap" href="https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele">mitomap</DividedLink>,
-    )
+    links.push({ name: 'mitomap', href: 'https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele' })
     if (isTrnaOrRrna(genesById)) {
-      links.push(
-        <DividedLink key="Mitovisualize" href={`https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}`}>
-          Mitovisualize
-        </DividedLink>,
-      )
+      links.push({ name: 'Mitovisualize', href: `https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}` })
     }
   } else {
-    links.push(
-      <DividedLink key="Geno2MP" href={`https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`}>
-        Geno2MP
-      </DividedLink>,
-    )
+    links.push({
+      name: 'Geno2MP',
+      href: `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
+    })
   }
 
-  return links
+  return [
+    <Popup
+      key="seqr-search"
+      trigger={(
+        <SearchResultsLink
+          buttonText="seqr"
+          genomeVersion={genomeVersion}
+          svType={svType}
+          variantId={isSv ? null : variantId}
+          location={svType && (
+            (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` : `${chrom}:${pos}-${end}%20`)}
+        />
+      )}
+      content={`Search for this variant across all your seqr projects${isSv ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
+      size="tiny"
+    />,
+    ...links.map(({ name, href }) => <DividedLink key={name} href={href}>{name}</DividedLink>),
+  ]
 })
 
 BaseSearchLinks.propTypes = {
