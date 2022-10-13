@@ -178,10 +178,13 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       links.push({ name: 'Mitovisualize', href: `https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}` })
     }
   } else {
-    links.push({
-      name: 'Geno2MP',
-      href: `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
-    })
+    links.push(
+      {
+        name: 'Geno2MP',
+        href: `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
+      },
+      { name: 'Iranome', href: `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}` },
+    )
   }
 
   return [
