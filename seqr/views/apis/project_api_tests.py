@@ -447,11 +447,11 @@ class ProjectAPITest(object):
         response_keys = {'projectsByGuid', 'mmeSubmissionsByGuid', 'familyNotesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'mmeSubmissionsLoaded': True}})
+        self.assertSetEqual(set(response_json['mmeSubmissionsByGuid'].keys()), {'MS000001_na19675'})
         submission_fields = {'geneIds'}
         submission_fields.update(MATCHMAKER_SUBMISSION_FIELDS)
-        self.assertSetEqual(
-            set(next(iter(response_json['mmeSubmissionsByGuid'].values())).keys()), submission_fields
-        )
+        self.assertSetEqual(set(response_json['mmeSubmissionsByGuid']['MS000001_na19675'].keys()), submission_fields)
+        self.assertListEqual(response_json['mmeSubmissionsByGuid']['MS000001_na19675']['geneIds'], ['ENSG00000135953'])
         self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
 
         # Test empty project

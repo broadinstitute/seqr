@@ -1715,7 +1715,7 @@
             "predictions": {"strvctvre": 0.374},
             "alt": null,
             "numExon": 2,
-            "genomeVersion": "37", "genotypeFilters": [],
+            "genotypeFilters": [],
             "ref": null,
             "genotypes": {
                 "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
@@ -2081,23 +2081,16 @@
                 "id": "HP:0012469",
                 "observed": "yes"
             }
-        ],
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000135953"
-                },
-                "variant": {
-                    "end": 77027548,
-                    "start": 77027549,
-                    "assembly": "GRCh38",
-                    "referenceName": "14",
-                    "alternateBases": "C",
-                    "referenceBases": "CCACT"
-                },
-                "zygosity": 1
-            }
         ]
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 1,
+    "fields": {
+        "matchmaker_submission": 1,
+        "saved_variant": 1,
+        "gene_id": "ENSG00000135953"
     }
 },
 {
@@ -2123,23 +2116,15 @@
                 "label": "Nausea and vomiting",
                 "observed": "yes"
             }
-        ],
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000240361"
-                },
-                "variant": {
-                    "end": 38739601,
-                    "start": 38739601,
-                    "assembly": "GRCh38",
-                    "referenceName": "17",
-                    "alternateBases": "A",
-                    "referenceBases": "G"
-                },
-                "zygosity": 1
-            }
         ]
+    }
+}, {
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 2,
+    "fields": {
+        "matchmaker_submission": 2,
+        "saved_variant": 6,
+        "gene_id": "ENSG00000240361"
     }
 },
     {
@@ -2153,27 +2138,34 @@
         "submission_id": "P0004515",
         "label": "P0004515",
         "contact_name": "Baylor UDN Clinical Site",
-        "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org",
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000135953"
-                }, "variant": {
-                    "referenceName": "14",
-                    "start": 77027630
-                }
-            },
-            {
-                "gene": {
-                    "id": "ENSG00000240361"
-                }
-            },
-            {
-                "gene": {
-                    "id": "ENSG00000223972"
-                }
-            }
-        ]
+        "contact_href": "mailto:UDNCC@hms.harvard.edu,matchmaker@phenomecentral.org"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 3,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000135953"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 4,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000223972"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 5,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000240361"
     }
 },
 {
@@ -2187,14 +2179,16 @@
         "submission_id": "P0004517",
         "label": "P0004517",
         "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@broadinstitute.org",
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000135953"
-                }
-            }
-        ]
+        "contact_href": "mailto:matchmaker@broadinstitute.org"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 6,
+    "fields": {
+        "matchmaker_submission": 4,
+        "saved_variant": 8,
+        "gene_id": "ENSG00000135953"
     }
 },
 {
@@ -2216,6 +2210,13 @@
                     {
                         "gene": {
                             "id": "OR4F5"
+                        },
+                        "variant": {
+                            "alternateBases":  "A",
+                            "referenceBases": "G",
+                            "referenceName": "2",
+                            "start": 100379086,
+                            "assembly": "GRCh37"
                         }
                     },
                     {

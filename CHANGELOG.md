@@ -2,6 +2,9 @@
 
 ## dev
 
+## 10/13/22
+* Link MME submissions to saved variants (REQUIRES DB MIGRATION)
+
 ## 9/28/22
 * Add Gregor fields to sample manifest (REQUIRES DB MIGRATION)
 * Deprecate auto-granting project access for analysts (removes ANALYST_PROJECT_CATEGORY env variable)

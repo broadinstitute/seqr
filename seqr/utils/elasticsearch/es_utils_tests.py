@@ -114,6 +114,11 @@ ES_VARIANTS = [
               ]
             }
           ],
+          'screen_region_type' : [
+            'dELS',
+            'CTCF-bound'
+          ],
+          'gnomad_non_coding_constraint_z_score': 1.01272,
           'hgmd_class': 'DM',
           'AC': 2,
           'exac_AN_Adj': 121308,
@@ -780,7 +785,9 @@ MAPPING_FIELDS = [
     'dbnsfp_SIFT_pred',
     'dbnsfp_Polyphen2_HVAR_pred',
     'cadd_PHRED',
+    'gnomad_non_coding_constraint_z_score',
     'sortedTranscriptConsequences',
+    'screen_region_type',
     'genotypes',
     'samples_no_call',
     'samples_num_alt_1',
@@ -1598,6 +1605,7 @@ class EsUtilsTest(TestCase):
             'annotations': {
                 'in_frame': ['inframe_insertion', 'inframe_deletion'],
                 'other': ['5_prime_UTR_variant', 'intergenic_variant'],
+                'SCREEN': ['dELS', 'DNase-only'],
                 'splice_ai': '0.8',
             },
             'freqs': {
@@ -1775,6 +1783,7 @@ class EsUtilsTest(TestCase):
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
                         {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
+                        {'terms': {'screen_region_type': ['dELS', 'DNase-only']}},
                     ]
                 }
             },

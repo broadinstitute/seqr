@@ -24,6 +24,7 @@ import {
   SPLICE_AI_FIELD,
   VEP_GROUP_SV_NEW,
   PANEL_APP_CONFIDENCE_LEVELS,
+  SCREEN_LABELS,
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
@@ -243,6 +244,18 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
   name, options, groupLabel: snakecaseToTitlecase(name),
 }))
 
+const SCREEN_GROUP = 'SCREEN'
+const SCREEN_VALUES = ['PLS', 'pELS', 'dELS', 'DNase-H3K4me3', 'CTCF-only', 'DNase-only', 'low-DNase']
+ANNOTATION_GROUPS.push({
+  name: SCREEN_GROUP,
+  groupLabel: SCREEN_GROUP,
+  options: SCREEN_VALUES.map(value => ({
+    value,
+    text: SCREEN_LABELS[value] || value,
+    description: 'SCREEN: Search Candidate cis-Regulatory Elements by ENCODE. Registry of cCREs V3’',
+  })),
+})
+
 export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
@@ -271,6 +284,11 @@ export const MODERATE_IMPACT_GROUPS = [
 export const CODING_IMPACT_GROUPS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
+]
+export const CODING_IMPACT_GROUPS_SCREEN = [
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+  SCREEN_GROUP,
 ]
 export const ALL_ANNOTATION_FILTER = {
   text: 'All',

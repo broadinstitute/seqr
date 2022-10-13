@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Icon, Popup, Table } from 'semantic-ui-react'
+import { Icon, Popup, Table, Label } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
@@ -12,6 +12,8 @@ import {
   getTagTypesByProject,
   getFunctionalTagTypesTypesByProject,
   getVariantId,
+  getMmeSubmissionsByGuid,
+  getGenesById,
 } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
 import AcmgModal from '../acmg/AcmgModal'
@@ -54,6 +56,8 @@ const VARIANT_NOTE_FIELDS = [{
   label: 'Add to public gene notes',
   component: BooleanCheckbox,
 }]
+
+const DEPRECATED_MME_TAG = 'seqr MME (old)'
 
 export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
   <Popup
@@ -191,17 +195,47 @@ export const LoadedFamilyLabel = connect((state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
 }))(FamilyLabel)
 
+const MatchmakerLabel = ({ variant, family, mmeSubmissionsByGuid, genesById }) => {
+  const variantSubmissions = (Array.isArray(variant) ? variant.reduce(
+    (acc, { mmeSubmissions = [] }) => ([...acc, ...mmeSubmissions]), [],
+  ) : (variant.mmeSubmissions || [])).map(
+    ({ submissionGuid, geneId }) => ({ gene: genesById[geneId], submission: mmeSubmissionsByGuid[submissionGuid] }),
+  ).filter(({ submission }) => family.individualGuids.includes(submission.individualGuid))
+  return variantSubmissions.length ? (
+    <Popup
+      content={[...new Set(variantSubmissions.map(
+        ({ gene, submission }) => `${gene.geneSymbol} submitted ${new Date(submission.lastModifiedDate).toLocaleDateString()}`,
+      ))].join('; ')}
+      trigger={<Label
+        as={NavLink}
+        to={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
+        target="_blank"
+        content="MME Submission"
+        color="violet"
+        size="small"
+      />}
+    />
+  ) : null
+}
+
+MatchmakerLabel.propTypes = {
+  variant: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
+  family: PropTypes.object.isRequired,
+  mmeSubmissionsByGuid: PropTypes.object,
+  genesById: PropTypes.object,
+}
+
 const FamilyVariantTags = React.memo(({
   variant, variantTagNotes, family, projectTagTypes, projectFunctionalTagTypes, dispatchUpdateVariantNote,
   dispatchUpdateFamilyVariantTags, dispatchUpdateFamilyVariantFunctionalTags, isCompoundHet, variantId,
-  linkToSavedVariants,
+  linkToSavedVariants, mmeSubmissionsByGuid, genesById,
 }) => (
   family ? (
     <NoBorderTable basic="very" compact="very" celled>
       <Table.Body>
         <Table.Row verticalAlign="top">
           {!isCompoundHet && (
-            <Table.Cell collapsing rowSpan={2}>
+            <Table.Cell collapsing>
               <FamilyLabel family={family} path={linkToSavedVariants ? `saved_variants/family/${family.familyGuid}` : null} />
             </Table.Cell>
           )}
@@ -225,8 +259,7 @@ const FamilyVariantTags = React.memo(({
               variantId={variantId}
               tagOptions={projectTagTypes}
               displayMetadata
-              linkTagType="seqr MME"
-              tagLinkUrl={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
+              disabledTagType={DEPRECATED_MME_TAG}
               onSubmit={dispatchUpdateFamilyVariantTags}
             />
             <HorizontalSpacer width={5} />
@@ -255,6 +288,16 @@ const FamilyVariantTags = React.memo(({
           </Table.Cell>
         </Table.Row>
         <Table.Row verticalAlign="top">
+          {!isCompoundHet && (
+            <Table.Cell collapsing>
+              <MatchmakerLabel
+                family={family}
+                variant={variant}
+                mmeSubmissionsByGuid={mmeSubmissionsByGuid}
+                genesById={genesById}
+              />
+            </Table.Cell>
+          )}
           <Table.Cell collapsing textAlign="right">
             <TagTitle>Notes:</TagTitle>
           </Table.Cell>
@@ -291,6 +334,8 @@ FamilyVariantTags.propTypes = {
   dispatchUpdateVariantNote: PropTypes.func.isRequired,
   dispatchUpdateFamilyVariantTags: PropTypes.func.isRequired,
   dispatchUpdateFamilyVariantFunctionalTags: PropTypes.func.isRequired,
+  mmeSubmissionsByGuid: PropTypes.object,
+  genesById: PropTypes.object,
 }
 
 FamilyVariantTags.defaultProps = {
@@ -308,6 +353,8 @@ const mapStateToProps = (state, ownProps) => {
     projectTagTypes: getTagTypesByProject(state)[projectGuid],
     projectFunctionalTagTypes: getFunctionalTagTypesTypesByProject(state)[projectGuid],
     variantTagNotes: ((getVariantTagNotesByFamilyVariants(state) || {})[ownProps.familyGuid] || {})[variantId],
+    mmeSubmissionsByGuid: getMmeSubmissionsByGuid(state),
+    genesById: getGenesById(state),
   }
 }
 

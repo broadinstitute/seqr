@@ -182,7 +182,7 @@ def delete_variant_note_handler(request, variant_guids, note_guid):
         notes = saved_variant.variantnote_set.all()
         saved_variants_by_guid[saved_variant.guid] = {'noteGuids': [n.guid for n in notes]}
         if not notes:
-            if not saved_variant.varianttag_set.count() > 0:
+            if saved_variant.varianttag_set.count() == 0 and saved_variant.matchmakersubmissiongenes_set.count() == 0:
                 saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
 
@@ -264,7 +264,7 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
         tags = _get_tag_set(saved_variant, tag_type).all()
         saved_variants_by_guid[saved_variant.guid] = {response_guid_key: [t.guid for t in tags]}
         if delete_variants_if_empty and not tags:
-            if not saved_variant.variantnote_set.count() > 0:
+            if saved_variant.variantnote_set.count() == 0 and saved_variant.matchmakersubmissiongenes_set.count() == 0:
                 saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
 
