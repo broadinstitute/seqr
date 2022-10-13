@@ -112,19 +112,22 @@ const isTrnaOrRrna = genesById => genesById &&
     Object.values(genesById).some(({ gencodeGeneType }) => gencodeGeneType === 'Mt-tRNA' || gencodeGeneType === 'Mt-rRNA')
 
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
-  const isSv = !!variant.svType
+  const {
+    chrom, endChrom, pos, end, ref, alt, genomeVersion, liftedOverGenomeVersion, liftedOverPos,
+    svType, variantId, transcripts,
+  } = variant
+  const isSv = !!svType
   const links = [(
     <Popup
       key="seqr-search"
       trigger={(
         <SearchResultsLink
           buttonText="seqr"
-          genomeVersion={variant.genomeVersion}
-          svType={variant.svType}
-          variantId={isSv ? null : variant.variantId}
-          location={variant.svType && ((variant.endChrom && variant.endChrom !== variant.chrom) ?
-            `${variant.chrom}:${variant.pos - 50}-${variant.pos + 50}` :
-            `${variant.chrom}:${variant.pos}-${variant.end}%20`)}
+          genomeVersion={genomeVersion}
+          svType={svType}
+          variantId={isSv ? null : variantId}
+          location={svType && (
+            (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` : `${chrom}:${pos}-${end}%20`)}
         />
       )}
       content={`Search for this variant across all your seqr projects${isSv ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
@@ -139,20 +142,13 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   if (mainGene) {
     geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
 
-    if (variant.ref) {
-      variations.unshift(
-        `${variant.pos}${variant.ref}/${variant.alt}`, // 179432185A/G
-        `${variant.pos}${variant.ref}>${variant.alt}`, // 179432185A>G
-        `g.${variant.pos}${variant.ref}>${variant.alt}`, // g.179432185A>G
-      )
+    if (ref) {
+      variations.unshift(`${pos}${ref}/${alt}`, `${pos}${ref}>${alt}`, `g.${pos}${ref}>${alt}`)
     }
 
     if (mainTranscript.hgvsp) {
       const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
-      variations.unshift(
-        `p.${hgvsp}`,
-        hgvsp,
-      )
+      variations.unshift(`p.${hgvsp}`, hgvsp)
     }
 
     if (mainTranscript.hgvsc) {
@@ -165,7 +161,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       )
     }
   } else {
-    geneNames = Object.keys(variant.transcripts || {}).reduce((acc, geneId) => {
+    geneNames = Object.keys(transcripts || {}).reduce((acc, geneId) => {
       const gene = genesById[geneId]
       if (gene) {
         return [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc]
@@ -191,31 +187,33 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
   }
 
   if (isSv) {
-    const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
-    if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
-      const endOffset = variant.endChrom ? 0 : variant.end - variant.pos
-      const start = useLiftover ? variant.liftedOverPos : variant.pos
-      const region = `${variant.chrom}-${start}-${start + endOffset}`
+    const useLiftover = liftedOverGenomeVersion === GENOME_VERSION_37
+    if (genomeVersion === GENOME_VERSION_37 || (useLiftover && liftedOverPos)) {
+      const endOffset = endChrom ? 0 : end - pos
+      const start = useLiftover ? liftedOverPos : pos
+      const region = `${chrom}-${start}-${start + endOffset}`
       links.push(
         <DividedLink key="gnomAD" href={`https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`}>
           gnomAD
         </DividedLink>,
       )
     }
-  } else if (variant.chrom === 'M') {
+  } else if (chrom === 'M') {
     links.push(
       <DividedLink key="mitomap" href="https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele">mitomap</DividedLink>,
     )
     if (isTrnaOrRrna(genesById)) {
       links.push(
-        <DividedLink key="Mitovisualize" href={`https://www.mitovisualize.org/variant/m-${variant.pos}-${variant.ref}-${variant.alt}`}>
+        <DividedLink key="Mitovisualize" href={`https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}`}>
           Mitovisualize
         </DividedLink>,
       )
     }
   } else {
     links.push(
-      <DividedLink key="Geno2MP" href={`https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${variant.chrom}:${variant.pos}/chrLoc/${variant.pos}/${variant.pos}/${variant.chrom}`}>Geno2MP</DividedLink>,
+      <DividedLink key="Geno2MP" href={`https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`}>
+        Geno2MP
+      </DividedLink>,
     )
   }
 
