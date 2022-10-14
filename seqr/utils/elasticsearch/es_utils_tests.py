@@ -1991,6 +1991,35 @@ class EsUtilsTest(TestCase):
         ])
 
     @urllib3_responses.activate
+    def test_multi_dataset_no_affected_inheritance_get_es_variants(self):
+        setup_responses()
+        # The family has multiple data types loaded but only one loaded in an affected individual
+        Sample.objects.get(individual_id=4, elasticsearch_index=SV_INDEX_NAME).delete()
+
+        search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid='F000002_2'))
+
+        get_es_variants(results_model, num_results=2)
+        self.assertExecutedSearch(filters=[{'bool': {
+            'must': [{'bool': {
+                'minimum_should_match': 1,
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                ],
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00732'}},
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}},
+                ],
+            }}], '_name': 'F000002_2',
+        }}])
+
+    @urllib3_responses.activate
     def test_compound_het_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
