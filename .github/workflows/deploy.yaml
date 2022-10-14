@@ -59,6 +59,17 @@ jobs:
       - name: push image
         run: docker push --all-tags $DOCKER_IMAGE
 
+      - name: Update cloudrun jobs
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+        run: |
+          # cloud run jobs to update
+          run_job_names=("$DEPLOY_TARGET-schema-migrator" "$DEPLOY_TARGET-reference-schema-migrator" "$DEPLOY_TARGET-reference-updater" "$DEPLOY_TARGET-reference-update-hpo-terms" "$DEPLOY_TARGET-reference-import-panels")
+          for cloud_run_target in run_job_names; do
+          
+            gcloud beta run jobs update \
+              $cloud_run_target \
+              --image=$DOCKER_IMAGE:gcloud-$DEPLOY_TARGET
+
       - name: restart seqr instances
         run: |
           gcloud compute instance-groups managed rolling-action replace \
@@ -67,11 +78,10 @@ jobs:
             --max-unavailable 0 \
             --max-surge 3
 
-      - name: restart seqr reference-updater
-        if: github.ref == 'refs/heads/main'
+      - name: apply schema
         run: |
-          # Used for Cloud Scheduler tasks.
-          gcloud run deploy \
-            seqr-$DEPLOY_TARGET-reference-updater \
-            --region australia-southeast1 \
-            --image=$DOCKER_IMAGE:gcloud-$DEPLOY_TARGET
+          gcloud beta run jobs execute --wait \
+            seqr-$DEPLOY_TARGET-schema-migrator
+
+          gcloud beta run jobs execute --wait \
+            seqr-$DEPLOY_TARGET-reference-schema-migrator
