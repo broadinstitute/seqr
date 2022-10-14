@@ -24,17 +24,7 @@ const EllipsisContainer = styled.span`
 `
 
 const ProjectEllipsisMenu = React.memo((props) => {
-  if (!props.project.canEdit) {
-    return null
-  }
-
   const menuItems = [
-    <EditProjectButton
-      key="edit"
-      trigger={<Dropdown.Item>Edit Project</Dropdown.Item>}
-      project={props.project}
-      user={props.user}
-    />,
     <EditProjectCategoriesModal
       key="editCategories"
       trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>}
@@ -42,6 +32,17 @@ const ProjectEllipsisMenu = React.memo((props) => {
       project={props.project}
     />,
   ]
+
+  if (props.project.canEdit) {
+    menuItems.unshift(
+      <EditProjectButton
+        key="edit"
+        trigger={<Dropdown.Item>Edit Project</Dropdown.Item>}
+        project={props.project}
+        user={props.user}
+      />,
+    )
+  }
 
   if (props.project.hasCaseReview) {
     menuItems.unshift(
