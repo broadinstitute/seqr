@@ -936,6 +936,12 @@ export const SVTYPE_DETAILS = {
   },
 }
 
+export const SCREEN_LABELS = {
+  PLS: 'Promotor-like signatures',
+  pELS: 'proximal Enhancer-like signatures',
+  dELS: 'distal Enhancer-like signatures',
+}
+
 export const SHOW_ALL = 'ALL'
 export const NOTE_TAG_NAME = 'Has Notes'
 export const EXCLUDED_TAG_NAME = 'Excluded'
@@ -1187,6 +1193,7 @@ export const PREDICTOR_FIELDS = [
   { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
   { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
   { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
+  { field: 'gnomad_noncoding', displayOnly: true, warningThreshold: 0, dangerThreshold: 1.5 },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP },
   { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },

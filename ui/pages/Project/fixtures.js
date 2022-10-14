@@ -891,8 +891,8 @@ export const STATE_WITH_2_FAMILIES = {
         {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
       ],
       geneVariants: [
-        { geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 },
-        { geneId: "ENSG00000228198", alt: null, ref: null, chrom: '1', pos: 248367227, end: 248369100 }
+        { geneId: "ENSG00000228198", variantGuid: 'SV0000004_116042722_r0390_1000' },
+        { geneId: "ENSG00000228198", variantGuid: 'SV0000002_SV48367227_r0390_100' },
       ],
     }
   },

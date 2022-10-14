@@ -13,10 +13,20 @@ import { getOtherGeneNames } from '../genes/GeneDetail'
 import Transcripts from './Transcripts'
 import VariantGenes, { LocusListLabels } from './VariantGene'
 import { getLocus, Sequence, ProteinSequence, TranscriptLink } from './VariantUtils'
-import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS } from '../../../utils/constants'
+import { GENOME_VERSION_37, getVariantMainTranscript, SVTYPE_LOOKUP, SVTYPE_DETAILS, SCREEN_LABELS } from '../../../utils/constants'
 
 const LargeText = styled.div`
   font-size: 1.2em;
+`
+
+const DividedLink = styled.a.attrs({ target: '_blank', rel: 'noreferrer' })`
+  padding-left: 4px;
+  ::before {
+    content: "|";
+    padding-right: 4px;
+    color: grey;
+    cursor: initial;
+  }
 `
 
 const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) => {
@@ -98,40 +108,30 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const addDividedLink = (links, name, href) => links.push((
-  <span key={`divider-${name}`}>
-    <HorizontalSpacer width={5} />
-    |
-    <HorizontalSpacer width={5} />
-  </span>
-), <a key={name} href={href} target="_blank" rel="noreferrer">{name}</a>)
-
 const isTrnaOrRrna = genesById => genesById &&
     Object.values(genesById).some(({ gencodeGeneType }) => gencodeGeneType === 'Mt-tRNA' || gencodeGeneType === 'Mt-rRNA')
 
 const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
-  const links = []
+  const {
+    chrom, endChrom, pos, end, ref, alt, genomeVersion, liftedOverGenomeVersion, liftedOverPos,
+    svType, variantId, transcripts,
+  } = variant
+
   const mainGene = genesById[mainTranscript.geneId]
   let geneNames
+  const links = []
   const variations = []
 
   if (mainGene) {
     geneNames = [mainGene.geneSymbol, ...getOtherGeneNames(mainGene)]
 
-    if (variant.ref) {
-      variations.unshift(
-        `${variant.pos}${variant.ref}/${variant.alt}`, // 179432185A/G
-        `${variant.pos}${variant.ref}>${variant.alt}`, // 179432185A>G
-        `g.${variant.pos}${variant.ref}>${variant.alt}`, // g.179432185A>G
-      )
+    if (ref) {
+      variations.unshift(`${pos}${ref}/${alt}`, `${pos}${ref}>${alt}`, `g.${pos}${ref}>${alt}`)
     }
 
     if (mainTranscript.hgvsp) {
       const hgvsp = mainTranscript.hgvsp.split(':')[1].replace('p.', '')
-      variations.unshift(
-        `p.${hgvsp}`,
-        hgvsp,
-      )
+      variations.unshift(`p.${hgvsp}`, hgvsp)
     }
 
     if (mainTranscript.hgvsc) {
@@ -144,7 +144,7 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       )
     }
   } else {
-    geneNames = Object.keys(variant.transcripts || {}).reduce((acc, geneId) => {
+    geneNames = Object.keys(transcripts || {}).reduce((acc, geneId) => {
       const gene = genesById[geneId]
       if (gene) {
         return [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc]
@@ -157,47 +157,54 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     let pubmedSearch = `(${geneNames.join(' OR ')})`
     if (variations.length) {
       pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
-      addDividedLink(links, 'google', `https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}`)
+      links.push({ name: 'google', href: `https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}` })
     }
 
-    addDividedLink(links, 'pubmed', `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}`)
+    links.push({ name: 'pubmed', href: `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}` })
   }
 
-  const seqrLinkProps = { genomeVersion: variant.genomeVersion, svType: variant.svType }
-  if (variant.svType) {
-    if (variant.endChrom && variant.endChrom !== variant.chrom) {
-      seqrLinkProps.location = `${variant.chrom}:${variant.pos - 50}-${variant.pos + 50}`
-    } else {
-      seqrLinkProps.location = `${variant.chrom}:${variant.pos}-${variant.end}%20`
+  const isSv = !!svType
+  if (isSv) {
+    const useLiftover = liftedOverGenomeVersion === GENOME_VERSION_37
+    if (genomeVersion === GENOME_VERSION_37 || (useLiftover && liftedOverPos)) {
+      const endOffset = endChrom ? 0 : end - pos
+      const start = useLiftover ? liftedOverPos : pos
+      const region = `${chrom}-${start}-${start + endOffset}`
+      links.push({ name: 'gnomAD', href: `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1` })
     }
-
-    const useLiftover = variant.liftedOverGenomeVersion === GENOME_VERSION_37
-    if (variant.genomeVersion === GENOME_VERSION_37 || (useLiftover && variant.liftedOverPos)) {
-      const endOffset = variant.endChrom ? 0 : variant.end - variant.pos
-      const start = useLiftover ? variant.liftedOverPos : variant.pos
-      const region = `${variant.chrom}-${start}-${start + endOffset}`
-      addDividedLink(links, 'gnomAD', `https://gnomad.broadinstitute.org/region/${region}?dataset=gnomad_sv_r2_1`)
+  } else if (chrom === 'M') {
+    links.push({ name: 'mitomap', href: 'https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele' })
+    if (isTrnaOrRrna(genesById)) {
+      links.push({ name: 'Mitovisualize', href: `https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}` })
     }
   } else {
-    seqrLinkProps.variantId = variant.variantId
-  }
-  links.unshift(
-    <Popup
-      key="seqr-search"
-      trigger={<SearchResultsLink key="seqr" buttonText="seqr" {...seqrLinkProps} />}
-      content={`Search for this variant across all your seqr projects${variant.svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
-      size="tiny"
-    />,
-  )
-  if (variant.chrom === 'M') {
-    addDividedLink(links, 'mitomap', 'https://www.mitomap.org/foswiki/bin/view/Main/SearchAllele')
-    if (isTrnaOrRrna(genesById)) {
-      addDividedLink(links, 'Mitovisualize',
-        `https://www.mitovisualize.org/variant/m-${variant.pos}-${variant.ref}-${variant.alt}`)
-    }
+    links.push(
+      {
+        name: 'Geno2MP',
+        href: `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
+      },
+      { name: 'Iranome', href: `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}` },
+    )
   }
 
-  return links
+  return [
+    <Popup
+      key="seqr-search"
+      trigger={(
+        <SearchResultsLink
+          buttonText="seqr"
+          genomeVersion={genomeVersion}
+          svType={svType}
+          variantId={isSv ? null : variantId}
+          location={svType && (
+            (endChrom && endChrom !== chrom) ? `${chrom}:${pos - 50}-${pos + 50}` : `${chrom}:${pos}-${end}%20`)}
+        />
+      )}
+      content={`Search for this variant across all your seqr projects${isSv ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
+      size="tiny"
+    />,
+    ...links.map(({ name, href }) => <DividedLink key={name} href={href}>{name}</DividedLink>),
+  ]
 })
 
 BaseSearchLinks.propTypes = {
@@ -375,6 +382,14 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene }) => {
           <HorizontalSpacer width={12} />
           <Label color="red" horizontal size="tiny">High Constraint Region</Label>
         </span>
+      )}
+      {variant.screenRegionType && (
+        <div>
+          <b>
+            SCREEN: &nbsp;
+            {SCREEN_LABELS[variant.screenRegionType] || variant.screenRegionType}
+          </b>
+        </div>
       )}
       {mainTranscript.hgvsc && (
         <div>

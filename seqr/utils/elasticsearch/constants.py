@@ -274,6 +274,7 @@ SORT_FIELDS.update({
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
 
+SCREEN_KEY = 'SCREEN'
 CLINVAR_KEY = 'clinvar'
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_KEY = 'hgmd'
@@ -301,6 +302,7 @@ CORE_FIELDS_CONFIG = {
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},
+    'screen_region_type': {'response_key': 'screenRegionType', 'format_value': lambda types: types[0] if types else None},
     'start': {'response_key': 'pos', 'format_value': int},
     'svType': {},
     'variantId': {},
@@ -332,6 +334,7 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
     'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
+    'gnomad_non_coding_constraint_z_score': {'response_key': 'gnomad_noncoding'},
     'primate_ai_score': {'response_key': 'primate_ai'},
     'splice_ai_delta_score': {'response_key': SPLICE_AI_FIELD},
     'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},

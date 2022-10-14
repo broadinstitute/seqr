@@ -789,8 +789,9 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
 
     elif project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-        if expand_user_groups and f'{ANALYST_USER_GROUP}@firecloud.org' in permission_levels:
-            analyst_permission = permission_levels.pop(f'{ANALYST_USER_GROUP}@firecloud.org')
+        analyst_email = f'{ANALYST_USER_GROUP}@firecloud.org'.lower()
+        if expand_user_groups and analyst_email in permission_levels:
+            analyst_permission = permission_levels.pop(analyst_email)
             permission_levels.update({email.lower(): analyst_permission for email in get_anvil_analyst_user_emails(user)})
 
         users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in=permission_levels.keys())}

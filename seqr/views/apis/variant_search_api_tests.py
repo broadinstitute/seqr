@@ -14,7 +14,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    VARIANT_NOTE_FIELDS, TAG_FIELDS
+    VARIANT_NOTE_FIELDS, TAG_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_DETAIL_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -23,7 +23,7 @@ SEARCH = {'filters': {}, 'inheritance': None}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 
 VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(VARIANTS)
-VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
+DISCOVERY_TAGS = [{
     'savedVariant': {
         'variantGuid': 'SV0000006_1248367227_r0003_tes',
         'familyGuid': 'F000012_12',
@@ -38,32 +38,51 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'lastModifiedDate': '2018-05-29T16:32:51.449Z',
     'createdBy': None,
 }]
+VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = DISCOVERY_TAGS
 
 PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded'}
 PROJECT_CONTEXT_FIELDS.update(PROJECT_FIELDS)
 
 PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
 
+EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
+expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
+EXPECTED_GENE = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
+EXPECTED_GENE['locusListGuids'] = []
+expected_pa_gene = deepcopy(EXPECTED_GENE)
+expected_pa_gene['locusListGuids'] = ['LL00049_pid_genes_autosomal_do']
+expected_pa_gene['panelAppDetail'] = mock.ANY
+EXPECTED_SAVED_VARIANT = {k: mock.ANY for k in SAVED_VARIANT_DETAIL_FIELDS}
+expected_detail_saved_variant = deepcopy(EXPECTED_SAVED_VARIANT)
+expected_detail_saved_variant['mmeSubmissions'] = [
+    {'geneId': 'ENSG00000135953', 'submissionGuid': 'MS000001_na19675', 'variantGuid': 'SV0000001_2103343353_r0390_100'},
+]
+expected_detail_saved_variant['mainTranscriptId'] = mock.ANY
+
 EXPECTED_SEARCH_RESPONSE = {
     'searchedVariants': VARIANTS,
-    'savedVariantsByGuid': {'SV0000001_2103343353_r0390_100': mock.ANY, 'SV0000002_1248367227_r0390_100': mock.ANY},
-    'genesById': {'ENSG00000227232': mock.ANY, 'ENSG00000268903': mock.ANY, 'ENSG00000233653': mock.ANY},
+    'savedVariantsByGuid': {
+        'SV0000001_2103343353_r0390_100': expected_detail_saved_variant,
+        'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT,
+    },
+    'genesById': {'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE},
     'search': {
         'search': SEARCH,
         'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
         'totalResults': 3,
     },
     'variantTagsByGuid': {
-        'VT1708633_2103343353_r0390_100': mock.ANY, 'VT1726945_2103343353_r0390_100': mock.ANY,
-        'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726961_2103343353_r0390_100': mock.ANY,
+        'VT1708633_2103343353_r0390_100': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
+        'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726961_2103343353_r0390_100': EXPECTED_TAG,
     },
-    'variantNotesByGuid': {'VN0714935_2103343353_r0390_100': mock.ANY},
+    'variantNotesByGuid': {'VN0714935_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS}},
     'variantFunctionalDataByGuid': {
-        'VFD0000023_1248367227_r0390_10': mock.ANY, 'VFD0000024_1248367227_r0390_10': mock.ANY,
-        'VFD0000025_1248367227_r0390_10': mock.ANY, 'VFD0000026_1248367227_r0390_10': mock.ANY,
+        'VFD0000023_1248367227_r0390_10': expected_functional_tag, 'VFD0000024_1248367227_r0390_10': expected_functional_tag,
+        'VFD0000025_1248367227_r0390_10': expected_functional_tag, 'VFD0000026_1248367227_r0390_10': expected_functional_tag,
     },
-    'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
+    'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
+    'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
 }
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
@@ -368,13 +387,14 @@ class VariantSearchAPITest(object):
         expected_search_response = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_response.update({
             'searchedVariants': COMP_HET_VARAINTS,
-            'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': mock.ANY},
-            'genesById': {'ENSG00000233653': mock.ANY},
+            'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
+            'genesById': {'ENSG00000233653': EXPECTED_GENE},
             'variantTagsByGuid': {
-                'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726945_2103343353_r0390_100': mock.ANY,
+                'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
             },
             'variantFunctionalDataByGuid': {},
             'rnaSeqData': {},
+            'mmeSubmissionsByGuid': {},
         })
         expected_search_response['search']['totalResults'] = 1
         self.assertDictEqual(response_json, expected_search_response)
@@ -389,6 +409,7 @@ class VariantSearchAPITest(object):
         response_json = response.json()
         expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
+        expected_search_results['savedVariantsByGuid']['SV0000002_1248367227_r0390_100']['discoveryTags'] = DISCOVERY_TAGS
         expected_search_results['familiesByGuid'] = {'F000012_12': mock.ANY}
         self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
         self.assertDictEqual(response_json, expected_search_results)
