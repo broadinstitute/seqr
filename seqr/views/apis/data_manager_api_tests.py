@@ -594,7 +594,9 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     @mock.patch('seqr.views.utils.dataset_utils.logger')
-    def test_update_rna_seq(self, mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file, mock_os, mock_datetime):
+    @mock.patch('seqr.models.logger')
+    def test_update_rna_seq(self, mock_model_logger, mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file,
+                            mock_os, mock_datetime):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
 
@@ -687,14 +689,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response_json = response.json()
                 self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [mock.ANY], 'fileName': file_name})
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
-                mock_logger.info.assert_has_calls(
-                    [mock.call(info_log, self.data_manager_user) for info_log in info] + [
-                        mock.call(f'delete {deleted_count} {model_cls.__name__}s', self.data_manager_user, db_update={
-                            'dbEntity': model_cls.__name__, 'numEntities': deleted_count, 'parentEntityIds': mock.ANY, 'updateType': 'bulk_delete',
-                        }),
-                    ], any_order=True
-                )
-                self.assertTrue(RNA_SAMPLE_GUID in mock_logger.info.call_args_list[1].kwargs['db_update']['parentEntityIds'])
+                mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
+                mock_model_logger.info.assert_called_with(
+                    f'delete {deleted_count} {model_cls.__name__}s', self.data_manager_user, db_update={
+                        'dbEntity': model_cls.__name__, 'entityIds': mock.ANY, 'parentEntityIds': mock.ANY,
+                        'updateType': 'bulk_delete',
+                })
+                self.assertTrue(RNA_SAMPLE_GUID in mock_model_logger.info.call_args_list[1].kwargs['db_update']['parentEntityIds'])
                 mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
 
                 # test database models are correct
@@ -718,7 +719,8 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     @mock.patch('seqr.views.apis.data_manager_api.logger')
-    def test_load_rna_seq_sample_data(self, mock_logger, mock_open, mock_os):
+    @mock.patch('seqr.models.logger')
+    def test_load_rna_seq_sample_data(self, mock_model_logger, mock_logger, mock_open, mock_os):
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_SAMPLE_GUID])
@@ -743,11 +745,12 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 mock_open.assert_called_with(file_name, 'rt')
 
-                mock_logger.info.assert_has_calls([
-                    mock.call('Loading outlier data for NA19675_D2', self.data_manager_user),
-                    mock.call(f'create 2 {model_cls.__name__}', self.data_manager_user, db_update={
-                        'dbEntity':  model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [RNA_SAMPLE_GUID], 'updateType': 'bulk_create',
-                    }),
-                ])
+                mock_logger.info.assert_called_with('Loading outlier data for NA19675_D2', self.data_manager_user)
+                mock_model_logger.info.assert_called_with(
+                    f'create 2 {model_cls.__name__}s', self.data_manager_user, db_update={
+                        'dbEntity': model_cls.__name__, 'entityIds': mock.ANY, 'parentEntityIds': [RNA_SAMPLE_GUID],
+                        'updateType': 'bulk_create',
+                    }
+                )
 
                 self.assertListEqual(params['get_models_json'](models), params['expected_models_json'])

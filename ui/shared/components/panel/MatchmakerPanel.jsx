@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Icon, List } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { getGenesById } from 'redux/selectors'
+import { getGenesById, getSavedVariantsByGuid } from 'redux/selectors'
 import { GENOME_VERSION_DISPLAY_LOOKUP } from 'shared/utils/constants'
 import ShowGeneModal from '../buttons/ShowGeneModal'
 
@@ -47,10 +47,17 @@ const variantSummary = (variant, includeGenomeVersion) => (
   </div>
 )
 
-const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesById, dispatch, ...listProps }) => (
+const BaseSubmissionGeneVariants = React.memo((
+  { geneVariants, savedVariantsByGuid, modalId, genesById, dispatch, ...listProps },
+) => (
   <List {...listProps}>
     {Object.entries(geneVariants.reduce(
-      (acc, variant) => ({ ...acc, [variant.geneId]: [...(acc[variant.geneId] || []), variant] }), {},
+      (acc, variant) => ({
+        ...acc,
+        [variant.geneId]: [
+          ...(acc[variant.geneId] || []), variant.variant || savedVariantsByGuid[variant.variantGuid] || {},
+        ],
+      }), {},
     )).map(([geneId, variants]) => (
       <TopAlignedItem key={geneId}>
         <ShowGeneModal gene={genesById[geneId]} modalId={modalId} />
@@ -70,6 +77,7 @@ const BaseSubmissionGeneVariants = React.memo(({ geneVariants, modalId, genesByI
 
 BaseSubmissionGeneVariants.propTypes = {
   genesById: PropTypes.object,
+  savedVariantsByGuid: PropTypes.object,
   geneVariants: PropTypes.arrayOf(PropTypes.object),
   modalId: PropTypes.string,
   dispatch: PropTypes.func,
@@ -77,6 +85,7 @@ BaseSubmissionGeneVariants.propTypes = {
 
 const mapGeneStateToProps = state => ({
   genesById: getGenesById(state),
+  savedVariantsByGuid: getSavedVariantsByGuid(state),
 })
 
 export const SubmissionGeneVariants = connect(mapGeneStateToProps)(BaseSubmissionGeneVariants)

@@ -419,12 +419,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     individual_db_ids = {s.individual_id for s in samples}
     to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
     if to_delete:
-        prefetch_related_objects(to_delete, 'sample')
-        logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
-            'dbEntity': model_cls.__name__, 'numEntities': len(to_delete), 'updateType': 'bulk_delete',
-            'parentEntityIds': list({model.sample.guid for model in to_delete}),
-        })
-        to_delete.delete()
+        model_cls.bulk_delete(user, to_delete, parent='sample')
 
     loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     samples_to_load = {
@@ -452,12 +447,13 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     return samples_to_load, info, warnings
 
 
-PHENOTYPE_PRI_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName', 'scoreName1', 'score1']
+PHENOTYPE_PRIORITIZATION_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName']
+PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER = PHENOTYPE_PRIORITIZATION_HEADER + ['scoreName1', 'score1']
 MAX_SCORES = 100
 
 
 def _parse_phenotype_pri_row(row):
-    record = {_to_snake_case(key): row[key] for key in PHENOTYPE_PRI_HEADER[:-2]}
+    record = {_to_snake_case(key): row[key] for key in PHENOTYPE_PRIORITIZATION_HEADER}
 
     scores = {}
     for i in range(1, MAX_SCORES):
@@ -471,13 +467,14 @@ def _parse_phenotype_pri_row(row):
 
 
 def load_phenotype_prioritization_data_file(file_path):
-    data_by_id = defaultdict(lambda: defaultdict(list))
+    data_by_project_sample_id = defaultdict(lambda: defaultdict(list))
     f = file_iter(file_path)
     header = _parse_tsv_row(next(f))
-    missing_cols = [col for col in PHENOTYPE_PRI_HEADER if col not in header]
+    missing_cols = [col for col in PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER if col not in header]
     if missing_cols:
         raise ValueError(f'Invalid file: missing column(s) {", ".join(missing_cols)}')
 
+    tool = None
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in _parse_phenotype_pri_row(row):
@@ -485,6 +482,10 @@ def load_phenotype_prioritization_data_file(file_path):
             project = row_dict.pop('project', None)
             if not sample_id or not project:
                 raise ValueError('Both sample ID and project fields are required.')
-            data_by_id[project][sample_id].append(row_dict)
+            data_by_project_sample_id[project][sample_id].append(row_dict)
+            if tool and tool != row_dict['tool']:
+                raise ValueError(f'Multiple tools found {tool} and {row_dict["tool"]}. Only one is supported.')
+            if not tool:
+                tool = row_dict['tool']
 
-    return data_by_id
+    return tool, data_by_project_sample_id

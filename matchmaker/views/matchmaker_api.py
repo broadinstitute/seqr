@@ -4,11 +4,10 @@ from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.db.models import prefetch_related_objects
 
-from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
+from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission, MatchmakerSubmissionGenes
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
-    get_submission_json_for_external_match, parse_mme_features, parse_mme_gene_variants, get_mme_matches, \
+    get_submission_json_for_external_match, parse_mme_features, get_submission_gene_variants, get_mme_matches, \
     get_gene_ids_for_feature, validate_patient_data, MME_DISCLAIMER
-from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.logging_utils import SeqrLogger
@@ -204,33 +203,11 @@ def update_mme_submission(request, submission_guid=None):
     gene_variants = submission_json.pop('geneVariants', [])
     if not phenotypes and not gene_variants:
         return create_json_response({}, status=400, reason='Genotypes or phenotypes are required')
-
-    genomic_features = []
-    for gene_variant in gene_variants:
-        if not gene_variant.get('geneId'):
-            return create_json_response({}, status=400, reason='Gene id is required for genomic features')
-        feature = {'gene': {'id': gene_variant['geneId']}}
-        if 'numAlt' in gene_variant and gene_variant['numAlt'] > 0:
-            feature['zygosity'] = gene_variant['numAlt']
-        if gene_variant.get('pos'):
-            genome_version = gene_variant['genomeVersion']
-            feature['variant'] = {
-                'referenceName': gene_variant['chrom'],
-                'start': gene_variant['pos'],
-                'assembly': GENOME_VERSION_LOOKUP.get(genome_version, genome_version),
-            }
-            if gene_variant.get('alt'):
-                feature['variant'].update({
-                    'alternateBases': gene_variant['alt'],
-                    'referenceBases': gene_variant['ref'],
-                })
-            elif gene_variant.get('end'):
-                feature['variant']['end'] = gene_variant['end']
-        genomic_features.append(feature)
+    if not all(gene_variant.get('geneId') and gene_variant.get('variantGuid') for gene_variant in gene_variants):
+        return create_json_response({}, status=400, reason='Gene and variant IDs are required for genomic features')
 
     submission_json.update({
         'features': phenotypes,
-        'genomicFeatures': genomic_features,
         'deletedDate': None,
         'deletedBy': None,
     })
@@ -252,10 +229,30 @@ def update_mme_submission(request, submission_guid=None):
 
     update_model_from_json(submission, submission_json, user=request.user, allow_unknown_keys=True)
 
+    new_gene_variants = {(gene_variant['geneId'], gene_variant['variantGuid']) for gene_variant in gene_variants}
+    existing_submission_genes = {
+        (s.gene_id, s.saved_variant.guid): s
+        for s in submission.matchmakersubmissiongenes_set.all().select_related('saved_variant')
+    }
+    existing_gv_keys = set(existing_submission_genes.keys())
+    to_delete = existing_gv_keys - new_gene_variants
+    to_create = new_gene_variants - existing_gv_keys
+    saved_variants = {
+        sv.guid: sv for sv in SavedVariant.objects.filter(guid__in=[gv[1] for gv in to_create])
+    }
+    for gene_id, variant_guid in to_create:
+        MatchmakerSubmissionGenes.objects.create(
+            matchmaker_submission=submission,
+            saved_variant=saved_variants[variant_guid],
+            gene_id=gene_id,
+        )
+    for gv in to_delete:
+        existing_submission_genes[gv].delete()
+
     submission_response = get_json_for_matchmaker_submission(submission)
     submission_response.update({
         'phenotypes': phenotypes,
-        'geneVariants': gene_variants,
+        'geneVariants': get_submission_gene_variants(submission),
     })
     response = {
         'mmeSubmissionsByGuid': {submission.guid: submission_response},
@@ -281,6 +278,8 @@ def delete_mme_submission(request, submission_guid):
 
     deleted_date = datetime.now()
     update_model_from_json(submission, {'deleted_date': deleted_date, 'deleted_by': request.user}, request.user)
+
+    MatchmakerSubmissionGenes.objects.filter(matchmaker_submission=submission).delete()
 
     for saved_result in MatchmakerResult.objects.filter(submission=submission):
         if not (saved_result.we_contacted or saved_result.host_contacted or saved_result.comments):
@@ -412,10 +411,6 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
     additional_hpo_ids = {feature['id'] for feature in (submission.features or []) if feature.get('id')}
-    if not additional_genes:
-        additional_genes = set()
-    additional_genes.update({gene_feature['gene']['id'] for gene_feature in (submission.genomic_features or [])})
-
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(
         results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
 
@@ -429,7 +424,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     submission_json.update({
         'mmeResultGuids': list(parsed_results_gy_guid.keys()),
         'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
-        'geneVariants': parse_mme_gene_variants(submission.genomic_features, gene_symbols_to_ids),
+        'geneVariants': get_submission_gene_variants(submission),
     })
 
     response = {

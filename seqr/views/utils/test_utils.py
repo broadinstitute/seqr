@@ -45,7 +45,7 @@ class AuthenticationTestCase(TestCase):
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
         self.mock_analyst_group = patcher.start()
-        self.mock_analyst_group.__str__.return_value = 'analysts'
+        self.mock_analyst_group.__str__.return_value = 'Analysts'
         self.mock_analyst_group.__eq__.side_effect = lambda s: str(self.mock_analyst_group) == s
         self.mock_analyst_group.__bool__.side_effect = lambda: bool(str(self.mock_analyst_group))
         self.mock_analyst_group.resolve_expression.return_value = 'analysts'
@@ -261,7 +261,7 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         },
-        'analysts@firecloud.org': {
+        'Analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -294,7 +294,7 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": False
         },
-        'analysts@firecloud.org': {
+        'Analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -331,7 +331,7 @@ ANVIL_WORKSPACES = [{
     'workspace_name': TEST_EMPTY_PROJECT_WORKSPACE,
     'public': False,
     'acl': {
-        'analysts@firecloud.org': {
+        'Analysts@firecloud.org': {
             "accessLevel": "WRITER",
             "pending": False,
             "canShare": False,
@@ -366,7 +366,7 @@ ANVIL_WORKSPACES = [{
 
 ANVIL_GROUPS = {
     'project-managers': ['test_pm_user@test.com'],
-    'analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
+    'Analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
 }
 ANVIL_GROUP_LOOKUP = defaultdict(list)
 for group, users in ANVIL_GROUPS.items():
@@ -420,7 +420,7 @@ def get_workspaces_side_effect(user):
                 'name': ws['workspace_name']
             }
         } for ws in ANVIL_WORKSPACES if any(
-            email == k.lower() or k.lower().replace('@firecloud.org', '') in ANVIL_GROUP_LOOKUP[email]
+            email == k.lower() or k.replace('@firecloud.org', '') in ANVIL_GROUP_LOOKUP[email]
             for k in ws['acl'].keys())
     ]
 
@@ -574,6 +574,12 @@ IGV_SAMPLE_FIELDS = {
 }
 
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
+SAVED_VARIANT_DETAIL_FIELDS = {
+    'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
+    'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd',
+    'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
+}
+SAVED_VARIANT_DETAIL_FIELDS.update(SAVED_VARIANT_FIELDS)
 
 TAG_FIELDS = {
     'tagGuid', 'name', 'category', 'color', 'searchHash', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
@@ -892,9 +898,10 @@ PARSED_VARIANTS = [
                         'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
                         'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'metasvm': None, 'primate_ai': None,
                         'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
-                        'splice_ai_consequence': None},
+                        'splice_ai_consequence': None, 'gnomad_noncoding': 1.01272,},
         'ref': 'TC',
         'rsid': None,
+        'screenRegionType': 'dELS',
         'transcripts': {
             'ENSG00000135953': [TRANSCRIPT_3],
             'ENSG00000228198': [TRANSCRIPT_2],
@@ -973,13 +980,14 @@ PARSED_VARIANTS = [
         },
         'pos': 103343353,
         'predictions': {
-            'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
+            'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None, 'gnomad_noncoding': None,
             'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
             'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': 1, 'gerp_rs': None,
             'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None, 'splice_ai_consequence': None,
         },
         'ref': 'GAGA',
         'rsid': None,
+        'screenRegionType': None,
         'transcripts': {
             'ENSG00000135953': [TRANSCRIPT_1],
             'ENSG00000228198': [TRANSCRIPT_2],
@@ -1059,12 +1067,13 @@ PARSED_SV_VARIANT = {
     },
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
-                    'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
+                    'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None, 'gnomad_noncoding': None,
                     'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
                     'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': 0.374,
                     'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
+    'screenRegionType': None,
     'transcripts': {
         'ENSG00000228198': [
             {
@@ -1148,10 +1157,11 @@ PARSED_SV_WGS_VARIANT = {
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                     'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
                     'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
-                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
+                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None, 'gnomad_noncoding': None,
                     'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
+    'screenRegionType': None,
     'transcripts': {
         'ENSG00000228198': [
             {
@@ -1228,10 +1238,11 @@ PARSED_MITO_VARIANT = {
                     'gerp_rs': '5.07', 'haplogroup_defining': None, 'metasvm': None, 'mitotip': None,
                     'mpc': None, 'mut_taster': 'N', 'phastcons_100_vert': '0.958000', 'polyphen': None,
                     'primate_ai': None, 'revel': None, 'sift': 'D', 'splice_ai': None, 'splice_ai_consequence': None,
-                    'strvctvre': None},
+                    'strvctvre': None, 'gnomad_noncoding': None,},
     'ref': 'C',
     'rg37LocusEnd': None,
     'rsid': None,
+    'screenRegionType': None,
     'selectedMainTranscriptId': None,
     'svType': None,
     'svTypeDetail': None,
