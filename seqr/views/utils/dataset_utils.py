@@ -461,9 +461,10 @@ def _parse_phenotype_pri_row(row):
 
     scores = {}
     for i in range(1, MAX_SCORES):
-        if not row[f'scoreName{i}']:
+        score_name = row.get(f'scoreName{i}')
+        if not score_name:
             break
-        scores[row[f'scoreName{i}']] = row[f'score{i}']
+        scores[score_name] = float(row[f'score{i}'])
     record['scores'] = scores
 
     yield record['sample_id'], record

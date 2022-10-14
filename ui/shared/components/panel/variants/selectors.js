@@ -11,7 +11,6 @@ import {
   VARIANT_SORT_LOOKUP,
   SHOW_ALL,
   VARIANT_EXPORT_DATA,
-  LIRICAL, EXOMISER,
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
@@ -25,31 +24,33 @@ export const getRnaSeqOutilerDataByFamilyGene = createSelector(
     (acc, [individualGuid, rnaSeqData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
       acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
-        (acc2, [geneId, data]) => (data.isSignificant ?
-          { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
-        ), acc[familyGuid] || {},
+        (acc2, [geneId, data]) => {
+          const { zScore, pValue, pAdjust } = data
+          return (data.isSignificant ? {
+            ...acc2,
+            [geneId]: { ...(acc2[geneId] || {}), [displayName]: [{ scores: { zScore, pValue, pAdjust } }] },
+          } : acc2)
+        },
+        acc[familyGuid] || {},
       )
       return acc
     }, {},
   ),
 )
 
-const TOOLS = [LIRICAL, EXOMISER]
 export const getPhePriDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getPhePriDataByIndividual,
   (individualsByGuid, phePriDataByIndividual) => Object.entries(phePriDataByIndividual).reduce(
     (acc, [individualGuid, phePriData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = TOOLS.reduce(
-        (accTool, tool) => ({
-          ...accTool,
-          [tool]: Object.entries(phePriData[tool] || {}).reduce(
-            (acc2, [geneId, data]) => ({ ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } }),
-            acc[familyGuid] || {},
-          ),
-        }), {},
-      )
+      acc[familyGuid] = Object.entries(phePriData).reduce((accTool, [tool, toolData]) => ({
+        ...accTool,
+        [tool]: Object.entries(toolData).reduce((acc2, [geneId, data]) => ({
+          ...acc2,
+          [geneId]: { ...(acc2[geneId] || {}), [displayName]: data },
+        }), {}),
+      }), acc[familyGuid] || {})
       return acc
     }, {},
   ),

@@ -8,7 +8,8 @@ from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, get_json_for_phenotype_pri
+    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags,\
+    get_json_for_phenotype_prioritization
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
@@ -128,17 +129,16 @@ def _get_rna_seq_outliers(gene_ids, families):
     return data_by_individual_gene
 
 
-def _get_phenotype_pri_data(gene_ids, families):
-    data_by_individual_gene = defaultdict(lambda: {PhenotypePrioritization.LIRICAL_CHOICE: {},
-                                                   PhenotypePrioritization.EXOMISER_CHOICE: {}})
+def _get_phenotype_prioritization(gene_ids, families):
+    data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
-    phe_pri_data = get_json_for_phenotype_pri(
+    data_dicts = _get_json_for_models(
         PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, individual__family__in=families),
         nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 
-    for data in phe_pri_data:
-        data_by_individual_gene[data.pop('individualGuid')][data['tool']][data['geneId']] = data
+    for data in data_dicts:
+        data_by_individual_gene[data.pop('individualGuid')][data['tool']][data['geneId']].append(data)
 
     return data_by_individual_gene
 
@@ -173,9 +173,10 @@ def _add_pa_detail(locus_list_gene, locus_list_guid, gene_json):
 LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
+
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
                           add_locus_list_detail=False, include_rna_seq=True, include_project_name=False,
-                          include_phe_pri=True):
+                          include_phenotype_prioritization=True):
     response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
@@ -220,7 +221,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid)
 
-    if include_phe_pri:
-        response['phePriData'] = _get_phenotype_pri_data(genes.keys(), families)
+    if include_phenotype_prioritization:
+        response['phePriData'] = _get_phenotype_prioritization(genes.keys(), families)
 
     return response

@@ -9,7 +9,6 @@ import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/sele
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
-  LIRICAL, EXOMISER,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
@@ -315,39 +314,34 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
   },
 ]
 
-const SAMPLE_GENE_DETAIL_FIELDS = {
-  rnaSeqData: { infos: [], scores: ['zScore', 'pValue', 'pAdjust'] },
-  liricalData: { infos: ['rank', 'diseases'], scores: ['postTestProbability', 'LR'] },
-  exomiserData: { infos: ['rank', 'diseases'], scores: ['exomiserScore', 'phenotypeScore', 'variantScore'] },
-}
-
-const sampleGeneDetailsDisplay = (geneId, sampleGeneData, dataType) => (
-  <div>
-    <Table basic="very" compact="very">
-      <Table.Header>
-        <Table.Row>
-          <Table.HeaderCell />
-          {Object.values(SAMPLE_GENE_DETAIL_FIELDS[dataType]).flat().map(
-            field => <Table.HeaderCell key={field}>{camelcaseToTitlecase(field).replace(' ', '-')}</Table.HeaderCell>,
-          )}
-        </Table.Row>
-      </Table.Header>
-      <Table.Body>
-        {Object.entries(sampleGeneData[geneId]).map(([individual, data]) => (
-          <Table.Row key={individual}>
-            <Table.HeaderCell>{individual}</Table.HeaderCell>
-            {SAMPLE_GENE_DETAIL_FIELDS[dataType].infos.map(
-              field => <Table.Cell key={field}>{data[field]}</Table.Cell>,
-            )}
-            {SAMPLE_GENE_DETAIL_FIELDS[dataType].scores.map(
-              field => <Table.Cell key={field}>{data[field].toPrecision(3)}</Table.Cell>,
-            )}
+const sampleGeneDetailsDisplay = (geneId, sampleGeneData) => {
+  const { scores, ...info } = Object.values(Object.values(sampleGeneData)[0])[0][0]
+  const infoKeys = Object.keys(info)
+  const scoreKeys = Object.keys(scores || {})
+  return (
+    <div>
+      <Table basic="very" compact="very">
+        <Table.Header>
+          <Table.Row>
+            <Table.HeaderCell />
+            {infoKeys.concat(scoreKeys).map(field => (
+              <Table.HeaderCell key={field}>{camelcaseToTitlecase(field).replace(' ', '-')}</Table.HeaderCell>
+            ))}
           </Table.Row>
-        ))}
-      </Table.Body>
-    </Table>
-  </div>
-)
+        </Table.Header>
+        <Table.Body>
+          {Object.entries(sampleGeneData[geneId]).map(([individual, data]) => (data.map(row => (
+            <Table.Row key={individual + row.diseaseId}>
+              <Table.HeaderCell>{individual}</Table.HeaderCell>
+              {infoKeys.map(field => <Table.Cell key={field}>{row[field]}</Table.Cell>)}
+              {scoreKeys.map(field => <Table.Cell key={field}>{row.scores[field].toPrecision(3)}</Table.Cell>)}
+            </Table.Row>
+          ))))}
+        </Table.Body>
+      </Table>
+    </div>
+  )
+}
 
 const GENE_DETAIL_SECTIONS = [
   {
@@ -410,20 +404,20 @@ const GENE_DETAIL_SECTIONS = [
   },
   {
     color: 'orange',
-    description: 'LIRICAL Phenotype Prioritization',
+    description: 'Phenotype Prioritization',
     label: 'LIRICAL',
-    showDetails: (gene, { phePriData }) => phePriData && phePriData[LIRICAL][gene.geneId],
+    showDetails: (gene, { phePriData }) => phePriData && phePriData.lirical && phePriData.lirical[gene.geneId],
     detailsDisplay: (gene, { phePriData }) => (
-      sampleGeneDetailsDisplay(gene.geneId, phePriData, 'lirical')
+      sampleGeneDetailsDisplay(gene.geneId, phePriData.lirical)
     ),
   },
   {
     color: 'orange',
-    description: 'Exomiser Phenotype Prioritization',
+    description: 'Phenotype Prioritization',
     label: 'Exomiser',
-    showDetails: (gene, { phePriData }) => phePriData && phePriData[EXOMISER][gene.geneId],
+    showDetails: (gene, { phePriData }) => phePriData && phePriData.exomiser && phePriData.exomiser[gene.geneId],
     detailsDisplay: (gene, { phePriData }) => (
-      sampleGeneDetailsDisplay(gene.geneId, phePriData, 'exomiser')
+      sampleGeneDetailsDisplay(gene.geneId, phePriData.exomiser)
     ),
   },
 ]
