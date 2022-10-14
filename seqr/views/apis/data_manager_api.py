@@ -9,8 +9,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max, TextField
-from django.db.models.functions import Concat
+from django.db.models import Max
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -388,53 +387,45 @@ def load_rna_seq_sample_data(request, sample_guid):
         data_by_gene = json.loads(row.split('\t\t')[1])
 
     model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
-    models = model_cls.objects.bulk_create([model_cls(sample=sample, **data) for data in data_by_gene.values()])
-    logger.info(f'create {len(models)} {model_cls.__name__}', request.user, db_update={
-        'dbEntity': model_cls.__name__, 'numEntities': len(models), 'parentEntityIds': [sample_guid], 'updateType': 'bulk_create',
-    })
+    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_by_gene.values()], parent='sample')
 
     return create_json_response({'success': True})
 
 
-def _load_phenotype_prioritization(file_path, user):
-    data_by_id = load_phenotype_prioritization_data_file(file_path)
-
-    all_samples = [sample for project_samples in data_by_id.values() for sample in project_samples.values()]
-    all_records = [rec for sample_records in all_samples for rec in sample_records]
-    message = f'Parsed {len(all_records)} LIRICAL/Exomiser data records in {len(all_samples)} samples'
-    info = [message]
-    logger.info(message, user)
-
-    for project, project_samples in data_by_id.items():
-        indivs = Individual.objects.filter(family__project__name=project, individual_id__in=project_samples.keys())
-        existing_indivs_by_id = {ind.individual_id: ind for ind in indivs}
-
-        tool_sample_id_set = set()
-        for sample_id, records in project_samples.items():
-            if existing_indivs_by_id[sample_id]:
-                for rec in records:
-                    rec['individual'] = existing_indivs_by_id[sample_id]
-                    tool_sample_id_set.add(f'{rec["tool"]}{sample_id}')
-            else:
-                raise ValueError(f'Individual {sample_id} doesn\'t exist in project {project}')
-
-        # Delete old data
-        to_delete = PhenotypePrioritization.objects.annotate(
-            tool_ind=Concat('tool', 'individual__individual_id', output_field=TextField())
-        ).filter(
-            tool_ind__in=tool_sample_id_set,
-        )
-        if to_delete:
-            deleted, _ = PhenotypePrioritization.bulk_delete(user, to_delete, parent='individual')
-            message = f'Deleted {deleted} existing phenotype-based prioritization records from project {project}'
-            info.append(message)
-            logger.info(message, user)
-
-    project_names = ', '.join(sorted(data_by_id.keys()))
-    message = 'Attempted data loading for {} phenotype-based prioritization records in the following {} projects: {}'.format(
-        len(all_records), len(data_by_id.keys()), project_names)
+def _log_append_info(user, info, message):
     info.append(message)
     logger.info(message, user)
+
+
+def _load_phenotype_prioritization(file_path, user):
+    tool, data_by_project_sample_id = load_phenotype_prioritization_data_file(file_path)
+
+    info = []
+    _log_append_info(user, info, f'Parsed {tool.upper()} data for project(s): {", ".join(data_by_project_sample_id.keys())}')
+
+    all_records = []
+    to_delete = None
+    for project, records_by_sample in data_by_project_sample_id.items():
+        indivs = Individual.objects.filter(family__project__name=project, individual_id__in=records_by_sample.keys())
+        existing_indivs_by_id = {ind.individual_id: ind for ind in indivs}
+
+        missing_individuals = set(records_by_sample.keys()) - set(existing_indivs_by_id.keys())
+        if missing_individuals:
+            raise ValueError(f'Individual {", ".join(list(missing_individuals))} doesn\'t exist')
+        for sample_id, records in records_by_sample.items():
+            for rec in records:
+                rec['individual'] = existing_indivs_by_id[sample_id]
+
+        exist_records = PhenotypePrioritization.objects.filter(tool=tool, individual__in=indivs)
+        to_delete = to_delete | exist_records if to_delete else exist_records
+
+        records = [rec for records in records_by_sample.values() for rec in records]
+        _log_append_info(user, info, f'Attempted loading {len(records)} records of {tool.upper()} data to project {project}')
+        all_records += records
+
+    if to_delete:
+        deleted, _ = PhenotypePrioritization.bulk_delete(user, to_delete, parent='individual')
+        _log_append_info(user, info, f'Deleted {deleted} existing {tool.upper()} records')
 
     return all_records, info
 
@@ -445,12 +436,12 @@ def load_phenotype_prioritization_data(request):
 
     file_name = request_json['file']
 
-    logger.info(f'Loading phenotype prioritization data from {file_name}', request.user)
-    records, info = _load_phenotype_prioritization(file_name, request.user)
+    logger.info(f'Loading phenotype-based prioritization data from {file_name}', request.user)
+    records, info, tool = _load_phenotype_prioritization(file_name, request.user)
     models = PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in records],
                                                  parent='individual')
 
-    info.append(f'Loaded {len(models)} LIRICAL/Exomiser data records')
+    info.append(f'Loaded {len(models)} {tool.upper()} data records')
 
     return create_json_response({
         'info': info,

@@ -7,7 +7,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.db.models import base, options, ForeignKey, JSONField
+from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -43,28 +43,6 @@ def _get_audit_fields(audit_field):
 
 def get_audit_field_names(audit_field):
     return list(_get_audit_fields(audit_field).keys())
-
-
-class BulkOperationBase:
-    @classmethod
-    def bulk_create(cls, user, new_models, parent=None):
-        """Helper bulk create method that logs the creation"""
-        for model in new_models:
-            model.created_by = user
-        models = cls.objects.bulk_create(new_models)
-        log_model_bulk_update(logger, models, user, 'create', parent=parent)
-        return models
-
-    @classmethod
-    def bulk_delete(cls, user, queryset=None, parent=None, **filter_kwargs):
-        """Helper bulk delete method that logs the deletion"""
-        if queryset is None:
-            queryset = cls.objects.filter(**filter_kwargs)
-        log_model_bulk_update(logger, queryset, user, 'delete', parent=parent)
-        return queryset.delete()
-
-    class Meta:
-        abstract = True
 
 
 class CustomModelBase(base.ModelBase):
@@ -1033,18 +1011,35 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
-class DeletableSampleMetadataModel(models.Model):
 
-    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
-    gene_id = models.CharField(max_length=20)  # ensembl ID
+class BulkOperationBase:
+    @classmethod
+    def bulk_create(cls, user, new_models, parent=None):
+        """Helper bulk create method that logs the creation"""
+        for model in new_models:
+            model.created_by = user
+        models = cls.objects.bulk_create(new_models)
+        log_model_bulk_update(logger, models, user, 'create', parent=parent)
+        return models
 
     @classmethod
-    def bulk_delete(cls, user, queryset=None, **filter_kwargs):
+    def bulk_delete(cls, user, queryset=None, parent=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
-        log_model_bulk_update(logger, queryset, user, 'delete')
+        if parent:
+            prefetch_related_objects(queryset, parent)
+        log_model_bulk_update(logger, queryset, user, 'delete', parent=parent)
         return queryset.delete()
+
+    class Meta:
+        abstract = True
+
+
+class DeletableSampleMetadataModel(models.Model, BulkOperationBase):
+
+    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
 
     def __unicode__(self):
         return "%s:%s" % (self.sample.sample_id, self.gene_id)
