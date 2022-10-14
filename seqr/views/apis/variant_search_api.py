@@ -23,7 +23,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions
+    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variant_key, get_variants_response
 
@@ -364,8 +364,7 @@ def search_context_handler(request):
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    for project in projects:
-        check_project_permissions(project, request.user)
+    check_projects_view_permission(projects, request.user)
 
     project_guid = projects[0].guid if len(projects) == 1 else None
     response.update(get_projects_child_entities(
@@ -469,8 +468,8 @@ def delete_saved_search_handler(request, saved_search_guid):
 def _check_results_permission(results_model, user, project_perm_check=None):
     families = results_model.families.prefetch_related('project').all()
     projects = {family.project for family in families}
+    check_projects_view_permission(projects, user)
     for project in projects:
-        check_project_permissions(project, user)
         if project_perm_check and not project_perm_check(project):
             raise PermissionDenied()
 

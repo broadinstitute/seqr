@@ -742,12 +742,28 @@ def assert_no_list_ws_has_al(self, acl_call_count, group_call_count, workspace_n
     assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name)
 
 
+def assert_has_list_ws(self):
+    self.mock_list_workspaces.assert_has_calls([
+        mock.call(self.no_access_user),
+        mock.call(self.collaborator_user),
+    ])
+
+
+def assert_no_al_has_list_ws(self):
+    assert_has_list_ws(self)
+    self.mock_get_ws_access_level.assert_not_called()
+    assert_workspace_calls(self, 1)
+
+
 def assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None, user=None):
     if not workspace_name:
         workspace_name = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
-    self.mock_get_ws_access_level.assert_called_with(user or self.collaborator_user, 'my-seqr-billing', workspace_name)
+    self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', workspace_name)
     self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+    assert_workspace_calls(self, group_call_count, user)
 
+
+def assert_workspace_calls(self, group_call_count, user=None):
     self.assertEqual(self.mock_get_groups.call_count, group_call_count)
     self.mock_get_groups.assert_called_with(user or self.collaborator_user)
 
@@ -761,36 +777,21 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_ws_has_al(self, 18, 9, user=self.analyst_user)
-        self.mock_list_workspaces.assert_called_once_with(self.analyst_user)
+        assert_ws_has_al(self, 1, 9, user=self.analyst_user)
+        assert_has_list_ws(self)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        calls = [
-            mock.call(self.no_access_user),
-            mock.call(self.collaborator_user),
-        ]
-        self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-        ])
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
-        self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_get_groups.assert_has_calls([
-            mock.call(self.collaborator_user),
-        ])
-        self.assertEqual(self.mock_get_groups.call_count, 1)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
+        assert_no_al_has_list_ws(self)
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
-        assert_no_list_ws_has_al(self, 3, 1, workspace_name='anvil-project 1000 Genomes Demo')
+        assert_no_al_has_list_ws(self)
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        self.mock_list_workspaces.assert_called_with(self.collaborator_user)
-        assert_ws_has_al(self, 17, 12)
+        assert_has_list_ws(self)
+        assert_ws_has_al(self, 8, 12)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
@@ -798,8 +799,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
-        self.mock_get_groups.assert_called_with(self.no_access_user)
-        self.assertEqual(self.mock_get_groups.call_count, 6)
+        assert_workspace_calls(self, 6, user=self.no_access_user)
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
+
