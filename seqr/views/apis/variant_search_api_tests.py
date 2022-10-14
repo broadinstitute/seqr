@@ -40,8 +40,7 @@ DISCOVERY_TAGS = [{
 }]
 VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = DISCOVERY_TAGS
 
-PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded'}
-PROJECT_CONTEXT_FIELDS.update(PROJECT_FIELDS)
+PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded', 'projectGuid', 'name'}
 
 PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
 
@@ -749,10 +748,10 @@ def assert_has_list_ws(self):
     ])
 
 
-def assert_no_al_has_list_ws(self):
+def assert_no_al_has_list_ws(self, group_count=1):
     assert_has_list_ws(self)
     self.mock_get_ws_access_level.assert_not_called()
-    assert_workspace_calls(self, 1)
+    assert_workspace_calls(self, group_count)
 
 
 def assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None, user=None):
@@ -790,8 +789,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_has_list_ws(self)
-        assert_ws_has_al(self, 8, 12)
+        assert_no_al_has_list_ws(self, 12)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
