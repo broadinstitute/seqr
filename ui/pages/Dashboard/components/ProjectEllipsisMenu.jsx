@@ -1,12 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Dropdown, Icon } from 'semantic-ui-react'
+import { Dropdown, Icon, Loader, Dimmer } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 
 import { updateProject } from 'redux/rootReducer'
-import { getUser } from 'redux/selectors'
+import { getUser, getProjectDetailsIsLoading } from 'redux/selectors'
+import { loadProjectDetails } from 'redux/utils/reducerUtils'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
@@ -25,6 +26,14 @@ const EllipsisContainer = styled.span`
 
 const ProjectEllipsisMenu = React.memo((props) => {
   const menuItems = [
+    props.loading ? <Dropdown.Item><Dimmer inverted active><Loader size="tiny" /></Dimmer></Dropdown.Item> : (
+      <EditProjectButton
+        key="edit"
+        trigger={<Dropdown.Item>Edit Project</Dropdown.Item>}
+        project={props.project}
+        user={props.user}
+      />
+    ),
     <EditProjectCategoriesModal
       key="editCategories"
       trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>}
@@ -32,17 +41,6 @@ const ProjectEllipsisMenu = React.memo((props) => {
       project={props.project}
     />,
   ]
-
-  if (props.project.canEdit) {
-    menuItems.unshift(
-      <EditProjectButton
-        key="edit"
-        trigger={<Dropdown.Item>Edit Project</Dropdown.Item>}
-        project={props.project}
-        user={props.user}
-      />,
-    )
-  }
 
   if (props.project.hasCaseReview) {
     menuItems.unshift(
@@ -74,7 +72,7 @@ const ProjectEllipsisMenu = React.memo((props) => {
 
   return (
     <EllipsisContainer>
-      <Dropdown pointing="top right" icon={<Icon name="ellipsis vertical" />}>
+      <Dropdown pointing="top right" icon={<Icon name="ellipsis vertical" />} onOpen={props.load}>
         <Dropdown.Menu>{menuItems}</Dropdown.Menu>
       </Dropdown>
     </EllipsisContainer>
@@ -87,12 +85,22 @@ ProjectEllipsisMenu.propTypes = {
   project: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
   updateProject: PropTypes.func.isRequired,
+  loading: PropTypes.bool,
+  load: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
+  loading: getProjectDetailsIsLoading(state),
 })
 
-const mapDispatchToProps = { updateProject }
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  load: () => {
+    dispatch(loadProjectDetails(ownProps.project.projectGuid))
+  },
+  updateProject: (values) => {
+    dispatch(updateProject(values))
+  },
+})
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectEllipsisMenu)
