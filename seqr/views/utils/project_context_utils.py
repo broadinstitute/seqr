@@ -10,7 +10,6 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json
 
 
 def get_projects_child_entities(projects, project_guid, user, include_samples=True, include_locus_list_metadata=True):
-    # TODO do not add permissions here?
     projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, add_permissions=True)}
 
     if include_samples:
