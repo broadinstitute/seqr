@@ -402,24 +402,6 @@ const GENE_DETAIL_SECTIONS = [
       sampleGeneDetailsDisplay(gene.geneId, rnaSeqData, 'rnaSeqData')
     ),
   },
-  {
-    color: 'orange',
-    description: 'Phenotype Prioritization',
-    label: 'LIRICAL',
-    showDetails: (gene, { phePriData }) => phePriData && phePriData.lirical && phePriData.lirical[gene.geneId],
-    detailsDisplay: (gene, { phePriData }) => (
-      sampleGeneDetailsDisplay(gene.geneId, phePriData.lirical)
-    ),
-  },
-  {
-    color: 'orange',
-    description: 'Phenotype Prioritization',
-    label: 'Exomiser',
-    showDetails: (gene, { phePriData }) => phePriData && phePriData.exomiser && phePriData.exomiser[gene.geneId],
-    detailsDisplay: (gene, { phePriData }) => (
-      sampleGeneDetailsDisplay(gene.geneId, phePriData.exomiser)
-    ),
-  },
 ]
 
 const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: true, compact: true })`
@@ -471,10 +453,28 @@ const getDetailSections = (configs, gene, compact, labelProps, sampleGeneData) =
   )
 ))
 
+const addPhenotypePrioritizationConfig = (configs, phePriInfo) => (
+  phePriInfo ? [
+    ...configs,
+    ...Object.keys(phePriInfo).map(tool => (
+      {
+        color: 'orange',
+        description: 'Phenotype Prioritization',
+        label: tool.toUpper(),
+        showDetails: (gene, { phePriData }) => phePriData && phePriData[tool] && phePriData[tool][gene.geneId],
+        detailsDisplay: (gene, { phePriData }) => (
+          sampleGeneDetailsDisplay(gene.geneId, phePriData[tool])
+        ),
+      }
+    )),
+  ] : configs
+)
+
 export const GeneDetails = React.memo((
   { gene, compact, showLocusLists, showInlineDetails, sampleGeneData, ...labelProps },
 ) => {
-  const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, sampleGeneData)
+  const geneDetailConfigs = addPhenotypePrioritizationConfig(GENE_DETAIL_SECTIONS, sampleGeneData.phePriData)
+  const geneDetails = getDetailSections(geneDetailConfigs, gene, compact, labelProps, sampleGeneData)
   const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps)
   const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
