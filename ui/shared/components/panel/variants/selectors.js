@@ -31,7 +31,9 @@ export const getRnaSeqOutilerDataByFamilyGene = createSelector(
             [geneId]: {
               ...(acc2[geneId] || {}),
               [displayName]: [{
-                scores: RNA_SEQ_SCORE_FIELDS.reduce((scoreAcc, score) => ({ ...scoreAcc, [score]: data[score] }), {}),
+                scores: RNA_SEQ_SCORE_FIELDS.reduce(
+                  (sAcc, score) => (data[score] ? { ...sAcc, [score]: data[score] } : sAcc), {},
+                ),
               }],
             },
           } : acc2
@@ -45,7 +47,7 @@ export const getRnaSeqOutilerDataByFamilyGene = createSelector(
 export const getPhePriDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getPhePriDataByIndividual,
-  (individualsByGuid, phePriDataByIndividual) => Object.entries(phePriDataByIndividual).reduce(
+  (individualsByGuid, phePriDataByIndividual) => Object.entries(phePriDataByIndividual || {}).reduce(
     (acc, [individualGuid, phePriData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
       acc[familyGuid] = Object.entries(phePriData).reduce((accTool, [tool, toolData]) => ({
