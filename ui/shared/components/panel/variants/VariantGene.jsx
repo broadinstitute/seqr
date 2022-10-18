@@ -460,7 +460,7 @@ const addPhenotypePrioritizationConfig = (configs, phePriInfo) => (
       {
         color: 'orange',
         description: 'Phenotype Prioritization',
-        label: tool.toUpper(),
+        label: tool.toUpperCase(),
         showDetails: (gene, { phePriData }) => phePriData && phePriData[tool] && phePriData[tool][gene.geneId],
         detailsDisplay: (gene, { phePriData }) => (
           sampleGeneDetailsDisplay(gene.geneId, phePriData[tool])

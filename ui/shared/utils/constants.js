@@ -1311,9 +1311,6 @@ const VARIANT_ICON_COLORS = {
   green: '#21a926',
 }
 
-export const LIRICAL = 'L'
-export const EXOMISER = 'E'
-
 export const PANEL_APP_CONFIDENCE_DESCRIPTION = {
   0: 'No Panel App confidence level',
   1: 'Red, lowest level of confidence; 1 of the 4 sources or from other sources.',

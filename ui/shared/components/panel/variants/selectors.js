@@ -17,6 +17,7 @@ import {
   getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual, getPhePriDataByIndividual,
 } from 'redux/selectors'
 
+const RNA_SEQ_SCORE_FIELDS = ['zScore', 'pValue', 'pAdjust']
 export const getRnaSeqOutilerDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
@@ -24,14 +25,17 @@ export const getRnaSeqOutilerDataByFamilyGene = createSelector(
     (acc, [individualGuid, rnaSeqData]) => {
       const { familyGuid, displayName } = individualsByGuid[individualGuid]
       acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
-        (acc2, [geneId, data]) => {
-          const { zScore, pValue, pAdjust } = data
-          return (data.isSignificant ? {
+        (acc2, [geneId, data]) => (data.isSignificant ?
+          {
             ...acc2,
-            [geneId]: { ...(acc2[geneId] || {}), [displayName]: [{ scores: { zScore, pValue, pAdjust } }] },
-          } : acc2)
-        },
-        acc[familyGuid] || {},
+            [geneId]: {
+              ...(acc2[geneId] || {}),
+              [displayName]: [{
+                scores: RNA_SEQ_SCORE_FIELDS.reduce((scoreAcc, score) => ({ ...scoreAcc, [score]: data[score] }), {}),
+              }],
+            },
+          } : acc2
+        ), acc[familyGuid] || {},
       )
       return acc
     }, {},

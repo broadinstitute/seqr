@@ -140,7 +140,7 @@ def _get_phenotype_prioritization(gene_ids, families):
     )
 
     for data in data_dicts:
-        data_by_individual_gene[data.pop('individualGuid')][data['tool']][data['geneId']].append(data)
+        data_by_individual_gene[data.pop('individualGuid')][data.pop('tool')][data['geneId']].append(data)
 
     return data_by_individual_gene
 
