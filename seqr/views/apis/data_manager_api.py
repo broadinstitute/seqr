@@ -427,7 +427,7 @@ def _load_phenotype_prioritization(file_path, user):
         deleted, _ = PhenotypePrioritization.bulk_delete(user, to_delete, parent='individual')
         _log_append_info(user, info, f'Deleted {deleted} existing {tool.upper()} records')
 
-    return all_records, info
+    return all_records, info, tool
 
 
 @data_manager_required
