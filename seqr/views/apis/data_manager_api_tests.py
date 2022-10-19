@@ -6,7 +6,7 @@ from requests import HTTPError
 import responses
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data
+    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers
 from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample
@@ -281,6 +281,21 @@ RNA_OUTLIER_SAMPLE_DATA = [f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIE
 RNA_TPM_SAMPLE_DATA = [f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n']
 RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00.json.gz'
 
+PHENOTYPE_PRIORITIZATION_HEADER = ['tool\tproject\tsampleId\trank\tgeneId\tdiseaseId\tdiseaseName\tscoreName1\tscore1\tscoreName2\tscore2\tscoreName3\tscore3']
+PHENOTYPE_PRIORITIZATION_MISS_HEADER = ['tool\tsampleId\trank\tgeneId\tdiseaseName\tscoreName1\tscore1\tscoreName2\tscore2\tscoreName3\tscore3']
+LIRICAL_NO_PROJECT_DATA = ['lirical']
+LIRICAL_NO_EXIST_INDV_DATA = [
+    'lirical\tCMG_Beggs_WGS\tNA19678\t1\tENSG00000105357\tOMIM:618460\tKhan-Khan-Katsanis syndrome\tpost_test_probability\t0\tcompositeLR\t0.066',
+    'lirical\tCMG_Beggs_WGS\tNA19679\t1\tENSG00000105357\tOMIM:618460\tKhan-Khan-Katsanis syndrome\tpost_test_probability\t0\tcompositeLR\t0.066',
+]
+LIRICAL_DATA = [
+    'lirical\t1kg project nåme with uniçøde\tNA19678\t1\tENSG00000105357\tOMIM:618460\tKhan-Khan-Katsanis syndrome\tpost_test_probability\t0\tcompositeLR\t0.066',
+    'lirical\t1kg project nåme with uniçøde\tNA19678\t2\tENSG00000105357\tOMIM:219800\t"Cystinosis, nephropathic"\tpost_test_probability\t0\tcompositeLR\t0.003\t\t',
+]
+EXOMISER_DATA = [
+    'exomiser\tCMG_Beggs_WGS\tBEG_1230-1_01\t1\tENSG00000105357\tORPHA:2131\tAlternating hemiplegia of childhood\texomiser_score\t0.977923765\tphenotype_score\t0.603998205\tvariant_score\t1',
+    'exomiser\tCMG_Beggs_WGS\tBEG_1230-1_01\t3\tENSG00000105357\tORPHA:71517\tRapid-onset dystonia-parkinsonism\texomiser_score\t0.977923765\tphenotype_score\t0.551578222\tvariant_score\t1'
+]
 
 class DataManagerAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -754,3 +769,36 @@ class DataManagerAPITest(AuthenticationTestCase):
                 )
 
                 self.assertListEqual(params['get_models_json'](models), params['expected_models_json'])
+
+    @mock.patch('seqr.views.utils.dataset_utils.file_iter')
+    @mock.patch('seqr.views.apis.data_manager_api.logger')
+    @mock.patch('seqr.models.logger')
+    def test_load_phenotype_prioritization_data(self, mock_model_logger, mock_logger, mock_file_iter):
+        url = reverse(load_phenotype_prioritization_data)
+        self.check_data_manager_login(url)
+
+        mock_file_iter.return_value = iter(PHENOTYPE_PRIORITIZATION_MISS_HEADER)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'Invalid file: missing column(s) project, diseaseId')
+        mock_logger.info.assert_called_with('Loading phenotype-based prioritization data from lirical_data.tsv.gz', self.data_manager_user)
+        mock_file_iter.assert_called_with('lirical_data.tsv.gz')
+
+        mock_file_iter.return_value = iter(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_PROJECT_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'Both sample ID and project fields are required.')
+
+        mock_file_iter.return_value = iter(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + EXOMISER_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'Multiple tools found lirical and exomiser. Only one in a file is supported.')
+
+        mock_file_iter.return_value = iter(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_EXIST_INDV_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'Can\'t find individuals NA19678, NA19679')
+
+        mock_file_iter.return_value = iter(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 200)

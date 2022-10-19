@@ -411,7 +411,7 @@ def _load_phenotype_prioritization(file_path, user):
 
         missing_individuals = set(records_by_sample.keys()) - set(existing_indivs_by_id.keys())
         if missing_individuals:
-            raise ValueError(f'Individual {", ".join(list(missing_individuals))} doesn\'t exist')
+            raise ValueError(f'Can\'t find individuals {", ".join(sorted(list(missing_individuals)))}')
         for sample_id, records in records_by_sample.items():
             for rec in records:
                 rec['individual'] = existing_indivs_by_id[sample_id]
