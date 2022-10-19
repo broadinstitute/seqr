@@ -11,6 +11,7 @@ DASHBOARD_PROJECT_FIELDS = {
     'numIndividuals', 'numFamilies', 'sampleTypeCounts', 'numVariantTags', 'analysisStatusCounts',
 }
 DASHBOARD_PROJECT_FIELDS.update(PROJECT_FIELDS)
+DASHBOARD_PROJECT_FIELDS.remove('canEdit')
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json')
 class DashboardPageTest(object):
@@ -76,7 +77,6 @@ class DashboardPageTest(object):
         self.assertEqual(response.status_code, 200)
         project_json = response.json()['projectsByGuid']
         self.assertSetEqual(set(project_json.keys()), {'R0003_test'})
-        self.assertFalse(project_json['R0003_test']['canEdit'])
         self.assertFalse(project_json['R0003_test']['isMmeEnabled'])
 
         if hasattr(self, 'mock_list_workspaces'):
@@ -101,11 +101,7 @@ def assert_has_list_workspaces_calls(self, call_count=5):
 
 def assert_has_anvil_calls(self):
     assert_has_list_workspaces_calls(self)
-    calls = [
-        mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-        mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-project 1000 Genomes Demo')
-    ]
-    self.mock_get_ws_access_level.assert_has_calls(calls, any_order=True)
+    self.mock_get_ws_access_level.assert_not_called()
     self.assert_no_extra_anvil_calls()
 
 

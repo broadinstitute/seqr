@@ -4,6 +4,7 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+export const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
@@ -74,6 +75,20 @@ export const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, d
         if (dispatchOnReceive) {
           dispatch({ type: dispatchType, updates: { [familyGuid]: false } })
         }
+      }).get()
+  }
+}
+
+export const loadProjectDetails = projectGuid => (dispatch, getState) => {
+  const project = getState().projectsByGuid[projectGuid]
+  if (!project || project.canEdit === undefined) {
+    dispatch({ type: REQUEST_PROJECT_DETAILS })
+    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
       }).get()
   }
 }

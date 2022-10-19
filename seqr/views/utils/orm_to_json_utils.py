@@ -136,7 +136,7 @@ def get_json_for_current_user(user):
     return user_json
 
 
-def get_json_for_projects(projects, user=None, is_analyst=None, add_project_category_guids_field=True):
+def get_json_for_projects(projects, user=None, is_analyst=None, add_project_category_guids_field=True, add_permissions=False):
     """Returns JSON representation of the given Projects.
 
     Args:
@@ -151,10 +151,11 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
                 project.projectcategory_set.values_list('guid', flat=True)
             ) if add_project_category_guids_field else [],
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
-            'canEdit': has_project_permissions(project, user, can_edit=True),
             'userIsCreator': project.created_by == user,
             'isAnalystProject': is_internal_anvil_project(project),
         })
+        if add_permissions:
+            result['canEdit'] = has_project_permissions(project, user, can_edit=True)
 
     prefetch_related_objects(projects, 'created_by')
     if add_project_category_guids_field:
@@ -172,7 +173,7 @@ def _get_json_for_project(project, user, **kwargs):
     Returns:
         dict: json object
     """
-    return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
+    return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, add_permissions=True, **kwargs)
 
 
 def _get_case_review_fields(model, has_case_review_perm, user, get_project):

@@ -44,7 +44,7 @@ class EsSearch(object):
             raise InvalidSearchException('No es index found for families {}'.format(
                 ', '.join([f.family_id for f in families])))
 
-        self._indices = sorted(list(self.samples_by_family_index.keys()))
+        self._set_indices(sorted(list(self.samples_by_family_index.keys())))
         self._set_index_metadata()
 
         if len(self.samples_by_family_index) > len(self.index_metadata):
@@ -107,6 +107,10 @@ class EsSearch(object):
     def _get_index_dataset_type(self, index):
         return self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
 
+    def _set_indices(self, indices):
+        self._indices = indices
+        self._set_index_name()
+
     def _set_index_name(self):
         self.index_name = ','.join(sorted(self._indices))
         if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
@@ -120,7 +124,6 @@ class EsSearch(object):
             self.index_name = alias
 
     def _set_index_metadata(self):
-        self._set_index_name()
         from seqr.utils.elasticsearch.utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
 
@@ -168,7 +171,7 @@ class EsSearch(object):
                 dataset_type = self._get_index_dataset_type(index)
                 self.indices_by_dataset_type[dataset_type].remove(index)
 
-        self._indices = sorted(list(self.samples_by_family_index.keys()))
+        self._set_indices(sorted(list(self.samples_by_family_index.keys())))
 
         if len(self._indices) < 1:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
@@ -180,7 +183,7 @@ class EsSearch(object):
         if keep_previous:
             indices = set(self._indices)
             indices.update(new_indices)
-            self._indices = list(indices)
+            update_indices = list(indices)
         else:
             if not new_indices:
                 error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
@@ -188,8 +191,9 @@ class EsSearch(object):
                 )
                 from seqr.utils.elasticsearch.utils import InvalidSearchException
                 raise InvalidSearchException(error)
-            self._indices = new_indices
-        self._set_index_name()
+            update_indices = new_indices
+
+        self._set_indices(update_indices)
         return self
 
     def _sort_variants(self):

@@ -218,14 +218,18 @@ def check_user_created_object_permissions(obj, user):
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
+def check_projects_view_permission(projects, user):
+    can_view = set(get_project_guids_user_can_view(user, limit_data_manager=False))
+    no_access_projects = {p.guid for p in projects} - can_view
+    if no_access_projects:
+        raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
+
+
 def check_multi_project_permissions(obj, user):
-    for project in obj.projects.all():
-        try:
-            check_project_permissions(project, user)
-            return
-        except PermissionDenied:
-            continue
-    raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
+    try:
+        check_projects_view_permission(obj.projects.all(), user)
+    except PermissionDenied:
+        raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
 
 
 def get_project_guids_user_can_view(user, limit_data_manager=True):
