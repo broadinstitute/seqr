@@ -9,7 +9,7 @@ from datetime import date
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.json_utils import _to_snake_case
+from seqr.views.utils.json_utils import _to_snake_case, _to_title_case
 from seqr.views.utils.permissions_utils import user_is_pm, get_pm_user_emails
 from seqr.models import Individual
 
@@ -19,7 +19,7 @@ logger = SeqrLogger(__name__)
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
-def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warnings=False):
+def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warnings=False, required_columns=None):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
@@ -98,7 +98,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         else:
             logger.info("Parsing regular pedigree file", user)
 
-        json_records = _convert_fam_file_rows_to_json(rows)
+        json_records = _convert_fam_file_rows_to_json(rows, required_columns=required_columns)
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
@@ -130,7 +130,7 @@ def _parse_affected(affected):
     return None
 
 
-def _convert_fam_file_rows_to_json(rows):
+def _convert_fam_file_rows_to_json(rows, required_columns=None):
     """Parse the values in rows and convert them to a json representation.
 
     Args:
@@ -163,10 +163,10 @@ def _convert_fam_file_rows_to_json(rows):
         json_record = _parse_row_dict(row_dict, i)
 
         # validate
-        if not json_record.get(JsonConstants.FAMILY_ID_COLUMN):
-            raise ValueError("Family Id not specified in row #%d:\n%s" % (i+1, json_record))
-        if not json_record.get(JsonConstants.INDIVIDUAL_ID_COLUMN):
-            raise ValueError("Individual Id not specified in row #%d:\n%s" % (i+1, json_record))
+        required_columns = (required_columns or []) + [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN]
+        missing_cols = [col for col in required_columns if not json_record.get(col)]
+        if missing_cols:
+            raise ValueError(f"{', '.join([_to_title_case(_to_snake_case(col)) for col in missing_cols])} not specified in row #{i + 1}")
 
         json_results.append(json_record)
 

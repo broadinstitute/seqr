@@ -27,8 +27,8 @@ class PedigreeInfoUtilsTest(object):
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                 ['', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertEqual(len(ec.exception.errors), 1)
-        self.assertEqual(ec.exception.errors[0].split('\n')[0],
-                         "Error while converting {} rows to json: Family Id not specified in row #1:".format(FILENAME))
+        self.assertEqual(ec.exception.errors[0],
+                         "Error while converting {} rows to json: Family Id, Individual Id not specified in row #1".format(FILENAME))
         self.assertListEqual(ec.exception.warnings, [])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
@@ -36,8 +36,8 @@ class PedigreeInfoUtilsTest(object):
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                  ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertEqual(len(ec.exception.errors), 1)
-        self.assertEqual(ec.exception.errors[0].split('\n')[0],
-                         "Error while converting {} rows to json: Individual Id not specified in row #1:".format(FILENAME))
+        self.assertEqual(ec.exception.errors[0],
+                         "Error while converting {} rows to json: Individual Id not specified in row #1".format(FILENAME))
         self.assertListEqual(ec.exception.warnings, [])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
