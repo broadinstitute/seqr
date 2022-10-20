@@ -278,7 +278,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     # use airflow api to trigger AnVIL dags
     trigger_success = _trigger_data_loading(project, data_path, sample_type, user)
     # Send a slack message to the slack channel
-    _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user)
+    _send_load_data_slack_msg(project, ids_path, data_path, len(updated_individuals), sample_type, user)
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
             'Requester Name': user.get_full_name(),
@@ -323,10 +323,10 @@ def _get_loading_project_path(project, sample_type):
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'
 
-def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
+def _send_load_data_slack_msg(project, ids_path, data_path, sample_count, sample_type, user):
     pipeline_dag = _construct_dag_variables(project, data_path, sample_type)
     message_content = """
-        *{user}* requested to load {sample_type} data ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
+        *{user}* requested to load {sample_count} {sample_type} samples ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
         {path} to seqr project <{project_url}|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to {ids_path}.  
@@ -342,6 +342,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         project_url=_get_seqr_project_url(project),
         guid=project.guid,
         project_name=project.name,
+        sample_count=sample_count,
         sample_type=sample_type,
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
         dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
