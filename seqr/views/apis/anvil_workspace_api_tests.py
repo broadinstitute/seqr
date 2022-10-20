@@ -18,7 +18,7 @@ LOAD_SAMPLE_DATA = [
      "Notes", "familyNotes"],
     ["1", "NA19675", "NA19675_1", "NA19678", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", "HG00735", "", "", "", "Female", "Unaffected", "", "a new family"]]
+    ["21", "HG00735", "", "", "", "", "", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
 

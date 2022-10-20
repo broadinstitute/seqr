@@ -68,7 +68,8 @@ def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immu
             raise ValueError('Cannot edit field {}'.format(orm_key))
         if allow_unknown_keys and not hasattr(model_obj, orm_key):
             continue
-        if getattr(model_obj, orm_key) != value:
+        model_value = getattr(model_obj, orm_key)
+        if (model_value or value) and model_value != value:
             if orm_key in internal_fields and not user_is_analyst(user):
                 raise PermissionDenied('User {0} is not authorized to edit the internal field {1}'.format(user, orm_key))
             updated_fields.add(orm_key)
