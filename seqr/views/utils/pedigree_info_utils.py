@@ -163,8 +163,10 @@ def _convert_fam_file_rows_to_json(rows, required_columns=None):
         json_record = _parse_row_dict(row_dict, i)
 
         # validate
-        required_columns = (required_columns or []) + [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN]
-        missing_cols = [col for col in required_columns if not json_record.get(col)]
+        columns = [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN]
+        if required_columns:
+            columns += required_columns
+        missing_cols = [col for col in columns if not json_record.get(col)]
         if missing_cols:
             raise ValueError(f"{', '.join([_to_title_case(_to_snake_case(col)) for col in missing_cols])} not specified in row #{i + 1}")
 
