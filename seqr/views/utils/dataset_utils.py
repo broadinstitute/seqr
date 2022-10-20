@@ -483,9 +483,9 @@ def load_phenotype_prioritization_data_file(file_path):
             if not sample_id or not project:
                 raise ValueError('Both sample ID and project fields are required.')
             data_by_project_sample_id[project][sample_id].append(row_dict)
-            if tool and tool != row_dict['tool']:
-                raise ValueError(f'Multiple tools found {tool} and {row_dict["tool"]}. Only one in a file is supported.')
             if not tool:
                 tool = row_dict['tool']
+            elif tool != row_dict['tool']:
+                raise ValueError(f'Multiple tools found {tool} and {row_dict["tool"]}. Only one in a file is supported.')
 
     return tool, data_by_project_sample_id
