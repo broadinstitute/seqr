@@ -881,5 +881,5 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing'])
-    def test_load_phenotype_prioritization_data(self):
-        super(AnvilDataManagerAPITest, self).test_load_phenotype_prioritization_data()
+    def test_load_phenotype_prioritization_data(self, *args):
+        super(AnvilDataManagerAPITest, self).test_load_phenotype_prioritization_data(*args)
