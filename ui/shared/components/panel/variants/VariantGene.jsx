@@ -18,7 +18,7 @@ import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
 import { GenCC, ClingenLabel } from '../genes/GeneDetail'
-import { getRnaSeqOutilerDataByFamilyGene, getPhePriDataByFamilyGene } from './selectors'
+import { getSampleGeneDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -623,10 +623,7 @@ BaseVariantGene.propTypes = {
 
 const getRnaSeqProps = (state, ownProps) => ({
   hasRnaTpmData: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.hasRnaTpmData,
-  sampleGeneData: {
-    rnaSeqData: getRnaSeqOutilerDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
-    phePriData: getPhePriDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
-  },
+  sampleGeneData: getSampleGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]] || {},
 })
 
 const mapStateToProps = (state, ownProps) => ({

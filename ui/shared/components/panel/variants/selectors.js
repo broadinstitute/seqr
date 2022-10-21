@@ -18,48 +18,48 @@ import {
 } from 'redux/selectors'
 
 const RNA_SEQ_SCORE_FIELDS = ['zScore', 'pValue', 'pAdjust']
-export const getRnaSeqOutilerDataByFamilyGene = createSelector(
+export const getSampleGeneDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
-  (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
-    (acc, [individualGuid, rnaSeqData]) => {
-      const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
-        (acc2, [geneId, data]) => (data.isSignificant ?
-          {
-            ...acc2,
-            [geneId]: {
-              ...(acc2[geneId] || {}),
-              [displayName]: [{
-                scores: RNA_SEQ_SCORE_FIELDS.reduce(
-                  (sAcc, score) => (data[score] ? { ...sAcc, [score]: data[score] } : sAcc), {},
-                ),
-              }],
-            },
-          } : acc2
-        ), acc[familyGuid] || {},
-      )
-      return acc
-    }, {},
-  ),
-)
-
-export const getPhePriDataByFamilyGene = createSelector(
-  getIndividualsByGuid,
   getPhePriDataByIndividual,
-  (individualsByGuid, phePriDataByIndividual) => Object.entries(phePriDataByIndividual || {}).reduce(
-    (acc, [individualGuid, phePriData]) => {
-      const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(phePriData).reduce((accTool, [tool, toolData]) => ({
-        ...accTool,
-        [tool]: Object.entries(toolData).reduce((acc2, [geneId, data]) => ({
-          ...acc2,
-          [geneId]: { ...(acc2[geneId] || {}), [displayName]: data },
-        }), {}),
-      }), acc[familyGuid] || {})
-      return acc
-    }, {},
-  ),
+  (individualsByGuid, rnaSeqDataByIndividual, phePriDataByIndividual) => {
+    const rnaSeqD = Object.entries(rnaSeqDataByIndividual).reduce(
+      (acc, [individualGuid, rnaSeqData]) => {
+        const { familyGuid, displayName } = individualsByGuid[individualGuid]
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData.outliers || {}).reduce(
+          (acc2, [geneId, data]) => (data.isSignificant ?
+            {
+              ...acc2,
+              [geneId]: {
+                ...(acc2[geneId] || {}),
+                [displayName]: [{
+                  scores: RNA_SEQ_SCORE_FIELDS.reduce(
+                    (sAcc, score) => (data[score] ? { ...sAcc, [score]: data[score] } : sAcc), {},
+                  ),
+                }],
+              },
+            } : acc2
+          ), acc[familyGuid].rnaSeqData || {},
+        )
+        return acc
+      }, {},
+    )
+    return Object.entries(phePriDataByIndividual || {}).reduce(
+      (acc, [individualGuid, phePriData]) => {
+        const { familyGuid, displayName } = individualsByGuid[individualGuid]
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].phePriData = Object.entries(phePriData).reduce((accTool, [tool, toolData]) => ({
+          ...accTool,
+          [tool]: Object.entries(toolData).reduce((acc2, [geneId, data]) => ({
+            ...acc2,
+            [geneId]: { ...(acc2[geneId] || {}), [displayName]: data },
+          }), {}),
+        }), acc[familyGuid].phePriData || {})
+        return acc
+      }, rnaSeqD,
+    )
+  },
 )
 
 // Saved variant selectors
