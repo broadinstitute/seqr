@@ -101,6 +101,7 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
             individual = create_model_from_json(
                 Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
             updated_families.add(family)
+            updated_individuals.add(individual)
             individual_lookup[individual_id][family] = individual
 
     record['family'] = family
