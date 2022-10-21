@@ -453,7 +453,7 @@ MAX_SCORES = 100
 
 
 def _parse_phenotype_pri_row(row):
-    record = {_to_snake_case(key): row[key] for key in PHENOTYPE_PRIORITIZATION_HEADER}
+    record = {_to_snake_case(key): row.get(key) for key in PHENOTYPE_PRIORITIZATION_HEADER}
 
     scores = {}
     for i in range(1, MAX_SCORES):
@@ -463,7 +463,7 @@ def _parse_phenotype_pri_row(row):
         scores[score_name] = float(row[f'score{i}'])
     record['scores'] = scores
 
-    yield record['sample_id'], record
+    yield record
 
 
 def load_phenotype_prioritization_data_file(file_path):
@@ -477,15 +477,15 @@ def load_phenotype_prioritization_data_file(file_path):
     tool = None
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
-        for sample_id, row_dict in _parse_phenotype_pri_row(row):
-            row_dict.pop('sample_id')
+        for row_dict in _parse_phenotype_pri_row(row):
+            sample_id = row_dict.pop('sample_id', None)
             project = row_dict.pop('project', None)
             if not sample_id or not project:
                 raise ValueError('Both sample ID and project fields are required.')
             data_by_project_sample_id[project][sample_id].append(row_dict)
-            if tool and tool != row_dict['tool']:
-                raise ValueError(f'Multiple tools found {tool} and {row_dict["tool"]}. Only one is supported.')
             if not tool:
                 tool = row_dict['tool']
+            elif tool != row_dict['tool']:
+                raise ValueError(f'Multiple tools found {tool} and {row_dict["tool"]}. Only one in a file is supported.')
 
     return tool, data_by_project_sample_id

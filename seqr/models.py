@@ -7,13 +7,13 @@ from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
+from django.db.models import base, options, ForeignKey, JSONField
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
+from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger, log_model_no_guid_bulk_update
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
@@ -1014,22 +1014,20 @@ class VariantSearchResults(ModelWithGUID):
 
 class BulkOperationBase:
     @classmethod
-    def bulk_create(cls, user, new_models, parent=None):
+    def bulk_create(cls, user, new_models):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
         models = cls.objects.bulk_create(new_models)
-        log_model_bulk_update(logger, models, user, 'create', parent=parent)
+        log_model_no_guid_bulk_update(logger, models, user, 'create')
         return models
 
     @classmethod
-    def bulk_delete(cls, user, queryset=None, parent=None, **filter_kwargs):
+    def bulk_delete(cls, user, queryset=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
-        if parent:
-            prefetch_related_objects(queryset, parent)
-        log_model_bulk_update(logger, queryset, user, 'delete', parent=parent)
+        log_model_no_guid_bulk_update(logger, queryset, user, 'delete')
         return queryset.delete()
 
     class Meta:
