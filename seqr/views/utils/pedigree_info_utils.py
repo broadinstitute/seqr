@@ -196,11 +196,14 @@ def _parse_row_dict(row_dict, i):
 
         if column:
             format_func = JsonConstants.FORMAT_COLUMNS.get(column)
-            if format_func and (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
-                parsed_value = format_func(value)
-                if parsed_value is None and column not in JsonConstants.JSON_COLUMNS:
-                    raise ValueError(f'Invalid value "{value}" for {_to_snake_case(column)} in row #{i + 1}')
-                value = parsed_value
+            if format_func:
+                if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
+                    parsed_value = format_func(value)
+                    if parsed_value is None and column not in JsonConstants.JSON_COLUMNS:
+                        raise ValueError(f'Invalid value "{value}" for {_to_snake_case(column)} in row #{i + 1}')
+                    value = parsed_value
+            elif value == '':
+                value = None
             json_record[column] = value
     return json_record
 
