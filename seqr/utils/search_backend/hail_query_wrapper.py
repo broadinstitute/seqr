@@ -892,12 +892,11 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update({k: _annotation_for_sv_type(k) for k in ['end', 'pos']})
     CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
-    #
-    # COMPUTED_ANNOTATION_FIELDS = {
-    #     k: lambda self, r: hl.if_else(_is_gcnv_variant(r), v(self, r), r[k])
-    #     for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
-    # }
-    COMPUTED_ANNOTATION_FIELDS = {}
+
+    COMPUTED_ANNOTATION_FIELDS = {
+        k: lambda self, r: hl.or_else(v(self, r), r[k])
+        for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
+    }
 
     @property
     def sv_populations(self):
