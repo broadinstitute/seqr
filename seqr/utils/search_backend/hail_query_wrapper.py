@@ -872,6 +872,8 @@ QUERY_CLASS_MAP = {
     SV_KEY: SvHailTableQuery,
 }
 
+DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_type, cls in QUERY_CLASS_MAP.items()}
+
 
 class MultiDataTypeHailTableQuery(object):
 
@@ -881,7 +883,7 @@ class MultiDataTypeHailTableQuery(object):
     def population_expression(self, r, population, pop_config):
         data_type = self._get_row_data_type(r)
         return hl.or_missing(
-            hl.set(set(hl.dict(QUERY_CLASS_MAP)[data_type].POPULATIONS.keys())).contains(population),
+            hl.dict(DATA_TYPE_POPULATIONS_MAP)[data_type].contains(population),
             super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
