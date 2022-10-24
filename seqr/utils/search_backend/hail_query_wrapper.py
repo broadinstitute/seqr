@@ -874,7 +874,7 @@ def _annotation_for_data_type(field):
 
 class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle all? or have special cases for gcnv vs SV
 
-    GENOTYPE_QUERY_MAP = GcnvHailTableQuery.GENOTYPE_QUERY_MAP
+    GENOTYPE_QUERY_MAP = BaseSvHailTableQuery.GENOTYPE_QUERY_MAP
 
     GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
@@ -882,7 +882,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
     POPULATIONS = deepcopy(VariantHailTableQuery.POPULATIONS)
     POPULATIONS.update(GcnvHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
-    PREDICTION_FIELDS_CONFIG.update(GcnvHailTableQuery.PREDICTION_FIELDS_CONFIG)
+    PREDICTION_FIELDS_CONFIG.update(BaseSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + GcnvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
     BASE_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.BASE_ANNOTATION_FIELDS)
@@ -986,7 +986,7 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
     def get_x_chrom_filter(mt, x_interval):
         return hl.if_else(
             hl.is_defined(mt.svType),
-            GcnvHailTableQuery.get_x_chrom_filter(mt, x_interval),
+            BaseSvHailTableQuery.get_x_chrom_filter(mt, x_interval),
             VariantHailTableQuery.get_x_chrom_filter(mt, x_interval),
         )
 
