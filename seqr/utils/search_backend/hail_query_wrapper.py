@@ -912,7 +912,7 @@ class MultiDataTypeHailTableQuery(object):
         sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
         if not self._sample_ids_by_dataset_type:
             return sample_filter
-        return sample_filter & hl.set(self._sample_ids_by_dataset_type[self._get_row_data_type(mt)]).contains(mt.s)
+        return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self._get_row_data_type(mt)].contains(mt.s)
 
     # TODO
     # @staticmethod
