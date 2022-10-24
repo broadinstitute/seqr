@@ -808,10 +808,13 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     })
     COMPUTED_ANNOTATION_FIELDS = {
         'transcripts': lambda self, r: hl.if_else(
-            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
-                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-                r.genotypes.values().flatmap(lambda g: g.geneIds)
-            ),
+            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.or_else(
+                hl.bind(
+                    lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
+                    r.genotypes.values().flatmap(lambda g: g.geneIds)
+                ),
+                r.transcripts
+            )
         )
     }
     INITIAL_ENTRY_ANNOTATIONS = {
