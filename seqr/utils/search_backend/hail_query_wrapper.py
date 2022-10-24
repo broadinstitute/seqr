@@ -876,9 +876,9 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
     POPULATIONS = deepcopy(GcnvHailTableQuery.POPULATIONS)
     POPULATIONS.update(SvHailTableQuery.POPULATIONS)
 
-    CORE_FIELDS = SvHailTableQuery.CORE_FIELDS
     BASE_ANNOTATION_FIELDS = deepcopy(SvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
+    CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
 
     @property
     def sv_populations(self):
