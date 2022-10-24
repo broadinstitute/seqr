@@ -27,6 +27,14 @@ COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
 INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
 
+GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
+SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
+QUERY_CLASS_MAP = {
+    VARIANT_DATASET: VariantHailTableQuery,
+    GCNV_KEY: GcnvHailTableQuery,
+    SV_KEY: SvHailTableQuery,
+}
+
 
 class BaseHailTableQuery(object):
 
@@ -864,8 +872,46 @@ class SvHailTableQuery(BaseSvHailTableQuery):
         return super(SvHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
 
 
-GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
-SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
+class MultiDataTypeHailTableQuery(object):
+
+    def _get_row_data_type(self, r):
+        raise NotImplementedError
+
+    def population_expression(self, r, population, pop_config):
+        data_type = self._get_row_data_type(r)
+        return hl.or_missing(
+            hl.set(set(QUERY_CLASS_MAP[data_type].POPULATIONS.keys())).contains(population),
+            super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
+        )
+
+    def _save_samples(self, samples):
+        self._individuals_by_sample_id = {}
+        for data_type_samples in samples.values():
+            for s in data_type_samples:
+                self._individuals_by_sample_id[s.sample_id] = s.individual
+
+        self._sample_ids_by_dataset_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
+        sample_sets = list(self._sample_ids_by_dataset_type.values())
+        if all(sample_set == sample_sets[0] for sample_set in sample_sets[1:]):
+            self._sample_ids_by_dataset_type = None
+
+    def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
+        if not self._sample_ids_by_dataset_type:
+            return super(MultiDataTypeHailTableQuery, self)._get_family_samples_map(mt, sample_ids, family_samples_filter)
+
+        data_type_maps = hl.dict({
+            data_type: super(MultiDataTypeHailTableQuery, self)._get_family_samples_map(
+                mt, data_sample_ids.intersection(sample_ids), family_samples_filter)
+            for data_type, data_sample_ids in self._sample_ids_by_dataset_type.items()
+        })
+
+        return data_type_maps[self._get_row_data_type(mt)]
+
+    def _matched_family_sample_filter(self, mt, sample_family_map):
+        sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
+        if not self._sample_ids_by_dataset_type:
+            return sample_filter
+        return sample_filter & hl.set(self._sample_ids_by_dataset_type[self._get_row_data_type(mt)]).contains(mt.s)
 
 
 def _is_gcnv_variant(r):
@@ -897,6 +943,9 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
         k: lambda self, r: hl.or_else(v(self, r), r[k])
         for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
     }
+
+    def _get_row_data_type(self, r):
+        return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
 
     @property
     def sv_populations(self):
@@ -966,12 +1015,13 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
         if not self._sample_ids_by_dataset_type:
             return super(AllSvHailTableQuery, self)._get_family_samples_map(mt, sample_ids, family_samples_filter)
 
-        gcnv_samples_map = super(AllSvHailTableQuery, self)._get_family_samples_map(
-            mt, self._sample_ids_by_dataset_type[GCNV_KEY].intersection(sample_ids), family_samples_filter)
-        sv_samples_map = super(AllSvHailTableQuery, self)._get_family_samples_map(
-            mt, self._sample_ids_by_dataset_type[SV_KEY].intersection(sample_ids), family_samples_filter)
+        data_type_maps = hl.dict({
+            data_type: super(AllSvHailTableQuery, self)._get_family_samples_map(
+                mt, data_sample_ids.intersection(sample_ids), family_samples_filter)
+            for data_type, data_sample_ids in self._sample_ids_by_dataset_type.items()
+        })
 
-        return hl.if_else(_is_gcnv_variant(mt), gcnv_samples_map, sv_samples_map)
+        return data_type_maps[self._get_row_data_type(mt)]
 
     def _matched_family_sample_filter(self, mt, sample_family_map):
         sample_filter = super(AllSvHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)

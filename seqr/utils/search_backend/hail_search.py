@@ -5,18 +5,13 @@ from seqr.models import Sample
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD
 from seqr.utils.elasticsearch.es_search import EsSearch
-from seqr.utils.search_backend.hail_query_wrapper import STRUCTURAL_ANNOTATION_FIELD, \
-    VariantHailTableQuery, GcnvHailTableQuery, SvHailTableQuery, AllSvHailTableQuery, AllDataTypeHailTableQuery
+from seqr.utils.search_backend.hail_query_wrapper import QUERY_CLASS_MAP, STRUCTURAL_ANNOTATION_FIELD, \
+    AllSvHailTableQuery, AllDataTypeHailTableQuery
 
 logger = logging.getLogger(__name__)
 
 SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD}
 
-QUERY_CLASS_MAP = {
-    Sample.DATASET_TYPE_VARIANT_CALLS: VariantHailTableQuery,
-    f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': GcnvHailTableQuery,
-    f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': SvHailTableQuery,
-}
 
 class HailSearch(object):
 
