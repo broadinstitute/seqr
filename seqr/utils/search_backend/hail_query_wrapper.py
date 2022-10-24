@@ -908,7 +908,7 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
         gcnv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs).annotate(
-            isGcnv=True
+            isGcnv=True # TODO find better way to distinguish
         )
         sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs)
 
@@ -933,11 +933,13 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
                 ht.sortedTranscriptConsequences_1.map(
                     lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)),  # TODO only export desired fields for sv ht
             ),
+            **{k: hl.or_else(ht[k], ht[f'{k}_1'])
+               for k in ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sv_callset']},
             **{sample_id: hl.or_else(
-                add_missing_gcnv_entries(ht[sample_id]), add_missing_sv_entries(ht[f'{sample_id}_1'])
+                add_missing_sv_entries(ht[sample_id]), add_missing_gcnv_entries(ht[f'{sample_id}_1'])
             ) for sample_id in shared_sample_ids},
-            **{sample_id: add_missing_gcnv_entries(ht[sample_id]) for sample_id in gcnv_sample_ids - sv_sample_ids},
-            **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in sv_sample_ids - gcnv_sample_ids},
+            **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in gcnv_sample_ids - sv_sample_ids},
+            **{sample_id: add_missing_gcnv_entries(ht[sample_id]) for sample_id in sv_sample_ids - gcnv_sample_ids},
         )
 
     def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
