@@ -894,7 +894,7 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
     def population_expression(self, r, population, pop_config):
         return hl.or_missing(
             hl.if_else(_is_gcnv_variant(r), self.gcnv_populations, self.sv_populations).contains(population),
-            super(GcnvHailTableQuery, self).population_expression(r, population, pop_config),
+            super(AllSvHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
     def _save_samples(self, samples):
