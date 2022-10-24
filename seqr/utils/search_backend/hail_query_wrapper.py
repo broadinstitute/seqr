@@ -748,7 +748,8 @@ def _no_genotype_override(genotypes, field):
 
 def _get_genotype_override_field(genotypes, default, field, agg):
     return hl.if_else(
-        _no_genotype_override(genotypes, field), default, agg(genotypes.values().map(lambda g: g[field]))
+        _no_genotype_override(genotypes, field), default,
+        hl.or_else(agg(genotypes.values().map(lambda g: g[field])), default)
     )
 
 
