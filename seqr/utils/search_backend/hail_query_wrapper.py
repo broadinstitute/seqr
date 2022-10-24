@@ -921,11 +921,11 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
         entry_fields = ['GT', *AllSvHailTableQuery.GENOTYPE_FIELDS.values()]
         add_missing_sv_entries = lambda sample: sample.annotate(
-            **{k: hl.missing(sv_entry_types[k]) for k in SvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
-        add_missing_gcnv_entries = lambda sample: sample.annotate(
-            **{k: hl.missing(gcnv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()},
+            **{k: hl.missing(sv_entry_types[k]) for k in SvHailTableQuery.GENOTYPE_FIELDS.values()},
             CN=sample.cn,  # TODO fix cn case for gcnv ht
         ).select(*entry_fields)
+        add_missing_gcnv_entries = lambda sample: sample.annotate(
+            **{k: hl.missing(gcnv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
         return ht.transmute(
             sv_callset=hl.or_else(
                 ht.sv_callset.annotate(Het=hl.missing(hl.dtype('int32')), Hom=hl.missing(hl.dtype('int32'))),
