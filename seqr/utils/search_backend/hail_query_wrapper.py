@@ -881,7 +881,7 @@ class MultiDataTypeHailTableQuery(object):
     def population_expression(self, r, population, pop_config):
         data_type = self._get_row_data_type(r)
         return hl.or_missing(
-            hl.set(set(QUERY_CLASS_MAP[data_type].POPULATIONS.keys())).contains(population),
+            hl.set(set(hl.dict(QUERY_CLASS_MAP)[data_type].POPULATIONS.keys())).contains(population),
             super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
