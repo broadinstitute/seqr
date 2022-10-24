@@ -893,7 +893,7 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
 
     def population_expression(self, r, population, pop_config):
         return hl.or_missing(
-            hl.if_else(_is_gcnv_variant(r), self.gcnv_populations, self.sv_populations).contains(population),
+            hl.if_else(self._is_gcnv_variant(r), self.gcnv_populations, self.sv_populations).contains(population),
             super(AllSvHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
@@ -958,14 +958,14 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
         sv_samples_map = super(AllSvHailTableQuery, self)._get_family_samples_map(
             mt, self._sample_ids_by_dataset_type[SV_KEY].intersection(sample_ids), family_samples_filter)
 
-        return hl.if_else(_is_gcnv_variant(mt), gcnv_samples_map, sv_samples_map)
+        return hl.if_else(self._is_gcnv_variant(mt), gcnv_samples_map, sv_samples_map)
 
     def _matched_family_sample_filter(self, mt, sample_family_map):
         sample_filter = super(AllSvHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
         if not self._sample_ids_by_dataset_type:
             return sample_filter
         return sample_filter & hl.if_else(
-            _is_gcnv_variant(mt),
+            self._is_gcnv_variant(mt),
             hl.set(self._sample_ids_by_dataset_type[GCNV_KEY]).contains(mt.s),
             hl.set(self._sample_ids_by_dataset_type[SV_KEY]).contains(mt.s),
         )
