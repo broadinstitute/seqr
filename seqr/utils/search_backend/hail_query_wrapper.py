@@ -871,7 +871,6 @@ SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
 class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTypeHailTableQuery
 
     GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
-    # TODO cn case mismatch?
     GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
 
     POPULATIONS = deepcopy(GcnvHailTableQuery.POPULATIONS)
@@ -920,11 +919,13 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
         shared_sample_ids = gcnv_sample_ids.intersection(sv_sample_ids)
         gcnv_entry_types = ht[list(gcnv_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
-        entry_fields = ['GT', *SvHailTableQuery.GENOTYPE_FIELDS.values(), *GcnvHailTableQuery.GENOTYPE_FIELDS.values()]
+        entry_fields = ['GT', *GENOTYPE_FIELDS.values()]
         add_missing_sv_entries = lambda sample: sample.annotate(
             **{k: hl.missing(sv_entry_types[k]) for k in SvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
         add_missing_gcnv_entries = lambda sample: sample.annotate(
-            **{k: hl.missing(gcnv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
+            **{k: hl.missing(gcnv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()},
+            CN=sample.cn,  # TODO fix cn case for gcnv ht
+        ).select(*entry_fields)
         return ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
             sortedTranscriptConsequences=hl.or_else(
