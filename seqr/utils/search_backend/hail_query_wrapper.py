@@ -877,11 +877,12 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 
 class MultiDataTypeHailTableQuery(object):
 
-    def _get_row_data_type(self, r):
+    @staticmethod
+    def get_row_data_type(r):
         raise NotImplementedError
 
     def population_expression(self, r, population, pop_config):
-        data_type = self._get_row_data_type(r)
+        data_type = self.get_row_data_type(r)
         return hl.or_missing(
             hl.dict(DATA_TYPE_POPULATIONS_MAP)[data_type].contains(population),
             super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
@@ -908,13 +909,13 @@ class MultiDataTypeHailTableQuery(object):
             for data_type, data_sample_ids in self._sample_ids_by_dataset_type.items()
         })
 
-        return data_type_maps[self._get_row_data_type(mt)]
+        return data_type_maps[self.get_row_data_type(mt)]
 
     def _matched_family_sample_filter(self, mt, sample_family_map):
         sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
         if not self._sample_ids_by_dataset_type:
             return sample_filter
-        return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self._get_row_data_type(mt)].contains(mt.s)
+        return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)].contains(mt.s)
 
     # TODO
     # @staticmethod
@@ -951,7 +952,8 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
         for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
     }
 
-    def _get_row_data_type(self, r):
+    @staticmethod
+    def get_row_data_type(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
 
     @staticmethod
@@ -1003,7 +1005,7 @@ def _annotation_for_data_type(field):
     )
 
 
-class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle all? or have special cases for gcnv vs SV
+class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
 
     GENOTYPE_QUERY_MAP = BaseSvHailTableQuery.GENOTYPE_QUERY_MAP
 
@@ -1026,32 +1028,13 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
         'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
     }
 
-    @property
-    def snp_populations(self):
-        return hl.set(set(VariantHailTableQuery.POPULATIONS.keys()))
-
-    @property
-    def sv_populations(self):
-        return hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
-
-    def population_expression(self, r, population, pop_config):
-        return hl.or_missing(
-            hl.if_else(hl.is_defined(r.svType), self.sv_populations, self.snp_populations).contains(population),
-            super(AllDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
+    @staticmethod
+    def get_row_data_type(r):
+        return hl.if_else(
+            hl.is_defined(r.svType),
+            AllSvHailTableQuery.get_row_data_type(r),
+            VARIANT_DATASET,
         )
-
-    def _save_samples(self, samples):
-        self._individuals_by_sample_id = {}
-        for data_type_samples in samples.values():
-            for s in data_type_samples:
-                self._individuals_by_sample_id[s.sample_id] = s.individual
-
-        # TODO work with WGS SVs
-        self._sample_ids_by_dataset_type = {
-            SV_DATASET if k.startswith(SV_DATASET) else k: {s.sample_id for s in v} for k, v in samples.items()
-        }
-        if self._sample_ids_by_dataset_type[VARIANT_DATASET] == self._sample_ids_by_dataset_type[SV_DATASET]:
-            self._sample_ids_by_dataset_type = None
 
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
@@ -1089,27 +1072,6 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
             ) for sample_id in shared_sample_ids},
             **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in variant_sample_ids - sv_sample_ids},
             **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
-        )
-
-    def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
-        if not self._sample_ids_by_dataset_type:
-            return super(AllDataTypeHailTableQuery, self)._get_family_samples_map(mt, sample_ids, family_samples_filter)
-
-        snp_samples_map = super(AllDataTypeHailTableQuery, self)._get_family_samples_map(
-            mt, self._sample_ids_by_dataset_type[VARIANT_DATASET].intersection(sample_ids), family_samples_filter)
-        sv_samples_map = super(AllDataTypeHailTableQuery, self)._get_family_samples_map(
-            mt, self._sample_ids_by_dataset_type[SV_DATASET].intersection(sample_ids), family_samples_filter)
-
-        return hl.if_else(hl.is_defined(mt.svType), sv_samples_map, snp_samples_map)
-
-    def _matched_family_sample_filter(self, mt, sample_family_map):
-        sample_filter = super(AllDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
-        if not self._sample_ids_by_dataset_type:
-            return sample_filter
-        return sample_filter & hl.if_else(
-            hl.is_defined(mt.svType),
-            hl.set(self._sample_ids_by_dataset_type[SV_DATASET]).contains(mt.s),
-            hl.set(self._sample_ids_by_dataset_type[VARIANT_DATASET]).contains(mt.s),
         )
 
     @staticmethod
