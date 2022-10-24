@@ -927,14 +927,17 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
             CN=sample.cn,  # TODO fix cn case for gcnv ht
         ).select(*entry_fields)
         return ht.transmute(
-            rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
+            sv_callset=hl.or_else(
+                ht.sv_callset.annotate(Het=hl.missing(hl.dtype('int32')), Hom=hl.missing(hl.dtype('int32'))),
+                ht.sv_callset_1,
+            ),
             sortedTranscriptConsequences=hl.or_else(
                 hl.array(ht.sortedTranscriptConsequences),  # TODO export consequences as array for gcnv ht
                 ht.sortedTranscriptConsequences_1.map(
                     lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)),  # TODO only export desired fields for sv ht
             ),
             **{k: hl.or_else(ht[k], ht[f'{k}_1'])
-               for k in ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sv_callset']},
+               for k in ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']},
             **{sample_id: hl.or_else(
                 add_missing_sv_entries(ht[sample_id]), add_missing_gcnv_entries(ht[f'{sample_id}_1'])
             ) for sample_id in shared_sample_ids},
