@@ -24,7 +24,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families, get_updated_pedigree_json
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, mv_file_to_gs, get_gs_file_list
@@ -245,7 +245,10 @@ def add_workspace_data(request, project_guid):
 def _parse_uploaded_pedigree(request_json, user):
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=user, fail_on_warnings=True)
+    pedigree_records, _ = parse_pedigree_table(
+        json_records, 'uploaded pedigree file', user=user, fail_on_warnings=True, required_columns=[
+            JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
+        ])
 
     missing_samples = [record['individualId'] for record in pedigree_records
                        if record['individualId'] not in request_json['vcfSamples']]
@@ -278,7 +281,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     # use airflow api to trigger AnVIL dags
     trigger_success = _trigger_data_loading(project, data_path, sample_type, user)
     # Send a slack message to the slack channel
-    _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user)
+    _send_load_data_slack_msg(project, ids_path, data_path, len(updated_individuals), sample_type, user)
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
             'Requester Name': user.get_full_name(),
@@ -323,10 +326,10 @@ def _get_loading_project_path(project, sample_type):
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'
 
-def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
+def _send_load_data_slack_msg(project, ids_path, data_path, sample_count, sample_type, user):
     pipeline_dag = _construct_dag_variables(project, data_path, sample_type)
     message_content = """
-        *{user}* requested to load {sample_type} data ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
+        *{user}* requested to load {sample_count} {sample_type} samples ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
         {path} to seqr project <{project_url}|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to {ids_path}.  
@@ -342,6 +345,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         project_url=_get_seqr_project_url(project),
         guid=project.guid,
         project_name=project.name,
+        sample_count=sample_count,
         sample_type=sample_type,
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
         dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),

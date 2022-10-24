@@ -27,8 +27,8 @@ class PedigreeInfoUtilsTest(object):
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                 ['', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertEqual(len(ec.exception.errors), 1)
-        self.assertEqual(ec.exception.errors[0].split('\n')[0],
-                         "Error while converting {} rows to json: Family Id not specified in row #1:".format(FILENAME))
+        self.assertEqual(ec.exception.errors[0],
+                         "Error while converting {} rows to json: Family Id, Individual Id not specified in row #1".format(FILENAME))
         self.assertListEqual(ec.exception.warnings, [])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
@@ -36,8 +36,8 @@ class PedigreeInfoUtilsTest(object):
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                  ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertEqual(len(ec.exception.errors), 1)
-        self.assertEqual(ec.exception.errors[0].split('\n')[0],
-                         "Error while converting {} rows to json: Individual Id not specified in row #1:".format(FILENAME))
+        self.assertEqual(ec.exception.errors[0],
+                         "Error while converting {} rows to json: Individual Id not specified in row #1".format(FILENAME))
         self.assertListEqual(ec.exception.warnings, [])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
@@ -88,8 +88,8 @@ class PedigreeInfoUtilsTest(object):
              'maternalId': 'ind2', 'notes': 'some notes', 'codedPhenotype': 'HPO:12345', 'probandRelationship': '',
              'previousIndividualId': 'ind1_old_id'},
             {'familyId': 'fam1', 'individualId': 'ind2', 'sex': 'F', 'affected': 'N', 'paternalId': '',
-             'maternalId': 'ind3', 'notes': '', 'codedPhenotype': 'HPO:56789', 'probandRelationship': 'M',
-             'previousIndividualId': ''},
+             'maternalId': 'ind3', 'notes': None, 'codedPhenotype': 'HPO:56789', 'probandRelationship': 'M',
+             'previousIndividualId': None},
         ])
         self.assertListEqual(warnings, no_error_warnings)
 
@@ -180,9 +180,9 @@ class PedigreeInfoUtilsTest(object):
         records, warnings = parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
-             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': '',
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': None,
              'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,},
-            {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': '', 'individualId': 'SCO_PED073C_GA0340_1',
+            {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': None, 'individualId': 'SCO_PED073C_GA0340_1',
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
              'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
              }])
