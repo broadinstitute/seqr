@@ -869,7 +869,7 @@ SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
 
 
 def _is_gcnv_variant(r):
-    return r.isGcnv  # TODO find better way to distinguish
+    return r.svTyoe.startswith('gCNV_')
 
 
 def _annotation_for_sv_type(field):
@@ -926,9 +926,7 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
 
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
-        gcnv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs).annotate(
-            isGcnv=True # TODO find better way to distinguish
-        )
+        gcnv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs)
         sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs)
 
         ht = gcnv_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
