@@ -869,7 +869,7 @@ SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
 
 
 def _is_gcnv_variant(r):
-    return r.svTyoe.startswith('gCNV_')
+    return r.svType.startswith('gCNV_')
 
 
 def _annotation_for_sv_type(field):
