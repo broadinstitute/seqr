@@ -56,6 +56,7 @@ class HailSearch(object):
         if data_type == Sample.DATASET_TYPE_SV_CALLS:
             data_type = None
             data_sources_by_type = {k: v for k, v in data_sources_by_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
+            samples_by_data_type = {k: v for k, v in samples_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
 
         if not data_type and len(data_sources_by_type) == 1:
             data_type = list(data_sources_by_type.keys())[0]
