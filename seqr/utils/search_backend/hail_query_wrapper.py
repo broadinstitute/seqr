@@ -748,8 +748,7 @@ def _no_genotype_override(genotypes, field):
 
 def _get_genotype_override_field(genotypes, default, field, agg):
     return hl.if_else(
-        _no_genotype_override(genotypes, field), default,
-        hl.or_else(agg(genotypes.values().map(lambda g: g[field])), default)
+        _no_genotype_override(genotypes, field), default, agg(genotypes.values().map(lambda g: g[field]))
     )
 
 
@@ -808,13 +807,10 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     })
     COMPUTED_ANNOTATION_FIELDS = {
         'transcripts': lambda self, r: hl.if_else(
-            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.or_else(
-                hl.bind(
-                    lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-                    r.genotypes.values().flatmap(lambda g: g.geneIds)
-                ),
-                r.transcripts
-            )
+            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
+                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
+                r.genotypes.values().flatmap(lambda g: g.geneIds)
+            ),
         )
     }
     INITIAL_ENTRY_ANNOTATIONS = {
@@ -872,6 +868,18 @@ GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
 SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
 
 
+def _is_gcnv_variant(r):
+    return r.isGcnv  # TODO find better way to distinguish
+
+
+def _annotation_for_sv_type(field):
+    return lambda r: hl.if_else(
+        _is_gcnv_variant(r),
+        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r),
+        SvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
+    )
+
+
 class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTypeHailTableQuery
 
     GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
@@ -882,7 +890,13 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
 
     BASE_ANNOTATION_FIELDS = deepcopy(SvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
+    BASE_ANNOTATION_FIELDS.update({k: _annotation_for_sv_type(k) for k in ['end', 'pos']})
     CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
+
+    COMPUTED_ANNOTATION_FIELDS = {
+        k: lambda self, r: hl.if_else(_is_gcnv_variant(r), v(self, r), r[k])
+        for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
+    }
 
     @property
     def sv_populations(self):
@@ -892,12 +906,9 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
     def gcnv_populations(self):
         return hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
 
-    def _is_gcnv_variant(self, r):
-        return r.isGcnv  # TODO find better way to distinguish
-
     def population_expression(self, r, population, pop_config):
         return hl.or_missing(
-            hl.if_else(self._is_gcnv_variant(r), self.gcnv_populations, self.sv_populations).contains(population),
+            hl.if_else(_is_gcnv_variant(r), self.gcnv_populations, self.sv_populations).contains(population),
             super(AllSvHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
@@ -962,14 +973,14 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
         sv_samples_map = super(AllSvHailTableQuery, self)._get_family_samples_map(
             mt, self._sample_ids_by_dataset_type[SV_KEY].intersection(sample_ids), family_samples_filter)
 
-        return hl.if_else(self._is_gcnv_variant(mt), gcnv_samples_map, sv_samples_map)
+        return hl.if_else(_is_gcnv_variant(mt), gcnv_samples_map, sv_samples_map)
 
     def _matched_family_sample_filter(self, mt, sample_family_map):
         sample_filter = super(AllSvHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
         if not self._sample_ids_by_dataset_type:
             return sample_filter
         return sample_filter & hl.if_else(
-            self._is_gcnv_variant(mt),
+            _is_gcnv_variant(mt),
             hl.set(self._sample_ids_by_dataset_type[GCNV_KEY]).contains(mt.s),
             hl.set(self._sample_ids_by_dataset_type[SV_KEY]).contains(mt.s),
         )
