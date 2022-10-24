@@ -29,12 +29,6 @@ INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
 
 GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
 SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
-QUERY_CLASS_MAP = {
-    VARIANT_DATASET: VariantHailTableQuery,
-    GCNV_KEY: GcnvHailTableQuery,
-    SV_KEY: SvHailTableQuery,
-}
-
 
 class BaseHailTableQuery(object):
 
@@ -870,6 +864,13 @@ class SvHailTableQuery(BaseSvHailTableQuery):
         # TODO use different ht field
         quality_filter = {'min_gq' if k == 'min_gq_sv' else k: v for k, v in (quality_filter or {}).items()}
         return super(SvHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
+
+
+QUERY_CLASS_MAP = {
+    VARIANT_DATASET: VariantHailTableQuery,
+    GCNV_KEY: GcnvHailTableQuery,
+    SV_KEY: SvHailTableQuery,
+}
 
 
 class MultiDataTypeHailTableQuery(object):
