@@ -927,7 +927,11 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
             **{k: hl.missing(gcnv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
         return ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
-            sortedTranscriptConsequences=hl.or_else(ht.sortedTranscriptConsequences, ht.sortedTranscriptConsequences_1),
+            sortedTranscriptConsequences=hl.or_else(
+                ht.sortedTranscriptConsequences,
+                ht.sortedTranscriptConsequences_1.map(
+                    lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)),  # TODO only export desired fields for main sv ht
+            ),
             **{sample_id: hl.or_else(
                 add_missing_gcnv_entries(ht[sample_id]), add_missing_sv_entries(ht[f'{sample_id}_1'])
             ) for sample_id in shared_sample_ids},
