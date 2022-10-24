@@ -752,99 +752,22 @@ def _get_genotype_override_field(genotypes, default, field, agg):
     )
 
 
-class GcnvHailTableQuery(BaseHailTableQuery):
+class BaseSvHailTableQuery(BaseHailTableQuery):
 
     GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
     GENOTYPE_QUERY_MAP[COMP_HET_ALT] = GENOTYPE_QUERY_MAP[HAS_ALT]
 
-    GENOTYPE_FIELDS = {
-        f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
-    }
     POPULATIONS = {
-        'sv_callset': {'hom': None, 'hemi': None, 'het': None},
-    }
-    PREDICTION_FIELDS_CONFIG = {
-        'strvctvre': ('strvctvre', 'score'),
-    }
-
-    BASE_ANNOTATION_FIELDS = {
-        'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
-        'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
-        'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
-        'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.numExon, 'numExon', hl.max),
-        'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
-        'svType': lambda r: r.svType.replace('^gCNV_', ''),
-    }
-    BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
-    COMPUTED_ANNOTATION_FIELDS = {
-        'transcripts': lambda self, r: hl.if_else(
-            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
-                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-                r.genotypes.values().flatmap(lambda g: g.geneIds)
-            ),
-        )
-    }
-    INITIAL_ENTRY_ANNOTATIONS = {
-        #  gCNV data has no ref/ref calls so add them back in
-        'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
-    }
-    ANNOTATION_OVERRIDE_FIELDS = [NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD]
-
-    @staticmethod
-    def import_filtered_ht(data_source, samples, intervals=None, exclude_intervals=False):
-        ht = BaseHailTableQuery.import_filtered_ht(data_source, samples)
-        if intervals:
-            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
-                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
-            ht = ht.filter(interval_filter)
-        # In production: will not have callset frequency, may rename or rework these fields and filters
-        ht = ht.annotate(sv_callset=hl.struct(**{key: ht[field] for key, field in {'AF': 'sf', 'AC': 'sc', 'AN': 'sn'}.items()}))
-        return ht
-
-    def _parse_pathogenicity_overrides(self, pathogenicity):
-        pass
-
-    def _filter_vcf_filters(self):
-        pass
-
-    @staticmethod
-    def get_x_chrom_filter(mt, x_interval):
-        return mt.interval.overlaps(x_interval)
-
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
-        families_expr = super(GcnvHailTableQuery, self)._get_matched_families_expr(
-            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr)
-        if self._consequence_overrides[NEW_SV_FIELD]:
-            families_expr = hl.bind(
-                lambda families, new_call_families: new_call_families.intersection(families),
-                families_expr,
-                hl.agg.filter(mt.newCall, hl.agg.collect_as_set(sample_family_map[mt.s])),
-            )
-        return families_expr
-
-
-class SvHailTableQuery(BaseHailTableQuery):  # TODO use inheritance with GcnvHailTableQuery
-
-    GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
-    GENOTYPE_QUERY_MAP[COMP_HET_ALT] = GENOTYPE_QUERY_MAP[HAS_ALT]
-
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
-    POPULATIONS = {
-        'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None},
         'sv_callset': {'hemi': None},
     }
     PREDICTION_FIELDS_CONFIG = {
         'strvctvre': ('strvctvre', 'score'),
     }
 
-    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + [
-        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'svType', 'svTypeDetail', 'xpos',
-    ]
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.interval.start.contig.replace('^chr', ''),
         'pos': lambda r: r.interval.start.position,
         'end': lambda r: r.interval.end.position,
-        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
@@ -866,7 +789,77 @@ class SvHailTableQuery(BaseHailTableQuery):  # TODO use inheritance with GcnvHai
     def get_x_chrom_filter(mt, x_interval):
         return mt.interval.overlaps(x_interval)
 
+
+class GcnvHailTableQuery(BaseSvHailTableQuery):
+
+    GENOTYPE_FIELDS = {
+        f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
+    }
+    POPULATIONS = deepcopy(BaseSvHailTableQuery.POPULATIONS)
+    POPULATIONS['sv_callset'].update({'hom': None, 'het': None})
+
+    BASE_ANNOTATION_FIELDS = deepcopy(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
+    BASE_ANNOTATION_FIELDS.update({
+        'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
+        'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
+        'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.numExon, 'numExon', hl.max),
+        'svType': lambda r: r.svType.replace('^gCNV_', ''),
+    })
+    COMPUTED_ANNOTATION_FIELDS = {
+        'transcripts': lambda self, r: hl.if_else(
+            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
+                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
+                r.genotypes.values().flatmap(lambda g: g.geneIds)
+            ),
+        )
+    }
+    INITIAL_ENTRY_ANNOTATIONS = {
+        #  gCNV data has no ref/ref calls so add them back in
+        'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
+    }
+    ANNOTATION_OVERRIDE_FIELDS = BaseSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + [NEW_SV_FIELD]
+
+    @staticmethod
+    def import_filtered_ht(*args, **kwargs):
+        ht = BaseHailTableQuery.BaseSvHailTableQuery(*args, **kwargs)
+        # In production: will not have callset frequency, may rename or rework these fields and filters
+        # TODO add annotation in write_main_gcnv_ht
+        ht = ht.annotate(sv_callset=hl.struct(**{key: ht[field] for key, field in {'AF': 'sf', 'AC': 'sc', 'AN': 'sn'}.items()}))
+        return ht
+
+    def _filter_vcf_filters(self):
+        pass
+
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
+        families_expr = super(GcnvHailTableQuery, self)._get_matched_families_expr(
+            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr)
+        if self._consequence_overrides[NEW_SV_FIELD]:
+            families_expr = hl.bind(
+                lambda families, new_call_families: new_call_families.intersection(families),
+                families_expr,
+                hl.agg.filter(mt.newCall, hl.agg.collect_as_set(sample_family_map[mt.s])),
+            )
+        return families_expr
+
+
+class SvHailTableQuery(BaseSvHailTableQuery):
+
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
+    POPULATIONS = {
+        'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None},
+    }
+    POPULATIONS.update(BaseSvHailTableQuery.POPULATIONS)
+
+    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + [
+        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'svType', 'svTypeDetail', 'xpos',
+    ]
+    BASE_ANNOTATION_FIELDS = {
+        'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
+    }
+    BASE_ANNOTATION_FIELDS.update(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
+
     def _get_quality_filter_expr(self, mt, quality_filter):
+        # TODO use different ht field
         quality_filter = {'min_gq' if k == 'min_gq_sv' else k: v for k, v in (quality_filter or {}).items()}
         return super(SvHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
 
@@ -877,6 +870,7 @@ def _annotation_for_data_type(field):
         VariantHailTableQuery.BASE_ANNOTATION_FIELDS[field](r),
         GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
     )
+
 
 class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle all? or have special cases for gcnv vs SV
 
