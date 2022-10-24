@@ -897,6 +897,7 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
     #     k: lambda self, r: hl.if_else(_is_gcnv_variant(r), v(self, r), r[k])
     #     for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
     # }
+    COMPUTED_ANNOTATION_FIELDS = {}
 
     @property
     def sv_populations(self):
