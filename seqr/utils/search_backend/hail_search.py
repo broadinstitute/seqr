@@ -14,7 +14,6 @@ SV_ANNOTATION_TYPES = {'structural_consequence', STRUCTURAL_ANNOTATION_FIELD, NE
 
 QUERY_CLASS_MAP = {
     Sample.DATASET_TYPE_VARIANT_CALLS: VariantHailTableQuery,
-    Sample.DATASET_TYPE_SV_CALLS: AllSvHailTableQuery,
     f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': GcnvHailTableQuery,
     f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': SvHailTableQuery,
 }
@@ -67,8 +66,9 @@ class HailSearch(object):
             query_cls = QUERY_CLASS_MAP[data_type]
         else:
             samples = samples_by_data_type
-            query_cls = AllDataTypeHailTableQuery
             data_source = data_sources_by_type
+            is_all_svs = all(k.startswith(Sample.DATASET_TYPE_SV_CALLS) for k in data_sources_by_type)
+            query_cls = AllSvHailTableQuery if is_all_svs else AllDataTypeHailTableQuery
 
         self._query_wrapper = query_cls(data_source, samples=samples, genome_version=self._genome_version, **kwargs)
 
