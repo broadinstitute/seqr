@@ -922,6 +922,7 @@ class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTy
         entry_fields = ['GT', *AllSvHailTableQuery.GENOTYPE_FIELDS.values()]
         add_missing_sv_entries = lambda sample: sample.annotate(
             **{k: hl.missing(sv_entry_types[k]) for k in SvHailTableQuery.GENOTYPE_FIELDS.values()},
+        ).annotate(
             CN=sample.cn,  # TODO fix cn case for gcnv ht
         ).select(*entry_fields)
         add_missing_gcnv_entries = lambda sample: sample.annotate(
