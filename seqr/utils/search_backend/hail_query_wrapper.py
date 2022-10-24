@@ -864,6 +864,99 @@ class SvHailTableQuery(BaseSvHailTableQuery):
         return super(SvHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
 
 
+GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
+SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
+
+
+class AllSvHailTableQuery(GcnvHailTableQuery):  # TODO share code with AllDataTypeHailTableQuery
+
+    GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
+    # TODO cn case mismatch?
+    GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
+
+    POPULATIONS = deepcopy(GcnvHailTableQuery.POPULATIONS)
+    POPULATIONS.update(SvHailTableQuery.POPULATIONS)
+
+    CORE_FIELDS = SvHailTableQuery.CORE_FIELDS
+    BASE_ANNOTATION_FIELDS = deepcopy(SvHailTableQuery.BASE_ANNOTATION_FIELDS)
+    BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
+
+    @property
+    def sv_populations(self):
+        return hl.set(set(SvHailTableQuery.POPULATIONS.keys()))
+
+    @property
+    def gcnv_populations(self):
+        return hl.set(set(GcnvHailTableQuery.POPULATIONS.keys()))
+
+    def population_expression(self, r, population, pop_config):
+        return hl.or_missing(
+            hl.if_else(r.isGcnv, self.gcnv_populations, self.sv_populations).contains(population),
+            super(GcnvHailTableQuery, self).population_expression(r, population, pop_config),
+        )
+
+    def _save_samples(self, samples):
+        self._individuals_by_sample_id = {}
+        for data_type_samples in samples.values():
+            for s in data_type_samples:
+                self._individuals_by_sample_id[s.sample_id] = s.individual
+
+        self._sample_ids_by_dataset_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
+        sample_sets = list(self._sample_ids_by_dataset_type.values())
+        if all(sample_set == sample_sets[0] for sample_set in sample_sets[1:]):
+            self._sample_ids_by_dataset_type = None
+
+    @staticmethod
+    def import_filtered_ht(data_source, samples, **kwargs):
+        gcnv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs).annotate(
+            isGcnv=True
+        )
+        sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs)
+
+        ht = gcnv_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
+
+        gcnv_sample_ids = {s.sample_id for s in samples[GCNV_KEY]}
+        sv_sample_ids = {s.sample_id for s in samples[SV_KEY]}
+        shared_sample_ids = gcnv_sample_ids.intersection(sv_sample_ids)
+        gcnv_entry_types = ht[list(gcnv_sample_ids)[0]].dtype
+        sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
+        entry_fields = ['GT', *SvHailTableQuery.GENOTYPE_FIELDS.values(), *GcnvHailTableQuery.GENOTYPE_FIELDS.values()]
+        add_missing_sv_entries = lambda sample: sample.annotate(
+            **{k: hl.missing(sv_entry_types[k]) for k in SvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
+        add_missing_gcnv_entries = lambda sample: sample.annotate(
+            **{k: hl.missing(gcnv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
+        return ht.transmute(
+            rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
+            sortedTranscriptConsequences=hl.or_else(ht.sortedTranscriptConsequences, ht.sortedTranscriptConsequences_1),
+            **{sample_id: hl.or_else(
+                add_missing_gcnv_entries(ht[sample_id]), add_missing_sv_entries(ht[f'{sample_id}_1'])
+            ) for sample_id in shared_sample_ids},
+            **{sample_id: add_missing_gcnv_entries(ht[sample_id]) for sample_id in gcnv_sample_ids - sv_sample_ids},
+            **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in sv_sample_ids - gcnv_sample_ids},
+        )
+
+    def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
+        if not self._sample_ids_by_dataset_type:
+            return super(AllSvHailTableQuery, self)._get_family_samples_map(mt, sample_ids, family_samples_filter)
+
+        gcnv_samples_map = super(AllSvHailTableQuery, self)._get_family_samples_map(
+            mt, self._sample_ids_by_dataset_type[GCNV_KEY].intersection(sample_ids), family_samples_filter)
+        sv_samples_map = super(AllSvHailTableQuery, self)._get_family_samples_map(
+            mt, self._sample_ids_by_dataset_type[SV_KEY].intersection(sample_ids), family_samples_filter)
+
+        return hl.if_else(r.isGcnv, gcnv_samples_map, sv_samples_map)
+
+    def _matched_family_sample_filter(self, mt, sample_family_map):
+        sample_filter = super(AllSvHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
+        if not self._sample_ids_by_dataset_type:
+            return sample_filter
+        return sample_filter & hl.if_else(
+            r.isGcnv,
+            hl.set(self._sample_ids_by_dataset_type[GCNV_KEY]).contains(mt.s),
+            hl.set(self._sample_ids_by_dataset_type[SV_KEY]).contains(mt.s),
+        )
+
+
 def _annotation_for_data_type(field):
     return lambda r: hl.if_else(
         hl.is_defined(r.locus),
@@ -925,14 +1018,13 @@ class AllDataTypeHailTableQuery(VariantHailTableQuery): # TODO actually handle a
     @staticmethod
     def import_filtered_ht(data_source, samples, **kwargs):
         variant_ht = VariantHailTableQuery.import_filtered_ht(data_source[VARIANT_DATASET], samples[VARIANT_DATASET], **kwargs)
-        gcnv_key = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
         # TODO work with WGS SVs
-        sv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[gcnv_key], samples[gcnv_key], **kwargs)
+        sv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs)
 
         ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
 
         variant_sample_ids = {s.sample_id for s in samples[VARIANT_DATASET]}
-        sv_sample_ids = {s.sample_id for s in samples[gcnv_key]}
+        sv_sample_ids = {s.sample_id for s in samples[GCNV_KEY]}
         shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
         variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
