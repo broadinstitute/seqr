@@ -821,7 +821,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     @staticmethod
     def import_filtered_ht(*args, **kwargs):
-        ht = BaseHailTableQuery.BaseSvHailTableQuery(*args, **kwargs)
+        ht = BaseSvHailTableQuery.import_filtered_ht(*args, **kwargs)
         # In production: will not have callset frequency, may rename or rework these fields and filters
         # TODO add annotation in write_main_gcnv_ht
         ht = ht.annotate(sv_callset=hl.struct(**{key: ht[field] for key, field in {'AF': 'sf', 'AC': 'sc', 'AN': 'sn'}.items()}))
