@@ -18,13 +18,13 @@ def _read_table(file, **kwargs):
 def _get_sample_table(ht, sample_id):
     st = ht.filter(ht.samples.sample_id==sample_id)
     st = st.annotate(
-        GT=hl.if_else((st.samples.cn == 0) | (st.samples.cn > 3), hl.Call([1, 1]), hl.Call([0, 1])),
+        GT=hl.if_else((st.samples.CN == 0) | (st.samples.CN > 3), hl.Call([1, 1]), hl.Call([0, 1])),
         geneIds=hl.if_else(st.geneIds == hl.set(st.samples.geneIds), hl.missing(hl.tarray(hl.tstr)), st.samples.geneIds),
         **{field: hl.if_else(st[field] == st.samples[field], hl.missing(hl.tint32), st.samples[field]) for field in [
             'start', 'end', 'numExon',
         ]},
         **{field: st.samples[field] for field in [
-            'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall',
+            'CN', 'QS', 'defragged', 'prevCall', 'prevOverlap', 'newCall',
         ]},
     )
     return st.drop('samples')

@@ -795,10 +795,9 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
 class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     GENOTYPE_FIELDS = {
-        f: f for f in ['start', 'end', 'numExon', 'geneIds', 'cn', 'qs', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
+        f: f for f in ['start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
     }
-    POPULATIONS = deepcopy(BaseSvHailTableQuery.POPULATIONS)
-    POPULATIONS['sv_callset'].update({'hom': None, 'het': None})
+    GENOTYPE_FIELDS.update({f.lower(): f for f in ['CN', 'QS']})
 
     BASE_ANNOTATION_FIELDS = deepcopy(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update({
@@ -820,14 +819,6 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
     }
     ANNOTATION_OVERRIDE_FIELDS = BaseSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + [NEW_SV_FIELD]
-
-    @classmethod
-    def import_filtered_ht(cls, *args, **kwargs):
-        ht = super(GcnvHailTableQuery, cls).import_filtered_ht(*args, **kwargs)
-        # In production: will not have callset frequency, may rename or rework these fields and filters
-        # TODO add annotation in write_main_gcnv_ht
-        ht = ht.annotate(sv_callset=hl.struct(**{key: ht[field] for key, field in {'AF': 'sf', 'AC': 'sc', 'AN': 'sn'}.items()}))
-        return ht
 
     def _filter_vcf_filters(self):
         pass
@@ -950,14 +941,6 @@ class MultiDataTypeHailTableQuery(object):
             ))
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
-            if 'cn' in entry_fields and 'CN' in entry_fields:
-                # TODO fix cn case for gcnv ht
-                entry_fields.remove('cn')
-                ht = ht.annotate(
-                    **{sample_id: ht[sample_id].annotate(CN=ht[sample_id].get('cn', ht[sample_id].get('CN')))
-                       for sample_id in table_sample_ids},
-                )
-
             ht = ht.annotate(**{sample_id: ht[sample_id].select(
                 **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
             ) for sample_id in table_sample_ids})
@@ -1016,13 +999,9 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
     @staticmethod
     def _import_table_transmute_expressions(ht):
         return {
-            'sv_callset': lambda sv_callset: sv_callset.annotate(
-                **{k: sv_callset.get(k, hl.missing(hl.dtype('int32'))) for k in ['Het', 'Hom']}  # TODO do this in gcnv export
+            'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: sortedTranscriptConsequences.map(
+                lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)  # TODO only export desired fields for sv ht
             ),
-            'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: hl.array(
-                sortedTranscriptConsequences.map(  # TODO export consequences as array for gcnv ht
-                    lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS))  # TODO only export desired fields for sv ht
-                ),
         }
 
 
@@ -1072,12 +1051,10 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
         struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
         return {
-            'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: hl.array(  # TODO export consequences as array for gcnv ht
-                sortedTranscriptConsequences.map(lambda t: t.select(
-                    consequence_terms=t.get('consequence_terms', [t.major_consequence]),
-                    **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS},
-                ))
-            ),
+            'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
+                consequence_terms=t.get('consequence_terms', [t.major_consequence]),
+                **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS},
+            )),
        }
 
     @staticmethod
