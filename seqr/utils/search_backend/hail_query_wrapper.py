@@ -1017,7 +1017,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
     def _import_table_transmute_expressions(ht):
         return {
             'sv_callset': lambda sv_callset: sv_callset.annotate(
-                **{k: sv_callset.get(k, hl.missing(hl.dtype('int32'))) for k in ['Het', 'Hom']}
+                **{k: sv_callset.get(k, hl.missing(hl.dtype('int32'))) for k in ['Het', 'Hom']}  # TODO do this in gcnv export
             ),
             'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: hl.array(
                 sortedTranscriptConsequences.map(  # TODO export consequences as array for gcnv ht
@@ -1057,6 +1057,8 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
     }
 
+    MERGE_FIELDS = ['rg37_locus']
+
     @staticmethod
     def get_row_data_type(r):
         return hl.if_else(
@@ -1065,48 +1067,18 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
             VARIANT_DATASET,
         )
 
-    @classmethod
-    def import_filtered_ht(cls, data_source, samples, **kwargs):
-        variant_ht = VariantHailTableQuery.import_filtered_ht(data_source[VARIANT_DATASET], samples[VARIANT_DATASET], **kwargs)
-        # TODO work with WGS SVs
-        sv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs)
-
-        ht = variant_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
-
-        variant_sample_ids = {s.sample_id for s in samples[VARIANT_DATASET]}
-        sv_sample_ids = {s.sample_id for s in samples[GCNV_KEY]}
-        all_sample_ids = variant_sample_ids.union(sv_sample_ids)
-        shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
-
-        variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
-        sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
-
-        entry_types = {}
-        entry_types.update(variant_entry_types)
-        entry_types.update(sv_entry_types)
-        entry_fields = ['GT', *VariantHailTableQuery.GENOTYPE_FIELDS.values(), *GcnvHailTableQuery.GENOTYPE_FIELDS.values()]
-
-        add_missing_entries = lambda sample: sample.select(
-            **{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields}
-        )
-
-        transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
-        missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
-
-        ht = ht.annotate(
-            **{sample_id: add_missing_entries(ht[sample_id]) for sample_id in all_sample_ids},
-        )
-
-        return ht.transmute(
-            rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
-            sortedTranscriptConsequences=hl.or_else(
-                ht.sortedTranscriptConsequences.map(lambda t: t.select(*VariantHailTableQuery.TRANSCRIPT_FIELDS, 'consequence_terms')),
-                hl.array(ht.sortedTranscriptConsequences_1.map(lambda t: t.annotate(
-                    **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
-                    consequence_terms=[t.major_consequence])))
+    @staticmethod
+    def _import_table_transmute_expressions(ht):
+        struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
+        struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
+        return {
+            'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: hl.array(  # TODO export consequences as array for gcnv ht
+                sortedTranscriptConsequences.map(lambda t: t.select(
+                    consequence_terms=t.get('consequence_terms', [t.major_consequence]),
+                    **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS},
+                ))
             ),
-            **{sample_id: hl.or_else(ht[sample_id], add_missing_entries(ht[f'{sample_id}_1'])) for sample_id in shared_sample_ids},
-        )
+       }
 
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):
