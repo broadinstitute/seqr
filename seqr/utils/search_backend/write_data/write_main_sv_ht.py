@@ -8,7 +8,7 @@ CHROMOSOMES = [
 CHROM_NUMBER_TO_CHROM = hl.literal({i: chrom for i, chrom in enumerate(CHROMOSOMES)})
 
 SEQR_FIELDS = [
-    'filters', 'rg37_locus', 'rg37_locus_end', 'sortedTranscriptConsequences', 'svType', 'xpos',
+    'filters', 'rg37_locus', 'rg37_locus_end', 'svType', 'xpos',
 ]
 RENAME_FIELDS = {
     'bothsides_support': 'bothsidesSupport', 'cpx_intervals': 'cpxIntervals', 'sv_type_detail': 'svTypeDetail',
@@ -39,6 +39,7 @@ def write_main_ht(file):
                 hl.locus(hl.format('chr%s', ht.contig), ht.end, reference_genome='GRCh38')
             ),
         ),
+        'sortedTranscriptConsequences': ht.sortedTranscriptConsequences.map(lambda t: t.select('gene_id', 'major_consequence')),
         'strvctvre': hl.struct(score=ht.StrVCTVRE_score),
         'sv_callset': hl.struct(**{key: ht[field] for key, field in CALLSET_FIELDS.items()}),
         'svSourceDetail': hl.or_missing(ht.has_end2 & (ht.svType == 'INS'), hl.struct(chrom=ht.end_chrom))

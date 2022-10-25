@@ -996,14 +996,6 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
     def get_row_data_type(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
 
-    @staticmethod
-    def _import_table_transmute_expressions(ht):
-        return {
-            'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: sortedTranscriptConsequences.map(
-                lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)  # TODO only export desired fields for sv ht
-            ),
-        }
-
 
 def _annotation_for_data_type(field):
     return lambda r: hl.if_else(
@@ -1048,6 +1040,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
     @staticmethod
     def _import_table_transmute_expressions(ht):
+        # TODO possibly redo this for simplicity if not needed once MITO is added
         struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
         struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
         return {
