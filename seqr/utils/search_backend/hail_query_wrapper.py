@@ -131,8 +131,8 @@ class BaseHailTableQuery(object):
 
         return mt
 
-    @staticmethod
-    def import_filtered_ht(data_source, samples, intervals=None, **kwargs):
+    @classmethod
+    def import_filtered_ht(cls, data_source, samples, intervals=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         sample_hts = {
@@ -718,9 +718,9 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'selectedMainTranscriptId': _selected_main_transcript_expr,
     }
 
-    @staticmethod
-    def import_filtered_ht(data_source, samples, intervals=None, exclude_intervals=False):
-        ht = BaseHailTableQuery.import_filtered_ht(data_source, samples, intervals=None if exclude_intervals else intervals)
+    @classmethod
+    def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        ht = super(VariantHailTableQuery, cls).import_filtered_ht(data_source, samples, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
             ht = hl.filter_intervals(ht, intervals, keep=False)
         # In production: will not have callset frequency, may rename or rework these fields and filters
@@ -775,9 +775,9 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD]
 
-    @staticmethod
-    def import_filtered_ht(data_source, samples, intervals=None, exclude_intervals=False):
-        ht = BaseHailTableQuery.import_filtered_ht(data_source, samples)
+    @classmethod
+    def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        ht = super(BaseSvHailTableQuery, cls).import_filtered_ht(data_source, samples)
         if intervals:
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
@@ -821,9 +821,9 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     }
     ANNOTATION_OVERRIDE_FIELDS = BaseSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + [NEW_SV_FIELD]
 
-    @staticmethod
+    @classmethod
     def import_filtered_ht(*args, **kwargs):
-        ht = BaseSvHailTableQuery.import_filtered_ht(*args, **kwargs)
+        ht = super(GcnvHailTableQuery, cls).import_filtered_ht(*args, **kwargs)
         # In production: will not have callset frequency, may rename or rework these fields and filters
         # TODO add annotation in write_main_gcnv_ht
         ht = ht.annotate(sv_callset=hl.struct(**{key: ht[field] for key, field in {'AF': 'sf', 'AC': 'sc', 'AN': 'sn'}.items()}))
@@ -917,8 +917,8 @@ class MultiDataTypeHailTableQuery(object):
             return sample_filter
         return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)].contains(mt.s)
 
-    @staticmethod
-    def import_filtered_ht(data_source, samples, **kwargs):
+    @classmethod
+    def import_filtered_ht(cls, data_source, samples, **kwargs):
         # TODO actually use
         data_types = list(data_source.keys())
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
@@ -1021,8 +1021,8 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
     def get_row_data_type(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
 
-    @staticmethod
-    def import_filtered_ht(data_source, samples, **kwargs):
+    @classmethod
+    def import_filtered_ht(cls, data_source, samples, **kwargs):
         # TODO shared MultiDataTypeHailTableQuery
         gcnv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs)
         sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs)
@@ -1101,8 +1101,8 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
             VARIANT_DATASET,
         )
 
-    @staticmethod
-    def import_filtered_ht(data_source, samples, **kwargs):
+    @classmethod
+    def import_filtered_ht(cls, data_source, samples, **kwargs):
         variant_ht = VariantHailTableQuery.import_filtered_ht(data_source[VARIANT_DATASET], samples[VARIANT_DATASET], **kwargs)
         # TODO work with WGS SVs
         sv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs)
