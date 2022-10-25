@@ -1132,7 +1132,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
                     **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
                     consequence_terms=[t.major_consequence])))
             ),
-            **{sample_id: hl.or_else(
+            **{sample_id: hl.if_else(hl.is_missing(ht[f'{sample_id}_1']),
                 add_missing_entries(ht[sample_id]), add_missing_entries(ht[f'{sample_id}_1'])
             ) for sample_id in all_sample_ids},
             #
