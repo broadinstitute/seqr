@@ -140,6 +140,7 @@ class BaseHailTableQuery(object):
             s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
             for s in samples
         }
+        logger.info(f'Loaded {ht.count()} rows for {data_source}')
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
     @staticmethod
@@ -169,7 +170,6 @@ class BaseHailTableQuery(object):
 
     def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
                         annotations=None, quality_filter=None, custom_query=None):
-        logger.info(f'Total hits before filter: {self._mt.count()}')
         self._parse_pathogenicity_overrides(pathogenicity)
         self._parse_annotations_overrides(annotations)
 
@@ -184,7 +184,6 @@ class BaseHailTableQuery(object):
 
         if quality_filter.get('vcf_filter') is not None:
             self._filter_vcf_filters()
-        logger.info(f'Total hits after filter: {self._mt.count()}')
 
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
@@ -209,9 +208,7 @@ class BaseHailTableQuery(object):
         self._mt = self._mt.filter_rows(hl.is_missing(self._mt.filters) | (self._mt.filters.length() < 1))
 
     def filter_main_annotations(self):
-        logger.info(f'Total hits before annotation: {self._mt.count()}')
         self._mt = self._filter_by_annotations(self._allowed_consequences)
-        logger.info(f'Total hits after annotation: {self._mt.count()}')
 
     def filter_by_variant_ids(self, variant_ids):
         if len(variant_ids) == 1:
