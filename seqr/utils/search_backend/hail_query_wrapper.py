@@ -42,6 +42,7 @@ class BaseHailTableQuery(object):
     }
 
     GENOTYPE_FIELDS = {}
+    GENOTYPE_RESPONSE_KEYS = {}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
     TRANSCRIPT_FIELDS = ['gene_id', 'major_consequence']
@@ -382,7 +383,7 @@ class BaseHailTableQuery(object):
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
                 numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
-                **{k: mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
+                **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
             )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
@@ -748,6 +749,7 @@ class VariantHailTableQuery(BaseHailTableQuery):
 def _no_genotype_override(genotypes, field):
     return genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
 
+
 def _get_genotype_override_field(genotypes, default, field, agg):
     return hl.if_else(
         _no_genotype_override(genotypes, field), default, agg(genotypes.values().map(lambda g: g[field]))
@@ -759,6 +761,8 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     GENOTYPE_QUERY_MAP = deepcopy(BaseHailTableQuery.GENOTYPE_QUERY_MAP)
     GENOTYPE_QUERY_MAP[COMP_HET_ALT] = GENOTYPE_QUERY_MAP[HAS_ALT]
 
+    GENOTYPE_FIELDS = {'cn': 'CN'}
+    GENOTYPE_RESPONSE_KEYS = {'gq_sv': 'gq'}
     POPULATIONS = {
         'sv_callset': {'hemi': None},
     }
@@ -773,7 +777,7 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
-    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD]
+    ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
@@ -791,13 +795,25 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     def get_x_chrom_filter(mt, x_interval):
         return mt.interval.overlaps(x_interval)
 
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
+        families_expr = super(BaseSvHailTableQuery, self)._get_matched_families_expr(
+            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr)
+        if self._consequence_overrides[NEW_SV_FIELD]:
+            families_expr = hl.bind(
+                lambda families, new_call_families: new_call_families.intersection(families),
+                families_expr,
+                hl.agg.filter(mt.newCall, hl.agg.collect_as_set(sample_family_map[mt.s])),
+            )
+        return families_expr
+
 
 class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     GENOTYPE_FIELDS = {
         f: f for f in ['start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall']
     }
-    GENOTYPE_FIELDS.update({f.lower(): f for f in ['CN', 'QS']})
+    GENOTYPE_FIELDS.update({'qs': QS})
+    GENOTYPE_FIELDS.update(BaseSvHailTableQuery.GENOTYPE_FIELDS)
 
     BASE_ANNOTATION_FIELDS = deepcopy(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update({
@@ -818,26 +834,15 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         #  gCNV data has no ref/ref calls so add them back in
         'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
     }
-    ANNOTATION_OVERRIDE_FIELDS = BaseSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + [NEW_SV_FIELD]
 
     def _filter_vcf_filters(self):
         pass
 
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
-        families_expr = super(GcnvHailTableQuery, self)._get_matched_families_expr(
-            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr)
-        if self._consequence_overrides[NEW_SV_FIELD]:
-            families_expr = hl.bind(
-                lambda families, new_call_families: new_call_families.intersection(families),
-                families_expr,
-                hl.agg.filter(mt.newCall, hl.agg.collect_as_set(sample_family_map[mt.s])),
-            )
-        return families_expr
-
 
 class SvHailTableQuery(BaseSvHailTableQuery):
 
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['CN', 'GQ']}
+    GENOTYPE_FIELDS = {'gq_sv': 'GQ_SV'}
+    GENOTYPE_FIELDS.update(BaseSvHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
         'gnomad_svs': {'id': 'ID', 'ac': None, 'an': None, 'hom': None, 'hemi': None, 'het': None},
     }
@@ -850,11 +855,6 @@ class SvHailTableQuery(BaseSvHailTableQuery):
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
     }
     BASE_ANNOTATION_FIELDS.update(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
-
-    def _get_quality_filter_expr(self, mt, quality_filter):
-        # TODO use different ht field
-        quality_filter = {'min_gq' if k == 'min_gq_sv' else k: v for k, v in (quality_filter or {}).items()}
-        return super(SvHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
 
 
 QUERY_CLASS_MAP = {
@@ -972,7 +972,7 @@ def _annotation_for_sv_type(field):
     )
 
 
-class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
+class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
@@ -988,6 +988,10 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
     COMPUTED_ANNOTATION_FIELDS = {
         k: lambda self, r: hl.or_else(v(self, r), r[k])
         for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
+    }
+    INITIAL_ENTRY_ANNOTATIONS = {
+        #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
+        'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
     }
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
@@ -1016,17 +1020,14 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     POPULATIONS.update(GcnvHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     PREDICTION_FIELDS_CONFIG.update(BaseSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
-    ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + GcnvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
+    ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + BaseSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
     BASE_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update({k: _annotation_for_data_type(k) for k in ['chrom', 'pos']})
     COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     COMPUTED_ANNOTATION_FIELDS.update(GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
-    INITIAL_ENTRY_ANNOTATIONS = {
-        #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
-        'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
-    }
+    INITIAL_ENTRY_ANNOTATIONS = BaseSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
 
     MERGE_FIELDS = ['rg37_locus']
 
