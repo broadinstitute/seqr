@@ -972,7 +972,7 @@ def _annotation_for_sv_type(field):
     )
 
 
-class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
+class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
 
     GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
@@ -996,7 +996,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     #     #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
     #     'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
     # }
-    INITIAL_ENTRY_ANNOTATIONS = GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
+    # INITIAL_ENTRY_ANNOTATIONS = GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS  # TODO
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
 
