@@ -348,6 +348,7 @@ class BaseHailTableQuery(object):
         self._mt = self._filter_by_genotype(self._mt, *args)
 
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
+        logger.info(f'Total hits before genotype: {mt.count()}')
         individual_affected_status = inheritance_filter.get('affected') or {}
         if inheritance_mode == ANY_AFFECTED:
             inheritance_filter = None
@@ -375,6 +376,7 @@ class BaseHailTableQuery(object):
             ))
 
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
+        logger.info(f'Total hits after genotype: {mt.count()}')
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
