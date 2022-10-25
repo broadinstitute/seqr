@@ -1025,7 +1025,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update({k: _annotation_for_data_type(k) for k in ['chrom', 'pos']})
     COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
-    COMPUTED_ANNOTATION_FIELDS.update(GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
+    COMPUTED_ANNOTATION_FIELDS.update(AllSvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     INITIAL_ENTRY_ANNOTATIONS = BaseSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
 
     MERGE_FIELDS = ['rg37_locus']
