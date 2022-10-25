@@ -954,7 +954,7 @@ class MultiDataTypeHailTableQuery(object):
                 # TODO fix cn case for gcnv ht
                 entry_fields.remove('cn')
                 ht = ht.annotate(
-                    **{sample_id: ht[sample_id].annotate(CN=ht[sample_id].get('cn', sample.CN))
+                    **{sample_id: ht[sample_id].annotate(CN=ht[sample_id].get('cn', ht[sample_id].CN))
                        for sample_id in table_sample_ids},
                 )
 
@@ -1020,8 +1020,8 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
                 **{k: sv_callset.get(k, hl.missing(hl.dtype('int32'))) for k in ['Het', 'Hom']}
             ),
             'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: hl.array(
-                sortedTranscriptConsequences.map( # TODO export consequences as array for gcnv ht
-                    lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)) # TODO only export desired fields for sv ht
+                sortedTranscriptConsequences.map(  # TODO export consequences as array for gcnv ht
+                    lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS))  # TODO only export desired fields for sv ht
                 ),
         }
 
