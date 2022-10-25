@@ -930,7 +930,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = ht.key_by(VARIANT_KEY_FIELD)
 
         sample_ids = deepcopy(sample_ids_by_type[data_type_0])
-        entry_types = deepcopy(ht[list(sample_ids)[0]].dtype)
+        entry_types = dict(**ht[list(sample_ids)[0]].dtype)
         entry_fields = {'GT'}
         entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
 
