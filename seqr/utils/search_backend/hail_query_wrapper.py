@@ -1124,6 +1124,10 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
 
+        ht = ht.annotate(
+            **{sample_id: add_missing_entries(ht[sample_id]) for sample_id in all_sample_ids},
+        )
+
         return ht.transmute(
             rg37_locus=hl.or_else(ht.rg37_locus, ht.rg37_locus_1),
             sortedTranscriptConsequences=hl.or_else(
@@ -1132,9 +1136,11 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
                     **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
                     consequence_terms=[t.major_consequence])))
             ),
-            **{sample_id: hl.if_else(hl.is_missing(ht[f'{sample_id}_1']),
-                add_missing_entries(ht[sample_id]), add_missing_entries(ht[f'{sample_id}_1'])
-            ) for sample_id in all_sample_ids},
+            **{sample_id: hl.or_else(ht[sample_id], add_missing_entries(ht[f'{sample_id}_1'])) for sample_id in shared_sample_ids},
+
+            # **{sample_id: hl.if_else(hl.is_missing(ht[f'{sample_id}_1']),
+            #     add_missing_entries(ht[sample_id]), add_missing_entries(ht[f'{sample_id}_1'])
+            # ) for sample_id in all_sample_ids},
             #
             # **{sample_id: hl.or_else(
             #     add_missing_sv_entries(ht[sample_id]), add_missing_variant_entries(ht[f'{sample_id}_1'])
