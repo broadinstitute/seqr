@@ -129,7 +129,7 @@ class BaseHailTableQuery(object):
 
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
-
+        logger.info(f'Loaded {mt.count()} rows for {data_source}')
         return mt
 
     @classmethod
@@ -140,7 +140,6 @@ class BaseHailTableQuery(object):
             s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
             for s in samples
         }
-        logger.info(f'Loaded {ht.count()} rows for {data_source}')
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
     @staticmethod
