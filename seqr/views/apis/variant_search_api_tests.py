@@ -82,7 +82,14 @@ EXPECTED_SEARCH_RESPONSE = {
     },
     'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
-    'phePriData': {},
+    'phePriData': {'I000001_na19675': {
+        'lirical': {'ENSG00000268903': [
+            {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'geneId': 'ENSG00000268903',
+             'rank': 1, 'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
+            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'geneId': 'ENSG00000268903',
+             'rank': 2, 'scores': {'compositeLR': 0.003, 'post_test_probability': 0}}
+        ]}
+    }},
     'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
 }
 
@@ -394,6 +401,7 @@ class VariantSearchAPITest(object):
                 'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
             },
             'variantFunctionalDataByGuid': {},
+            'phePriData': {},
             'rnaSeqData': {},
             'mmeSubmissionsByGuid': {},
         })

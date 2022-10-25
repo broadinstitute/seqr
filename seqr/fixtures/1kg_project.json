@@ -1288,6 +1288,38 @@
     }
 },
 {
+    "model": "seqr.phenotypeprioritization",
+    "pk": 1,
+    "fields": {
+        "individual": 1,
+        "gene_id": "ENSG00000268903",
+        "tool": "lirical",
+        "rank": 1,
+        "disease_id": "OMIM:618460",
+        "disease_name": "Khan-Khan-Katsanis syndrome",
+        "scores": {
+            "post_test_probability": 0,
+            "compositeLR": 0.066
+        }
+    }
+},
+{
+    "model": "seqr.phenotypeprioritization",
+    "pk": 2,
+    "fields": {
+        "individual": 1,
+        "gene_id": "ENSG00000268903",
+        "tool": "lirical",
+        "rank": 2,
+        "disease_id": "OMIM:219800",
+        "disease_name": "Cystinosis, nephropathic",
+        "scores": {
+            "post_test_probability": 0,
+            "compositeLR": 0.003
+        }
+    }
+},
+{
     "model": "seqr.igvsample",
     "pk": 145,
     "fields": {
