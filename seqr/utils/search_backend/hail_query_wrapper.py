@@ -1113,6 +1113,11 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
             **{k: hl.missing(sv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
         add_missing_variant_entries = lambda sample: sample.annotate(
             **{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
+
+        add_missing_entries = lambda sample: sample.annotate(
+            **{k: sample[k] for k in entry_fields}).select(
+            *entry_fields)
+
         # TODO merge these so filtering and returning GQ works for merges SNPs/SVs
 
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
@@ -1126,7 +1131,9 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
                     **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
                     consequence_terms=[t.major_consequence])))
             ),
-            **{sample_id: hl.or_else(ht[sample_id], ht[f'{sample_id}_1']) for sample_id in shared_sample_ids},
+            **{sample_id: hl.or_else(
+                add_missing_entries(ht[sample_id]), add_missing_entries(ht[f'{sample_id}_1'])
+            ) for sample_id in all_sample_ids},
             #
             # **{sample_id: hl.or_else(
             #     add_missing_sv_entries(ht[sample_id]), add_missing_variant_entries(ht[f'{sample_id}_1'])
