@@ -130,6 +130,7 @@ class BaseHailTableQuery(object):
 
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
+        logger.info(f'Loaded {mt.count()} annotated rows for {data_source}')
         return mt
 
     @classmethod
