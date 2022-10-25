@@ -1108,14 +1108,17 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
         variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
+        entry_types = {}
+        entry_types.update(variant_entry_types)
+        entry_types.update(sv_entry_types)
         entry_fields = ['GT', *VariantHailTableQuery.GENOTYPE_FIELDS.values(), *GcnvHailTableQuery.GENOTYPE_FIELDS.values()]
         add_missing_sv_entries = lambda sample: sample.annotate(
             **{k: hl.missing(sv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
         add_missing_variant_entries = lambda sample: sample.annotate(
             **{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
 
-        add_missing_entries = lambda sample: sample.annotate(
-            **{k: sample.get(k) for k in entry_fields}).select(
+        add_missing_entries = lambda sample: sample.annotate(  # TODO select?
+            **{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields}).select(
             *entry_fields)
 
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
