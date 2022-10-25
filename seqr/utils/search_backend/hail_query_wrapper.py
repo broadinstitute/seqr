@@ -977,8 +977,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
 
-    POPULATIONS = deepcopy(GcnvHailTableQuery.POPULATIONS)
-    POPULATIONS.update(SvHailTableQuery.POPULATIONS)
+    POPULATION = SvHailTableQuery.POPULATIONS
 
     BASE_ANNOTATION_FIELDS = deepcopy(SvHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
