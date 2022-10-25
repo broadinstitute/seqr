@@ -822,7 +822,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     ANNOTATION_OVERRIDE_FIELDS = BaseSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + [NEW_SV_FIELD]
 
     @classmethod
-    def import_filtered_ht(*args, **kwargs):
+    def import_filtered_ht(cls, *args, **kwargs):
         ht = super(GcnvHailTableQuery, cls).import_filtered_ht(*args, **kwargs)
         # In production: will not have callset frequency, may rename or rework these fields and filters
         # TODO add annotation in write_main_gcnv_ht
