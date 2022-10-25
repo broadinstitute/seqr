@@ -169,6 +169,7 @@ class BaseHailTableQuery(object):
 
     def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
                         annotations=None, quality_filter=None, custom_query=None):
+        logger.info(f'Total hits before filter: {self._mt.count()}')
         self._parse_pathogenicity_overrides(pathogenicity)
         self._parse_annotations_overrides(annotations)
 
@@ -183,6 +184,7 @@ class BaseHailTableQuery(object):
 
         if quality_filter.get('vcf_filter') is not None:
             self._filter_vcf_filters()
+        logger.info(f'Total hits after filter: {self._mt.count()}')
 
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
@@ -207,7 +209,9 @@ class BaseHailTableQuery(object):
         self._mt = self._mt.filter_rows(hl.is_missing(self._mt.filters) | (self._mt.filters.length() < 1))
 
     def filter_main_annotations(self):
+        logger.info(f'Total hits before annotation: {self._mt.count()}')
         self._mt = self._filter_by_annotations(self._allowed_consequences)
+        logger.info(f'Total hits after annotation: {self._mt.count()}')
 
     def filter_by_variant_ids(self, variant_ids):
         if len(variant_ids) == 1:
@@ -348,7 +352,6 @@ class BaseHailTableQuery(object):
         self._mt = self._filter_by_genotype(self._mt, *args)
 
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
-        logger.info(f'Total hits before genotype: {mt.count()}')
         individual_affected_status = inheritance_filter.get('affected') or {}
         if inheritance_mode == ANY_AFFECTED:
             inheritance_filter = None
@@ -376,7 +379,6 @@ class BaseHailTableQuery(object):
             ))
 
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
-        logger.info(f'Total hits after genotype: {mt.count()}')
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
