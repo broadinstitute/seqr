@@ -954,7 +954,7 @@ class MultiDataTypeHailTableQuery(object):
                 # TODO fix cn case for gcnv ht
                 entry_fields.remove('cn')
                 ht = ht.annotate(
-                    **{sample_id: ht[sample_id].annotate(CN=ht[sample_id].get('cn', ht[sample_id].CN))
+                    **{sample_id: ht[sample_id].annotate(CN=ht[sample_id].get('cn', ht[sample_id].get('CN')))
                        for sample_id in table_sample_ids},
                 )
 
