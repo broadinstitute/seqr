@@ -1104,6 +1104,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
         variant_sample_ids = {s.sample_id for s in samples[VARIANT_DATASET]}
         sv_sample_ids = {s.sample_id for s in samples[GCNV_KEY]}
+        all_sample_ids = variant_sample_ids.union(sv_sample_ids)
         shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
         variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
@@ -1125,11 +1126,13 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
                     **{k: hl.missing(transcript_struct_types[k]) for k in missing_transcript_fields},
                     consequence_terms=[t.major_consequence])))
             ),
-            **{sample_id: hl.or_else(
-                add_missing_sv_entries(ht[sample_id]), add_missing_variant_entries(ht[f'{sample_id}_1'])
-            ) for sample_id in shared_sample_ids},
-            **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in variant_sample_ids - sv_sample_ids},
-            **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
+            **{sample_id: hl.or_else(ht[sample_id], ht[f'{sample_id}_1']) for sample_id in shared_sample_ids},
+            #
+            # **{sample_id: hl.or_else(
+            #     add_missing_sv_entries(ht[sample_id]), add_missing_variant_entries(ht[f'{sample_id}_1'])
+            # ) for sample_id in shared_sample_ids},
+            # **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in variant_sample_ids - sv_sample_ids},
+            # **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
         )
 
     @staticmethod
