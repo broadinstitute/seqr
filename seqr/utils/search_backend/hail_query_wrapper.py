@@ -1115,7 +1115,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
             **{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
 
         add_missing_entries = lambda sample: sample.annotate(
-            **{k: sample[k] for k in entry_fields}).select(
+            **{k: hl.or_missing(hl.is_defined(sample[k]), sample[k]) for k in entry_fields}).select(
             *entry_fields)
 
         # TODO merge these so filtering and returning GQ works for merges SNPs/SVs
