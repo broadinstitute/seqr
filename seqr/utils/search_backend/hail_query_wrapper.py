@@ -1106,20 +1106,18 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         sv_sample_ids = {s.sample_id for s in samples[GCNV_KEY]}
         all_sample_ids = variant_sample_ids.union(sv_sample_ids)
         shared_sample_ids = variant_sample_ids.intersection(sv_sample_ids)
+
         variant_entry_types = ht[list(variant_sample_ids)[0]].dtype
         sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
+
         entry_types = {}
         entry_types.update(variant_entry_types)
         entry_types.update(sv_entry_types)
         entry_fields = ['GT', *VariantHailTableQuery.GENOTYPE_FIELDS.values(), *GcnvHailTableQuery.GENOTYPE_FIELDS.values()]
-        add_missing_sv_entries = lambda sample: sample.annotate(
-            **{k: hl.missing(sv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
-        add_missing_variant_entries = lambda sample: sample.annotate(
-            **{k: hl.missing(variant_entry_types[k]) for k in VariantHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
 
-        add_missing_entries = lambda sample: sample.annotate(  # TODO select?
-            **{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields}).select(
-            *entry_fields)
+        add_missing_entries = lambda sample: sample.select(
+            **{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields}
+        )
 
         transcript_struct_types = ht.sortedTranscriptConsequences.dtype.element_type
         missing_transcript_fields = sorted(set(VariantHailTableQuery.TRANSCRIPT_FIELDS) - set(GcnvHailTableQuery.TRANSCRIPT_FIELDS))
@@ -1137,16 +1135,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
                     consequence_terms=[t.major_consequence])))
             ),
             **{sample_id: hl.or_else(ht[sample_id], add_missing_entries(ht[f'{sample_id}_1'])) for sample_id in shared_sample_ids},
-
-            # **{sample_id: hl.if_else(hl.is_missing(ht[f'{sample_id}_1']),
-            #     add_missing_entries(ht[sample_id]), add_missing_entries(ht[f'{sample_id}_1'])
-            # ) for sample_id in all_sample_ids},
-            #
-            # **{sample_id: hl.or_else(
-            #     add_missing_sv_entries(ht[sample_id]), add_missing_variant_entries(ht[f'{sample_id}_1'])
-            # ) for sample_id in shared_sample_ids},
-            # **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in variant_sample_ids - sv_sample_ids},
-            # **{sample_id: add_missing_variant_entries(ht[sample_id]) for sample_id in sv_sample_ids - variant_sample_ids},
         )
 
     @staticmethod
