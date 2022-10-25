@@ -877,6 +877,8 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 
 class MultiDataTypeHailTableQuery(object):
 
+    MERGE_FIELDS = []
+
     @staticmethod
     def get_row_data_type(r):
         raise NotImplementedError
@@ -919,7 +921,6 @@ class MultiDataTypeHailTableQuery(object):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        # TODO actually use
         data_types = list(data_source.keys())
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
@@ -941,6 +942,9 @@ class MultiDataTypeHailTableQuery(object):
             new_type_samples = sample_ids_by_type[data_type]
             shared_sample_ids = sample_ids.intersection(new_type_samples)
             sample_ids.update(new_type_samples)
+            table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
+            table_sample_ids.update(sample_ids)
+
             entry_types.update(ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype)
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
@@ -949,42 +953,26 @@ class MultiDataTypeHailTableQuery(object):
                 entry_fields.remove('cn')
                 ht = ht.annotate(
                     **{sample_id: ht[sample_id].annotate(CN=sample.get('cn', sample.CN))
-                       for sample_id in sample_ids},
-                    **{f'{sample_id}_1': ht[f'{sample_id}_1'].annotate(CN=sample.get('cn', sample.CN))
-                       for sample_id in shared_sample_ids},
+                       for sample_id in table_sample_ids},
                 )
 
-            ht = ht.annotate(
-                **{sample_id: MultiDataTypeHailTableQuery.add_missing_entries(ht[sample_id], entry_fields, entry_types)
-                   for sample_id in sample_ids},
-            )
+            ht = ht.annotate(**{sample_id: ht[sample_id].select(
+                **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
+            ) for sample_id in table_sample_ids})
 
-            merge_fields = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']  # TODO make generic
+            merge_fields = deepcopy(cls.MERGE_FIELDS)
+            merge_fields += shared_sample_ids
             ht = ht.transmute(
-                sv_callset=hl.or_else(  # TODO make generic
-                    ht.sv_callset.annotate(Het=hl.missing(hl.dtype('int32')), Hom=hl.missing(hl.dtype('int32'))),
-                    ht.sv_callset_1,
-                ),
-                sortedTranscriptConsequences=hl.or_else(  # TODO make generic
-                    hl.array(ht.sortedTranscriptConsequences),  # TODO export consequences as array for gcnv ht
-                    ht.sortedTranscriptConsequences_1.map(
-                        lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)),
-                    # TODO only export desired fields for sv ht
-                ),
+                **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
+                   for k, format in cls._import_table_transmute_expressions(ht).items()},
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
-                **{sample_id: hl.or_else(
-                    ht[sample_id],
-                    MultiDataTypeHailTableQuery.add_missing_entries(ht[f'{sample_id}_1'], entry_fields, entry_types)
-                ) for sample_id in shared_sample_ids},
             )
 
         return ht
 
     @staticmethod
-    def add_missing_entry_fields(sample, entry_fields, entry_types):
-        return sample.select(
-            **{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields}
-        )
+    def _import_table_transmute_expressions(ht):
+        return {}
 
 
 def _is_gcnv_variant(r):
@@ -1017,49 +1005,23 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
         for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
     }
 
+    MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
+
     @staticmethod
     def get_row_data_type(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
 
-    @classmethod
-    def import_filtered_ht(cls, data_source, samples, **kwargs):
-        # TODO shared MultiDataTypeHailTableQuery
-        gcnv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs)
-        sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs)
-
-        ht = gcnv_ht.key_by(VARIANT_KEY_FIELD).join(sv_ht, how='outer')
-
-        gcnv_sample_ids = {s.sample_id for s in samples[GCNV_KEY]}
-        sv_sample_ids = {s.sample_id for s in samples[SV_KEY]}
-        shared_sample_ids = gcnv_sample_ids.intersection(sv_sample_ids)
-        gcnv_entry_types = ht[list(gcnv_sample_ids)[0]].dtype
-        sv_entry_types = ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(sv_sample_ids)[0]].dtype
-        entry_fields = ['GT', *AllSvHailTableQuery.GENOTYPE_FIELDS.values()]
-        add_missing_sv_entries = lambda sample: sample.annotate(
-            **{k: hl.missing(sv_entry_types[k]) for k in SvHailTableQuery.GENOTYPE_FIELDS.values()},
-        ).annotate(
-            CN=sample.cn,  # TODO fix cn case for gcnv ht
-        ).select(*entry_fields)
-        add_missing_gcnv_entries = lambda sample: sample.annotate(
-            **{k: hl.missing(gcnv_entry_types[k]) for k in GcnvHailTableQuery.GENOTYPE_FIELDS.values()}).select(*entry_fields)
-        return ht.transmute(
-            sv_callset=hl.or_else(
-                ht.sv_callset.annotate(Het=hl.missing(hl.dtype('int32')), Hom=hl.missing(hl.dtype('int32'))),
-                ht.sv_callset_1,
+    @staticmethod
+    def _import_table_transmute_expressions(ht):
+        return {
+            'sv_callset': lambda sv_callset: sv_callset.annotate(
+                **{k: sv_callset.get(k, hl.missing(hl.dtype('int32'))) for k in ['Het', 'Hom']}
             ),
-            sortedTranscriptConsequences=hl.or_else(
-                hl.array(ht.sortedTranscriptConsequences),  # TODO export consequences as array for gcnv ht
-                ht.sortedTranscriptConsequences_1.map(
-                    lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)),  # TODO only export desired fields for sv ht
-            ),
-            **{k: hl.or_else(ht[k], ht[f'{k}_1'])
-               for k in ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']},
-            **{sample_id: hl.or_else(
-                add_missing_sv_entries(ht[sample_id]), add_missing_gcnv_entries(ht[f'{sample_id}_1'])
-            ) for sample_id in shared_sample_ids},
-            **{sample_id: add_missing_sv_entries(ht[sample_id]) for sample_id in gcnv_sample_ids - sv_sample_ids},
-            **{sample_id: add_missing_gcnv_entries(ht[sample_id]) for sample_id in sv_sample_ids - gcnv_sample_ids},
-        )
+            'sortedTranscriptConsequences': lambda sortedTranscriptConsequences: hl.array(
+                sortedTranscriptConsequences.map( # TODO export consequences as array for gcnv ht
+                    lambda t: t.select(*BaseSvHailTableQuery.TRANSCRIPT_FIELDS)) # TODO only export desired fields for sv ht
+                ),
+        }
 
 
 def _annotation_for_data_type(field):
