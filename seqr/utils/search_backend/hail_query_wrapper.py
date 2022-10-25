@@ -945,7 +945,9 @@ class MultiDataTypeHailTableQuery(object):
             table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
             table_sample_ids.update(sample_ids)
 
-            entry_types.update(ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype)
+            entry_types.update(dict(
+                **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
+            ))
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
             if 'cn' in entry_fields and 'CN' in entry_fields:
