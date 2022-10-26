@@ -1009,7 +1009,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     # TODO remove
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        data_types = [GCNV_KEY, SV_KEY]
+        data_types = [SV_KEY, GCNV_KEY]
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
         data_type_0 = data_types[0]
