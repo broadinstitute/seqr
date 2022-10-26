@@ -972,7 +972,7 @@ def _annotation_for_sv_type(field):
     )
 
 
-class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
+class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     # GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
     # GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
