@@ -121,21 +121,20 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
-        counts = {  # TODO
-            sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))
-            for sample_id in self._individuals_by_sample_id.keys()}
-        logger.info(f'Total Counts: {counts}')
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
 
-        cols = mt.annotate_cols(non_ref_count=hl.agg.count_where(mt.GT.is_non_ref())).cols()
-        logger.info(f'Total MT Counts: {cols.take(10)}')
+        cols = mt.annotate_cols(ct=hl.agg.count_where(mt.GT.is_non_ref())).cols()
+        logger.info(f'Total MT Counts: {cols.take(10)}')  # TODO
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
 
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
+
+        cols = mt.annotate_cols(ct=hl.agg.count_where(mt.GT.is_non_ref())).cols()
+        logger.info(f'Total Filtered MT Counts: {cols.take(10)}')  # TODO
         return mt
 
     @classmethod
