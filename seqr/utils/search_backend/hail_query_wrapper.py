@@ -992,17 +992,21 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
         'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
     }
-    # INITIAL_ENTRY_ANNOTATIONS = {
-    #     #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
-    #     'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
-    # }
-    # INITIAL_ENTRY_ANNOTATIONS = GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS  # TODO
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
 
+    def filter_variants(self, **kwargs):
+        pass
+
+    def filter_main_annotations(self):
+        pass
+
+    def annotate_filtered_genotypes(self, *args):
+        pass
+
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        data_types = [SV_KEY, GCNV_KEY]
+        data_types = [GCNV_KEY, SV_KEY]
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
         data_type_0 = data_types[0]
