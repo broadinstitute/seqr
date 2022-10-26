@@ -1022,8 +1022,8 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
             table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
             table_sample_ids.update(sample_ids)
 
-            counts = {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in table_sample_ids}
-            logger.info(f'Imported {counts} rows')
+            counts = {sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in table_sample_ids}
+            logger.info(f'Counts for {data_type}: {counts}')
 
             entry_types.update(dict(
                 **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
