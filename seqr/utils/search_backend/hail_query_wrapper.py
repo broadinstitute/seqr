@@ -122,7 +122,7 @@ class BaseHailTableQuery(object):
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
-        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
+        # mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
@@ -1090,6 +1090,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
             )
 
+        logger.info(f'Imported {ht.count()} rows')
         return ht
 
     @staticmethod
