@@ -1002,6 +1002,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
+        sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
         data_type_0 = GCNV_KEY
         ht = GcnvHailTableQuery.import_filtered_ht(data_source[data_type_0], samples[data_type_0], **kwargs)
         ht = ht.key_by(VARIANT_KEY_FIELD)
