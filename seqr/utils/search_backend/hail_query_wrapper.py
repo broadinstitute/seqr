@@ -957,9 +957,35 @@ class MultiDataTypeHailTableQuery(object):
 
             merge_fields = deepcopy(cls.MERGE_FIELDS)
             merge_fields += shared_sample_ids
+            # TODO
+            struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
+            logger.info(f'transcript types 1: {struct_types}')
+            new_types = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
+            logger.info(f'transcript types 2: {new_types}')
+            struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
+            logger.info(f'all transcript types: {struct_types}')
+            # TODO
+            # return {
+            #     'sortedTranscriptConsequences': lambda consequences: consequences.map(
+            #         lambda t: t.select(*BaseHailTableQuery.TRANSCRIPT_FIELDS))
+            # }
+            # return {
+            #     'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
+            #         consequence_terms=t.get('consequence_terms', [t.major_consequence]),
+            #         **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS},
+            #     )),
+            # }
             ht = ht.transmute(
-                **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
-                   for k, format in cls._import_table_transmute_expressions(ht).items()},
+                sortedTranscriptConsequences=hl.or_else(
+                    ht.sortedTranscriptConsequences.map(lambda t: t.select(
+                        'consequence_terms', *VariantHailTableQuery.TRANSCRIPT_FIELDS),
+                    ht.sortedTranscriptConsequences_1.map(lambda t: t.select(
+                        consequence_terms=[t.major_consequence],
+                        **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS}
+                    ))
+                ),
+                # **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
+                #    for k, format in cls._import_table_transmute_expressions(ht).items()},
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
             )
 
