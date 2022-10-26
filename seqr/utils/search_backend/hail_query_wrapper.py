@@ -132,7 +132,7 @@ class BaseHailTableQuery(object):
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
 
         cols = mt.annotate_cols(ct=hl.agg.count_where(mt.GT.is_non_ref())).cols()
-        logger.info(f'Total Annotated MT Counts: {cols.take(10)}')  # TODO
+        logger.info(f'Total MT Counts: {cols.take(10)}')  # TODO
         logger.info(f'Total MT Size: {mt.count()}')  # TODO
 
         if self._filtered_genes:
@@ -1004,7 +1004,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
     }
 
-    MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
+    MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sortedTranscriptConsequences']
 
     # TODO remove
     @classmethod
