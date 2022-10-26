@@ -129,7 +129,8 @@ class BaseHailTableQuery(object):
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
 
-        mt.annotate_cols(non_ref_count=hl.agg.count_where(mt.GT.is_non_ref())).cols().show()  # TODO
+        cols = mt.annotate_cols(non_ref_count=hl.agg.count_where(mt.GT.is_non_ref())).cols()
+        logger.info(f'Total MT Counts: {cols.take(10)}')
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
 
