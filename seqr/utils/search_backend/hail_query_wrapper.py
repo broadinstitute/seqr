@@ -1029,7 +1029,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
                     family_samples_filter=lambda s: len(s) > 1)
             ))
 
-        mt = mt.filter_rows(mt.familyGuids.size() > 0)
+        # mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
@@ -1040,6 +1040,12 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
                 numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
                 **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
             )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
+
+    def _matched_family_sample_filter(self, mt, sample_family_map):
+        sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
+        if True or not self._sample_ids_by_dataset_type:
+            return sample_filter
+        return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)].contains(mt.s)
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
