@@ -139,7 +139,6 @@ class BaseHailTableQuery(object):
             s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
             for s in samples
         }
-        logger.info(f'Imported {ht.count()} rows for {data_source}')
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
     @staticmethod
@@ -1011,6 +1010,9 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         entry_fields = {'GT'}
         entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
 
+        counts = {sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in sample_ids}
+        logger.info(f'Counts for {data_type_0}: {counts}')
+
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
             sub_ht = data_type_cls.import_filtered_ht(data_source[data_type], samples[data_type], **kwargs)
@@ -1042,7 +1044,9 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
             )
 
-        logger.info(f'Imported {ht.count()} rows')
+        counts = {sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in
+                  sample_ids}
+        logger.info(f'Total Counts: {counts}')
         return ht
 
     @staticmethod
