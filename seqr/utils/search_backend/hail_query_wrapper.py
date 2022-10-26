@@ -1053,9 +1053,14 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         # TODO possibly redo this for simplicity if not needed once MITO is added
         struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
         logger.info(f'transcript types 1: {struct_types}')
-        new_types = ht.sortedTranscriptConsequences_1.dtype.element_type
+        new_types = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
         logger.info(f'transcript types 2: {new_types}')
         struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
+        logger.info(f'all transcript types: {struct_types}')
+        # TODO
+        return {
+            'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(*BaseHailTableQuery.TRANSCRIPT_FIELDS))
+        }
         return {
             'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
                 consequence_terms=t.get('consequence_terms', [t.major_consequence]),
