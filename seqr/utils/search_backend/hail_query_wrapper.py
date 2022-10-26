@@ -1001,8 +1001,45 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     def filter_main_annotations(self):
         pass
 
-    def annotate_filtered_genotypes(self, *args):
-        pass
+    def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
+        individual_affected_status = inheritance_filter.get('affected') or {}
+        if inheritance_mode == ANY_AFFECTED:
+            inheritance_filter = None
+        elif inheritance_mode:
+            inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
+
+        if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
+            self._set_validated_affected_status(individual_affected_status, max_families)
+
+        sample_family_map = hl.dict(
+            {sample_id: i.family.guid for sample_id, i in self._individuals_by_sample_id.items()})
+        mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
+            mt, inheritance_mode, inheritance_filter, sample_family_map,
+            self._get_quality_filter_expr(mt, quality_filter),
+        ))
+
+        if inheritance_mode == X_LINKED_RECESSIVE:
+            mt = mt.filter_rows(self.get_x_chrom_filter(mt, self._get_x_chrom_interval()))
+        elif inheritance_mode == COMPOUND_HET:
+            # remove variants where all unaffected individuals are het
+            mt = mt.annotate_rows(familyGuids=hl.bind(
+                lambda unphased_families: mt.familyGuids.difference(unphased_families),
+                self._get_family_all_samples_expr(
+                    mt, mt.GT.is_het(), self._affected_status_samples[UNAFFECTED],
+                    family_samples_filter=lambda s: len(s) > 1)
+            ))
+
+        mt = mt.filter_rows(mt.familyGuids.size() > 0)
+
+        sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
+        return mt.annotate_rows(genotypes=hl.agg.filter(
+            self._matched_family_sample_filter(mt, sample_family_map),
+            hl.agg.collect(hl.struct(
+                individualGuid=sample_individual_map[mt.s],
+                sampleId=mt.s,
+                numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
+                **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
+            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
