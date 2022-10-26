@@ -131,6 +131,10 @@ class BaseHailTableQuery(object):
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
 
+        cols = mt.annotate_cols(ct=hl.agg.count_where(mt.GT.is_non_ref())).cols()
+        logger.info(f'Total Annotated MT Counts: {cols.take(10)}')  # TODO
+        logger.info(f'Total MT Size: {mt.count()}')  # TODO
+
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
 
