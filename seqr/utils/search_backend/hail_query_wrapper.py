@@ -122,7 +122,7 @@ class BaseHailTableQuery(object):
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
-        # mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))  # TODO
+        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
@@ -995,27 +995,10 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
 
-    # TODO
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
-        return hl.agg.filter(hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s), hl.agg.collect_as_set(sample_family_map[mt.s]))
-        # if not inheritance_filter:
-        #     sample_filter = mt.GT.is_non_ref()
-        #     if quality_filter_expr is not None:
-        #         sample_filter &= quality_filter_expr
-        #     if inheritance_mode == ANY_AFFECTED:
-        #         sample_filter &= hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s)
-        #     return hl.agg.filter(sample_filter, hl.agg.collect_as_set(sample_family_map[mt.s]))
-
-    # TODO
-    def _matched_family_sample_filter(self, mt, sample_family_map):
-        sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
-        if True or not self._sample_ids_by_dataset_type:
-            return sample_filter
-        return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)].contains(mt.s)
-
+    # TODO remove
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        data_types = [SV_KEY, GCNV_KEY]
+        data_types = [GCNV_KEY, SV_KEY]
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
         data_type_0 = data_types[0]
@@ -1038,6 +1021,9 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
             sample_ids.update(new_type_samples)
             table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
             table_sample_ids.update(sample_ids)
+
+            counts = {ht.aggregate(hl.agg.count(ht[sample_id].GT.is_non_ref())) for sample_id in table_sample_ids}
+            logger.info(f'Imported {counts} rows')
 
             entry_types.update(dict(
                 **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
