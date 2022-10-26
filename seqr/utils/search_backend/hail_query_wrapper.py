@@ -984,10 +984,10 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     # BASE_ANNOTATION_FIELDS.update({k: _annotation_for_sv_type(k) for k in ['end', 'pos']})
     # CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
     #
-    # COMPUTED_ANNOTATION_FIELDS = {
-    #     k: lambda self, r: hl.or_else(v(self, r), r[k])
-    #     for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
-    # }
+    COMPUTED_ANNOTATION_FIELDS = {
+        k: lambda self, r: hl.or_else(v(self, r), r[k])
+        for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
+    }
     # INITIAL_ENTRY_ANNOTATIONS = {
     #     #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
     #     'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
