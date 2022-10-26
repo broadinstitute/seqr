@@ -1030,6 +1030,14 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
             **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
         ) for sample_id in table_sample_ids})
 
+        merge_fields = deepcopy(cls.MERGE_FIELDS)
+        merge_fields += shared_sample_ids
+        ht = ht.transmute(
+            **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
+               for k, format in cls._import_table_transmute_expressions(ht).items()},
+            **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
+        )
+
         return ht
 
     def _save_samples(self, samples):
