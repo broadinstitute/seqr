@@ -154,9 +154,7 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _filter_gene_ids(mt, gene_ids):
-        return mt.filter_rows(
-            mt.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)) | mt.sortedTranscriptConsequences_1.any(lambda t: hl.set(gene_ids).contains(t.gene_id))
-        )
+        return mt.filter_rows(mt.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
 
     def _should_add_chr_prefix(self):
         reference_genome = hl.get_reference(self._genome_version)
@@ -1054,6 +1052,9 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     def _import_table_transmute_expressions(ht):
         # TODO possibly redo this for simplicity if not needed once MITO is added
         struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
+        logger.info(f'transcript types 1: {struct_types}')
+        new_types = ht.sortedTranscriptConsequences_1.dtype.element_type
+        logger.info(f'transcript types 2: {new_types}')
         struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
         return {
             'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
