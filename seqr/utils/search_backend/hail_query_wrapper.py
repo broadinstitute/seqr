@@ -1013,7 +1013,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         entry_fields.update(GcnvHailTableQuery.GENOTYPE_FIELDS.values())
 
         sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs).key_by(VARIANT_KEY_FIELD)
-        ht = ht.join(sv_ht.key_by(VARIANT_KEY_FIELD), how='left')
+        ht = ht.join(sv_ht.key_by(VARIANT_KEY_FIELD), how='outer')
         return ht
 
     def _save_samples(self, samples):
