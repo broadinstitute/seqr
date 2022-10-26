@@ -988,15 +988,15 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         k: lambda self, r: hl.or_else(v(self, r), r[k])
         for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
     }
-    # INITIAL_ENTRY_ANNOTATIONS = {
-    #     #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
-    #     'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
-    # }
+    INITIAL_ENTRY_ANNOTATIONS = {
+        #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
+        'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
+    }
     # INITIAL_ENTRY_ANNOTATIONS = {
     #     #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
     #     'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
     # }
-    INITIAL_ENTRY_ANNOTATIONS = GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS  # TODO
+    # INITIAL_ENTRY_ANNOTATIONS = GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS  # TODO
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
 
