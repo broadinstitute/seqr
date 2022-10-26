@@ -1004,6 +1004,13 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, GcnvHailTableQuery):
     def import_filtered_ht(cls, data_source, samples, **kwargs):
         return GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs)
 
+    def _save_samples(self, samples):
+        self._individuals_by_sample_id = {}
+        for s in samples[GCNV_KEY]:
+            self._individuals_by_sample_id[s.sample_id] = s.individual
+
+        self._sample_ids_by_dataset_type = None
+
     @staticmethod
     def get_row_data_type(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
