@@ -974,20 +974,20 @@ def _annotation_for_sv_type(field):
 
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
-    # GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
-    # GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
-    #
-    # POPULATIONS = SvHailTableQuery.POPULATIONS
-    #
-    # BASE_ANNOTATION_FIELDS = deepcopy(SvHailTableQuery.BASE_ANNOTATION_FIELDS)
-    # BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
-    # BASE_ANNOTATION_FIELDS.update({k: _annotation_for_sv_type(k) for k in ['end', 'pos']})
-    # CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
-    #
-    # COMPUTED_ANNOTATION_FIELDS = {
-    #     k: lambda self, r: hl.or_else(v(self, r), r[k])
-    #     for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
-    # }
+    GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
+    GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
+
+    POPULATIONS = SvHailTableQuery.POPULATIONS
+
+    BASE_ANNOTATION_FIELDS = deepcopy(SvHailTableQuery.BASE_ANNOTATION_FIELDS)
+    BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
+    BASE_ANNOTATION_FIELDS.update({k: _annotation_for_sv_type(k) for k in ['end', 'pos']})
+    CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
+
+    COMPUTED_ANNOTATION_FIELDS = {
+        k: lambda self, r: hl.or_else(v(self, r), r[k])
+        for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
+    }
     # INITIAL_ENTRY_ANNOTATIONS = {
     #     #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
     #     'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
@@ -996,7 +996,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     #     #  gCNV data has no ref/ref calls so add them back in, do not change uncalled SNPs
     #     'GT': lambda mt: hl.if_else(hl.is_defined(mt.GT) | hl.is_missing(mt.svType), mt.GT, hl.Call([0, 0]))
     # }
-    # INITIAL_ENTRY_ANNOTATIONS = GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS  # TODO
+    INITIAL_ENTRY_ANNOTATIONS = GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS  # TODO
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
 
