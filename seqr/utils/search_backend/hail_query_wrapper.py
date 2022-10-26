@@ -1040,12 +1040,12 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
         return ht
 
-    def _save_samples(self, samples):
-        self._individuals_by_sample_id = {}
-        for s in samples[GCNV_KEY]:
-            self._individuals_by_sample_id[s.sample_id] = s.individual
-
-        self._sample_ids_by_dataset_type = None
+    # def _save_samples(self, samples):
+    #     self._individuals_by_sample_id = {}
+    #     for s in samples[GCNV_KEY]:
+    #         self._individuals_by_sample_id[s.sample_id] = s.individual
+    #
+    #     self._sample_ids_by_dataset_type = None
 
     @staticmethod
     def get_row_data_type(r):
