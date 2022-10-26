@@ -984,10 +984,10 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     # BASE_ANNOTATION_FIELDS.update({k: _annotation_for_sv_type(k) for k in ['end', 'pos']})
     # CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
     #
-    COMPUTED_ANNOTATION_FIELDS = {
-        k: lambda self, r: hl.or_else(v(self, r), r[k])
-        for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
-    }
+    # COMPUTED_ANNOTATION_FIELDS = {
+    #     k: lambda self, r: hl.or_else(v(self, r), r[k])
+    #     for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
+    # }
     # INITIAL_ENTRY_ANNOTATIONS = {
     #     #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
     #     'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
@@ -1002,41 +1002,46 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
+        data_types = [GCNV_KEY, SV_KEY]
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
-        data_type_0 = GCNV_KEY
-        ht = GcnvHailTableQuery.import_filtered_ht(data_source[data_type_0], samples[data_type_0], **kwargs)
+
+        data_type_0 = data_types[0]
+
+        ht = QUERY_CLASS_MAP[data_type_0].import_filtered_ht(data_source[data_type_0], samples[data_type_0], **kwargs)
         ht = ht.key_by(VARIANT_KEY_FIELD)
 
         sample_ids = deepcopy(sample_ids_by_type[data_type_0])
         entry_types = dict(**ht[list(sample_ids)[0]].dtype)
         entry_fields = {'GT'}
-        entry_fields.update(GcnvHailTableQuery.GENOTYPE_FIELDS.values())
+        entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
 
-        sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs).key_by(VARIANT_KEY_FIELD)
-        ht = ht.join(sv_ht.key_by(VARIANT_KEY_FIELD), how='outer')
+        for data_type in data_types[1:]:
+            data_type_cls = QUERY_CLASS_MAP[data_type]
+            sub_ht = data_type_cls.import_filtered_ht(data_source[data_type], samples[data_type], **kwargs)
+            ht = ht.join(sub_ht.key_by(VARIANT_KEY_FIELD), how='outer')
 
-        new_type_samples = sample_ids_by_type[SV_KEY]
-        shared_sample_ids = sample_ids.intersection(new_type_samples)
-        sample_ids.update(new_type_samples)
-        table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
-        table_sample_ids.update(sample_ids)
+            new_type_samples = sample_ids_by_type[data_type]
+            shared_sample_ids = sample_ids.intersection(new_type_samples)
+            sample_ids.update(new_type_samples)
+            table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
+            table_sample_ids.update(sample_ids)
 
-        entry_types.update(dict(
-            **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
-        ))
-        entry_fields.update(SvHailTableQuery.GENOTYPE_FIELDS.values())
+            entry_types.update(dict(
+                **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
+            ))
+            entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
-        ht = ht.annotate(**{sample_id: ht[sample_id].select(
-            **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
-        ) for sample_id in table_sample_ids})
+            ht = ht.annotate(**{sample_id: ht[sample_id].select(
+                **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
+            ) for sample_id in table_sample_ids})
 
-        merge_fields = deepcopy(cls.MERGE_FIELDS)
-        merge_fields += shared_sample_ids
-        ht = ht.transmute(
-            **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
-               for k, format in cls._import_table_transmute_expressions(ht).items()},
-            **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
-        )
+            merge_fields = deepcopy(cls.MERGE_FIELDS)
+            merge_fields += shared_sample_ids
+            ht = ht.transmute(
+                **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
+                   for k, format in cls._import_table_transmute_expressions(ht).items()},
+                **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
+            )
 
         return ht
 
