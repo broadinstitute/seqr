@@ -1014,6 +1014,22 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
         sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs).key_by(VARIANT_KEY_FIELD)
         ht = ht.join(sv_ht.key_by(VARIANT_KEY_FIELD), how='outer')
+
+        new_type_samples = sample_ids_by_type[SV_KEY]
+        shared_sample_ids = sample_ids.intersection(new_type_samples)
+        sample_ids.update(new_type_samples)
+        table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
+        table_sample_ids.update(sample_ids)
+
+        entry_types.update(dict(
+            **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
+        ))
+        entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
+
+        ht = ht.annotate(**{sample_id: ht[sample_id].select(
+            **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
+        ) for sample_id in table_sample_ids})
+
         return ht
 
     def _save_samples(self, samples):
