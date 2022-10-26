@@ -121,13 +121,25 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
+        counts = {sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in
+                  self._individuals_by_sample_id.keys()}
+        logger.info(f'Total Counts: {counts}')
+
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
+
+        cols = mt.annotate_cols(ct=hl.agg.count_where(mt.GT.is_non_ref())).cols()
+        logger.info(f'Total MT Counts: {cols.take(10)}')  # TODO
+        logger.info(f'Total MT Size: {mt.count()}')  # TODO
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
+
+        cols = mt.annotate_cols(ct=hl.agg.count_where(mt.GT.is_non_ref())).cols()
+        logger.info(f'Total Filtered MT Counts: {cols.take(10)}')  # TODO
+        logger.info(f'Total MT Size: {mt.count()}')  # TODO
         return mt
 
     @classmethod
@@ -923,10 +935,6 @@ class MultiDataTypeHailTableQuery(object):
         entry_fields = {'GT'}
         entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
 
-        counts = {sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in
-                  sample_ids}
-        logger.info(f'Counts for {data_type_0}: {counts}')
-
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
             sub_ht = data_type_cls.import_filtered_ht(data_source[data_type], samples[data_type], **kwargs)
@@ -937,10 +945,6 @@ class MultiDataTypeHailTableQuery(object):
             sample_ids.update(new_type_samples)
             table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
             table_sample_ids.update(sample_ids)
-
-            counts = {sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in
-                      table_sample_ids}
-            logger.info(f'Counts for {data_type}: {counts}')
 
             entry_types.update(dict(
                 **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
@@ -958,10 +962,6 @@ class MultiDataTypeHailTableQuery(object):
                    for k, format in cls._import_table_transmute_expressions(ht).items()},
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
             )
-
-        counts = {sample_id: ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref())) for sample_id in
-                  sample_ids}
-        logger.info(f'Total Counts: {counts}')
 
         return ht
 
