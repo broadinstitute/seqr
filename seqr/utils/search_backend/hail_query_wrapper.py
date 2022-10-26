@@ -122,7 +122,7 @@ class BaseHailTableQuery(object):
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
-        # mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
+        # mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))  # TODO
         mt = mt.unfilter_entries()
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
@@ -995,6 +995,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
 
+    # TODO
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
         individual_affected_status = inheritance_filter.get('affected') or {}
         if inheritance_mode == ANY_AFFECTED:
@@ -1023,7 +1024,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
                     family_samples_filter=lambda s: len(s) > 1)
             ))
 
-        # mt = mt.filter_rows(mt.familyGuids.size() > 0)
+        mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
@@ -1035,6 +1036,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
                 **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
             )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
+    # TODO
     def _matched_family_sample_filter(self, mt, sample_family_map):
         sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
         if True or not self._sample_ids_by_dataset_type:
