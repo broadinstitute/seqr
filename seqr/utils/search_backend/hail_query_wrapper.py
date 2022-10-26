@@ -1002,9 +1002,18 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        gcnv_ht = GcnvHailTableQuery.import_filtered_ht(data_source[GCNV_KEY], samples[GCNV_KEY], **kwargs).key_by(VARIANT_KEY_FIELD)
-        return gcnv_ht
+        data_type_0 = GCNV_KEY
+        ht = GcnvHailTableQuery.import_filtered_ht(data_source[data_type_0], samples[data_type_0], **kwargs)
+        ht = ht.key_by(VARIANT_KEY_FIELD)
+
+        sample_ids = deepcopy(sample_ids_by_type[data_type_0])
+        entry_types = dict(**ht[list(sample_ids)[0]].dtype)
+        entry_fields = {'GT'}
+        entry_fields.update(GcnvHailTableQuery.GENOTYPE_FIELDS.values())
+
         sv_ht = SvHailTableQuery.import_filtered_ht(data_source[SV_KEY], samples[SV_KEY], **kwargs).key_by(VARIANT_KEY_FIELD)
+        ht = ht.join(sv_ht.key_by(VARIANT_KEY_FIELD), how='left')
+        return ht
 
     def _save_samples(self, samples):
         self._individuals_by_sample_id = {}
