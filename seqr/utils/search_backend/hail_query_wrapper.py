@@ -1024,7 +1024,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         entry_types.update(dict(
             **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
         ))
-        entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
+        entry_fields.update(SvHailTableQuery.GENOTYPE_FIELDS.values())
 
         ht = ht.annotate(**{sample_id: ht[sample_id].select(
             **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
