@@ -995,12 +995,6 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre']
 
-    def filter_variants(self, **kwargs):
-        pass
-
-    def filter_main_annotations(self):
-        pass
-
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
         individual_affected_status = inheritance_filter.get('affected') or {}
         if inheritance_mode == ANY_AFFECTED:
