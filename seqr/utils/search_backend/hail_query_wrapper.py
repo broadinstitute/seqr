@@ -1008,16 +1008,16 @@ def _annotation_for_data_type(field):
 
 class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
 
-    GENOTYPE_QUERY_MAP = BaseSvHailTableQuery.GENOTYPE_QUERY_MAP
+    GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
 
     GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
 
     POPULATIONS = deepcopy(VariantHailTableQuery.POPULATIONS)
-    POPULATIONS.update(GcnvHailTableQuery.POPULATIONS)
+    POPULATIONS.update(AllSvHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
-    PREDICTION_FIELDS_CONFIG.update(BaseSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
-    ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + BaseSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
+    PREDICTION_FIELDS_CONFIG.update(AllSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
+    ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + AllSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
     BASE_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.BASE_ANNOTATION_FIELDS)
     BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
