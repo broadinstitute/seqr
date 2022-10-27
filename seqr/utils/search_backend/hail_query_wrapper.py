@@ -877,7 +877,7 @@ class MultiDataTypeHailTableQuery(object):
         self.BASE_ANNOTATION_FIELDS = {}
         self.CORE_FIELDS = set()
         self.ANNOTATION_OVERRIDE_FIELDS = []
-        for cls in data_classes:
+        for cls in self._data_classes:
             self.POPULATIONS.update(cls.POPULATIONS)
             self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
             self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
