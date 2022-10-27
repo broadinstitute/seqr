@@ -8,6 +8,7 @@ import { getSortedIndividualsByFamily, getGenesById } from 'redux/selectors'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { VerticalSpacer } from '../../Spacers'
 import HpoPanel from '../HpoPanel'
+import { ColoredDiv } from '../../StyledComponents'
 
 const IndividualsContainer = styled.div`
   display: inline-block;
@@ -193,7 +194,12 @@ const GENOTYPE_DETAILS = [
   { title: 'Filter', variantField: 'genotypeFilters', shouldHide: val => (val || []).length < 1 },
   { title: 'Phred Likelihoods', field: 'pl' },
   { title: 'Quality Score', field: 'qs' },
-  { title: 'Mitochondrial Copy Number', field: 'mitoCn', format: val => val && val.toFixed(0) },
+  {
+    title: 'Mitochondrial Copy Number',
+    field: 'mitoCn',
+    format: val => val && val.toFixed(0),
+    comment: 'CN = (2*mean mtDNA coverage)/(median nuclear coverage). Median for blood samples ≈ 250. CN is typically higher in other tissues. Low values may indicate mtDNA depletion.',
+  },
   { title: 'Heteroplasmy Level', field: 'hl', format: val => val && val.toPrecision(2) },
   { title: 'Contamination', field: 'contamination' },
 ]
@@ -210,12 +216,13 @@ const SV_GENOTYPE_DETAILS = [
 ]
 
 const formattedGenotypeDetails = (details, genotype, variant, genesById) => details.map(
-  ({ shouldHide, title, field, variantField, format }) => {
+  ({ shouldHide, title, field, variantField, format, comment }) => {
     const value = field ? genotype[field] : variant[variantField]
     return value && !(shouldHide && shouldHide(value, variant)) ? (
       <div key={title}>
         {`${title}:  `}
         <b>{format ? format(value, genesById) : value}</b>
+        {comment && <ColoredDiv color="grey">{comment}</ColoredDiv> }
       </div>
     ) : null
   },

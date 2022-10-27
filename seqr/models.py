@@ -15,6 +15,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
+from seqr.views.utils.terra_api_utils import anvil_enabled
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION
 
@@ -169,10 +170,13 @@ class Project(ModelWithGUID):
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
-    can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
-    can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
+    can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
+    can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT, null=True, blank=True)
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    consent_code = models.CharField(max_length=1, null=True, blank=True, choices=[
+        (c[0], c) for c in ['HMB', 'GRU', 'Other']
+    ])
 
     is_mme_enabled = models.BooleanField(default=True)
     mme_primary_data_owner = models.TextField(null=True, blank=True, default=MME_DEFAULT_CONTACT_NAME)
@@ -201,15 +205,17 @@ class Project(ModelWithGUID):
         This could be done with signals, but seems cleaner to do it this way.
         """
         being_created = not self.pk
+        should_create_user_groups = being_created and not anvil_enabled()
 
-        if being_created:
+        if should_create_user_groups:
             # create user groups
             self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_edit', uuid.uuid4()))
             self.can_view_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_view', uuid.uuid4()))
 
         super(Project, self).save(*args, **kwargs)
 
-        if being_created:
+        if should_create_user_groups:
+
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_EDIT, obj=self)
             assign_perm(user_or_group=self.can_edit_group, perm=CAN_VIEW, obj=self)
 
@@ -224,20 +230,9 @@ class Project(ModelWithGUID):
 
         super(Project, self).delete(*args, **kwargs)
 
-        self.can_edit_group.delete()
-        self.can_view_group.delete()
-
-    def get_collaborators(self, permissions=None):
-        if not permissions:
-            permissions = {CAN_VIEW, CAN_EDIT}
-
-        collabs = set()
-        if CAN_VIEW in permissions:
-            collabs.update(self.can_view_group.user_set.all())
-        if CAN_EDIT in permissions:
-            collabs.update(self.can_edit_group.user_set.all())
-
-        return collabs
+        if self.can_edit_group:
+            self.can_edit_group.delete()
+            self.can_view_group.delete()
 
     class Meta:
         permissions = (
@@ -247,7 +242,7 @@ class Project(ModelWithGUID):
 
         json_fields = [
             'name', 'description', 'created_date', 'last_modified_date', 'genome_version', 'mme_contact_institution',
-            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid',
+            'last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'mme_contact_url', 'guid', 'consent_code',
             'workspace_namespace', 'workspace_name', 'has_case_review', 'enable_hgmd', 'is_demo', 'all_user_demo',
         ]
 
@@ -490,6 +485,29 @@ class Individual(ModelWithGUID):
         ('U', 'Unknown'),
     ]
 
+    BIOSAMPLE_CHOICES = [
+        ('T', 'UBERON:0000479'),  # tissue
+        ('NT', 'UBERON:0003714'),  # neural tissue
+        ('S', 'UBERON:0001836'),  # saliva
+        ('SE', 'UBERON:0001003'),  # skin epidermis
+        ('MT', 'UBERON:0002385'),  # muscle tissue
+        ('WB', 'UBERON:0000178'),  # whole blood
+        ('BM', 'UBERON:0002371'),  # bone marrow
+        ('CC', 'UBERON:0006956'),  # buccal mucosa
+        ('CF', 'UBERON:0001359'),  # cerebrospinal fluid
+        ('U', 'UBERON:0001088'),  # urine
+        ('NE', 'UBERON:0019306'),  # nose epithelium
+    ]
+
+    ANALYTE_CHOICES = [
+        ('D', 'DNA'),
+        ('R', 'RNA'),
+        ('B', 'blood plasma'),
+        ('F', 'frozen whole blood'),
+        ('H', 'high molecular weight DNA'),
+        ('U', 'urine'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
@@ -499,6 +517,7 @@ class Individual(ModelWithGUID):
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
     INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
     RELATIONSHIP_LOOKUP = dict(RELATIONSHIP_CHOICES)
+    ANALYTE_REVERSE_LOOKUP = {name: key for key, name in ANALYTE_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -520,6 +539,10 @@ class Individual(ModelWithGUID):
     case_review_discussion = models.TextField(null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
+
+    primary_biosample = models.CharField(max_length=2, choices=BIOSAMPLE_CHOICES, null=True, blank=True)
+    analyte_type = models.CharField(max_length=1, choices=ANALYTE_CHOICES, null=True, blank=True)
+    tissue_affected_status = models.BooleanField(null=True)
 
     birth_year = YearField()
     death_year = YearField()
@@ -576,7 +599,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship'
+            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type',
         ]
         audit_fields = {'case_review_status'}
 

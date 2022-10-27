@@ -5,12 +5,12 @@ import { connect } from 'react-redux'
 
 import { updateProject } from 'redux/rootReducer'
 import { getUser } from 'redux/selectors'
-import { EDITABLE_PROJECT_FIELDS, GENOME_VERSION_FIELD, GENOME_VERSION_38, ANVIL_FIELDS } from 'shared/utils/constants'
+import { PM_EDITABLE_PROJECT_FIELDS, GENOME_VERSION_FIELD, GENOME_VERSION_38, ANVIL_FIELDS } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { BooleanCheckbox } from 'shared/components/form/Inputs'
 
 const PROJECT_FIELDS = [
-  ...EDITABLE_PROJECT_FIELDS,
+  ...PM_EDITABLE_PROJECT_FIELDS,
   GENOME_VERSION_FIELD,
   { name: 'isDemo', label: 'Demo Project', component: BooleanCheckbox, inline: true },
   { name: 'disableMme', label: 'Disable Matchmaker', component: BooleanCheckbox, inline: true, width: 8 },

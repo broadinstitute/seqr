@@ -15,11 +15,12 @@ from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family,\
-    _get_json_for_families, get_json_for_family_notes, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
+    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
+from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families,\
+    get_updated_pedigree_json
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -322,24 +323,9 @@ def _update_and_parse_individuals_and_families(project, individual_records, user
         project, individual_records, user
     )
 
-    individuals_by_guid = {
-        individual['individualGuid']: individual for individual in
-        _get_json_for_individuals(updated_individuals, user, add_sample_guids_field=True)
-    }
-    families_by_guid = {
-        family['familyGuid']: family for family in
-        _get_json_for_families(updated_families, user, add_individual_guids_field=True)
-    }
+    pedigree_json = get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user)
 
-    response = {
-        'individualsByGuid': individuals_by_guid,
-        'familiesByGuid': families_by_guid,
-    }
-    if updated_notes:
-        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(updated_notes)}
-        response['familyNotesByGuid'] = family_notes_by_guid
-
-    return create_json_response(response)
+    return create_json_response(pedigree_json)
 
 
 FAMILY_ID_COL = 'family_id'
@@ -601,7 +587,7 @@ def _parse_individual_hpo_terms(json_records, project, user):
     if any(record.get(ASSIGNED_ANALYST_COL) for record in json_records):
         allowed_assigned_analysts = {
             u['email'] for u in get_project_collaborators_by_username(
-                user, project, include_permissions=False, include_analysts=True, fields=['email'],
+                user, project, fields=['email'], expand_user_groups=True,
             ).values()
         }
 

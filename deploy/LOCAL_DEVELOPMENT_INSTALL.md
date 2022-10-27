@@ -7,13 +7,16 @@ Instructions for setting up seqr on a local machine for development
 Before installing, always check first to see if a dependency is already installed.
 
 - [python 3](https://www.python.org/downloads/)
+
 - [gcloud](https://cloud.google.com/sdk/install)
+
 - [postgres](https://www.postgresql.org/download/)
   - Note: if you use homebrew to install postgres, it may not create the correct superuser. 
 After installation, run `psql -l` and if there is no user named `postgres`, run the following:
   `$POSTGRES_INSTALL_PATH/bin/createuser -s postgres`
 
 - [redis](https://redis.io/topics/quickstart)
+
 - [node/npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
 
 Optionally, if planning to use elasticsearch from docker-compose, install:
@@ -74,9 +77,9 @@ always starts up with the correct configuration.
 
 ```bash
 # Mirrors production configuration
-export ANALYST_PROJECT_CATEGORY=analyst-projects
-export ANALYST_USER_GROUP=analysts
-export PM_USER_GROUP=project-managers
+export INTERNAL_NAMESPACES=gregor-consortium,seqr-access
+export ANALYST_USER_GROUP=TGG_Users
+export PM_USER_GROUP=TGG_PM
     
 # Set the client ID and secret for the seqr-local OAuth client (from GCP)
 export SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID=

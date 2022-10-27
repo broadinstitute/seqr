@@ -215,11 +215,11 @@ const nestedVariantPanes = (variants, mainGeneId, props) => ([
 })))
 
 const CompoundHets = React.memo(({ variants, compoundHetToggle, ...props }) => {
-  const mainGeneId = compHetGene(variants)
-
   // If linked variants are complex and not comp-het (more than 2 variants) and the first variant is a manual variant,
   // display associated variants nested under the manual variant
   const mainVariants = (variants.length > 2 && !variants[0].populations) && variants.slice(0, 1)
+
+  const mainGeneId = compHetGene(variants) || (mainVariants && mainVariants[0].svName)
 
   return (
     <VariantLayout

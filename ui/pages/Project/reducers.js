@@ -3,7 +3,9 @@ import { combineReducers } from 'redux'
 import {
   loadingReducer, createSingleObjectReducer, createSingleValueReducer, createObjectsByIdReducer,
 } from 'redux/utils/reducerFactories'
-import { REQUEST_SAVED_VARIANTS, updateEntity, loadProjectChildEntities, loadFamilyData } from 'redux/utils/reducerUtils'
+import {
+  REQUEST_SAVED_VARIANTS, updateEntity, loadProjectChildEntities, loadFamilyData, loadProjectDetails,
+} from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { SHOW_IN_REVIEW, SORT_BY_FAMILY_NAME, SORT_BY_FAMILY_ADDED_DATE, CASE_REVIEW_TABLE_NAME } from './constants'
@@ -14,7 +16,6 @@ const UPDATE_FAMILY_TABLE_STATE = 'UPDATE_FAMILY_TABLE_STATE'
 const UPDATE_FAMILY_TABLE_FILTER_STATE = 'UPDATE_FAMILY_TABLE_FILTER_STATE'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
 const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
-const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
@@ -30,17 +31,7 @@ const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
 
 export const loadCurrentProject = projectGuid => (dispatch, getState) => {
   dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
-  const project = getState().projectsByGuid[projectGuid]
-  if (!project) {
-    dispatch({ type: REQUEST_PROJECT_DETAILS })
-    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      }).get()
-  }
+  loadProjectDetails(projectGuid)(dispatch, getState)
 }
 
 const loadCurrentProjectChildEntities = (entityType, dispatchType, receiveDispatchType) => (dispatch, getState) => {
@@ -234,6 +225,10 @@ export const updateCollaborator = values => updateEntity(
   values, RECEIVE_DATA, null, 'username', null, state => `/api/project/${state.currentProjectGuid}/collaborators`,
 )
 
+export const updateCollaboratorGroup = values => updateEntity(
+  values, RECEIVE_DATA, null, 'name', null, state => `/api/project/${state.currentProjectGuid}/collaboratorGroups`,
+)
+
 export const updateAnalysisGroup = values => updateEntity(
   values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/analysis_groups`,
 )
@@ -319,7 +314,6 @@ export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_
 
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
-  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),

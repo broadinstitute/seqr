@@ -342,6 +342,7 @@ export const STATE_WITH_2_FAMILIES = {
       deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
       description: '',
       isMmeEnabled: true,
+      canEdit: true,
       lastModifiedDate: '2017-03-14T17:37:32.712Z',
       mmePrimaryDataOwner: 'PI',
       mmeContactInstitution: 'Broad',
@@ -349,6 +350,8 @@ export const STATE_WITH_2_FAMILIES = {
       name: '1000 Genomes Demo',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
+      workspaceName: 'test-namespace',
+      workspaceNamespace: 'test-workspace',
       collaborators: [
         {
           dateJoined: '2019-02-20T18:01:36.677Z',
@@ -888,8 +891,8 @@ export const STATE_WITH_2_FAMILIES = {
         {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
       ],
       geneVariants: [
-        { geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 },
-        { geneId: "ENSG00000228198", alt: null, ref: null, chrom: '1', pos: 248367227, end: 248369100 }
+        { geneId: "ENSG00000228198", variantGuid: 'SV0000004_116042722_r0390_1000' },
+        { geneId: "ENSG00000228198", variantGuid: 'SV0000002_SV48367227_r0390_100' },
       ],
     }
   },
@@ -1011,4 +1014,16 @@ export const STATE_WITH_2_FAMILIES = {
       username: 'test_user2',
     },
   },
+}
+
+export const DATA_MANAGER_USER = {
+  date_joined: '2015-02-19T20:22:50.633Z',
+  email: 'test@broadinstitute.org',
+  first_name: '',
+  id: 1,
+  isActive: true,
+  isDataManager: true,
+  last_login: '2017-03-14T17:44:53.403Z',
+  last_name: '',
+  username: 'test',
 }

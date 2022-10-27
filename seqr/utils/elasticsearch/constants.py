@@ -85,8 +85,6 @@ POPULATIONS = {
         'filter_AF': [],
         'AC': 'AC',
         'AN': 'AN',
-        'AC_het': 'AC_het',
-        'AF_het': 'AF_het',
     },
     'topmed': {
         'filter_AF': [],
@@ -109,13 +107,26 @@ POPULATIONS = {
         'filter_AF': ['gnomad_genomes_AF_POPMAX_OR_GLOBAL'],
     },
     'gnomad_svs': {},
+    'callset_heteroplasmy': {
+        'AN': 'AN',
+        'AC': 'AC_het',
+        'AF': 'AF_het',
+    },
+    'gnomad_mito': {'max_hl': None},
+    'gnomad_mito_heteroplasmy': {
+        'AN': 'gnomad_mito_AN',
+        'AC': 'gnomad_mito_AC_het',
+        'AF': 'gnomad_mito_AF_het',
+        'max_hl': 'gnomad_mito_max_hl'
+    },
+    'helix': {'max_hl': None},
+    'helix_heteroplasmy': {
+        'AN': 'helix_AN',
+        'AC': 'helix_AC_het',
+        'AF': 'helix_AF_het',
+        'max_hl': 'helix_max_hl',
+    }
 }
-
-MITO_POPULATION = {
-    'gnomad_mito': {},
-    'helix': {},
-}
-POPULATIONS.update(MITO_POPULATION)
 
 POPULATION_FIELD_CONFIGS = {
     'AF': {'format_value': float},
@@ -126,8 +137,6 @@ POPULATION_FIELD_CONFIGS = {
     'Hemi': {},
     'Het': {},
     'ID': {'format_value': str, 'default_value': None},
-    'AC_het': {},
-    'AF_het': {'format_value': float},
     'max_hl': {'format_value': float},
 }
 for population, pop_config in POPULATIONS.items():
@@ -265,6 +274,7 @@ SORT_FIELDS.update({
     for sort, sort_field in PREDICTOR_SORT_FIELDS.items()
 })
 
+SCREEN_KEY = 'SCREEN'
 CLINVAR_KEY = 'clinvar'
 CLINVAR_FIELDS = ['clinical_significance', 'variation_id', 'allele_id', 'gold_stars']
 HGMD_KEY = 'hgmd'
@@ -292,6 +302,7 @@ CORE_FIELDS_CONFIG = {
     'originalAltAlleles': {'format_value': lambda alleles: [a.split('-')[-1] for a in alleles], 'default_value': []},
     'ref': {},
     'rsid': {},
+    'screen_region_type': {'response_key': 'screenRegionType', 'format_value': lambda types: types[0] if types else None},
     'start': {'response_key': 'pos', 'format_value': int},
     'svType': {},
     'variantId': {},
@@ -317,12 +328,10 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_DANN_score': {},
     'eigen_Eigen_phred': {},
     'dbnsfp_FATHMM_pred': {},
-    'dbnsfp_GERP_RS': {'response_key': 'gerp_rs'},
     'mpc_MPC': {},
-    'dbnsfp_MetaSVM_pred': {},
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
-    'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
+    'gnomad_non_coding_constraint_z_score': {'response_key': 'gnomad_noncoding'},
     'primate_ai_score': {'response_key': 'primate_ai'},
     'splice_ai_delta_score': {'response_key': SPLICE_AI_FIELD},
     'splice_ai_splice_consequence': {'response_key': 'splice_ai_consequence'},

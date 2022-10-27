@@ -5,19 +5,19 @@ from seqr.models import Individual, Sample, IgvSample, AnalysisGroup, LocusList,
     VariantFunctionalData, FamilyNote, SavedVariant
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
-    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects, \
+    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
     get_json_for_family_notes, get_json_for_saved_variants
 
 
-def get_projects_child_entities(projects, project_guid, user, is_analyst, include_samples=True, include_locus_list_metadata=True):
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user, is_analyst=is_analyst)}
+def get_projects_child_entities(projects, project_guid, user, include_samples=True, include_locus_list_metadata=True):
+    projects_by_guid = {p.guid: {'projectGuid': p.guid, 'name': p.name} for p in projects}
 
     if include_samples:
         sample_models = Sample.objects.filter(individual__family__project__in=projects)
-        samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True, is_analyst=is_analyst)
+        samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
 
     locus_lists_models = LocusList.objects.filter(projects__in=projects).order_by('name')
-    locus_lists = get_json_for_locus_lists(locus_lists_models, user, is_analyst=is_analyst, include_metadata=include_locus_list_metadata)
+    locus_lists = get_json_for_locus_lists(locus_lists_models, user, include_metadata=include_locus_list_metadata)
 
     response = {
         'projectsByGuid': projects_by_guid,
@@ -54,32 +54,33 @@ def get_project_analysis_groups(projects, project_guid):
     return {ag['analysisGroupGuid']: ag for ag in analysis_groups}
 
 
-def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True, skip_child_ids=False):
+def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True):
     families = _get_json_for_families(
-        family_models, user, project_guid=project_guid, skip_nested=skip_child_ids,
-        is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+        family_models, user, project_guid=project_guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__in=family_models), is_analyst=is_analyst)
 
     individual_models = Individual.objects.filter(family__in=family_models)
     individuals = _get_json_for_individuals(
-        individual_models, user=user, project_guid=project_guid, add_hpo_details=True, skip_nested=skip_child_ids,
+        individual_models, user=user, project_guid=project_guid, add_hpo_details=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    response.update({
+    context = {
         'familiesByGuid': {f['familyGuid']: f for f in families},
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
-    })
+    }
+    for k, v in context.items():
+        if k not in response:
+            response[k] = {}
+        response[k].update(v)
 
     if include_igv:
         igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
-        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, skip_nested=skip_child_ids,
-                                       is_analyst=is_analyst)
+        igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, is_analyst=is_analyst)
         response['igvSamplesByGuid'] = {s['sampleGuid']: s for s in igv_samples}
 
-    if not skip_child_ids:
-        add_child_ids(response)
+    add_child_ids(response)
 
     return individual_models
 

@@ -4,29 +4,31 @@ Utility functions for converting Django ORM object to JSON
 
 import json
 from collections import defaultdict
-from copy import deepcopy
-from django.db.models import prefetch_related_objects, Prefetch
+from django.db.models import prefetch_related_objects, Prefetch, Count
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Lower
 from django.contrib.auth.models import User
+from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_EDIT, CAN_VIEW, \
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
-    project_has_analyst_access
-from seqr.views.utils.terra_api_utils import is_anvil_authenticated
-from settings import ANALYST_PROJECT_CATEGORY, ANALYST_USER_GROUP, PM_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
+    is_internal_anvil_project, get_project_guids_user_can_view, get_anvil_analyst_user_emails
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
+from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
     fields = set(model_class._meta.json_fields)
-    if is_analyst is None:
-        is_analyst = user and user_is_analyst(user)
-    if is_analyst:
-        fields.update(getattr(model_class._meta, 'internal_json_fields', []))
+    internal_fields = getattr(model_class._meta, 'internal_json_fields', [])
+    if internal_fields:
+        if is_analyst is None:
+            is_analyst = user and user_is_analyst(user)
+        if is_analyst:
+            fields.update(internal_fields)
     if additional_model_fields:
         fields.update(additional_model_fields)
     audit_fields = [field for field in getattr(model_class._meta, 'audit_fields', set()) if field in fields]
@@ -103,52 +105,38 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
 def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
-MAIN_USER_FIELDS = [
-    'username', 'email', 'first_name', 'last_name', 'last_login', 'date_joined', 'id'
+
+MODEL_USER_FIELDS = [
+    'username', 'email', 'first_name', 'last_name', 'last_login', 'date_joined', 'id', 'is_superuser', 'is_active',
 ]
-BOOL_USER_FIELDS = {
-    'is_superuser': False, 'is_active': True,
-}
-MODEL_USER_FIELDS = MAIN_USER_FIELDS + list(BOOL_USER_FIELDS.keys())
 COMPUTED_USER_FIELDS = {
-    'is_anvil': lambda user, is_anvil=None, **kwargs: is_anvil_authenticated(user) if is_anvil is None else is_anvil,
-    'display_name': lambda user, **kwargs: user.get_full_name(),
-    'is_analyst': lambda user, analyst_users=None, **kwargs: user in analyst_users if analyst_users is not None else user_is_analyst(user),
-    'is_data_manager': lambda user, **kwargs: user_is_data_manager(user),
-    'is_pm': lambda user, pm_users=None, **kwargs: user in pm_users if pm_users is not None else user_is_pm(user),
+    'display_name': lambda user: user.get_full_name(),
+    'is_data_manager': user_is_data_manager,
 }
 
-DEFAULT_USER = {_to_camel_case(field): '' for field in MAIN_USER_FIELDS}
-DEFAULT_USER.update({_to_camel_case(field): val for field, val in BOOL_USER_FIELDS.items()})
-DEFAULT_USER.update({_to_camel_case(field): False for field in COMPUTED_USER_FIELDS.keys()})
 
-def _get_json_for_user(user, is_anvil=None, fields=None, analyst_users=None, pm_users=None):
-    """Returns JSON representation of the given User object
+def get_json_for_user(user, fields):
+    invalid_fields = [field for field in fields if field not in MODEL_USER_FIELDS and field not in COMPUTED_USER_FIELDS]
+    if invalid_fields:
+        raise ValueError(f'Invalid user fields: {", ".join(invalid_fields)}')
 
-    Args:
-        user (object): Django user model
-
-    Returns:
-        dict: json object
-    """
-
-    if hasattr(user, '_wrapped'):
-        user = user._wrapped   # Django request.user actually stores the Django User objects in a ._wrapped attribute
-
-    model_fields = [field for field in fields if field in MODEL_USER_FIELDS] if fields else MODEL_USER_FIELDS
-    computed_fields = [field for field in fields if field in COMPUTED_USER_FIELDS] if fields else COMPUTED_USER_FIELDS
-
-    user_json = {
-        _to_camel_case(field): getattr(user, field) for field in model_fields
+    return {
+        _to_camel_case(field): COMPUTED_USER_FIELDS[field](user) if field in COMPUTED_USER_FIELDS else getattr(user, field)
+        for field in fields
     }
+
+
+def get_json_for_current_user(user):
+    user_json = get_json_for_user(user, fields=MODEL_USER_FIELDS + list(COMPUTED_USER_FIELDS.keys()))
     user_json.update({
-        _to_camel_case(field): COMPUTED_USER_FIELDS[field](user, is_anvil=is_anvil, analyst_users=analyst_users, pm_users=pm_users)
-        for field in computed_fields
+        'isAnvil': is_anvil_authenticated(user),
+        'isAnalyst': user_is_analyst(user),
+        'isPm': user_is_pm(user),
     })
     return user_json
 
 
-def get_json_for_projects(projects, user=None, is_analyst=None, add_project_category_guids_field=True):
+def get_json_for_projects(projects, user=None, is_analyst=None, add_project_category_guids_field=True, add_permissions=False):
     """Returns JSON representation of the given Projects.
 
     Args:
@@ -159,13 +147,15 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
     """
     def _process_result(result, project):
         result.update({
-            'projectCategoryGuids': [
-                c.guid for c in project.projectcategory_set.all() if c.name != ANALYST_PROJECT_CATEGORY
-            ] if add_project_category_guids_field else [],
+            'projectCategoryGuids': list(
+                project.projectcategory_set.values_list('guid', flat=True)
+            ) if add_project_category_guids_field else [],
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
-            'canEdit': has_project_permissions(project, user, can_edit=True),
             'userIsCreator': project.created_by == user,
+            'isAnalystProject': is_internal_anvil_project(project),
         })
+        if add_permissions:
+            result['canEdit'] = has_project_permissions(project, user, can_edit=True)
 
     prefetch_related_objects(projects, 'created_by')
     if add_project_category_guids_field:
@@ -183,7 +173,7 @@ def _get_json_for_project(project, user, **kwargs):
     Returns:
         dict: json object
     """
-    return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, **kwargs)
+    return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, add_permissions=True, **kwargs)
 
 
 def _get_case_review_fields(model, has_case_review_perm, user, get_project):
@@ -194,7 +184,7 @@ def _get_case_review_fields(model, has_case_review_perm, user, get_project):
     return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, skip_nested=False, is_analyst=None, has_case_review_perm=None):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -240,10 +230,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     kwargs = {'additional_model_fields': _get_case_review_fields(
         families[0], has_case_review_perm, user, lambda family: family.project)
     }
-    if project_guid or not skip_nested:
-        kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
-    else:
-        kwargs['additional_model_fields'].append('project_id')
+    kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
 
     return _get_json_for_models(families, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
 
@@ -288,7 +275,7 @@ def _process_individual_result(add_sample_guids_field):
     return _process_result
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
-                              family_fields=None, skip_nested=False, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
+                              family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -308,17 +295,14 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         'additional_model_fields': _get_case_review_fields(
             individuals[0], has_case_review_perm, user, lambda indiv: indiv.family.project)
     }
-    if project_guid or not skip_nested:
-        nested_fields = [
-            {'fields': ('family', 'guid'), 'value': family_guid},
-            {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
-        ]
-        if family_fields:
-            for field in family_fields:
-                nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-        kwargs.update({'nested_fields': nested_fields})
-    else:
-        kwargs['additional_model_fields'].append('family_id')
+    nested_fields = [
+        {'fields': ('family', 'guid'), 'value': family_guid},
+        {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
+    ]
+    if family_fields:
+        for field in family_fields:
+            nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
+    kwargs.update({'nested_fields': nested_fields})
 
     if add_hpo_details:
         kwargs['additional_model_fields'] += [
@@ -466,13 +450,12 @@ def get_json_for_saved_variant(saved_variant, **kwargs):
     return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
 
 
-def get_json_for_saved_variants_with_tags(saved_variants, include_missing_variants=False, **kwargs):
+def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
         for variant in get_json_for_saved_variants(saved_variants, **kwargs)
     }
 
-    missing_ids = set()
     saved_variant_id_map = {var.id: var.guid for var in saved_variants}
 
     variant_tag_id_map = defaultdict(list)
@@ -487,12 +470,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         tag['variantGuids'] = []
         variant_ids = variant_tag_id_map[tag_id_map[tag_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
-                tag['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
+            tag['variantGuids'].append(variant_guid)
 
     variant_functional_id_map = defaultdict(list)
     for functional_mapping in VariantFunctionalData.saved_variants.through.objects.filter(
@@ -507,12 +487,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         tag['variantGuids'] = []
         variant_ids = variant_functional_id_map[functional_id_map[tag_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
-                tag['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
+            tag['variantGuids'].append(variant_guid)
 
     variant_note_id_map = defaultdict(list)
     for note_mapping in VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
@@ -526,18 +503,9 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
         note['variantGuids'] = []
         variant_ids = variant_note_id_map[note_id_map[note_guid]]
         for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map.get(variant_id)
-            if variant_guid:
-                variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
-                note['variantGuids'].append(variant_guid)
-            else:
-                missing_ids.add(variant_id)
-
-    if include_missing_variants and missing_ids:
-        variants_by_guid.update({
-            variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
-            for variant in get_json_for_saved_variants(SavedVariant.objects.filter(id__in=missing_ids), **kwargs)
-        })
+            variant_guid = saved_variant_id_map[variant_id]
+            variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
+            note['variantGuids'].append(variant_guid)
 
     response = {
         'variantTagsByGuid': {tag['tagGuid']: tag for tag in tags},
@@ -549,7 +517,7 @@ def get_json_for_saved_variants_with_tags(saved_variants, include_missing_varian
     return response
 
 
-def get_json_for_discovery_tags(variants):
+def get_json_for_discovery_tags(variants, user):
     from seqr.views.utils.variant_utils import get_variant_key
     response = {}
     discovery_tags = defaultdict(list)
@@ -557,7 +525,7 @@ def get_json_for_discovery_tags(variants):
     tag_models = VariantTag.objects.filter(
         variant_tag_type__category='CMG Discovery Tags',
         saved_variants__variant_id__in={variant['variantId'] for variant in variants},
-        saved_variants__family__project__projectcategory__name=ANALYST_PROJECT_CATEGORY,
+        saved_variants__family__project__guid__in=get_project_guids_user_can_view(user),
     )
     if tag_models:
         discovery_tag_json = get_json_for_variant_tags(tag_models, add_variant_guids=False)
@@ -643,19 +611,6 @@ def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True):
     return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
 
 
-def get_json_for_variant_functional_data_tag_types():
-    functional_tag_types = []
-    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
-        functional_tag_types += [{
-            'category': category,
-            'name': name,
-            'metadataTitle': json.loads(tag_json).get('metadata_title', 'Notes'),
-            'color': json.loads(tag_json)['color'],
-            'description': json.loads(tag_json).get('description'),
-        } for name, tag_json in tags]
-    return functional_tag_types
-
-
 def get_json_for_variant_notes(notes, add_variant_guids=True):
     """Returns a JSON representation of the given variant notes.
 
@@ -712,7 +667,8 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False, is_analyst=None, include_metadata=True):
+def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False,
+                             is_analyst=False, include_metadata=True):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -749,7 +705,8 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
 
         if include_metadata:
             result.update({
-                'numEntries': gene_set.count() + interval_set.count(),
+                'numEntries': gene_set.count() + interval_set.count()
+                if include_genes else locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
                 'canEdit': user == locus_list.created_by,
             })
 
@@ -761,9 +718,13 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
 
     if include_metadata:
         prefetch_related_objects(locus_lists, 'created_by')
-    if include_metadata or include_genes:
+
+    if include_genes:
         prefetch_related_objects(locus_lists, 'locuslistgene_set')
         prefetch_related_objects(locus_lists, 'locuslistinterval_set')
+    elif include_metadata:
+        locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
+
     prefetch_related_objects(locus_lists, 'palocuslist')
 
     if include_pagenes:
@@ -784,60 +745,81 @@ def get_json_for_locus_list(locus_list, user):
                                include_pagenes=True)
 
 
+PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit']
+
+
+def get_json_for_project_collaborator_groups(project):
+    if anvil_enabled():
+        return None
+    group_json = [
+        _get_collaborator_json(
+            group, fields=['name'], include_permissions=True, can_edit=CAN_EDIT in perms,
+            get_json_func=lambda g, fields: {field: getattr(g, field) for field in fields},
+        )
+        for group, perms in get_groups_with_perms(project, attach_perms=True).items()
+        if not any(substring in group.name for substring in PROJECT_ACCESS_GROUP_NAMES)
+    ]
+    return sorted(group_json, key=lambda group: (not group['hasEditPermissions'], group['name'].lower()))
+
+
 def get_json_for_project_collaborator_list(user, project):
     """Returns a JSON representation of the collaborators in the given project"""
-    collaborator_list = list(get_project_collaborators_by_username(user, project).values())
+    collaborator_list = list(
+        get_project_collaborators_by_username(
+            user, project, fields=['username', 'email', 'display_name'], include_permissions=True,
+        ).values())
 
     return sorted(collaborator_list, key=lambda collaborator: (
-        collaborator['lastName'] or '', collaborator['displayName'] or '', collaborator['email']))
+        not collaborator['hasEditPermissions'], (collaborator['displayName'] or collaborator['email']).lower()))
 
 
-def get_project_collaborators_by_username(user, project, include_permissions=True, include_analysts=False, **kwargs):
+def get_project_collaborators_by_username(user, project, fields, include_permissions=False, expand_user_groups=False):
     """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
-    analyst_users = set(User.objects.filter(groups__name=ANALYST_USER_GROUP)) if ANALYST_USER_GROUP else None
-    pm_users = set(User.objects.filter(groups__name=PM_USER_GROUP) if PM_USER_GROUP else User.objects.filter(is_superuser=True))
+    if not anvil_enabled():
+        if expand_user_groups:
+            collaborator_perms = get_users_with_perms(project, attach_perms=True)
+        else:
+            collaborator_perms = {collab: [CAN_VIEW] for collab in project.can_view_group.user_set.all()}
+            for collab in project.can_edit_group.user_set.all():
+                collaborator_perms[collab].append(CAN_EDIT)
 
-    for collaborator in project.get_collaborators(permissions=[CAN_VIEW]):
-        collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=False, analyst_users=analyst_users, pm_users=pm_users, **kwargs
-        )
+        for collaborator, perms in collaborator_perms.items():
+            collaborators[collaborator.username] = _get_collaborator_json(
+                collaborator, fields, include_permissions, can_edit=CAN_EDIT in perms)
 
-    for collaborator in project.get_collaborators(permissions=[CAN_EDIT]):
-        collaborators[collaborator.username] = _get_collaborator_json(
-            collaborator, include_permissions, can_edit=True, analyst_users=analyst_users, pm_users=pm_users, **kwargs
-        )
-
-    if project_has_anvil(project):
+    elif project_has_anvil(project):
         permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in = permission_levels.keys())}
+        analyst_email = f'{ANALYST_USER_GROUP}@firecloud.org'.lower()
+        if expand_user_groups and analyst_email in permission_levels:
+            analyst_permission = permission_levels.pop(analyst_email)
+            permission_levels.update({email.lower(): analyst_permission for email in get_anvil_analyst_user_emails(user)})
+
+        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in=permission_levels.keys())}
         for email, permission in permission_levels.items():
             if email == SERVICE_ACCOUNT_FOR_ANVIL:
                 continue
             collaborator = users_by_email.get(email)
-            if collaborator:
-                collaborators.update({collaborator.username: _get_collaborator_json(collaborator, include_permissions,
-                    can_edit=permission==CAN_EDIT, is_anvil=True, analyst_users=analyst_users, pm_users=pm_users, **kwargs)})
-            else:
-                collaborators[email] = deepcopy(DEFAULT_USER)
-                collaborators[email].update({
-                    'username': email,  # to ensure everything has a unique ID
-                    'email': email,
-                    'isAnvil': True,
-                    'hasViewPermissions': True,
-                    'hasEditPermissions': permission == CAN_EDIT,
-                })
-
-    if include_analysts and analyst_users and project_has_analyst_access(project):
-        collaborators.update({
-            user.username: _get_collaborator_json(user, include_permissions, can_edit=True, **kwargs) for user in analyst_users
-        })
+            collaborator_json = _get_collaborator_json(
+                collaborator or email, fields, include_permissions, can_edit=permission == CAN_EDIT,
+                get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
+            collaborators[collaborator_json['username']] = collaborator_json
 
     return collaborators
 
 
-def _get_collaborator_json(collaborator, include_permissions, can_edit, is_anvil=False, analyst_users=None, pm_users=None, **kwargs):
-    collaborator_json = _get_json_for_user(collaborator, is_anvil=is_anvil, analyst_users=analyst_users, pm_users=pm_users, **kwargs)
+def _get_anvil_user_json(collaborator, fields):
+    user = {_to_camel_case(field): '' for field in fields}
+    user.update({field: collaborator for field in ['username', 'email']})
+    return user
+
+
+def _get_collaborator_json(collaborator, fields, include_permissions, can_edit, get_json_func=get_json_for_user):
+    collaborator_json = get_json_func(collaborator, fields)
+    return _set_collaborator_permissions(collaborator_json, include_permissions, can_edit)
+
+
+def _set_collaborator_permissions(collaborator_json, include_permissions, can_edit):
     if include_permissions:
         collaborator_json.update({
             'hasViewPermissions': True,

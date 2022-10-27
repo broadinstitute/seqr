@@ -2,6 +2,7 @@
 import json
 import mock
 
+from copy import deepcopy
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
 
@@ -10,7 +11,8 @@ from seqr.views.apis.individual_api import edit_individuals_handler, update_indi
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
     get_hpo_terms, get_individual_rna_seq_data
-from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, \
+    CORE_INTERNAL_INDIVIDUAL_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 PM_REQUIRED_PROJECT_GUID = 'R0003_test'
@@ -78,6 +80,7 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
+        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), INDIVIDUAL_FIELDS_NO_FEATURES)
         individual = Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID)
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertEqual(individual.display_name, '')
@@ -90,7 +93,24 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(edit_individuals_url, content_type='application/json',
                                     data=json.dumps(INDIVIDUAL_UPDATE_DATA))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()[INDIVIDUAL_UPDATE_GUID]['birthYear'], 2000)
+        response_json = response.json()
+        response_fields = deepcopy(INDIVIDUAL_FIELDS_NO_FEATURES)
+        response_fields.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), response_fields)
+        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['birthYear'], 2000)
+
+        update_json = {'analyteType': 'D', 'tissueAffectedStatus': False}
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps(update_json))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_analyst_user()
+        response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps(update_json))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        response_fields.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), response_fields)
+        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['analyteType'], 'D')
+        self.assertFalse(response_json[INDIVIDUAL_UPDATE_GUID]['tissueAffectedStatus'])
 
     def test_update_individual_hpo_terms(self):
         edit_individuals_url = reverse(update_individual_hpo_terms, args=[INDIVIDUAL_UPDATE_GUID])
@@ -249,6 +269,15 @@ class IndividualAPITest(AuthenticationTestCase):
             pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
                 'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
             }))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA20889'])
+
+        response = self.client.post(
+            pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [{'individualGuid': 'I000015_na20885'}]
+            }))
+
         self.assertEqual(response.status_code, 200)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -266,7 +295,7 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'errors': mock.ANY, 'warnings': []})
         errors = response.json()['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].split('\n')[0],"Error while converting test.tsv rows to json: Individual Id not specified in row #1:")
+        self.assertEqual(errors[0], "Error while converting test.tsv rows to json: Individual Id not specified in row #1")
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})

@@ -17,7 +17,6 @@ class MatchmakerSubmission(ModelWithGUID):
     contact_name = models.TextField(default=MME_DEFAULT_CONTACT_NAME)
     contact_href = models.TextField(default=MME_DEFAULT_CONTACT_HREF)
     features = JSONField(null=True)
-    genomic_features = JSONField(null=True)
 
     deleted_date = models.DateTimeField(null=True)
     deleted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
@@ -32,6 +31,12 @@ class MatchmakerSubmission(ModelWithGUID):
         json_fields = [
             'guid', 'created_date', 'last_modified_date', 'deleted_date'
         ]
+
+
+class MatchmakerSubmissionGenes(models.Model):
+    matchmaker_submission = models.ForeignKey(MatchmakerSubmission, on_delete=models.CASCADE)
+    saved_variant = models.ForeignKey('seqr.SavedVariant', on_delete=models.PROTECT)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
 
 
 class MatchmakerIncomingQuery(ModelWithGUID):

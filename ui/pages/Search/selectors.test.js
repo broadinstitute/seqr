@@ -41,7 +41,7 @@ test('getLocusListOptions', () => {
     text: LOCUS_LIST.name,
     value: LOCUS_LIST.locusListGuid,
     key: LOCUS_LIST.locusListGuid,
-    description: undefined,
+    description: '60 Genes',
     icon: { name: 'users', size: 'small' },
     category: 'Project Lists',
     categoryRank: 0,

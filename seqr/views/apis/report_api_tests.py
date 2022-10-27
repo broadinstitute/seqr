@@ -5,9 +5,10 @@ import pytz
 import responses
 from settings import AIRTABLE_URL
 
+from seqr.models import Project
 from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
-    sample_metadata_export
-from seqr.views.utils.test_utils import AuthenticationTestCase
+    sample_metadata_export, gregor_export
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -17,7 +18,7 @@ COMPOUND_HET_PROJECT_GUID = 'R0003_test'
 NO_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 
 EXPECTED_DISCOVERY_SHEET_ROW = \
-    {'project_guid': 'R0001_1kg', 'pubmed_ids': '', 'posted_publicly': '',
+    {'project_guid': 'R0001_1kg', 'pubmed_ids': '34415322; 33665635', 'posted_publicly': '',
      'solved': 'TIER 1 GENE', 'head_or_neck': 'N', 'analysis_complete_status': 'complete',
      'cardiovascular_system': 'N', 'n_kindreds_overlapping_sv_similar_phenotype': '2',
      'biochemical_function': 'Y', 'omim_number_post_discovery': '615120,615123',
@@ -25,7 +26,7 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      't0': '2017-02-05T06:42:55.397Z', 'months_since_t0': 38, 'sample_source': 'CMG',
      'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
      'expected_inheritance_model': 'Autosomal recessive inheritance',
-     'extras_variant_tag_list': ['21-3343353-GAGA-G  RP11-206L10.5  tier 1 - novel gene and phenotype'],
+     'extras_variant_tag_list': ['21-3343353-GAGA-G  RP11  tier 1 - novel gene and phenotype'],
      'protein_interaction': 'N', 'n_kindreds': '1', 'num_individuals_sequenced': 3,
      'musculature': 'Y', 'sequencing_approach': 'WES', 'neoplasm': 'N',
      'collaborator': '1kg project n\xe5me with uni\xe7\xf8de',
@@ -41,28 +42,28 @@ EXPECTED_DISCOVERY_SHEET_ROW = \
      'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'Y', 'ear_defects': 'N',
      'thoracic_cavity': 'N', 'non_patient_cell_model': 'N',
      't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped_1.png',
-     'family_id': '1', 'genitourinary_system': 'N', 'coded_phenotype': '',
+     'family_id': '1', 'genitourinary_system': 'N', 'coded_phenotype': 'myopathy',
      'animal_model': 'N', 'non_human_cell_culture_model': 'N', 'expression': 'N',
-     'gene_name': 'RP11-206L10.5', 'breast': 'N'}
+     'gene_name': 'RP11', 'breast': 'N'}
 
 EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW = {
     'project_guid': 'R0003_test', 'pubmed_ids': '', 'posted_publicly': '', 'solved': 'TIER 1 GENE', 'head_or_neck': 'N',
     'analysis_complete_status': 'complete', 'cardiovascular_system': 'Y',
     'n_kindreds_overlapping_sv_similar_phenotype': 'NA', 'biochemical_function': 'N', 'omim_number_post_discovery': 'NA',
-    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2020-02-05T06:42:55.397Z',
-    'months_since_t0': 2, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
-    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 1, 'sequencing_approach': 'REAN',
+    'genome_wide_linkage': 'NA', 'metabolism_homeostasis': 'N', 'growth': 'N', 't0': '2017-02-05T06:42:55.397Z',
+    'months_since_t0': 38, 'sample_source': 'CMG', 'integument': 'N', 'voice': 'N', 'skeletal_system': 'N',
+    'expected_inheritance_model': 'multiple', 'num_individuals_sequenced': 2, 'sequencing_approach': 'REAN',
     'extras_variant_tag_list': ['1-248367227-TC-T  OR4G11P  tier 1 - novel gene and phenotype',
         'prefix_19107_DEL  OR4G11P  tier 1 - novel gene and phenotype'], 'protein_interaction': 'N', 'n_kindreds': '1',
     'neoplasm': 'N', 'collaborator': 'Test Reprocessed Project', 'actual_inheritance_model': 'AR-comphet',
     'novel_mendelian_gene': 'Y', 'endocrine_system': 'N', 'komp_early_release': 'N', 'connective_tissue': 'N',
-    'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000011_11', 'immune_system': 'N',
+    'prenatal_development_or_birth': 'N', 'rescue': 'N', 'family_guid': 'F000012_12', 'immune_system': 'N',
     'analysis_summary': '', 'gene_count': 'NA', 'gene_id': 'ENSG00000240361', 'abdomen': 'N', 'limbs': 'N',
     'phenotype_class': 'New', 'submitted_to_mme': 'Y', 'n_unrelated_kindreds_with_causal_variants_in_gene': '1',
-    'blood': 'N',  'row_id': 'F000011_11ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
+    'blood': 'N',  'row_id': 'F000012_12ENSG00000240361', 'eye_defects': 'N', 'omim_number_initial': 'NA',
     'p_value': 'NA', 'respiratory': 'N', 'nervous_system': 'N', 'ear_defects': 'N', 'thoracic_cavity': 'N',
-    'non_patient_cell_model': 'N', 't0_copy': '2020-02-05T06:42:55.397Z', 'extras_pedigree_url': '/media/ped.png',
-    'family_id': '11', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
+    'non_patient_cell_model': 'N', 't0_copy': '2017-02-05T06:42:55.397Z', 'extras_pedigree_url': '',
+    'family_id': '12', 'genitourinary_system': 'N', 'coded_phenotype': '', 'animal_model': 'N', 'expression': 'N',
     'non_human_cell_culture_model': 'N', 'gene_name': 'OR4G11P', 'breast': 'N', 'musculature': 'N', 'patient_cells': 'N',}
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -151,7 +152,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "num_saved_variants": 2,
     "dbgap_submission": "No",
     "solve_state": "Tier 1",
-    "sample_id": "NA20885",
+    "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
     "sample_provider": "",
@@ -161,7 +162,7 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "novel_mendelian_gene-1": "Y",
     "novel_mendelian_gene-2": "Y",
     "hgvsc-1": "c.3955G>A",
-    "date_data_generation": "2020-02-05",
+    "date_data_generation": "2017-02-05",
     "Zygosity-1": "Heterozygous",
     "Zygosity-2": "Heterozygous",
     "variant_genome_build-1": "GRCh37",
@@ -174,29 +175,30 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "maternal_id": "",
     "paternal_id": "",
     "hgvsp-1": "c.1586-17C>G",
-    "entity:family_id": "11",
-    "entity:discovery_id": "NA20885",
+    "entity:family_id": "12",
+    "entity:discovery_id": "NA20889",
     "project_id": "Test Reprocessed Project",
     "Pos-1": "248367227",
     "data_type": "WES",
-    "family_guid": "F000011_11",
+    "family_guid": "F000012_12",
     "congenital_status": "Unknown",
+    "family_history": "Yes",
     "hpo_present": "HP:0011675 (Arrhythmia)|HP:0001509 ()",
     "Transcript-1": "ENST00000505820",
     "ancestry": "Ashkenazi Jewish",
     "phenotype_group": "",
-    "sex": "Male",
-    "entity:subject_id": "NA20885",
-    "entity:sample_id": "NA20885",
+    "sex": "Female",
+    "entity:subject_id": "NA20889",
+    "entity:sample_id": "NA20889",
     "Chrom-1": "1",
     "Alt-1": "T",
     "Gene-1": "OR4G11P",
     "pmid_id": "",
     "phenotype_description": "",
     "affected_status": "Affected",
-    "family_id": "11",
+    "family_id": "12",
     "MME": "Y",
-    "subject_id": "NA20885",
+    "subject_id": "NA20889",
     "proband_relationship": "",
     "consanguinity": "None suspected",
     "sequencing_center": "Broad",
@@ -207,43 +209,41 @@ def _get_list_param(call, param):
     param_str = f'{param}='
     return [p.replace(param_str, '') for p in query_params if p.startswith(param_str)]
 
-class ReportAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
 
-    @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_seqr_stats(self, mock_analyst_group):
+class ReportAPITest(object):
+
+    def _get_zip_files(self, mock_zip, filenames):
+        mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
+        self.assertEqual(mock_write_zip.call_count, len(filenames))
+        mock_write_zip.assert_has_calls([mock.call(file, mock.ANY) for file in filenames])
+
+        return (
+            [row.split('\t') for row in mock_write_zip.call_args_list[i][0][1].split('\n') if row]
+            for i in range(len(filenames))
+        )
+
+    def test_seqr_stats(self):
+        no_access_project = Project.objects.get(id=2)
+        no_access_project.workspace_namespace = None
+        no_access_project.save()
+
         url = reverse(seqr_stats)
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'projectsCount', 'individualsCount', 'familiesCount', 'sampleCountsByType'})
-        self.assertEqual(response_json['projectsCount'], {'internal': 3, 'external': 1})
-        self.assertEqual(response_json['individualsCount'], {'internal': 17, 'external': 1})
-        self.assertEqual(response_json['familiesCount'], {'internal': 13, 'external': 1})
-        self.assertDictEqual(
-            response_json['sampleCountsByType'],
-            {'WES__VARIANTS': {'internal': 8}, 'WGS__MITO': {'internal': 1}, 'WES__SV': {'internal': 3}, 'WGS__SV': {'external': 1}, 'RNA__VARIANTS': {'internal': 2}},
-        )
+        self.assertDictEqual(response_json['projectsCount'], self.STATS_DATA['projectsCount'])
+        self.assertDictEqual(response_json['individualsCount'], self.STATS_DATA['individualsCount'])
+        self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
+        self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_get_cmg_projects(self, mock_analyst_group):
+        self.check_no_analyst_no_access(url)
+
+    def test_get_cmg_projects(self):
         url = reverse(get_cmg_projects)
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -251,17 +251,12 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), ['projectGuids'])
         self.assertSetEqual(set(response_json['projectGuids']), {PROJECT_GUID, COMPOUND_HET_PROJECT_GUID})
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.apis.report_api.timezone')
-    def test_discovery_sheet(self, mock_timezone, mock_analyst_group):
+    def test_discovery_sheet(self, mock_timezone):
         non_project_url = reverse(discovery_sheet, args=[NON_PROJECT_GUID])
         self.check_analyst_login(non_project_url)
-
-        response = self.client.get(non_project_url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         mock_timezone.now.return_value = pytz.timezone("US/Eastern").localize(parse_datetime("2020-04-27 20:16:01"), is_dst=None)
         response = self.client.get(non_project_url)
@@ -298,25 +293,21 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'rows', 'errors'})
-        self.assertListEqual(response_json['errors'], ['HPO category field not set for some HPO terms in 11'])
+        self.assertListEqual(response_json['errors'], [
+            'HPO category field not set for some HPO terms in 11', 'HPO category field not set for some HPO terms in 12',
+        ])
         self.assertEqual(len(response_json['rows']), 2)
         self.assertIn(EXPECTED_DISCOVERY_SHEET_COMPOUND_HET_ROW, response_json['rows'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_anvil_export(self, mock_google_authenticated,  mock_zip, mock_analyst_group):
+    def test_anvil_export(self, mock_google_authenticated,  mock_zip):
         mock_google_authenticated.return_value = False
         url = reverse(anvil_export, args=[PROJECT_GUID])
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
@@ -336,71 +327,69 @@ class ReportAPITest(AuthenticationTestCase):
             'attachment; filename="1kg project nme with unide_AnVIL_Metadata.zip"'
         )
 
-        mock_write_zip = mock_zip.return_value.__enter__.return_value.writestr
-        self.assertEqual(mock_write_zip.call_count, 4)
-        mock_write_zip.assert_has_calls([
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Subject.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Sample.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Family.tsv', mock.ANY),
-            mock.call('1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery.tsv', mock.ANY),
+        subject_file, sample_file, family_file, discovery_file = self._get_zip_files(mock_zip, [
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Subject.tsv',
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Sample.tsv',
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Family.tsv',
+            '1kg project n\xe5me with uni\xe7\xf8de_PI_Discovery.tsv',
         ])
 
-        subject_file = mock_write_zip.call_args_list[0][0][1].split('\n')
-        self.assertEqual(subject_file[0], '\t'.join([
+        self.assertEqual(subject_file[0], [
             'entity:subject_id', '01-subject_id', '02-prior_testing', '03-project_id', '04-pmid_id',
             '05-dbgap_study_id', '06-dbgap_subject_id', '07-multiple_datasets',
             '08-family_id', '09-paternal_id', '10-maternal_id', '11-twin_id', '12-proband_relationship', '13-sex',
             '14-ancestry', '15-ancestry_detail', '16-age_at_last_observation', '17-phenotype_group', '18-disease_id',
             '19-disease_description', '20-affected_status', '21-congenital_status', '22-age_of_onset', '23-hpo_present',
-            '24-hpo_absent', '25-phenotype_description', '26-solve_state']))
-        self.assertIn(u'\t'.join([
-            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '-', 'dbgap_stady_id_1',
-            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', '-', '-', '-', '-',
-            'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
-            'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508', '-',
-            'Tier 1']), subject_file)
+            '24-hpo_absent', '25-phenotype_description', '26-solve_state'])
+        self.assertIn([
+            'NA19675_1', 'NA19675_1', '-', u'1kg project nme with unide', '34415322', 'dbgap_stady_id_1',
+            'dbgap_subject_id_1', 'No', '1', 'NA19678', 'NA19679', '-', 'Self', 'Male', 'Other', 'Middle Eastern', '-',
+            '-', 'OMIM:615120;OMIM:615123', 'Myasthenic syndrome; congenital; 8; with pre- and postsynaptic defects;',
+            'Affected', 'Adult onset', '-', 'HP:0001631|HP:0002011|HP:0001636', 'HP:0011675|HP:0001674|HP:0001508',
+            'myopathy', 'Tier 1'], subject_file)
 
-        sample_file = mock_write_zip.call_args_list[1][0][1].split('\n')
-        self.assertEqual(sample_file[0], '\t'.join([
+        self.assertEqual(sample_file[0], [
             'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
-            '05-sample_source', '06-tissue_affected_status',]))
+            '05-sample_source', '06-tissue_affected_status',])
         self.assertIn(
-            '\t'.join(['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-']),
+            ['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-'],
             sample_file,
         )
 
-        family_file = mock_write_zip.call_args_list[2][0][1].split('\n')
-        self.assertEqual(family_file[0], '\t'.join([
+        self.assertEqual(family_file[0], [
             'entity:family_id', '01-family_id', '02-consanguinity', '03-consanguinity_detail', '04-pedigree_image',
-            '05-pedigree_detail', '06-family_history', '07-family_onset']))
-        self.assertIn('\t'.join([
+            '05-pedigree_detail', '06-family_history', '07-family_onset'])
+        self.assertIn([
             '1', '1', 'Present', '-', '-', '-', '-', '-',
-        ]), family_file)
+        ], family_file)
 
-        discovery_file = mock_write_zip.call_args_list[3][0][1].split('\n')
         self.assertEqual(len(discovery_file), 6)
-        self.assertEqual(discovery_file[0], '\t'.join([
+        self.assertEqual(discovery_file[0], [
             'entity:discovery_id', '01-subject_id', '02-sample_id', '03-Gene', '04-Gene_Class',
             '05-inheritance_description', '06-Zygosity', '07-variant_genome_build', '08-Chrom', '09-Pos',
             '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
-            '17-significance', '18-discovery_notes']))
-        self.assertIn('\t'.join([
-            'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
-            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-']), discovery_file)
-        self.assertIn('\t'.join([
-            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
+            '17-significance', '18-discovery_notes'])
+        self.assertIn([
+            'HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'Autosomal recessive (homozygous)',
+            'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
+        self.assertIn([
+            'NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Tier 1 - Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
-            '-', '-', '-', '-']), discovery_file)
-        self.assertIn('\t'.join([
+            '-', '-', '-', '-'], discovery_file)
+        self.assertIn([
             'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
             '1912633', 'G', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT '
+            '(c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
-        self.assertIn('\t'.join([
+        self.assertIn([
             'HG00733', 'HG00733', 'HG00733', 'OR4G11P', 'Known', 'Unknown / Other', 'Heterozygous', 'GRCh38.p12', '19',
             '1912634', 'C', 'T', '-', '-', 'ENST00000371839', '-', '-', '-',
-            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T']),
+            'The following variants are part of the multinucleotide variant 19-1912632-GC-TT (c.586_587delinsTT, '
+            'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
             discovery_file)
+
+        self.check_no_analyst_no_access(url)
 
         # Test non-broad analysts do not have access
         self.login_pm_user()
@@ -409,20 +398,12 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
-    def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
+    def test_sample_metadata_export(self, mock_google_authenticated):
         mock_google_authenticated.return_value = False
         url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
         response = self.client.get(unauthorized_project_url)
@@ -492,8 +473,132 @@ class ReportAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
 
+        self.check_no_analyst_no_access(url)
+
         # Test non-broad analysts do not have access
         self.login_pm_user()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+    @mock.patch('seqr.views.apis.report_api.datetime')
+    @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
+    @responses.activate
+    def test_gregor_export(self, mock_zip, mock_datetime):
+        mock_datetime.now.return_value.year = 2020
+
+        url = reverse(gregor_export, args=['HMB'])
+        self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get('content-disposition'),
+            'attachment; filename="GREGoR Reports HMB.zip"'
+        )
+
+        files = self._get_zip_files(mock_zip, [
+            'participant.tsv', 'family.tsv', 'phenotype.tsv', 'analyte.tsv', 'experiment_dna_short_read.tsv',
+            'aligned_dna_short_read.tsv', 'aligned_dna_short_read_set.tsv', 'called_variants_dna_short_read.tsv',
+        ])
+        participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
+
+        self.assertEqual(len(participant_file), 15)
+        self.assertEqual(participant_file[0], [
+            'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
+            'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
+            'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
+            'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
+        ])
+        self.assertIn([
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', '', 'IKBKAP|CCDC102B',
+            '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
+            'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
+        ], participant_file)
+
+        self.assertEqual(len(family_file), 11)
+        self.assertEqual(family_file[0], [
+            'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail',
+            'family_history_detail',
+        ])
+        self.assertIn(['Broad_1', 'Present', '', '', '', ''], family_file)
+
+        self.assertEqual(len(phenotype_file), 10)
+        self.assertEqual(phenotype_file[0], [
+            'phenotype_id', 'participant_id', 'term_id', 'presence', 'ontology', 'additional_details',
+            'onset_age_range', 'additional_modifiers',
+        ])
+        self.assertIn([
+            '', 'Broad_NA19675_1', 'HP:0002011', 'Present', 'HPO', '', 'HP:0003593', 'HP:0012825|HP:0003680',
+        ], phenotype_file)
+        self.assertIn([
+            '', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', '',
+        ], phenotype_file)
+
+        self.assertEqual(len(analyte_file), 15)
+        self.assertEqual(analyte_file[0], [
+            'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
+            'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
+            'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number',
+            'time_to_freeze', 'sample_transformation_detail',
+        ])
+        self.assertIn(
+            ['Broad_NA19675_1', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
+            analyte_file)
+
+        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(experiment_file[0], [
+            'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
+            'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
+            'date_data_generation', 'target_insert_size', 'sequencing_platform',
+        ])
+
+        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(read_file[0], [
+            'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
+            'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
+            'analysis_details',
+        ])
+
+        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
+
+        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(called_file[0], [
+            'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
+            'caller_software', 'variant_types', 'analysis_details',
+        ])
+
+        self.check_no_analyst_no_access(url)
+
+
+class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    STATS_DATA = {
+        'projectsCount': {'non_demo': 3, 'demo': 1},
+        'familiesCount': {'non_demo': 12, 'demo': 2},
+        'individualsCount': {'non_demo': 15, 'demo': 3},
+        'sampleCountsByType': {
+            'WES__VARIANTS': {'demo': 1, 'non_demo': 7},
+            'WGS__MITO': {'non_demo': 1},
+            'WES__SV': {'non_demo': 3},
+            'WGS__SV': {'non_demo': 1},
+            'RNA__VARIANTS': {'demo': 1, 'non_demo': 1},
+        },
+    }
+
+
+class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    STATS_DATA = {
+        'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
+        'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
+        'individualsCount': {'internal': 14, 'external': 1, 'no_anvil': 0, 'demo': 3},
+        'sampleCountsByType': {
+            'WES__VARIANTS': {'internal': 7, 'demo': 1},
+            'WGS__MITO': {'internal': 1},
+            'WES__SV': {'internal': 3},
+            'WGS__SV': {'external': 1},
+            'RNA__VARIANTS': {'internal': 1, 'demo': 1},
+        },
+    }

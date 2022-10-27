@@ -1,27 +1,58 @@
 from django.contrib.auth.decorators import user_passes_test, login_required
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
 from django.db.models import Value, TextField
+from guardian.shortcuts import get_objects_for_user
 
-from seqr.models import Project, ProjectCategory, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
-    anvil_enabled, user_get_workspace_access_level, WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL,\
-    PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
-from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, ANALYST_PROJECT_CATEGORY, \
+    anvil_enabled, user_get_workspace_access_level, get_anvil_group_members, user_get_anvil_groups, \
+    WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL, PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
+from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, \
     TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
+from typing import Callable, Optional
 
 logger = SeqrLogger(__name__)
 
+
+def get_anvil_analyst_user_emails(user):
+    return get_anvil_group_members(user, ANALYST_USER_GROUP, use_sa_credentials=True)
+
+
+def get_analyst_user_emails(user):
+    if not ANALYST_USER_GROUP:
+        return []
+    if anvil_enabled():
+        return get_anvil_analyst_user_emails(user)
+    return set(User.objects.filter(groups__name=ANALYST_USER_GROUP).values_list('email', flat=True))
+
+
+def get_pm_user_emails(user):
+    if not PM_USER_GROUP:
+        return []
+    if anvil_enabled():
+        return get_anvil_group_members(user, PM_USER_GROUP)
+    return list(User.objects.filter(groups__name=PM_USER_GROUP).values_list('email', flat=True))
+
+
 def user_is_analyst(user):
+    if anvil_enabled():
+        return ANALYST_USER_GROUP in user_get_anvil_groups(user)
     return bool(ANALYST_USER_GROUP) and user.groups.filter(name=ANALYST_USER_GROUP).exists()
+
 
 def user_is_data_manager(user):
     return user.is_staff
 
+
 def user_is_pm(user):
+    if anvil_enabled():
+        return PM_USER_GROUP in user_get_anvil_groups(user)
     return user.groups.filter(name=PM_USER_GROUP).exists() if PM_USER_GROUP else user.is_superuser
+
 
 def _has_current_policies(user):
     if not hasattr(user, 'userpolicy'):
@@ -33,7 +64,7 @@ def _has_current_policies(user):
 
 
 # User access decorators
-def _require_permission(user_permission_test_func, error='User has insufficient permission'):
+def _require_permission(user_permission_test_func: Callable, error: str = 'User has insufficient permission') -> Callable:
     def test_user(user):
         if not user_permission_test_func(user):
             raise PermissionDenied(error)
@@ -41,34 +72,42 @@ def _require_permission(user_permission_test_func, error='User has insufficient 
     return test_user
 
 _active_required = user_passes_test(_require_permission(lambda user: user.is_active, error='User is no longer active'))
-def _current_policies_required(view_func, policy_url=API_POLICY_REQUIRED_URL):
+def _current_policies_required(view_func: Callable, policy_url: str = API_POLICY_REQUIRED_URL) -> Callable:
     return user_passes_test(_has_current_policies, login_url=policy_url)(view_func)
 
-def login_active_required(wrapped_func=None, login_url=API_LOGIN_REQUIRED_URL):
+def login_active_required(wrapped_func: Optional[Callable] = None, login_url: str = API_LOGIN_REQUIRED_URL) -> Callable:
     def decorator(view_func):
         return login_required(_active_required(view_func), login_url=login_url)
     if wrapped_func:
         return decorator(wrapped_func)
     return decorator
 
-def login_and_policies_required(view_func, login_url=API_LOGIN_REQUIRED_URL, policy_url=API_POLICY_REQUIRED_URL):
+def login_and_policies_required(view_func: Callable, login_url: str = API_LOGIN_REQUIRED_URL, policy_url: str = API_POLICY_REQUIRED_URL) -> Callable:
     return login_active_required(_current_policies_required(view_func, policy_url=policy_url), login_url=login_url)
 
-def _user_has_policies_and_passes_test(user_permission_test_func):
+def active_user_has_policies_and_passes_test(user_permission_test_func: Callable) -> Callable:
     def decorator(view_func):
         return login_and_policies_required(user_passes_test(_require_permission(user_permission_test_func))(view_func))
     return decorator
 
-analyst_required = _user_has_policies_and_passes_test(user_is_analyst)
-data_manager_required = _user_has_policies_and_passes_test(user_is_data_manager)
-pm_required = _user_has_policies_and_passes_test(user_is_pm)
-pm_or_data_manager_required = _user_has_policies_and_passes_test(
+
+analyst_required = active_user_has_policies_and_passes_test(user_is_analyst)
+data_manager_required = active_user_has_policies_and_passes_test(user_is_data_manager)
+pm_required = active_user_has_policies_and_passes_test(user_is_pm)
+pm_or_data_manager_required = active_user_has_policies_and_passes_test(
     lambda user: user_is_data_manager(user) or user_is_pm(user))
-superuser_required = _user_has_policies_and_passes_test(lambda user: user.is_superuser)
+superuser_required = active_user_has_policies_and_passes_test(lambda user: user.is_superuser)
 
 
-def project_has_analyst_access(project):
-    return project.projectcategory_set.filter(name=ANALYST_PROJECT_CATEGORY).exists()
+def is_internal_anvil_project(project):
+    return anvil_enabled() and project.workspace_namespace in INTERNAL_NAMESPACES
+
+
+def get_internal_projects():
+    if anvil_enabled():
+        return Project.objects.filter(workspace_namespace__in=INTERNAL_NAMESPACES)
+    return Project.objects.all()
+
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
     """Retrieves Project with the given guid after checking that the given user has permission to
@@ -156,9 +195,13 @@ def has_project_permissions(project, user, can_edit=False):
 
     return user_is_data_manager(user) or \
            (not can_edit and project.all_user_demo and project.is_demo) or \
-           (user_is_analyst(user) and project_has_analyst_access(project)) or \
-           user.has_perm(permission_level, project) or \
-           anvil_has_perm(user, permission_level, project)
+           _user_project_permission(user, permission_level, project)
+
+
+def _user_project_permission(user, permission_level, project):
+    if anvil_enabled():
+        return anvil_has_perm(user, permission_level, project)
+    return user.has_perm(permission_level, project)
 
 
 def check_project_permissions(project, user, **kwargs):
@@ -175,52 +218,45 @@ def check_user_created_object_permissions(obj, user):
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
+def check_projects_view_permission(projects, user):
+    can_view = set(get_project_guids_user_can_view(user, limit_data_manager=False))
+    no_access_projects = {p.guid for p in projects} - can_view
+    if no_access_projects:
+        raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
+
+
 def check_multi_project_permissions(obj, user):
-    for project in obj.projects.all():
-        try:
-            check_project_permissions(project, user)
-            return
-        except PermissionDenied:
-            continue
-    raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
-
-
-def _get_analyst_projects():
-    return ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.all()
+    try:
+        check_projects_view_permission(obj.projects.all(), user)
+    except PermissionDenied:
+        raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
 
 
 def get_project_guids_user_can_view(user, limit_data_manager=True):
+    if user_is_data_manager(user) and not limit_data_manager:
+        return list(Project.objects.values_list('guid', flat=True))
+
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:
         return project_guids
 
-    is_data_manager = user_is_data_manager(user)
-    if is_data_manager and not limit_data_manager:
-        projects = Project.objects.all()
-    else:
-        projects = get_local_access_projects(user)
-        projects = (projects | Project.objects.filter(all_user_demo=True, is_demo=True)).distinct()
-
-    project_guids = [p.guid for p in projects.only('guid')]
-    if is_anvil_authenticated(user) and not is_data_manager:
+    if is_anvil_authenticated(user):
         workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
                       list_anvil_workspaces(user)]
-        project_guids += [p.guid for p in Project.objects.filter(workspace_name__isnull=False).exclude(
-            workspace_name='').exclude(guid__in=project_guids).annotate(
-            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')).filter(
-            workspace__in=workspaces).only('guid')]
+        projects = Project.objects.annotate(
+            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
+        ).filter(workspace__in=workspaces)
+    else:
+        projects = get_objects_for_user(user, CAN_VIEW, Project)
+
+    projects = projects | Project.objects.filter(all_user_demo=True, is_demo=True)
+
+    project_guids = [p.guid for p in projects.distinct().only('guid')]
 
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
     return project_guids
-
-
-def get_local_access_projects(user):
-    projects = Project.objects.filter(can_view_group__user=user)
-    if user_is_analyst(user):
-        projects = (projects | _get_analyst_projects())
-    return projects
 
 
 def check_mme_permissions(submission, user):

@@ -82,13 +82,6 @@ class PaLocusListAPITest(AuthenticationTestCase):
             {item['geneId'] for item in locus_list['items'] if item.get('geneId')},
             set(response_json['genesById'].keys())
         )
-        self.assertSetEqual(
-            {item['geneId'] for item in locus_list['items'] if item.get('geneId')},
-            set(response_json['pagenesById'].keys())
-        )
-        self.assertTrue(all(
-            {set(pagene.keys()) == PA_GENE_FIELDS for pagene in response_json['pagenesById'].values()}
-        ))
 
     def test_private_locus_list_info(self):
         url = reverse(locus_list_info, args=[PRIVATE_LOCUS_LIST_GUID])
@@ -172,21 +165,21 @@ class PaLocusListAPITest(AuthenticationTestCase):
         response = self.client.get(url_au260)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000106991', 'ENSG00000139567'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000106991', 'ENSG00000139567'})
 
         # and list 3069 contains only one gene because the other one was skipped during import
         url3069 = reverse(locus_list_info, args=['LL00006_hereditary_neuropathy_'])
         response = self.client.get(url3069)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000090861'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000090861'})
 
         # and UK list 260 contains expected one gene
         url_uk260 = reverse(locus_list_info, args=['LL00007_auditory_neuropathy_sp'])
         response = self.client.get(url_uk260)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json['pagenesById'].keys()), {'ENSG00000139734'})
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000139734'})
 
         # and import is idempotent
         call_command('import_all_panels', PANEL_APP_API_URL_AU)

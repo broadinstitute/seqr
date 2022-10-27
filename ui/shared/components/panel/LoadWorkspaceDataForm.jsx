@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Header, Segment, Message } from 'semantic-ui-react'
+import { connect } from 'react-redux'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -13,6 +14,8 @@ import {
   FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
+  INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
@@ -20,11 +23,15 @@ import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
+import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
+import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
 const WARNING_HEADER = 'Planned Data Loading Delay'
 const WARNING_BANNER = null
+
+const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
@@ -32,6 +39,9 @@ const FIELD_DESCRIPTIONS = {
 }
 const REQUIRED_FIELDS = INDIVIDUAL_ID_EXPORT_DATA.map(config => (
   { ...config, description: FIELD_DESCRIPTIONS[config.field] }))
+REQUIRED_FIELDS.push(...INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => NON_ID_REQUIRED_FIELDS.includes(field)))
+
+const OPTIONAL_FIELDS = INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => !NON_ID_REQUIRED_FIELDS.includes(field))
 
 const BLANK_EXPORT = {
   filename: 'individuals_template',
@@ -48,7 +58,7 @@ const UploadPedigreeField = React.memo(({ name, error }) => (
         name={name}
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}
-        optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
+        optionalFields={OPTIONAL_FIELDS}
         uploadFormats={FILE_FORMATS}
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"
@@ -87,33 +97,57 @@ const DATA_BUCK_FIELD = {
   name: 'dataPath',
   label: 'Path to the Joint Called VCF',
   labelHelp: 'File path for a joint called VCF available in the workspace "Files".',
-  placeholder: '/path-under-Files-of-the-workspace',
+  component: AnvilFileSelector,
   validate: validators.required,
 }
 
 const REQUIRED_GENOME_FIELD = { ...GENOME_VERSION_FIELD, validate: validators.required }
 
-const postWorkspaceValues = (path, formatVals) => onSuccess => ({ namespace, name, ...values }) => (
-  new HttpRequestHelper(`/api/create_project_from_workspace/${namespace}/${name}/${path}`, onSuccess).post(
-    formatVals ? formatVals(values) : values,
-  ))
+const postWorkspaceValues = (path, formatVals, formatUrl) => onSuccess => (
+  { workspaceNamespace, workspaceName, ...values },
+) => (
+  new HttpRequestHelper(
+    formatUrl ? formatUrl(values) : `/api/create_project_from_workspace/${workspaceNamespace}/${workspaceName}/${path}`,
+    onSuccess,
+  ).post(formatVals ? formatVals(values) : values)
+)
 
-const createProjectFromWorkspace = postWorkspaceValues(
-  'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }),
-)((responseJson) => {
+const postSubmitValues = formatUrl => postWorkspaceValues(
+  'submit', ({ uploadedFile, ...values }) => ({ ...values, uploadedFileId: uploadedFile.uploadedFileId }), formatUrl,
+)
+
+const createProjectFromWorkspace = postSubmitValues()((responseJson) => {
   window.location.href = `/project/${responseJson.projectGuid}/project_page`
 })
 
-const FORM_WIZARD_PAGES = [
-  { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') },
-  { fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD], onPageSubmit: postWorkspaceValues('validate_vcf') },
+const addDataFromWorkspace = values => dispatch => postSubmitValues(
+  ({ projectGuid }) => (`/api/project/${projectGuid}/add_workspace_data`),
+)((responseJson) => {
+  dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+})(values)
+
+const GRANT_ACCESS_PAGE = { fields: [AGREE_CHECKBOX], onPageSubmit: postWorkspaceValues('grant_access') }
+const VALIDATE_VCF_PAGE = {
+  fields: [DATA_BUCK_FIELD, SAMPLE_TYPE_FIELD, REQUIRED_GENOME_FIELD],
+  onPageSubmit: postWorkspaceValues('validate_vcf'),
+}
+
+const NEW_PROJECT_WIZARD_PAGES = [
+  GRANT_ACCESS_PAGE,
+  VALIDATE_VCF_PAGE,
   { fields: [PROJECT_DESC_FIELD, UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const LoadWorkspaceDataForm = React.memo(({ params }) => (
+const ADD_DATA_WIZARD_PAGES = [
+  GRANT_ACCESS_PAGE,
+  { ...VALIDATE_VCF_PAGE, fields: [DATA_BUCK_FIELD] },
+  { fields: [UPLOAD_PEDIGREE_FIELD] },
+]
+
+const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
-      {`Load data to seqr from AnVIL Workspace "${params.namespace}/${params.name}"`}
+      {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
     </Header>
     <Segment basic textAlign="center">
       <Message info compact>
@@ -125,8 +159,9 @@ const LoadWorkspaceDataForm = React.memo(({ params }) => (
       {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
     </Segment>
     <FormWizard
-      onSubmit={createProjectFromWorkspace}
-      pages={FORM_WIZARD_PAGES}
+      {...props}
+      onSubmit={onAddData || createProjectFromWorkspace}
+      pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
       initialValues={params}
       size="small"
       noModal
@@ -144,6 +179,13 @@ const LoadWorkspaceDataForm = React.memo(({ params }) => (
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
+  onAddData: PropTypes.func,
 }
+
+const mapDispatchToProps = {
+  onAddData: addDataFromWorkspace,
+}
+
+export const AddWorkspaceDataForm = connect(null, mapDispatchToProps)(LoadWorkspaceDataForm)
 
 export default LoadWorkspaceDataForm

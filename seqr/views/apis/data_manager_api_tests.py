@@ -342,8 +342,9 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
+    @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_upload_qc_pipeline_output(self, mock_subprocess):
+    def test_upload_qc_pipeline_output(self, mock_subprocess, mock_file_logger):
         url = reverse(upload_qc_pipeline_output,)
         self.check_data_manager_login(url)
 
@@ -355,11 +356,19 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_does_file_exist = mock.MagicMock()
         mock_subprocess.side_effect = [mock_does_file_exist]
         mock_does_file_exist.wait.return_value = 1
+        mock_does_file_exist.stdout = [b'BucketNotFoundException: 404 gs://seqr-datsets bucket does not exist.']
         response = self.client.post(url, content_type='application/json', data=request_data)
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(
             response.json()['errors'],
             ['File not found: gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'])
+        mock_file_logger.info.assert_has_calls([
+            mock.call(
+                '==> gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv',
+                self.data_manager_user,
+            ),
+            mock.call('BucketNotFoundException: 404 gs://seqr-datsets bucket does not exist.', self.data_manager_user),
+        ])
 
         # Test missing columns
         mock_does_file_exist.wait.return_value = 0
@@ -579,7 +588,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')

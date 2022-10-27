@@ -46,9 +46,26 @@ export const FILE_FIELD_NAME = 'uploadedFile'
 
 export const PROJECT_DESC_FIELD = { name: 'description', label: 'Project Description', placeholder: 'Description' }
 
+export const CONSENT_CODES = ['HMB', 'GRU']
+const CONSENT_CODE_OPTIONS = [...CONSENT_CODES, 'Other'].map(text => ({ text, value: text[0] }))
+export const CONSENT_CODE_LOOKUP = CONSENT_CODE_OPTIONS.reduce(
+  (acc, { value, text }) => ({ ...acc, [value]: text }), {},
+)
+const CONSENT_CODE_FIELD = {
+  name: 'consentCode',
+  label: 'Consent Code',
+  component: RadioGroup,
+  options: CONSENT_CODE_OPTIONS,
+}
+
 export const EDITABLE_PROJECT_FIELDS = [
   { name: 'name', label: 'Project Name', placeholder: 'Name', validate: validators.required, autoFocus: true },
   PROJECT_DESC_FIELD,
+]
+
+export const PM_EDITABLE_PROJECT_FIELDS = [
+  ...EDITABLE_PROJECT_FIELDS,
+  CONSENT_CODE_FIELD,
 ]
 
 export const ANVIL_FIELDS = [
@@ -919,6 +936,12 @@ export const SVTYPE_DETAILS = {
   },
 }
 
+export const SCREEN_LABELS = {
+  PLS: 'Promotor-like signatures',
+  pELS: 'proximal Enhancer-like signatures',
+  dELS: 'distal Enhancer-like signatures',
+}
+
 export const SHOW_ALL = 'ALL'
 export const NOTE_TAG_NAME = 'Has Notes'
 export const EXCLUDED_TAG_NAME = 'Excluded'
@@ -1166,10 +1189,8 @@ export const PREDICTOR_FIELDS = [
   { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
   { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
-  { field: 'metasvm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
-  { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
-  { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
   { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
+  { field: 'gnomad_noncoding', displayOnly: true, warningThreshold: 0, dangerThreshold: 1.5 },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP },
   { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },

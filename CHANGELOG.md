@@ -2,6 +2,20 @@
 
 ## dev
 
+## 10/13/22
+* Link MME submissions to saved variants (REQUIRES DB MIGRATION)
+
+## 9/28/22
+* Add Gregor fields to sample manifest (REQUIRES DB MIGRATION)
+* Deprecate auto-granting project access for analysts (removes ANALYST_PROJECT_CATEGORY env variable)
+* Add support for adding user groups for project access
+
+## 9/6/22
+* Disable mixed authorization for local and AnVIL permissions (REQUIRES DB MIGRATION)
+
+## 8/23/22
+* Add consent code for projects (REQUIRES DB MIGRATION)
+
 ## 7/19/22
 * Add "Incomplete Penetrance" functional tag type (REQUIRES DB MIGRATION)
 

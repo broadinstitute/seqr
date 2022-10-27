@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS
+    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -44,7 +44,7 @@ class EsSearch(object):
             raise InvalidSearchException('No es index found for families {}'.format(
                 ', '.join([f.family_id for f in families])))
 
-        self._indices = sorted(list(self.samples_by_family_index.keys()))
+        self._set_indices(sorted(list(self.samples_by_family_index.keys())))
         self._set_index_metadata()
 
         if len(self.samples_by_family_index) > len(self.index_metadata):
@@ -107,6 +107,10 @@ class EsSearch(object):
     def _get_index_dataset_type(self, index):
         return self.index_metadata[index].get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
 
+    def _set_indices(self, indices):
+        self._indices = indices
+        self._set_index_name()
+
     def _set_index_name(self):
         self.index_name = ','.join(sorted(self._indices))
         if len(self.index_name) > MAX_INDEX_NAME_LENGTH:
@@ -120,7 +124,6 @@ class EsSearch(object):
             self.index_name = alias
 
     def _set_index_metadata(self):
-        self._set_index_name()
         from seqr.utils.elasticsearch.utils import get_index_metadata
         self.index_metadata = get_index_metadata(self.index_name, self._client, include_fields=True)
 
@@ -168,7 +171,7 @@ class EsSearch(object):
                 dataset_type = self._get_index_dataset_type(index)
                 self.indices_by_dataset_type[dataset_type].remove(index)
 
-        self._indices = sorted(list(self.samples_by_family_index.keys()))
+        self._set_indices(sorted(list(self.samples_by_family_index.keys())))
 
         if len(self._indices) < 1:
             from seqr.utils.elasticsearch.utils import InvalidSearchException
@@ -180,7 +183,7 @@ class EsSearch(object):
         if keep_previous:
             indices = set(self._indices)
             indices.update(new_indices)
-            self._indices = list(indices)
+            update_indices = list(indices)
         else:
             if not new_indices:
                 error = 'Unable to search against dataset type "{}". This may be because inheritance based search is disabled in families with no loaded affected individuals'.format(
@@ -188,8 +191,9 @@ class EsSearch(object):
                 )
                 from seqr.utils.elasticsearch.utils import InvalidSearchException
                 raise InvalidSearchException(error)
-            self._indices = new_indices
-        self._set_index_name()
+            update_indices = new_indices
+
+        self._set_indices(update_indices)
         return self
 
     def _sort_variants(self):
@@ -234,19 +238,10 @@ class EsSearch(object):
     def filter_variants(self, inheritance=None, genes=None, intervals=None, rs_ids=None, variant_ids=None, locus=None,
                         frequencies=None, pathogenicity=None, in_silico=None, annotations=None, annotations_secondary=None,
                         quality_filter=None, custom_query=None, skip_genotype_filter=False):
-        has_location_filter = genes or intervals
 
         self._filter_custom(custom_query)
 
-        if has_location_filter:
-            exclude_locations = locus and locus.get('excludeLocations')
-            self._filter(_location_filter(genes, intervals, exclude_locations))
-            if genes and not exclude_locations:
-                self._filtered_gene_ids = set(genes.keys())
-        elif variant_ids:
-            self.filter_by_variant_ids(variant_ids)
-        elif rs_ids:
-            self._filter(Q('terms', rsid=rs_ids))
+        self._filter_by_location(genes, intervals, variant_ids, rs_ids, locus)
 
         clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
         self._filter_by_frequency(frequencies, clinvar_terms=clinvar_terms)
@@ -256,16 +251,7 @@ class EsSearch(object):
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self._filter(~Q('exists', field='filters'))
 
-        annotations = {k: v for k, v in (annotations or {}).items() if v}
-        new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
-        splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
-        self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
-        if clinvar_terms:
-            self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
-        if hgmd_classes:
-            self._consequence_overrides[HGMD_KEY] = hgmd_classes
-        if splice_ai:
-            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
+        annotations, new_svs = self._parse_annotation_overrides(annotations, clinvar_terms, hgmd_classes)
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
@@ -282,7 +268,7 @@ class EsSearch(object):
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
             comp_het_dataset_type = self._filter_compound_hets(
-                quality_filters_by_family, annotations, annotations_secondary, has_location_filter)
+                quality_filters_by_family, annotations, annotations_secondary, bool(genes or intervals))
             if inheritance_mode == COMPOUND_HET:
                 if comp_het_dataset_type:
                     self.update_dataset_type(comp_het_dataset_type)
@@ -297,6 +283,34 @@ class EsSearch(object):
 
         if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
             self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
+
+    def _parse_annotation_overrides(self, annotations, clinvar_terms, hgmd_classes):
+        annotations = {k: v for k, v in (annotations or {}).items() if v}
+        new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
+        splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
+        screen = annotations.pop(SCREEN_KEY, None)
+        self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
+        if clinvar_terms:
+            self._consequence_overrides[CLINVAR_KEY] = clinvar_terms
+        if hgmd_classes:
+            self._consequence_overrides[HGMD_KEY] = hgmd_classes
+        if splice_ai:
+            self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
+        if screen:
+            self._consequence_overrides[SCREEN_KEY] = screen
+
+        return annotations, new_svs
+
+    def _filter_by_location(self, genes, intervals, variant_ids, rs_ids, locus):
+        if genes or intervals:
+            exclude_locations = locus and locus.get('excludeLocations')
+            self._filter(_location_filter(genes, intervals, exclude_locations))
+            if genes and not exclude_locations:
+                self._filtered_gene_ids = set(genes.keys())
+        elif variant_ids:
+            self.filter_by_variant_ids(variant_ids)
+        elif rs_ids:
+            self._filter(Q('terms', rsid=rs_ids))
 
     def _filter_custom(self, custom_query):
         if custom_query:
@@ -342,16 +356,22 @@ class EsSearch(object):
         self._filter(q)
 
     def _get_annotation_override_filter(self):
+        filters = []
         pathogenicity_filter = _pathogenicity_filter(
             self._consequence_overrides.get(CLINVAR_KEY), self._consequence_overrides.get(HGMD_KEY),
         )
+        if pathogenicity_filter:
+            filters.append(pathogenicity_filter)
         splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
-        splice_ai_filter = _in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False) if splice_ai else None
-        if pathogenicity_filter and splice_ai_filter:
-            return _or_filters([pathogenicity_filter, splice_ai_filter])
-        else:
-            return pathogenicity_filter or splice_ai_filter
+        if splice_ai:
+            filters.append(_in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False))
+        screen = self._consequence_overrides.get(SCREEN_KEY)
+        if screen:
+            filters.append(Q('terms', screen_region_type=screen))
 
+        if not filters:
+            return None
+        return _or_filters(filters)
 
     def _filter_by_annotations(self, annotations, new_svs):
         dataset_type = None
@@ -364,7 +384,9 @@ class EsSearch(object):
                 # Pathogencicity and transcript consequences act as "OR" filters instead of the usual "AND"
                 consequences_filter |= annotation_override_filter
             self._filter(consequences_filter)
-            dataset_type = _dataset_type_for_annotations(annotations, new_svs=new_svs)
+            dataset_type = _dataset_type_for_annotations(
+                annotations, new_svs=new_svs, screen=self._consequence_overrides.get(SCREEN_KEY)
+            )
         elif new_svs:
             dataset_type = Sample.DATASET_TYPE_SV_CALLS
         elif annotation_override_filter:
@@ -1459,9 +1481,9 @@ def _annotations_filter(vep_consequences):
     return consequences_filter
 
 
-def _dataset_type_for_annotations(annotations, new_svs=False):
+def _dataset_type_for_annotations(annotations, new_svs=False, screen=False):
     sv = new_svs or bool(annotations.get('structural')) or bool(annotations.get('structural_consequence'))
-    non_sv = any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
+    non_sv = bool(screen) or any(v for k, v in annotations.items() if k != 'structural' and k != 'structural_consequence')
     if sv and not non_sv:
         return Sample.DATASET_TYPE_SV_CALLS
     elif not sv and non_sv:

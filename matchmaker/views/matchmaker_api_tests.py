@@ -28,22 +28,10 @@ SUBMISSION_DATA = {
     ],
     'geneVariants': [{
         'geneId': 'ENSG00000235249',
-        'alt': 'C',
-        'ref': 'CCACT',
-        'chrom': '14',
-        'pos': 77027549,
-        'genomeVersion': '38',
-        'numAlt': 2,
+        'variantGuid': 'SV0000002_1248367227_r0390_100',
     }, {
-        'geneId': 'ENSG00000235249',
-        'alt': None,
-        'ref': None,
-        'chrom': '14',
-        'pos': 77027623,
-        'end': 77028137,
-        'genomeVersion': '38',
-        'numAlt': -1,
-        'cn': 3,
+        'geneId': 'ENSG00000135953',
+        'variantGuid': 'SV0000002_1248367227_r0390_100',
     }],
 }
 
@@ -53,7 +41,9 @@ PARSED_RESULT = {
     'submissionGuid': SUBMISSION_GUID,
     'patient': {
         'genomicFeatures': [
-            {'gene': {'id': 'OR4F5'}},
+            {'gene': {'id': 'OR4F5'}, 'variant': {
+                'alternateBases': 'A', 'assembly': 'GRCh37', 'referenceBases': 'G', 'referenceName': '2', 'start': 100379086,
+            }},
             {'gene': {'id': 'CICP27'}},
             {'gene': {'id': 'DDX11L1'}},
         ],
@@ -72,7 +62,14 @@ PARSED_RESULT = {
         {'id': 'HP:0003273', 'label': 'Hip contracture', 'observed': 'no'},
     ],
     'geneVariants': [
-        {'geneId': 'ENSG00000186092'},
+        {'geneId': 'ENSG00000186092', 'variant': {
+            'alt':  'A',
+            'ref': 'G',
+            'chrom': '2',
+            'pos': 100379086,
+            'end': None,
+            'genomeVersion': 'GRCh37'
+        }},
         {'geneId': 'ENSG00000233750'},
         {'geneId': 'ENSG00000223972'},
     ],
@@ -101,7 +98,7 @@ NEW_MATCH_JSON = {
         "genomicFeatures": [
             {
                 "gene": {
-                    "id": "OR4F29"
+                    "id": "RP11"
                 }
             }
         ],
@@ -125,7 +122,7 @@ PARSED_NEW_MATCH_JSON = {
     'patient': NEW_MATCH_JSON['patient'],
     'submissionGuid': SUBMISSION_GUID,
     'phenotypes': [{'observed': 'yes', 'id': 'HP:0012469', 'label': 'Infantile spasms'}],
-    'geneVariants': [{'geneId': 'ENSG00000235249'}],
+    'geneVariants': [{'geneId': 'ENSG00000135953'}],
     'matchStatus': {
         'matchmakerResultGuid': mock.ANY,
         'comments': None,
@@ -174,9 +171,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
     databases = '__all__'
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_get_individual_mme_matches(self, mock_analyst_group):
+    def test_get_individual_mme_matches(self):
         url = reverse(get_individual_mme_matches, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
 
@@ -218,13 +213,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000186092',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'end': 77027548,
-                'genomeVersion': 'GRCh38',
+                'geneId': 'ENSG00000135953',
+                'variantGuid': 'SV0000001_2103343353_r0390_100',
             }],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
@@ -258,18 +248,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.login_analyst_user()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-        response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
     @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.Slacker')
@@ -334,9 +317,19 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertFalse(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['matchStatus']['matchRemoved'])
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid], {
             'id': 'P0004517',
-            'score': 0.35,
+            'score': 0.425,
             'patient': {
-                'genomicFeatures': [{'gene': {'id': 'ENSG00000186092'}}],
+                'genomicFeatures': [{
+                    'gene': {'id': 'ENSG00000135953'},
+                    'variant': {
+                        'referenceName': '1',
+                        'start': 248367227,
+                        'referenceBases': 'TC',
+                        'alternateBases': 'T',
+                        'assembly': 'GRCh37',
+                    },
+                    'zygosity': 1,
+                }],
                 'features': None,
                 'contact': {
                     'href': 'mailto:matchmaker@broadinstitute.org',
@@ -352,7 +345,15 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'phenotypes': [],
             'geneVariants': [
                 {
-                    'geneId': 'ENSG00000186092',
+                    'geneId': 'ENSG00000135953',
+                    'variant': {
+                        'chrom': '1',
+                        'pos': 248367227,
+                        'ref': 'TC',
+                        'alt': 'T',
+                        'end': None,
+                        'genomeVersion': 'GRCh37',
+                    }
                 }
             ],
             'matchStatus': {
@@ -382,13 +383,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000186092',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'end': 77027548,
-                'genomeVersion': 'GRCh38',
+                'geneId': 'ENSG00000135953',
+                'variantGuid': 'SV0000001_2103343353_r0390_100',
             }],
         }})
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
@@ -400,7 +396,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
-            {'ENSG00000186092', 'ENSG00000233750', 'ENSG00000223972', 'ENSG00000235249'}
+            {'ENSG00000135953', 'ENSG00000240361', 'ENSG00000223972'}
         )
         # non-analyst users can't see contact notes
         self.assertDictEqual(response_json['mmeContactNotes'], {'st georges, university of london': {}})
@@ -426,10 +422,10 @@ class MatchmakerAPITest(AuthenticationTestCase):
                     {'id': 'HP:0012469', 'observed': 'yes'}
                 ],
                 'genomicFeatures': [{
-                    'gene': {'id': 'ENSG00000186092'},
+                    'gene': {'id': 'ENSG00000135953'},
                     'variant': {
-                        'end': 77027548, 'start': 77027549, 'assembly': 'GRCh38', 'referenceName': '14',
-                        'alternateBases': 'C', 'referenceBases': 'CCACT',
+                        'referenceName': '21', 'start':  3343353, 'assembly': 'GRCh37',
+                        'alternateBases': 'G', 'referenceBases': 'GAGA',
                     },
                     'zygosity': 1
                 }],
@@ -452,9 +448,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
         message = """
     A search from a seqr user from project 1kg project n\xe5me with uni\xe7\xf8de individual NA19675_1 had the following new match(es):
     
-     - From Sam Baxter at institution Broad Center for Mendelian Genomics with genes OR4F5.
+     - From Sam Baxter at institution Broad Center for Mendelian Genomics with genes RP11.
 
- - From Reza Maroofian at institution St Georges, University of London with genes OR4F29 with phenotypes HP:0012469 (Infantile spasms).
+ - From Reza Maroofian at institution St Georges, University of London with genes RP11 with phenotypes HP:0012469 (Infantile spasms).
     
     /project/R0001_1kg/family_page/F000001_1/matchmaker_exchange
     """
@@ -554,7 +550,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'geneVariants': [{'pos': 123345}],
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Gene id is required for genomic features')
+        self.assertEqual(response.reason_phrase, 'Gene and variant IDs are required for genomic features')
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
             'phenotypes': [{'id': 'HP:0012469'}]
@@ -583,23 +579,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
             ],
             'geneVariants': [{
-                'geneId': 'ENSG00000235249',
-                'alt': 'C',
-                'ref': 'CCACT',
-                'chrom': '14',
-                'pos': 77027549,
-                'genomeVersion': '38',
-                'numAlt': 2,
+                'geneId': 'ENSG00000135953',
+                'variantGuid': 'SV0000002_1248367227_r0390_100',
             }, {
                 'geneId': 'ENSG00000235249',
-                'alt': None,
-                'ref': None,
-                'chrom': '14',
-                'pos': 77027623,
-                'end': 77028137,
-                'genomeVersion': '38',
-                'numAlt': -1,
-                'cn': 3,
+                'variantGuid': 'SV0000002_1248367227_r0390_100',
             }],
         }})
         self.assertEqual(
@@ -614,6 +598,19 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json['individualsByGuid'], {NO_SUBMISSION_INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': new_submission_guid,
         }})
+
+        # test model creation
+        submission = MatchmakerSubmission.objects.get(guid=new_submission_guid)
+        self.assertEqual(submission.individual.guid, NO_SUBMISSION_INDIVIDUAL_GUID)
+        self.assertEqual(submission.submission_id, NO_SUBMISSION_INDIVIDUAL_GUID)
+        self.assertEqual(submission.label, 'HG00733')
+        self.assertEqual(submission.contact_name, 'PI')
+        self.assertIsNone(submission.deleted_date)
+        self.assertListEqual(submission.features, SUBMISSION_DATA['phenotypes'])
+        submission_genes = submission.matchmakersubmissiongenes_set.all()
+        self.assertEqual(submission_genes.count(), 2)
+        self.assertSetEqual(
+            set(submission_genes.values_list('gene_id', flat=True)), {'ENSG00000135953', 'ENSG00000235249'})
 
         # Test successful update
         url = reverse(update_mme_submission, args=[new_submission_guid])
@@ -659,6 +656,16 @@ class MatchmakerAPITest(AuthenticationTestCase):
             response_json['mmeSubmissionsByGuid'][new_submission_guid]['lastModifiedDate']
         )
 
+        # test model update
+        submission = MatchmakerSubmission.objects.get(guid=new_submission_guid)
+        self.assertEqual(submission.contact_name, 'Test Name')
+        self.assertEqual(submission.contact_href, 'mailto:matchmaker@broadinstitute.org')
+        self.assertEqual(submission.label, 'HG00733')
+        self.assertIsNone(submission.deleted_date)
+        self.assertListEqual(submission.features, update_body['phenotypes'])
+        submission_genes = submission.matchmakersubmissiongenes_set.all()
+        self.assertEqual(submission_genes.count(), 0)
+
     def test_delete_mme_submission(self):
         url = reverse(delete_mme_submission, args=[SUBMISSION_GUID])
         self.check_collaborator_login(url)
@@ -666,12 +673,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertEqual(
-            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['deletedDate'][:10],
-            datetime.today().strftime('%Y-%m-%d')
-        )
+        today = datetime.today().strftime('%Y-%m-%d')
+        self.assertEqual(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['deletedDate'][:10], today)
 
         self.assertEqual(MatchmakerResult.objects.filter(submission__guid=SUBMISSION_GUID).count(), 2)
+        submission = MatchmakerSubmission.objects.get(guid=SUBMISSION_GUID)
+        self.assertEqual(submission.deleted_date.strftime('%Y-%m-%d'), today)
+        self.assertEqual(submission.deleted_by, self.collaborator_user)
+        self.assertEqual(submission.matchmakersubmissiongenes_set.count(), 0)
 
         # Test do not delete if already deleted
         response = self.client.post(url)
@@ -680,7 +689,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         update_url = reverse(update_mme_submission, args=[SUBMISSION_GUID])
         response = self.client.post(update_url, content_type='application/json',  data=json.dumps({
-            'geneVariants': [{'geneId': 'ENSG00000235249'}]
+            'geneVariants': [{'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000001_2103343353_r0390_100'}]
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -695,12 +704,14 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
             'submissionId': 'NA19675_1_01',
             'phenotypes': [],
-            'geneVariants': [{'geneId': 'ENSG00000235249'}],
+            'geneVariants': [{'geneId': 'ENSG00000235249', 'variantGuid': 'SV0000001_2103343353_r0390_100'}],
         }})
-        self.assertEqual(
-            response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['lastModifiedDate'][:10],
-            datetime.today().strftime('%Y-%m-%d')
-        )
+        self.assertEqual(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['lastModifiedDate'][:10], today)
+
+        submission = MatchmakerSubmission.objects.get(guid=SUBMISSION_GUID)
+        self.assertIsNone(submission.deleted_date)
+        self.assertIsNone(submission.deleted_by)
+        self.assertEqual(submission.matchmakersubmissiongenes_set.count(), 1)
 
     def test_update_mme_result_status(self):
         url = reverse(update_mme_result_status, args=[RESULT_STATUS_GUID])
@@ -787,8 +798,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.reason_phrase, 'email error')
         self.assertDictEqual(response.json(), {'error': 'no connection'})
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     def test_update_mme_contact_note(self):
         url = reverse(update_mme_contact_note, args=['GeneDx'])
         self.check_analyst_login(url)

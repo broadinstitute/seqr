@@ -14,19 +14,23 @@ STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc
 PROJECT_GUID = 'R0001_1kg'
 
 
-@mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-@mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class IgvAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @responses.activate
+    @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.igv_api.safe_redis_get_json')
     @mock.patch('seqr.views.apis.igv_api.safe_redis_set_json')
-    def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_subprocess):
-        mock_subprocess.return_value.stdout = iter([b'token1\n', b'token2\n'])
-        mock_subprocess.return_value.wait.side_effect = [-1, 0, 0]
+    def test_proxy_google_to_igv(self, mock_set_redis, mock_get_redis, mock_subprocess, mock_file_logger):
+        mock_ls_subprocess = mock.MagicMock()
+        mock_access_token_subprocess = mock.MagicMock()
+        mock_subprocess.side_effect = [mock_ls_subprocess, mock_access_token_subprocess]
+        mock_ls_subprocess.stdout = iter([b'CommandException: One or more URLs matched no objects.'])
+        mock_ls_subprocess.wait.return_value = 1
+        mock_access_token_subprocess.stdout = iter([b'token1\n', b'token2\n'])
+        mock_access_token_subprocess.wait.return_value = 0
         mock_get_redis.return_value = None
 
         responses.add(responses.GET, 'https://storage.googleapis.com/fc-secure-project_A/sample_1.bai',
@@ -47,10 +51,12 @@ class IgvAPITest(AuthenticationTestCase):
         mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=3594)
         mock_subprocess.assert_has_calls([
             mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
-            mock.call().wait(),
             mock.call('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),
-            mock.call().wait(),
         ])
+        mock_ls_subprocess.wait.assert_called_once()
+        mock_access_token_subprocess.wait.assert_called_once()
+        mock_file_logger.info.assert_any_call(
+            'CommandException: One or more URLs matched no objects.', self.collaborator_user)
 
         mock_get_redis.reset_mock()
         mock_get_redis.return_value = 'token3'

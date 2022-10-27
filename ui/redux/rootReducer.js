@@ -13,8 +13,17 @@ import {
 } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
 import {
-  RECEIVE_DATA, REQUEST_PROJECTS, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES, REQUEST_SAVED_VARIANTS,
-  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity, loadFamilyData, loadProjectChildEntities,
+  RECEIVE_DATA,
+  REQUEST_PROJECTS,
+  RECEIVE_SAVED_SEARCHES,
+  REQUEST_SAVED_SEARCHES,
+  REQUEST_SAVED_VARIANTS,
+  REQUEST_SEARCHED_VARIANTS,
+  RECEIVE_SEARCHED_VARIANTS,
+  REQUEST_PROJECT_DETAILS,
+  updateEntity,
+  loadFamilyData,
+  loadProjectChildEntities,
 } from './utils/reducerUtils'
 
 /**
@@ -307,6 +316,7 @@ const rootReducer = combineReducers({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
+  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
   familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
@@ -318,7 +328,6 @@ const rootReducer = combineReducers({
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
-  pagenesById: createObjectsByIdReducer(RECEIVE_DATA, 'pagenesById'),
   rnaSeqDataByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'rnaSeqData'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
   hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),

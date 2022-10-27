@@ -13,7 +13,7 @@ from urllib3.exceptions import ReadTimeoutError
 from seqr.models import Family, Sample, VariantSearch, VariantSearchResults
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_tuples, get_single_es_variant, get_es_variants, \
     get_es_variant_gene_counts, get_es_variants_for_variant_ids, InvalidIndexException, InvalidSearchException
-from seqr.utils.elasticsearch.es_search import EsSearch, _get_family_affected_status, _liftover_grch38_to_grch37
+from seqr.utils.elasticsearch.es_search import _get_family_affected_status, _liftover_grch38_to_grch37
 from seqr.views.utils.test_utils import urllib3_responses, PARSED_VARIANTS, PARSED_SV_VARIANT, PARSED_SV_WGS_VARIANT,\
     PARSED_MITO_VARIANT, TRANSCRIPT_2
 
@@ -114,6 +114,11 @@ ES_VARIANTS = [
               ]
             }
           ],
+          'screen_region_type' : [
+            'dELS',
+            'CTCF-bound'
+          ],
+          'gnomad_non_coding_constraint_z_score': 1.01272,
           'hgmd_class': 'DM',
           'AC': 2,
           'exac_AN_Adj': 121308,
@@ -766,13 +771,10 @@ MAPPING_FIELDS = [
     'contig',
     'variantId',
     'dbnsfp_MutationTaster_pred',
-    'dbnsfp_phastCons100way_vertebrate',
-    'dbnsfp_MetaSVM_pred',
     'mpc_MPC',
     'dbnsfp_DANN_score',
     'eigen_Eigen_phred',
     'dbnsfp_REVEL_score',
-    'dbnsfp_GERP_RS',
     'splice_ai_delta_score',
     'splice_ai_splice_consequence',
     'dbnsfp_FATHMM_pred',
@@ -780,7 +782,9 @@ MAPPING_FIELDS = [
     'dbnsfp_SIFT_pred',
     'dbnsfp_Polyphen2_HVAR_pred',
     'cadd_PHRED',
+    'gnomad_non_coding_constraint_z_score',
     'sortedTranscriptConsequences',
+    'screen_region_type',
     'genotypes',
     'samples_no_call',
     'samples_num_alt_1',
@@ -886,13 +890,10 @@ MITO_MAPPING_FIELDS = [
     "common_low_heteroplasmy",
     "contig",
     "dbnsfp_FATHMM_pred",
-    "dbnsfp_GERP_RS",
-    "dbnsfp_MetaSVM_pred",
     "dbnsfp_MutationTaster_pred",
     "dbnsfp_Polyphen2_HVAR_pred",
     "dbnsfp_REVEL_score",
     "dbnsfp_SIFT_pred",
-    "dbnsfp_phastCons100way_vertebrate",
     "end",
     "filters",
     "genotypes",
@@ -925,27 +926,13 @@ MITO_MAPPING_FIELDS = [
 
 MITO_SOURCE_ONLY_FIELDS = [
     'callset_max_hl',
-    'exac_AC_het',
-    'exac_AF_het',
     'exac_max_hl',
-    'g1k_AC_het',
-    'g1k_AF_het',
     'g1k_max_hl',
-    'gnomad_exomes_AC_het',
-    'gnomad_exomes_AF_het',
     'gnomad_exomes_max_hl',
-    'gnomad_genomes_AC_het',
-    'gnomad_genomes_AF_het',
     'gnomad_genomes_max_hl',
-    'gnomad_svs_AC_het',
-    'gnomad_svs_AF_het',
     'gnomad_svs_max_hl',
-    'sv_callset_AC_het',
-    'sv_callset_AF_het',
     'sv_callset_max_hl',
-    'topmed_AC_het',
     'topmed_max_hl',
-    'topmed_AF_het',
     'helix_ID',
     'helix_Hemi',
     'helix_AN',
@@ -957,6 +944,22 @@ MITO_SOURCE_ONLY_FIELDS = [
     'gnomad_mito_ID',
     'gnomad_mito_Het',
     'gnomad_mito_Hemi',
+    'callset_heteroplasmy_Het',
+    'callset_heteroplasmy_ID',
+    'callset_heteroplasmy_Hemi',
+    'callset_heteroplasmy_filter_AF',
+    'callset_heteroplasmy_Hom',
+    'callset_heteroplasmy_max_hl',
+    'gnomad_mito_heteroplasmy_filter_AF',
+    'gnomad_mito_heteroplasmy_Hemi',
+    'gnomad_mito_heteroplasmy_Hom',
+    'gnomad_mito_heteroplasmy_ID',
+    'gnomad_mito_heteroplasmy_Het',
+    'helix_heteroplasmy_Het',
+    'helix_heteroplasmy_ID',
+    'helix_heteroplasmy_Hemi',
+    'helix_heteroplasmy_filter_AF',
+    'helix_heteroplasmy_Hom',
 ]
 
 SOURCE_FIELDS = {
@@ -1150,7 +1153,7 @@ def mock_hits(hits, increment_sort=False, include_matched_queries=True, sort=Non
             sort_key = sort[0] if sort else 'xpos'
             if isinstance(sort_key, dict):
                 if '_script' in sort_key:
-                    sort_key = sort_key['_script']['script']['params'].get('field', 'xpos')
+                    sort_key = sort_key['_script']['script']['params'].get('field', 'xpos') # pylint: disable=invalid-sequence-index
                 else:
                     sort_key = next(iter(sort_key.keys()))
             sort_value = jmespath.search(sort_key, hit['_source'])
@@ -1596,6 +1599,7 @@ class EsUtilsTest(TestCase):
             'annotations': {
                 'in_frame': ['inframe_insertion', 'inframe_deletion'],
                 'other': ['5_prime_UTR_variant', 'intergenic_variant'],
+                'SCREEN': ['dELS', 'DNase-only'],
                 'splice_ai': '0.8',
             },
             'freqs': {
@@ -1773,6 +1777,7 @@ class EsUtilsTest(TestCase):
                         }},
                         {'terms': {'hgmd_class': ['DM', 'DM?']}},
                         {'range': {'splice_ai_delta_score': {'gte': 0.8}}},
+                        {'terms': {'screen_region_type': ['dELS', 'DNase-only']}},
                     ]
                 }
             },
@@ -1846,7 +1851,6 @@ class EsUtilsTest(TestCase):
                                 ]
                             }}
                         ],
-                        '_name': 'F000002_2'
                     }},
                     {'bool': {
                         'must': [
@@ -1979,6 +1983,35 @@ class EsUtilsTest(TestCase):
             dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
             dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
+
+    @urllib3_responses.activate
+    def test_multi_dataset_no_affected_inheritance_get_es_variants(self):
+        setup_responses()
+        # The family has multiple data types loaded but only one loaded in an affected individual
+        Sample.objects.get(individual_id=4, elasticsearch_index=SV_INDEX_NAME).delete()
+
+        search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}})
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(guid='F000002_2'))
+
+        get_es_variants(results_model, num_results=2)
+        self.assertExecutedSearch(filters=[{'bool': {
+            'must': [{'bool': {
+                'minimum_should_match': 1,
+                'should': [
+                    {'term': {'samples_num_alt_1': 'HG00731'}},
+                    {'term': {'samples_num_alt_2': 'HG00731'}},
+                ],
+                'must_not': [
+                    {'term': {'samples_no_call': 'HG00732'}},
+                    {'term': {'samples_num_alt_1': 'HG00732'}},
+                    {'term': {'samples_num_alt_2': 'HG00732'}},
+                    {'term': {'samples_no_call': 'HG00733'}},
+                    {'term': {'samples_num_alt_1': 'HG00733'}},
+                    {'term': {'samples_num_alt_2': 'HG00733'}},
+                ],
+            }}], '_name': 'F000002_2',
+        }}])
 
     @urllib3_responses.activate
     def test_compound_het_get_es_variants(self):
@@ -2709,7 +2742,7 @@ class EsUtilsTest(TestCase):
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
 
-        variants, total_results = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
+        variants, _ = get_es_variants(results_model, num_results=2, skip_genotype_filter=True)
         expected_transcript_variant = deepcopy(PARSED_VARIANTS[0])
         expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
         self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_INDEX_VARIANT])

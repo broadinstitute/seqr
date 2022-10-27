@@ -491,7 +491,7 @@ const GeneSearchLinkWithPopup = props => (
 )
 
 const getGeneConsequence = (geneId, variant) => {
-  const geneTranscripts = variant.transcripts[geneId]
+  const geneTranscripts = (variant.transcripts || {})[geneId]
   return geneTranscripts && geneTranscripts.length > 0 &&
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
@@ -595,10 +595,14 @@ BaseVariantGene.propTypes = {
   rnaSeqData: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  gene: getGenesById(state)[ownProps.geneId],
+const getRnaSeqProps = (state, ownProps) => ({
   hasRnaTpmData: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.hasRnaTpmData,
   rnaSeqData: getRnaSeqOutilerDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+})
+
+const mapStateToProps = (state, ownProps) => ({
+  gene: getGenesById(state)[ownProps.geneId],
+  ...getRnaSeqProps(state, ownProps),
 })
 
 export const VariantGene = connect(mapStateToProps)(BaseVariantGene)
@@ -610,6 +614,7 @@ class VariantGenes extends React.PureComponent {
     mainGeneId: PropTypes.string,
     genesById: PropTypes.object.isRequired,
     rnaSeqData: PropTypes.object,
+    hasRnaTpmData: PropTypes.bool,
     showMainGene: PropTypes.bool,
   }
 
@@ -624,7 +629,7 @@ class VariantGenes extends React.PureComponent {
   }
 
   render() {
-    const { variant, genesById, mainGeneId, showMainGene, rnaSeqData } = this.props
+    const { variant, genesById, mainGeneId, showMainGene, rnaSeqData, hasRnaTpmData } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
     const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
@@ -644,6 +649,7 @@ class VariantGenes extends React.PureComponent {
               gene={gene}
               variant={variant}
               rnaSeqData={rnaSeqData}
+              hasRnaTpmData={hasRnaTpmData}
               showInlineDetails={!mainGeneId}
               compact
             />
@@ -693,7 +699,7 @@ class VariantGenes extends React.PureComponent {
 
 const mapAllGenesStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
-  rnaSeqData: getRnaSeqOutilerDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
+  ...getRnaSeqProps(state, ownProps),
 })
 
 export default connect(mapAllGenesStateToProps)(VariantGenes)

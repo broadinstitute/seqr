@@ -8,6 +8,7 @@ from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json, \
     update_model_from_json
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
 
@@ -100,6 +101,7 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
             individual = create_model_from_json(
                 Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
             updated_families.add(family)
+            updated_individuals.add(individual)
             individual_lookup[individual_id][family] = individual
 
     record['family'] = family
@@ -185,3 +187,24 @@ def get_parsed_feature(feature):
             feature_json[field] = feature[field]
 
     return feature_json
+
+
+def get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user):
+    individuals_by_guid = {
+        individual['individualGuid']: individual for individual in
+        _get_json_for_individuals(updated_individuals, user, add_sample_guids_field=True)
+    }
+    families_by_guid = {
+        family['familyGuid']: family for family in
+        _get_json_for_families(updated_families, user, add_individual_guids_field=True)
+    }
+
+    response = {
+        'individualsByGuid': individuals_by_guid,
+        'familiesByGuid': families_by_guid,
+    }
+    if updated_notes:
+        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(updated_notes)}
+        response['familyNotesByGuid'] = family_notes_by_guid
+
+    return response

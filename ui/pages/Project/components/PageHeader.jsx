@@ -1,10 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Header } from 'semantic-ui-react'
 
+import { getUser } from 'redux/selectors'
 import EditProjectButton from 'shared/components/buttons/EditProjectButton'
 import PageHeaderLayout from 'shared/components/page/PageHeaderLayout'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import { CONSENT_CODE_LOOKUP } from 'shared/utils/constants'
 
 import {
   getCurrentProject,
@@ -16,7 +19,7 @@ import {
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 const PageHeader = React.memo((
-  { project, family, analysisGroup, breadcrumb, match, breadcrumbIdSections, entityLinks },
+  { project, family, analysisGroup, user, breadcrumb, match, breadcrumbIdSections, entityLinks },
 ) => {
   if (!project) {
     return null
@@ -25,11 +28,22 @@ const PageHeader = React.memo((
   let { description } = project
   let button = null
   if (match.params.breadcrumb === 'project_page') {
-    button = <EditProjectButton project={project} />
+    button = <EditProjectButton project={project} user={user} />
+    if (user.isPm && project.consentCode) {
+      description = (
+        <Header.Subheader>
+          {description}
+          <br />
+          <i>
+            Consent Code: &nbsp;
+            {CONSENT_CODE_LOOKUP[project.consentCode]}
+          </i>
+        </Header.Subheader>
+      )
+    }
   } else if (match.params.breadcrumb === 'family_page') {
     if (match.params.breadcrumbIdSection === 'matchmaker_exchange') {
       description = ''
-      button = <EditProjectButton project={project} />
     } else {
       description = family.description
     }
@@ -66,6 +80,7 @@ PageHeader.propTypes = {
   project: PropTypes.object,
   family: PropTypes.object,
   analysisGroup: PropTypes.object,
+  user: PropTypes.object,
   match: PropTypes.object,
   breadcrumb: PropTypes.string,
   breadcrumbIdSections: PropTypes.arrayOf(PropTypes.object),
@@ -76,6 +91,7 @@ const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
   family: getPageHeaderFamily(state, ownProps),
   analysisGroup: getPageHeaderAnalysisGroup(state, ownProps),
+  user: getUser(state),
   breadcrumbIdSections: getPageHeaderBreadcrumbIdSections(state, ownProps),
   entityLinks: getPageHeaderEntityLinks(state, ownProps),
 })

@@ -11,19 +11,18 @@ from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
-    ProjectCategory, FamilyNote, CAN_EDIT
+    FamilyNote, CAN_EDIT
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, _get_json_for_families, \
-    get_json_for_family_notes, _get_json_for_individuals
+    get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    check_user_created_object_permissions, pm_required, user_is_analyst, login_and_policies_required, \
+    check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
-from settings import ANALYST_PROJECT_CATEGORY
 
 
 @pm_required
@@ -57,14 +56,14 @@ def create_project_handler(request):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
-    project_args['description'] = request_json.get('description', '')
-    project_args['is_demo'] = request_json.get('isDemo', False)
+    project_args.update({
+        _to_snake_case(field): request_json.get(field, default) for field, default in
+        [('description', ''), ('isDemo', False), ('consentCode', None)]
+    })
     if request_json.get('disableMme'):
         project_args['is_mme_enabled'] = False
 
     project = create_model_from_json(Project, project_args, user=request.user)
-    if ANALYST_PROJECT_CATEGORY:
-        ProjectCategory.objects.get(name=ANALYST_PROJECT_CATEGORY).projects.add(project)
 
     return create_json_response({
         'projectsByGuid': {
@@ -109,7 +108,15 @@ def update_project_handler(request, project_guid):
     check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
-    update_project_from_json(project, request_json, request.user, allow_unknown_keys=True)
+    updated_fields = None
+    consent_code = request_json.get('consentCode')
+    if consent_code and consent_code != project.consent_code:
+        if not user_is_pm(request.user):
+            raise PermissionDenied('User is not authorized to edit consent code')
+        project.consent_code = consent_code
+        updated_fields = {'consent_code'}
+
+    update_project_from_json(project, request_json, request.user, allow_unknown_keys=True, updated_fields=updated_fields)
 
     return create_json_response({
         'projectsByGuid': {
@@ -196,8 +203,7 @@ def project_families(request, project_guid):
 def project_overview(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    is_analyst = user_is_analyst(request.user)
-    response = get_projects_child_entities([project], project.guid, request.user, is_analyst=is_analyst)
+    response = get_projects_child_entities([project], project.guid, request.user)
     add_project_tag_types(response['projectsByGuid'])
 
     project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
@@ -206,6 +212,7 @@ def project_overview(request, project_guid):
     project_json.update({
         'detailsLoaded': True,
         'collaborators': get_json_for_project_collaborator_list(request.user, project),
+        'collaboratorGroups': get_json_for_project_collaborator_groups(project),
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
     })
@@ -247,16 +254,14 @@ def project_family_notes(request, project_guid):
 @login_and_policies_required
 def project_mme_submisssions(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    models = MatchmakerSubmission.objects.filter(individual__family__project=project)
+    models = MatchmakerSubmission.objects.filter(
+        individual__family__project=project).prefetch_related('matchmakersubmissiongenes_set')
 
-    submissions = get_json_for_matchmaker_submissions(models, additional_model_fields=['genomic_features'])
+    submissions_by_guid = {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(models)}
 
-    submissions_by_guid = {}
-    for s in submissions:
-        genomic_features = s.pop('genomicFeatures') or []
-        s['geneIds'] = [feature['gene']['id'] for feature in genomic_features if feature.get('gene', {}).get('id')]
-        guid = s['submissionGuid']
-        submissions_by_guid[guid] = s
+    for model in models:
+        gene_ids = model.matchmakersubmissiongenes_set.values_list('gene_id', flat=True)
+        submissions_by_guid[model.guid]['geneIds'] = list(gene_ids)
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project))
 

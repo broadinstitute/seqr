@@ -1,21 +1,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import orderBy from 'lodash/orderBy'
-import { Icon, Popup } from 'semantic-ui-react'
+import { Icon, Popup, Segment, Header } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import { loadUserOptions } from 'redux/rootReducer'
-import { getUserOptionsIsLoading } from 'redux/selectors'
+import { getUserOptionsIsLoading, getUser } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { RadioGroup, AddableSelect } from 'shared/components/form/Inputs'
 import { validators } from 'shared/components/form/FormHelpers'
+import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
+import { HelpIcon } from 'shared/components/StyledComponents'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
-import { updateCollaborator } from '../reducers'
+import { updateCollaborator, updateCollaboratorGroup } from '../reducers'
 import { getUserOptions, getCurrentProject } from '../selectors'
 
 const CollaboratorEmailDropdown = React.memo(({ load, ...props }) => (
@@ -63,112 +64,164 @@ const EDIT_FIELDS = [
   },
 ]
 
-const AddCollaboratorButton = React.memo(({ onSubmit }) => (
-  <UpdateButton
-    modalId="addCollaborator"
-    modalTitle="Add Collaborator"
-    onSubmit={onSubmit}
-    formFields={CREATE_FIELDS}
-    editIconName="plus"
-    buttonText="Add Collaborator"
-    showErrorPanel
-  />
-))
-
-AddCollaboratorButton.propTypes = {
-  onSubmit: PropTypes.func,
-}
+const CREATE_GROUP_FIELDS = [
+  {
+    name: 'name',
+    label: 'Group',
+    component: LoadOptionsSelect,
+    url: '/api/users/get_group_options',
+    optionsResponseKey: 'groups',
+    validationErrorHeader: 'No User Groups Available',
+    validationErrorMessage: 'Contact your system administrator to have them configure user groups',
+    validate: validators.required,
+  },
+  ...EDIT_FIELDS,
+]
 
 const CollaboratorContainer = styled.div`
   white-space: nowrap;
 `
 
-const CollaboratorRow = React.memo(({ collaborator, update }) => (
-  <CollaboratorContainer>
-    {update && (
-      <span>
-        <HorizontalSpacer width={10} />
-        <UpdateButton
-          modalId={`editCollaborator-${collaborator.email}`}
-          modalTitle={`Edit Collaborator: ${collaborator.displayName || collaborator.email}`}
-          onSubmit={update}
-          formFields={EDIT_FIELDS}
-          initialValues={collaborator}
-          showErrorPanel
-          size="tiny"
-        />
-        <DeleteButton
-          initialValues={collaborator}
-          onSubmit={update}
-          size="tiny"
-          hideNoRequestStatus
-          confirmDialog={
-            <div className="content">
-              Are you sure you want to delete &nbsp;
-              <b>{collaborator.displayName || collaborator.email}</b>
-              . They will still
-              have their user account and be able to log in, but will not be able to access this project anymore.
-            </div>
-          }
-        />
-      </span>
-    )}
-    <Popup
-      position="top center"
-      trigger={<Icon link size="small" name={collaborator.hasEditPermissions ? 'star' : ''} />}
-      content={`Has "${collaborator.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
-      size="small"
-    />
-    {collaborator.displayName && `${collaborator.displayName} - `}
-    <a href={`mailto:${collaborator.email}`}>{collaborator.email}</a>
-  </CollaboratorContainer>
-))
+const ProjectAccessSection = (
+  { entities, idField, title, displayField, deleteMessage, rowDisplay, canEdit, onSubmit, onAdd, addEntityFields },
+) => ([
+  ...(entities || []).map(entity => (
+    <CollaboratorContainer key={entity[idField]}>
+      {canEdit && (
+        <span>
+          <HorizontalSpacer width={10} />
+          <UpdateButton
+            modalId={`edit${title}-${entity[idField]}`}
+            modalTitle={`Edit ${title}: ${entity[displayField] || entity[idField]}`}
+            onSubmit={onSubmit}
+            formFields={EDIT_FIELDS}
+            initialValues={entity}
+            showErrorPanel
+            size="tiny"
+          />
+          <DeleteButton
+            initialValues={entity}
+            onSubmit={onSubmit}
+            size="tiny"
+            hideNoRequestStatus
+            confirmDialog={
+              <div className="content">
+                Are you sure you want to remove &nbsp;
+                <b>{entity[displayField] || entity[idField]}</b>
+                ?
+                {deleteMessage}
+              </div>
+            }
+          />
+        </span>
+      )}
+      <Popup
+        position="top center"
+        trigger={<Icon link size="small" name={entity.hasEditPermissions ? 'star' : ''} />}
+        content={`Has "${entity.hasEditPermissions ? 'Manager' : 'Collaborator'}" permissions`}
+        size="small"
+      />
+      {rowDisplay(entity)}
+    </CollaboratorContainer>
+  )),
+  (canEdit ? (
+    <div key={`add${title}Button`}>
+      <br />
+      <UpdateButton
+        modalId={`add${title}`}
+        modalTitle={`Add ${title}`}
+        onSubmit={onAdd}
+        formFields={addEntityFields}
+        editIconName="plus"
+        buttonText={`Add ${title}`}
+        showErrorPanel
+      />
+    </div>
+  ) : null),
+])
 
-CollaboratorRow.propTypes = {
-  collaborator: PropTypes.object.isRequired,
-  update: PropTypes.func,
+ProjectAccessSection.propTypes = {
+  entities: PropTypes.arrayOf(PropTypes.object),
+  onSubmit: PropTypes.func,
+  onAdd: PropTypes.func,
+  canEdit: PropTypes.bool,
+  title: PropTypes.string,
+  idField: PropTypes.string,
+  displayField: PropTypes.string,
+  deleteMessage: PropTypes.string,
+  rowDisplay: PropTypes.func,
+  addEntityFields: PropTypes.arrayOf(PropTypes.object),
 }
 
-const getSortedCollabs = (project, isAnvil) => orderBy(
-  (project.collaborators || []).filter(col => col.isAnvil === isAnvil), [c => c.hasEditPermissions, c => c.email],
-  ['desc', 'asc'],
+const collaboratorDisplay = ({ displayName, email }) => (
+  <span>
+    {displayName && `${displayName} - `}
+    <a href={`mailto:${email}`}>{email}</a>
+  </span>
 )
 
-const ProjectCollaborators = React.memo(({ project, onSubmit, addCollaborator }) => {
-  const localCollabs = getSortedCollabs(project, false)
-  const anvilCollabs = getSortedCollabs(project, true)
-  return [
-    localCollabs.map(
-      c => <CollaboratorRow key={c.username} collaborator={c} update={project.canEdit ? onSubmit : null} />,
-    ),
-    ((project.canEdit && !project.workspaceName) ? (
-      <div key="addButton">
-        <br />
-        <AddCollaboratorButton onSubmit={addCollaborator} />
-      </div>
-    ) : null),
-    (localCollabs.length && anvilCollabs.length) ? (
-      <p key="subheader">
-        <br />
-        AnVIL Workspace Users
-      </p>
-    ) : null,
-    anvilCollabs.map(c => <CollaboratorRow key={c.username} collaborator={c} />),
-  ]
+const groupNameDisplay = ({ name }) => name
+
+const ProjectCollaborators = React.memo(({ project, user, onSubmit, onGroupSubmit, addCollaborator }) => {
+  const canEdit = project.canEdit && !user.isAnvil
+  return (
+    <div>
+      <ProjectAccessSection
+        title="Collaborator"
+        idField="email"
+        displayField="displayName"
+        deleteMessage=" They will still have their user account and be able to log in, but will not be able to access this project anymore."
+        entities={project.collaborators}
+        canEdit={canEdit}
+        onSubmit={onSubmit}
+        onAdd={addCollaborator}
+        addEntityFields={CREATE_FIELDS}
+        rowDisplay={collaboratorDisplay}
+      />
+      {project.collaboratorGroups?.length > 0 && <Header subheader="Groups" size="small" />}
+      <ProjectAccessSection
+        title="Collaborator Group"
+        idField="name"
+        entities={project.collaboratorGroups}
+        canEdit={canEdit}
+        onSubmit={onGroupSubmit}
+        onAdd={onGroupSubmit}
+        addEntityFields={CREATE_GROUP_FIELDS}
+        rowDisplay={groupNameDisplay}
+      />
+      {user.isAnvil && project.workspaceName && (
+        <Segment basic size="small" textAlign="right">
+          <i>Collaborators fetched from AnVIL</i>
+          {project.canEdit && (
+            <Popup
+              trigger={<HelpIcon color="black" />}
+              content={`Project collaborators are managed in AnVIL. Users with access to the associated workspace have
+              access to this project. Users with "Writer" or "Owner" access to the workspace have Manager level access. 
+              To add or remove users, or to change a user's access level, edit the collaborators directly in AnVIL`}
+            />
+          )}
+        </Segment>
+      )}
+    </div>
+  )
 })
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
+  user: PropTypes.object.isRequired,
   onSubmit: PropTypes.func,
+  onGroupSubmit: PropTypes.func,
   addCollaborator: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
+  user: getUser(state),
 })
 
 const mapDispatchToProps = {
   onSubmit: updateCollaborator,
+  onGroupSubmit: updateCollaboratorGroup,
   addCollaborator: updates => updateCollaborator(updates.user),
 }
 

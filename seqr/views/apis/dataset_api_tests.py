@@ -6,8 +6,7 @@ from io import StringIO
 
 from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
-from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase,\
-    MixAuthenticationTestCase
+from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
@@ -46,7 +45,6 @@ class DatasetAPITest(object):
     @mock.patch('seqr.views.apis.dataset_api.send_html_email')
     @mock.patch('seqr.views.apis.dataset_api.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @urllib3_responses.activate
     def test_add_variants_dataset(self, mock_send_email, mock_send_slack, mock_random):
         url = reverse(add_variants_dataset_handler, args=[PROJECT_GUID])
@@ -140,11 +138,11 @@ class DatasetAPITest(object):
         self.assertTrue(str(existing_index_sample_model.loaded_date).startswith('2017-02-05'))
 
         mock_send_email.assert_not_called()
-        mock_send_slack.assert_called_with(
-            'seqr-data-loading',
-            '1 new WES samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA20878```\n            '.format(
-                guid=PROJECT_GUID
-            ))
+        if self.SLACK_MESSAGE_TEMPLATE:
+            mock_send_slack.assert_called_with(
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES', samples='NA20878'))
+        else:
+            mock_send_slack.assert_not_called()
 
         # Adding an SV index works additively with the regular variants index
         mock_random.return_value = 1234567
@@ -190,11 +188,11 @@ class DatasetAPITest(object):
         self.assertSetEqual({True}, {sample.is_active for sample in sample_models})
 
         mock_send_email.assert_not_called()
-        mock_send_slack.assert_called_with(
-            'seqr-data-loading',
-            '1 new WES SV samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA19675_1```\n            '.format(
-                guid=PROJECT_GUID
-            ))
+        if self.SLACK_MESSAGE_TEMPLATE:
+            mock_send_slack.assert_called_with(
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WES SV', samples='NA19675_1'))
+        else:
+            mock_send_slack.assert_not_called()
 
         # Adding an index for a different sample type works additively
         mock_random.return_value = 987654
@@ -234,11 +232,11 @@ class DatasetAPITest(object):
                             {sv_sample_guid, existing_index_sample_guid, new_sample_type_sample_guid, existing_rna_seq_sample_guid})
 
         mock_send_email.assert_not_called()
-        mock_send_slack.assert_called_with(
-            'seqr-data-loading',
-            '1 new WGS samples are loaded in https://seqr.broadinstitute.org/project/{guid}/project_page\n            ```NA19675_1```\n            '.format(
-                guid=PROJECT_GUID
-            ))
+        if self.SLACK_MESSAGE_TEMPLATE:
+            mock_send_slack.assert_called_with(
+                'seqr-data-loading', self.SLACK_MESSAGE_TEMPLATE.format(type='WGS', samples='NA19675_1'))
+        else:
+            mock_send_slack.assert_not_called()
 
         # Previous variant samples should still be active
         sample_models = Sample.objects.filter(individual__guid='I000001_na19675')
@@ -265,10 +263,14 @@ class DatasetAPITest(object):
         if self.ANVIL_DISABLED:
             mock_send_email.assert_not_called()
         else:
+            namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
             mock_send_email.assert_called_with("""Hi Test Manager User,
 We are following up on your request to load data from AnVIL on March 12, 2017.
-We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bio/#workspaces/my-seqr-billing/anvil-non-analyst-project 1000 Genomes Demo>my-seqr-billing/anvil-non-analyst-project 1000 Genomes Demo</a> to the corresponding seqr project <a href=https://seqr.broadinstitute.org/project/{guid}/project_page>Non-Analyst Project</a>. Let us know if you have any questions.
-- The seqr team\n""".format(guid=NON_ANALYST_PROJECT_GUID),
+We have loaded 1 samples from the AnVIL workspace {anvil_link} to the corresponding seqr project {seqr_link}. Let us know if you have any questions.
+- The seqr team\n""".format(
+                anvil_link=f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>',
+                seqr_link=f'<a href=https://seqr.broadinstitute.org/project/{NON_ANALYST_PROJECT_GUID}/project_page>Non-Analyst Project</a>',
+            ),
                                                subject='New data available in seqr',
                                                to=['test_user_manager@test.com'])
         mock_send_slack.assert_not_called()
@@ -437,12 +439,13 @@ We have loaded 1 samples from the AnVIL workspace <a href=https://anvil.terra.bi
 class LocalDatasetAPITest(AuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', '1kg_project']
     ANVIL_DISABLED = True
+    SLACK_MESSAGE_TEMPLATE = None
 
 
 def assert_no_anvil_calls(self):
     self.mock_list_workspaces.assert_not_called()
     self.mock_get_ws_access_level.assert_not_called()
-    self.mock_get_ws_acl.assert_not_called()
+    self.assert_no_extra_anvil_calls()
 
 
 # Test for permissions from AnVIL only
@@ -450,16 +453,10 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     ANVIL_DISABLED = False
 
+    SEQR_URL = 'https://seqr.broadinstitute.org'
+    BREAK = '\n            '
+    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page{BREAK}```{{samples}}```{BREAK}'
+
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_anvil_calls(self)
-
-
-# Test for permissions from AnVIL and local
-class MixDatasetAPITest(MixAuthenticationTestCase, DatasetAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-    ANVIL_DISABLED = False
-
-    def test_add_variants_dataset(self, *args):
-        super(MixDatasetAPITest, self).test_add_variants_dataset(*args)
         assert_no_anvil_calls(self)

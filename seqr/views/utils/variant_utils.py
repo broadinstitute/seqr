@@ -1,17 +1,20 @@
 from collections import defaultdict
+from django.db.models import F
 import logging
 import redis
 
+from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags
+    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
+    get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
-from settings import REDIS_SERVICE_HOSTNAME
+from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +56,7 @@ def update_project_saved_variant_json(project, family_id=None, user=None):
 
 def reset_cached_search_results(project, reset_index_metadata=False):
     try:
-        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, port=REDIS_SERVICE_PORT, socket_connect_timeout=3)
         keys_to_delete = []
         if project:
             result_guids = [res.guid for res in VariantSearchResults.objects.filter(families__project=project)]
@@ -159,9 +162,8 @@ LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM = 'loadProjectTagTypes'
 LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
-                          add_locus_list_detail=False, include_rna_seq=True, include_missing_variants=False,
-                          include_project_name=False):
-    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, include_missing_variants=include_missing_variants)
+                          add_locus_list_detail=False, include_rna_seq=True, include_project_name=False):
+    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
 
@@ -175,7 +177,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     discovery_tags = None
     is_analyst = user_is_analyst(request.user)
     if is_analyst:
-        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values())
+        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
         response.update(discovery_response)
 
     genes = _saved_variant_genes(variants)
@@ -185,6 +187,19 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)
     response['genesById'] = genes
+
+    mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
+        saved_variant__in=saved_variants).values(
+        geneId=F('gene_id'), variantGuid=F('saved_variant__guid'), submissionGuid=F('matchmaker_submission__guid'))
+    for s in mme_submission_genes:
+        response_variant = response['savedVariantsByGuid'][s['variantGuid']]
+        if 'mmeSubmissions' not in response_variant:
+            response_variant['mmeSubmissions'] = []
+        response_variant['mmeSubmissions'].append(s)
+
+    submissions = get_json_for_matchmaker_submissions(
+        MatchmakerSubmission.objects.filter(matchmakersubmissiongenes__saved_variant__in=saved_variants))
+    response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
         project_fields = {'projectGuid': lambda p: p.guid}
