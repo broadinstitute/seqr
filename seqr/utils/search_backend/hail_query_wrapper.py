@@ -866,7 +866,7 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 
 class MultiDataTypeHailTableQuery(object):
 
-    MERGE_FIELDS = []
+    MERGE_FIELDS = {}
     DATA_TYPE_ANNOTATION_FIELDS = []
 
     def __init__(self, data_source, *args, **kwargs):
@@ -956,6 +956,7 @@ class MultiDataTypeHailTableQuery(object):
         entry_types = dict(**ht[list(sample_ids)[0]].dtype)
         entry_fields = {'GT'}
         entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
+        merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
 
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
@@ -977,12 +978,14 @@ class MultiDataTypeHailTableQuery(object):
                 **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
             ) for sample_id in table_sample_ids})
 
-            merge_fields = deepcopy(cls.MERGE_FIELDS)
-            merge_fields += shared_sample_ids
+            new_merge_fields = cls.MERGE_FIELDS[data_type]
+            table_merge_fields = merge_fields.intersection(new_merge_fields)
+            table_merge_fields += shared_sample_ids
+            merge_fields.update(new_merge_fields)
             ht = ht.transmute(
                 **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
                    for k, format in cls._import_table_transmute_expressions(ht).items()},
-                **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
+                **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
 
         return ht
@@ -1007,7 +1010,8 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
     }
 
-    MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sortedTranscriptConsequences']
+    SV_MERGE_FIELDS = {'interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sortedTranscriptConsequences'}
+    MERGE_FIELDS = {GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS}
     DATA_TYPE_ANNOTATION_FIELDS = ['end', 'pos']
 
     @staticmethod
@@ -1023,7 +1027,8 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     COMPUTED_ANNOTATION_FIELDS.update(AllSvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
 
-    MERGE_FIELDS = ['rg37_locus']
+    MERGE_FIELDS = {VARIANT_DATASET: {'rg37_locus'}}
+    MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
     @staticmethod
