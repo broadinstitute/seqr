@@ -861,16 +861,42 @@ QUERY_CLASS_MAP = {
     SV_KEY: SvHailTableQuery,
 }
 
-DATA_TYPE_ANNOTATIONS_MAP = {
-    data_type: {k: cls.BASE_ANNOTATION_FIELDS[k] for k in ['chrom', 'pos', 'end'] if cls.BASE_ANNOTATION_FIELDS.get(k)}
-    for data_type, cls in QUERY_CLASS_MAP.items()
-}
 DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_type, cls in QUERY_CLASS_MAP.items()}
 
 
 class MultiDataTypeHailTableQuery(object):
 
     MERGE_FIELDS = []
+    DATA_TYPE_ANNOTATION_FIELDS = []
+
+    def __init__(self, data_source, *args, **kwargs):
+        data_classes = [QUERY_CLASS_MAP[data_type] for data_type in data_source.keys()]
+        self.POPULATIONS = {}
+        self.PREDICTION_FIELDS_CONFIG = {}
+        self.GENOTYPE_FIELDS = {}
+        self.BASE_ANNOTATION_FIELDS = {}
+        self.ANNOTATION_OVERRIDE_FIELDS = []
+        for cls in data_classes:
+            self.POPULATIONS.update(cls.POPULATIONS)
+            self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
+            self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
+            self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
+            self.ANNOTATION_OVERRIDE_FIELDS += cls.ANNOTATION_OVERRIDE_FIELDS
+        self.BASE_ANNOTATION_FIELDS.update({
+            k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
+        })
+
+        super(MultiDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
+
+    def _annotation_for_data_type(self, field):
+        def field_annotation(r):
+            data_type = self.get_row_data_type(r)
+            case = hl.case()
+            for cls_type, cls in QUERY_CLASS_MAP.items():
+                if field in cls.BASE_ANNOTATION_FIELDS:
+                    case = case.when(data_type == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
+            return case.or_missing()
+        return field_annotation
 
     @staticmethod
     def get_row_data_type(r):
@@ -966,24 +992,9 @@ def _is_gcnv_variant(r):
     return hl.is_defined(r.svType) & r.svType.startswith('gCNV_')
 
 
-def _annotation_for_sv_type(field):
-    return lambda r: hl.if_else(
-        _is_gcnv_variant(r),
-        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r),
-        SvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
-    )
-
-
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
-    GENOTYPE_FIELDS = deepcopy(GcnvHailTableQuery.GENOTYPE_FIELDS)
-    GENOTYPE_FIELDS.update(SvHailTableQuery.GENOTYPE_FIELDS)
-
-    POPULATIONS = SvHailTableQuery.POPULATIONS
-
-    BASE_ANNOTATION_FIELDS = deepcopy(SvHailTableQuery.BASE_ANNOTATION_FIELDS)
-    BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
-    BASE_ANNOTATION_FIELDS.update({k: _annotation_for_sv_type(k) for k in ['end', 'pos']})
+    # TODO
     CORE_FIELDS = list(set(SvHailTableQuery.CORE_FIELDS) - set(BASE_ANNOTATION_FIELDS.keys()))
 
     COMPUTED_ANNOTATION_FIELDS = {
@@ -996,18 +1007,11 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     }
 
     MERGE_FIELDS = ['interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sortedTranscriptConsequences']
+    DATA_TYPE_ANNOTATION_FIELDS = ['end', 'pos']
 
     @staticmethod
     def get_row_data_type(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
-
-
-def _annotation_for_data_type(field):
-    return lambda r: hl.if_else(
-        hl.is_defined(r.locus),
-        VariantHailTableQuery.BASE_ANNOTATION_FIELDS[field](r),
-        GcnvHailTableQuery.BASE_ANNOTATION_FIELDS[field](r)
-    )
 
 
 class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
@@ -1020,36 +1024,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
     MERGE_FIELDS = ['rg37_locus']
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
-
-    def __init__(self, data_source, *args, **kwargs):
-        # TODO share with MultiDataTypeHailTableQuery
-        data_classes = [QUERY_CLASS_MAP[data_type] for data_type in data_source.keys()]
-        self.POPULATIONS = {}
-        self.PREDICTION_FIELDS_CONFIG = {}
-        self.GENOTYPE_FIELDS = {}
-        self.BASE_ANNOTATION_FIELDS = {}
-        self.ANNOTATION_OVERRIDE_FIELDS = []
-        for cls in data_classes:
-            self.POPULATIONS.update(cls.POPULATIONS)
-            self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
-            self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
-            self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
-            self.ANNOTATION_OVERRIDE_FIELDS += cls.ANNOTATION_OVERRIDE_FIELDS
-        self.BASE_ANNOTATION_FIELDS.update({
-            k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
-        })
-
-        super(AllDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
-
-    def _annotation_for_data_type(self, field):
-        def field_annotation(r):
-            data_type = self.get_row_data_type(r)
-            case = hl.case()
-            for cls_type, cls in QUERY_CLASS_MAP.items():
-                if field in cls.BASE_ANNOTATION_FIELDS:
-                    case = case.when(data_type == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
-            return case.or_missing()
-        return field_annotation
 
     @staticmethod
     def get_row_data_type(r):
