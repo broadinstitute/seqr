@@ -1011,7 +1011,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
 
     GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
-    GENOTYPE_FIELDS.update(AllSvHailTableQuery.GENOTYPE_FIELDS)
+    GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
 
     POPULATIONS = deepcopy(VariantHailTableQuery.POPULATIONS)
     POPULATIONS.update(AllSvHailTableQuery.POPULATIONS)
