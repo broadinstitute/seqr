@@ -891,6 +891,10 @@ class MultiDataTypeHailTableQuery(object):
 
         super(MultiDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
+    @staticmethod
+    def get_row_data_type(r):
+        raise NotImplementedError
+
     def _annotation_for_data_type(self, field):
         def field_annotation(r):
             data_type = self.get_row_data_type(r)
@@ -901,10 +905,6 @@ class MultiDataTypeHailTableQuery(object):
                     case = case.when(data_type == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
             return case.or_missing()
         return field_annotation
-
-    @staticmethod
-    def get_row_data_type(r):
-        raise NotImplementedError
 
     def population_expression(self, r, population, pop_config):
         data_type = self.get_row_data_type(r)
