@@ -140,7 +140,7 @@ def _get_phenotype_prioritization(gene_ids, families):
     )
 
     for data in data_dicts:
-        data_by_individual_gene[data.pop('individualGuid')][data.pop('tool')][data['geneId']].append(data)
+        data_by_individual_gene[data.pop('individualGuid')][data.pop('geneId')][data.pop('tool')].append(data)
 
     return data_by_individual_gene
 
@@ -237,6 +237,6 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             _add_family_has_rna_tpm(families_by_guid)
 
     if include_phenotype_prioritization:
-        response['phePriData'] = _get_phenotype_prioritization(genes.keys(), families)
+        response['phenotypeGeneScores'] = _get_phenotype_prioritization(genes.keys(), families)
 
     return response

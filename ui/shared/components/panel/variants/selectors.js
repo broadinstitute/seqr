@@ -14,52 +14,43 @@ import {
 } from 'shared/utils/constants'
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
-  getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual, getPhePriDataByIndividual,
+  getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual,
+  getPhenotypeGeneScoresByIndividual,
 } from 'redux/selectors'
 
-const RNA_SEQ_SCORE_FIELDS = ['zScore', 'pValue', 'pAdjust']
-export const getSampleGeneDataByFamilyGene = createSelector(
+export const getIndividualGeneDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
-  getPhePriDataByIndividual,
-  (individualsByGuid, rnaSeqDataByIndividual, phePriDataByIndividual) => {
-    const rnaSeqD = Object.entries(rnaSeqDataByIndividual).reduce(
-      (acc, [individualGuid, rnaSeqData]) => {
-        const { familyGuid, displayName } = individualsByGuid[individualGuid]
-        acc[familyGuid] = acc[familyGuid] || {}
-        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData.outliers || {}).reduce(
-          (acc2, [geneId, data]) => (data.isSignificant ?
-            {
+  getPhenotypeGeneScoresByIndividual,
+  (individualsByGuid, rnaSeqDataByIndividual, phenotypeGeneScoresByIndividual) => (
+    Object.values(individualsByGuid).reduce((acc, { individualGuid, familyGuid, displayName }) => {
+      const rnaSeqData = rnaSeqDataByIndividual && rnaSeqDataByIndividual[individualGuid]?.outliers
+      const phenotypeGeneScores = phenotypeGeneScoresByIndividual && phenotypeGeneScoresByIndividual[individualGuid]
+      if (!rnaSeqData && !phenotypeGeneScores) {
+        return acc
+      }
+      return {
+        ...acc,
+        [familyGuid]: {
+          rnaSeqData: Object.entries(rnaSeqData || {}).reduce(
+            (acc2, [geneId, data]) => (data.isSignificant ? {
               ...acc2,
-              [geneId]: {
-                ...(acc2[geneId] || {}),
-                [displayName]: [{
-                  scores: RNA_SEQ_SCORE_FIELDS.reduce(
-                    (sAcc, score) => (data[score] ? { ...sAcc, [score]: data[score] } : sAcc), {},
-                  ),
-                }],
-              },
-            } : acc2
-          ), acc[familyGuid].rnaSeqData || {},
-        )
-        return acc
-      }, {},
-    )
-    return Object.entries(phePriDataByIndividual || {}).reduce(
-      (acc, [individualGuid, phePriData]) => {
-        const { familyGuid, displayName } = individualsByGuid[individualGuid]
-        acc[familyGuid] = acc[familyGuid] || {}
-        acc[familyGuid].phePriData = Object.entries(phePriData).reduce((accTool, [tool, toolData]) => ({
-          ...accTool,
-          [tool]: Object.entries(toolData).reduce((acc2, [geneId, data]) => ({
-            ...acc2,
-            [geneId]: { ...(acc2[geneId] || {}), [displayName]: data },
-          }), {}),
-        }), acc[familyGuid].phePriData || {})
-        return acc
-      }, rnaSeqD,
-    )
-  },
+              [geneId]: [...(acc2[geneId] || []), { ...data, individual: displayName }],
+            } : acc2), acc[familyGuid]?.rnaSeqData || {},
+          ),
+          phenotypeGeneScores: Object.entries(phenotypeGeneScores || {}).reduce(
+            (acc2, [geneId, dataByTool]) => ({
+              ...acc2,
+              [geneId]: Object.entries(dataByTool).reduce((acc3, [tool, data]) => ({
+                ...acc3,
+                [tool]: [...(acc3[tool] || []), ...data.map(d => ({ ...d, individual: displayName }))],
+              }), acc2[geneId] || {}),
+            }), acc[familyGuid]?.phenotypeGeneScores || {},
+          ),
+        },
+      }
+    }, {})
+  ),
 )
 
 // Saved variant selectors

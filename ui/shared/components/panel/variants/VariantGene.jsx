@@ -6,19 +6,19 @@ import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
 import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
+import DataTable from 'shared/components/table/DataTable'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
-import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
 import { GenCC, ClingenLabel } from '../genes/GeneDetail'
-import { getSampleGeneDataByFamilyGene } from './selectors'
+import { getIndividualGeneDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
@@ -314,33 +314,31 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
   },
 ]
 
-const sampleGeneDetailsDisplay = (geneId, sampleGeneData) => {
-  const { scores, ...info } = Object.values(Object.values(sampleGeneData)[0])[0][0]
-  const infoKeys = Object.keys(info)
-  const scoreKeys = Object.keys(scores || {})
-  return (
-    <div>
-      <Table basic="very" compact="very">
-        <Table.Header>
-          <Table.Row>
-            <Table.HeaderCell />
-            {infoKeys.concat(scoreKeys).map(field => (
-              <Table.HeaderCell key={field}>{camelcaseToTitlecase(field).replace(' ', '-')}</Table.HeaderCell>
-            ))}
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {Object.entries(sampleGeneData[geneId]).map(([individual, data]) => (data.map(row => (
-            <Table.Row key={individual + row.diseaseId}>
-              <Table.HeaderCell>{individual}</Table.HeaderCell>
-              {infoKeys.map(field => <Table.Cell key={field}>{row[field]}</Table.Cell>)}
-              {scoreKeys.map(field => <Table.Cell key={field}>{row.scores[field].toPrecision(3)}</Table.Cell>)}
-            </Table.Row>
-          ))))}
-        </Table.Body>
-      </Table>
-    </div>
-  )
+const RNA_SEQ_COLUMNS = [
+  { name: 'individual', content: '', width: 3 },
+  { name: 'zScore', content: 'Z-Score', width: 3, format: ({ zScore }) => (zScore ? zScore.toPrecision(3) : null) },
+  { name: 'pValue', content: 'P-Value', width: 3, format: ({ pValue }) => (pValue ? pValue.toPrecision(3) : null) },
+  { name: 'pAdjust', content: 'P-Adjust', width: 3, format: ({ pAdjust }) => (pAdjust ? pAdjust.toPrecision(3) : null) },
+]
+
+const PHENOTYPE_GENE_INFO_COLUMNS = [
+  { name: 'individual', content: '', width: 3 },
+  { name: 'rank', content: 'Rank', width: 3 },
+  { name: 'diseaseName', content: 'Disease', width: 3, format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
+]
+
+const PHENOTYPE_GENE_SCORE_COLUMNS = {
+  lirical: [
+    ...PHENOTYPE_GENE_INFO_COLUMNS,
+    { name: 'scores.post_test_probability', content: 'Posttest-Probability', width: 3, format: ({ scores }) => (scores.post_test_probability.toPrecision(3)) },
+    { name: 'scores.compositeLR', content: 'Composite-LR', width: 3, format: ({ scores }) => (scores.compositeLR.toPrecision(3)) },
+  ],
+  exomiser: [
+    ...PHENOTYPE_GENE_INFO_COLUMNS,
+    { name: 'scores.exomiser_score', content: 'Exomiser-Score', width: 3, format: ({ scores }) => (scores.exomiser_score.toPrecision(3)) },
+    { name: 'scores.phenotype_score', content: 'Phenotype-Score', width: 3, format: ({ scores }) => (scores.phenotype_score.toPrecision(3)) },
+    { name: 'scores.variant_score', content: 'Variant-Score', width: 3, format: ({ scores }) => (scores.variant_score.toPrecision(3)) },
+  ],
 }
 
 const GENE_DETAIL_SECTIONS = [
@@ -399,8 +397,33 @@ const GENE_DETAIL_SECTIONS = [
     label: 'RNA-Seq',
     showDetails: (gene, { rnaSeqData }) => rnaSeqData && rnaSeqData[gene.geneId],
     detailsDisplay: (gene, { rnaSeqData }) => (
-      sampleGeneDetailsDisplay(gene.geneId, rnaSeqData, 'rnaSeqData')
+      <DataTable
+        basic="very"
+        data={rnaSeqData[gene.geneId]}
+        idField="geneId"
+        columns={RNA_SEQ_COLUMNS}
+      />
     ),
+  },
+  {
+    color: 'orange',
+    description: 'Phenotype Prioritization',
+    lable: 'PhenotypeGene',
+    showDetails: (gene, { phenotypeGeneScores }) => phenotypeGeneScores && phenotypeGeneScores[gene.geneId],
+    detailsDisplay: (gene, { phenotypeGeneScores }) => (Object.entries(phenotypeGeneScores[gene.geneId]).map(
+      ([tool, data]) => ([
+        tool,
+        (
+          <DataTable
+            basic="very"
+            data={data}
+            idField="diseaseId"
+            defaultSortColumn="rank"
+            columns={PHENOTYPE_GENE_SCORE_COLUMNS[tool]}
+          />
+        ),
+      ]),
+    )),
   },
 ]
 
@@ -426,13 +449,18 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-const getDetailSections = (configs, gene, compact, labelProps, sampleGeneData) => configs.map(
+const getDetailSections = (configs, gene, compact, labelProps, individualGeneData) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
       ...sectionConfig,
-      detail: showDetails(gene, sampleGeneData) && detailsDisplay(gene, sampleGeneData),
+      detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData),
     }),
-).filter(({ detail }) => detail).map(({ detail, expandedDisplay, ...sectionConfig }) => (
+).reduce((acc, config) => (Array.isArray(config.detail) ?
+  [
+    ...acc,
+    ...config.detail.map(([tool, detail]) => ({ ...config, label: tool.toUpperCase(), detail })),
+  ] : [...acc, config]),
+[]).filter(({ detail }) => detail).map(({ detail, expandedDisplay, ...sectionConfig }) => (
   (expandedDisplay && !compact) ? (
     <OmimSegments key={sectionConfig.label}>
       <Segment color={sectionConfig.color}>
@@ -453,28 +481,10 @@ const getDetailSections = (configs, gene, compact, labelProps, sampleGeneData) =
   )
 ))
 
-const addPhenotypePrioritizationConfig = (configs, phePriInfo) => (
-  phePriInfo ? [
-    ...configs,
-    ...Object.keys(phePriInfo).map(tool => (
-      {
-        color: 'orange',
-        description: 'Phenotype Prioritization',
-        label: tool.toUpperCase(),
-        showDetails: (gene, { phePriData }) => phePriData && phePriData[tool] && phePriData[tool][gene.geneId],
-        detailsDisplay: (gene, { phePriData }) => (
-          sampleGeneDetailsDisplay(gene.geneId, phePriData[tool])
-        ),
-      }
-    )),
-  ] : configs
-)
-
 export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, showInlineDetails, sampleGeneData, ...labelProps },
+  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, ...labelProps },
 ) => {
-  const geneDetailConfigs = addPhenotypePrioritizationConfig(GENE_DETAIL_SECTIONS, sampleGeneData.phePriData)
-  const geneDetails = getDetailSections(geneDetailConfigs, gene, compact, labelProps, sampleGeneData)
+  const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData)
   const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps)
   const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
@@ -503,7 +513,7 @@ GeneDetails.propTypes = {
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
-  sampleGeneData: PropTypes.object,
+  individualGeneData: PropTypes.object,
 }
 
 const GeneSearchLinkWithPopup = props => (
@@ -523,7 +533,7 @@ const getGeneConsequence = (geneId, variant) => {
 }
 
 const BaseVariantGene = React.memo((
-  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, sampleGeneData },
+  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData },
 ) => {
   const geneConsequence = getGeneConsequence(geneId, variant)
 
@@ -540,7 +550,7 @@ const BaseVariantGene = React.memo((
       showInlineDetails={showInlineDetails}
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
-      sampleGeneData={sampleGeneData}
+      individualGeneData={individualGeneData}
       showLocusLists
     />
   )
@@ -618,12 +628,12 @@ BaseVariantGene.propTypes = {
   showInlineDetails: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
   hasRnaTpmData: PropTypes.bool,
-  sampleGeneData: PropTypes.object,
+  individualGeneData: PropTypes.object,
 }
 
 const getRnaSeqProps = (state, ownProps) => ({
   hasRnaTpmData: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.hasRnaTpmData,
-  sampleGeneData: getSampleGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]] || {},
+  individualGeneData: getIndividualGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]] || {},
 })
 
 const mapStateToProps = (state, ownProps) => ({
@@ -639,7 +649,7 @@ class VariantGenes extends React.PureComponent {
     variant: PropTypes.object.isRequired,
     mainGeneId: PropTypes.string,
     genesById: PropTypes.object.isRequired,
-    sampleGeneData: PropTypes.object,
+    individualGeneData: PropTypes.object,
     hasRnaTpmData: PropTypes.bool,
     showMainGene: PropTypes.bool,
   }
@@ -655,7 +665,7 @@ class VariantGenes extends React.PureComponent {
   }
 
   render() {
-    const { variant, genesById, mainGeneId, showMainGene, sampleGeneData, hasRnaTpmData } = this.props
+    const { variant, genesById, mainGeneId, showMainGene, individualGeneData, hasRnaTpmData } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
     const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
@@ -674,7 +684,7 @@ class VariantGenes extends React.PureComponent {
               geneId={gene.geneId}
               gene={gene}
               variant={variant}
-              sampleGeneData={sampleGeneData}
+              individualGeneData={individualGeneData}
               hasRnaTpmData={hasRnaTpmData}
               showInlineDetails={!mainGeneId}
               compact
@@ -705,7 +715,7 @@ class VariantGenes extends React.PureComponent {
                     details={sectionGenes.length > 0 && sectionGenes.map(gene => (
                       <div key={gene.geneId}>
                         <Header size="small" content={gene.geneSymbol} />
-                        {detailsDisplay(gene, sampleGeneData)}
+                        {detailsDisplay(gene, individualGeneData)}
                         <VerticalSpacer height={5} />
                       </div>
                     ))}
