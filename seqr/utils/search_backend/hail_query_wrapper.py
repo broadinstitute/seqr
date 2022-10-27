@@ -959,33 +959,7 @@ class MultiDataTypeHailTableQuery(object):
 
             merge_fields = deepcopy(cls.MERGE_FIELDS)
             merge_fields += shared_sample_ids
-            # TODO
-            struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
-            logger.info(f'transcript types 1: {struct_types}')
-            new_types = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
-            logger.info(f'transcript types 2: {new_types}')
-            struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
-            logger.info(f'all transcript types: {struct_types}')
-            # TODO
-            # return {
-            #     'sortedTranscriptConsequences': lambda consequences: consequences.map(
-            #         lambda t: t.select(*BaseHailTableQuery.TRANSCRIPT_FIELDS))
-            # }
-            # return {
-            #     'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
-            #         consequence_terms=t.get('consequence_terms', [t.major_consequence]),
-            #         **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS},
-            #     )),
-            # }
             ht = ht.transmute(
-                # sortedTranscriptConsequences=hl.or_else(
-                #     ht.sortedTranscriptConsequences.map(lambda t: t.select(
-                #         'consequence_terms', *VariantHailTableQuery.TRANSCRIPT_FIELDS)),
-                #     ht.sortedTranscriptConsequences_1.map(lambda t: t.select(
-                #         consequence_terms=[t.major_consequence],
-                #         **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS}
-                #     ))
-                # ),
                 **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
                    for k, format in cls._import_table_transmute_expressions(ht).items()},
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
@@ -999,7 +973,7 @@ class MultiDataTypeHailTableQuery(object):
 
 
 def _is_gcnv_variant(r):
-    return r.svType.startswith('gCNV_')
+    return hl.is_defined(r.svType) & r.svType.startswith('gCNV_')  # TODO
 
 
 def _annotation_for_sv_type(field):
@@ -1079,16 +1053,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     @staticmethod
     def _import_table_transmute_expressions(ht):
         # TODO possibly redo this for simplicity if not needed once MITO is added
-        struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
-        logger.info(f'transcript types 1: {struct_types}')
-        new_types = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
-        logger.info(f'transcript types 2: {new_types}')
-        struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
-        logger.info(f'all transcript types: {struct_types}')
-        # # TODO
-        # return {
-        #     'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(*BaseHailTableQuery.TRANSCRIPT_FIELDS))
-        # }
         return {
             'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
                 consequence_terms=t.get('consequence_terms', [t.major_consequence]),
