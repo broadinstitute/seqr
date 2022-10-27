@@ -1030,7 +1030,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         data_classes = [QUERY_CLASS_MAP[data_type] for data_type in data_source.keys()]
         self.POPULATIONS = {}
         for cls in data_classes:
-            self.POPULATIONS.update(cls.self.POPULATIONS)
+            self.POPULATIONS.update(cls.POPULATIONS)
         super(AllDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
     @staticmethod
