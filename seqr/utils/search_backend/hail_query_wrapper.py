@@ -1054,7 +1054,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
             for cls_type, cls in QUERY_CLASS_MAP.items():
                 if field in cls.BASE_ANNOTATION_FIELDS:
                     case = case.when(data_type == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
-            return case
+            return case.or_missing()
             # return hl.struct(**{k: hl.struct(**v) for k, v in DATA_TYPE_ANNOTATIONS_MAP.items())[data_type].get(field, default_annotation)(r)
         return field_annotation
 
