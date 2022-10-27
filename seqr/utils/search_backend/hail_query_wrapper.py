@@ -1028,7 +1028,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     COMPUTED_ANNOTATION_FIELDS.update(AllSvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
 
     MERGE_FIELDS = {VARIANT_DATASET: {'rg37_locus'}}
-    MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
+    MERGE_FIELDS.update({k: v - {'sortedTranscriptConsequences'} for k, v in AllSvHailTableQuery.MERGE_FIELDS.items()})
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
     @staticmethod
@@ -1041,10 +1041,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
     @staticmethod
     def _import_table_transmute_expressions(ht):
-        # TODO possibly redo this for simplicity if not needed once MITO is added
-        logger.info(f'transcript type 1 {ht.sortedTranscriptConsequences.dtype.element_type}')
-        logger.info(f'transcript type 2 {ht.sortedTranscriptConsequences_1.dtype.element_type}')
-
         struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
         struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
         return {
