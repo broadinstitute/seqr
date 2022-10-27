@@ -1014,7 +1014,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
 
     POPULATIONS = deepcopy(VariantHailTableQuery.POPULATIONS)
-    POPULATIONS.update(AllSvHailTableQuery.POPULATIONS)
+    POPULATIONS.update(GcnvHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     PREDICTION_FIELDS_CONFIG.update(AllSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + AllSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
