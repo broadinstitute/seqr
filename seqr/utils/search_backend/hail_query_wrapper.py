@@ -1042,6 +1042,9 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     @staticmethod
     def _import_table_transmute_expressions(ht):
         # TODO possibly redo this for simplicity if not needed once MITO is added
+        logger.info(f'transcript type 1 {ht.sortedTranscriptConsequences.dtype.element_type}')
+        logger.info(f'transcript type 2 {ht.sortedTranscriptConsequences_1.dtype.element_type}')
+
         struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
         struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
         return {
