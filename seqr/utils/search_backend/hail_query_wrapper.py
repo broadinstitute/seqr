@@ -978,13 +978,19 @@ class MultiDataTypeHailTableQuery(object):
                 **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
             ) for sample_id in table_sample_ids})
 
+            transmute_expressions = {
+                k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
+                for k, format in cls._import_table_transmute_expressions(ht).items()
+            }
+
             new_merge_fields = cls.MERGE_FIELDS[data_type]
             table_merge_fields = merge_fields.intersection(new_merge_fields)
             table_merge_fields.update(shared_sample_ids)
+            table_merge_fields -= set(transmute_expressions.keys())
             merge_fields.update(new_merge_fields)
+
             ht = ht.transmute(
-                **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
-                   for k, format in cls._import_table_transmute_expressions(ht).items()},
+                **transmute_expressions,
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
 
@@ -1028,7 +1034,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     COMPUTED_ANNOTATION_FIELDS.update(AllSvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
 
     MERGE_FIELDS = {VARIANT_DATASET: {'rg37_locus'}}
-    MERGE_FIELDS.update({k: v - {'sortedTranscriptConsequences'} for k, v in AllSvHailTableQuery.MERGE_FIELDS.items()})
+    MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
     @staticmethod
