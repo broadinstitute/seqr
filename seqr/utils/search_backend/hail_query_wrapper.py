@@ -1053,6 +1053,8 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     @staticmethod
     def _import_table_transmute_expressions(ht):
         # TODO possibly redo this for simplicity if not needed once MITO is added
+        struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
+        struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
         return {
             'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
                 consequence_terms=t.get('consequence_terms', [t.major_consequence]),
