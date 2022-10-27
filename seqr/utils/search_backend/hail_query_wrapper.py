@@ -978,12 +978,12 @@ class MultiDataTypeHailTableQuery(object):
             ht = ht.transmute(
                 sortedTranscriptConsequences=hl.or_else(
                     ht.sortedTranscriptConsequences.map(lambda t: t.select(
-                        'consequence_terms', *VariantHailTableQuery.TRANSCRIPT_FIELDS),
+                        'consequence_terms', *VariantHailTableQuery.TRANSCRIPT_FIELDS)),
                     ht.sortedTranscriptConsequences_1.map(lambda t: t.select(
                         consequence_terms=[t.major_consequence],
                         **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS}
                     ))
-                )),
+                ),
                 # **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
                 #    for k, format in cls._import_table_transmute_expressions(ht).items()},
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in merge_fields},
