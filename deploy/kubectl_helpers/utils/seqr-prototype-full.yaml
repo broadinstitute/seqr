@@ -1,0 +1,196 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: seqr
+  namespace: seqr-prototype
+  labels:
+    name: seqr
+    deployment: prototype
+spec:
+  type: LoadBalancer
+  
+  loadBalancerIP: 35.202.215.217
+  
+  ports:
+  
+  - port: 80
+    targetPort: 8000
+  
+  selector:
+    name: seqr
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: seqr
+  namespace: seqr-prototype
+  labels:
+    name: seqr
+    deployment: prototype
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: seqr
+  template:
+    metadata:
+      annotations:
+        linkerd.io/inject: enabled
+        config.linkerd.io/opaque-ports: "6379,5432"
+      labels:
+        name: seqr
+        deployment: prototype
+    spec:
+      
+      volumes:
+      - name: gcloud-client-secrets-volume
+        secret:
+          secretName: gcloud-client-secrets
+      
+      - name: hail-datasets
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: hail-datasets-disk-2
+          fsType: ext4
+      # - name: elasticsearch-es-http-certs-public
+      #   secret:
+      #     secretName: elasticsearch-es-http-certs-public
+      containers:
+      - name: seqr-pod
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        imagePullPolicy: Always
+        image: gcr.io/seqr-project/seqr:prototype
+        volumeMounts:
+        - name: gcloud-client-secrets-volume
+          mountPath: /.config
+          readOnly: true
+        
+        - name: hail-datasets
+          mountPath: /hail_datasets
+        # - name: elasticsearch-es-http-certs-public
+        #   mountPath: "/elasticsearch-certs"
+        #   readOnly: true
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.05"
+          limits:
+            memory: "5Gi"
+            cpu: "8"
+        envFrom:
+          - configMapRef:
+              name: all-settings
+        env:
+        - name: POSTGRES_USERNAME
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: password
+        
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_id
+        - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: google_client_secret
+        - name: GCLOUD_PROJECT      #  TODO can delete these and just rely on 'envFrom configMapRef' above once https://github.com/kubernetes/minikube/issues/2295 is fixed
+          value: "hail-seqr-development"
+        - name: GCLOUD_ZONE
+          value: "us-central1-b"
+        - name: GUNICORN_WORKER_THREADS
+          value: "4"
+        - name: POSTGRES_SERVICE_HOSTNAME
+          value: "127.0.0.1"
+        - name: ELASTICSEARCH_SERVICE_HOSTNAME
+          value: "elasticsearch-es-http"
+        - name: KIBANA_SERVICE_HOSTNAME
+          value: "kibana-kb-http"
+        - name: REDIS_SERVICE_HOSTNAME
+          value: "redis"
+        - name: POSTGRES_SERVICE_PORT
+          value: "5432"
+        - name: ELASTICSEARCH_SERVICE_PORT
+          value: "9200"
+        - name: KIBANA_SERVICE_PORT
+          value: "5601"
+        - name: DEPLOYMENT_TYPE
+          value: "prototype"
+        - name: SEQR_GIT_BRANCH
+          value: "hail-backend"
+        - name: BASE_URL
+          value: "https://seqr-hail.broadinstitute.org/"
+        - name: RUN_CRON_JOBS
+          value: ""
+        - name: MME_CONFIG_DIR
+          value: ""
+        - name: TERRA_API_ROOT_URL
+          value: ""
+        - name: AIRFLOW_WEBSERVER_URL
+          value: ""
+        - name: ELASTICSEARCH_PROTOCOL
+          value: "http"
+        # - name: ELASTICSEARCH_CA_PATH
+        #   value: ""
+        - name: TERRA_PERMS_CACHE_EXPIRE_SECONDS
+          value: "60"
+        - name: TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
+          value: "300"
+        - name: INTERNAL_NAMESPACES
+          value: "gregor-consortium,seqr-access"
+        - name: ANALYST_USER_GROUP
+          value: ""
+        - name: PM_USER_GROUP
+          value: ""
+        - name: GCS_MEDIA_ROOT_BUCKET
+          value: "seqr-prototype-media-storage"
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - /readiness_probe
+      - name: cloud-sql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.17
+        command:
+          - "/cloud_sql_proxy"
+          - "-instances=hail-seqr-development:us-central1-b:postgres-prototype=tcp:5432"
+          - "-credential_file=/.config/service-account-key.json"
+        securityContext:
+          # The default Cloud SQL proxy image runs as the "nonroot" user and group (uid: 65532) by default.
+          runAsNonRoot: true
+        volumeMounts:
+        - name: gcloud-client-secrets-volume
+          mountPath: /.config
+          readOnly: true
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1"
+          limits:
+            memory: "2Gi"
+            cpu: "2"
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1.0
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "name"
+                      operator: In
+                      values:
+                      - seqr
+                topologyKey: "kubernetes.io/hostname"
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'default-pool'
+---
