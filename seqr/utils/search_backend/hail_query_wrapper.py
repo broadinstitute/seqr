@@ -1014,13 +1014,8 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
 
-    PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
-    PREDICTION_FIELDS_CONFIG.update(AllSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + AllSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
-    # BASE_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.BASE_ANNOTATION_FIELDS)
-    # BASE_ANNOTATION_FIELDS.update(GcnvHailTableQuery.BASE_ANNOTATION_FIELDS)
-    # BASE_ANNOTATION_FIELDS.update({k: _annotation_for_data_type(k) for k in ['chrom', 'pos']}) # TODO
     COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     COMPUTED_ANNOTATION_FIELDS.update(AllSvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     INITIAL_ENTRY_ANNOTATIONS = AllSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
@@ -1032,10 +1027,12 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         # TODO share with MultiDataTypeHailTableQuery
         data_classes = [QUERY_CLASS_MAP[data_type] for data_type in data_source.keys()]
         self.POPULATIONS = {}
+        self.PREDICTION_FIELDS_CONFIG = {}
         self.GENOTYPE_FIELDS = {}
         self.BASE_ANNOTATION_FIELDS = {}
         for cls in data_classes:
             self.POPULATIONS.update(cls.POPULATIONS)
+            self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
             self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
         self.BASE_ANNOTATION_FIELDS.update({
@@ -1045,9 +1042,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         super(AllDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
     def _annotation_for_data_type(self, field):
-        # TODO share with MultiDataTypeHailTableQuery
-        default_annotation = self.BASE_ANNOTATION_FIELDS[field]
-
         def field_annotation(r):
             data_type = self.get_row_data_type(r)
             case = hl.case()
@@ -1055,7 +1049,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
                 if field in cls.BASE_ANNOTATION_FIELDS:
                     case = case.when(data_type == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
             return case.or_missing()
-            # return hl.struct(**{k: hl.struct(**v) for k, v in DATA_TYPE_ANNOTATIONS_MAP.items())[data_type].get(field, default_annotation)(r)
         return field_annotation
 
     @staticmethod
