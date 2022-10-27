@@ -871,7 +871,6 @@ class MultiDataTypeHailTableQuery(object):
 
     def __init__(self, data_source, *args, **kwargs):
         data_classes = [QUERY_CLASS_MAP[data_type] for data_type in data_source.keys()]
-        logger.info(f'DATA CLASSES: {data_classes}')
         self.POPULATIONS = {}
         self.PREDICTION_FIELDS_CONFIG = {}
         self.GENOTYPE_FIELDS = {}
@@ -898,6 +897,7 @@ class MultiDataTypeHailTableQuery(object):
             case = hl.case()
             for cls_type, cls in QUERY_CLASS_MAP.items():
                 if field in cls.BASE_ANNOTATION_FIELDS:
+                    logger.info(f'Add case {field}: {cls_type}')
                     case = case.when(data_type == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
             return case.or_missing()
         return field_annotation
