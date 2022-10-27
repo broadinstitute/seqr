@@ -861,7 +861,10 @@ QUERY_CLASS_MAP = {
     SV_KEY: SvHailTableQuery,
 }
 
-DATA_TYPE_ANNOTATIONS_FIELDS_MAP = {data_type: cls.BASE_ANNOTATION_FIELDS for data_type, cls in QUERY_CLASS_MAP.items()}
+DATA_TYPE_ANNOTATIONS_MAP = {
+    data_type: {k: cls.BASE_ANNOTATION_FIELDS.get(k) for k in ['chrom', 'pos', 'end']}
+    for data_type, cls in QUERY_CLASS_MAP.items()
+}
 DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_type, cls in QUERY_CLASS_MAP.items()}
 
 
@@ -1044,9 +1047,10 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     def _annotation_for_data_type(self, field):
         # TODO share with MultiDataTypeHailTableQuery
         default_annotation = self.BASE_ANNOTATION_FIELDS[field]
+
         def field_annotation(r):
             data_type = self.get_row_data_type(r)
-            return hl.dict(DATA_TYPE_ANNOTATIONS_FIELDS_MAP)[data_type].get(field, default_annotation)(r)
+            return hl.or_else(hl.dict(DATA_TYPE_ANNOTATIONS_MAP)[data_type].get(field), default_annotation)(r)
         return field_annotation
 
     @staticmethod
