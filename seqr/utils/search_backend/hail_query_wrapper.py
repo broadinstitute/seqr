@@ -980,7 +980,7 @@ class MultiDataTypeHailTableQuery(object):
 
             new_merge_fields = cls.MERGE_FIELDS[data_type]
             table_merge_fields = merge_fields.intersection(new_merge_fields)
-            table_merge_fields += shared_sample_ids
+            table_merge_fields.update(shared_sample_ids)
             merge_fields.update(new_merge_fields)
             ht = ht.transmute(
                 **{k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
