@@ -1050,7 +1050,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
         def field_annotation(r):
             data_type = self.get_row_data_type(r)
-            return hl.struct(**DATA_TYPE_ANNOTATIONS_MAP)[data_type].get(field, default_annotation)(r)
+            return hl.struct(**{k: hl.struct(**v) for k, v in DATA_TYPE_ANNOTATIONS_MAP.items())[data_type].get(field, default_annotation)(r)
         return field_annotation
 
     @staticmethod
