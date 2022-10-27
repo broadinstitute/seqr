@@ -862,7 +862,7 @@ QUERY_CLASS_MAP = {
 }
 
 DATA_TYPE_ANNOTATIONS_MAP = {
-    data_type: {k: cls.BASE_ANNOTATION_FIELDS.get(k) for k in ['chrom', 'pos', 'end']}
+    data_type: {k: cls.BASE_ANNOTATION_FIELDS[k] for k in ['chrom', 'pos', 'end'] if cls.BASE_ANNOTATION_FIELDS.get(k)}
     for data_type, cls in QUERY_CLASS_MAP.items()
 }
 DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_type, cls in QUERY_CLASS_MAP.items()}
@@ -1050,7 +1050,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
         def field_annotation(r):
             data_type = self.get_row_data_type(r)
-            return hl.or_else(hl.dict(DATA_TYPE_ANNOTATIONS_MAP)[data_type].get(field), default_annotation)(r)
+            return hl.struct(**DATA_TYPE_ANNOTATIONS_MAP)[data_type].get(field, default_annotation)(r)
         return field_annotation
 
     @staticmethod
