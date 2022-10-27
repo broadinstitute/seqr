@@ -1013,8 +1013,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
     GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
 
-    POPULATIONS = deepcopy(VariantHailTableQuery.POPULATIONS)
-    POPULATIONS.update(GcnvHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     PREDICTION_FIELDS_CONFIG.update(AllSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + AllSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
@@ -1027,6 +1025,13 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     INITIAL_ENTRY_ANNOTATIONS = AllSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
 
     MERGE_FIELDS = ['rg37_locus']
+
+    def __init__(self, data_source, *args, **kwargs):
+        data_classes = [QUERY_CLASS_MAP[data_type] for data_type in data_source.keys()]
+        self.POPULATIONS = {}
+        for cls in data_classes:
+            self.POPULATIONS.update(cls.self.POPULATIONS)
+        super(AllDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
     @staticmethod
     def get_row_data_type(r):
