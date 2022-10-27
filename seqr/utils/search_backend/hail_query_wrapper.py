@@ -1013,12 +1013,10 @@ def _annotation_for_data_type(field):
 class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
 
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
-
-    ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + AllSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
+    INITIAL_ENTRY_ANNOTATIONS = AllSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
 
     COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
     COMPUTED_ANNOTATION_FIELDS.update(AllSvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
-    INITIAL_ENTRY_ANNOTATIONS = AllSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
 
     MERGE_FIELDS = ['rg37_locus']
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
@@ -1030,11 +1028,13 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         self.PREDICTION_FIELDS_CONFIG = {}
         self.GENOTYPE_FIELDS = {}
         self.BASE_ANNOTATION_FIELDS = {}
+        self.ANNOTATION_OVERRIDE_FIELDS = []
         for cls in data_classes:
             self.POPULATIONS.update(cls.POPULATIONS)
             self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
             self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
+            self.ANNOTATION_OVERRIDE_FIELDS += cls.ANNOTATION_OVERRIDE_FIELDS
         self.BASE_ANNOTATION_FIELDS.update({
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
