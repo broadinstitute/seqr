@@ -1010,9 +1010,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
 
-    GENOTYPE_FIELDS = deepcopy(VariantHailTableQuery.GENOTYPE_FIELDS)
-    GENOTYPE_FIELDS.update(GcnvHailTableQuery.GENOTYPE_FIELDS)
-
     PREDICTION_FIELDS_CONFIG = deepcopy(VariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     PREDICTION_FIELDS_CONFIG.update(AllSvHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = VariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS + AllSvHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
@@ -1029,8 +1026,10 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
     def __init__(self, data_source, *args, **kwargs):
         data_classes = [QUERY_CLASS_MAP[data_type] for data_type in data_source.keys()]
         self.POPULATIONS = {}
+        self.GENOTYPE_FIELDS = {}
         for cls in data_classes:
             self.POPULATIONS.update(cls.POPULATIONS)
+            self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
         super(AllDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
     @staticmethod
