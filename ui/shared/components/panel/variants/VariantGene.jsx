@@ -12,6 +12,7 @@ import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
+import { camelcaseToTitlecase, snakecaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
@@ -327,19 +328,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
   { name: 'diseaseName', content: 'Disease', width: 3, format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
 ]
 
-const PHENOTYPE_GENE_SCORE_COLUMNS = {
-  lirical: [
-    ...PHENOTYPE_GENE_INFO_COLUMNS,
-    { name: 'scores.post_test_probability', content: 'Posttest-Probability', width: 3, format: ({ scores }) => (scores.post_test_probability.toPrecision(3)) },
-    { name: 'scores.compositeLR', content: 'Composite-LR', width: 3, format: ({ scores }) => (scores.compositeLR.toPrecision(3)) },
-  ],
-  exomiser: [
-    ...PHENOTYPE_GENE_INFO_COLUMNS,
-    { name: 'scores.exomiser_score', content: 'Exomiser-Score', width: 3, format: ({ scores }) => (scores.exomiser_score.toPrecision(3)) },
-    { name: 'scores.phenotype_score', content: 'Phenotype-Score', width: 3, format: ({ scores }) => (scores.phenotype_score.toPrecision(3)) },
-    { name: 'scores.variant_score', content: 'Variant-Score', width: 3, format: ({ scores }) => (scores.variant_score.toPrecision(3)) },
-  ],
-}
+const PHENOTYPE_GENE_SCORE_COLUMNS = {}
 
 const GENE_DETAIL_SECTIONS = [
   {
@@ -411,18 +400,29 @@ const GENE_DETAIL_SECTIONS = [
     lable: 'PhenotypeGene',
     showDetails: (gene, { phenotypeGeneScores }) => phenotypeGeneScores && phenotypeGeneScores[gene.geneId],
     detailsDisplay: (gene, { phenotypeGeneScores }) => (Object.entries(phenotypeGeneScores[gene.geneId]).map(
-      ([tool, data]) => ([
-        tool,
-        (
-          <DataTable
-            basic="very"
-            data={data}
-            idField="diseaseId"
-            defaultSortColumn="rank"
-            columns={PHENOTYPE_GENE_SCORE_COLUMNS[tool]}
-          />
-        ),
-      ]),
+      ([tool, data]) => {
+        PHENOTYPE_GENE_SCORE_COLUMNS[tool] = [
+          ...PHENOTYPE_GENE_INFO_COLUMNS,
+          ...Object.keys(data[0].scores).map(score => ({
+            name: score,
+            content: snakecaseToTitlecase(camelcaseToTitlecase(score)).replace(' ', '-'),
+            width: 3,
+            format: ({ scores }) => (scores[score].toPrecision(3)),
+          })),
+        ]
+        return ([
+          tool,
+          (
+            <DataTable
+              basic="very"
+              data={data}
+              idField="diseaseId"
+              defaultSortColumn="rank"
+              columns={PHENOTYPE_GENE_SCORE_COLUMNS[tool]}
+            />
+          ),
+        ])
+      },
     )),
   },
 ]
