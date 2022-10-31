@@ -317,7 +317,7 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
 
 const RNA_SEQ_DETAIL_FIELDS = ['zScore', 'pValue', 'pAdjust']
 
-const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', width: 3, format: ({ individualName }) => (<b>{individualName}</b>) }
+const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({ individualName }) => (<b>{individualName}</b>) }
 
 const RNA_SEQ_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
@@ -328,8 +328,8 @@ const RNA_SEQ_COLUMNS = [
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
-  { name: 'diseaseName', content: 'Disease', width: 3, format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
-  { name: 'rank', content: 'Rank', width: 3 },
+  { name: 'diseaseName', content: 'Disease', format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
+  { name: 'rank', content: 'Rank' },
   {
     name: 'scores',
     content: 'Scores',
