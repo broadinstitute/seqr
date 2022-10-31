@@ -90,7 +90,7 @@ const LocusListsContainer = styled.div`
 const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
-    <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
+    <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide="very" hoverable /> : content
 })
 
 GeneLabel.propTypes = {
@@ -327,13 +327,13 @@ const RNA_SEQ_COLUMNS = [
 ]
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
-  INDIVIDUAL_NAME_COLUMN,
-  { name: 'diseaseName', content: 'Disease', format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
-  { name: 'rank', content: 'Rank' },
+  { ...INDIVIDUAL_NAME_COLUMN, width: 4 },
+  { name: 'diseaseName', content: 'Disease', width: 5, format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
+  { name: 'rank', content: 'Rank', width: 1 },
   {
     name: 'scores',
     content: 'Scores',
-    width: 12,
+    width: 6,
     format: ({ scores }) => Object.keys(scores).sort().map(scoreName => (
       <div key={scoreName}>
         <b>{camelcaseToTitlecase(scoreName).replace(' ', '-')}</b>
@@ -422,6 +422,8 @@ const GENE_DETAIL_SECTIONS = [
           <DataTable
             basic="very"
             data={data}
+            singleLine
+            fixedWidth
             idField="rowId"
             defaultSortColumn="rank"
             columns={PHENOTYPE_GENE_INFO_COLUMNS}
