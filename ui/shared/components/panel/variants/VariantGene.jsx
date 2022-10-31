@@ -12,7 +12,7 @@ import {
   MISSENSE_THRESHHOLD, LOF_THRESHHOLD, PANEL_APP_CONFIDENCE_LEVEL_COLORS, PANEL_APP_CONFIDENCE_DESCRIPTION,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
-import { camelcaseToTitlecase, snakecaseToTitlecase } from '../../../utils/stringUtils'
+import { camelcaseToTitlecase } from '../../../utils/stringUtils'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
@@ -315,20 +315,34 @@ const GENE_DISEASE_DETAIL_SECTIONS = [
   },
 ]
 
+const RNA_SEQ_DETAIL_FIELDS = ['zScore', 'pValue', 'pAdjust']
+
+const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', width: 3, format: ({ individualName }) => (<b>{individualName}</b>) }
+
 const RNA_SEQ_COLUMNS = [
-  { name: 'individual', content: '', width: 3 },
-  { name: 'zScore', content: 'Z-Score', width: 3, format: ({ zScore }) => (zScore ? zScore.toPrecision(3) : null) },
-  { name: 'pValue', content: 'P-Value', width: 3, format: ({ pValue }) => (pValue ? pValue.toPrecision(3) : null) },
-  { name: 'pAdjust', content: 'P-Adjust', width: 3, format: ({ pAdjust }) => (pAdjust ? pAdjust.toPrecision(3) : null) },
+  INDIVIDUAL_NAME_COLUMN,
+  ...RNA_SEQ_DETAIL_FIELDS.map(name => (
+    { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
+  )),
 ]
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
-  { name: 'individual', content: '', width: 3 },
-  { name: 'rank', content: 'Rank', width: 3 },
+  INDIVIDUAL_NAME_COLUMN,
   { name: 'diseaseName', content: 'Disease', width: 3, format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
+  { name: 'rank', content: 'Rank', width: 3 },
+  {
+    name: 'scores',
+    content: 'Scores',
+    width: 12,
+    format: ({ scores }) => Object.keys(scores).sort().map(scoreName => (
+      <div key={scoreName}>
+        <b>{camelcaseToTitlecase(scoreName).replace(' ', '-')}</b>
+        : &nbsp;
+        { scores[scoreName].toPrecision(3) }
+      </div>
+    )),
+  },
 ]
-
-const PHENOTYPE_GENE_SCORE_COLUMNS = {}
 
 const GENE_DETAIL_SECTIONS = [
   {
@@ -386,43 +400,34 @@ const GENE_DETAIL_SECTIONS = [
     label: 'RNA-Seq',
     showDetails: (gene, { rnaSeqData }) => rnaSeqData && rnaSeqData[gene.geneId],
     detailsDisplay: (gene, { rnaSeqData }) => (
-      <DataTable
-        basic="very"
-        data={rnaSeqData[gene.geneId]}
-        idField="geneId"
-        columns={RNA_SEQ_COLUMNS}
-      />
+      <div>
+        This gene is flagged as an outlier for RNA-Seq in the following samples
+        <DataTable
+          basic="very"
+          data={rnaSeqData[gene.geneId]}
+          idField="individualName"
+          columns={RNA_SEQ_COLUMNS}
+        />
+      </div>
     ),
   },
   {
     color: 'orange',
     description: 'Phenotype Prioritization',
-    lable: 'PhenotypeGene',
     showDetails: (gene, { phenotypeGeneScores }) => phenotypeGeneScores && phenotypeGeneScores[gene.geneId],
     detailsDisplay: (gene, { phenotypeGeneScores }) => (Object.entries(phenotypeGeneScores[gene.geneId]).map(
-      ([tool, data]) => {
-        PHENOTYPE_GENE_SCORE_COLUMNS[tool] = [
-          ...PHENOTYPE_GENE_INFO_COLUMNS,
-          ...Object.keys(data[0].scores).map(score => ({
-            name: score,
-            content: snakecaseToTitlecase(camelcaseToTitlecase(score)).replace(' ', '-'),
-            width: 3,
-            format: ({ scores }) => (scores[score].toPrecision(3)),
-          })),
-        ]
-        return ([
-          tool,
-          (
-            <DataTable
-              basic="very"
-              data={data}
-              idField="diseaseId"
-              defaultSortColumn="rank"
-              columns={PHENOTYPE_GENE_SCORE_COLUMNS[tool]}
-            />
-          ),
-        ])
-      },
+      ([tool, data]) => ({
+        label: tool.toUpperCase(),
+        detail: (
+          <DataTable
+            basic="very"
+            data={data}
+            idField="rowId"
+            defaultSortColumn="rank"
+            columns={PHENOTYPE_GENE_INFO_COLUMNS}
+          />
+        ),
+      }),
     )),
   },
 ]
@@ -458,9 +463,9 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 ).reduce((acc, config) => (Array.isArray(config.detail) ?
   [
     ...acc,
-    ...config.detail.map(([tool, detail]) => ({ ...config, label: tool.toUpperCase(), detail })),
-  ] : [...acc, config]),
-[]).filter(({ detail }) => detail).map(({ detail, expandedDisplay, ...sectionConfig }) => (
+    ...config.detail.map(detail => ({ ...config, ...detail })),
+  ] : (config.detail && [...acc, config]) || acc),
+[]).map(({ detail, expandedDisplay, ...sectionConfig }) => (
   (expandedDisplay && !compact) ? (
     <OmimSegments key={sectionConfig.label}>
       <Segment color={sectionConfig.color}>

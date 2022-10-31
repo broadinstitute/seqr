@@ -110,20 +110,21 @@ test('getIndividualGeneDataByFamilyGene', () => {
     F011652_1: {
       rnaSeqData: {
         ENSG00000228198: [
-          { individual: 'NA19678', isSignificant: true, pValue: 0.0004 },
-          { individual: 'NA19679_1', isSignificant: true, pValue: 0.01 },
+          { individualName: 'NA19678', isSignificant: true, pValue: 0.0004 },
+          { individualName: 'NA19679_1', isSignificant: true, pValue: 0.01 },
         ],
         ENSG00000164458: [
-          { individual: 'NA19678', isSignificant: true, pValue: 0.0073 },
+          { individualName: 'NA19678', isSignificant: true, pValue: 0.0073 },
         ],
       },
       phenotypeGeneScores: {
         ENSG00000228198: {
           lirical: [{
-            individual: 'NA19678',
+            individualName: 'NA19678',
             diseaseId: 'OMIM:618460',
             diseaseName: 'Khan-Khan-Katsanis syndrome',
             geneId: 'ENSG00000228198',
+            rowId: 'NA19678-OMIM:618460',
             rank: 1,
             scores: { compositeLR: 0.066, post_test_probability: 0 },
           }],
@@ -132,9 +133,8 @@ test('getIndividualGeneDataByFamilyGene', () => {
     },
     F011652_2: {
       rnaSeqData: {
-        ENSG00000228198: [{ individual: 'NA19678_2', isSignificant: true, pValue: 0.0214 }],
+        ENSG00000228198: [{ individualName: 'NA19678_2', isSignificant: true, pValue: 0.0214 }],
       },
-      phenotypeGeneScores: {},
     },
   })
 })

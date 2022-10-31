@@ -11,7 +11,7 @@ from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
-    get_json_for_matchmaker_submissions, get_json_for_phenotype_prioritization
+    get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
@@ -177,8 +177,7 @@ LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
-                          add_locus_list_detail=False, include_rna_seq=True, include_project_name=False,
-                          include_phenotype_prioritization=True):
+                          add_locus_list_detail=False, include_individual_gene_scores=True, include_project_name=False):
     response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True)
 
     variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
@@ -230,13 +229,12 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
-    if include_rna_seq:
+    if include_individual_gene_scores:
         response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), families)
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid)
 
-    if include_phenotype_prioritization:
         response['phenotypeGeneScores'] = _get_phenotype_prioritization(genes.keys(), families)
 
     return response
