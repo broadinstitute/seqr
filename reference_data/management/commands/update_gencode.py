@@ -135,8 +135,16 @@ def _parse_line(line, i, new_genes, new_transcripts,  existing_gene_ids, existin
 
     # parse info field
     info_fields = [x.strip().split() for x in record['info'].split(';') if x != '']
-    info_fields = {k: v.strip('"') for k, v in info_fields}
-    record.update(info_fields)
+    info_dict = {}
+    for k, v in info_fields:
+        v = v.strip('"')
+        if k == 'tag':
+            if k not in info_dict:
+                info_dict[k] = []
+            info_dict[k].append(v)
+        else:
+            info_dict[k] = v
+    record.update(info_dict)
 
     record['gene_id'] = record['gene_id'].split('.')[0]
     if 'transcript_id' in record:
@@ -179,6 +187,8 @@ def _parse_line(line, i, new_genes, new_transcripts,  existing_gene_ids, existin
             "end_grch{}".format(genome_version): record["end"],
             "strand_grch{}".format(genome_version): record["strand"],
         })
+        if 'MANE_Select' in record.get('tag', []):
+            new_transcripts[record['transcript_id']]['is_mane_select'] = True
 
     elif record['feature_type'] == 'CDS':
         if record["transcript_id"] in existing_transcript_ids:
