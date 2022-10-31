@@ -148,9 +148,26 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(responses.calls[0].request.url, url_23_lift)
         self.assertEqual(responses.calls[2].request.url, url_23)
 
+    def _has_expected_new_transcripts(self):
+        self.assertEqual(TranscriptInfo.objects.all().count(), 2)
+        trans_info = TranscriptInfo.objects.get(transcript_id='ENST00000456328')
+        self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
+        self.assertEqual(trans_info.gene.gencode_release, 27)
+        self.assertFalse(trans_info.is_mane_select)
+        trans_info = TranscriptInfo.objects.get(transcript_id='ENST00000332831')
+        self.assertEqual(trans_info.start_grch37, 621059)
+        self.assertEqual(trans_info.end_grch37, 622053)
+        self.assertEqual(trans_info.strand_grch37, '-')
+        self.assertEqual(trans_info.chrom_grch37, '1')
+        self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
+        self.assertEqual(trans_info.gene.gencode_release, 31)
+        self.assertTrue(trans_info.is_mane_select)
+
+    @responses.activate
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
+    @mock.patch('reference_data.management.commands.update_gencode_transcripts.logger')
     @mock.patch('reference_data.management.commands.update_gencode.logger')
-    def test_update_gencode_command(self, mock_logger, mock_utils_logger):
+    def test_update_gencode_command(self, mock_logger, mock_update_transcripts_logger, mock_utils_logger):
         # Test normal command function
         call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
         mock_utils_logger.info.assert_has_calls([
@@ -177,19 +194,7 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.gencode_gene_type, 'protein_coding')
         self.assertEqual(gene_info.gene_symbol, 'OR4F16')
 
-        self.assertEqual(TranscriptInfo.objects.all().count(), 2)
-        trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000456328')
-        self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
-        self.assertEqual(trans_info.gene.gencode_release, 27)
-        self.assertFalse(trans_info.is_mane_select)
-        trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000332831')
-        self.assertEqual(trans_info.start_grch37, 621059)
-        self.assertEqual(trans_info.end_grch37, 622053)
-        self.assertEqual(trans_info.strand_grch37, '-')
-        self.assertEqual(trans_info.chrom_grch37, '1')
-        self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
-        self.assertEqual(trans_info.gene.gencode_release, 31)
-        self.assertTrue(trans_info.is_mane_select)
+        self._has_expected_new_transcripts()
 
         # Test normal command function with a --reset option
         mock_logger.reset_mock()
@@ -222,3 +227,31 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.gene_symbol, 'OR4F16')
         self.assertEqual(gene_info.end_grch37, 622053)
         self.assertEqual(gene_info.strand_grch37, '-')
+
+        # Test only reloading transcripts
+        tmp_dir = tempfile.gettempdir()
+        mock_tempfile.gettempdir.return_value = tmp_dir
+        with open(self.temp_file_path, 'rb') as f:
+            gtf_content = f.read()
+
+        url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.annotation.gtf.gz'
+        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url, body=gtf_content, stream=True)
+        url_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/GRCh37_mapping/gencode.v31lift37.annotation.gtf.gz'
+        responses.add(responses.HEAD, url_lift, headers={"Content-Length": "1024"})
+        responses.add(responses.GET, url_lift, body=gtf_content, stream=True)
+
+        call_command('update_gencode_transcripts')
+
+        self.assertEqual(GeneInfo.objects.all().count(), 2)
+        self._has_expected_new_transcripts()
+        mock_utils_logger.info.assert_has_calls([
+            mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
+            mock.call('Creating 2 TranscriptInfo records'),
+        ])
+        mock_update_transcripts_logger.info.assert_has_calls([
+            mock.call('Dropping the 2 existing TranscriptInfo entries'),
+        ])
+
+        self.assertEqual(responses.calls[0].request.url, url_lift)
+        self.assertEqual(responses.calls[2].request.url, url)
