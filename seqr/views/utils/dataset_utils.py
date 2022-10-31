@@ -11,7 +11,7 @@ from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
-from seqr.views.utils.json_utils import _to_snake_case
+from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
 
 logger = SeqrLogger(__name__)
 
@@ -460,7 +460,7 @@ def _parse_phenotype_pri_row(row):
         score_name = row.get(f'scoreName{i}')
         if not score_name:
             break
-        scores[score_name] = float(row[f'score{i}'])
+        scores[_to_camel_case(_to_snake_case(score_name))] = float(row[f'score{i}'])
     record['scores'] = scores
 
     yield record
