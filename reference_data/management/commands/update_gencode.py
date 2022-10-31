@@ -2,7 +2,7 @@ import logging
 
 from django.core.management.base import BaseCommand
 
-from reference_data.management.commands.utils.gencode_utils import load_gencode_records
+from reference_data.management.commands.utils.gencode_utils import load_gencode_records, create_transcript_info
 from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
 logger = logging.getLogger(__name__)
@@ -54,13 +54,9 @@ def update_gencode(gencode_release, gencode_gtf_path=None, genome_version=None, 
     logger.info('Creating {} GeneInfo records'.format(len(new_genes)))
     counters["genes_created"] = len(new_genes)
     GeneInfo.objects.bulk_create([GeneInfo(**record) for record in new_genes.values()])
-    gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.all().only('gene_id')}
 
-    logger.info('Creating {} TranscriptInfo records'.format(len(new_transcripts)))
     counters["transcripts_created"] = len(new_transcripts)
-    TranscriptInfo.objects.bulk_create([
-        TranscriptInfo(gene=gene_id_to_gene_info[record.pop('gene_id')], **record) for record in new_transcripts.values()
-    ], batch_size=50000)
+    create_transcript_info(new_transcripts)
 
     logger.info("Done")
     logger.info("Stats: ")

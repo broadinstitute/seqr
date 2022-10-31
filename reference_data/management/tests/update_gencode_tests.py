@@ -153,10 +153,12 @@ class UpdateGencodeTest(TestCase):
     def test_update_gencode_command(self, mock_logger, mock_utils_logger):
         # Test normal command function
         call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
-        mock_utils_logger.info.assert_called_with('Loading {} (genome version: 37)'.format(self.temp_file_path))
+        mock_utils_logger.info.assert_has_calls([
+            mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
+            mock.call('Creating 2 TranscriptInfo records'),
+        ])
         calls = [
             mock.call('Creating 1 GeneInfo records'),
-            mock.call('Creating 2 TranscriptInfo records'),
             mock.call('Done'),
             mock.call('Stats: '),
             mock.call('  genes_skipped: 1'),
@@ -178,6 +180,7 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(TranscriptInfo.objects.all().count(), 2)
         trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000456328')
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
+        self.assertEqual(trans_info.gene.gencode_release, 27)
         self.assertFalse(trans_info.is_mane_select)
         trans_info = TranscriptInfo.objects.get(transcript_id = 'ENST00000332831')
         self.assertEqual(trans_info.start_grch37, 621059)
@@ -185,23 +188,26 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(trans_info.strand_grch37, '-')
         self.assertEqual(trans_info.chrom_grch37, '1')
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
+        self.assertEqual(trans_info.gene.gencode_release, 31)
         self.assertTrue(trans_info.is_mane_select)
 
         # Test normal command function with a --reset option
         mock_logger.reset_mock()
         call_command('update_gencode', '--reset', '--gencode-release=31', self.temp_file_path, '37')
-        mock_utils_logger.info.assert_called_with('Loading {} (genome version: 37)'.format(self.temp_file_path))
+        mock_utils_logger.info.assert_has_calls([
+            mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
+            mock.call('Creating 2 TranscriptInfo records'),
+        ])
         calls = [
             mock.call('Dropping the 2 existing TranscriptInfo entries'),
             mock.call('Dropping the 50 existing GeneInfo entries'),
             mock.call('Creating 2 GeneInfo records'),
-            mock.call('Creating 2 TranscriptInfo records'),
             mock.call('Done'),
             mock.call('Stats: '),
             mock.call('  genes_created: 2'),
             mock.call('  transcripts_created: 2')
         ]
-        # mock_logger.info.assert_has_calls(calls)
+        mock_logger.info.assert_has_calls(calls)
 
         self.assertEqual(GeneInfo.objects.all().count(), 2)
         gene_info = GeneInfo.objects.get(gene_id = 'ENSG00000223972')

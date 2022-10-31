@@ -7,7 +7,7 @@ from tqdm import tqdm
 from django.core.management.base import CommandError
 
 from reference_data.management.commands.utils.download_utils import download_file
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from reference_data.models import GeneInfo, TranscriptInfo, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
 logger = logging.getLogger(__name__)
 
@@ -64,10 +64,19 @@ def load_gencode_records(gencode_release, gencode_gtf_path=None, genome_version=
         with gzip.open(gencode_gtf_path, 'rt') as gencode_file:
             for i, line in enumerate(tqdm(gencode_file, unit=' gencode records')):
                 _parse_line(
-                    line, i, new_genes, new_transcripts, existing_gene_ids, existing_transcript_ids, counters,
-                    genome_version, gencode_release)
+                    line, i, new_genes, new_transcripts, existing_gene_ids or set(), existing_transcript_ids or set(),
+                    counters, genome_version, gencode_release)
 
     return new_genes, new_transcripts, counters
+
+
+def create_transcript_info(new_transcripts):
+    gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.order_by('gencode_release').only('gene_id')}
+    logger.info('Creating {} TranscriptInfo records'.format(len(new_transcripts)))
+    TranscriptInfo.objects.bulk_create([
+        TranscriptInfo(gene=gene_id_to_gene_info[record.pop('gene_id')], **record) for record in
+        new_transcripts.values()
+    ], batch_size=50000)
 
 
 def _parse_line(line, i, new_genes, new_transcripts,  existing_gene_ids, existing_transcript_ids, counters, genome_version, gencode_release):
