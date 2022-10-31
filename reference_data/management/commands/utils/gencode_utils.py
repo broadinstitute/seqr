@@ -71,7 +71,7 @@ def load_gencode_records(gencode_release, gencode_gtf_path=None, genome_version=
 
 
 def create_transcript_info(new_transcripts):
-    gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.order_by('gencode_release').only('gene_id')}
+    gene_id_to_gene_info = {g.gene_id: g for g in GeneInfo.objects.all().only('gene_id')}
     logger.info('Creating {} TranscriptInfo records'.format(len(new_transcripts)))
     TranscriptInfo.objects.bulk_create([
         TranscriptInfo(gene=gene_id_to_gene_info[record.pop('gene_id')], **record) for record in
