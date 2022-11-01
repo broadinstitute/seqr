@@ -127,6 +127,9 @@ class TranscriptInfo(models.Model):
     strand_grch38 = models.CharField(max_length=1, null=True, blank=True)
     coding_region_size_grch38 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
 
+    class Meta:
+        json_fields = ['transcript_id', 'is_mane_select']
+
 
 class RefseqTranscript(models.Model):
     transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
