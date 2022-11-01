@@ -1000,8 +1000,8 @@
     "model": "reference_data.transcriptinfo",
     "pk": 2,
     "fields": {
-        "gene_id": 6,
-        "transcript_id": "ENST00000505820",
+        "gene_id": 2,
+        "transcript_id": "ENST00000624735",
         "is_mane_select": false,
         "chrom_grch37": "1",
         "start_grch37": 696291,

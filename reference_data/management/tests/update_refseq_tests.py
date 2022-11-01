@@ -8,7 +8,7 @@ class UpdateRefseqTest(ReferenceDataCommandTestCase):
         'ENST00000258436.1	NR_026874.2	\n',
         'ENST00000258436.1	NR_122045.1	\n',
         'ENST00000342066.8	NM_152486.3	NP_689699.2\n',
-        'ENST00000505820.7	NM_015658.4	NP_056473.3\n',
+        'ENST00000624735.7	NM_015658.4	NP_056473.3\n',
     ]
 
     def test_update_refseq_command(self):
@@ -19,5 +19,5 @@ class UpdateRefseqTest(ReferenceDataCommandTestCase):
         self.assertListEqual(
             list(RefseqTranscript.objects.order_by('transcript_id').values('transcript__transcript_id', 'refseq_id')), [
                 {'transcript__transcript_id': 'ENST00000258436', 'refseq_id': 'NR_026874.2'},
-                {'transcript__transcript_id': 'ENST00000505820', 'refseq_id': 'NM_015658.4'}
+                {'transcript__transcript_id': 'ENST00000624735', 'refseq_id': 'NM_015658.4'}
             ])
