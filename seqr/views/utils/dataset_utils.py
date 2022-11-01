@@ -419,7 +419,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     individual_db_ids = {s.individual_id for s in samples}
     to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
     if to_delete:
-        model_cls.bulk_delete(user, to_delete, parent='sample')
+        model_cls.bulk_delete(user, to_delete)
 
     loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     samples_to_load = {
