@@ -129,7 +129,7 @@ class TranscriptInfo(models.Model):
 
 
 class RefseqTranscript(models.Model):
-    transcript = models.ForeignKey(TranscriptInfo, on_delete=models.CASCADE)
+    transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
 
 

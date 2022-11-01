@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 LATEST_GENCODE_RELEASE = 31
 OLD_GENCODE_RELEASES = [29, 28, 27, 19]
 
-GENCODE_GTF_URL = "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/gencode.v{gencode_release}.annotation.gtf.gz"
-GENCODE_LIFT37_GTF_URL = "http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/GRCh37_mapping/gencode.v{gencode_release}lift37.annotation.gtf.gz"
+GENCODE_URL_TEMPLATE = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/{path}gencode.v{gencode_release}{file}'
 
 # expected GTF file header
 GENCODE_FILE_HEADER = [
@@ -36,14 +35,15 @@ def _get_valid_gencode_gtf_paths(gencode_release, gencode_gtf_path, genome_versi
     elif gencode_gtf_path and not genome_version:
         raise CommandError("The genome version must also be specified after the gencode GTF file path")
     else:
+        gtf_url = GENCODE_URL_TEMPLATE.format(path='', file='.annotation.gtf.gz', gencode_release=gencode_release)
         if gencode_release == 19:
-            urls = [('37', GENCODE_GTF_URL.format(gencode_release=gencode_release))]
+            urls = [('37', gtf_url)]
         elif gencode_release <= 22:
-            urls = [('38', GENCODE_GTF_URL.format(gencode_release=gencode_release))]
+            urls = [('38', gtf_url)]
         else:
             urls = [
-                ('37', GENCODE_LIFT37_GTF_URL.format(gencode_release=gencode_release)),
-                ('38', GENCODE_GTF_URL.format(gencode_release=gencode_release)),
+                ('37', GENCODE_URL_TEMPLATE.format(path='GRCh37_mapping/', file='lift37.annotation.gtf.gz', gencode_release=gencode_release)),
+                ('38', gtf_url),
             ]
         gencode_gtf_paths = {}
         for genome_version, url in urls:
