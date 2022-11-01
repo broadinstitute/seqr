@@ -254,7 +254,7 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
 
     'hpo_terms/(?P<hpo_parent_id>[^/]+)': get_hpo_terms,
-    'igv_genomes/(?P<file_path>.*)': igv_genomes_proxy,
+    'igv_genomes/(?P<cloud_host>[^/]+)/(?P<file_path>.*)': igv_genomes_proxy,
 
     'locus_lists/(?P<locus_list_guid>[^/]+)/update': update_locus_list_handler,
     'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
