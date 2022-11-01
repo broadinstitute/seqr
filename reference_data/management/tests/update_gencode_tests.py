@@ -149,7 +149,6 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(responses.calls[2].request.url, url_23)
 
     def _has_expected_new_transcripts(self, expected_release=27):
-        self.assertEqual(TranscriptInfo.objects.all().count(), 2)
         trans_info = TranscriptInfo.objects.get(transcript_id='ENST00000456328')
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
         self.assertEqual(trans_info.gene.gencode_release, expected_release)
@@ -195,6 +194,7 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.gencode_gene_type, 'protein_coding')
         self.assertEqual(gene_info.gene_symbol, 'OR4F16')
 
+        self.assertEqual(TranscriptInfo.objects.all().count(), 4)
         self._has_expected_new_transcripts()
 
         # Test normal command function with a --reset option
@@ -205,7 +205,7 @@ class UpdateGencodeTest(TestCase):
             mock.call('Creating 2 TranscriptInfo records'),
         ])
         calls = [
-            mock.call('Dropping the 2 existing TranscriptInfo entries'),
+            mock.call('Dropping the 4 existing TranscriptInfo entries'),
             mock.call('Dropping the 50 existing GeneInfo entries'),
             mock.call('Creating 2 GeneInfo records'),
             mock.call('Done'),
@@ -245,6 +245,7 @@ class UpdateGencodeTest(TestCase):
         call_command('update_gencode_transcripts')
 
         self.assertEqual(GeneInfo.objects.all().count(), 2)
+        self.assertEqual(TranscriptInfo.objects.all().count(), 2)
         self._has_expected_new_transcripts(expected_release=31)
         mock_utils_logger.info.assert_has_calls([
             mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
