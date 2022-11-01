@@ -14,6 +14,7 @@ from reference_data.management.commands.update_mgi import MGIReferenceDataHandle
 from reference_data.management.commands.update_gene_cn_sensitivity import CNSensitivityReferenceDataHandler
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
+from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
 
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ REFERENCE_DATA_SOURCES = OrderedDict([
     ("mgi", MGIReferenceDataHandler),
     ("gencc", GenCCReferenceDataHandler),
     ("clingen", ClinGenReferenceDataHandler),
+    ("refseq", RefseqReferenceDataHandler),
     ("hpo", None),
 ])
 
