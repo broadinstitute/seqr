@@ -1,6 +1,8 @@
 # _seqr_ Changes
 
 ## dev
+* Add Refseq and MANE transcript info (REQUIRES DB MIGRATION)
+  * To add new data, run the `update_gencode_transcripts` and `update_refseq` commands
 
 ## 10/13/22
 * Link MME submissions to saved variants (REQUIRES DB MIGRATION)
