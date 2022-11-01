@@ -325,6 +325,7 @@ class EsSearch(object):
             self._filter(_in_silico_filter(in_silico_filters))
 
     def _filter_by_frequency(self, frequencies, clinvar_terms=None):
+        frequencies = {pop: v for pop, v in (frequencies or {}).items() if pop in POPULATIONS}
         if not frequencies:
             return
 

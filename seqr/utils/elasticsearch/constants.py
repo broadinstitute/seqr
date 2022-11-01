@@ -90,9 +90,6 @@ POPULATIONS = {
         'filter_AF': [],
         'Het': None,
     },
-    'g1k': {
-        'filter_AF': ['g1k_POPMAX_AF'],
-    },
     'exac': {
         'filter_AF': ['exac_AF_POPMAX'],
         'AC': 'exac_AC_Adj',
@@ -259,7 +256,7 @@ POPULATION_SORTS = {
                 'source': "doc.containsKey(params.field) ? (doc[params.field].empty ? 0 : doc[params.field].value) : 1"
             }
         }
-    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', '1kg': 'g1k', 'callset_af': 'callset'}.items()}
+    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', 'callset_af': 'callset'}.items()}
 SORT_FIELDS.update(POPULATION_SORTS)
 PREDICTOR_SORT_FIELDS = {
     'cadd': 'cadd_PHRED',
