@@ -18,7 +18,7 @@ LOAD_SAMPLE_DATA = [
      "Notes", "familyNotes"],
     ["1", "NA19675", "NA19675_1", "NA19678", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", "HG00735", "", "", "", "Female", "Unaffected", "", "a new family"]]
+    ["21", "HG00735", "", "", "", "", "", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
 
@@ -666,6 +666,14 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.reason_phrase, f'Field(s) "{field_str}" are required')
         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, workspace_name)
 
+        # test missing columns
+        self.mock_load_file.return_value = [['family', 'individual'], ['1', '2']]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertListEqual(response_json['errors'], [
+            'Error while converting uploaded pedigree file rows to json: Sex, Affected not specified in row #1'])
+
         # test sample data error
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
@@ -751,7 +759,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(responses.calls[call_cnt+1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
 
         slack_message = """
-        *test_user_manager@test.com* requested to load WES data ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
+        *test_user_manager@test.com* requested to load 3 WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
@@ -842,6 +850,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
                       '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
                       headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json={"tasks": [
+                            {"task_id": "pyspark_compute_project_R0006_anvil_no_project_workspace"},
                             {"task_id": "pyspark_compute_project_R0007_anvil_no_project_workspace"},
                             {"task_id": "pyspark_compute_project_R0008_anvil_no_project_workspace"}],
                             "total_entries": 2},

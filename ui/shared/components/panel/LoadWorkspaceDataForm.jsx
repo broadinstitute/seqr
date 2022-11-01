@@ -14,6 +14,8 @@ import {
   FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
+  INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
@@ -29,12 +31,17 @@ const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-dat
 const WARNING_HEADER = 'Planned Data Loading Delay'
 const WARNING_BANNER = null
 
+const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
+
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
   [INDIVIDUAL_FIELD_ID]: 'Individual ID (needs to match the VCF ids)',
 }
 const REQUIRED_FIELDS = INDIVIDUAL_ID_EXPORT_DATA.map(config => (
   { ...config, description: FIELD_DESCRIPTIONS[config.field] }))
+REQUIRED_FIELDS.push(...INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => NON_ID_REQUIRED_FIELDS.includes(field)))
+
+const OPTIONAL_FIELDS = INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => !NON_ID_REQUIRED_FIELDS.includes(field))
 
 const BLANK_EXPORT = {
   filename: 'individuals_template',
@@ -51,7 +58,7 @@ const UploadPedigreeField = React.memo(({ name, error }) => (
         name={name}
         blankExportConfig={BLANK_EXPORT}
         requiredFields={REQUIRED_FIELDS}
-        optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
+        optionalFields={OPTIONAL_FIELDS}
         uploadFormats={FILE_FORMATS}
         actionDescription="load individual data from an AnVIL workspace to a new seqr project"
         url="/api/upload_temp_file"

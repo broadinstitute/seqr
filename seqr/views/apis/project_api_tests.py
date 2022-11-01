@@ -240,10 +240,9 @@ class ProjectAPITest(object):
 
         project_fields = {
             'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',
-            'workspaceName', 'workspaceNamespace', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
-            'analysisGroupsLoaded', 'collaboratorGroups'
+            'projectGuid', 'name', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
+            'analysisGroupsLoaded', 'collaboratorGroups',
         }
-        project_fields.update(PROJECT_FIELDS)
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project_response.keys()), project_fields)
         tag_type_fields = {'numTags'}
@@ -550,4 +549,4 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 4)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
             'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 10)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 6)
