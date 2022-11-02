@@ -90,9 +90,6 @@ POPULATIONS = {
         'filter_AF': [],
         'Het': None,
     },
-    'g1k': {
-        'filter_AF': ['g1k_POPMAX_AF'],
-    },
     'exac': {
         'filter_AF': ['exac_AF_POPMAX'],
         'AC': 'exac_AC_Adj',
@@ -259,7 +256,7 @@ POPULATION_SORTS = {
                 'source': "doc.containsKey(params.field) ? (doc[params.field].empty ? 0 : doc[params.field].value) : 1"
             }
         }
-    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', '1kg': 'g1k', 'callset_af': 'callset'}.items()}
+    }] for sort, pop_key in {'gnomad': 'gnomad_genomes', 'gnomad_exomes': 'gnomad_exomes', 'callset_af': 'callset'}.items()}
 SORT_FIELDS.update(POPULATION_SORTS)
 PREDICTOR_SORT_FIELDS = {
     'cadd': 'cadd_PHRED',
@@ -328,11 +325,8 @@ PREDICTION_FIELDS_CONFIG = {
     'dbnsfp_DANN_score': {},
     'eigen_Eigen_phred': {},
     'dbnsfp_FATHMM_pred': {},
-    'dbnsfp_GERP_RS': {'response_key': 'gerp_rs'},
     'mpc_MPC': {},
-    'dbnsfp_MetaSVM_pred': {},
     'dbnsfp_MutationTaster_pred': {'response_key': 'mut_taster'},
-    'dbnsfp_phastCons100way_vertebrate': {'response_key': 'phastcons_100_vert'},
     'dbnsfp_Polyphen2_HVAR_pred': {'response_key': 'polyphen'},
     'gnomad_non_coding_constraint_z_score': {'response_key': 'gnomad_noncoding'},
     'primate_ai_score': {'response_key': 'primate_ai'},

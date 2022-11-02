@@ -6,6 +6,7 @@ import { compareObjects } from 'shared/utils/sortUtils'
 import { NOTE_TAG_NAME } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
+export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid

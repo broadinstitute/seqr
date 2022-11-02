@@ -392,34 +392,28 @@ def load_rna_seq_sample_data(request, sample_guid):
     return create_json_response({'success': True})
 
 
-def _log_append_info(user, info, message):
-    info.append(message)
-    logger.info(message, user)
-
-
 @data_manager_required
 def load_phenotype_prioritization_data(request):
     request_json = json.loads(request.body)
 
     file_path = request_json['file']
 
-    info = []
-    _log_append_info(request.user, info, f'Loading phenotype-based prioritization data from {file_path}')
-
     try:
         tool, data_by_project_sample_id = load_phenotype_prioritization_data_file(file_path)
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
+    info = [f'Loaded {tool.upper()} data from {file_path}']
+
     all_records = []
-    to_delete = None
+    to_delete = PhenotypePrioritization.objects.none()
     error = None
     for project_name, records_by_sample in data_by_project_sample_id.items():
         projects = [p for p in Project.objects.filter(name=project_name) if is_internal_project(p)]
         if not projects or len(projects) > 1:
-            error = f'Project not found or multiple projects with the same name {project_name}'
+            error = f'Multiple projects with the same name {project_name}'\
+                if projects else f'Project ({project_name}) not found'
             break
-        _log_append_info(request.user, info, f'Parsed {tool.upper()} data for project: {project_name}')
 
         indivs = Individual.objects.filter(family__project=projects[0], individual_id__in=records_by_sample.keys())
         existing_indivs_by_id = {ind.individual_id: ind for ind in indivs}
@@ -433,22 +427,23 @@ def load_phenotype_prioritization_data(request):
                 rec['individual'] = existing_indivs_by_id[sample_id]
 
         exist_records = PhenotypePrioritization.objects.filter(tool=tool, individual__in=indivs)
-        to_delete = to_delete | exist_records if to_delete else exist_records
-
         records = [rec for records in records_by_sample.values() for rec in records]
-        _log_append_info(request.user, info,
-                         f'Attempted loading {len(records)} records of {tool.upper()} data to project {project_name}')
+
+        delete_info = f'deleted {len(exist_records)} record(s), ' if exist_records else ''
+        info.append(f'Project {project_name}: {delete_info}loaded {len(records)} record(s)')
+
+        to_delete |= exist_records
         all_records += records
 
     if error:
         return create_json_response({'error': error}, status=400)
 
     if to_delete:
-        deleted, _ = PhenotypePrioritization.bulk_delete(request.user, to_delete)
-        _log_append_info(request.user, info, f'Deleted {deleted} existing {tool.upper()} records')
+        PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
-    models = PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in all_records])
-    _log_append_info(request.user, info, f'Loaded {len(models)} {tool.upper()} data records')
+    PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in all_records])
+
+    logger.info('\n'.join(info), request.user)
 
     return create_json_response({
         'info': info,

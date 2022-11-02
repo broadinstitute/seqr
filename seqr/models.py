@@ -1035,6 +1035,7 @@ class BulkOperationBase:
 
 
 class DeletableSampleMetadataModel(models.Model, BulkOperationBase):
+    PARENT_FIELD = 'sample'
 
     sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
     gene_id = models.CharField(max_length=20)  # ensembl ID
@@ -1071,6 +1072,8 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class PhenotypePrioritization(models.Model, BulkOperationBase):
+    PARENT_FIELD = 'individual'
+
     individual = models.ForeignKey('Individual', on_delete=models.CASCADE, db_index=True)
     gene_id = models.CharField(max_length=20)  # ensembl ID
 

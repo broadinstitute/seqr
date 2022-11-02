@@ -16,7 +16,11 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     login_and_policies_required, pm_or_data_manager_required
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
-
+GS_STORAGE_URL = 'https://storage.googleapis.com'
+CLOUD_STORAGE_URLS = {
+    's3': 'https://s3.amazonaws.com',
+    'gs': GS_STORAGE_URL,
+}
 
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
@@ -141,7 +145,7 @@ def _stream_gs(request, gs_path):
     headers = _get_gs_rest_api_headers(request.META.get('HTTP_RANGE'), gs_path, user=request.user)
 
     response = requests.get(
-        'https://storage.googleapis.com/{}'.format(gs_path.replace('gs://', '', 1)),
+        f"{GS_STORAGE_URL}/{gs_path.replace('gs://', '', 1)}",
         headers=headers,
         stream=True)
 
@@ -202,7 +206,7 @@ def _stream_file(request, path):
     return resp
 
 
-def igv_genomes_proxy(request, file_path):
+def igv_genomes_proxy(request, cloud_host, file_path):
     # IGV does not properly set CORS header and cannot directly access the genomes resource from the browser without
     # using this server-side proxy
     headers = {}
@@ -210,7 +214,7 @@ def igv_genomes_proxy(request, file_path):
     if range_header:
         headers['Range'] = range_header
 
-    genome_response = requests.get('https://s3.amazonaws.com/igv.{}'.format(file_path), headers=headers)
+    genome_response = requests.get(f'{CLOUD_STORAGE_URLS[cloud_host]}/{file_path}', headers=headers)
     proxy_response = HttpResponse(
         content=genome_response.content,
         status=genome_response.status_code,

@@ -295,7 +295,7 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertDictEqual(response.json(), {'errors': mock.ANY, 'warnings': []})
         errors = response.json()['errors']
         self.assertEqual(len(errors), 1)
-        self.assertEqual(errors[0].split('\n')[0],"Error while converting test.tsv rows to json: Individual Id not specified in row #1:")
+        self.assertEqual(errors[0], "Error while converting test.tsv rows to json: Individual Id not specified in row #1")
 
         response = self.client.post(individuals_url, {'f': SimpleUploadedFile(
             'test.tsv', 'Family ID	Individual ID	Previous Individual ID\n"1"	"NA19675_1"	"NA19675"'.encode('utf-8'))})

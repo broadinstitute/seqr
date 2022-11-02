@@ -305,6 +305,7 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
     { title: 'primAD', link: `http://primad.basespace.illumina.com/gene/${gene.geneSymbol}?dataset=gnomad_r3`, description: 'Primate Genome Aggregation Database' },
     gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
     gene.mgiMarkerId ? { title: 'IMPC', link: `https://www.mousephenotype.org/data/genes/${gene.mgiMarkerId}`, description: 'International Mouse Phenotyping Consortium' } : null,
+    { title: 'KEGG', link: `https://www.kegg.jp/kegg-bin/search_pathway_text?keyword=${gene.geneSymbol}&viewImage=true`, description: 'Pathway maps representing known molecular interaction' },
     gene.clinGen ? { title: 'ClinGen', link: gene.clinGen.href, description: 'ClinGen Dosage Sensitivity' } : null,
     { title: 'ClinVar', link: `https://www.ncbi.nlm.nih.gov/clinvar?term=${gene.geneSymbol}[gene]`, description: 'Aggregated information about human genomic variation' },
     user.isAnalyst ? { title: 'HGMD', link: `https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/gene.php?gene=${gene.geneSymbol}`, description: 'Human Gene Mutation Database ' } : null,

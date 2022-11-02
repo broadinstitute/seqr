@@ -771,13 +771,10 @@ MAPPING_FIELDS = [
     'contig',
     'variantId',
     'dbnsfp_MutationTaster_pred',
-    'dbnsfp_phastCons100way_vertebrate',
-    'dbnsfp_MetaSVM_pred',
     'mpc_MPC',
     'dbnsfp_DANN_score',
     'eigen_Eigen_phred',
     'dbnsfp_REVEL_score',
-    'dbnsfp_GERP_RS',
     'splice_ai_delta_score',
     'splice_ai_splice_consequence',
     'dbnsfp_FATHMM_pred',
@@ -801,14 +798,6 @@ MAPPING_FIELDS = [
     'AC',
     'AF',
     'AN',
-    'g1k_AC',
-    'g1k_Hom',
-    'g1k_Hemi',
-    'g1k_POPMAX_AF',
-    'g1k_AF',
-    'g1k_AN',
-    'g1k_Het',
-    'g1k_ID',
     'gnomad_genomes_AC',
     'gnomad_genomes_Hom',
     'gnomad_genomes_Hemi',
@@ -893,13 +882,10 @@ MITO_MAPPING_FIELDS = [
     "common_low_heteroplasmy",
     "contig",
     "dbnsfp_FATHMM_pred",
-    "dbnsfp_GERP_RS",
-    "dbnsfp_MetaSVM_pred",
     "dbnsfp_MutationTaster_pred",
     "dbnsfp_Polyphen2_HVAR_pred",
     "dbnsfp_REVEL_score",
     "dbnsfp_SIFT_pred",
-    "dbnsfp_phastCons100way_vertebrate",
     "end",
     "filters",
     "genotypes",
@@ -933,7 +919,6 @@ MITO_MAPPING_FIELDS = [
 MITO_SOURCE_ONLY_FIELDS = [
     'callset_max_hl',
     'exac_max_hl',
-    'g1k_max_hl',
     'gnomad_exomes_max_hl',
     'gnomad_genomes_max_hl',
     'gnomad_svs_max_hl',
@@ -1665,13 +1650,6 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
-                                {'range': {'g1k_POPMAX_AF': {'lte': 0.001}}}
-                            ]
-                        }},
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
                                 {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
                                 {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
                             ]
@@ -1727,13 +1705,6 @@ class EsUtilsTest(TestCase):
                         {'range': {'AF': {'lte': 0.1}}}
                     ],
                     'must': [
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
-                                {'range': {'g1k_POPMAX_AF': {'lte': 0.05}}}
-                            ]
-                        }},
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [

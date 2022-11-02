@@ -5,12 +5,12 @@ from seqr.models import Individual, Sample, IgvSample, AnalysisGroup, LocusList,
     VariantFunctionalData, FamilyNote, SavedVariant
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
-    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_projects, \
+    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
     get_json_for_family_notes, get_json_for_saved_variants
 
 
 def get_projects_child_entities(projects, project_guid, user, include_samples=True, include_locus_list_metadata=True):
-    projects_by_guid = {p['projectGuid']: p for p in get_json_for_projects(projects, user)}
+    projects_by_guid = {p.guid: {'projectGuid': p.guid, 'name': p.name} for p in projects}
 
     if include_samples:
         sample_models = Sample.objects.filter(individual__family__project__in=projects)
