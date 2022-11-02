@@ -449,7 +449,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
 PHENOTYPE_PRIORITIZATION_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName']
 PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER = PHENOTYPE_PRIORITIZATION_HEADER + ['scoreName1', 'score1']
-MAX_SCORES = 100
+MAX_SCORES = 16
 
 
 def _parse_phenotype_pri_row(row):

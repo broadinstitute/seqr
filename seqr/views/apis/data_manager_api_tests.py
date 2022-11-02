@@ -7,9 +7,9 @@ import responses
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data
-from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers
+from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses, AnvilAuthenticationTestCase
-from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample, Project
+from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample, Project, PhenotypePrioritization
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -309,6 +309,32 @@ EXOMISER_DATA = [
     ['exomiser', 'CMG_Beggs_WGS', 'BEG_1230-1_01', '3', 'ENSG00000105357', 'ORPHA:71517',
      'Rapid-onset dystonia-parkinsonism', 'exomiser_score', '0.977923765', 'phenotype_score', '0.551578222',
      'variant_score', '1']
+]
+UPDATE_LIRICAL_DATA = [
+    ['lirical', '1kg project nåme with uniçøde', 'NA19678', '3', 'ENSG00000105357', 'OMIM:618460',
+     'Khan-Khan-Katsanis syndrome', 'post_test_probability', '0', 'compositeLR', '0.066'],
+    ['lirical', '1kg project nåme with uniçøde', 'NA19678', '4', 'ENSG00000105357', 'OMIM:219800',
+     '"Cystinosis, nephropathic"', 'post_test_probability', '0', 'compositeLR', '0.003', '', ''],
+]
+
+EXPECTED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
+     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 1, 'individualGuid': 'I000002_na19678'},
+    {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
+     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'}
+]
+EXPECTED_UPDATED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
+     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'},
+    {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
+     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 3, 'individualGuid': 'I000002_na19678'},
+    {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
+     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'},
 ]
 
 
@@ -829,6 +855,7 @@ class DataManagerAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Can\'t find individuals NA19678x, NA19679x')
 
+        # Test a successful operation
         mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
         self.assertEqual(response.status_code, 200)
@@ -842,16 +869,19 @@ class DataManagerAPITest(object):
         db_update = {'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
                      'parentEntityIds': {'I000002_na19678', 'I000015_na20885'}, 'updateType': 'bulk_create'}
         mock_model_logger.info.assert_called_with('create PhenotypePrioritizations', self.data_manager_user, db_update=db_update)
+        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(),
+                                          nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
+        self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
 
+        # Test uploading new data
         mock_logger.reset_mock()
         mock_model_logger.reset_mock()
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
         self.assertEqual(response.status_code, 200)
         info = [
             'Loaded LIRICAL data from lirical_data.tsv.gz',
-            'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 1 record(s)',
-            'Project Test Reprocessed Project: deleted 1 record(s), loaded 1 record(s)',
+            'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
         mock_logger.info.assert_called_with('\n'.join(info), self.data_manager_user)
@@ -860,12 +890,14 @@ class DataManagerAPITest(object):
                 'dbEntity': 'PhenotypePrioritization', 'numEntities': 1,
                 'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_delete',
             }),
-            mock.call('delete PhenotypePrioritizations', self.data_manager_user, db_update={
-                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1,
-                'parentEntityIds': {'I000015_na20885'}, 'updateType': 'bulk_delete',
-            }),
-            mock.call('create PhenotypePrioritizations', self.data_manager_user, db_update=db_update),
+            mock.call('create PhenotypePrioritizations', self.data_manager_user,
+                      db_update={'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
+                     'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_create'}),
         ])
+        self.maxDiff = None
+        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(),
+                                          nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
+        self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
 
 
 # Tests for AnVIL access disabled

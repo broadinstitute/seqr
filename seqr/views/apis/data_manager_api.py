@@ -406,6 +406,7 @@ def load_phenotype_prioritization_data(request):
     info = [f'Loaded {tool.upper()} data from {file_path}']
 
     all_records = []
+    to_delete = PhenotypePrioritization.objects.none()
     error = None
     for project_name, records_by_sample in data_by_project_sample_id.items():
         projects = [p for p in Project.objects.filter(name=project_name) if is_internal_project(p)]
@@ -426,15 +427,19 @@ def load_phenotype_prioritization_data(request):
                 rec['individual'] = existing_indivs_by_id[sample_id]
 
         exist_records = PhenotypePrioritization.objects.filter(tool=tool, individual__in=indivs)
-        deleted, _ = PhenotypePrioritization.bulk_delete(request.user, exist_records)
-
         records = [rec for records in records_by_sample.values() for rec in records]
-        delete_info = f'deleted {deleted} record(s), ' if deleted else ''
+
+        delete_info = f'deleted {len(exist_records)} record(s), ' if exist_records else ''
         info.append(f'Project {project_name}: {delete_info}loaded {len(records)} record(s)')
+
+        to_delete |= exist_records
         all_records += records
 
     if error:
         return create_json_response({'error': error}, status=400)
+
+    if to_delete:
+        PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
     PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in all_records])
 
