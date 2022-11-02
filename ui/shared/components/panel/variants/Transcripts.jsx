@@ -22,6 +22,8 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
+const HeaderLabel = AnnotationLabel.withComponent('span')
+
 const TRANSCRIPT_LABELS = [
   {
     content: 'Canonical',
@@ -58,7 +60,18 @@ const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMai
               <Table.Row key={transcript.transcriptId}>
                 <Table.Cell width={3}>
                   <TranscriptLink variant={variant} transcript={transcript} />
-                  {/* TODO show refseq ID */}
+                  {transcriptsById[transcript.transcriptId]?.refseqId && (
+                    <div>
+                      <HeaderLabel>RefSeq:</HeaderLabel>
+                      <a
+                        href={`https://www.ncbi.nlm.nih.gov/nuccore/${transcriptsById[transcript.transcriptId].refseqId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {transcriptsById[transcript.transcriptId].refseqId}
+                      </a>
+                    </div>
+                  )}
                   <div>
                     {TRANSCRIPT_LABELS.map(({ shouldShow, ...labelProps }) => (
                       shouldShow(transcript, transcriptsById) && (
