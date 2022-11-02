@@ -133,6 +133,16 @@ ShowRnaSeqOutliers.propTypes = {
   sample: PropTypes.object,
 }
 
+const ShowPhenotypePrioritizations = ({ individual, hasPhenotypePriData, ...props }) => (hasPhenotypePriData ? (
+  <Modal
+    modalName={``}
+    title={``}
+    trigger={<ButtonLink padding="1em 0 0 0" content="Show Phenotype Prioritized Genes" />}
+  >
+    <PhenotypePrioritize {...props} />
+  </Modal>
+) : null)
+
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
     <VerticalSpacer height={5} />
