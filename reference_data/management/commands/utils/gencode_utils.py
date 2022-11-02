@@ -29,7 +29,9 @@ def _get_valid_gencode_gtf_paths(gencode_release, gencode_gtf_path, genome_versi
         elif gencode_release <= 22 and genome_version != GENOME_VERSION_GRCh38:
             raise CommandError("Invalid genome_version: {}. gencode v20, v21, v22 only have a GRCh38 version".format(genome_version))
         elif genome_version != GENOME_VERSION_GRCh38 and "lift" not in gencode_gtf_path.lower():
-            raise CommandError("Invalid genome_version for file: {}. gencode v23 and up must have 'lift' in the filename or genome_version arg must be GRCh38".format(gencode_gtf_path))
+            raise CommandError(
+                f"Invalid genome_version for file: {gencode_gtf_path}. gencode v23 and up must have 'lift' in the "
+                "filename or genome_version arg must be GRCh38")
 
         gencode_gtf_paths = {genome_version: gencode_gtf_path}
     elif gencode_gtf_path and not genome_version:
