@@ -162,7 +162,6 @@ const CALLSET_POP = { field: 'callset', fieldTitle: 'This Callset', acDisplay: '
 const POPULATIONS = [
   { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
   CALLSET_POP,
-  { field: 'g1k', fieldTitle: '1kg WGS' },
   {
     field: 'exac',
     fieldTitle: 'ExAC',
