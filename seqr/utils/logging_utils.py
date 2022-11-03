@@ -1,7 +1,6 @@
 import json
 import logging
 
-from django.db.models import prefetch_related_objects
 from settings import DEPLOYMENT_TYPE
 from typing import Optional
 
@@ -87,15 +86,3 @@ def log_model_bulk_update(logger, models, user, update_type, update_fields=None)
     logger.info(
         '{} {} {}s'.format(update_type, len(entity_ids), db_entity), user, db_update=db_update)
     return entity_ids
-
-
-def log_model_no_guid_bulk_update(logger, models, user, update_type):
-    if models:
-        db_entity = type(models[0]).__name__
-        prefetch_related_objects(models, models[0].PARENT_FIELD)
-        parent_ids = {getattr(model, models[0].PARENT_FIELD).guid for model in models}
-        db_update = {
-            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
-            'updateType': 'bulk_{}'.format(update_type),
-        }
-        logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)

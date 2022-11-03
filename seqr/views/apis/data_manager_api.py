@@ -21,9 +21,9 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
-from seqr.views.utils.permissions_utils import data_manager_required, is_internal_project
+from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
+from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -399,41 +399,54 @@ def load_phenotype_prioritization_data(request):
     file_path = request_json['file']
 
     try:
-        tool, data_by_project_sample_id = load_phenotype_prioritization_data_file(file_path)
+        tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path)
     except ValueError as e:
         return create_json_response({'error': str(e)}, status=400)
 
-    info = [f'Loaded {tool.upper()} data from {file_path}']
+    info = [f'Loaded {tool.title()} data from {file_path}']
+    logger.info(f'Loading {tool.title()} data from {file_path}', request.user)
+
+    internal_projects = get_internal_projects().filter(name__in=data_by_project_indiv_id)
+    projects_by_name = {p_name: [project for project in internal_projects if project.name == p_name]
+                       for p_name in data_by_project_indiv_id.keys()}
+    missing_projects = [p_name for p_name, projects in projects_by_name.items() if len(projects) == 0]
+    missing_info = f"Project {', '.join(missing_projects)} not found. " if missing_projects else ''
+    conflict_projects = [p_name for p_name, projects in projects_by_name.items() if len(projects) > 1]
+    conflict_info = f"Projects with conflict name(s) {', '.join(conflict_projects)}." if conflict_projects else ''
+
+    if missing_info or conflict_info:
+        return create_json_response({'error': missing_info + conflict_info}, status=400)
 
     all_records = []
     to_delete = PhenotypePrioritization.objects.none()
     error = None
-    for project_name, records_by_sample in data_by_project_sample_id.items():
-        projects = [p for p in Project.objects.filter(name=project_name) if is_internal_project(p)]
-        if not projects or len(projects) > 1:
-            error = f'Multiple projects with the same name {project_name}'\
-                if projects else f'Project ({project_name}) not found'
-            break
-
-        indivs = Individual.objects.filter(family__project=projects[0], individual_id__in=records_by_sample.keys())
+    for project_name, records_by_indiv in data_by_project_indiv_id.items():
+        indivs = Individual.objects.filter(family__project=projects_by_name[project_name][0],
+                                           individual_id__in=records_by_indiv.keys())
         existing_indivs_by_id = {ind.individual_id: ind for ind in indivs}
 
-        missing_individuals = set(records_by_sample.keys()) - set(existing_indivs_by_id.keys())
+        missing_individuals = set(records_by_indiv.keys()) - set(existing_indivs_by_id.keys())
         if missing_individuals:
-            error = f'Can\'t find individuals {", ".join(sorted(list(missing_individuals)))}'
+            error = f"Can't find individuals {', '.join(sorted(list(missing_individuals)))}"
             break
-        for sample_id, records in records_by_sample.items():
+        indiv_records = []
+        for sample_id, records in records_by_indiv.items():
             for rec in records:
                 rec['individual'] = existing_indivs_by_id[sample_id]
+                indiv_records.append(rec)
 
         exist_records = PhenotypePrioritization.objects.filter(tool=tool, individual__in=indivs)
-        records = [rec for records in records_by_sample.values() for rec in records]
 
         delete_info = f'deleted {len(exist_records)} record(s), ' if exist_records else ''
-        info.append(f'Project {project_name}: {delete_info}loaded {len(records)} record(s)')
+        info.append(f'Project {project_name}: {delete_info}loaded {len(indiv_records)} record(s)')
+
+        logger.info(
+            f'Project {project_name}: deleting {len(exist_records)} record(s), loading {len(indiv_records)} record(s)',
+            request.user
+        )
 
         to_delete |= exist_records
-        all_records += records
+        all_records += indiv_records
 
     if error:
         return create_json_response({'error': error}, status=400)
@@ -442,8 +455,6 @@ def load_phenotype_prioritization_data(request):
         PhenotypePrioritization.bulk_delete(request.user, to_delete)
 
     PhenotypePrioritization.bulk_create(request.user, [PhenotypePrioritization(**data) for data in all_records])
-
-    logger.info('\n'.join(info), request.user)
 
     return create_json_response({
         'info': info,
