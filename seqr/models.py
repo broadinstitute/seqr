@@ -7,13 +7,13 @@ from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.db.models import base, options, ForeignKey, JSONField
+from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
-from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger, log_model_no_guid_bulk_update
+from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
@@ -1012,14 +1012,27 @@ class VariantSearchResults(ModelWithGUID):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
 
-class BulkOperationBase:
+class BulkOperationBase(models.Model):
+
+    @classmethod
+    def log_model_no_guid_bulk_update(cls, models, user, update_type):
+        if models:
+            db_entity = type(models[0]).__name__
+            prefetch_related_objects(models, models[0].PARENT_FIELD)
+            parent_ids = {getattr(model, models[0].PARENT_FIELD).guid for model in models}
+            db_update = {
+                'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
+                'updateType': 'bulk_{}'.format(update_type),
+            }
+            logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
+
     @classmethod
     def bulk_create(cls, user, new_models):
         """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
         models = cls.objects.bulk_create(new_models)
-        log_model_no_guid_bulk_update(logger, models, user, 'create')
+        cls.log_model_no_guid_bulk_update(models, user, 'create')
         return models
 
     @classmethod
@@ -1027,14 +1040,14 @@ class BulkOperationBase:
         """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
-        log_model_no_guid_bulk_update(logger, queryset, user, 'delete')
+        cls.log_model_no_guid_bulk_update(queryset, user, 'delete')
         return queryset.delete()
 
     class Meta:
         abstract = True
 
 
-class DeletableSampleMetadataModel(models.Model, BulkOperationBase):
+class DeletableSampleMetadataModel(BulkOperationBase):
     PARENT_FIELD = 'sample'
 
     sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
@@ -1071,7 +1084,7 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         json_fields = ['gene_id', 'tpm']
 
 
-class PhenotypePrioritization(models.Model, BulkOperationBase):
+class PhenotypePrioritization(BulkOperationBase):
     PARENT_FIELD = 'individual'
 
     individual = models.ForeignKey('Individual', on_delete=models.CASCADE, db_index=True)
