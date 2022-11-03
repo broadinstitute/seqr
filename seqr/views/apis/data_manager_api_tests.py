@@ -841,7 +841,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. ')
-        mock_logger.info.assert_called_with(f'Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user)
+        mock_logger.info.assert_called_with('Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user)
 
         project = Project.objects.create(created_by=self.data_manager_user,
                                          name='1kg project nåme with uniçøde', workspace_namespace='my-seqr-billing')
@@ -869,9 +869,9 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         self.assertEqual(response.json()['info'], info)
         mock_logger.info.assert_has_calls([
-            mock.call(f'Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user),
-            mock.call(f'Project 1kg project nåme with uniçøde: deleting 0 record(s), loading 1 record(s)', self.data_manager_user),
-            mock.call(f'Project Test Reprocessed Project: deleting 0 record(s), loading 1 record(s)', self.data_manager_user),
+            mock.call('Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user),
+            mock.call('Project 1kg project nåme with uniçøde: deleting 0 record(s), loading 1 record(s)', self.data_manager_user),
+            mock.call('Project Test Reprocessed Project: deleting 0 record(s), loading 1 record(s)', self.data_manager_user),
         ])
         db_update = {'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
                      'parentEntityIds': {'I000002_na19678', 'I000015_na20885'}, 'updateType': 'bulk_create'}
@@ -892,8 +892,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         self.assertEqual(response.json()['info'], info)
         mock_logger.info.assert_has_calls([
-            mock.call(f'Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user),
-            mock.call(f'Project 1kg project nåme with uniçøde: deleting 1 record(s), loading 2 record(s)', self.data_manager_user),
+            mock.call('Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user),
+            mock.call('Project 1kg project nåme with uniçøde: deleting 1 record(s), loading 2 record(s)', self.data_manager_user),
         ])
         mock_model_logger.info.assert_has_calls([
             mock.call('delete PhenotypePrioritizations', self.data_manager_user, db_update={
