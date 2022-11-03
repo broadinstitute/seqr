@@ -90,7 +90,7 @@ const LocusListsContainer = styled.div`
 const GeneLabel = React.memo(({ popupHeader, popupContent, showEmpty, ...labelProps }) => {
   const content = <GeneLabelContent {...labelProps} />
   return (popupContent || showEmpty) ?
-    <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide="very" hoverable /> : content
+    <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide hoverable /> : content
 })
 
 GeneLabel.propTypes = {
@@ -327,13 +327,22 @@ const RNA_SEQ_COLUMNS = [
 ]
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
-  { ...INDIVIDUAL_NAME_COLUMN, width: 4 },
-  { name: 'diseaseName', content: 'Disease', width: 5, format: ({ diseaseName, diseaseId }) => `${diseaseName} (${diseaseId})` },
-  { name: 'rank', content: 'Rank', width: 1 },
+  INDIVIDUAL_NAME_COLUMN,
+  {
+    name: 'diseaseName',
+    content: 'Disease',
+    format: ({ diseaseName, diseaseId }) => (
+      <div>
+        {diseaseName}
+        <br />
+        <i>{diseaseId}</i>
+      </div>
+    ),
+  },
+  { name: 'rank', content: 'Rank' },
   {
     name: 'scores',
     content: 'Scores',
-    width: 6,
     format: ({ scores }) => Object.keys(scores).sort().map(scoreName => (
       <div key={scoreName}>
         <b>{camelcaseToTitlecase(scoreName).replace(' ', '-')}</b>
@@ -343,6 +352,15 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
     )),
   },
 ]
+
+const getDataTable = props => (
+  <DataTable
+    basic="very"
+    compact="very"
+    singleLine
+    {...props}
+  />
+)
 
 const GENE_DETAIL_SECTIONS = [
   {
@@ -398,37 +416,23 @@ const GENE_DETAIL_SECTIONS = [
     color: 'pink',
     description: 'RNA-Seq Outlier',
     label: 'RNA-Seq',
-    showDetails: (gene, { rnaSeqData }) => rnaSeqData && rnaSeqData[gene.geneId],
-    detailsDisplay: (gene, { rnaSeqData }) => (
+    showDetails: (gene, indivGeneData) => indivGeneData?.rnaSeqData && indivGeneData.rnaSeqData[gene.geneId],
+    detailsDisplay: (gene, indivGeneData) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
-        <DataTable
-          basic="very"
-          data={rnaSeqData[gene.geneId]}
-          idField="individualName"
-          columns={RNA_SEQ_COLUMNS}
-        />
+        {getDataTable({ data: indivGeneData.rnaSeqData[gene.geneId], idField: 'individualName', columns: RNA_SEQ_COLUMNS })}
       </div>
     ),
   },
   {
     color: 'orange',
     description: 'Phenotype Prioritization',
-    showDetails: (gene, { phenotypeGeneScores }) => phenotypeGeneScores && phenotypeGeneScores[gene.geneId],
-    detailsDisplay: (gene, { phenotypeGeneScores }) => (Object.entries(phenotypeGeneScores[gene.geneId]).map(
+    showDetails: (gene, indivGeneData) => indivGeneData?.phenotypeGeneScores &&
+      indivGeneData.phenotypeGeneScores[gene.geneId],
+    detailsDisplay: (gene, indivGeneData) => (Object.entries(indivGeneData.phenotypeGeneScores[gene.geneId]).map(
       ([tool, data]) => ({
         label: tool.toUpperCase(),
-        detail: (
-          <DataTable
-            basic="very"
-            data={data}
-            singleLine
-            fixedWidth
-            idField="rowId"
-            defaultSortColumn="rank"
-            columns={PHENOTYPE_GENE_INFO_COLUMNS}
-          />
-        ),
+        detail: getDataTable({ data, idField: 'rowId', columns: PHENOTYPE_GENE_INFO_COLUMNS, defaultSortColumn: 'rank' }),
       }),
     )),
   },
@@ -462,11 +466,11 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
       ...sectionConfig,
       detail: showDetails(gene, individualGeneData) && detailsDisplay(gene, individualGeneData),
     }),
-).reduce((acc, config) => (Array.isArray(config.detail) ?
+).filter(({ detail }) => detail).reduce((acc, config) => (Array.isArray(config.detail) ?
   [
     ...acc,
     ...config.detail.map(detail => ({ ...config, ...detail })),
-  ] : (config.detail && [...acc, config]) || acc),
+  ] : [...acc, config]),
 []).map(({ detail, expandedDisplay, ...sectionConfig }) => (
   (expandedDisplay && !compact) ? (
     <OmimSegments key={sectionConfig.label}>
@@ -640,7 +644,7 @@ BaseVariantGene.propTypes = {
 
 const getRnaSeqProps = (state, ownProps) => ({
   hasRnaTpmData: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.hasRnaTpmData,
-  individualGeneData: getIndividualGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]] || {},
+  individualGeneData: getIndividualGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
 })
 
 const mapStateToProps = (state, ownProps) => ({

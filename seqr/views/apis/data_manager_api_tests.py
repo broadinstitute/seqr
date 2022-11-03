@@ -858,7 +858,10 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.json()['error'], "Can't find individuals NA19678x, NA19679x")
 
         # Test a successful operation
+        exist_data = PhenotypePrioritization.objects.filter()
+        PhenotypePrioritization.bulk_delete(self.data_manager_user, exist_data)  # clear existing data
         mock_logger.reset_mock()
+        mock_model_logger.reset_mock()
         mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
         self.assertEqual(response.status_code, 200)

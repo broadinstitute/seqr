@@ -135,7 +135,7 @@ def _get_phenotype_prioritization(gene_ids, families):
     data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     data_dicts = _get_json_for_models(
-        PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, individual__family__in=families),
+        PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, individual__family__in=families).order_by('disease_id'),
         nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 

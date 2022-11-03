@@ -284,8 +284,8 @@ class VariantSearchAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
-        lirical_data = response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical']
-        self.assertListEqual(sorted(lirical_data, key=lambda d: d['diseaseId']), EXPECTED_LIRICAL_DATA)
+        self.assertListEqual(response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical'],
+                             EXPECTED_LIRICAL_DATA)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), {'F000001_1', 'F000002_2'})
         self._assert_expected_results_context(response_json)
@@ -499,8 +499,8 @@ class VariantSearchAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
-        lirical_data = response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical']
-        self.assertListEqual(sorted(lirical_data, key=lambda d: d['diseaseId']), EXPECTED_LIRICAL_DATA)
+        self.assertListEqual(response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical'],
+                             EXPECTED_LIRICAL_DATA)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
@@ -648,8 +648,8 @@ class VariantSearchAPITest(object):
         expected_search_response['genesById'].pop('ENSG00000233653')
         expected_search_response['searchedVariants'] = [single_family_variant]
         self.assertDictEqual(response_json, expected_search_response)
-        lirical_data = response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical']
-        self.assertListEqual(sorted(lirical_data, key=lambda d: d['diseaseId']), EXPECTED_LIRICAL_DATA)
+        self.assertListEqual(response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical'],
+                             EXPECTED_LIRICAL_DATA)
         self._assert_expected_results_family_context(response_json, locus_list_detail=True)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1'})
