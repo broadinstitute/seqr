@@ -322,7 +322,7 @@ const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({
 const RNA_SEQ_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
   ...RNA_SEQ_DETAIL_FIELDS.map(name => (
-    { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
+    { name, content: camelcaseToTitlecase(name), format: row => row[name].toPrecision(3) }
   )),
 ]
 
@@ -345,7 +345,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
     content: 'Scores',
     format: ({ scores }) => Object.keys(scores).sort().map(scoreName => (
       <div key={scoreName}>
-        <b>{camelcaseToTitlecase(scoreName).replace(' ', '-')}</b>
+        <b>{camelcaseToTitlecase(scoreName)}</b>
         : &nbsp;
         { scores[scoreName].toPrecision(3) }
       </div>
@@ -353,14 +353,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
   },
 ]
 
-const getDataTable = props => (
-  <DataTable
-    basic="very"
-    compact="very"
-    singleLine
-    {...props}
-  />
-)
+const hoverTableProps = { basic: 'very', compact: 'very', singleLine: true }
 
 const GENE_DETAIL_SECTIONS = [
   {
@@ -420,7 +413,12 @@ const GENE_DETAIL_SECTIONS = [
     detailsDisplay: (gene, indivGeneData) => (
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
-        {getDataTable({ data: indivGeneData.rnaSeqData[gene.geneId], idField: 'individualName', columns: RNA_SEQ_COLUMNS })}
+        <DataTable
+          {...hoverTableProps}
+          data={indivGeneData.rnaSeqData[gene.geneId]}
+          idField="individualName"
+          columns={RNA_SEQ_COLUMNS}
+        />
       </div>
     ),
   },
@@ -432,7 +430,15 @@ const GENE_DETAIL_SECTIONS = [
     detailsDisplay: (gene, indivGeneData) => (Object.entries(indivGeneData.phenotypeGeneScores[gene.geneId]).map(
       ([tool, data]) => ({
         label: tool.toUpperCase(),
-        detail: getDataTable({ data, idField: 'rowId', columns: PHENOTYPE_GENE_INFO_COLUMNS, defaultSortColumn: 'rank' }),
+        detail: (
+          <DataTable
+            {...hoverTableProps}
+            data={data}
+            idField="rowId"
+            columns={PHENOTYPE_GENE_INFO_COLUMNS}
+            defaultSortColumn="rank"
+          />
+        ),
       }),
     )),
   },
