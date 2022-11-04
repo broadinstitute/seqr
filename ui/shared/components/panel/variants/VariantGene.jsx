@@ -17,14 +17,12 @@ import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../Sty
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
-import { GenCC, ClingenLabel } from '../genes/GeneDetail'
+import { GenCC, ClingenLabel, HI_THRESHOLD, TS_THRESHOLD } from '../genes/GeneDetail'
 import { getRnaSeqOutilerDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
-const HI_THRESHOLD = 0.84
-const TS_THRESHOLD = 0.993
 
 const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, dispatch, ...props }) => {
   const labelProps = {
@@ -352,8 +350,8 @@ const GENE_DETAIL_SECTIONS = [
     label: 'HI',
     showDetails: gene => gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
     detailsDisplay: gene => (
-      `These are a score under development by the Talkowski lab that predict whether a gene is haploinsufficient based 
-      on large chromosomal microarray data set analysis. Scores >0.84 are considered to have high likelihood to be 
+      `These are a score developed by the Talkowski lab that predict whether a gene is haploinsufficient based 
+      on large chromosomal microarray data set analysis. Scores >${HI_THRESHOLD} are considered to have high likelihood to be 
       haploinsufficient. This gene has a score of ${gene.cnSensitivity.phi.toPrecision(4)}.`),
   },
   {
@@ -362,8 +360,8 @@ const GENE_DETAIL_SECTIONS = [
     label: 'TS',
     showDetails: gene => gene.cnSensitivity.pts && gene.cnSensitivity.pts > TS_THRESHOLD,
     detailsDisplay: gene => (
-      `These are a score under development by the Talkowski lab that predict whether a gene is triplosensitive based on
-       large chromosomal microarray dataset analysis. Scores >0.993 are considered to have high likelihood to be 
+      `These are a score developed by the Talkowski lab that predict whether a gene is triplosensitive based on
+       large chromosomal microarray dataset analysis. Scores >${TS_THRESHOLD} are considered to have high likelihood to be 
        triplosensitive. This gene has a score of ${gene.cnSensitivity.pts.toPrecision(4)}.`),
   },
   {
