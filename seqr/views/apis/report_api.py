@@ -707,7 +707,9 @@ def gregor_export(request, consent_code):
     individuals = Individual.objects.filter(
         family__project__consent_code=consent_code[0],
         family__project__in=projects,
-    ).prefetch_related('family__project', 'mother', 'father')
+        sample__elasticsearch_index__isnull=False,
+    ).distinct().prefetch_related('family__project', 'mother', 'father')
+
     participant_rows = []
     family_map = {}
     phenotype_rows = []
