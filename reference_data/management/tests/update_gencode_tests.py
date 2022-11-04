@@ -49,6 +49,8 @@ class UpdateGencodeTest(TestCase):
         self.temp_file_path = os.path.join(self.test_dir, 'gencode.v31lift37.annotation.gtf.gz')
         with gzip.open(self.temp_file_path, 'wt') as f:
             f.write(''.join(GTF_DATA))
+        with open(self.temp_file_path, 'rb') as f:
+            self.gzipped_gtf_data = f.read()
 
     def tearDown(self):
         # Close the file, the directory will be removed after the test
@@ -115,18 +117,11 @@ class UpdateGencodeTest(TestCase):
 
     @responses.activate
     @mock.patch('reference_data.management.commands.update_gencode.logger')
-    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
-    def test_update_gencode_command_url_generation(self, mock_tempfile, mock_logger):
+    def test_update_gencode_command_url_generation(self, mock_logger):
         # Test the code paths of generating urls, gencode_release == 19
-        tmp_dir = tempfile.gettempdir()
-        mock_tempfile.gettempdir.return_value = tmp_dir
-
-        with open(self.temp_file_path, 'rb') as f:
-            gtf_content = f.read()
-
         url_19 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz'
         responses.add(responses.HEAD, url_19, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_19, body=gtf_content, stream=True)
+        responses.add(responses.GET, url_19, body=self.gzipped_gtf_data, stream=True)
         call_command('update_gencode', '--gencode-release=19')
         self.assertEqual(responses.calls[0].request.url, url_19)
         responses.reset()
@@ -135,7 +130,7 @@ class UpdateGencodeTest(TestCase):
         mock_logger.reset_mock()
         url_20 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_20/gencode.v20.annotation.gtf.gz'
         responses.add(responses.HEAD, url_20, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_20, body=gtf_content, stream=True)
+        responses.add(responses.GET, url_20, body=self.gzipped_gtf_data, stream=True)
         call_command('update_gencode', '--gencode-release=20')
         self.assertEqual(responses.calls[0].request.url, url_20)
         responses.reset()
@@ -144,10 +139,10 @@ class UpdateGencodeTest(TestCase):
         mock_logger.reset_mock()
         url_23 = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/gencode.v23.annotation.gtf.gz'
         responses.add(responses.HEAD, url_23, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_23, body=gtf_content, stream=True)
+        responses.add(responses.GET, url_23, body=self.gzipped_gtf_data, stream=True)
         url_23_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_23/GRCh37_mapping/gencode.v23lift37.annotation.gtf.gz'
         responses.add(responses.HEAD, url_23_lift, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_23_lift, body=gtf_content, stream=True)
+        responses.add(responses.GET, url_23_lift, body=self.gzipped_gtf_data, stream=True)
         call_command('update_gencode', '--gencode-release=23')
         self.assertEqual(responses.calls[0].request.url, url_23_lift)
         self.assertEqual(responses.calls[2].request.url, url_23)
@@ -167,11 +162,10 @@ class UpdateGencodeTest(TestCase):
         self.assertTrue(trans_info.is_mane_select)
 
     @responses.activate
-    @mock.patch('reference_data.management.commands.utils.download_utils.tempfile')
     @mock.patch('reference_data.management.commands.utils.gencode_utils.logger')
     @mock.patch('reference_data.management.commands.update_gencode_transcripts.logger')
     @mock.patch('reference_data.management.commands.update_gencode.logger')
-    def test_update_gencode_command(self, mock_logger, mock_update_transcripts_logger, mock_utils_logger, mock_tempfile):
+    def test_update_gencode_command(self, mock_logger, mock_update_transcripts_logger, mock_utils_logger):
         # Test normal command function
         call_command('update_gencode', '--gencode-release=31', self.temp_file_path, '37')
         mock_utils_logger.info.assert_has_calls([
@@ -234,17 +228,12 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.strand_grch37, '-')
 
         # Test only reloading transcripts
-        tmp_dir = tempfile.gettempdir()
-        mock_tempfile.gettempdir.return_value = tmp_dir
-        with open(self.temp_file_path, 'rb') as f:
-            gtf_content = f.read()
-
         url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.annotation.gtf.gz'
         responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url, body=gtf_content, stream=True)
+        responses.add(responses.GET, url, body=self.gzipped_gtf_data, stream=True)
         url_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/GRCh37_mapping/gencode.v31lift37.annotation.gtf.gz'
         responses.add(responses.HEAD, url_lift, headers={"Content-Length": "1024"})
-        responses.add(responses.GET, url_lift, body=gtf_content, stream=True)
+        responses.add(responses.GET, url_lift, body=self.gzipped_gtf_data, stream=True)
 
         call_command('update_gencode_transcripts')
 
