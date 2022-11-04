@@ -147,15 +147,14 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
     """
     def _process_result(result, project):
         result.update({
-            'projectCategoryGuids': list(
-                project.projectcategory_set.values_list('guid', flat=True)
-            ) if add_project_category_guids_field else [],
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
             'userIsCreator': project.created_by == user,
             'isAnalystProject': is_internal_anvil_project(project),
         })
         if add_permissions:
             result['canEdit'] = has_project_permissions(project, user, can_edit=True)
+        if add_project_category_guids_field:
+            result['projectCategoryGuids'] = list(project.projectcategory_set.values_list('guid', flat=True))
 
     prefetch_related_objects(projects, 'created_by')
     if add_project_category_guids_field:
