@@ -2,6 +2,7 @@ import logging
 from collections import OrderedDict
 from django.core.management.base import BaseCommand
 
+from reference_data.management.commands.utils.gencode_utils import LATEST_GENCODE_RELEASE, OLD_GENCODE_RELEASES
 from reference_data.management.commands.utils.update_utils import update_records
 from reference_data.management.commands.update_human_phenotype_ontology import update_hpo
 from reference_data.management.commands.update_dbnsfp_gene import DbNSFPReferenceDataHandler
@@ -13,6 +14,7 @@ from reference_data.management.commands.update_mgi import MGIReferenceDataHandle
 from reference_data.management.commands.update_gene_cn_sensitivity import CNSensitivityReferenceDataHandler
 from reference_data.management.commands.update_gencc import GenCCReferenceDataHandler
 from reference_data.management.commands.update_clingen import ClinGenReferenceDataHandler
+from reference_data.management.commands.update_refseq import RefseqReferenceDataHandler
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +27,7 @@ REFERENCE_DATA_SOURCES = OrderedDict([
     ("mgi", MGIReferenceDataHandler),
     ("gencc", GenCCReferenceDataHandler),
     ("clingen", ClinGenReferenceDataHandler),
+    ("refseq", RefseqReferenceDataHandler),
     ("hpo", None),
 ])
 
@@ -52,11 +55,9 @@ class Command(BaseCommand):
         if not options["skip_gencode"]:
             # Download latest version first, and then add any genes from old releases not included in the latest release
             # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
-            update_gencode(31, reset=True)
-            update_gencode(29)
-            update_gencode(28)
-            update_gencode(27)
-            update_gencode(19)
+            update_gencode(LATEST_GENCODE_RELEASE, reset=True)
+            for release in OLD_GENCODE_RELEASES:
+                update_gencode(release)
             updated.append('gencode')
 
         if not options["skip_omim"]:
