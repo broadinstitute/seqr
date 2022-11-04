@@ -815,9 +815,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         return iter(['\t'.join(line) for line in data])
 
     @mock.patch('seqr.views.utils.dataset_utils.file_iter')
-    @mock.patch('seqr.views.apis.data_manager_api.logger')
     @mock.patch('seqr.models.logger')
-    def test_load_phenotype_prioritization_data(self, mock_model_logger, mock_logger, mock_file_iter):
+    def test_load_phenotype_prioritization_data(self, mock_logger, mock_file_iter):
         url = reverse(load_phenotype_prioritization_data)
         self.check_data_manager_login(url)
 
@@ -841,7 +840,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. ')
-        mock_logger.info.assert_called_with('Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user)
 
         project = Project.objects.create(created_by=self.data_manager_user,
                                          name='1kg project nåme with uniçøde', workspace_namespace='my-seqr-billing')
@@ -858,7 +856,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.json()['error'], "Can't find individuals NA19678x, NA19679x")
 
         # Test a successful operation
-        mock_logger.reset_mock()
         mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
         self.assertEqual(response.status_code, 200)
@@ -868,21 +865,15 @@ class DataManagerAPITest(AuthenticationTestCase):
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
-        mock_logger.info.assert_has_calls([
-            mock.call('Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user),
-            mock.call('Project 1kg project nåme with uniçøde: deleting 0 record(s), loading 1 record(s)', self.data_manager_user),
-            mock.call('Project Test Reprocessed Project: deleting 0 record(s), loading 1 record(s)', self.data_manager_user),
-        ])
         db_update = {'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
                      'parentEntityIds': {'I000002_na19678', 'I000015_na20885'}, 'updateType': 'bulk_create'}
-        mock_model_logger.info.assert_called_with('create PhenotypePrioritizations', self.data_manager_user, db_update=db_update)
-        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(),
+        mock_logger.info.assert_called_with('create PhenotypePrioritizations', self.data_manager_user, db_update=db_update)
+        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
 
         # Test uploading new data
         mock_logger.reset_mock()
-        mock_model_logger.reset_mock()
         mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
         self.assertEqual(response.status_code, 200)
@@ -892,10 +883,6 @@ class DataManagerAPITest(AuthenticationTestCase):
         ]
         self.assertEqual(response.json()['info'], info)
         mock_logger.info.assert_has_calls([
-            mock.call('Loading Lirical data from lirical_data.tsv.gz', self.data_manager_user),
-            mock.call('Project 1kg project nåme with uniçøde: deleting 1 record(s), loading 2 record(s)', self.data_manager_user),
-        ])
-        mock_model_logger.info.assert_has_calls([
             mock.call('delete PhenotypePrioritizations', self.data_manager_user, db_update={
                 'dbEntity': 'PhenotypePrioritization', 'numEntities': 1,
                 'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_delete',
@@ -904,6 +891,6 @@ class DataManagerAPITest(AuthenticationTestCase):
                       db_update={'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
                      'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_create'}),
         ])
-        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(),
+        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)

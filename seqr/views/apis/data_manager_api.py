@@ -404,7 +404,6 @@ def load_phenotype_prioritization_data(request):
         return create_json_response({'error': str(e)}, status=400)
 
     info = [f'Loaded {tool.title()} data from {file_path}']
-    logger.info(f'Loading {tool.title()} data from {file_path}', request.user)
 
     internal_projects = get_internal_projects().filter(name__in=data_by_project_indiv_id)
     projects_by_name = {p_name: [project for project in internal_projects if project.name == p_name]
@@ -439,11 +438,6 @@ def load_phenotype_prioritization_data(request):
 
         delete_info = f'deleted {len(exist_records)} record(s), ' if exist_records else ''
         info.append(f'Project {project_name}: {delete_info}loaded {len(indiv_records)} record(s)')
-
-        logger.info(
-            f'Project {project_name}: deleting {len(exist_records)} record(s), loading {len(indiv_records)} record(s)',
-            request.user
-        )
 
         to_delete |= exist_records
         all_records += indiv_records

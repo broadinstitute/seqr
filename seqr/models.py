@@ -1016,15 +1016,16 @@ class BulkOperationBase(models.Model):
 
     @classmethod
     def log_model_no_guid_bulk_update(cls, models, user, update_type):
-        if models:
-            db_entity = type(models[0]).__name__
-            prefetch_related_objects(models, models[0].PARENT_FIELD)
-            parent_ids = {getattr(model, models[0].PARENT_FIELD).guid for model in models}
-            db_update = {
-                'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
-                'updateType': 'bulk_{}'.format(update_type),
-            }
-            logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
+        if not models:
+            return
+        db_entity = cls.__name__
+        prefetch_related_objects(models, cls.PARENT_FIELD)
+        parent_ids = {getattr(model, cls.PARENT_FIELD).guid for model in models}
+        db_update = {
+            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
+            'updateType': 'bulk_{}'.format(update_type),
+        }
+        logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
 
     @classmethod
     def bulk_create(cls, user, new_models):
