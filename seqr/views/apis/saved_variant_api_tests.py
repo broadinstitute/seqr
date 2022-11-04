@@ -27,7 +27,7 @@ GENE_GUID_2 = 'ENSG00000197530'
 
 SAVED_VARIANT_RESPONSE_KEYS = {
     'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
-    'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid',
+    'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid', 'transcriptsById',
 }
 
 COMPOUND_HET_3_JSON = {
@@ -161,6 +161,11 @@ class SavedVariantAPITest(object):
         gene_fields.update(GENE_VARIANT_FIELDS)
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         self.assertSetEqual(set(response_json['genesById']['ENSG00000135953'].keys()), gene_fields)
+
+        self.assertDictEqual(
+            response_json['transcriptsById'],
+            {'ENST00000258436': {'isManeSelect': True, 'refseqId': 'NM_017900.2', 'transcriptId': 'ENST00000258436'}},
+        )
 
         self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {
             'outliers': {
