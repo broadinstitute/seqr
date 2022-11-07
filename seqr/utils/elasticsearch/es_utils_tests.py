@@ -1778,7 +1778,7 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_num_alt_2': 'HG00731'}}
                                 ]
                             }},
-                            {'bool': {
+                            {'bool': {'should': [{'bool': {
                                 'minimum_should_match': 1,
                                 'should': [
                                     {'bool': {
@@ -1826,7 +1826,9 @@ class EsUtilsTest(TestCase):
                                         ]
                                     }},
                                 ]
-                            }}
+                            }}, {'terms': {
+                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}]}}
                         ],
                     }},
                     {'bool': {
@@ -1835,7 +1837,7 @@ class EsUtilsTest(TestCase):
                                 {'term': {'samples_num_alt_1': 'NA20870'}},
                                 {'term': {'samples_num_alt_2': 'NA20870'}}
                             ]}},
-                            {'bool': {
+                            {'bool': {'should': [{'bool': {
                                 'minimum_should_match': 1,
                                 'should': [
                                     {'bool': {
@@ -1851,7 +1853,9 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_gq_5_to_10': 'NA20870'}},
                                     {'term': {'samples_gq_10_to_15': 'NA20870'}},
                                 ]
-                            }}
+                            }}, {'terms': {
+                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}]}}
                         ],
                         '_name': 'F000003_3'
                     }},
@@ -2052,8 +2056,16 @@ class EsUtilsTest(TestCase):
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}},
         ]}}
 
+        inheritance_query = deepcopy(COMPOUND_HET_INHERITANCE_QUERY)
+        for fam_q in inheritance_query['bool']['should']:
+            fam_quality_q = fam_q['bool']['must'][1]
+            fam_quality_q['bool'] = {'should': [
+                deepcopy(fam_quality_q),
+                {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}}
+            ]}
+
         self.assertExecutedSearch(
-            filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
+            filters=[annotation_query, inheritance_query],
             gene_aggs=True,
             start_index=0,
             size=1

@@ -1324,8 +1324,8 @@ class EsSearch(object):
                                 quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
                             else:
                                 quality_q &= ~Q(q)
-                    if path_filter:
-                        quality_q |= path_filter
+                if path_filter:
+                    quality_q |= path_filter
                 quality_filters_by_family[family_guid] = quality_q
         return quality_filters_by_family
 
