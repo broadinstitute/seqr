@@ -261,8 +261,7 @@ class EsSearch(object):
         if inheritance:
             self._filter_families_for_inheritance(inheritance_filter, skipped_sample_count)
 
-        quality_filters_by_family = _quality_filters_by_family(
-            quality_filter, self.samples_by_family_index, self._indices, new_svs=self._consequence_overrides.get(NEW_SV_FIELD))
+        quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
 
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
@@ -1285,6 +1284,41 @@ class EsSearch(object):
             raise ValueError('Invalid variant id')
         return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]
 
+    def _get_quality_filters_by_family(self, quality_filter):
+        quality_field_configs = {
+            'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
+        }
+        quality_filter = dict({field: 0 for field in quality_field_configs.keys()}, **(quality_filter or {}))
+        for field, config in quality_field_configs.items():
+            if quality_filter[field] % config['step'] != 0:
+                raise Exception('Invalid {} filter {}'.format(config['field'], quality_filter[field]))
+
+        quality_filters_by_family = {}
+        new_svs = self._consequence_overrides.get(NEW_SV_FIELD)
+        if new_svs or any(quality_filter[field] for field in quality_field_configs.keys()):
+            family_sample_ids = defaultdict(set)
+            for index in self._indices:
+                family_samples_by_id = self.samples_by_family_index[index]
+                for family_guid, samples_by_id in family_samples_by_id.items():
+                    family_sample_ids[family_guid].update(samples_by_id.keys())
+
+            for family_guid, sample_ids in sorted(family_sample_ids.items()):
+                quality_q = Q('terms', samples_new_call=sorted(sample_ids)) if new_svs else Q()
+                for sample_id in sorted(sample_ids):
+                    for field, config in sorted(quality_field_configs.items()):
+                        if quality_filter[field]:
+                            q = _build_or_filter('term', [
+                                {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
+                                for i in range(0, quality_filter[field], config['step'])
+                            ])
+                            if field == 'min_ab':
+                                #  AB only relevant for hets
+                                quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
+                            else:
+                                quality_q &= ~Q(q)
+                quality_filters_by_family[family_guid] = quality_q
+        return quality_filters_by_family
+
 
 # TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/broadinstitute/seqr/issues/1010)
 LIFTOVER_GRCH38_TO_GRCH37 = None
@@ -1306,41 +1340,6 @@ def _get_family_affected_status(samples_by_id, inheritance_filter):
         affected_status[indiv.guid] = individual_affected_status.get(indiv.guid) or indiv.affected
 
     return affected_status
-
-
-def _quality_filters_by_family(quality_filter, samples_by_family_index, indices, new_svs=False):
-    quality_field_configs = {
-        'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
-    }
-    quality_filter = dict({field: 0 for field in quality_field_configs.keys()}, **(quality_filter or {}))
-    for field, config in quality_field_configs.items():
-        if quality_filter[field] % config['step'] != 0:
-            raise Exception('Invalid {} filter {}'.format(config['field'], quality_filter[field]))
-
-    quality_filters_by_family = {}
-    if new_svs or any(quality_filter[field] for field in quality_field_configs.keys()):
-        family_sample_ids = defaultdict(set)
-        for index in indices:
-            family_samples_by_id = samples_by_family_index[index]
-            for family_guid, samples_by_id in family_samples_by_id.items():
-                family_sample_ids[family_guid].update(samples_by_id.keys())
-
-        for family_guid, sample_ids in sorted(family_sample_ids.items()):
-            quality_q = Q('terms', samples_new_call=sorted(sample_ids)) if new_svs else Q()
-            for sample_id in sorted(sample_ids):
-                for field, config in sorted(quality_field_configs.items()):
-                    if quality_filter[field]:
-                        q = _build_or_filter('term', [
-                            {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
-                            for i in range(0, quality_filter[field], config['step'])
-                        ])
-                        if field == 'min_ab':
-                            #  AB only relevant for hets
-                            quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
-                        else:
-                            quality_q &= ~Q(q)
-            quality_filters_by_family[family_guid] = quality_q
-    return quality_filters_by_family
 
 
 def _any_affected_sample_filter(sample_ids):
