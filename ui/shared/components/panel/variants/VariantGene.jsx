@@ -322,7 +322,7 @@ const INDIVIDUAL_NAME_COLUMN = { name: 'individualName', content: '', format: ({
 const RNA_SEQ_COLUMNS = [
   INDIVIDUAL_NAME_COLUMN,
   ...RNA_SEQ_DETAIL_FIELDS.map(name => (
-    { name, content: camelcaseToTitlecase(name), format: row => row[name].toPrecision(3) }
+    { name, content: camelcaseToTitlecase(name).replace(' ', '-'), format: row => row[name].toPrecision(3) }
   )),
 ]
 
@@ -353,7 +353,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
   },
 ]
 
-const hoverTableProps = { basic: 'very', compact: 'very', singleLine: true }
+const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
 const GENE_DETAIL_SECTIONS = [
   {
@@ -414,7 +414,7 @@ const GENE_DETAIL_SECTIONS = [
       <div>
         This gene is flagged as an outlier for RNA-Seq in the following samples
         <DataTable
-          {...hoverTableProps}
+          {...HOVER_DATA_TABLE_PROPS}
           data={indivGeneData.rnaSeqData[gene.geneId]}
           idField="individualName"
           columns={RNA_SEQ_COLUMNS}
@@ -432,7 +432,7 @@ const GENE_DETAIL_SECTIONS = [
         label: tool.toUpperCase(),
         detail: (
           <DataTable
-            {...hoverTableProps}
+            {...HOVER_DATA_TABLE_PROPS}
             data={data}
             idField="rowId"
             columns={PHENOTYPE_GENE_INFO_COLUMNS}
