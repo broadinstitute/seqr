@@ -4,6 +4,7 @@ import logging
 import redis
 
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
+from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
@@ -79,19 +80,30 @@ def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs)
     return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
 
 
-def _saved_variant_genes(variants):
+def _saved_variant_genes_transcripts(variants):
     gene_ids = set()
+    transcript_ids = set()
     for variant in variants:
-        if isinstance(variant, list):
-            for compound_het in variant:
-                gene_ids.update(list(compound_het.get('transcripts', {}).keys()))
-        else:
-            gene_ids.update(list(variant.get('transcripts', {}).keys()))
+        if not isinstance(variant, list):
+            variant = [variant]
+        for var in variant:
+            for gene_id, transcripts in var.get('transcripts', {}).items():
+                gene_ids.add(gene_id)
+                transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
+
     genes = get_genes_for_variants(gene_ids)
     for gene in genes.values():
         if gene:
             gene['locusListGuids'] = []
-    return genes
+
+    transcripts = {
+        t['transcriptId']: t for t in _get_json_for_models(
+            TranscriptInfo.objects.filter(transcript_id__in=transcript_ids),
+            nested_fields=[{'fields': ('refseqtranscript', 'refseq_id'), 'key': 'refseqId'}]
+        )
+    }
+
+    return genes, transcripts
 
 
 def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
@@ -195,7 +207,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
         response.update(discovery_response)
 
-    genes = _saved_variant_genes(variants)
+    genes, transcripts = _saved_variant_genes_transcripts(variants)
+    response['transcriptsById'] = transcripts
     response['locusListsByGuid'] = _add_locus_lists(
         projects, genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
 

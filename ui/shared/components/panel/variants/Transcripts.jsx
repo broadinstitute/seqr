@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Label, Header, Table, Segment } from 'semantic-ui-react'
 
-import { getGenesById } from 'redux/selectors'
+import { getGenesById, getTranscriptsById } from 'redux/selectors'
 import { updateVariantMainTranscript } from 'redux/rootReducer'
 import { VerticalSpacer } from '../../Spacers'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
@@ -22,7 +22,27 @@ const AnnotationLabel = styled.small`
   padding-right: 10px;
 `
 
-const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) => (
+const HeaderLabel = AnnotationLabel.withComponent('span')
+
+const TRANSCRIPT_LABELS = [
+  {
+    content: 'Canonical',
+    color: 'green',
+    shouldShow: transcript => transcript.canonical,
+  },
+  {
+    content: 'MANE Select',
+    color: 'teal',
+    shouldShow: (transcript, transcriptsById) => transcriptsById[transcript.transcriptId]?.isManeSelect,
+  },
+  {
+    content: 'seqr Chosen Transcript',
+    color: 'blue',
+    shouldShow: transcript => transcript.transcriptRank === 0,
+  },
+]
+
+const Transcripts = React.memo(({ variant, genesById, transcriptsById, updateMainTranscript }) => (
   variant.transcripts && Object.entries(variant.transcripts).sort((transcriptsA, transcriptsB) => (
     Math.min(...transcriptsA[1].map(t => t.transcriptRank)) - Math.min(...transcriptsB[1].map(t => t.transcriptRank))
   )).map(([geneId, geneTranscripts]) => (
@@ -40,23 +60,24 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
               <Table.Row key={transcript.transcriptId}>
                 <Table.Cell width={3}>
                   <TranscriptLink variant={variant} transcript={transcript} />
+                  {transcriptsById[transcript.transcriptId]?.refseqId && (
+                    <div>
+                      <HeaderLabel>RefSeq:</HeaderLabel>
+                      <a
+                        href={`https://www.ncbi.nlm.nih.gov/nuccore/${transcriptsById[transcript.transcriptId].refseqId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {transcriptsById[transcript.transcriptId].refseqId}
+                      </a>
+                    </div>
+                  )}
                   <div>
-                    {
-                      transcript.transcriptRank === 0 && (
-                        <span>
-                          <VerticalSpacer height={5} />
-                          <Label content="seqr Chosen Transcript" color="blue" size="small" />
-                        </span>
+                    {TRANSCRIPT_LABELS.map(({ shouldShow, ...labelProps }) => (
+                      shouldShow(transcript, transcriptsById) && (
+                        <Label key={labelProps.content} size="small" horizontal {...labelProps} />
                       )
-                    }
-                    {
-                      transcript.canonical && (
-                        <span>
-                          <VerticalSpacer height={5} />
-                          <Label content="Canonical Transcript" color="green" size="small" />
-                        </span>
-                      )
-                    }
+                    ))}
                     {
                       variant.variantGuid && (
                         <span>
@@ -119,11 +140,13 @@ const Transcripts = React.memo(({ variant, genesById, updateMainTranscript }) =>
 Transcripts.propTypes = {
   variant: PropTypes.object.isRequired,
   genesById: PropTypes.object.isRequired,
+  transcriptsById: PropTypes.object.isRequired,
   updateMainTranscript: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({
   genesById: getGenesById(state),
+  transcriptsById: getTranscriptsById(state),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
