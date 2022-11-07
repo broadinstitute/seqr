@@ -243,15 +243,14 @@ class EsSearch(object):
 
         self._filter_by_location(genes, intervals, variant_ids, rs_ids, locus)
 
-        clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
-        self._filter_by_frequency(frequencies, clinvar_terms=clinvar_terms)
+        annotations, new_svs = self._parse_annotation_overrides(annotations, pathogenicity)
+
+        self._filter_by_frequency(frequencies)
 
         self._filter_by_in_silico(in_silico)
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self._filter(~Q('exists', field='filters'))
-
-        annotations, new_svs = self._parse_annotation_overrides(annotations, clinvar_terms, hgmd_classes)
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
@@ -284,7 +283,9 @@ class EsSearch(object):
         if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
             self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
 
-    def _parse_annotation_overrides(self, annotations, clinvar_terms, hgmd_classes):
+    def _parse_annotation_overrides(self, annotations, pathogenicity):
+        clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
+
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
@@ -324,12 +325,13 @@ class EsSearch(object):
         if in_silico_filters:
             self._filter(_in_silico_filter(in_silico_filters))
 
-    def _filter_by_frequency(self, frequencies, clinvar_terms=None):
+    def _filter_by_frequency(self, frequencies):
         frequencies = {pop: v for pop, v in (frequencies or {}).items() if pop in POPULATIONS}
         if not frequencies:
             return
 
-        clinvar_path_filters = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES]
+        clinvar_terms = self._consequence_overrides.get(CLINVAR_KEY)
+        clinvar_path_filters = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES] if clinvar_terms else None
         path_override = bool(clinvar_path_filters) and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
