@@ -1309,6 +1309,7 @@ class EsSearch(object):
                 for family_guid, samples_by_id in family_samples_by_id.items():
                     family_sample_ids[family_guid].update(samples_by_id.keys())
 
+            path_filter = self._get_clinvar_pathogenic_override_filter()
             for family_guid, sample_ids in sorted(family_sample_ids.items()):
                 quality_q = Q('terms', samples_new_call=sorted(sample_ids)) if new_svs else Q()
                 for sample_id in sorted(sample_ids):
@@ -1323,6 +1324,8 @@ class EsSearch(object):
                                 quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
                             else:
                                 quality_q &= ~Q(q)
+                    if path_filter:
+                        quality_q |= path_filter
                 quality_filters_by_family[family_guid] = quality_q
         return quality_filters_by_family
 
