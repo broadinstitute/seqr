@@ -331,9 +331,8 @@ class EsSearch(object):
         if not frequencies:
             return
 
-        clinvar_terms = self._consequence_overrides.get(CLINVAR_KEY)
-        clinvar_path_filters = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES] if clinvar_terms else None
-        path_override = bool(clinvar_path_filters) and any(
+        path_filter = self._get_clinvar_pathogenic_override_filter()
+        path_override = path_filter is not None and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
         q = Q()
@@ -355,9 +354,17 @@ class EsSearch(object):
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
 
         if path_override:
-            q |= (_pathogenicity_filter(clinvar_path_filters) & path_q)
+            q |= (path_filter & path_q)
 
         self._filter(q)
+
+    def _get_clinvar_pathogenic_override_filter(self):
+        clinvar_path_terms = [
+            f for f in self._consequence_overrides.get(CLINVAR_KEY, []) if f in CLINVAR_PATH_SIGNIFICANCES
+        ]
+        if clinvar_path_terms:
+            return _pathogenicity_filter(clinvar_path_terms)
+        return None
 
     def _get_annotation_override_filter(self):
         filters = []
