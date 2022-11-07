@@ -243,7 +243,7 @@ class EsSearch(object):
 
         self._filter_by_location(genes, intervals, variant_ids, rs_ids, locus)
 
-        annotations, new_svs = self._parse_annotation_overrides(annotations, pathogenicity)
+        annotations = self._parse_annotation_overrides(annotations, pathogenicity)
 
         self._filter_by_frequency(frequencies)
 
@@ -262,7 +262,7 @@ class EsSearch(object):
             self._filter_families_for_inheritance(inheritance_filter, skipped_sample_count)
 
         quality_filters_by_family = _quality_filters_by_family(
-            quality_filter, self.samples_by_family_index, self._indices, new_svs=new_svs)
+            quality_filter, self.samples_by_family_index, self._indices, new_svs=self._consequence_overrides.get(NEW_SV_FIELD))
 
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
@@ -273,7 +273,7 @@ class EsSearch(object):
                     self.update_dataset_type(comp_het_dataset_type)
                 return
 
-        dataset_type = self._filter_by_annotations(annotations, new_svs)
+        dataset_type = self._filter_by_annotations(annotations)
 
         if skip_genotype_filter and not inheritance_mode:
             return
@@ -299,8 +299,10 @@ class EsSearch(object):
             self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
         if screen:
             self._consequence_overrides[SCREEN_KEY] = screen
+        if new_svs:
+            self._consequence_overrides[NEW_SV_FIELD] = new_svs
 
-        return annotations, new_svs
+        return annotations
 
     def _filter_by_location(self, genes, intervals, variant_ids, rs_ids, locus):
         if genes or intervals:
@@ -376,9 +378,10 @@ class EsSearch(object):
             return None
         return _or_filters(filters)
 
-    def _filter_by_annotations(self, annotations, new_svs):
+    def _filter_by_annotations(self, annotations):
         dataset_type = None
         annotation_override_filter = self._get_annotation_override_filter()
+        new_svs = self._consequence_overrides.get(NEW_SV_FIELD)
 
         if self._allowed_consequences:
             consequences_filter = _annotations_filter(self._allowed_consequences)
