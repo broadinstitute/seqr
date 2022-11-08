@@ -210,7 +210,7 @@ def project_overview(request, project_guid):
 
     project_json = response['projectsByGuid'][project_guid]
     project_json.update({
-        'detailsLoaded': True,
+        'overviewLoaded': True,
         'collaborators': get_json_for_project_collaborator_list(request.user, project),
         'collaboratorGroups': get_json_for_project_collaborator_groups(project),
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),

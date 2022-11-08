@@ -21,6 +21,7 @@ const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
 const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
+const REQUEST_PROJECT_COLLABORATORS = 'REQUEST_PROJECT_COLLABORATORS'
 const REQUEST_FAMILIES = 'REQUEST_FAMILIES'
 const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
 const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
@@ -52,20 +53,9 @@ export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
   loadFamilyNotes()(dispatch, getState),
 ])
 
-export const loadProjectOverview = () => (dispatch, getState) => {
-  const { currentProjectGuid, projectsByGuid } = getState()
-  const project = projectsByGuid[currentProjectGuid]
-  if (!project.detailsLoaded) {
-    dispatch({ type: REQUEST_PROJECT_OVERVIEW })
-    new HttpRequestHelper(`/api/project/${currentProjectGuid}/get_overview`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      },
-      (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      }).get()
-  }
-}
+export const loadProjectOverview = () => loadCurrentProjectChildEntities('overview', REQUEST_PROJECT_OVERVIEW)
+
+export const loadProjectCollaborators = () => loadCurrentProjectChildEntities('collaborators', REQUEST_PROJECT_COLLABORATORS)
 
 export const loadFamilyVariantSummary = familyGuid => loadFamilyData(
   familyGuid, 'discoveryTags', 'variant_tag_summary', REQUEST_FAMILY_VARIANT_SUMMARY,
@@ -324,6 +314,7 @@ export const reducers = {
   individualsLoading: loadingReducer(REQUEST_INDIVIDUALS, RECEIVE_DATA),
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_DATA),
+  projectCollaboratorsLoading: loadingReducer(REQUEST_PROJECT_COLLABORATORS, RECEIVE_DATA),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesSearch: '',
     familiesSortOrder: SORT_BY_FAMILY_NAME,
