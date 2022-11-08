@@ -8,7 +8,7 @@ from django.urls.base import reverse
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace, project_family_notes
+    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
@@ -240,9 +240,8 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'collaborators', 'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'detailsLoaded',
-            'projectGuid', 'name', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
-            'analysisGroupsLoaded', 'collaboratorGroups',
+            'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'overviewLoaded',
+            'projectGuid', 'name', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount', 'analysisGroupsLoaded',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project_response.keys()), project_fields)
@@ -259,8 +258,6 @@ class ProjectAPITest(object):
             'order': 100,
             'numTags': 1,
         })
-        self.assertListEqual(project_response['collaborators'], self.PROJECT_COLLABORATORS)
-        self.assertEqual(project_response['collaboratorGroups'], self.PROJECT_COLLABORATOR_GROUPS)
         self.assertListEqual(project_response['locusListGuids'], ['LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'])
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
@@ -291,6 +288,23 @@ class ProjectAPITest(object):
         empty_url = reverse(project_overview, args=[EMPTY_PROJECT_GUID])
         self._check_empty_project(empty_url, response_keys)
 
+    def test_project_collaborators(self):
+        url = reverse(project_collaborators, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertDictEqual(response.json(), {'projectsByGuid': {PROJECT_GUID: {
+            'collaboratorsLoaded': True,
+            'collaborators': self.PROJECT_COLLABORATORS,
+            'collaboratorGroups': self.PROJECT_COLLABORATOR_GROUPS,
+        }}})
+
+        # Test empty project
+        empty_url = reverse(project_collaborators, args=[EMPTY_PROJECT_GUID])
+        self._check_empty_project(empty_url, {'projectsByGuid'})
+
         if hasattr(self, 'mock_get_ws_acl'):
             self.mock_get_ws_acl.side_effect = TerraAPIException('AnVIL Error', 400)
             response = self.client.get(url)
@@ -301,7 +315,6 @@ class ProjectAPITest(object):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 401)
             self.assertEqual(response.json()['error'], '/login')
-
 
     def test_project_families(self):
         url = reverse(project_families, args=[PROJECT_GUID])
@@ -543,11 +556,19 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     def test_project_overview(self):
         super(AnvilProjectAPITest, self).test_project_overview()
         self.mock_list_workspaces.assert_not_called()
+        self.assert_no_extra_anvil_calls()
+        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'empty')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
+
+    def test_project_collaborators(self):
+        super(AnvilProjectAPITest, self).test_project_collaborators()
+        self.mock_list_workspaces.assert_not_called()
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
         self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
-            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 4)
+                                                'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_acl.call_count, 3)
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
-            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 6)
+                                                         'my-seqr-billing',
+                                                         'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
