@@ -2,9 +2,7 @@
 
 set -u
 
-DEPLOYMENT_TARGET=$1
-COMPONENT=$2
-JSON_PATH=$3
+COMPONENT=$1
+JSON_PATH=$2
 
-
-kubectl get pod -l "name=${COMPONENT},deployment=gcloud-${DEPLOYMENT_TARGET}" -o "jsonpath=${JSON_PATH}"
+kubectl get pod -l "app.kubernetes.io/name=${COMPONENT}" -o "jsonpath=${JSON_PATH}"

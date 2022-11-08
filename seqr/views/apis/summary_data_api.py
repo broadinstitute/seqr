@@ -97,7 +97,7 @@ def saved_variants_page(request, tag):
 
     response_json = get_variants_response(
         request, saved_variant_models, add_all_context=True, include_igv=False, add_locus_list_detail=True,
-        include_rna_seq=False, include_project_name=True,
+        include_individual_gene_scores=False, include_project_name=True,
     )
 
     return create_json_response(response_json)
