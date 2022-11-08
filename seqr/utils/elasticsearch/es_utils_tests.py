@@ -1973,9 +1973,30 @@ class EsUtilsTest(TestCase):
         }}
         self.assertExecutedSearches([
             dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
-            dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),  # TODO
+            dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
             dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
+
+        # test with dataset filtering applied
+        search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+
+        get_es_variants(results_model, num_results=5)
+        filter = {'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}, path_filter]}}
+        self.assertExecutedSearches([
+            dict(filters=[filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
+            dict(filters=[filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
+        ])
+
+        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+
+        get_es_variants(results_model, num_results=5)
+        self.assertExecutedSearch(
+            filters=[{'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['DEL']}}, path_filter]}}],
+            start_index=0, size=5, index=SV_INDEX_NAME)
 
     @urllib3_responses.activate
     def test_multi_dataset_no_affected_inheritance_get_es_variants(self):
