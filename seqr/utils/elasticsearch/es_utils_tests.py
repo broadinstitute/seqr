@@ -1182,6 +1182,11 @@ def create_mock_response(search, index=INDEX_NAME):
             index_hits = [hit for hit in index_hits if hit['_id'] in variant_id_filters]
         response_dict['hits']['hits'] += index_hits
 
+    try:
+        response_dict['hits']['hits'] = sorted(response_dict['hits']['hits'], key=lambda v: v['_sort'])
+    except (KeyError, TypeError):
+        pass
+
     if search.get('aggs'):
         index_vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
         buckets = [{'key': gene_id, 'doc_count': 3} for gene_id in ['ENSG00000135953', 'ENSG00000228198']]
@@ -1313,7 +1318,8 @@ class EsUtilsTest(TestCase):
 
     def assertCachedResults(self, results_model, expected_results, sort='xpos'):
         cache_key = 'search_results__{}__{}'.format(results_model.guid, sort)
-        self.assertDictEqual(json.loads(REDIS_CACHE.get(cache_key)), expected_results)
+        self.assertTrue(cache_key in REDIS_CACHE)
+        self.assertDictEqual(json.loads(REDIS_CACHE[cache_key]), expected_results)
         MOCK_REDIS.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     @urllib3_responses.activate
@@ -1330,8 +1336,9 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1], PARSED_NO_SORT_VARIANTS[1])
 
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=3,
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=6,
             unsorted=True,
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME])
         )
 
     @urllib3_responses.activate
@@ -1532,7 +1539,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
-        self.assertEqual(total_results, 5)
+        self.assertEqual(total_results, 10)
 
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
         self.assertTrue('index_metadata__{},{},{}'.format(INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
@@ -2362,7 +2369,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
-        self.assertExecutedSearch(filters=[
+        self.assertExecutedSearch(index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, filters=[
             {'terms': {'variantId': ['1-248367227-TC-T', '2-103343353-GAGA-G']}}, ANNOTATION_QUERY])
 
     @urllib3_responses.activate
@@ -2635,9 +2642,9 @@ class EsUtilsTest(TestCase):
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, SECOND_INDEX_NAME, MITO_WGS_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
-            size=4,
+            size=6,
         )
 
         # test pagination
@@ -3002,12 +3009,12 @@ class EsUtilsTest(TestCase):
         gene_counts = get_es_variant_gene_counts(results_model, None)
 
         self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 1, 'F000002_2': 1, 'F000011_11': 1}},
+            'ENSG00000135953': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}},
             'ENSG00000228198': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}}
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
             size=1,
             gene_count_aggs={
@@ -3123,12 +3130,13 @@ class EsUtilsTest(TestCase):
 
         variants, _ = get_es_variants(results_model, sort='primate_ai', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
-            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'])
+            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'],
+                                  index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4)
         self.assertEqual(variants[0]['_sort'][0], maxsize)
         self.assertEqual(variants[1]['_sort'][0], -1)
 
         variants, _ = get_es_variants(results_model, sort='gnomad', num_results=2)
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, sort=[
             {
                 '_script': {
                     'type': 'number',
@@ -3142,7 +3150,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(variants[1]['_sort'][0], maxsize)
 
         variants, _ = get_es_variants(results_model, sort='in_omim', num_results=2)
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, sort=[
             {
                 '_script': {
                     'type': 'number',
