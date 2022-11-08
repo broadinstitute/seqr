@@ -1161,10 +1161,13 @@ def create_mock_response(search, index=INDEX_NAME):
     indices = index.split(',')
     include_matched_queries = False
     variant_id_filters = None
+    gene_ids_filters = set()
     if 'query' in search:
         for search_filter in search['query']['bool']['filter']:
             if not variant_id_filters:
                 variant_id_filters = search_filter.get('terms', {}).get('variantId')
+            if not gene_ids_filters and not search.get('aggs'):
+                gene_ids_filters.update(search_filter.get('terms', {}).get('geneIds') or [])
             possible_inheritance_filters = search_filter.get('bool', {}).get('should', []) + [search_filter]
             if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
                 include_matched_queries = True
@@ -1180,6 +1183,10 @@ def create_mock_response(search, index=INDEX_NAME):
             index=index_name)
         if variant_id_filters:
             index_hits = [hit for hit in index_hits if hit['_id'] in variant_id_filters]
+        elif gene_ids_filters:
+            index_hits = [hit for hit in index_hits if any(
+                gene_ids_filters.intersection({t['gene_id'] for t in hit['_source']['sortedTranscriptConsequences']})
+            )]
         response_dict['hits']['hits'] += index_hits
 
     try:
@@ -2734,7 +2741,7 @@ class EsUtilsTest(TestCase):
         expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
         self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_INDEX_VARIANT])
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[{'terms': {'geneIds': ['ENSG00000228198']}}, ANNOTATION_QUERY],
             size=3,
         )
