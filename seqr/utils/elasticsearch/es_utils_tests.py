@@ -1076,6 +1076,14 @@ COMPOUND_HET_INHERITANCE_QUERY = {
     }
 }
 
+COMPOUND_HET_PATH_INHERITANCE_QUERY = deepcopy(COMPOUND_HET_INHERITANCE_QUERY)
+for fam_q in COMPOUND_HET_PATH_INHERITANCE_QUERY['bool']['should']:
+    fam_quality_q = fam_q['bool']['must'][1]
+    fam_quality_q['bool'] = {'should': [
+        deepcopy(fam_quality_q),
+        {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}}
+    ]}
+
 RECESSIVE_INHERITANCE_QUERY = {
     'bool': {
         'should': [
@@ -2056,16 +2064,8 @@ class EsUtilsTest(TestCase):
             {'terms': {'transcriptConsequenceTerms': ['frameshift_variant', 'intron']}},
         ]}}
 
-        inheritance_query = deepcopy(COMPOUND_HET_INHERITANCE_QUERY)
-        for fam_q in inheritance_query['bool']['should']:
-            fam_quality_q = fam_q['bool']['must'][1]
-            fam_quality_q['bool'] = {'should': [
-                deepcopy(fam_quality_q),
-                {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}}
-            ]}
-
         self.assertExecutedSearch(
-            filters=[annotation_query, inheritance_query],
+            filters=[annotation_query, COMPOUND_HET_PATH_INHERITANCE_QUERY],
             gene_aggs=True,
             start_index=0,
             size=1
