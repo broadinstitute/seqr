@@ -26,17 +26,18 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
     Object.entries(individualsByGuid).reduce((acc, [individualGuid, { familyGuid, displayName }]) => {
       const rnaSeqData = rnaSeqDataByIndividual[individualGuid]?.outliers
       const phenotypeGeneScores = phenotypeGeneScoresByIndividual[individualGuid]
-      acc[familyGuid] = acc[familyGuid] || {}
       if (rnaSeqData) {
-        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData || {}).reduce(
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
           (acc2, [geneId, data]) => (data.isSignificant ? {
             ...acc2,
             [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
-          } : acc2), acc[familyGuid]?.rnaSeqData || {},
+          } : acc2), acc[familyGuid].rnaSeqData || {},
         )
       }
       if (phenotypeGeneScores) {
-        acc[familyGuid].phenotypeGeneScores = Object.entries(phenotypeGeneScores || {}).reduce(
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].phenotypeGeneScores = Object.entries(phenotypeGeneScores).reduce(
           (acc2, [geneId, dataByTool]) => ({
             ...acc2,
             [geneId]: Object.entries(dataByTool).reduce((acc3, [tool, data]) => ({
@@ -45,7 +46,7 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
                 ...d, individualName: displayName, rowId: `${displayName}-${d.diseaseId}`,
               }))],
             }), acc2[geneId] || {}),
-          }), acc[familyGuid]?.phenotypeGeneScores || {},
+          }), acc[familyGuid].phenotypeGeneScores || {},
         )
       }
       return acc

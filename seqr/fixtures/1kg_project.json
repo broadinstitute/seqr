@@ -1293,7 +1293,7 @@
     "fields": {
         "individual": 1,
         "gene_id": "ENSG00000268903",
-        "tool": "lirical",
+        "tool": "exomiser",
         "rank": 1,
         "disease_id": "OMIM:618460",
         "disease_name": "Khan-Khan-Katsanis syndrome",
@@ -1309,7 +1309,7 @@
     "fields": {
         "individual": 1,
         "gene_id": "ENSG00000268903",
-        "tool": "lirical",
+        "tool": "exomiser",
         "rank": 2,
         "disease_id": "OMIM:219800",
         "disease_name": "Cystinosis, nephropathic",

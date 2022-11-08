@@ -348,6 +348,7 @@ const rootReducer = combineReducers({
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
+  transcriptsById: createObjectsByIdReducer(RECEIVE_DATA, 'transcriptsById'),
   user: createSingleObjectReducer(UPDATE_USER),
   newUser: zeroActionsReducer,
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),

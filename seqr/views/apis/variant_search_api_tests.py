@@ -58,6 +58,13 @@ expected_detail_saved_variant['mmeSubmissions'] = [
 ]
 expected_detail_saved_variant['mainTranscriptId'] = mock.ANY
 
+EXPECTED_EXOMISER_DATA = [
+    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+    {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
+     'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
+]
+
 EXPECTED_SEARCH_RESPONSE = {
     'searchedVariants': VARIANTS,
     'savedVariantsByGuid': {
@@ -65,6 +72,7 @@ EXPECTED_SEARCH_RESPONSE = {
         'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT,
     },
     'genesById': {'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE},
+    'transcriptsById': {'ENST00000624735': {'isManeSelect': False, 'refseqId': None, 'transcriptId': 'ENST00000624735'}},
     'search': {
         'search': SEARCH,
         'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
@@ -82,17 +90,10 @@ EXPECTED_SEARCH_RESPONSE = {
     'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
     'phenotypeGeneScores': {'I000001_na19675': {
-        'ENSG00000268903': {'lirical': mock.ANY}
+        'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}
     }},
     'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
 }
-
-EXPECTED_LIRICAL_DATA = [
-    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
-     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
-    {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
-     'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
-]
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
     'savedSearchesByGuid': {
@@ -284,8 +285,6 @@ class VariantSearchAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
-        lirical_data = response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical']
-        self.assertListEqual(sorted(lirical_data, key=lambda d: d['diseaseId']), EXPECTED_LIRICAL_DATA)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), {'F000001_1', 'F000002_2'})
         self._assert_expected_results_context(response_json)
@@ -400,6 +399,7 @@ class VariantSearchAPITest(object):
             'searchedVariants': COMP_HET_VARAINTS,
             'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
             'genesById': {'ENSG00000233653': EXPECTED_GENE},
+            'transcriptsById': {},
             'variantTagsByGuid': {
                 'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
             },
@@ -493,14 +493,13 @@ class VariantSearchAPITest(object):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13'}
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH
+            'allGenomeProjectFamilies': '37', 'search': SEARCH,
+            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1']}]
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
         self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
-        lirical_data = response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical']
-        self.assertListEqual(sorted(lirical_data, key=lambda d: d['diseaseId']), EXPECTED_LIRICAL_DATA)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
@@ -519,7 +518,8 @@ class VariantSearchAPITest(object):
         mock_get_variants.side_effect = _get_es_variants
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectGuids': ['R0003_test'], 'search': SEARCH
+            'projectGuids': ['R0003_test'], 'search': SEARCH,
+            'projectFamilies': [{'projectGuid':  'R0003_test', 'familyGuids': ['F000011_11']}],
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -648,8 +648,6 @@ class VariantSearchAPITest(object):
         expected_search_response['genesById'].pop('ENSG00000233653')
         expected_search_response['searchedVariants'] = [single_family_variant]
         self.assertDictEqual(response_json, expected_search_response)
-        lirical_data = response_json['phenotypeGeneScores']['I000001_na19675']['ENSG00000268903']['lirical']
-        self.assertListEqual(sorted(lirical_data, key=lambda d: d['diseaseId']), EXPECTED_LIRICAL_DATA)
         self._assert_expected_results_family_context(response_json, locus_list_detail=True)
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), PROJECT_TAG_TYPE_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1'})

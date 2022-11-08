@@ -146,9 +146,20 @@ const DosageSensitivity = ({ gene, clingenField, scoreFields, sensitivityType, t
       scores={gene.cnSensitivity}
       fields={scoreFields}
       rankDescription="intolerant of LoF mutations"
-      note={`These are a score under development by the Talkowski lab that predict whether a gene is ${sensitivityType}
-      based on large chromosomal microarray data set analysis. Scores >${threshold} are considered to have high
-      likelihood to be ${sensitivityType}.`}
+      note={(
+        <span>
+          These are a score developed by the Talkowski lab [
+          <a href="https://pubmed.ncbi.nlm.nih.gov/35917817" target="_blank" rel="noreferrer">
+            Collins et al. 2022
+          </a>
+          ] that predict whether a gene is &nbsp;
+          {sensitivityType}
+          &nbsp; based on large chromosomal microarray data set analysis. Scores &gt;
+          {threshold}
+          &nbsp; are considered to have high likelihood to be &nbsp;
+          {sensitivityType}
+        </span>
+      )}
     />
   </div>
 )
@@ -161,8 +172,10 @@ DosageSensitivity.propTypes = {
   gene: PropTypes.object,
 }
 
-const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHI-score' }]
-const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTS-score' }]
+export const HI_THRESHOLD = 0.86
+export const TS_THRESHOLD = 0.94
+const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHaplo' }]
+const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTriplo' }]
 const STAT_DETAILS = [
   { title: 'Coding Size', content: gene => `${((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2)}kb` },
   {
@@ -204,7 +217,7 @@ const STAT_DETAILS = [
         clingenField="haploinsufficiency"
         scoreFields={HAPLOINSUFFICIENT_FIELDS}
         sensitivityType="haploinsufficient"
-        threshold="0.84"
+        threshold={HI_THRESHOLD}
       />
     ),
   },
@@ -216,7 +229,7 @@ const STAT_DETAILS = [
         clingenField="triplosensitivity"
         scoreFields={TRIPLOSENSITIVE_FIELDS}
         sensitivityType="triplosensitive"
-        threshold="0.993"
+        threshold={TS_THRESHOLD}
       />
     ),
   },
