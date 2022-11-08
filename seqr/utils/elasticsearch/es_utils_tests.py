@@ -486,7 +486,7 @@ ES_MITO_WGS_VARIANT = {
       "alt" : "A",
       "AN" : 2520,
       "clinvar_allele_id" : None,
-      "clinvar_clinical_significance" : ['Likely_pathogenic'],
+      "clinvar_clinical_significance" : "Likely_pathogenic",
       "clinvar_gold_stars" : None,
       "codingGeneIds" : [
         "ENSG00000198840"
@@ -1318,7 +1318,7 @@ class EsUtilsTest(TestCase):
 
     def assertCachedResults(self, results_model, expected_results, sort='xpos'):
         cache_key = 'search_results__{}__{}'.format(results_model.guid, sort)
-        self.assertTrue(cache_key in REDIS_CACHE)
+        self.assertIn(cache_key, REDIS_CACHE.keys())
         self.assertDictEqual(json.loads(REDIS_CACHE[cache_key]), expected_results)
         MOCK_REDIS.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
@@ -1531,6 +1531,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_get_es_variants(self, mock_max_variants):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1539,7 +1541,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(len(variants), 2)
         self.assertDictEqual(variants[0], PARSED_VARIANTS[0])
         self.assertDictEqual(variants[1], PARSED_VARIANTS[1])
-        self.assertEqual(total_results, 10)
+        self.assertEqual(total_results, 5)
 
         self.assertCachedResults(results_model, {'all_results': variants, 'total_results': 5})
         self.assertTrue('index_metadata__{},{},{}'.format(INDEX_NAME, MITO_WGS_INDEX_NAME, SV_INDEX_NAME) in REDIS_CACHE)
@@ -1964,7 +1966,7 @@ class EsUtilsTest(TestCase):
         }}
         self.assertExecutedSearches([
             dict(filters=[path_filter], start_index=0, size=5, index=SV_INDEX_NAME),
-            dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
+            dict(filters=[path_filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),  # TODO
             dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
 
@@ -2635,8 +2637,9 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 4)
 
+        cached_variants = expected_variants + [PARSED_MITO_VARIANT]
         self.assertCachedResults(results_model, {
-            'all_results': expected_variants,
+            'all_results': cached_variants,
             'duplicate_doc_count': 1,
             'total_results': 4,
         })
@@ -2649,30 +2652,30 @@ class EsUtilsTest(TestCase):
 
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
-        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
+        expected_variants = [PARSED_MITO_VARIANT, PARSED_VARIANTS[0]]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 3)
 
         self.assertCachedResults(results_model, {
-            'all_results': expected_variants + expected_variants,
+            'all_results': cached_variants + cached_variants,
             'duplicate_doc_count': 2,
             'total_results': 3,
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
-            size=5,
-            start_index=3,
+            size=8,
+            start_index=4,
         )
 
         # test skipping page fetches all consecutively
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
         get_es_variants(results_model, num_results=2, page=2)
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
-            size=8,
+            size=12,
         )
 
     @urllib3_responses.activate
