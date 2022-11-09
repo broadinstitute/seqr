@@ -114,7 +114,7 @@ from seqr.views.apis.users_api import \
     forgot_password
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana
+    update_rna_seq, load_rna_seq_sample_data, proxy_to_kibana, load_phenotype_prioritization_data
 from seqr.views.apis.report_api import \
     anvil_export, \
     discovery_sheet, \
@@ -133,7 +133,7 @@ from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, 
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace, project_family_notes
+    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     grant_workspace_access, validate_anvil_vcf, add_workspace_data, get_anvil_vcf_list
@@ -198,6 +198,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
     'project/(?P<project_guid>[^/]+)/get_analysis_groups': project_analysis_groups,
     'project/(?P<project_guid>[^/]+)/get_overview': project_overview,
+    'project/(?P<project_guid>[^/]+)/get_collaborators': project_collaborators,
 
     'project/create_project': create_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project': update_project_handler,
@@ -254,7 +255,7 @@ api_endpoints = {
     'gene_info/(?P<gene_id>[^/]+)/note/(?P<note_guid>[^/]+)/delete': delete_gene_note_handler,
 
     'hpo_terms/(?P<hpo_parent_id>[^/]+)': get_hpo_terms,
-    'igv_genomes/(?P<file_path>.*)': igv_genomes_proxy,
+    'igv_genomes/(?P<cloud_host>[^/]+)/(?P<file_path>.*)': igv_genomes_proxy,
 
     'locus_lists/(?P<locus_list_guid>[^/]+)/update': update_locus_list_handler,
     'locus_lists/(?P<locus_list_guid>[^/]+)/delete': delete_locus_list_handler,
@@ -307,6 +308,7 @@ api_endpoints = {
     'data_management/get_all_users': get_all_users,
     'data_management/update_rna_seq': update_rna_seq,
     'data_management/load_rna_seq_sample/(?P<sample_guid>[^/]+)': load_rna_seq_sample_data,
+    'data_management/load_phenotype_prioritization_data': load_phenotype_prioritization_data,
 
     'summary_data/saved_variants/(?P<tag>[^/]+)': saved_variants_page,
     'summary_data/success_story/(?P<success_story_types>[^/]+)': success_story,

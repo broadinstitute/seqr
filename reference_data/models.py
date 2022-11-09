@@ -113,7 +113,7 @@ class TranscriptInfo(models.Model):
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
     transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
-    #protein_id = models.CharField(max_length=20, null=True)
+    is_mane_select = models.BooleanField(default=False)
 
     chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
     start_grch37 = models.IntegerField(null=True, blank=True)
@@ -126,6 +126,14 @@ class TranscriptInfo(models.Model):
     end_grch38 = models.IntegerField(null=True, blank=True)
     strand_grch38 = models.CharField(max_length=1, null=True, blank=True)
     coding_region_size_grch38 = models.IntegerField(default=0)  # number of protein-coding bases (= 0 for non-coding genes)
+
+    class Meta:
+        json_fields = ['transcript_id', 'is_mane_select']
+
+
+class RefseqTranscript(models.Model):
+    transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
+    refseq_id = models.CharField(max_length=20)
 
 
 # based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt

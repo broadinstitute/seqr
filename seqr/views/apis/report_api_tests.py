@@ -503,7 +503,7 @@ class ReportAPITest(object):
         ])
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
 
-        self.assertEqual(len(participant_file), 15)
+        self.assertEqual(len(participant_file), 14)
         self.assertEqual(participant_file[0], [
             'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
             'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
@@ -516,7 +516,7 @@ class ReportAPITest(object):
             'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
         ], participant_file)
 
-        self.assertEqual(len(family_file), 11)
+        self.assertEqual(len(family_file), 10)
         self.assertEqual(family_file[0], [
             'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail',
             'family_history_detail',
@@ -535,7 +535,7 @@ class ReportAPITest(object):
             '', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', '',
         ], phenotype_file)
 
-        self.assertEqual(len(analyte_file), 15)
+        self.assertEqual(len(analyte_file), 14)
         self.assertEqual(analyte_file[0], [
             'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
             'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',

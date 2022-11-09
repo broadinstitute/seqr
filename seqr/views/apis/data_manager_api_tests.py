@@ -6,10 +6,10 @@ from requests import HTTPError
 import responses
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data
-from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers
+    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data
+from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
-from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample
+from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample, Project, PhenotypePrioritization
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -280,6 +280,62 @@ SAMPLE_GENE_TPM_DATA = {
 RNA_OUTLIER_SAMPLE_DATA = [f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n']
 RNA_TPM_SAMPLE_DATA = [f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n']
 RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00.json.gz'
+
+PHENOTYPE_PRIORITIZATION_HEADER = [['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName',
+                                   'scoreName1', 'score1', 'scoreName2', 'score2', 'scoreName3', 'score3']]
+PHENOTYPE_PRIORITIZATION_MISS_HEADER = [['tool', 'sampleId', 'rank', 'geneId', 'diseaseName', 'scoreName1', 'score1',
+                                        'scoreName2', 'score2', 'scoreName3', 'score3']]
+LIRICAL_NO_PROJECT_DATA = [['lirical']]
+LIRICAL_PROJECT_NOT_EXIST_DATA = [
+    ['lirical', 'CMG_Beggs_WGS', 'NA19678', '1', 'ENSG00000105357', 'OMIM:618460', 'Khan-Khan-Katsanis syndrome',
+     'post_test_probability', '0', 'compositeLR', '0.066'],
+]
+LIRICAL_NO_EXIST_INDV_DATA = [
+    ['lirical', '1kg project nåme with uniçøde', 'NA19678x', '1', 'ENSG00000105357', 'OMIM:618460',
+     'Khan-Khan-Katsanis syndrome', 'post_test_probability', '0', 'compositeLR', '0.066'],
+    ['lirical', '1kg project nåme with uniçøde', 'NA19679x', '1', 'ENSG00000105357', 'OMIM:618460',
+     'Khan-Khan-Katsanis syndrome', 'post_test_probability', '0', 'compositeLR', '0.066'],
+]
+LIRICAL_DATA = [
+    ['lirical', '1kg project nåme with uniçøde', 'NA19678', '1', 'ENSG00000105357', 'OMIM:618460',
+     'Khan-Khan-Katsanis syndrome', 'post_test_probability', '0', 'compositeLR', '0.066'],
+    ['lirical', 'Test Reprocessed Project', 'NA20885', '2', 'ENSG00000105357', 'OMIM:219800',
+     '"Cystinosis, nephropathic"', 'post_test_probability', '0', 'compositeLR', '0.003', '', ''],
+]
+EXOMISER_DATA = [
+    ['exomiser', 'CMG_Beggs_WGS', 'BEG_1230-1_01', '1', 'ENSG00000105357', 'ORPHA:2131',
+     'Alternating hemiplegia of childhood', 'exomiser_score', '0.977923765', 'phenotype_score', '0.603998205',
+     'variant_score', '1'],
+    ['exomiser', 'CMG_Beggs_WGS', 'BEG_1230-1_01', '3', 'ENSG00000105357', 'ORPHA:71517',
+     'Rapid-onset dystonia-parkinsonism', 'exomiser_score', '0.977923765', 'phenotype_score', '0.551578222',
+     'variant_score', '1']
+]
+UPDATE_LIRICAL_DATA = [
+    ['lirical', '1kg project nåme with uniçøde', 'NA19678', '3', 'ENSG00000105357', 'OMIM:618460',
+     'Khan-Khan-Katsanis syndrome', 'post_test_probability', '0', 'compositeLR', '0.066'],
+    ['lirical', '1kg project nåme with uniçøde', 'NA19678', '4', 'ENSG00000105357', 'OMIM:219800',
+     '"Cystinosis, nephropathic"', 'post_test_probability', '0', 'compositeLR', '0.003', '', ''],
+]
+
+EXPECTED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
+     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 1, 'individualGuid': 'I000002_na19678'},
+    {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
+     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'}
+]
+EXPECTED_UPDATED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
+     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'},
+    {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
+     'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 3, 'individualGuid': 'I000002_na19678'},
+    {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
+     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'tool': 'lirical', 'rank': 4, 'individualGuid': 'I000002_na19678'},
+]
 
 
 class DataManagerAPITest(AuthenticationTestCase):
@@ -594,7 +650,9 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     @mock.patch('seqr.views.utils.dataset_utils.logger')
-    def test_update_rna_seq(self, mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file, mock_os, mock_datetime):
+    @mock.patch('seqr.models.logger')
+    def test_update_rna_seq(self, mock_model_logger, mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file,
+                            mock_os, mock_datetime):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
 
@@ -687,14 +745,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response_json = response.json()
                 self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [mock.ANY], 'fileName': file_name})
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
-                mock_logger.info.assert_has_calls(
-                    [mock.call(info_log, self.data_manager_user) for info_log in info] + [
-                        mock.call(f'delete {deleted_count} {model_cls.__name__}s', self.data_manager_user, db_update={
-                            'dbEntity': model_cls.__name__, 'numEntities': deleted_count, 'parentEntityIds': mock.ANY, 'updateType': 'bulk_delete',
-                        }),
-                    ], any_order=True
+                mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
+                mock_model_logger.info.assert_called_with(
+                    f'delete {model_cls.__name__}s', self.data_manager_user,
+                    db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
+                               'parentEntityIds': {RNA_SAMPLE_GUID}, 'updateType': 'bulk_delete'}
                 )
-                self.assertTrue(RNA_SAMPLE_GUID in mock_logger.info.call_args_list[1].kwargs['db_update']['parentEntityIds'])
                 mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
 
                 # test database models are correct
@@ -718,7 +774,8 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     @mock.patch('seqr.views.apis.data_manager_api.logger')
-    def test_load_rna_seq_sample_data(self, mock_logger, mock_open, mock_os):
+    @mock.patch('seqr.models.logger')
+    def test_load_rna_seq_sample_data(self, mock_model_logger, mock_logger, mock_open, mock_os):
         mock_os.path.join.side_effect = lambda *args: '/'.join(args[1:])
 
         url = reverse(load_rna_seq_sample_data, args=[RNA_SAMPLE_GUID])
@@ -743,11 +800,97 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 mock_open.assert_called_with(file_name, 'rt')
 
-                mock_logger.info.assert_has_calls([
-                    mock.call('Loading outlier data for NA19675_D2', self.data_manager_user),
-                    mock.call(f'create 2 {model_cls.__name__}', self.data_manager_user, db_update={
-                        'dbEntity':  model_cls.__name__, 'numEntities': 2, 'parentEntityIds': [RNA_SAMPLE_GUID], 'updateType': 'bulk_create',
-                    }),
-                ])
+                mock_logger.info.assert_called_with('Loading outlier data for NA19675_D2', self.data_manager_user)
+                mock_model_logger.info.assert_called_with(
+                    f'create {model_cls.__name__}s', self.data_manager_user, db_update={
+                        'dbEntity': model_cls.__name__, 'numEntities': 2, 'parentEntityIds': {RNA_SAMPLE_GUID},
+                        'updateType': 'bulk_create',
+                    }
+                )
 
                 self.assertListEqual(params['get_models_json'](models), params['expected_models_json'])
+
+    @classmethod
+    def _join_data(cls, data):
+        return iter(['\t'.join(line) for line in data])
+
+    @mock.patch('seqr.views.utils.dataset_utils.file_iter')
+    @mock.patch('seqr.models.logger')
+    def test_load_phenotype_prioritization_data(self, mock_logger, mock_file_iter):
+        url = reverse(load_phenotype_prioritization_data)
+        self.check_data_manager_login(url)
+
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_MISS_HEADER)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Invalid file: missing column(s) project, diseaseId')
+        mock_file_iter.assert_called_with('lirical_data.tsv.gz')
+
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_PROJECT_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Both sample ID and project fields are required.')
+
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + EXOMISER_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Multiple tools found lirical and exomiser. Only one in a file is supported.')
+
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_PROJECT_NOT_EXIST_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. ')
+
+        project = Project.objects.create(created_by=self.data_manager_user,
+                                         name='1kg project nåme with uniçøde', workspace_namespace='my-seqr-billing')
+        mock_file_iter.return_value = self._join_data(
+            PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + LIRICAL_PROJECT_NOT_EXIST_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. Projects with conflict name(s) 1kg project nåme with uniçøde.')
+        project.delete()
+
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_EXIST_INDV_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], "Can't find individuals NA19678x, NA19679x")
+
+        # Test a successful operation
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 200)
+        info = [
+            'Loaded Lirical data from lirical_data.tsv.gz',
+            'Project 1kg project nåme with uniçøde: loaded 1 record(s)',
+            'Project Test Reprocessed Project: loaded 1 record(s)'
+        ]
+        self.assertEqual(response.json()['info'], info)
+        db_update = {'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
+                     'parentEntityIds': {'I000002_na19678', 'I000015_na20885'}, 'updateType': 'bulk_create'}
+        mock_logger.info.assert_called_with('create PhenotypePrioritizations', self.data_manager_user, db_update=db_update)
+        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
+                                          nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
+        self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
+
+        # Test uploading new data
+        mock_logger.reset_mock()
+        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        self.assertEqual(response.status_code, 200)
+        info = [
+            'Loaded Lirical data from lirical_data.tsv.gz',
+            'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
+        ]
+        self.assertEqual(response.json()['info'], info)
+        mock_logger.info.assert_has_calls([
+            mock.call('delete PhenotypePrioritizations', self.data_manager_user, db_update={
+                'dbEntity': 'PhenotypePrioritization', 'numEntities': 1,
+                'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_delete',
+            }),
+            mock.call('create PhenotypePrioritizations', self.data_manager_user,
+                      db_update={'dbEntity': 'PhenotypePrioritization', 'numEntities': 2,
+                     'parentEntityIds': {'I000002_na19678'}, 'updateType': 'bulk_create'}),
+        ])
+        saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
+                                          nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
+        self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)

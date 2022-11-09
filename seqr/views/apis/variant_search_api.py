@@ -79,14 +79,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
         if not search_context:
             raise Exception('Invalid search hash: {}'.format(search_hash))
 
-        project_families = search_context.get('projectFamilies')
         all_project_genome_version = _all_project_family_search_genome(search_context)
-        if project_families:
-            all_families = set()
-            for project_family in project_families:
-                all_families.update(project_family['familyGuids'])
-            families = Family.objects.filter(guid__in=all_families)
-        elif all_project_genome_version:
+        if all_project_genome_version:
             omit_projects = [p.guid for p in Project.objects.filter(is_demo=True).only('guid')]
             project_guids = [
                 project_guid for project_guid in get_project_guids_user_can_view(user, limit_data_manager=True)
@@ -96,6 +90,11 @@ def _get_or_create_results_model(search_hash, search_context, user):
                 project__guid__in=project_guids, project__genome_version=all_project_genome_version)
         elif search_context.get('projectGuids'):
             families = Family.objects.filter(project__guid__in=search_context['projectGuids'])
+        elif search_context.get('projectFamilies'):
+            all_families = set()
+            for project_family in search_context['projectFamilies']:
+                all_families.update(project_family['familyGuids'])
+            families = Family.objects.filter(guid__in=all_families)
         else:
             raise Exception('Invalid search: no projects/ families specified')
 

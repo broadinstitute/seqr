@@ -486,7 +486,7 @@ ES_MITO_WGS_VARIANT = {
       "alt" : "A",
       "AN" : 2520,
       "clinvar_allele_id" : None,
-      "clinvar_clinical_significance" : ['Likely_pathogenic'],
+      "clinvar_clinical_significance" : "Likely_pathogenic",
       "clinvar_gold_stars" : None,
       "codingGeneIds" : [
         "ENSG00000198840"
@@ -798,14 +798,6 @@ MAPPING_FIELDS = [
     'AC',
     'AF',
     'AN',
-    'g1k_AC',
-    'g1k_Hom',
-    'g1k_Hemi',
-    'g1k_POPMAX_AF',
-    'g1k_AF',
-    'g1k_AN',
-    'g1k_Het',
-    'g1k_ID',
     'gnomad_genomes_AC',
     'gnomad_genomes_Hom',
     'gnomad_genomes_Hemi',
@@ -927,7 +919,6 @@ MITO_MAPPING_FIELDS = [
 MITO_SOURCE_ONLY_FIELDS = [
     'callset_max_hl',
     'exac_max_hl',
-    'g1k_max_hl',
     'gnomad_exomes_max_hl',
     'gnomad_genomes_max_hl',
     'gnomad_svs_max_hl',
@@ -1085,6 +1076,14 @@ COMPOUND_HET_INHERITANCE_QUERY = {
     }
 }
 
+COMPOUND_HET_PATH_INHERITANCE_QUERY = deepcopy(COMPOUND_HET_INHERITANCE_QUERY)
+for fam_q in COMPOUND_HET_PATH_INHERITANCE_QUERY['bool']['should']:
+    fam_quality_q = fam_q['bool']['must'][1]
+    fam_quality_q['bool'] = {'should': [
+        deepcopy(fam_quality_q),
+        {'terms': {'clinvar_clinical_significance': ['Pathogenic', 'Pathogenic/Likely_pathogenic']}}
+    ]}
+
 RECESSIVE_INHERITANCE_QUERY = {
     'bool': {
         'should': [
@@ -1170,10 +1169,13 @@ def create_mock_response(search, index=INDEX_NAME):
     indices = index.split(',')
     include_matched_queries = False
     variant_id_filters = None
+    gene_ids_filters = set()
     if 'query' in search:
         for search_filter in search['query']['bool']['filter']:
             if not variant_id_filters:
                 variant_id_filters = search_filter.get('terms', {}).get('variantId')
+            if not gene_ids_filters and not search.get('aggs'):
+                gene_ids_filters.update(search_filter.get('terms', {}).get('geneIds') or [])
             possible_inheritance_filters = search_filter.get('bool', {}).get('should', []) + [search_filter]
             if any('_name' in possible_filter.get('bool', {}) for possible_filter in possible_inheritance_filters):
                 include_matched_queries = True
@@ -1189,7 +1191,16 @@ def create_mock_response(search, index=INDEX_NAME):
             index=index_name)
         if variant_id_filters:
             index_hits = [hit for hit in index_hits if hit['_id'] in variant_id_filters]
+        elif gene_ids_filters:
+            index_hits = [hit for hit in index_hits if any(
+                gene_ids_filters.intersection({t['gene_id'] for t in hit['_source']['sortedTranscriptConsequences']})
+            )]
         response_dict['hits']['hits'] += index_hits
+
+    try:
+        response_dict['hits']['hits'] = sorted(response_dict['hits']['hits'], key=lambda v: v['_sort'])
+    except (KeyError, TypeError):
+        pass
 
     if search.get('aggs'):
         index_vars = COMPOUND_HET_INDEX_VARIANTS.get(index, {})
@@ -1322,7 +1333,8 @@ class EsUtilsTest(TestCase):
 
     def assertCachedResults(self, results_model, expected_results, sort='xpos'):
         cache_key = 'search_results__{}__{}'.format(results_model.guid, sort)
-        self.assertDictEqual(json.loads(REDIS_CACHE.get(cache_key)), expected_results)
+        self.assertIn(cache_key, REDIS_CACHE.keys())
+        self.assertDictEqual(json.loads(REDIS_CACHE[cache_key]), expected_results)
         MOCK_REDIS.expire.assert_called_with(cache_key, timedelta(weeks=2))
 
     @urllib3_responses.activate
@@ -1339,8 +1351,9 @@ class EsUtilsTest(TestCase):
         self.assertDictEqual(variants[1], PARSED_NO_SORT_VARIANTS[1])
 
         self.assertExecutedSearch(
-            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=3,
+            filters=[{'terms': {'variantId': ['2-103343353-GAGA-G', '1-248367227-TC-T', 'MT-138367346-A-C']}}], size=6,
             unsorted=True,
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME])
         )
 
     @urllib3_responses.activate
@@ -1533,6 +1546,8 @@ class EsUtilsTest(TestCase):
     @urllib3_responses.activate
     def test_get_es_variants(self, mock_max_variants):
         setup_responses()
+        # Testing mito indices is done in other tests, it is helpful to have a strightforward single datatype test
+        Sample.objects.get(elasticsearch_index=MITO_WGS_INDEX_NAME).delete()
         search_model = VariantSearch.objects.create(search={'annotations': {'frameshift': ['frameshift_variant']}})
         results_model = VariantSearchResults.objects.create(variant_search=search_model)
         results_model.families.set(self.families)
@@ -1659,13 +1674,6 @@ class EsUtilsTest(TestCase):
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
-                                {'range': {'g1k_POPMAX_AF': {'lte': 0.001}}}
-                            ]
-                        }},
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
                                 {'bool': {'must_not': [{'exists': {'field': 'gnomad_exomes_AF_POPMAX_OR_GLOBAL'}}]}},
                                 {'range': {'gnomad_exomes_AF_POPMAX_OR_GLOBAL': {'lte': 0.01}}}
                             ]
@@ -1721,13 +1729,6 @@ class EsUtilsTest(TestCase):
                         {'range': {'AF': {'lte': 0.1}}}
                     ],
                     'must': [
-                        {'bool': {
-                            'minimum_should_match': 1,
-                            'should': [
-                                {'bool': {'must_not': [{'exists': {'field': 'g1k_POPMAX_AF'}}]}},
-                                {'range': {'g1k_POPMAX_AF': {'lte': 0.05}}}
-                            ]
-                        }},
                         {'bool': {
                             'minimum_should_match': 1,
                             'should': [
@@ -1801,7 +1802,7 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_num_alt_2': 'HG00731'}}
                                 ]
                             }},
-                            {'bool': {
+                            {'bool': {'should': [{'bool': {
                                 'minimum_should_match': 1,
                                 'should': [
                                     {'bool': {
@@ -1849,7 +1850,9 @@ class EsUtilsTest(TestCase):
                                         ]
                                     }},
                                 ]
-                            }}
+                            }}, {'terms': {
+                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}]}}
                         ],
                     }},
                     {'bool': {
@@ -1858,7 +1861,7 @@ class EsUtilsTest(TestCase):
                                 {'term': {'samples_num_alt_1': 'NA20870'}},
                                 {'term': {'samples_num_alt_2': 'NA20870'}}
                             ]}},
-                            {'bool': {
+                            {'bool': {'should': [{'bool': {
                                 'minimum_should_match': 1,
                                 'should': [
                                     {'bool': {
@@ -1874,7 +1877,9 @@ class EsUtilsTest(TestCase):
                                     {'term': {'samples_gq_5_to_10': 'NA20870'}},
                                     {'term': {'samples_gq_10_to_15': 'NA20870'}},
                                 ]
-                            }}
+                            }}, {'terms': {
+                                'clinvar_clinical_significance': ['Likely_pathogenic', 'Pathogenic', 'Pathogenic/Likely_pathogenic']
+                            }}]}}
                         ],
                         '_name': 'F000003_3'
                     }},
@@ -1984,6 +1989,27 @@ class EsUtilsTest(TestCase):
             dict(filters=[path_filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
 
+        # test with dataset filtering applied
+        search_model.search['annotations'] = {'frameshift': ['frameshift_variant']}
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+
+        get_es_variants(results_model, num_results=5)
+        filter = {'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['frameshift_variant']}}, path_filter]}}
+        self.assertExecutedSearches([
+            dict(filters=[filter], start_index=0, size=5, index=MITO_WGS_INDEX_NAME),
+            dict(filters=[filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
+        ])
+
+        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.save()
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+
+        get_es_variants(results_model, num_results=5)
+        self.assertExecutedSearch(
+            filters=[{'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['DEL']}}, path_filter]}}],
+            start_index=0, size=5, index=SV_INDEX_NAME)
+
     @urllib3_responses.activate
     def test_multi_dataset_no_affected_inheritance_get_es_variants(self):
         setup_responses()
@@ -2076,7 +2102,7 @@ class EsUtilsTest(TestCase):
         ]}}
 
         self.assertExecutedSearch(
-            filters=[annotation_query, COMPOUND_HET_INHERITANCE_QUERY],
+            filters=[annotation_query, COMPOUND_HET_PATH_INHERITANCE_QUERY],
             gene_aggs=True,
             start_index=0,
             size=1
@@ -2385,7 +2411,7 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, PARSED_VARIANTS)
         self.assertEqual(total_results, 5)
 
-        self.assertExecutedSearch(filters=[
+        self.assertExecutedSearch(index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, filters=[
             {'terms': {'variantId': ['1-248367227-TC-T', '2-103343353-GAGA-G']}}, ANNOTATION_QUERY])
 
     @urllib3_responses.activate
@@ -2651,44 +2677,45 @@ class EsUtilsTest(TestCase):
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 4)
 
+        cached_variants = expected_variants + [PARSED_MITO_VARIANT]
         self.assertCachedResults(results_model, {
-            'all_results': expected_variants,
+            'all_results': cached_variants,
             'duplicate_doc_count': 1,
             'total_results': 4,
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, SECOND_INDEX_NAME, MITO_WGS_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
-            size=4,
+            size=6,
         )
 
         # test pagination
         variants, total_results = get_es_variants(results_model, num_results=2, page=2)
-        expected_variants = [PARSED_VARIANTS[0], PARSED_MULTI_INDEX_VARIANT]
+        expected_variants = [PARSED_MITO_VARIANT, PARSED_VARIANTS[0]]
         self.assertListEqual(variants, expected_variants)
         self.assertEqual(total_results, 3)
 
         self.assertCachedResults(results_model, {
-            'all_results': expected_variants + expected_variants,
+            'all_results': cached_variants + cached_variants,
             'duplicate_doc_count': 2,
             'total_results': 3,
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
-            size=5,
-            start_index=3,
+            size=8,
+            start_index=4,
         )
 
         # test skipping page fetches all consecutively
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
         get_es_variants(results_model, num_results=2, page=2)
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
-            size=8,
+            size=12,
         )
 
     @urllib3_responses.activate
@@ -2747,7 +2774,7 @@ class EsUtilsTest(TestCase):
         expected_transcript_variant['selectedMainTranscriptId'] = PARSED_VARIANTS[1]['selectedMainTranscriptId']
         self.assertListEqual(variants, [expected_transcript_variant, PARSED_MULTI_INDEX_VARIANT])
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[{'terms': {'geneIds': ['ENSG00000228198']}}, ANNOTATION_QUERY],
             size=3,
         )
@@ -3025,12 +3052,12 @@ class EsUtilsTest(TestCase):
         gene_counts = get_es_variant_gene_counts(results_model, None)
 
         self.assertDictEqual(gene_counts, {
-            'ENSG00000135953': {'total': 3, 'families': {'F000003_3': 1, 'F000002_2': 1, 'F000011_11': 1}},
+            'ENSG00000135953': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}},
             'ENSG00000228198': {'total': 6, 'families': {'F000003_3': 2, 'F000002_2': 2, 'F000011_11': 2}}
         })
 
         self.assertExecutedSearch(
-            index='{},{}'.format(INDEX_NAME, SECOND_INDEX_NAME),
+            index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME, SECOND_INDEX_NAME]),
             filters=[ANNOTATION_QUERY],
             size=1,
             gene_count_aggs={
@@ -3146,12 +3173,13 @@ class EsUtilsTest(TestCase):
 
         variants, _ = get_es_variants(results_model, sort='primate_ai', num_results=2)
         self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
-            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'])
+            {'primate_ai_score': {'order': 'desc', 'unmapped_type': 'double', 'numeric_type': 'double'}}, 'xpos', 'variantId'],
+                                  index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4)
         self.assertEqual(variants[0]['_sort'][0], maxsize)
         self.assertEqual(variants[1]['_sort'][0], -1)
 
         variants, _ = get_es_variants(results_model, sort='gnomad', num_results=2)
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, sort=[
             {
                 '_script': {
                     'type': 'number',
@@ -3165,7 +3193,7 @@ class EsUtilsTest(TestCase):
         self.assertEqual(variants[1]['_sort'][0], maxsize)
 
         variants, _ = get_es_variants(results_model, sort='in_omim', num_results=2)
-        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], sort=[
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY], index=','.join([INDEX_NAME, MITO_WGS_INDEX_NAME]), size=4, sort=[
             {
                 '_script': {
                     'type': 'number',
