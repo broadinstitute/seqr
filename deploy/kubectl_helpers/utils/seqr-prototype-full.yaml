@@ -25,6 +25,7 @@ metadata:
   name: seqr
   namespace: seqr-prototype
   labels:
+    app.kubernetes.io/name: seqr
     name: seqr
     deployment: prototype
 spec:
