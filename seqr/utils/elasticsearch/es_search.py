@@ -180,6 +180,8 @@ class EsSearch(object):
 
     def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            new_indices += self.indices_by_dataset_type[Sample.DATASET_TYPE_MITO_CALLS]
         if keep_previous:
             indices = set(self._indices)
             indices.update(new_indices)
