@@ -406,6 +406,7 @@ export const STATE_WITH_2_FAMILIES = {
     displayName: 'Test User',
   },
   savedVariantTableState: { hideExcluded: true, recordsPerPage: 1 },
+  projectCollaboratorsLoading: {},
   projectSavedVariantsLoading: {},
   familyDetailsLoading: {},
   savedVariantsByGuid: {
