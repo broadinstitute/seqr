@@ -39,6 +39,7 @@ spec:
         config.linkerd.io/opaque-ports: "6379,5432"
       labels:
         name: seqr
+        app.kubernetes.io/name: seqr
         deployment: prototype
     spec:
       
