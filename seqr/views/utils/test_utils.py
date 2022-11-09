@@ -868,8 +868,6 @@ PARSED_VARIANTS = [
         'populations': {
             'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None, 'het': None,
                         'id': None, 'max_hl': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None,
-                    'max_hl': None},
             'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0,
                                'filter_af': 0.0004590314436538903, 'het': 0, 'id': None, 'max_hl': None},
             'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661,
@@ -952,8 +950,6 @@ PARSED_VARIANTS = [
         'populations': {
             'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None, 'filter_af': None, 'het': None,
                         'id': None, 'max_hl': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None,
-                    'max_hl': None},
             'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0,
                                'id': None, 'max_hl': None},
             'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.00004942, 'hemi': 0, 'filter_af': 0.000242306760358614,
@@ -1039,8 +1035,6 @@ PARSED_SV_VARIANT = {
     'populations': {
         'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
                     'id': None, 'max_hl': None},
-        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                'id': None, 'max_hl': None},
         'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None,
                            'het': None, 'id': None, 'max_hl': None},
         'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
@@ -1126,8 +1120,6 @@ PARSED_SV_WGS_VARIANT = {
     'populations': {
         'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
                     'id': None, 'max_hl': None},
-        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                'id': None, 'max_hl': None},
         'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None,
                            'het': None, 'id': None, 'max_hl': None},
         'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
@@ -1185,7 +1177,7 @@ PARSED_MITO_VARIANT = {
     'alt': 'A',
     'bothsidesSupport': None,
     'chrom': 'M',
-    'clinvar': {'alleleId': None, 'clinicalSignificance': ['Likely_pathogenic'], 'goldStars': None, 'variationId': None},
+    'clinvar': {'alleleId': None, 'clinicalSignificance': 'Likely_pathogenic', 'goldStars': None, 'variationId': None},
     'commonLowHeteroplasmy': False,
     'cpxIntervals': None,
     'end': 10195,
@@ -1207,8 +1199,6 @@ PARSED_MITO_VARIANT = {
               'het': None, 'hom': None, 'id': None, 'max_hl': None},
          'exac': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None,
               'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'g1k': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None,
-                 'het': None, 'hom': None, 'id': None, 'max_hl': None},
          'gnomad_exomes': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                            'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
          'gnomad_genomes': {'ac': None, 'af': None, 'an': None, 'filter_af': None,

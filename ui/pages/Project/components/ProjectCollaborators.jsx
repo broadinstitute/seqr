@@ -16,8 +16,8 @@ import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
-import { updateCollaborator, updateCollaboratorGroup } from '../reducers'
-import { getUserOptions, getCurrentProject } from '../selectors'
+import { updateCollaborator, updateCollaboratorGroup, loadProjectCollaborators } from '../reducers'
+import { getUserOptions, getCurrentProject, getProjectCollaboratorsIsLoading } from '../selectors'
 
 const CollaboratorEmailDropdown = React.memo(({ load, ...props }) => (
   <DataLoader load={load} loading={false} content>
@@ -162,10 +162,12 @@ const collaboratorDisplay = ({ displayName, email }) => (
 
 const groupNameDisplay = ({ name }) => name
 
-const ProjectCollaborators = React.memo(({ project, user, onSubmit, onGroupSubmit, addCollaborator }) => {
+const ProjectCollaborators = React.memo((
+  { project, user, loading, load, onSubmit, onGroupSubmit, addCollaborator },
+) => {
   const canEdit = project.canEdit && !user.isAnvil
   return (
-    <div>
+    <DataLoader load={load} loading={loading} content={project.collaborators}>
       <ProjectAccessSection
         title="Collaborator"
         idField="email"
@@ -202,13 +204,15 @@ const ProjectCollaborators = React.memo(({ project, user, onSubmit, onGroupSubmi
           )}
         </Segment>
       )}
-    </div>
+    </DataLoader>
   )
 })
 
 ProjectCollaborators.propTypes = {
   project: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
+  loading: PropTypes.bool,
+  load: PropTypes.func,
   onSubmit: PropTypes.func,
   onGroupSubmit: PropTypes.func,
   addCollaborator: PropTypes.func,
@@ -217,9 +221,11 @@ ProjectCollaborators.propTypes = {
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
   user: getUser(state),
+  loading: getProjectCollaboratorsIsLoading(state),
 })
 
 const mapDispatchToProps = {
+  load: loadProjectCollaborators,
   onSubmit: updateCollaborator,
   onGroupSubmit: updateCollaboratorGroup,
   addCollaborator: updates => updateCollaborator(updates.user),

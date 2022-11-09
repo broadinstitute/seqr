@@ -210,9 +210,7 @@ def project_overview(request, project_guid):
 
     project_json = response['projectsByGuid'][project_guid]
     project_json.update({
-        'detailsLoaded': True,
-        'collaborators': get_json_for_project_collaborator_list(request.user, project),
-        'collaboratorGroups': get_json_for_project_collaborator_groups(project),
+        'overviewLoaded': True,
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
     })
@@ -220,6 +218,20 @@ def project_overview(request, project_guid):
     response['familyTagTypeCounts'] = _add_tag_type_counts(project, project_json['variantTagTypes'])
 
     return create_json_response(response)
+
+
+@login_and_policies_required
+def project_collaborators(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {
+            'collaboratorsLoaded': True,
+            'collaborators': get_json_for_project_collaborator_list(request.user, project),
+            'collaboratorGroups': get_json_for_project_collaborator_groups(project),
+        }}
+    })
+
 
 @login_and_policies_required
 def project_individuals(request, project_guid):

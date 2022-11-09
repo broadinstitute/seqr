@@ -47,6 +47,7 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 
 export const getProjectGuid = state => state.currentProjectGuid
 export const getProjectOverviewIsLoading = state => state.projectOverviewLoading.isLoading
+export const getProjectCollaboratorsIsLoading = state => state.projectCollaboratorsLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading

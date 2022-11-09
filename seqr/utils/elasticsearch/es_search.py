@@ -180,6 +180,8 @@ class EsSearch(object):
 
     def update_dataset_type(self, dataset_type, keep_previous=False):
         new_indices = self.indices_by_dataset_type[dataset_type]
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            new_indices += self.indices_by_dataset_type[Sample.DATASET_TYPE_MITO_CALLS]
         if keep_previous:
             indices = set(self._indices)
             indices.update(new_indices)
@@ -243,15 +245,14 @@ class EsSearch(object):
 
         self._filter_by_location(genes, intervals, variant_ids, rs_ids, locus)
 
-        clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
-        self._filter_by_frequency(frequencies, clinvar_terms=clinvar_terms)
+        annotations = self._parse_annotation_overrides(annotations, pathogenicity)
+
+        self._filter_by_frequency(frequencies)
 
         self._filter_by_in_silico(in_silico)
 
         if quality_filter and quality_filter.get('vcf_filter') is not None:
             self._filter(~Q('exists', field='filters'))
-
-        annotations, new_svs = self._parse_annotation_overrides(annotations, clinvar_terms, hgmd_classes)
 
         inheritance_mode = (inheritance or {}).get('mode')
         inheritance_filter = (inheritance or {}).get('filter') or {}
@@ -262,8 +263,7 @@ class EsSearch(object):
         if inheritance:
             self._filter_families_for_inheritance(inheritance_filter, skipped_sample_count)
 
-        quality_filters_by_family = _quality_filters_by_family(
-            quality_filter, self.samples_by_family_index, self._indices, new_svs=new_svs)
+        quality_filters_by_family = self._get_quality_filters_by_family(quality_filter)
 
         has_comp_het_search = inheritance_mode in {RECESSIVE, COMPOUND_HET} and not self.previous_search_results.get('grouped_results')
         if has_comp_het_search:
@@ -274,7 +274,7 @@ class EsSearch(object):
                     self.update_dataset_type(comp_het_dataset_type)
                 return
 
-        dataset_type = self._filter_by_annotations(annotations, new_svs)
+        dataset_type = self._filter_by_annotations(annotations)
 
         if skip_genotype_filter and not inheritance_mode:
             return
@@ -284,7 +284,9 @@ class EsSearch(object):
         if has_comp_het_search and annotations_secondary and dataset_type and comp_het_dataset_type != dataset_type:
             self.update_dataset_type(_dataset_type_for_annotations(annotations_secondary), keep_previous=True)
 
-    def _parse_annotation_overrides(self, annotations, clinvar_terms, hgmd_classes):
+    def _parse_annotation_overrides(self, annotations, pathogenicity):
+        clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
+
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
@@ -298,8 +300,10 @@ class EsSearch(object):
             self._consequence_overrides[SPLICE_AI_FIELD] = float(splice_ai)
         if screen:
             self._consequence_overrides[SCREEN_KEY] = screen
+        if new_svs:
+            self._consequence_overrides[NEW_SV_FIELD] = new_svs
 
-        return annotations, new_svs
+        return annotations
 
     def _filter_by_location(self, genes, intervals, variant_ids, rs_ids, locus):
         if genes or intervals:
@@ -324,12 +328,13 @@ class EsSearch(object):
         if in_silico_filters:
             self._filter(_in_silico_filter(in_silico_filters))
 
-    def _filter_by_frequency(self, frequencies, clinvar_terms=None):
+    def _filter_by_frequency(self, frequencies):
+        frequencies = {pop: v for pop, v in (frequencies or {}).items() if pop in POPULATIONS}
         if not frequencies:
             return
 
-        clinvar_path_filters = [f for f in clinvar_terms if f in CLINVAR_PATH_SIGNIFICANCES]
-        path_override = bool(clinvar_path_filters) and any(
+        path_filter = self._get_clinvar_pathogenic_override_filter()
+        path_override = path_filter is not None and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
         q = Q()
@@ -351,9 +356,17 @@ class EsSearch(object):
                 q &= _pop_freq_filter(POPULATIONS[pop]['Hemi'], freqs['hh'])
 
         if path_override:
-            q |= (_pathogenicity_filter(clinvar_path_filters) & path_q)
+            q |= (path_filter & path_q)
 
         self._filter(q)
+
+    def _get_clinvar_pathogenic_override_filter(self):
+        clinvar_path_terms = [
+            f for f in self._consequence_overrides.get(CLINVAR_KEY, []) if f in CLINVAR_PATH_SIGNIFICANCES
+        ]
+        if clinvar_path_terms:
+            return _pathogenicity_filter(clinvar_path_terms)
+        return None
 
     def _get_annotation_override_filter(self):
         filters = []
@@ -373,9 +386,10 @@ class EsSearch(object):
             return None
         return _or_filters(filters)
 
-    def _filter_by_annotations(self, annotations, new_svs):
+    def _filter_by_annotations(self, annotations):
         dataset_type = None
         annotation_override_filter = self._get_annotation_override_filter()
+        new_svs = self._consequence_overrides.get(NEW_SV_FIELD)
 
         if self._allowed_consequences:
             consequences_filter = _annotations_filter(self._allowed_consequences)
@@ -1279,6 +1293,44 @@ class EsSearch(object):
             raise ValueError('Invalid variant id')
         return var_fields[0].lstrip('chr'), int(var_fields[1]), var_fields[2], var_fields[3]
 
+    def _get_quality_filters_by_family(self, quality_filter):
+        quality_field_configs = {
+            'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
+        }
+        quality_filter = dict({field: 0 for field in quality_field_configs.keys()}, **(quality_filter or {}))
+        for field, config in quality_field_configs.items():
+            if quality_filter[field] % config['step'] != 0:
+                raise Exception('Invalid {} filter {}'.format(config['field'], quality_filter[field]))
+
+        quality_filters_by_family = {}
+        new_svs = self._consequence_overrides.get(NEW_SV_FIELD)
+        if new_svs or any(quality_filter[field] for field in quality_field_configs.keys()):
+            family_sample_ids = defaultdict(set)
+            for index in self._indices:
+                family_samples_by_id = self.samples_by_family_index[index]
+                for family_guid, samples_by_id in family_samples_by_id.items():
+                    family_sample_ids[family_guid].update(samples_by_id.keys())
+
+            path_filter = self._get_clinvar_pathogenic_override_filter()
+            for family_guid, sample_ids in sorted(family_sample_ids.items()):
+                quality_q = Q('terms', samples_new_call=sorted(sample_ids)) if new_svs else Q()
+                for sample_id in sorted(sample_ids):
+                    for field, config in sorted(quality_field_configs.items()):
+                        if quality_filter[field]:
+                            q = _build_or_filter('term', [
+                                {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
+                                for i in range(0, quality_filter[field], config['step'])
+                            ])
+                            if field == 'min_ab':
+                                #  AB only relevant for hets
+                                quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
+                            else:
+                                quality_q &= ~Q(q)
+                if path_filter:
+                    quality_q |= path_filter
+                quality_filters_by_family[family_guid] = quality_q
+        return quality_filters_by_family
+
 
 # TODO  move liftover to hail pipeline once upgraded to 0.2 (https://github.com/broadinstitute/seqr/issues/1010)
 LIFTOVER_GRCH38_TO_GRCH37 = None
@@ -1300,41 +1352,6 @@ def _get_family_affected_status(samples_by_id, inheritance_filter):
         affected_status[indiv.guid] = individual_affected_status.get(indiv.guid) or indiv.affected
 
     return affected_status
-
-
-def _quality_filters_by_family(quality_filter, samples_by_family_index, indices, new_svs=False):
-    quality_field_configs = {
-        'min_{}'.format(field): {'field': field, 'step': step} for field, step in QUALITY_QUERY_FIELDS.items()
-    }
-    quality_filter = dict({field: 0 for field in quality_field_configs.keys()}, **(quality_filter or {}))
-    for field, config in quality_field_configs.items():
-        if quality_filter[field] % config['step'] != 0:
-            raise Exception('Invalid {} filter {}'.format(config['field'], quality_filter[field]))
-
-    quality_filters_by_family = {}
-    if new_svs or any(quality_filter[field] for field in quality_field_configs.keys()):
-        family_sample_ids = defaultdict(set)
-        for index in indices:
-            family_samples_by_id = samples_by_family_index[index]
-            for family_guid, samples_by_id in family_samples_by_id.items():
-                family_sample_ids[family_guid].update(samples_by_id.keys())
-
-        for family_guid, sample_ids in sorted(family_sample_ids.items()):
-            quality_q = Q('terms', samples_new_call=sorted(sample_ids)) if new_svs else Q()
-            for sample_id in sorted(sample_ids):
-                for field, config in sorted(quality_field_configs.items()):
-                    if quality_filter[field]:
-                        q = _build_or_filter('term', [
-                            {'samples_{}_{}_to_{}'.format(config['field'], i, i + config['step']): sample_id}
-                            for i in range(0, quality_filter[field], config['step'])
-                        ])
-                        if field == 'min_ab':
-                            #  AB only relevant for hets
-                            quality_q &= ~Q(q) | ~Q('term', samples_num_alt_1=sample_id)
-                        else:
-                            quality_q &= ~Q(q)
-            quality_filters_by_family[family_guid] = quality_q
-    return quality_filters_by_family
 
 
 def _any_affected_sample_filter(sample_ids):
