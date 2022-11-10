@@ -5,8 +5,7 @@ SEQR_FIELDS = [
     # shared variant fields
     'clinvar', 'dbnsfp', 'filters', 'rg37_locus', 'rsid', 'sortedTranscriptConsequences', 'variantId', 'xpos',
     # mito specific fields
-    'mitomap', 'mitimpact_apogee', 'hmtvar_hmtVar', 'common_low_heteroplasmy', 'hap_defining_variant',
-    'mitotip_mitoTIP', 'high_constraint_region',
+    'mitomap', 'common_low_heteroplasmy',  'high_constraint_region',
 ]
 
 def write_main_ht(file):
@@ -43,6 +42,12 @@ def write_main_ht(file):
             AC=ht.helix.AC_het,
             AN=ht.helix.AN,
             max_hl=ht.helix.max_hl,
+        ),
+        'mitimpact': hl.struct(score=ht.mitimpact_apogee),
+        'hmtvar': hl.struct(score=ht.hmtvar_hmtVar),
+        'mitotip': hl.struct(trna_prediction=ht.mitotip_mitoTIP),
+        'haplogroup': hl.struct(
+            is_defining=hl.if_else(ht.hap_defining_variant, hl.str('Y'), hl.missing(hl.dtype('str'))),
         ),
     }
     ht = ht.annotate(**annotations)
