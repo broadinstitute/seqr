@@ -785,10 +785,10 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         POPULATIONS[pop].update({'max_hl': 'max_hl'})
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = {
-        'mitimpact_apogee': ('mitimpact', 'score'),
-        'hmtvar_hmtVar': ('hmtvar', 'score'),
-        'mitotip_mitoTIP': ('mitotip', 'trna_prediction'),
-        'hap_defining_variant': ('haplogroup', 'is_defining'),
+        'apogee': ('mitimpact', 'score'),
+        'hmtvar': ('hmtvar', 'score'),
+        'mitotip': ('mitotip', 'trna_prediction'),
+        'haplogroup_defining': ('haplogroup', 'is_defining'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     BASE_ANNOTATION_FIELDS = {
