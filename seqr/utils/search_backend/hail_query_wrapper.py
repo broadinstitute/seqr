@@ -629,6 +629,7 @@ class BaseHailTableQuery(object):
 
 class BaseVariantHailTableQuery(BaseHailTableQuery):
 
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['DP', 'GQ']}
     POPULATIONS = {
         'callset': {'hom': None, 'hemi': None, 'het': None},
     }
@@ -714,7 +715,8 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
 
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'DP', 'PL', 'GQ']}
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'PL']}
+    GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
         'topmed': {'hemi': None, 'het': None},
         'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
@@ -762,6 +764,37 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
                 quality_filter_expr &= ab_expr
 
         return quality_filter_expr
+
+
+class MitoHailTableQuery(BaseVariantHailTableQuery):
+
+    GENOTYPE_FIELDS = {
+        'hl': 'HL',
+        'mitoCn': 'mito_cn',
+        'contamination': 'contamination',
+    }
+    GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
+    POPULATIONS = {
+        pop: {'hom': None, 'hemi': None, 'het': None} for pop in [
+            'callset_heteroplasmy', 'gnomad_mito', 'gnomad_mito_heteroplasmy', 'helix', 'helix_heteroplasmy'
+        ]
+    }
+    for pop in ['gnomad_mito_heteroplasmy', 'helix_heteroplasmy']:
+        POPULATIONS[pop].update({'max_hl': 'max_hl'})
+    POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
+    PREDICTION_FIELDS_CONFIG = {
+        'mitimpact_apogee': ('mitimpact', 'score'),
+        'hmtvar_hmtVar': ('hmtvar', 'score'),
+        'mitotip_mitoTIP': ('mitotip', 'trna_prediction'),
+        'hap_defining_variant': ('haplogroup', 'is_defining'),
+    }
+    PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
+    BASE_ANNOTATION_FIELDS = {
+        'commonLowHeteroplasmy': lambda r: r.common_low_heteroplasmy,
+        'highConstraintRegion': lambda r: r.high_constraint_region,
+        'mitomapPathogenic': lambda r: r.mitomap.pathogenic,
+    }
+    BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
 
 def _no_genotype_override(genotypes, field):
