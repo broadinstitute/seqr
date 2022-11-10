@@ -1008,7 +1008,7 @@ def _is_gcnv_variant(r):
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     COMPUTED_ANNOTATION_FIELDS = {
-        k: lambda self, r: hl.or_else(v(self, r), r[k])
+        k: lambda self, r: hl.if_else(_is_gcnv_variant(r), hl.or_else(v(self, r), r[k]), r[k])
         for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
     }
     INITIAL_ENTRY_ANNOTATIONS = {
