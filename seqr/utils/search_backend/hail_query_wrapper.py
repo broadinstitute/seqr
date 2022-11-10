@@ -805,6 +805,10 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         return families_expr
 
 
+def _is_gcnv_variant(r):
+    return hl.is_defined(r.svType) & r.svType.startswith('gCNV_')
+
+
 class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     GENOTYPE_FIELDS = {
@@ -822,7 +826,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     })
     COMPUTED_ANNOTATION_FIELDS = {
         'transcripts': lambda self, r: hl.if_else(
-            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
+            ~_is_gcnv_variant(r) & _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
                 lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
                 r.genotypes.values().flatmap(lambda g: g.geneIds)
             ),
@@ -1001,14 +1005,10 @@ class MultiDataTypeHailTableQuery(object):
         return {}
 
 
-def _is_gcnv_variant(r):
-    return hl.is_defined(r.svType) & r.svType.startswith('gCNV_')
-
-
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     COMPUTED_ANNOTATION_FIELDS = {
-        k: lambda self, r: hl.if_else(_is_gcnv_variant(r), hl.or_else(v(self, r), r[k]), r[k])
+        k: lambda self, r: hl.or_else(v(self, r), r[k])
         for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
     }
     INITIAL_ENTRY_ANNOTATIONS = {
