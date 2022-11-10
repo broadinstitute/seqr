@@ -91,7 +91,7 @@ class BaseHailTableQuery(object):
                 r.sortedTranscriptConsequences.map(
                     lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS})).group_by(
                     lambda t: t.geneId),
-                hl.missing(hl.dtype('dict')),
+                hl.dict({}),
             ),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
