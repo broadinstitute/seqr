@@ -910,7 +910,7 @@ class SvHailTableQuery(BaseSvHailTableQuery):
 
 QUERY_CLASS_MAP = {
     VARIANT_DATASET: VariantHailTableQuery,
-    sample.DATASET_TYPE_MITO_CALLS: MitoHailTableQuery,
+    Sample.DATASET_TYPE_MITO_CALLS: MitoHailTableQuery,
     GCNV_KEY: GcnvHailTableQuery,
     SV_KEY: SvHailTableQuery,
 }
