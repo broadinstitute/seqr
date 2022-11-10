@@ -48,7 +48,15 @@ class HailSearch(object):
         data_sources_by_type = {k: list(v.keys())[0] for k, v in sample_data_sources_by_type.items()}
         samples_by_data_type = {k: list(v.values())[0] for k, v in sample_data_sources_by_type.items()}
 
-        if data_type == Sample.DATASET_TYPE_SV_CALLS:
+        data_type = Sample.DATASET_TYPE_MITO_CALLS  # TODO remove
+
+        if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+            data_type = None  # TODO always is nulled out, can redo
+            data_sources_by_type = {
+                k: v for k, v in data_sources_by_type.items()
+                if k in {Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS}
+            }
+        elif data_type == Sample.DATASET_TYPE_SV_CALLS:
             data_type = None
             data_sources_by_type = {k: v for k, v in data_sources_by_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
             samples_by_data_type = {k: v for k, v in samples_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
@@ -64,7 +72,14 @@ class HailSearch(object):
             samples = samples_by_data_type
             data_source = data_sources_by_type
             is_all_svs = all(k.startswith(Sample.DATASET_TYPE_SV_CALLS) for k in data_sources_by_type)
-            query_cls = AllSvHailTableQuery if is_all_svs else AllDataTypeHailTableQuery
+            is_no_sv = all(not k.startswith(Sample.DATASET_TYPE_SV_CALLS) for k in data_sources_by_type)
+
+            if is_all_svs:
+                query_cls = AllSvHailTableQuery
+            elif is_no_sv:
+                query_cls = AllDataTypeHailTableQuery  # TODO merged mito variant class
+            else:
+                query_cls = AllDataTypeHailTableQuery
 
         self._query_wrapper = query_cls(data_source, samples=samples, genome_version=self._genome_version, **kwargs)
 
