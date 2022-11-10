@@ -627,21 +627,12 @@ class BaseHailTableQuery(object):
         return result
 
 
-class VariantHailTableQuery(BaseHailTableQuery):
+class BaseVariantHailTableQuery(BaseHailTableQuery):
 
-    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'DP', 'PL', 'GQ']}
     POPULATIONS = {
         'callset': {'hom': None, 'hemi': None, 'het': None},
-        'topmed': {'hemi': None, 'het': None},
-        'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
-        'exac': {
-            'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
-        },
-        'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
-        'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
     }
     PREDICTION_FIELDS_CONFIG = {
-        'cadd': ('cadd', 'PHRED'),
         'fathmm': ('dbnsfp', 'FATHMM_pred'),
         'gerp_rs': ('dbnsfp', 'GERP_RS'),
         'metasvm': ('dbnsfp', 'MetaSVM_pred'),
@@ -650,19 +641,13 @@ class VariantHailTableQuery(BaseHailTableQuery):
         'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
-        'eigen': ('eigen', 'Eigen_phred'),
-        'mpc': ('mpc', 'MPC'),
-        'primate_ai': ('primate_ai', 'score'),
-        'splice_ai': ('splice_ai', 'delta_score'),
-        'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
     }
     TRANSCRIPT_FIELDS = BaseHailTableQuery.TRANSCRIPT_FIELDS + [
         'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_filter', 'lof_flags', 'lof_info',
         'transcript_id', 'transcript_rank',
     ]
-    ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
 
-    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['hgmd', 'rsid', 'xpos']
+    CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid', 'xpos']
     BASE_ANNOTATION_FIELDS = {
         'chrom': lambda r: r.locus.contig.replace("^chr", ""),
         'pos': lambda r: r.locus.position,
@@ -675,7 +660,6 @@ class VariantHailTableQuery(BaseHailTableQuery):
         ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
-        'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
 
@@ -719,15 +703,51 @@ class VariantHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        ht = super(VariantHailTableQuery, cls).import_filtered_ht(data_source, samples, intervals=None if exclude_intervals else intervals)
+        ht = super(BaseVariantHailTableQuery, cls).import_filtered_ht(data_source, samples, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
             ht = hl.filter_intervals(ht, intervals, keep=False)
-        # In production: will not have callset frequency, may rename or rework these fields and filters
-        ht = ht.annotate(callset=hl.struct(**{field: ht[field] for field in ['AF', 'AC', 'AN']}))
         return ht
 
     def _get_consequence_terms(self):
         return self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
+
+
+class VariantHailTableQuery(BaseVariantHailTableQuery):
+
+    GENOTYPE_FIELDS = {f.lower(): f for f in ['AB', 'AD', 'DP', 'PL', 'GQ']}
+    POPULATIONS = {
+        'topmed': {'hemi': None, 'het': None},
+        'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
+        'exac': {
+            'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
+        },
+        'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
+        'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
+    }
+    POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
+    PREDICTION_FIELDS_CONFIG = {
+        'cadd': ('cadd', 'PHRED'),
+        'eigen': ('eigen', 'Eigen_phred'),
+        'mpc': ('mpc', 'MPC'),
+        'primate_ai': ('primate_ai', 'score'),
+        'splice_ai': ('splice_ai', 'delta_score'),
+        'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
+    }
+    PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
+    ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
+
+    CORE_FIELDS = BaseVariantHailTableQuery.CORE_FIELDS + ['hgmd']
+    BASE_ANNOTATION_FIELDS = {
+        'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
+    }
+    BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
+
+    @classmethod
+    def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        ht = super(VariantHailTableQuery, cls).import_filtered_ht(data_source, samples, intervals, exclude_intervals)
+        # In production: will not have callset frequency, may rename or rework these fields and filters
+        ht = ht.annotate(callset=hl.struct(**{field: ht[field] for field in ['AF', 'AC', 'AN']}))
+        return ht
 
     def _get_quality_filter_expr(self, mt, quality_filter):
         min_ab = (quality_filter or {}).get('min_ab')
