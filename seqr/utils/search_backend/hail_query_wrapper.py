@@ -1019,7 +1019,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     DATA_TYPE_ANNOTATION_FIELDS = ['end', 'pos']
 
     def __init__(self, *args, **kwargs):
-        super(MultiDataTypeHailTableQuery, self).__init__(*args, **kwargs)
+        super(AllSvHailTableQuery, self).__init__(*args, **kwargs)
         self.COMPUTED_ANNOTATION_FIELDS = {
             k: lambda _self, r: hl.or_else(v(_self, r), r[k])
             for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()
