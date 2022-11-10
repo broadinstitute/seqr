@@ -86,9 +86,11 @@ class BaseHailTableQuery(object):
             'predictions': lambda r: hl.struct(**{
                 prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
-            'transcripts': lambda r: hl.or_else(r.sortedTranscriptConsequences, hl.empty_array(hl.dtype('dict'))).map(
-                lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS})).group_by(
-                lambda t: t.geneId),
+            'transcripts': lambda r: hl.or_else(
+                r.sortedTranscriptConsequences, hl.empty_array(r.sortedTranscriptConsequences.dtype.element_type)
+            ).map(
+                lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS})
+            ).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
