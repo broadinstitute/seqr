@@ -875,6 +875,7 @@ class MultiDataTypeHailTableQuery(object):
         self.PREDICTION_FIELDS_CONFIG = {}
         self.GENOTYPE_FIELDS = {}
         self.BASE_ANNOTATION_FIELDS = {}
+        self.COMPUTED_ANNOTATION_FIELDS = {}
         self.CORE_FIELDS = set()
         self.ANNOTATION_OVERRIDE_FIELDS = []
         for cls in [QUERY_CLASS_MAP[data_type] for data_type in self._data_types]:
@@ -882,6 +883,7 @@ class MultiDataTypeHailTableQuery(object):
             self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
             self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
+            self.COMPUTED_ANNOTATION_FIELDS.update(cls.COMPUTED_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
             self.ANNOTATION_OVERRIDE_FIELDS += cls.ANNOTATION_OVERRIDE_FIELDS
         self.BASE_ANNOTATION_FIELDS.update({
@@ -1007,16 +1009,6 @@ def _is_gcnv_variant(r):
 
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
-    COMPUTED_ANNOTATION_FIELDS = {
-        # k: lambda self, r: hl.or_else(v(self, r), r[k])
-        # for k, v in GcnvHailTableQuery.COMPUTED_ANNOTATION_FIELDS.items()
-        'transcripts': lambda self, r: hl.if_else(
-            ~_is_gcnv_variant(r) & _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
-                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-                r.genotypes.values().flatmap(lambda g: g.geneIds)
-            ),
-        )
-    }
     INITIAL_ENTRY_ANNOTATIONS = {
         #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
         'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
@@ -1025,6 +1017,13 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     SV_MERGE_FIELDS = {'interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sortedTranscriptConsequences'}
     MERGE_FIELDS = {GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS}
     DATA_TYPE_ANNOTATION_FIELDS = ['end', 'pos']
+
+    def __init__(self, *args, **kwargs):
+        super(MultiDataTypeHailTableQuery, self).__init__(*args, **kwargs)
+        self.COMPUTED_ANNOTATION_FIELDS = {
+            k: lambda _self, r: hl.or_else(v(_self, r), r[k])
+            for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()
+        }
 
     @staticmethod
     def get_row_data_type(r):
@@ -1035,9 +1034,6 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
 
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
     INITIAL_ENTRY_ANNOTATIONS = AllSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
-
-    COMPUTED_ANNOTATION_FIELDS = deepcopy(VariantHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
-    COMPUTED_ANNOTATION_FIELDS.update(AllSvHailTableQuery.COMPUTED_ANNOTATION_FIELDS)
 
     MERGE_FIELDS = {VARIANT_DATASET: {'rg37_locus'}}
     MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
