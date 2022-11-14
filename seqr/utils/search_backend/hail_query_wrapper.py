@@ -141,7 +141,7 @@ class BaseHailTableQuery(object):
             s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
             for s in samples
         }
-        logger.info(f'{data_source}: {ht.count()} ({len(samples)})')
+        logger.info(f'{data_source}: {ht.count()} ({len(samples)})')  # TODO
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
     @staticmethod
@@ -1065,6 +1065,7 @@ class MultiDataTypeHailTableQuery(object):
                 **transmute_expressions,
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
+            logger.info(f'{data_type}: {ht.count()}')  # TODO
 
         return ht
 
