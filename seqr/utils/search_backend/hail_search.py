@@ -48,26 +48,22 @@ class HailSearch(object):
         data_sources_by_type = {k: list(v.keys())[0] for k, v in sample_data_sources_by_type.items()}
         samples_by_data_type = {k: list(v.values())[0] for k, v in sample_data_sources_by_type.items()}
 
-        data_type = Sample.DATASET_TYPE_MITO_CALLS  # TODO remove
-
         if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            data_type = None  # TODO always is nulled out, can redo
             data_sources_by_type = {
                 k: v for k, v in data_sources_by_type.items()
                 if k in {Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS}
             }
         elif data_type == Sample.DATASET_TYPE_SV_CALLS:
-            data_type = None
             data_sources_by_type = {k: v for k, v in data_sources_by_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
             samples_by_data_type = {k: v for k, v in samples_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
 
-        if not data_type and len(data_sources_by_type) == 1:
-            data_type = list(data_sources_by_type.keys())[0]
+        if len(data_sources_by_type) == 1:
+            single_data_type = list(data_sources_by_type.keys())[0]
 
-        if data_type:
-            samples = samples_by_data_type[data_type]
-            data_source = data_sources_by_type[data_type]
-            query_cls = QUERY_CLASS_MAP[data_type]
+        if single_data_type:
+            samples = samples_by_data_type[single_data_type]
+            data_source = data_sources_by_type[single_data_type]
+            query_cls = QUERY_CLASS_MAP[single_data_type]
         else:
             samples = samples_by_data_type
             data_source = data_sources_by_type
