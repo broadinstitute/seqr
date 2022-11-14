@@ -124,18 +124,13 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
-        logger.info(f'{data_source}: {ht.count()}')
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
-        logger.info(f'{data_source}: {mt.count()}')
         mt = mt.unfilter_entries()
-        logger.info(f'{data_source}: {mt.count()}')
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
-        logger.info(f'{data_source}: {mt.count()}')
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
-        logger.info(f'{data_source}: {mt.count()}')
         return mt
 
     @classmethod
@@ -146,6 +141,7 @@ class BaseHailTableQuery(object):
             s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
             for s in samples
         }
+        logger.info(f'{data_source}: {ht.count()} ({len(samples)})')
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
     @staticmethod
