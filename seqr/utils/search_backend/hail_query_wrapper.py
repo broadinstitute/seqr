@@ -17,6 +17,7 @@ AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
 UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 VARIANT_DATASET = Sample.DATASET_TYPE_VARIANT_CALLS
 SV_DATASET = Sample.DATASET_TYPE_SV_CALLS
+MITO_DATASET = Sample.DATASET_TYPE_MITO_CALLS
 
 STRUCTURAL_ANNOTATION_FIELD = 'structural'
 
@@ -912,7 +913,7 @@ class SvHailTableQuery(BaseSvHailTableQuery):
 
 QUERY_CLASS_MAP = {
     VARIANT_DATASET: VariantHailTableQuery,
-    Sample.DATASET_TYPE_MITO_CALLS: MitoHailTableQuery,
+    MITO_DATASET: MitoHailTableQuery,
     GCNV_KEY: GcnvHailTableQuery,
     SV_KEY: SvHailTableQuery,
 }
@@ -1084,6 +1085,22 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
     @staticmethod
     def get_row_data_type(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
+
+
+class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
+
+    VARIANT_MERGE_FIELDS = {
+        'alleles', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rg37_locus', 'rsid', 'sortedTranscriptConsequences', 'xpos',
+    }
+    MERGE_FIELDS = {VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS}
+
+    @staticmethod
+    def get_row_data_type(r):
+        return hl.if_else(
+            hl.is_defined(r.mitomap),
+            MITO_DATASET,
+            VARIANT_DATASET,
+        )
 
 
 class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
