@@ -1101,9 +1101,11 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
 
-    VARIANT_MERGE_FIELDS = {  # TODO?
-        'alleles', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rg37_locus', 'rsid', 'sortedTranscriptConsequences', 'xpos',
+    VARIANT_MERGE_FIELDS = {
+        'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rg37_locus', 'rsid',
+        'sortedTranscriptConsequences', 'xpos',
     }
+
     MERGE_FIELDS = {VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS}
 
     @staticmethod
