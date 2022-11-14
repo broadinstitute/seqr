@@ -127,10 +127,10 @@ class BaseHailTableQuery(object):
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
-        if self.INITIAL_ENTRY_ANNOTATIONS:
-            mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
-        if self._filtered_genes:
-            mt = self._filter_gene_ids(mt, self._filtered_genes)
+        # if self.INITIAL_ENTRY_ANNOTATIONS:
+        #     mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
+        # if self._filtered_genes:
+        #     mt = self._filter_gene_ids(mt, self._filtered_genes)
         return mt
 
     @classmethod
@@ -141,7 +141,6 @@ class BaseHailTableQuery(object):
             s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
             for s in samples
         }
-        logger.info(f'{data_source}: {ht.count()} ({len(samples)})')  # TODO
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
 
     @staticmethod
@@ -1065,7 +1064,6 @@ class MultiDataTypeHailTableQuery(object):
                 **transmute_expressions,
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
-            logger.info(f'{data_type}: {ht.count()}')  # TODO
 
         return ht
 
