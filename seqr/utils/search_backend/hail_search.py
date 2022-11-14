@@ -59,7 +59,7 @@ class HailSearch(object):
             samples_by_data_type = {k: v for k, v in samples_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
 
         single_data_type = list(data_sources_by_type.keys())[0] if len(data_sources_by_type) == 1 else None
-        single_data_type = Sample.DATASET_TYPE_MITO_CALLS
+
         if single_data_type:
             samples = samples_by_data_type[single_data_type]
             data_source = data_sources_by_type[single_data_type]
