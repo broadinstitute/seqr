@@ -1052,6 +1052,9 @@ class MultiDataTypeHailTableQuery(object):
             ht = ht.annotate(**{sample_id: ht[sample_id].select(
                 **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
             ) for sample_id in table_sample_ids})
+            logger.info(table_sample_ids)  # TODO
+            logger.info(entry_fields)  # TODO
+            logger.info(entry_types)  # TODO
 
             transmute_expressions = {
                 k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
