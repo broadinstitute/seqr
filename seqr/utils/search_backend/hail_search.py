@@ -48,6 +48,7 @@ class HailSearch(object):
         data_sources_by_type = {k: list(v.keys())[0] for k, v in sample_data_sources_by_type.items()}
         samples_by_data_type = {k: list(v.values())[0] for k, v in sample_data_sources_by_type.items()}
 
+        data_type = Sample.DATASET_TYPE_VARIANT_CALLS  # TODO
         if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
             data_sources_by_type = {
                 k: v for k, v in data_sources_by_type.items()

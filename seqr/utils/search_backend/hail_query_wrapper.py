@@ -127,6 +127,7 @@ class BaseHailTableQuery(object):
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
+        # TODO
         # if self.INITIAL_ENTRY_ANNOTATIONS:
         #     mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
         # if self._filtered_genes:
