@@ -143,11 +143,11 @@ def _get_rna_seq_outliers(gene_ids, families):
     return data_by_individual_gene
 
 
-def _get_phenotype_prioritization(gene_ids, families):
+def get_phenotype_prioritization(filters):
     data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     data_dicts = _get_json_for_models(
-        PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, individual__family__in=families).order_by('disease_id'),
+        PhenotypePrioritization.objects.filter(**filters).order_by('disease_id'),
         nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 
@@ -248,6 +248,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid)
 
-        response['phenotypeGeneScores'] = _get_phenotype_prioritization(genes.keys(), families)
+        filters = {'gene_id__in': genes.keys(), 'individual__family__in': families}
+        response['phenotypeGeneScores'] = get_phenotype_prioritization(filters)
 
     return response

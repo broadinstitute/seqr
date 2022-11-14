@@ -24,6 +24,10 @@ def get_genes_for_variant_display(gene_ids):
     return _get_genes(gene_ids, gene_fields=VARIANT_GENE_DISPLAY_FIELDS)
 
 
+def get_genes_for_prioritized_display(gene_ids):
+    return _get_genes(gene_ids, gene_fields=VARIANT_GENE_PRIORITIZED_DISPLAY_FIELDS)
+
+
 def get_genes_for_variants(gene_ids):
     return _get_genes(gene_ids, gene_fields=VARIANT_GENE_FIELDS)
 
@@ -96,6 +100,10 @@ PRIMATE_AI = 'primate_ai'
 MGI_FIELD = 'mgi'
 CLINGEN = 'clingen'
 NOTES= 'notes'
+VARIANT_GENE_PRIORITIZED_DISPLAY_FIELDS = {
+    OMIM: (Omim, _add_omim),
+    CONSTRAINT: (GeneConstraint, None),
+}
 VARIANT_GENE_DISPLAY_FIELDS = {
     OMIM: (Omim, _add_omim),
     CONSTRAINT: (GeneConstraint, None),

@@ -16,7 +16,8 @@ from seqr.views.utils.note_utils import create_note_handler, update_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
     get_json_for_matchmaker_submissions, get_json_for_analysis_groups
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
+    PhenotypePrioritization
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 
@@ -47,6 +48,9 @@ def family_page_data(request, family_guid):
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
     if sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqtpm=None):
         response['familiesByGuid'][family_guid]['hasRnaTpmData'] = True
+
+    if PhenotypePrioritization.objects.filter(individual__guid=individual_guid):
+        response['individualsByGuid'][individual_guid]['hasPhenotypeGeneScores'] = True
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}

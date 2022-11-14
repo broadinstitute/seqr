@@ -32,10 +32,12 @@ import {
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
 import { getCurrentProject } from '../../selectors'
-
+import PhenotypePrioritizedGenes from '../PhenotypePrioritizedGenes'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
+
+// const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
 
 const Detail = styled.div`
   display: inline-block;
@@ -133,15 +135,20 @@ ShowRnaSeqOutliers.propTypes = {
   sample: PropTypes.object,
 }
 
-const ShowPhenotypePrioritizations = ({ individual, hasPhenotypePriData, ...props }) => (hasPhenotypePriData ? (
+const ShowPhenotypePrioritizedGenes = ({ individual, hasPhenotypeGeneScores, ...props }) => (hasPhenotypeGeneScores ? (
   <Modal
-    modalName={``}
-    title={``}
+    modalName={`PHENOTYPE-PRIORITIZATION-${individual.individualId}`}
+    title={`Phenotype Prioritized Genes: ${individual.individualId}`}
     trigger={<ButtonLink padding="1em 0 0 0" content="Show Phenotype Prioritized Genes" />}
   >
-    <PhenotypePrioritize {...props} />
+    <PhenotypePrioritizedGenes individual={individual} {...props} />
   </Modal>
 ) : null)
+
+ShowPhenotypePrioritizedGenes.propTypes = {
+  individual: PropTypes.object,
+  hasPhenotypeGeneScores: PropTypes.bool,
+}
 
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
@@ -185,6 +192,11 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       familyGuid={individual.familyGuid}
       sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
       hasRnaOutlierData={individual.hasRnaOutlierData}
+    />
+    <ShowPhenotypePrioritizedGenes
+      familyGuid={individual.familyGuid}
+      individual={individual}
+      hasPhenotypeGeneScores={individual.hasPhenotypeGeneScores}
     />
   </div>
 ))

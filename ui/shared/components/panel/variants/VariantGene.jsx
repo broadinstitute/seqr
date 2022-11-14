@@ -387,7 +387,7 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'HaploInsufficient',
     label: 'HI',
-    showDetails: gene => gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
+    showDetails: gene => gene.cnSensitivity?.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
     detailsDisplay: gene => (
       `These are a score developed by the Talkowski lab that predict whether a gene is haploinsufficient based 
       on large chromosomal microarray data set analysis. Scores >${HI_THRESHOLD} are considered to have high likelihood to be 
@@ -397,7 +397,7 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'TriploSensitive',
     label: 'TS',
-    showDetails: gene => gene.cnSensitivity.pts && gene.cnSensitivity.pts > TS_THRESHOLD,
+    showDetails: gene => gene.cnSensitivity?.pts && gene.cnSensitivity.pts > TS_THRESHOLD,
     detailsDisplay: gene => (
       `These are a score developed by the Talkowski lab that predict whether a gene is triplosensitive based on
        large chromosomal microarray dataset analysis. Scores >${TS_THRESHOLD} are considered to have high likelihood to be 
@@ -464,7 +464,7 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-const getDetailSections = (configs, gene, compact, labelProps, individualGeneData) => configs.map(
+const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
       ...sectionConfig,
@@ -475,11 +475,11 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
     ...acc,
     ...config.detail.map(detail => ({ ...config, ...detail })),
   ] : [...acc, config]),
-[]).map(({ detail, expandedDisplay, ...sectionConfig }) => (
-  (expandedDisplay && !compact) ? (
+[]).map(({ detail, expandedDisplay, expandedLabel, ...sectionConfig }) => (
+  (expandedDisplay && !compact && !noExpand) ? (
     <OmimSegments key={sectionConfig.label}>
       <Segment color={sectionConfig.color}>
-        <Label size="mini" color={sectionConfig.color} content={sectionConfig.expandedLabel} />
+        <Label size="mini" color={sectionConfig.color} content={expandedLabel} />
       </Segment>
       <Segment color={sectionConfig.color}>
         {detail}
@@ -497,11 +497,11 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 ))
 
 export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, ...labelProps },
+  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, ...labelProps },
 ) => {
   const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData)
-  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps)
-  const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
+  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps, null, noExpand)
+  const hasLocusLists = showLocusLists && gene.locusListGuids?.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
 
   return [
@@ -529,6 +529,7 @@ GeneDetails.propTypes = {
   showLocusLists: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   individualGeneData: PropTypes.object,
+  noExpand: PropTypes.bool,
 }
 
 const GeneSearchLinkWithPopup = props => (
@@ -547,7 +548,7 @@ const getGeneConsequence = (geneId, variant) => {
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
 
-const BaseVariantGene = React.memo((
+export const BaseVariantGene = React.memo((
   { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData },
 ) => {
   const geneConsequence = getGeneConsequence(geneId, variant)
@@ -567,6 +568,7 @@ const BaseVariantGene = React.memo((
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
       showLocusLists
+      noExpand={compact && showInlineDetails}
     />
   )
 

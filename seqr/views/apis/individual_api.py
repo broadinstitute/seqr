@@ -9,18 +9,19 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, Sample, RnaSeqOutlier
-from seqr.utils.gene_utils import get_genes
+from seqr.models import Individual, Family, Sample, RnaSeqOutlier, PhenotypePrioritization
+from seqr.utils.gene_utils import get_genes, get_genes_for_prioritized_display
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family,\
-    _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
+    _get_json_for_families, _get_json_for_models, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families,\
     get_updated_pedigree_json
+from seqr.views.utils.variant_utils import get_phenotype_prioritization
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -763,6 +764,19 @@ def get_individual_rna_seq_data(request, individual_guid):
         'rnaSeqData': {individual_guid: {'outliers': rna_seq_data}},
         'genesById': genes_to_show,
     })
+
+
+@login_and_policies_required
+def get_individual_phenotype_gene_scores(request, individual_guid):
+    individual = Individual.objects.get(guid=individual_guid)
+    check_project_permissions(individual.family.project, request.user)
+
+    phenotype_prioritization = get_phenotype_prioritization({'individual': individual})
+    return create_json_response({
+        'phenotypeGeneScores': phenotype_prioritization,
+        'genesById': get_genes_for_prioritized_display(phenotype_prioritization[individual_guid].keys())
+    })
+
 
 @login_and_policies_required
 def get_hpo_terms(request, hpo_parent_id):
