@@ -406,8 +406,9 @@ class BaseHailTableQuery(object):
             raise InvalidSearchException(max_families[1])
 
     def _get_quality_filter_expr(self, mt, quality_filter):
+        quality_filter = self._format_quality_filter(quality_filter or {})
         quality_filter_expr = None
-        for filter_k, value in (quality_filter or {}).items():
+        for filter_k, value in quality_filter.items():
             field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field:
                 field_filter = hl.is_missing(mt[field]) | (mt[field] > value)
@@ -417,6 +418,10 @@ class BaseHailTableQuery(object):
                     quality_filter_expr &= field_filter
 
         return quality_filter_expr
+
+    @classmethod
+    def _format_quality_filter(cls, quality_filter):
+        return quality_filter
 
     def _get_x_chrom_interval(self):
         return hl.parse_locus_interval(
@@ -756,7 +761,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     def _get_quality_filter_expr(self, mt, quality_filter):
         min_ab = (quality_filter or {}).get('min_ab')
-        quality_filter = {k: v for k, v in (quality_filter or {}).items() if k != 'min_ab'}
         quality_filter_expr = super(VariantHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
         if min_ab:
             #  AB only relevant for hets
@@ -767,6 +771,10 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
                 quality_filter_expr &= ab_expr
 
         return quality_filter_expr
+
+    @classmethod
+    def _format_quality_filter(cls, quality_filter):
+        return {k: v for k, v in quality_filter.items() if k != 'min_ab'}
 
 
 class MitoHailTableQuery(BaseVariantHailTableQuery):
@@ -798,6 +806,10 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         'mitomapPathogenic': lambda r: r.mitomap.pathogenic,
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
+
+    @classmethod
+    def _format_quality_filter(cls, quality_filter):
+        return {k: v / 100 if k == 'min_hl' else v for k, v in (quality_filter or {}).items()}
 
 
 def _no_genotype_override(genotypes, field):
@@ -1089,7 +1101,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
 
-    VARIANT_MERGE_FIELDS = {
+    VARIANT_MERGE_FIELDS = {  # TODO?
         'alleles', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rg37_locus', 'rsid', 'sortedTranscriptConsequences', 'xpos',
     }
     MERGE_FIELDS = {VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS}
@@ -1101,6 +1113,11 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
             MITO_DATASET,
             VARIANT_DATASET,
         )
+
+    @classmethod
+    def _format_quality_filter(cls, quality_filter):
+        quality_filter = VariantHailTableQuery._format_quality_filter(quality_filter)
+        return MitoHailTableQuery._format_quality_filter(quality_filter)
 
 
 class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
