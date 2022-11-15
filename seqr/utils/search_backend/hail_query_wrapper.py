@@ -808,6 +808,13 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     @classmethod
+    def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        ht = super(MitoHailTableQuery, cls).import_filtered_ht(data_source, samples, intervals, exclude_intervals)
+        # TODO remove this function after reloading mito sample tables
+        ht = ht.annotate(**{s.sample_id: ht[s.sample_id].annotate(GQ=hl.int(ht[s.sample_id].GQ)) for s in samples})
+        return ht
+
+    @classmethod
     def _format_quality_filter(cls, quality_filter):
         return {k: v / 100 if k == 'min_hl' else v for k, v in (quality_filter or {}).items()}
 
@@ -1044,9 +1051,6 @@ class MultiDataTypeHailTableQuery(object):
             entry_types.update(dict(
                 **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
             ))
-            if 'GQ' in entry_types:
-                # TODO remove once reload sample mito tables
-                entry_types['GQ'] = hl.dtype('int32')
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
             def genotype_expr(sample):
