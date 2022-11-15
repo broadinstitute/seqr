@@ -124,17 +124,13 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
-        logger.info(f'COUNT: {ht.count()}')
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
-        logger.info(f'MT COUNT: {mt.count()}')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
-        logger.info(f'F MT COUNT: {mt.count()}')
-        # TODO
-        # if self.INITIAL_ENTRY_ANNOTATIONS:
-        #     mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
-        # if self._filtered_genes:
-        #     mt = self._filter_gene_ids(mt, self._filtered_genes)
+        if self.INITIAL_ENTRY_ANNOTATIONS:
+            mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
+        if self._filtered_genes:
+            mt = self._filter_gene_ids(mt, self._filtered_genes)
         return mt
 
     @classmethod
@@ -1019,7 +1015,7 @@ class MultiDataTypeHailTableQuery(object):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        data_types = sorted(data_source.keys())  # TODO
+        data_types = list(data_source.keys())
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
         data_type_0 = data_types[0]
@@ -1049,10 +1045,6 @@ class MultiDataTypeHailTableQuery(object):
             ))
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
-            hht = ht.annotate(**{f'{sample_id}__GT': hl.or_else(ht[sample_id].GT, ht[f'{sample_id}_1'].GT) for sample_id in shared_sample_ids})
-            for sample_id in shared_sample_ids:
-                logger.info(f'{sample_id}: {hht.aggregate(hl.agg.count_where(hht[f"{sample_id}__GT"].is_non_ref()))}')  # TODO
-
             # TODO
             # ht = ht.annotate(**{sample_id: ht[sample_id].select(
             #     **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
@@ -1078,16 +1070,10 @@ class MultiDataTypeHailTableQuery(object):
             table_merge_fields -= set(transmute_expressions.keys())
             merge_fields.update(new_merge_fields)
 
-            for sample_id in sample_ids:
-                dup_s_id = f'{sample_id}_1'  # TODO
-                logger.info(f'{sample_id}: {data_type_0} - {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}, {data_type} - {ht.aggregate(hl.agg.count_where(ht[dup_s_id].GT.is_non_ref()))}')  # TODO
-
             ht = ht.transmute(
                 **transmute_expressions,
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
-            for sample_id in sample_ids:
-                logger.info(f'{sample_id}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
 
         return ht
 
