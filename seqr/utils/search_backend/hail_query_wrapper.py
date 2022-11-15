@@ -1037,26 +1037,14 @@ class MultiDataTypeHailTableQuery(object):
             new_type_samples = sample_ids_by_type[data_type]
             shared_sample_ids = sample_ids.intersection(new_type_samples)
             sample_ids.update(new_type_samples)
-            table_sample_ids = {f'{sample_id}_1' for sample_id in shared_sample_ids}
-            table_sample_ids.update(sample_ids)
 
             entry_types.update(dict(
                 **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
             ))
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
-            # TODO
-            # ht = ht.annotate(**{sample_id: ht[sample_id].select(
-            #     **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
-            # ) for sample_id in table_sample_ids})
-            distinct_sample_ids = sample_ids - shared_sample_ids
             def genotype_expr(sample):
                 return sample.select(**{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields})
-            # ht = ht.annotate(
-            #     **{sample_id: genotype_expr(ht[sample_id]) for sample_id in distinct_sample_ids},
-            #     **{sample_id: hl.if_else(hl.is_missing(ht[sample_id]), genotype_expr(ht[f'{sample_id}_1']), genotype_expr(ht[sample_id]))
-            #        for sample_id in shared_sample_ids},
-            # )
 
             transmute_expressions = {
                 k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
@@ -1065,14 +1053,13 @@ class MultiDataTypeHailTableQuery(object):
 
             new_merge_fields = cls.MERGE_FIELDS[data_type]
             table_merge_fields = merge_fields.intersection(new_merge_fields)
-            # table_merge_fields.update(shared_sample_ids)   # TODO
             table_merge_fields -= set(transmute_expressions.keys())
             merge_fields.update(new_merge_fields)
 
             ht = ht.transmute(
                 **transmute_expressions,
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
-                **{sample_id: genotype_expr(ht[sample_id]) for sample_id in distinct_sample_ids},
+                **{sample_id: genotype_expr(ht[sample_id]) for sample_id in sample_ids - shared_sample_ids},
                 **{sample_id: hl.if_else(
                     hl.is_missing(ht[sample_id]), genotype_expr(ht[f'{sample_id}_1']), genotype_expr(ht[sample_id])
                 ) for sample_id in shared_sample_ids},
