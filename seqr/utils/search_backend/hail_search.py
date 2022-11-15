@@ -90,13 +90,20 @@ class HailSearch(object):
         has_location_filter = genes or intervals
 
         if variant_ids:
-            self.filter_by_variant_ids(variant_ids)
+            # In production: support SV variant IDs?
+            variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
+            intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
+            data_type = Sample.DATASET_TYPE_VARIANT_CALLS
         else:
             data_type = self._dataset_type_for_annotations(annotations, annotations_secondary) if annotations else None
-            if has_location_filter:
-                self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'), data_type)
-            else:
-                self._load_table(data_type)
+
+        if has_location_filter:
+            self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'), data_type)
+        else:
+            self._load_table(data_type)
+
+        if variant_ids:
+            self._query_wrapper.filter_by_variant_ids(variant_ids)
 
         quality_filter = quality_filter or {}
         self._query_wrapper.filter_variants(annotations=annotations, quality_filter=quality_filter, **kwargs)
@@ -132,11 +139,7 @@ class HailSearch(object):
         return None
 
     def filter_by_variant_ids(self, variant_ids):
-        # In production: support SV variant IDs?
-        variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-        intervals = [ f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
-        self._load_table(data_type=Sample.DATASET_TYPE_VARIANT_CALLS, intervals=intervals)
-        self._query_wrapper.filter_by_variant_ids(variant_ids)
+        self.filter_variants(variant_ids=variant_ids)
 
     def _filter_by_intervals(self, genes, intervals, exclude_locations, data_type):
         parsed_intervals = None
