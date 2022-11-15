@@ -109,6 +109,7 @@ class BaseHailTableQuery(object):
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
+        self._has_location_filter = bool(intervals)
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {
@@ -195,8 +196,7 @@ class BaseHailTableQuery(object):
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             comp_het_only = inheritance_mode == COMPOUND_HET
             self._filter_compound_hets(
-                inheritance_filter, annotations_secondary, quality_filter, has_location_filter,
-                keep_main_ht=not comp_het_only,
+                inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=not comp_het_only,
             )
             if comp_het_only:
                 return
@@ -520,7 +520,7 @@ class BaseHailTableQuery(object):
     def _matched_family_sample_filter(self, mt, sample_family_map):
         return mt.familyGuids.contains(sample_family_map[mt.s])
 
-    def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=True):
+    def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=True):
         if not self._allowed_consequences:
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
@@ -534,7 +534,7 @@ class BaseHailTableQuery(object):
         ch_mt = self._filter_by_annotations(comp_het_consequences)
         ch_mt = self._filter_by_genotype(
             ch_mt, COMPOUND_HET, inheritance_filter, quality_filter,
-            max_families=None if has_location_filter else (MAX_NO_LOCATION_COMP_HET_FAMILIES, 'Location must be specified to search for compound heterozygous variants across many families')
+            max_families=None if self._has_location_filter else (MAX_NO_LOCATION_COMP_HET_FAMILIES, 'Location must be specified to search for compound heterozygous variants across many families')
         )
         ch_ht = self._format_results(ch_mt)
 
