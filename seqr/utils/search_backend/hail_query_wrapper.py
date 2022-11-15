@@ -1019,7 +1019,7 @@ class MultiDataTypeHailTableQuery(object):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        data_types = sorted(list(data_source.keys()), reverse=True)  # TODO
+        data_types = sorted(data_source.keys())  # TODO
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
         data_type_0 = data_types[0]
@@ -1032,9 +1032,6 @@ class MultiDataTypeHailTableQuery(object):
         entry_fields = {'GT'}
         entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
-
-        for sample_id in sample_ids:
-            logger.info(f'{sample_id} - {data_type_0}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
 
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
