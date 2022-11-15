@@ -167,8 +167,7 @@ class BaseHailTableQuery(object):
             ) for interval in intervals]
             invalid_intervals = [raw_intervals[i] for i, interval in enumerate(intervals) if interval is None]
             if invalid_intervals:
-                raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}') # TODO
-        logger.info(f'filtered to {len(intervals)} intervals')
+                raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
     def _filter_variants(self, inheritance_mode=None, inheritance_filter=None, variant_ids=None,

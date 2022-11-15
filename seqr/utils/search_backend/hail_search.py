@@ -94,8 +94,6 @@ class HailSearch(object):
         if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
-        has_location_filter = genes or intervals
-
         if variant_ids:
             # In production: support SV variant IDs?
             variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
@@ -107,7 +105,7 @@ class HailSearch(object):
         genes = genes or {}
         parsed_intervals = None
         exclude_locations = (locus or {}).get('excludeLocations')
-        if has_location_filter:
+        if genes or intervals:
             gene_coords = [
                 {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
                 for gene in genes.values()
