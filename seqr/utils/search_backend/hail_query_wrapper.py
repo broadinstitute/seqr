@@ -1122,12 +1122,12 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
         return MitoHailTableQuery._format_quality_filter(quality_filter)
 
 
-class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
+class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
     INITIAL_ENTRY_ANNOTATIONS = AllSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
 
-    MERGE_FIELDS = {VARIANT_DATASET: {'rg37_locus'}}
+    MERGE_FIELDS = deepcopy(AllVariantHailTableQuery.MERGE_FIELDS)
     MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
@@ -1136,7 +1136,7 @@ class AllDataTypeHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQue
         return hl.if_else(
             hl.is_defined(r.svType),
             AllSvHailTableQuery.get_row_data_type(r),
-            VARIANT_DATASET,
+            AllVariantHailTableQuery.get_row_data_type(r),
         )
 
     @staticmethod
