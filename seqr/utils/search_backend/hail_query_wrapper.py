@@ -1067,15 +1067,16 @@ class MultiDataTypeHailTableQuery(object):
             table_merge_fields -= set(transmute_expressions.keys())
             merge_fields.update(new_merge_fields)
 
-            for sample_id in table_sample_ids:
-                logger.info(f'table: {sample_id} - {data_type}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
+            for sample_id in sample_ids:
+                dup_s_id = f'{sample_id}_1'
+                logger.info(f'{sample_id}: {data_type_0} - {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}, {data_type} - {ht.aggregate(hl.agg.count_where(ht[dup_s_id].GT.is_non_ref()))}')  # TODO
 
             ht = ht.transmute(
                 **transmute_expressions,
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
             for sample_id in sample_ids:
-                logger.info(f'{sample_id} - {data_type}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
+                logger.info(f'{sample_id}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
 
         return ht
 
