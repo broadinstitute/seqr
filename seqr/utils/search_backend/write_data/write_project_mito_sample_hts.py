@@ -10,7 +10,7 @@ def _read_table(file, subset_ht=None):
     mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
     mt = mt.transmute_cols(c_mito_cn=mt.mito_cn, c_contamination=mt.contamination)
     return mt.annotate_entries(
-        GQ=mt.MQ,
+        GQ=hl.int(mt.MQ),
         mito_cn=mt.c_mito_cn,
         contamination=mt.c_contamination,
     )
