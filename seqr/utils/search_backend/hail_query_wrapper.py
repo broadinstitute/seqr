@@ -1055,9 +1055,6 @@ class MultiDataTypeHailTableQuery(object):
             ht = ht.annotate(**{sample_id: ht[sample_id].select(
                 **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
             ) for sample_id in table_sample_ids})
-            logger.info(f'table_sample_ids: {table_sample_ids}')  # TODO
-            logger.info(f'entry_fields: {entry_fields}')  # TODO
-            logger.info(f'entry_types: {entry_types}')  # TODO
 
             transmute_expressions = {
                 k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
@@ -1069,7 +1066,9 @@ class MultiDataTypeHailTableQuery(object):
             table_merge_fields.update(shared_sample_ids)
             table_merge_fields -= set(transmute_expressions.keys())
             merge_fields.update(new_merge_fields)
-            logger.info(f'table_merge_fields: {table_merge_fields}')  # TODO
+
+            for sample_id in table_sample_ids:
+                logger.info(f'table: {sample_id} - {data_type}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
 
             ht = ht.transmute(
                 **transmute_expressions,
