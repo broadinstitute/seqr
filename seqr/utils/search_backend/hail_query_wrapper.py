@@ -1114,7 +1114,7 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
     @staticmethod
     def data_type_for_row(r):
         return hl.if_else(
-            hl.is_defined(r.high_constraint_region),
+            hl.is_defined(r.high_constraint_region),  # TODO use is_mito after reloading table
             MITO_DATASET,
             VARIANT_DATASET,
         )
