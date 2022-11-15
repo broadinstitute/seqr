@@ -1063,13 +1063,19 @@ class MultiDataTypeHailTableQuery(object):
 
             new_merge_fields = cls.MERGE_FIELDS[data_type]
             table_merge_fields = merge_fields.intersection(new_merge_fields)
-            table_merge_fields.update(shared_sample_ids)
+            # table_merge_fields.update(shared_sample_ids)  # TODO
             table_merge_fields -= set(transmute_expressions.keys())
             merge_fields.update(new_merge_fields)
 
             for sample_id in sample_ids:
-                dup_s_id = f'{sample_id}_1'
+                dup_s_id = f'{sample_id}_1' # TODO
                 logger.info(f'{sample_id}: {data_type_0} - {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}, {data_type} - {ht.aggregate(hl.agg.count_where(ht[dup_s_id].GT.is_non_ref()))}')  # TODO
+
+            ht = ht.transmute(
+                **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in shared_sample_ids},
+            )
+            for sample_id in sample_ids:
+                logger.info(f'{sample_id}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
 
             ht = ht.transmute(
                 **transmute_expressions,
