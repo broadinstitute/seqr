@@ -1034,7 +1034,7 @@ class MultiDataTypeHailTableQuery(object):
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
 
         for sample_id in sample_ids:
-            logger.info(f'{sample_id} - {data_type_0}: {ht.aggregate(hl.agg.count_where(ht.GT.is_non_ref()))}')  # TODO
+            logger.info(f'{sample_id} - {data_type_0}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
 
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
@@ -1076,7 +1076,7 @@ class MultiDataTypeHailTableQuery(object):
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
             for sample_id in sample_ids:
-                logger.info(f'{sample_id} - {data_type}: {ht.aggregate(hl.agg.count_where(ht.GT.is_non_ref()))}')  # TODO
+                logger.info(f'{sample_id} - {data_type}: {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}')  # TODO
 
         return ht
 
