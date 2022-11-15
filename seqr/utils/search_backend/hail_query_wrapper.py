@@ -1111,13 +1111,10 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
 
     MERGE_FIELDS = {VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS}
 
-    def get_row_data_type(self, r):
-        return self.data_type_for_row(r)
-
     @staticmethod
     def data_type_for_row(r):
         return hl.if_else(
-            hl.is_defined(r.mitomap),
+            hl.is_defined(r.callset_heteroplasmy),
             MITO_DATASET,
             VARIANT_DATASET,
         )
