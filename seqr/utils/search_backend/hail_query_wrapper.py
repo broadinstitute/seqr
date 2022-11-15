@@ -1052,6 +1052,10 @@ class MultiDataTypeHailTableQuery(object):
             ))
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
 
+            hht = ht.annotate(**{f'{sample_id}__GT': hl.or_else(ht[sample_id].GT, ht[f'{sample_id}_1'].GT) for sample_id in shared_sample_ids})
+            for sample_id in shared_sample_ids:
+                logger.info(f'{sample_id}: {hht.aggregate(hl.agg.count_where(hht[f"{sample_id}__GT"].is_non_ref()))}')  # TODO
+
             ht = ht.annotate(**{sample_id: ht[sample_id].select(
                 **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
             ) for sample_id in table_sample_ids})
@@ -1070,7 +1074,6 @@ class MultiDataTypeHailTableQuery(object):
             for sample_id in sample_ids:
                 dup_s_id = f'{sample_id}_1'  # TODO
                 logger.info(f'{sample_id}: {data_type_0} - {ht.aggregate(hl.agg.count_where(ht[sample_id].GT.is_non_ref()))}, {data_type} - {ht.aggregate(hl.agg.count_where(ht[dup_s_id].GT.is_non_ref()))}')  # TODO
-                logger.info(f'missing {sample_id}: {data_type_0} - {ht.aggregate(hl.agg.count_where(hl.is_missing(ht[sample_id])))}, {data_type} - {ht.aggregate(hl.agg.count_where(hl.is_missing(ht[dup_s_id])))}')  # TODO
 
             ht = ht.transmute(
                 **transmute_expressions,
