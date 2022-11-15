@@ -35,7 +35,7 @@ class HailSearch(object):
         self._return_all_queried_families = return_all_queried_families # In production: need to implement for reloading saved variants
         self.previous_search_results = previous_search_results or {}
 
-    def _load_table(self, data_type, **kwargs):
+    def _load_filtered_table(self, data_type, **kwargs):
         sample_data_sources_by_type = defaultdict(lambda: defaultdict(list))
         for s in self.samples:
             data_type_key = f'{s.dataset_type}_{s.sample_type}' if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS else s.dataset_type
@@ -85,8 +85,15 @@ class HailSearch(object):
         return None, {'page': page, 'num_results': num_results}
 
     def filter_variants(self, inheritance=None, genes=None, intervals=None, variant_ids=None, locus=None,
-                        annotations=None, annotations_secondary=None, quality_filter=None, skip_genotype_filter=False,
+                        annotations=None, annotations_secondary=None, skip_genotype_filter=False,
                         **kwargs):
+        inheritance_mode = (inheritance or {}).get('mode')
+        inheritance_filter = (inheritance or {}).get('filter') or {}
+        if inheritance_filter.get('genotype'):
+            inheritance_mode = None
+        if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
+            raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
         has_location_filter = genes or intervals
 
         if variant_ids:
@@ -108,33 +115,13 @@ class HailSearch(object):
             parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
                 '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
 
-        self._load_table(
+        self._load_filtered_table(
             data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
-            gene_ids=None if exclude_locations else set(genes.keys()))
-
-        if variant_ids:
-            self._query_wrapper.filter_by_variant_ids(variant_ids)
-
-        quality_filter = quality_filter or {}
-        self._query_wrapper.filter_variants(annotations=annotations, quality_filter=quality_filter, **kwargs)
-
-        inheritance_mode = (inheritance or {}).get('mode')
-        inheritance_filter = (inheritance or {}).get('filter') or {}
-        if inheritance_filter.get('genotype'):
-            inheritance_mode = None
-        if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
-            raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
-
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            comp_het_only = inheritance_mode == COMPOUND_HET
-            self._query_wrapper.filter_compound_hets(
-                inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=not comp_het_only,
-            )
-            if comp_het_only:
-                return
-
-        self._query_wrapper.filter_main_annotations()
-        self._query_wrapper.annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
+            gene_ids=None if exclude_locations else set(genes.keys()), variant_ids=variant_ids,
+            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter,
+            annotations=annotations, annotations_secondary=annotations_secondary,
+            **kwargs,
+        )
 
     @staticmethod
     def _dataset_type_for_annotations(annotations, annotations_secondary):

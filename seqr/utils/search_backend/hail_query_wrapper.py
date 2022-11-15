@@ -104,7 +104,7 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
-    def __init__(self, data_source, samples, genome_version, gene_ids=None, **kwargs):
+    def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False, **kwargs):
         self._genome_version = genome_version
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
@@ -117,13 +117,15 @@ class BaseHailTableQuery(object):
         }
         self._save_samples(samples)
 
-        self._mt = self._load_table(data_source, samples, **kwargs)
+        self._mt = self._load_table(data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals)
+
+        self._filter_variants(**kwargs)
 
     def _save_samples(self, samples):
         self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
 
-    def _load_table(self, data_source, samples, intervals=None, **kwargs):
-        ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
+    def _load_table(self, data_source, samples, intervals=None, exclude_intervals=False):
+        ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), exclude_intervals=exclude_intervals)
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
@@ -168,8 +170,13 @@ class BaseHailTableQuery(object):
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
-    def filter_variants(self, rs_ids=None, frequencies=None, pathogenicity=None, in_silico=None,
-                        annotations=None, quality_filter=None, custom_query=None):
+    def _filter_variants(self, inheritance_mode=None, inheritance_filter=None, variant_ids=None,
+                         annotations=None, annotations_secondary=None, quality_filter=None, rs_ids=None,
+                         frequencies=None, pathogenicity=None, in_silico=None, custom_query=None):
+
+        if variant_ids:
+            self.filter_by_variant_ids(variant_ids)  # TODO rename?
+
         self._parse_pathogenicity_overrides(pathogenicity)
         self._parse_annotations_overrides(annotations)
 
@@ -182,8 +189,21 @@ class BaseHailTableQuery(object):
 
         self._filter_by_in_silico(in_silico)
 
+        quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter') is not None:
             self._filter_vcf_filters()
+
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+            comp_het_only = inheritance_mode == COMPOUND_HET
+            self.filter_compound_hets(  # TODO rename?
+                inheritance_filter, annotations_secondary, quality_filter, has_location_filter,
+                keep_main_ht=not comp_het_only,
+            )
+            if comp_het_only:
+                return
+
+        self.filter_main_annotations()  # TODO rename?
+        self.annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter) # TODO rename?
 
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
