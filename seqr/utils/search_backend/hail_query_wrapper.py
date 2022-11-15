@@ -1019,7 +1019,7 @@ class MultiDataTypeHailTableQuery(object):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
-        data_types = sorted(list(data_source.keys()))  # TODO
+        data_types = sorted(list(data_source.keys()), reverse=True)  # TODO
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
         data_type_0 = data_types[0]
