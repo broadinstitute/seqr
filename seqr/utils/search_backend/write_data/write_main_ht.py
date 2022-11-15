@@ -2,7 +2,7 @@ import argparse
 import hail as hl
 
 SEQR_FIELDS = [
-    'AF', 'AC', 'AN', 'cadd', 'clinvar', 'dbnsfp', 'eigen', 'exac', 'filters', 'g1k', 'gnomad_exomes', 'gnomad_genomes',
+    'AF', 'AC', 'AN', 'cadd', 'clinvar', 'dbnsfp', 'eigen', 'exac', 'filters', 'gnomad_exomes', 'gnomad_genomes',
     'hgmd', 'mpc', 'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'splice_ai', 'sortedTranscriptConsequences',
     'topmed', 'variantId', 'xpos',
 ]

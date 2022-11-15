@@ -643,10 +643,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
     PREDICTION_FIELDS_CONFIG = {
         'fathmm': ('dbnsfp', 'FATHMM_pred'),
-        'gerp_rs': ('dbnsfp', 'GERP_RS'),
-        'metasvm': ('dbnsfp', 'MetaSVM_pred'),
         'mutationtaster': ('dbnsfp', 'MutationTaster_pred'),
-        'phastcons_100_vert': ('dbnsfp', 'phastCons100way_vertebrate'),
         'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
@@ -727,7 +724,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     GENOTYPE_FIELDS.update(BaseVariantHailTableQuery.GENOTYPE_FIELDS)
     POPULATIONS = {
         'topmed': {'hemi': None, 'het': None},
-        'g1k': {'filter_af': 'POPMAX_AF', 'hom': None, 'hemi': None, 'het': None},
         'exac': {
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
         },
