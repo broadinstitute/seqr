@@ -1033,6 +1033,9 @@ class MultiDataTypeHailTableQuery(object):
         entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
 
+        for sample_id in sample_ids:
+            logger.info(f'{sample_id} - {data_type_0}: {ht.aggregate(hl.agg.count_where(ht.GT.is_non_ref()))}')  # TODO
+
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
             sub_ht = data_type_cls.import_filtered_ht(data_source[data_type], samples[data_type], **kwargs)
@@ -1066,11 +1069,14 @@ class MultiDataTypeHailTableQuery(object):
             table_merge_fields.update(shared_sample_ids)
             table_merge_fields -= set(transmute_expressions.keys())
             merge_fields.update(new_merge_fields)
+            logger.info(f'table_merge_fields: {table_merge_fields}')  # TODO
 
             ht = ht.transmute(
                 **transmute_expressions,
                 **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
             )
+            for sample_id in sample_ids:
+                logger.info(f'{sample_id} - {data_type}: {ht.aggregate(hl.agg.count_where(ht.GT.is_non_ref()))}')  # TODO
 
         return ht
 
