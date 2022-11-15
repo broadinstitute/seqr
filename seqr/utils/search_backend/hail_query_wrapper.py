@@ -124,6 +124,9 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
+        # TODO
+        for sample_id in self._individuals_by_sample_id.keys():
+            logger.info(f'{sample_id}: {dict(**ht[sample_id].dtype)}')  # TODO
         mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
         mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
         mt = mt.unfilter_entries()
@@ -1032,6 +1035,9 @@ class MultiDataTypeHailTableQuery(object):
         entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
 
+        logger.info(f'entry_fields {data_type_0}: {entry_fields}')  # TODO
+        logger.info(f'entry_types {data_type_0}: {entry_types}')  # TODO
+
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
             sub_ht = data_type_cls.import_filtered_ht(data_source[data_type], samples[data_type], **kwargs)
@@ -1045,6 +1051,8 @@ class MultiDataTypeHailTableQuery(object):
                 **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
             ))
             entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
+            logger.info(f'entry_fields {data_type}: {entry_fields}')  # TODO
+            logger.info(f'entry_types {data_type}: {entry_types}')  # TODO
 
             def genotype_expr(sample):
                 return sample.select(**{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields})
