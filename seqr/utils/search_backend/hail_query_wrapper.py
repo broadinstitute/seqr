@@ -962,8 +962,11 @@ class MultiDataTypeHailTableQuery(object):
 
         super(MultiDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
+    def get_row_data_type(self, r):
+        return self.data_type_for_row(r)
+
     @staticmethod
-    def get_row_data_type(r):
+    def data_type_for_row(r):
         raise NotImplementedError
 
     def _annotation_for_data_type(self, field):
@@ -1095,7 +1098,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
         }
 
     @staticmethod
-    def get_row_data_type(r):
+    def data_type_for_row(r):
         return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
 
 
@@ -1109,7 +1112,7 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
     MERGE_FIELDS = {VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS}
 
     @staticmethod
-    def get_row_data_type(r):
+    def data_type_for_row(r):
         return hl.if_else(
             hl.is_defined(r.mitomap),
             MITO_DATASET,
@@ -1131,12 +1134,11 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
     MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
-    @staticmethod
-    def get_row_data_type(r):
+    def get_row_data_type(self, r):
         return hl.if_else(
             hl.is_defined(r.svType),
-            AllSvHailTableQuery.get_row_data_type(r),
-            AllVariantHailTableQuery.get_row_data_type(r),
+            AllSvHailTableQuery.data_type_for_row(r),
+            AllVariantHailTableQuery.data_type_for_row(r) if MITO_DATASET in self._data_types else VARIANT_DATASET,
         )
 
     @staticmethod
