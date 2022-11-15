@@ -174,8 +174,7 @@ class BaseHailTableQuery(object):
                          annotations=None, annotations_secondary=None, quality_filter=None, rs_ids=None,
                          frequencies=None, pathogenicity=None, in_silico=None, custom_query=None):
 
-        if variant_ids:
-            self.filter_by_variant_ids(variant_ids)  # TODO rename?
+        self._filter_by_variant_ids(variant_ids)
 
         self._parse_pathogenicity_overrides(pathogenicity)
         self._parse_annotations_overrides(annotations)
@@ -195,15 +194,15 @@ class BaseHailTableQuery(object):
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             comp_het_only = inheritance_mode == COMPOUND_HET
-            self.filter_compound_hets(  # TODO rename?
+            self._filter_compound_hets(
                 inheritance_filter, annotations_secondary, quality_filter, has_location_filter,
                 keep_main_ht=not comp_het_only,
             )
             if comp_het_only:
                 return
 
-        self.filter_main_annotations()  # TODO rename?
-        self.annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter) # TODO rename?
+        self._filter_main_annotations()
+        self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
 
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
@@ -227,11 +226,13 @@ class BaseHailTableQuery(object):
     def _filter_vcf_filters(self):
         self._mt = self._mt.filter_rows(hl.is_missing(self._mt.filters) | (self._mt.filters.length() < 1))
 
-    def filter_main_annotations(self):
+    def _filter_main_annotations(self):
         self._mt = self._filter_by_annotations(self._allowed_consequences)
 
-    def filter_by_variant_ids(self, variant_ids):
-        if len(variant_ids) == 1:
+    def _filter_by_variant_ids(self, variant_ids):
+        if not variant_ids:
+            return
+        elif len(variant_ids) == 1:
             self._mt = self._mt.filter_rows(self._mt.alleles == [variant_ids[0][2], variant_ids[0][3]])
         else:
             add_chr_prefix = self._should_add_chr_prefix()
@@ -365,7 +366,7 @@ class BaseHailTableQuery(object):
     def _get_consequence_terms(self):
         return self._mt.sortedTranscriptConsequences.map(lambda tc: tc.major_consequence)
 
-    def annotate_filtered_genotypes(self, *args):
+    def _annotate_filtered_genotypes(self, *args):
         self._mt = self._filter_by_genotype(self._mt, *args)
 
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
@@ -519,7 +520,7 @@ class BaseHailTableQuery(object):
     def _matched_family_sample_filter(self, mt, sample_family_map):
         return mt.familyGuids.contains(sample_family_map[mt.s])
 
-    def filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=True):
+    def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, has_location_filter, keep_main_ht=True):
         if not self._allowed_consequences:
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
