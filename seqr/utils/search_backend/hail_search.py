@@ -97,10 +97,20 @@ class HailSearch(object):
         else:
             data_type = self._dataset_type_for_annotations(annotations, annotations_secondary) if annotations else None
 
+        genes = genes or {}
+        parsed_intervals = None
+        exclude_locations = (locus or {}).get('excludeLocations')
         if has_location_filter:
-            self._filter_by_intervals(genes, intervals, locus.get('excludeLocations'), data_type)
-        else:
-            self._load_table(data_type)
+            gene_coords = [
+                {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
+                for gene in genes.values()
+            ]
+            parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
+                '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
+
+        self._load_table(
+            data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
+            gene_ids=None if exclude_locations else set(genes.keys()))
 
         if variant_ids:
             self._query_wrapper.filter_by_variant_ids(variant_ids)
@@ -140,21 +150,6 @@ class HailSearch(object):
 
     def filter_by_variant_ids(self, variant_ids):
         self.filter_variants(variant_ids=variant_ids)
-
-    def _filter_by_intervals(self, genes, intervals, exclude_locations, data_type):
-        parsed_intervals = None
-        genes = genes or {}
-        if genes or intervals:
-            gene_coords = [
-                {field: gene[f'{field}{self._genome_version.title()}'] for field in ['chrom', 'start', 'end']}
-                for gene in genes.values()
-            ]
-            parsed_intervals = ['{chrom}:{start}-{end}'.format(**interval) for interval in intervals or []] + [
-                '{chrom}:{start}-{end}'.format(**gene) for gene in gene_coords]
-
-        self._load_table(
-            data_type, intervals=parsed_intervals, exclude_intervals=exclude_locations,
-            gene_ids=None if exclude_locations else set(genes.keys()))
 
     def search(self, page=1, num_results=100):
         hail_results, total_results = self._query_wrapper.search(page, num_results, self._sort)
