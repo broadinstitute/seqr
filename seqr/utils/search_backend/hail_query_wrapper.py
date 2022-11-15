@@ -1054,16 +1054,18 @@ class MultiDataTypeHailTableQuery(object):
                 logger.info(f'{sample_id}: {hht.aggregate(hl.agg.count_where(hht[f"{sample_id}__GT"].is_non_ref()))}')  # TODO
 
             # TODO
-            ht = ht.annotate(**{sample_id: ht[sample_id].select(
-                **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
-            ) for sample_id in table_sample_ids})
-            # distinct_sample_ids = sample_ids - shared_sample_ids
-            # def genotype_expr(sample):
-            #     return sample.select(**{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields})
-            # ht = ht.annotate(
-            #     **{sample_id: genotype_expr(ht[sample_id]) for sample_id in distinct_sample_ids},
-            #     **{sample_id: hl.or_else(genotype_expr(ht[sample_id]), genotype_expr(ht[f'{sample_id}_1'])) for sample_id in shared_sample_ids},
-            # )
+            # ht = ht.annotate(**{sample_id: ht[sample_id].select(
+            #     **{k: ht[sample_id].get(k, hl.missing(entry_types[k])) for k in entry_fields}
+            # ) for sample_id in table_sample_ids})
+            distinct_sample_ids = sample_ids - shared_sample_ids
+            logger.info(f'distinct_sample_ids: {distinct_sample_ids}')
+            def genotype_expr(sample):
+                return sample.select(**{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields})
+            ht = ht.annotate(
+                **{sample_id: genotype_expr(ht[sample_id]) for sample_id in distinct_sample_ids},
+                **{sample_id: hl.if_else(hl.is_missing(ht[sample_id]), genotype_expr(ht[f'{sample_id}_1']), genotype_expr(ht[sample_id]))
+                   for sample_id in shared_sample_ids},
+            )
 
             transmute_expressions = {
                 k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
