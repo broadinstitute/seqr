@@ -94,16 +94,16 @@ class HailSearch(object):
         if not inheritance_mode and inheritance_filter and list(inheritance_filter.keys()) == ['affected']:
             raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
+        parsed_intervals = None
         if variant_ids:
             # In production: support SV variant IDs?
             variant_ids = [EsSearch.parse_variant_id(variant_id) for variant_id in variant_ids]
-            intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
+            parsed_intervals = [f'[{chrom}:{pos}-{pos}]' for chrom, pos, _, _ in variant_ids]
             data_type = Sample.DATASET_TYPE_VARIANT_CALLS
         else:
             data_type = self._dataset_type_for_annotations(annotations, annotations_secondary) if annotations else None
 
         genes = genes or {}
-        parsed_intervals = None
         exclude_locations = (locus or {}).get('excludeLocations')
         if genes or intervals:
             gene_coords = [
