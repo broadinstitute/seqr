@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 
 import csv
 import json
@@ -27,11 +27,13 @@ def _parse_annotations(annotations):
 
     splice_ai = annotations.pop('splice_ai', None)
     new_svs = bool(annotations.pop('new_structural_variants', False))
+    screen = annotations.pop('SCREEN', None)
 
     return {
         'transcriptConsequences': ', '.join(sorted({ann for anns in annotations.values() for ann in anns})),
         'datasetType': _dataset_type(annotations, new_svs),
         'splice_ai': splice_ai,
+        'screen': ', '.join(sorted(screen or [])),
     }
 
 def _parse_freqs(frequencies):
@@ -50,8 +52,8 @@ FORMAT_SEARCH_FIELD = {
     'freqs': _parse_freqs,
     'in_silico': lambda search: {k: v for k, v in (search or {}).items() if v is not None and len(v) != 0},
     'locus': lambda search: {
-        'genes': search.get('rawItems', '').replace(',', ' ').replace('\n', ' ')[:32000],
-        'variantIds': search.get('rawVariantItems', '').replace(',', ' ').replace('\n', ' ')[:32000],
+        'genes': (search.get('rawItems') or '').replace(',', ' ').replace('\n', ' ')[:32000],
+        'variantIds': (search.get('rawVariantItems') or '').replace(',', ' ').replace('\n', ' ')[:32000],
         'excludeLocations': search.get('excludeLocations'),
     },
     'qualityFilter': lambda search: {
@@ -60,17 +62,17 @@ FORMAT_SEARCH_FIELD = {
     },
 }
 
-FREQUENCIES = ['gnomad_genomes', 'gnomad_exomes', 'g1k', 'exac', 'topmed', 'gnomad_svs', 'callset', 'sv_callset']
+FREQUENCIES = ['gnomad_genomes', 'gnomad_exomes', 'g1k', 'exac', 'topmed', 'gnomad_svs', 'callset', 'sv_callset', 'gnomad_mito']
 COLUMNS = [
-    'timestamp', 'requestUrl', 'user', 'numProjects', 'numFamilies', 'customSearch',
-    'inheritanceMode', 'inheritanceFilter', 'clinvar', 'hgmd', 'datasetType', 'transcriptConsequences',
+    'timestamp', 'requestUrl', 'user', 'numProjects', 'numFamilies', 'totalResults', 'customSearch',
+    'inheritanceMode', 'inheritanceFilter', 'clinvar', 'hgmd', 'datasetType', 'transcriptConsequences', 'screen',
     'secondaryDatasetType', 'secondaryTranscriptConsequences', 'genes', 'variantIds', 'excludeLocations',
     'min_gq', 'min_ab', 'min_qs', 'min_gq_sv', 'qcFilter', 'splice_ai', 'cadd', 'fathmm', 'mut_taster', 'sift',
-    'metasvm', 'revel', 'primate_ai', 'polyphen',
+    'metasvm', 'revel', 'primate_ai', 'polyphen', 'eigen', 'gerp_rs', 'mpc', 'phastcons_100_vert'
 ] + [f'{k}_af' for k in FREQUENCIES] + FREQUENCIES
 
 
-with open('/Users/hsnow/Downloads/downloaded-search-logs-20220125.json', 'rt') as f:
+with open('/Users/hsnow/Downloads/downloaded-logs-20221116-103444.json', 'rt') as f:
     rows = json.load(f)
 
 formatted_rows = []
@@ -79,21 +81,27 @@ for row in rows:
     if 'download' in url or 'requestBody' not in row['jsonPayload']:
         continue
 
+    if row['httpRequest']['status'] != 200:
+        continue
+
     formatted_row = {
         'timestamp': row['timestamp'],
         'requestUrl': url,
         'customSearch': 'custom_search' in row['httpRequest']['referer'],
-        'user': row['jsonPayload']['user'],
+        'user': row['jsonPayload'].get('user'),
+        'totalResults': row['jsonPayload']['requestBody'].get('totalResults'),
     }
 
     num_families = None
-    if row['jsonPayload']['requestBody'].get('allProjectFamilies'):
+    if row['jsonPayload']['requestBody'].get('allProjectFamilies') or row['jsonPayload']['requestBody'].get('allGenomeProjectFamilies'):
         num_projects = 400
     elif row['jsonPayload']['requestBody'].get('projectGuids'):
         num_projects = len(row['jsonPayload']['requestBody']['projectGuids'])
+    elif 'projectFamilies' not in row['jsonPayload']['requestBody']:
+        import pdb; pdb.set_trace()
     else:
         num_projects = len(row['jsonPayload']['requestBody']['projectFamilies'])
-        num_families =  sum([len(project['familyGuids']) for project in row['jsonPayload']['requestBody']['projectFamilies']])
+        num_families = sum([len(project['familyGuids']) for project in row['jsonPayload']['requestBody']['projectFamilies']])
     formatted_row.update({'numProjects': num_projects, 'numFamilies': num_families})
 
     for k, v in row['jsonPayload']['requestBody'].get('search', {}).items():
@@ -101,11 +109,13 @@ for row in rows:
             continue
         formatted_row.update(FORMAT_SEARCH_FIELD[k](v))
 
-    # if formatted_row.get('splice_ai'):
-    #     import pdb; pdb.set_trace()
+    diff_k = {k for k, v in formatted_row.items() if k not in COLUMNS}
+    if diff_k:
+        raise Exception(f'Found unexpected columns: {", ".join(sorted(diff_k))}')
+
     formatted_rows.append(formatted_row)
 
-with open('parsed_logs.csv', 'w') as f:
+with open('/Users/hsnow/Documents/seqr_searches__8-18-22__11-16-22.csv', 'w') as f:
     writer = csv.DictWriter(f, fieldnames=COLUMNS)
     writer.writeheader()
     writer.writerows(formatted_rows)
