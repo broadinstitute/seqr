@@ -274,10 +274,11 @@ export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
 }
 
 export const loadPhenotypeGeneScores = individualGuid => (dispatch, getState) => {
-  const data = getState().phenotypeGeneScoresByIndividual[individualGuid]
-  if (!data) {
+  const state = getState()
+  const { familyGuid } = state.individualsByGuid[individualGuid]
+  if (!state.phenotypeGeneScoresByIndividual[individualGuid]) {
     dispatch({ type: REQUEST_PHENOTYPE_GENE_SCORES })
-    new HttpRequestHelper(`/api/individual/${individualGuid}/phenotype_gene_scores`,
+    new HttpRequestHelper(`/api/family/${familyGuid}/phenotype_gene_scores`,
       (responseJson) => {
         dispatch({
           type: RECEIVE_DATA, updatesById: responseJson,

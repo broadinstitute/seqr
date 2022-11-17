@@ -27,11 +27,11 @@ from seqr.views.apis.family_api import \
     delete_family_note, \
     family_page_data, \
     get_family_rna_seq_data, \
+    get_family_phenotype_gene_scores, \
     family_variant_tag_summary
 
 from seqr.views.apis.individual_api import \
     get_individual_rna_seq_data, \
-    get_individual_phenotype_gene_scores, \
     get_hpo_terms, \
     update_individual_hpo_terms, \
     update_individual_handler, \
@@ -175,7 +175,6 @@ api_endpoints = {
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_discussion': update_case_review_discussion,
     'individual/(?P<individual_guid>[\w.|-]+)/update_case_review_status': update_case_review_status,
     'individual/(?P<individual_guid>[\w.|-]+)/rna_seq_data': get_individual_rna_seq_data,
-    r'individual/(?P<individual_guid>[\w.|-]+)/phenotype_gene_scores': get_individual_phenotype_gene_scores,
 
     'family/(?P<family_guid>[\w.|-]+)/details': family_page_data,
     'family/(?P<family_guid>[\w.|-]+)/variant_tag_summary': family_variant_tag_summary,
@@ -190,6 +189,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/delete': delete_family_note,
     'family/(?P<family_guid>[\w.|-]+)/rna_seq_data/(?P<gene_id>[\w.|-]+)': get_family_rna_seq_data,
+    'family/(?P<family_guid>[\w.|-]+)/phenotype_gene_scores': get_family_phenotype_gene_scores,
 
     'dashboard': dashboard_page_data,
 

@@ -32,12 +32,11 @@ import {
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
 import { getCurrentProject } from '../../selectors'
-import PhenotypePrioritizedGenes from '../PhenotypePrioritizedGenes'
+
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
-
-// const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
+const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
 
 const Detail = styled.div`
   display: inline-block;
@@ -118,37 +117,26 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const ShowRnaSeqOutliers = ({ sample, hasRnaOutlierData, ...props }) => (hasRnaOutlierData ? (
-  <Modal
-    modalName={`OUTRIDER-${sample.sampleId}`}
-    title={`RNA-Seq OUTRIDER: ${sample.sampleId}`}
-    trigger={<ButtonLink padding="1em 0 0 0" content="Show RNA-Seq OUTRIDER" />}
-  >
-    <React.Suspense fallback={<Loader />}>
-      <RnaSeqOutliers sample={sample} {...props} />
-    </React.Suspense>
-  </Modal>
-) : null)
-
-ShowRnaSeqOutliers.propTypes = {
-  hasRnaOutlierData: PropTypes.bool,
-  sample: PropTypes.object,
-}
-
-const ShowPhenotypePrioritizedGenes = ({ individual, hasPhenotypeGeneScores, ...props }) => (hasPhenotypeGeneScores ? (
-  <Modal
-    modalName={`PHENOTYPE-PRIORITIZATION-${individual.individualId}`}
-    title={`Phenotype Prioritized Genes: ${individual.individualId}`}
-    trigger={<ButtonLink padding="1em 0 0 0" content="Show Phenotype Prioritized Genes" />}
-  >
-    <PhenotypePrioritizedGenes individual={individual} {...props} />
-  </Modal>
-) : null)
-
-ShowPhenotypePrioritizedGenes.propTypes = {
-  individual: PropTypes.object,
-  hasPhenotypeGeneScores: PropTypes.bool,
-}
+const RNA_DATA_TYPE = 'RNA_OUTLIER'
+const PHENOTYPE_DATA_TYPE = 'PHENOTYPE_GENE_SCORES'
+const SHOW_DATA_MODAL_CONFIG = [
+  {
+    dataType: RNA_DATA_TYPE,
+    shouldShowField: 'hasRnaOutlierData',
+    component: RnaSeqOutliers,
+    modalName: data => `OUTRIDER-${data.sampleId}`,
+    title: data => `RNA-Seq OUTRIDER: ${data.sampleId}`,
+    linkText: 'Show RNA-Seq OUTRIDER',
+  },
+  {
+    dataType: PHENOTYPE_DATA_TYPE,
+    shouldShowField: 'hasPhenotypeGeneScores',
+    component: PhenotypePrioritizedGenes,
+    modalName: data => `PHENOTYPE-PRIORITIZATION-${data.individualId}`,
+    title: data => `Phenotype Prioritized Genes: ${data.individualId}`,
+    linkText: 'Show Phenotype Prioritized Genes',
+  },
+]
 
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
@@ -188,16 +176,26 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
-    <ShowRnaSeqOutliers
-      familyGuid={individual.familyGuid}
-      sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
-      hasRnaOutlierData={individual.hasRnaOutlierData}
-    />
-    <ShowPhenotypePrioritizedGenes
-      familyGuid={individual.familyGuid}
-      individual={individual}
-      hasPhenotypeGeneScores={individual.hasPhenotypeGeneScores}
-    />
+    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
+      ({ dataType, modalName, title, linkText, component }) => {
+        const data = {
+          [RNA_DATA_TYPE]: loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA),
+          [PHENOTYPE_DATA_TYPE]: individual,
+        }
+        return (
+          <Modal
+            modalName={modalName(data[dataType])}
+            title={title(data[dataType])}
+            trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
+          >
+            <React.Suspense fallback={<Loader />}>
+              {React.createElement(component,
+                { familyGuid: individual.familyGuid, individualGuid: data[dataType].individualGuid }) }
+            </React.Suspense>
+          </Modal>
+        )
+      },
+    )}
   </div>
 ))
 

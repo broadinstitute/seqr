@@ -2,11 +2,11 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getGenesById, getPhenotypeGeneScoresByIndividual } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
 import { BaseVariantGene } from 'shared/components/panel/variants/VariantGene'
+import { getIndividualPhenotypeGeneByFamily } from 'shared/components/panel/variants/selectors'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { loadPhenotypeGeneScores } from '../reducers'
 import { getPhenotypeDataLoading } from '../selectors'
@@ -14,26 +14,19 @@ import { getPhenotypeDataLoading } from '../selectors'
 const PHENOTYPE_GENE_INFO_COLUMNS = [
   {
     name: 'geneId',
-    width: 7,
+    width: 6,
     content: 'Gene',
-    format: ({ geneId, gene, variant, familyGuid }) => (
-      <div>
-        <BaseVariantGene
-          geneId={geneId}
-          gene={gene}
-          variant={variant}
-          compact
-          showInlineDetails
-        />
-        <GeneSearchLink
-          buttonText="Gene Search"
-          icon="search"
-          location={geneId}
-          familyGuid={familyGuid}
-        />
-      </div>
+    format: ({ geneId, gene, rowId }) => (
+      <BaseVariantGene
+        geneId={geneId}
+        gene={gene}
+        geneModalId={rowId}
+        compact
+        showInlineDetails
+      />
     ),
   },
+  { name: 'tool', width: 1, content: 'Tool' },
   {
     name: 'diseaseName',
     width: 3,
@@ -62,9 +55,9 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
 ]
 
 const BasePhenotypePriGenes = React.memo((
-  { individual, phenotypeGeneScores, familyGuid, genes, loading, load },
+  { individualGuid, phenotypeGeneScores, familyGuid, loading, load },
 ) => (
-  <DataLoader content={phenotypeGeneScores} contentId={individual.individualGuid} load={load} loading={loading}>
+  <DataLoader content={phenotypeGeneScores} contentId={individualGuid} load={load} loading={loading}>
     <GeneSearchLink
       buttonText="Search for variants in high-ranked genes"
       icon="search"
@@ -73,20 +66,7 @@ const BasePhenotypePriGenes = React.memo((
       floated="right"
     />
     <DataTable
-      data={Object.entries(phenotypeGeneScores || {}).reduce((acc, [geneId, toolData]) => ([
-        ...acc,
-        ...Object.values(toolData).reduce((acc2, data) => ([
-          ...acc2,
-          ...data.map(d => ({
-            ...d,
-            geneId,
-            gene: genes[geneId],
-            variant: { variantId: `modalId-${geneId}` },
-            familyGuid,
-            rowId: `${geneId}${d.diseaseId}`,
-          })),
-        ]), []),
-      ]), [])}
+      data={phenotypeGeneScores}
       idField="rowId"
       columns={PHENOTYPE_GENE_INFO_COLUMNS}
       fixedWidth
@@ -96,18 +76,15 @@ const BasePhenotypePriGenes = React.memo((
 ))
 
 BasePhenotypePriGenes.propTypes = {
-  individual: PropTypes.object.isRequired,
+  individualGuid: PropTypes.object.isRequired,
   familyGuid: PropTypes.string.isRequired,
   phenotypeGeneScores: PropTypes.object,
-  genes: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  phenotypeGeneScores: getPhenotypeGeneScoresByIndividual(state)[ownProps.individual.individualGuid],
-  genesById: getGenesById(state),
-  genes: getGenesById(state),
+  phenotypeGeneScores: getIndividualPhenotypeGeneByFamily(state)[ownProps.familyGuid],
   loading: getPhenotypeDataLoading(state),
 })
 

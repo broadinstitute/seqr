@@ -387,7 +387,7 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'HaploInsufficient',
     label: 'HI',
-    showDetails: gene => gene.cnSensitivity?.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
+    showDetails: gene => gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD,
     detailsDisplay: gene => (
       `These are a score developed by the Talkowski lab that predict whether a gene is haploinsufficient based 
       on large chromosomal microarray data set analysis. Scores >${HI_THRESHOLD} are considered to have high likelihood to be 
@@ -397,7 +397,7 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'TriploSensitive',
     label: 'TS',
-    showDetails: gene => gene.cnSensitivity?.pts && gene.cnSensitivity.pts > TS_THRESHOLD,
+    showDetails: gene => gene.cnSensitivity.pts && gene.cnSensitivity.pts > TS_THRESHOLD,
     detailsDisplay: gene => (
       `These are a score developed by the Talkowski lab that predict whether a gene is triplosensitive based on
        large chromosomal microarray dataset analysis. Scores >${TS_THRESHOLD} are considered to have high likelihood to be 
@@ -497,10 +497,11 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 ))
 
 export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, ...labelProps },
+  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, ...labelProps },
 ) => {
   const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData)
-  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps, null, noExpand)
+  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps,
+    null, showInlineDetails)
   const hasLocusLists = showLocusLists && gene.locusListGuids?.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
 
@@ -529,7 +530,6 @@ GeneDetails.propTypes = {
   showLocusLists: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   individualGeneData: PropTypes.object,
-  noExpand: PropTypes.bool,
 }
 
 const GeneSearchLinkWithPopup = props => (
@@ -543,14 +543,14 @@ const GeneSearchLinkWithPopup = props => (
 )
 
 const getGeneConsequence = (geneId, variant) => {
-  const geneTranscripts = (variant.transcripts || {})[geneId]
+  const geneTranscripts = (variant?.transcripts || {})[geneId]
   return geneTranscripts && geneTranscripts.length > 0 &&
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
 
-export const BaseVariantGene = React.memo((
-  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData },
-) => {
+export const BaseVariantGene = React.memo(({
+  geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData, geneModalId,
+}) => {
   const geneConsequence = getGeneConsequence(geneId, variant)
 
   if (!gene) {
@@ -568,7 +568,6 @@ export const BaseVariantGene = React.memo((
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
       showLocusLists
-      noExpand={compact && showInlineDetails}
     />
   )
 
@@ -601,7 +600,7 @@ export const BaseVariantGene = React.memo((
 
   const geneSummary = (
     <div>
-      <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
+      <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={geneModalId || variant.variantId} />
       <HorizontalSpacer width={10} />
       {summaryDetail}
       {compoundHetToggle && compoundHetToggle(gene.geneId)}
@@ -640,12 +639,13 @@ export const BaseVariantGene = React.memo((
 BaseVariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
   gene: PropTypes.object.isRequired,
-  variant: PropTypes.object.isRequired,
+  variant: PropTypes.object,
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
   hasRnaTpmData: PropTypes.bool,
   individualGeneData: PropTypes.object,
+  geneModalId: PropTypes.string,
 }
 
 const getRnaSeqProps = (state, ownProps) => ({

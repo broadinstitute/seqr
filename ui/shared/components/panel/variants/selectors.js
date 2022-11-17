@@ -54,6 +54,29 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
   ),
 )
 
+export const getIndividualPhenotypeGeneByFamily = createSelector(
+  getGenesById,
+  getIndividualGeneDataByFamilyGene,
+  (genesById, individualGeneDataByFamilyGene) => (
+    Object.entries(individualGeneDataByFamilyGene || {}).reduce((acc, [familyGuid, dataByType]) => ({
+      ...acc,
+      [familyGuid]: Object.entries(dataByType.phenotypeGeneScores || {}).reduce((acc2, [geneId, dataByTool]) => ([
+        ...(acc2 || []),
+        ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
+          ...acc3,
+          ...data.map(d => ({
+            ...d,
+            tool,
+            geneId,
+            gene: genesById[geneId],
+            rowId: `${geneId}${d.diseaseId}`,
+          })),
+        ]), []),
+      ]), null),
+    }), {})
+  ),
+)
+
 // Saved variant selectors
 export const getSavedVariantTableState = state => (
   state.currentProjectGuid ? state.savedVariantTableState : state.allProjectSavedVariantTableState
