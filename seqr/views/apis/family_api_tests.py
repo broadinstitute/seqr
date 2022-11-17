@@ -10,7 +10,7 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
-    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data
+    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
@@ -28,6 +28,7 @@ PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 INDIVIDUAL_GUID = 'I000001_na19675'
 
+
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
@@ -40,7 +41,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         response_keys = {
-            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid',  'igvSamplesByGuid',
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid', 'igvSamplesByGuid',
             'mmeSubmissionsByGuid',
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
@@ -55,7 +56,8 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData', 'hasPhenotypeGeneScores'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
+                             'hasPhenotypeGeneScores'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
@@ -72,7 +74,8 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['igvSamplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['igvSamplesByGuid'].values()})
-        self.assertSetEqual({INDIVIDUAL_GUID}, {s['individualGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual({INDIVIDUAL_GUID},
+                            {s['individualGuid'] for s in response_json['igvSamplesByGuid'].values()})
         self.assertSetEqual(set(individual['igvSampleGuids']), set(response_json['igvSamplesByGuid'].keys()))
 
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
@@ -97,7 +100,8 @@ class FamilyAPITest(AuthenticationTestCase):
         internal_individual_fields = deepcopy(individual_fields)
         internal_individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), internal_family_fields)
-        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), internal_individual_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()),
+                            internal_individual_fields)
 
         self.mock_analyst_group.__str__.return_value = ''
         response = self.client.get(url)
@@ -203,7 +207,8 @@ class FamilyAPITest(AuthenticationTestCase):
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
+        self.assertListEqual(response.json()['errors'],
+                             ['Unable to delete individuals with active MME submission: NA19675_1'])
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
@@ -255,12 +260,15 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), ['analysisGroupsByGuid'])
-        self.assertSetEqual(set(response_json['analysisGroupsByGuid'].keys()), {'AG0000183_test_group', 'AG0000185_accepted'})
+        self.assertSetEqual(set(response_json['analysisGroupsByGuid'].keys()),
+                            {'AG0000183_test_group', 'AG0000185_accepted'})
         self.assertTrue(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000185_accepted']['familyGuids'])
         self.assertFalse(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000183_test_group']['familyGuids'])
 
-        self.assertIsNotNone(AnalysisGroup.objects.get(guid='AG0000185_accepted').families.filter(guid=FAMILY_GUID).first())
-        self.assertIsNone(AnalysisGroup.objects.get(guid='AG0000183_test_group').families.filter(guid=FAMILY_GUID).first())
+        self.assertIsNotNone(
+            AnalysisGroup.objects.get(guid='AG0000185_accepted').families.filter(guid=FAMILY_GUID).first())
+        self.assertIsNone(
+            AnalysisGroup.objects.get(guid='AG0000183_test_group').families.filter(guid=FAMILY_GUID).first())
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
@@ -393,7 +401,7 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
 
         response = self.client.post(url, content_type='application/json',
-                data=json.dumps({'uploadedFileId': response_json['uploadedFileId']}))
+                                    data=json.dumps({'uploadedFileId': response_json['uploadedFileId']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
@@ -446,7 +454,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         # update the note
         update_note_url = reverse(update_family_note, args=[FAMILY_GUID, new_note_guid])
-        response = self.client.post(update_note_url, content_type='application/json',  data=json.dumps(
+        response = self.client.post(update_note_url, content_type='application/json', data=json.dumps(
             {'note': 'updated note'}))
 
         self.assertEqual(response.status_code, 200)
@@ -482,5 +490,36 @@ class FamilyAPITest(AuthenticationTestCase):
             'M': {
                 'individualData': {'NA19675_1': 8.38},
                 'rdgData': [1.01, 8.38],
+            }
+        })
+
+    def test_get_family_phenotype_gene_scores(self):
+        url = reverse(get_family_phenotype_gene_scores, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'genesById': {
+                'ENSG00000268903': {
+                    'chromGrch37': '1', 'chromGrch38': '1', 'clinGen': None, 'cnSensitivity': {},
+                    'codingRegionSizeGrch37': 0, 'codingRegionSizeGrch38': 0, 'constraints': {},
+                    'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {},
+                    'gencodeGeneType': 'processed_pseudogene', 'geneId': 'ENSG00000268903',
+                    'geneSymbol': 'AL627309.7', 'mimNumber': None, 'omimPhenotypes': [],
+                    'startGrch37': 135141, 'startGrch38': 135141
+                }
+            },
+            'phenotypeGeneScores': {
+                'I000001_na19675': {
+                    'ENSG00000268903': {
+                        'exomiser': [
+                            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
+                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+                            {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
+                             'scores': {'compositeLR': 0.066, 'post_test_probability': 0}}
+                        ]
+                    }
+                }
             }
         })
