@@ -111,7 +111,7 @@ const BaseRnaSeqOutliers = React.memo(({ individualGuid, rnaSeqData, genesById, 
 ))
 
 BaseRnaSeqOutliers.propTypes = {
-  individualGuid: PropTypes.object.isRequired,
+  individualGuid: PropTypes.string.isRequired,
   familyGuid: PropTypes.string.isRequired,
   rnaSeqData: PropTypes.object,
   genesById: PropTypes.object,

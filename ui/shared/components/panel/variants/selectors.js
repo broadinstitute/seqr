@@ -54,25 +54,19 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
   ),
 )
 
-export const getIndividualPhenotypeGeneByFamily = createSelector(
+export const getIndividualPhenotypeGeneScores = createSelector(
   getGenesById,
-  getIndividualGeneDataByFamilyGene,
-  (genesById, individualGeneDataByFamilyGene) => (
-    Object.entries(individualGeneDataByFamilyGene || {}).reduce((acc, [familyGuid, dataByType]) => ({
+  getPhenotypeGeneScoresByIndividual,
+  (genesById, phenotypeGeneScoresByIndividual) => (
+    Object.entries(phenotypeGeneScoresByIndividual || {}).reduce((acc, [individualGuid, dataByGene]) => ({
       ...acc,
-      [familyGuid]: Object.entries(dataByType.phenotypeGeneScores || {}).reduce((acc2, [geneId, dataByTool]) => ([
-        ...(acc2 || []),
+      [individualGuid]: Object.entries(dataByGene).reduce((acc2, [geneId, dataByTool]) => ([
+        ...acc2,
         ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
           ...acc3,
-          ...data.map(d => ({
-            ...d,
-            tool,
-            geneId,
-            gene: genesById[geneId],
-            rowId: `${geneId}${d.diseaseId}`,
-          })),
+          ...data.map(d => ({ ...d, tool, geneId, gene: genesById[geneId], rowId: `${geneId}${d.diseaseId}` })),
         ]), []),
-      ]), null),
+      ]), []),
     }), {})
   ),
 )

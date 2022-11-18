@@ -184,6 +184,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         }
         return (
           <Modal
+            key={modalName(data[dataType])}
             modalName={modalName(data[dataType])}
             title={title(data[dataType])}
             trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
