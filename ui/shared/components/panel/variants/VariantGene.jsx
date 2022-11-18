@@ -543,7 +543,7 @@ const GeneSearchLinkWithPopup = props => (
 )
 
 const getGeneConsequence = (geneId, variant) => {
-  const geneTranscripts = (variant?.transcripts || {})[geneId]
+  const geneTranscripts = (variant.transcripts || {})[geneId]
   return geneTranscripts && geneTranscripts.length > 0 &&
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
@@ -551,7 +551,7 @@ const getGeneConsequence = (geneId, variant) => {
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData, geneModalId,
 }) => {
-  const geneConsequence = getGeneConsequence(geneId, variant)
+  const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
   if (!gene) {
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
