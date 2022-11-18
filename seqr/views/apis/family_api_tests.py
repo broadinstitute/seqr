@@ -74,8 +74,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
         self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['igvSamplesByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['igvSamplesByGuid'].values()})
-        self.assertSetEqual({INDIVIDUAL_GUID},
-                            {s['individualGuid'] for s in response_json['igvSamplesByGuid'].values()})
+        self.assertSetEqual({INDIVIDUAL_GUID}, {s['individualGuid'] for s in response_json['igvSamplesByGuid'].values()})
         self.assertSetEqual(set(individual['igvSampleGuids']), set(response_json['igvSamplesByGuid'].keys()))
 
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 1)
@@ -100,8 +99,7 @@ class FamilyAPITest(AuthenticationTestCase):
         internal_individual_fields = deepcopy(individual_fields)
         internal_individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), internal_family_fields)
-        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()),
-                            internal_individual_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), internal_individual_fields)
 
         self.mock_analyst_group.__str__.return_value = ''
         response = self.client.get(url)
@@ -207,8 +205,7 @@ class FamilyAPITest(AuthenticationTestCase):
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'],
-                             ['Unable to delete individuals with active MME submission: NA19675_1'])
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
@@ -260,15 +257,12 @@ class FamilyAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), ['analysisGroupsByGuid'])
-        self.assertSetEqual(set(response_json['analysisGroupsByGuid'].keys()),
-                            {'AG0000183_test_group', 'AG0000185_accepted'})
+        self.assertSetEqual(set(response_json['analysisGroupsByGuid'].keys()), {'AG0000183_test_group', 'AG0000185_accepted'})
         self.assertTrue(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000185_accepted']['familyGuids'])
         self.assertFalse(FAMILY_GUID in response_json['analysisGroupsByGuid']['AG0000183_test_group']['familyGuids'])
 
-        self.assertIsNotNone(
-            AnalysisGroup.objects.get(guid='AG0000185_accepted').families.filter(guid=FAMILY_GUID).first())
-        self.assertIsNone(
-            AnalysisGroup.objects.get(guid='AG0000183_test_group').families.filter(guid=FAMILY_GUID).first())
+        self.assertIsNotNone(AnalysisGroup.objects.get(guid='AG0000185_accepted').families.filter(guid=FAMILY_GUID).first())
+        self.assertIsNone(AnalysisGroup.objects.get(guid='AG0000183_test_group').families.filter(guid=FAMILY_GUID).first())
 
     def test_update_family_pedigree_image(self):
         url = reverse(update_family_pedigree_image, args=[FAMILY_GUID])
@@ -401,7 +395,7 @@ class FamilyAPITest(AuthenticationTestCase):
         url = reverse(edit_families_handler, args=[PROJECT_GUID])
 
         response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'uploadedFileId': response_json['uploadedFileId']}))
+                data=json.dumps({'uploadedFileId': response_json['uploadedFileId']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
 
@@ -454,7 +448,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         # update the note
         update_note_url = reverse(update_family_note, args=[FAMILY_GUID, new_note_guid])
-        response = self.client.post(update_note_url, content_type='application/json', data=json.dumps(
+        response = self.client.post(update_note_url, content_type='application/json',  data=json.dumps(
             {'note': 'updated note'}))
 
         self.assertEqual(response.status_code, 200)
