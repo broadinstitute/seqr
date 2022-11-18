@@ -764,7 +764,6 @@ def get_individual_rna_seq_data(request, individual_guid):
         'genesById': genes_to_show,
     })
 
-
 @login_and_policies_required
 def get_hpo_terms(request, hpo_parent_id):
     """
