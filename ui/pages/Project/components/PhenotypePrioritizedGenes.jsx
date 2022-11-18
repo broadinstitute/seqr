@@ -6,7 +6,7 @@ import DataLoader from 'shared/components/DataLoader'
 import { GeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
 import { BaseVariantGene } from 'shared/components/panel/variants/VariantGene'
-import { getIndividualPhenotypeGeneByFamily } from 'shared/components/panel/variants/selectors'
+import { getIndividualPhenotypeGeneScores } from 'shared/components/panel/variants/selectors'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { loadPhenotypeGeneScores } from '../reducers'
 import { getPhenotypeDataLoading } from '../selectors'
@@ -57,16 +57,16 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
 const BasePhenotypePriGenes = React.memo((
   { individualGuid, phenotypeGeneScores, familyGuid, loading, load },
 ) => (
-  <DataLoader content={phenotypeGeneScores} contentId={individualGuid} load={load} loading={loading}>
+  <DataLoader content={phenotypeGeneScores[individualGuid]} contentId={individualGuid} load={load} loading={loading}>
     <GeneSearchLink
       buttonText="Search for variants in high-ranked genes"
       icon="search"
-      location={Object.values(phenotypeGeneScores || {}).map(({ geneId }) => geneId).join(',')}
+      location={(phenotypeGeneScores[individualGuid] || []).map(({ geneId }) => geneId).join(',')}
       familyGuid={familyGuid}
       floated="right"
     />
     <DataTable
-      data={phenotypeGeneScores}
+      data={phenotypeGeneScores[individualGuid]}
       idField="rowId"
       columns={PHENOTYPE_GENE_INFO_COLUMNS}
       fixedWidth
@@ -76,15 +76,15 @@ const BasePhenotypePriGenes = React.memo((
 ))
 
 BasePhenotypePriGenes.propTypes = {
-  individualGuid: PropTypes.object.isRequired,
+  individualGuid: PropTypes.string.isRequired,
   familyGuid: PropTypes.string.isRequired,
   phenotypeGeneScores: PropTypes.object,
   loading: PropTypes.bool,
   load: PropTypes.func,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  phenotypeGeneScores: getIndividualPhenotypeGeneByFamily(state)[ownProps.familyGuid],
+const mapStateToProps = state => ({
+  phenotypeGeneScores: getIndividualPhenotypeGeneScores(state),
   loading: getPhenotypeDataLoading(state),
 })
 
