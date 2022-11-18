@@ -64,7 +64,7 @@ export const getIndividualPhenotypeGeneScores = createSelector(
         ...acc2,
         ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
           ...acc3,
-          ...data.map(d => ({ ...d, tool, geneId, gene: genesById[geneId], rowId: `${geneId}${d.diseaseId}` })),
+          ...data.map(d => ({ ...d, tool, gene: genesById[geneId], rowId: `${geneId}${d.diseaseId}` })),
         ]), []),
       ]), []),
     }), {})

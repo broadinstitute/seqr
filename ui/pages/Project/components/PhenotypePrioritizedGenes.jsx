@@ -16,9 +16,9 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
     name: 'geneId',
     width: 6,
     content: 'Gene',
-    format: ({ geneId, gene, rowId }) => (
+    format: ({ gene, rowId }) => (
       <BaseVariantGene
-        geneId={geneId}
+        geneId={gene.geneId}
         gene={gene}
         geneModalId={rowId}
         compact
