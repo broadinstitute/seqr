@@ -28,7 +28,7 @@ azure-core==1.22.1
     #   azure-storage-blob
 azure-identity==1.6.0
     # via hail
-azure-storage-blob==12.11.0
+azure-storage-blob==12.13.0
     # via hail
 bokeh==1.4.0
     # via hail
@@ -183,7 +183,7 @@ pandas==1.3.5
     # via hail
 parsimonious==0.8.1
     # via hail
-pillow==9.0.1
+pillow==9.2.0
     # via
     #   -r requirements.in
     #   bokeh
