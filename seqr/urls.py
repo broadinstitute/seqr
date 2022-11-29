@@ -83,6 +83,7 @@ from matchmaker.views.matchmaker_api import \
     get_mme_nodes, \
     search_local_individual_mme_matches, \
     search_individual_mme_matches, \
+    remove_individual_mme_matches, \
     update_mme_submission, \
     delete_mme_submission, \
     update_mme_result_status, \
@@ -272,6 +273,7 @@ api_endpoints = {
     'matchmaker/get_mme_nodes': get_mme_nodes,
     'matchmaker/search_local_mme_matches/(?P<submission_guid>[\w.|-]+)': search_local_individual_mme_matches,
     'matchmaker/search_mme_matches/(?P<submission_guid>[\w.|-]+)/(?P<node>[\w.|-]+)': search_individual_mme_matches,
+    'matchmaker/remove_stale_mme_matches/(?P<submission_guid>[\w.|-]+)': remove_individual_mme_matches,
     'matchmaker/submission/create': update_mme_submission,
     'matchmaker/submission/(?P<submission_guid>[\w.|-]+)/update': update_mme_submission,
     'matchmaker/submission/(?P<submission_guid>[\w.|-]+)/delete': delete_mme_submission,

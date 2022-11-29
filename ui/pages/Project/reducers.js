@@ -261,14 +261,20 @@ export const searchMmeMatches = submissionGuid => (dispatch) => {
       Promise.all(urls.map(url => new HttpRequestHelper(
         url,
         (responseJson) => {
-          dispatch({
-            type: RECEIVE_DATA,
-            updatesById: responseJson,
-          })
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         e => errors.add(e.message),
       ).get())).then(() => {
-        dispatch({ type: RECEIVE_MME_MATCHES, error: [...errors].join(', '), updatesById: {} })
+        new HttpRequestHelper(
+          `/api/matchmaker/remove_stale_mme_matches/${submissionGuid}`,
+          (responseJson) => {
+            dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+            dispatch({ type: RECEIVE_MME_MATCHES, error: [...errors].join(', '), updatesById: {} })
+          },
+          (e) => {
+            dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
+          },
+        ).get()
       })
     },
     (e) => {
