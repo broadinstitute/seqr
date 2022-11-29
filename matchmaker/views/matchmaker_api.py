@@ -82,8 +82,8 @@ def _search_node_matches(submission_guid, node, user, is_local=False):
     if is_local:
         results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
     else:
-        # TODO
         results = _search_external_matches(MME_NODES_BY_NAME[node], patient_data, user)
+        raise NotImplementedError
         incoming_query = None  # TODO
 
     # TODO filter for found patient IDs

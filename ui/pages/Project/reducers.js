@@ -251,30 +251,32 @@ export const getMmeMatches = submissionGuid => (dispatch, getState) => {
 
 export const searchMmeMatches = submissionGuid => (dispatch) => {
   dispatch({ type: REQUEST_MME_MATCHES })
+  const errors = new Set()
+  const searchSingleNode = nodeUrl => new HttpRequestHelper(
+    nodeUrl,
+    (responseJson) => {
+      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+    },
+    e => errors.add(e.message),
+  ).get()
+
   new HttpRequestHelper('/api/matchmaker/get_mme_nodes',
     ({ mmeNodes }) => {
-      const errors = new Set()
-      const urls = [
-        `/api/matchmaker/search_local_mme_matches/${submissionGuid}`,
-        ...mmeNodes.map(node => `/api/matchmaker/search_mme_matches/${submissionGuid}/${node}`),
-      ]
-      Promise.all(urls.map(url => new HttpRequestHelper(
-        url,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-        },
-        e => errors.add(e.message),
-      ).get())).then(() => {
-        new HttpRequestHelper(
-          `/api/matchmaker/finalize_mme_search/${submissionGuid}`,
-          (responseJson) => {
-            dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-            dispatch({ type: RECEIVE_MME_MATCHES, error: [...errors].join(', '), updatesById: {} })
-          },
-          (e) => {
-            dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
-          },
-        ).get()
+      searchSingleNode(`/api/matchmaker/search_local_mme_matches/${submissionGuid}`).then(() => {
+        Promise.all(mmeNodes.map(
+          node => searchSingleNode(`/api/matchmaker/search_mme_matches/${submissionGuid}/${node}`),
+        )).then(() => {
+          new HttpRequestHelper(
+            `/api/matchmaker/finalize_mme_search/${submissionGuid}`,
+            (responseJson) => {
+              dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+              dispatch({ type: RECEIVE_MME_MATCHES, error: [...errors].join(', '), updatesById: {} })
+            },
+            (e) => {
+              dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
+            },
+          ).get()
+        })
       })
     },
     (e) => {
