@@ -266,7 +266,7 @@ export const searchMmeMatches = submissionGuid => (dispatch) => {
         e => errors.add(e.message),
       ).get())).then(() => {
         new HttpRequestHelper(
-          `/api/matchmaker/remove_stale_mme_matches/${submissionGuid}`,
+          `/api/matchmaker/finalize_mme_search/${submissionGuid}`,
           (responseJson) => {
             dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
             dispatch({ type: RECEIVE_MME_MATCHES, error: [...errors].join(', '), updatesById: {} })

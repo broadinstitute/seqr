@@ -61,24 +61,14 @@ def get_mme_nodes(request):
 
 @login_and_policies_required
 def search_local_individual_mme_matches(request, submission_guid):
-    raise NotImplementedException
-
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
     user = request.user
     check_mme_permissions(submission, user)
     patient_data = get_submission_json_for_external_match(submission)
 
-    nodes_to_query = [node for node in MME_NODES.values() if node.get('url')]
-    if not nodes_to_query:
-        message = 'No external MME nodes are configured'
-        logger.error(message, user)
-        return create_json_response({'error': message}, status=400, reason=message)
+    results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
 
-    external_results = _search_external_matches(nodes_to_query, patient_data, user)
-    local_results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
-
-    results = local_results + external_results
-
+    # TODO filter for found patient IDs
     initial_saved_results = {
         result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
     }
@@ -87,7 +77,7 @@ def search_local_individual_mme_matches(request, submission_guid):
         s.submission_id: s for s in MatchmakerSubmission.objects.filter(matchmakerresult__originating_submission=submission)
     }
 
-    new_results = []
+    new_count = 0
     saved_results = {}
     for result in results:
         result_patient_id = result['patient']['id']
@@ -100,34 +90,12 @@ def search_local_individual_mme_matches(request, submission_guid):
                 'result_data': result,
                 'last_modified_by': user,
             }, user)
-            new_results.append(result)
+            new_count += 1
         else:
-            update_model_from_json(saved_result, {'result_data': result, 'match_removed': False}, user)
+            update_model_from_json(saved_result, {'result_data': result, 'match_removed': False}, user, updated_fields={'last_modified_date'})
         saved_results[result['patient']['id']] = saved_result
 
-    if new_results:
-        try:
-            _generate_notification_for_seqr_match(submission, new_results)
-        except Exception as e:
-            logger.error('Unable to create notification for new MME match: {}'.format(str(e)), user)
-
-    logger.info('Found {} matches for {} ({} new)'.format(len(results), submission.submission_id, len(new_results)), user)
-
-    removed_patients = set(initial_saved_results.keys()) - set(saved_results.keys())
-    removed_count = 0
-    for patient_id in removed_patients:
-        saved_result = initial_saved_results[patient_id]
-        if saved_result.we_contacted or saved_result.host_contacted or saved_result.comments:
-            if not saved_result.match_removed:
-                update_model_from_json(saved_result, {'match_removed': True}, user)
-                removed_count += 1
-            saved_results[patient_id] = saved_result
-        else:
-            saved_result.delete_model(user, user_can_delete=True)
-            removed_count += 1
-
-    if removed_count:
-        logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id), user)
+    logger.info('Found {} local matches for {} ({} new)'.format(len(results), submission.submission_id, new_count, user))
 
     return _parse_mme_results(submission, list(saved_results.values()), user)
 
@@ -211,7 +179,7 @@ def search_individual_mme_matches(request, submission_guid, node):
 
 
 @login_and_policies_required
-def remove_individual_mme_matches(request, submission_guid):
+def finalize_mme_search(request, submission_guid):
     """
     Looks for matches for the given submission.
     Returns:
