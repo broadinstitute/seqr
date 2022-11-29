@@ -7,7 +7,7 @@ from django.db.models import prefetch_related_objects
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission, MatchmakerSubmissionGenes
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, get_submission_gene_variants, get_mme_matches, \
-    get_gene_ids_for_feature, validate_patient_data, MME_DISCLAIMER
+    get_gene_ids_for_feature, validate_patient_data, get_hpo_terms_by_id, MME_DISCLAIMER
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.logging_utils import SeqrLogger
@@ -49,6 +49,11 @@ def get_individual_mme_matches(request, submission_guid):
     gene_ids = set()
     for variant in response_json['savedVariantsByGuid'].values():
         gene_ids.update(list(variant.get('transcripts', {}).keys()))
+
+    hpo_terms_by_id = get_hpo_terms_by_id(
+        {feature['id'] for feature in (submission.features or []) if feature.get('id')})
+    phenotypes = parse_mme_features(submission.features, hpo_terms_by_id),
+    response_json.update(_get_submission_detail_response(submission, phenotypes))
 
     return _parse_mme_results(
         submission, results, request.user, additional_genes=gene_ids, response_json=response_json)
@@ -377,17 +382,21 @@ def update_mme_submission(request, submission_guid=None):
     for gv in to_delete:
         existing_submission_genes[gv].delete()
 
+    response = _get_submission_detail_response(submission, phenotypes)
+    if not submission_guid:
+        response['individualsByGuid'] = {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}}
+    return create_json_response(response)
+
+
+def _get_submission_detail_response(submission, phenotypes):
     submission_response = get_json_for_matchmaker_submission(submission)
     submission_response.update({
         'phenotypes': phenotypes,
         'geneVariants': get_submission_gene_variants(submission),
     })
-    response = {
+    return {
         'mmeSubmissionsByGuid': {submission.guid: submission_response},
     }
-    if not submission_guid:
-        response['individualsByGuid'] = {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}}
-    return create_json_response(response)
 
 
 @login_and_policies_required
@@ -538,9 +547,8 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         results.append(result)
         contact_institutions.add(result['patient']['contact'].get('institution', '').strip().lower())
 
-    additional_hpo_ids = {feature['id'] for feature in (submission.features or []) if feature.get('id')}
     hpo_terms_by_id, genes_by_id, gene_symbols_to_ids = get_mme_genes_phenotypes_for_results(
-        results, additional_genes=additional_genes, additional_hpo_ids=additional_hpo_ids)
+        results, additional_genes=additional_genes)
 
     parsed_results = [_parse_mme_result(res, hpo_terms_by_id, gene_symbols_to_ids, submission.guid) for res in results]
     parsed_results_gy_guid = {result['matchStatus']['matchmakerResultGuid']: result for result in parsed_results}
@@ -548,16 +556,9 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     contact_notes = {note.institution: _get_json_for_model(note, user=user)
                      for note in MatchmakerContactNotes.objects.filter(institution__in=contact_institutions)}
 
-    submission_json = get_json_for_matchmaker_submission(submission)
-    submission_json.update({
-        'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
-        'geneVariants': get_submission_gene_variants(submission),
-    })
-
     response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
         'mmeContactNotes': contact_notes,
-        'mmeSubmissionsByGuid': {submission.guid: submission_json},
         'individualsByGuid': {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}},
         'genesById': genes_by_id,
     }
