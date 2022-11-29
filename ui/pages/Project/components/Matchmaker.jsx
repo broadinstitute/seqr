@@ -468,7 +468,7 @@ const BaseMatchmakerIndividual = React.memo((
             defaultSortColumn="createdDate"
             defaultSortDescending
             columns={DISPLAY_FIELDS}
-            data={mmeResults.active}
+            data={mmeResults?.active}
             loading={loading}
             emptyContent="No matches found"
             downloadFileName={`MME_matches_${individual.displayName}`}

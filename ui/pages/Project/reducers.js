@@ -229,7 +229,7 @@ export const updateAnalysisGroup = values => updateEntity(
 export const getMmeMatches = submissionGuid => (dispatch, getState) => {
   const state = getState()
   const submission = state.mmeSubmissionsByGuid[submissionGuid]
-  if (submission && !submission.mmeResultGuids) {
+  if (submission && !submission.geneVariants) {
     const { familyGuid } = state.individualsByGuid[submission.individualGuid]
     dispatch({ type: REQUEST_MME_MATCHES })
     new HttpRequestHelper(`/api/matchmaker/get_mme_matches/${submissionGuid}`,

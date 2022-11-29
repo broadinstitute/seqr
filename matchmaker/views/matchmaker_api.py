@@ -550,7 +550,6 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
 
     submission_json = get_json_for_matchmaker_submission(submission)
     submission_json.update({
-        'mmeResultGuids': list(parsed_results_gy_guid.keys()),
         'phenotypes': parse_mme_features(submission.features, hpo_terms_by_id),
         'geneVariants': get_submission_gene_variants(submission),
     })
