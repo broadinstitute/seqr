@@ -256,7 +256,7 @@ export const searchMmeMatches = submissionGuid => (dispatch) => {
       const errors = new Set()
       const urls = [
         `/api/matchmaker/search_local_mme_matches/${submissionGuid}`,
-        ...mmeNodes.map(node => `/api/matchmaker/search_mme_matches/${node}/${submissionGuid}`),
+        ...mmeNodes.map(node => `/api/matchmaker/search_mme_matches/${submissionGuid}/${node}`),
       ]
       Promise.all(urls.map(url => new HttpRequestHelper(
         url,

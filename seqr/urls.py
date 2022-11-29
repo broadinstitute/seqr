@@ -80,6 +80,8 @@ from seqr.views.apis.locus_list_api import \
 
 from matchmaker.views.matchmaker_api import \
     get_individual_mme_matches, \
+    get_mme_nodes, \
+    search_local_individual_mme_matches, \
     search_individual_mme_matches, \
     update_mme_submission, \
     delete_mme_submission, \
@@ -267,7 +269,9 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_locus_lists': delete_project_locus_lists,
 
     'matchmaker/get_mme_matches/(?P<submission_guid>[\w.|-]+)': get_individual_mme_matches,
-    'matchmaker/search_mme_matches/(?P<submission_guid>[\w.|-]+)': search_individual_mme_matches,
+    'matchmaker/get_mme_nodes': get_mme_nodes,
+    'matchmaker/search_local_mme_matches/(?P<submission_guid>[\w.|-]+)': search_local_individual_mme_matches,
+    'matchmaker/search_mme_matches/(?P<submission_guid>[\w.|-]+)/(?P<node>[\w.|-]+)': search_individual_mme_matches,
     'matchmaker/submission/create': update_mme_submission,
     'matchmaker/submission/(?P<submission_guid>[\w.|-]+)/update': update_mme_submission,
     'matchmaker/submission/(?P<submission_guid>[\w.|-]+)/delete': delete_mme_submission,
