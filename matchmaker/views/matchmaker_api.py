@@ -52,7 +52,7 @@ def get_individual_mme_matches(request, submission_guid):
 
     hpo_terms_by_id = get_hpo_terms_by_id(
         {feature['id'] for feature in (submission.features or []) if feature.get('id')})
-    phenotypes = parse_mme_features(submission.features, hpo_terms_by_id),
+    phenotypes = parse_mme_features(submission.features, hpo_terms_by_id)
     response_json.update(_get_submission_detail_response(submission, phenotypes))
 
     return _parse_mme_results(
@@ -100,7 +100,7 @@ def search_local_individual_mme_matches(request, submission_guid):
             update_model_from_json(saved_result, {'result_data': result, 'match_removed': False}, user, updated_fields={'last_modified_date'})
         saved_results[result['patient']['id']] = saved_result
 
-    logger.info('Found {} local matches for {} ({} new)'.format(len(results), submission.submission_id, new_count, user))
+    logger.info('Found {} local matches for {} ({} new)'.format(len(results), submission.submission_id, new_count), user)
 
     return _parse_mme_results(submission, list(saved_results.values()), user)
 
