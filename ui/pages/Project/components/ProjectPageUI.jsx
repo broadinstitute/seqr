@@ -86,7 +86,7 @@ const ProjectPageUI = React.memo(props => (
       <Grid.Row>
         <Grid.Column width={4}>
           {props.match.params.analysisGroupGuid ? null : (
-            <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />} loading={props.loading}>
+            <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
               <AnalysisGroups />
             </ProjectSection>
           )}
