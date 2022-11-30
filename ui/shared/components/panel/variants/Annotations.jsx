@@ -153,16 +153,6 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     }, [])
   }
 
-  if (geneNames && geneNames.length) {
-    let pubmedSearch = `(${geneNames.join(' OR ')})`
-    if (variations.length) {
-      pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
-      links.push({ name: 'google', href: `https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}` })
-    }
-
-    links.push({ name: 'pubmed', href: `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}` })
-  }
-
   const isSv = !!svType
   if (isSv) {
     const useLiftover = liftedOverGenomeVersion === GENOME_VERSION_37
@@ -185,6 +175,16 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
       },
       { name: 'Iranome', href: `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}` },
     )
+  }
+
+  if (geneNames && geneNames.length) {
+    let pubmedSearch = `(${geneNames.join(' OR ')})`
+    if (variations.length) {
+      pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
+      links.push({ name: 'google', href: `https://www.google.com/search?q=(${geneNames.join('|')})+(${variations.join('|')}` })
+    }
+
+    links.push({ name: 'pubmed', href: `https://www.ncbi.nlm.nih.gov/pubmed?term=${pubmedSearch}` })
   }
 
   return [
