@@ -12,6 +12,7 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, pa
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -217,7 +218,7 @@ def _search_external_matches(node, patient_data, user):
                 error_message = 'Received {} invalid matches from {}'.format(len(invalid_results), node['name'])
                 logger.warning(error_message, user)
     except Exception as e:
-        _report_external_mme_error(node['name'], str(e), patient_data, user)
+        _report_external_mme_error(node['name'], str(e), patient_data, user, raise_exception=True)
 
     return external_results
 
@@ -229,11 +230,17 @@ def _is_valid_external_match(result, submission_gene_ids, gene_symbols_to_ids):
     return False
 
 
-def _report_external_mme_error(node_name, error, detail, user):
+def _report_external_mme_error(node_name, error, detail, user, raise_exception=False):
     error_message = 'Error searching in {}: {}'.format(node_name, error)
-    logger.warning(error_message, user, detail=detail)
     slack_message = '{}\n```{}```'.format(error_message, json.dumps(detail, indent=2))
     safe_post_to_slack(MME_SLACK_ALERT_NOTIFICATION_CHANNEL, slack_message)
+    if raise_exception:
+        e = ErrorsWarningsException([error_message])
+        e.info = detail
+        raise e
+    else:
+        logger.warning(error_message, user, detail=detail)
+
 
 @login_and_policies_required
 def update_mme_submission(request, submission_guid=None):

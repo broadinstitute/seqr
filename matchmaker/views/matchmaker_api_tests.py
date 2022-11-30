@@ -263,12 +263,13 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES_BY_NAME', MOCK_NODES_BY_NAME)
+    @mock.patch('seqr.utils.middleware.logger')
     @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.Slacker')
     @mock.patch('matchmaker.views.matchmaker_api.logger')
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
     @responses.activate
-    def test_search_individual_mme_matches(self, mock_email, mock_logger, mock_slacker, mock_communication_logger):
+    def test_search_individual_mme_matches(self, mock_email, mock_logger, mock_slacker, mock_communication_logger, mock_exception_logger):
         mock_slacker.return_value.chat.post_message.side_effect = ValueError('Unable to connect to slack')
         mock_email.return_value.send.side_effect = Exception('Email error')
 
@@ -364,9 +365,8 @@ class MatchmakerAPITest(AuthenticationTestCase):
         # Test external matches
         node_a_match_url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID, 'Node A'])
         response = self.client.get(node_a_match_url, {'incomingQueryGuid': incoming_query_guid})
-        # TODO should return error status
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json()['mmeResultsByGuid'], {})
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'],  ['Error searching in Node A: Failed request (400)'])
 
         node_b_match_url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID, 'Node B'])
         response = self.client.get(node_b_match_url, {'incomingQueryGuid': incoming_query_guid})
@@ -486,14 +486,16 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         mock_logger.error.assert_called_with(
             'Unable to create notification for new MME match: Email error', self.collaborator_user)
+        mock_exception_logger.warning.assert_called_with(
+            'Error searching in Node A: Failed request (400)', self.collaborator_user, detail=expected_patient_body,
+            http_request_json=mock.ANY, traceback=mock.ANY, request_body=mock.ANY,
+        )
         mock_logger.warning.assert_has_calls([
-            mock.call('Error searching in Node A: Failed request (400)', self.collaborator_user, detail=expected_patient_body),
             mock.call('Error searching in Node B: Received invalid results for NA19675_1', self.collaborator_user, detail=invalid_results),
             mock.call('Received 1 invalid matches from Node B', self.collaborator_user),
         ])
         mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [
             'Found 2 matches in Broad MME for NA19675_1_01 (1 new)',
-            'Found 0 matches in Node A for NA19675_1_01 (0 new)',
             'Found 5 matches from Node B',
             'Found 1 matches in Node B for NA19675_1_01 (1 new)',
             'Found 3 total matches for NA19675_1_01 (2 new)',
