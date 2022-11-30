@@ -135,7 +135,7 @@ def finalize_mme_search(request, submission_guid):
     new_results = submission_results.filter(originating_query=originating_query)
     if new_results:
         try:
-            _generate_notification_for_seqr_match(submission, new_results)
+            _generate_notification_for_seqr_match(submission, [r.result_data for r in new_results])
         except Exception as e:
             logger.error('Unable to create notification for new MME match: {}'.format(str(e)), user)
 
