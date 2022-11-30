@@ -423,7 +423,7 @@ const GENE_DETAIL_SECTIONS = [
   {
     color: 'orange',
     description: 'Phenotype Prioritization',
-    label: 'Prioritized-Gene', // required for using the label as a key
+    label: 'Prioritized-Gene', // required for using the label as a key and won't be displayed
     showDetails: (gene, indivGeneData) => indivGeneData?.phenotypeGeneScores &&
       indivGeneData.phenotypeGeneScores[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (Object.entries(indivGeneData.phenotypeGeneScores[gene.geneId]).map(
