@@ -252,14 +252,14 @@ export const getMmeMatches = submissionGuid => (dispatch, getState) => {
 export const searchMmeMatches = submissionGuid => (dispatch) => {
   dispatch({ type: REQUEST_MME_MATCHES })
   const errors = new Set()
-  let queryGuid
+  const queryParams = {}
 
   new HttpRequestHelper('/api/matchmaker/get_mme_nodes',
     ({ mmeNodes }) => {
       new HttpRequestHelper(
         `/api/matchmaker/search_local_mme_matches/${submissionGuid}`,
         ({ incomingQueryGuid, ...responseJson }) => {
-          queryGuid = incomingQueryGuid
+          queryParams.incomingQueryGuid = incomingQueryGuid
           dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
         },
         e => errors.add(e.message),
@@ -270,7 +270,7 @@ export const searchMmeMatches = submissionGuid => (dispatch) => {
             dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
           },
           e => errors.add(e.message),
-        ).get({ incomingQueryGuid: queryGuid }))).then(() => {
+        ).get(queryParams))).then(() => {
           new HttpRequestHelper(
             `/api/matchmaker/finalize_mme_search/${submissionGuid}`,
             (responseJson) => {
@@ -280,7 +280,7 @@ export const searchMmeMatches = submissionGuid => (dispatch) => {
             (e) => {
               dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
             },
-          ).get()
+          ).get(queryParams)
         })
       })
     },

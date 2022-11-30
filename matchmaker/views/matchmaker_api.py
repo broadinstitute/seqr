@@ -62,7 +62,7 @@ def get_individual_mme_matches(request, submission_guid):
 
 @login_and_policies_required
 def get_mme_nodes(request):
-    return create_json_response({'mmeNodes': list(MME_NODES_BY_NAME.keys())[:1]})
+    return create_json_response({'mmeNodes': list(MME_NODES_BY_NAME.keys())})
 
 
 @login_and_policies_required
@@ -113,7 +113,9 @@ def _search_node_matches(submission_guid, node, user, is_local=False, incoming_q
             }, user)
             new_count += 1
         else:
-            update_model_from_json(saved_result, {'result_data': result, 'match_removed': False}, user)
+            update_model_from_json(
+                saved_result, {'result_data': result, 'match_removed': False}, user, updated_fields={'last_modified_date'}
+            )
         saved_results[result['patient']['id']] = saved_result
 
     logger.info('Found {} matches in {} for {} ({} new)'.format(len(results), node, submission.submission_id, new_count), user)
@@ -123,80 +125,47 @@ def _search_node_matches(submission_guid, node, user, is_local=False, incoming_q
 
 @login_and_policies_required
 def finalize_mme_search(request, submission_guid):
-    """
-    Looks for matches for the given submission.
-    Returns:
-        Status code and results
-    """
-    raise NotImplementedException
-
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
     user = request.user
     check_mme_permissions(submission, user)
-    patient_data = get_submission_json_for_external_match(submission)
 
-    nodes_to_query = [node for node in MME_NODES.values() if node.get('url')]
-    if not nodes_to_query:
-        message = 'No external MME nodes are configured'
-        logger.error(message, user)
-        return create_json_response({'error': message}, status=400, reason=message)
+    originating_query = MatchmakerIncomingQuery.objects.get(guid=request.GET['incomingQueryGuid'])
+    submission_results = MatchmakerResult.objects.filter(submission=submission)
 
-    external_results = _search_external_matches(nodes_to_query, patient_data, user)
-    local_results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
-
-    results = local_results + external_results
-
-    initial_saved_results = {
-        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
-    }
-
-    local_result_submissions = {
-        s.submission_id: s for s in MatchmakerSubmission.objects.filter(matchmakerresult__originating_submission=submission)
-    }
-
-    new_results = []
-    saved_results = {}
-    for result in results:
-        result_patient_id = result['patient']['id']
-        saved_result = initial_saved_results.get(result_patient_id)
-        if not saved_result:
-            saved_result = create_model_from_json(MatchmakerResult, {
-                'submission': submission,
-                'originating_submission': local_result_submissions.get(result_patient_id),
-                'originating_query': incoming_query,
-                'result_data': result,
-                'last_modified_by': user,
-            }, user)
-            new_results.append(result)
-        else:
-            update_model_from_json(saved_result, {'result_data': result, 'match_removed': False}, user)
-        saved_results[result['patient']['id']] = saved_result
-
+    new_results = submission_results.filter(originating_query=originating_query)
     if new_results:
         try:
             _generate_notification_for_seqr_match(submission, new_results)
         except Exception as e:
             logger.error('Unable to create notification for new MME match: {}'.format(str(e)), user)
 
-    logger.info('Found {} matches for {} ({} new)'.format(len(results), submission.submission_id, len(new_results)), user)
+    removed_results = submission_results.filter(
+        # Any matches will have been updated so their modified timestamp will be after the query was submitted
+        last_modified_date__lt=originating_query.created_date,
+    )
 
-    removed_patients = set(initial_saved_results.keys()) - set(saved_results.keys())
-    removed_count = 0
-    for patient_id in removed_patients:
-        saved_result = initial_saved_results[patient_id]
-        if saved_result.we_contacted or saved_result.host_contacted or saved_result.comments:
-            if not saved_result.match_removed:
-                update_model_from_json(saved_result, {'match_removed': True}, user)
-                removed_count += 1
-            saved_results[patient_id] = saved_result
-        else:
-            saved_result.delete_model(user, user_can_delete=True)
-            removed_count += 1
+    total_results = submission_results.count() - removed_results.count()
+    logger.info('Found {} total matches for {} ({} new)'.format(total_results, submission.submission_id, len(new_results)), user)
 
-    if removed_count:
+    updated_results_json = {}
+    to_remove_results = removed_results.filter(match_removed=False)
+    if to_remove_results:
+        removed_count = to_remove_results.count()
+        is_deletable_filter = Q(we_contacted=False) & Q(host_contacted=False) & (
+                Q(comments__isnull=True) | Q(comments__exact=''))
+        to_delete = to_remove_results.filter(is_deletable_filter)
+        if to_delete:
+            updated_results_json.update({r.guid: None for r in to_delete})
+            MatchmakerResult.bulk_delete(user, queryset=to_delete)
+
+        to_remove = to_remove_results.exclude(is_deletable_filter)
+        if to_remove:
+            MatchmakerResult.bulk_update(user, {'match_removed': True}, queryset=to_remove)
+            updated_results_json.update({r.guid: {'matchStatus':  _get_json_for_model(r)} for r in to_remove})
+
         logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id), user)
 
-    return _parse_mme_results(submission, list(saved_results.values()), user)
+    return create_json_response({'mmeResultsByGuid': updated_results_json})
 
 
 def _search_external_matches(node, patient_data, user):
