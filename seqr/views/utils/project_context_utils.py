@@ -9,22 +9,16 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json
     get_json_for_family_notes, get_json_for_saved_variants
 
 
-def get_projects_child_entities(projects, project_guid, user, include_samples=True, include_locus_list_metadata=True):
+def get_projects_child_entities(projects, project_guid, user):
     projects_by_guid = {p.guid: {'projectGuid': p.guid, 'name': p.name} for p in projects}
 
-    if include_samples:
-        sample_models = Sample.objects.filter(individual__family__project__in=projects)
-        samples = get_json_for_samples(sample_models, project_guid=project_guid, skip_nested=True)
-
-    locus_list_json, locus_lists_models = get_project_locus_lists(projects, user, include_metadata=include_locus_list_metadata)
+    locus_list_json, locus_lists_models = get_project_locus_lists(projects, user)
 
     response = {
         'projectsByGuid': projects_by_guid,
         'locusListsByGuid': locus_list_json,
         'analysisGroupsByGuid': get_project_analysis_groups(projects, project_guid),
     }
-    if include_samples:
-        response['samplesByGuid'] = {s['sampleGuid']: s for s in samples}
 
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(locus_list_json.keys())
