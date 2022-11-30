@@ -194,11 +194,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertSetEqual(
             set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID}
         )
+        self.assertSetEqual({r['submissionGuid'] for r in response_json['mmeResultsByGuid'].values()}, {SUBMISSION_GUID})
 
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
-            'mmeResultGuids': mock.ANY,
             'submissionGuid': SUBMISSION_GUID,
             'individualGuid': INDIVIDUAL_GUID,
             'createdDate': '2018-05-23T09:07:49.719Z',
@@ -220,9 +220,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
             'mmeSubmissionGuid': SUBMISSION_GUID,
         }})
-        self.assertSetEqual(
-            set(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeResultGuids']),
-            {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
