@@ -117,23 +117,19 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const RNA_DATA_TYPE = 'RNA_OUTLIER'
-const PHENOTYPE_DATA_TYPE = 'PHENOTYPE_GENE_SCORES'
 const SHOW_DATA_MODAL_CONFIG = [
   {
-    dataType: RNA_DATA_TYPE,
     shouldShowField: 'hasRnaOutlierData',
     component: RnaSeqOutliers,
-    modalName: data => `OUTRIDER-${data.sampleId}`,
-    title: data => `RNA-Seq OUTRIDER: ${data.sampleId}`,
+    modalName: ({ sampleId }) => `OUTRIDER-${sampleId}`,
+    title: ({ sampleId }) => `RNA-Seq OUTRIDER: ${sampleId}`,
     linkText: 'Show RNA-Seq OUTRIDER',
   },
   {
-    dataType: PHENOTYPE_DATA_TYPE,
     shouldShowField: 'hasPhenotypeGeneScores',
     component: PhenotypePrioritizedGenes,
-    modalName: data => `PHENOTYPE-PRIORITIZATION-${data.individualId}`,
-    title: data => `Phenotype Prioritized Genes: ${data.individualId}`,
+    modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
+    title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
     linkText: 'Show Phenotype Prioritized Genes',
   },
 ]
@@ -177,21 +173,19 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
-      ({ dataType, modalName, title, linkText, component }) => {
-        const data = {
-          [RNA_DATA_TYPE]: loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA),
-          [PHENOTYPE_DATA_TYPE]: individual,
-        }
+      ({ modalName, title, linkText, component }) => {
+        const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
+        const titleIds = { sampleId: sample.sampleId, individualId: individual.individualId }
         return (
           <Modal
-            key={modalName(data[dataType])}
-            modalName={modalName(data[dataType])}
-            title={title(data[dataType])}
+            key={modalName(titleIds)}
+            modalName={modalName(titleIds)}
+            title={title(titleIds)}
             trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
           >
             <React.Suspense fallback={<Loader />}>
               {React.createElement(component,
-                { familyGuid: individual.familyGuid, individualGuid: data[dataType].individualGuid }) }
+                { familyGuid: individual.familyGuid, individualGuid: individual.individualGuid }) }
             </React.Suspense>
           </Modal>
         )

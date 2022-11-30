@@ -27,7 +27,7 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 INDIVIDUAL_GUID = 'I000001_na19675'
-
+INDIVIDUAL2_GUID = 'I000002_na19678'
 
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -60,6 +60,8 @@ class FamilyAPITest(AuthenticationTestCase):
                              'hasPhenotypeGeneScores'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
+        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL_GUID]['hasPhenotypeGeneScores'])
+        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL2_GUID]['hasPhenotypeGeneScores'])
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
@@ -512,6 +514,15 @@ class FamilyAPITest(AuthenticationTestCase):
                              'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
                             {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
                              'scores': {'compositeLR': 0.066, 'post_test_probability': 0}}
+                        ]
+                    }
+                },
+                'I000002_na19678': {
+                    'ENSG00000268903': {
+                        'lirical': [
+                            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
+                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}
+                            }
                         ]
                     }
                 }

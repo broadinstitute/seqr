@@ -23,6 +23,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
         geneModalId={rowId}
         compact
         showInlineDetails
+        noExpand
       />
     ),
   },

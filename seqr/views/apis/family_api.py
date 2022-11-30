@@ -51,9 +51,10 @@ def family_page_data(request, family_guid):
     if sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqtpm=None):
         response['familiesByGuid'][family_guid]['hasRnaTpmData'] = True
 
-    individuals = {record.individual for record in PhenotypePrioritization.objects.filter(individual__family=family)}
-    for individual in individuals:
-        response['individualsByGuid'][individual.guid]['hasPhenotypeGeneScores'] = True
+    has_phentoype_score_indivs = PhenotypePrioritization.objects.filter(individual__family=family).values_list(
+        'individual__guid', flat=True)
+    for individual_guid in has_phentoype_score_indivs:
+        response['individualsByGuid'][individual_guid]['hasPhenotypeGeneScores'] = True
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}

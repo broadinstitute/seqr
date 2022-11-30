@@ -423,6 +423,7 @@ const GENE_DETAIL_SECTIONS = [
   {
     color: 'orange',
     description: 'Phenotype Prioritization',
+    label: 'Prioritized-Gene', // required for using the label as a key
     showDetails: (gene, indivGeneData) => indivGeneData?.phenotypeGeneScores &&
       indivGeneData.phenotypeGeneScores[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (Object.entries(indivGeneData.phenotypeGeneScores[gene.geneId]).map(
@@ -497,11 +498,10 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 ))
 
 export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, ...labelProps },
+  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, ...labelProps },
 ) => {
   const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData)
-  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps,
-    null, showInlineDetails)
+  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps, null, noExpand)
   const hasLocusLists = showLocusLists && gene.locusListGuids?.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
 
@@ -529,6 +529,7 @@ GeneDetails.propTypes = {
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
+  noExpand: PropTypes.bool,
   individualGeneData: PropTypes.object,
 }
 
@@ -550,6 +551,7 @@ const getGeneConsequence = (geneId, variant) => {
 
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData, geneModalId,
+  noExpand,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -564,6 +566,7 @@ export const BaseVariantGene = React.memo(({
       gene={gene}
       compact={compactDetails}
       showInlineDetails={showInlineDetails}
+      noExpand={noExpand}
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
@@ -646,6 +649,7 @@ BaseVariantGene.propTypes = {
   hasRnaTpmData: PropTypes.bool,
   individualGeneData: PropTypes.object,
   geneModalId: PropTypes.string,
+  noExpand: PropTypes.bool,
 }
 
 const getRnaSeqProps = (state, ownProps) => ({
@@ -724,7 +728,7 @@ class VariantGenes extends React.PureComponent {
         {!mainGeneId && (
           <div>
             {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
-              ({ showDetails, detailsDisplay, ...sectionConfig }) => {
+              ({ showDetails, detailsDisplay, expandedDisplay, expandedLabel, ...sectionConfig }) => {
                 const sectionGenes = genes.filter(gene => showDetails(gene))
                 return (
                   <GeneDetailSection
