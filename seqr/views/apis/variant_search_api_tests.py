@@ -42,7 +42,7 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = DISCOVERY_TAGS
 
 PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded', 'projectGuid', 'name'}
 
-PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
+PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'variantFunctionalTagTypes'}
 
 EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
 expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}

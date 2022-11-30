@@ -184,7 +184,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         project = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes', 'projectGuid'})
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes', 'genomeVersion', 'projectGuid'})
         self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
 
         # include locus list details
