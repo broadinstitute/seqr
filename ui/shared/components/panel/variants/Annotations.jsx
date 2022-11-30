@@ -29,6 +29,8 @@ const DividedLink = styled.a.attrs({ target: '_blank', rel: 'noreferrer' })`
   }
 `
 
+const DividedButtonLink = DividedLink.withComponent(ButtonLink)
+
 const UcscBrowserLink = ({ genomeVersion, chrom, pos, refLength, endOffset }) => {
   const posInt = parseInt(pos, 10)
   const ucscGenomeVersion = genomeVersion === GENOME_VERSION_37 ? '19' : genomeVersion
@@ -111,7 +113,7 @@ const LOF_FILTER_MAP = {
 const isTrnaOrRrna = genesById => genesById &&
     Object.values(genesById).some(({ gencodeGeneType }) => gencodeGeneType === 'Mt-tRNA' || gencodeGeneType === 'Mt-rRNA')
 
-const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
+const variantSearchLinks = (variant, mainTranscript, genesById) => {
   const {
     chrom, endChrom, pos, end, ref, alt, genomeVersion, liftedOverGenomeVersion, liftedOverPos,
     svType, variantId, transcripts,
@@ -205,12 +207,37 @@ const BaseSearchLinks = React.memo(({ variant, mainTranscript, genesById }) => {
     />,
     ...links.map(({ name, href }) => <DividedLink key={name} href={href}>{name}</DividedLink>),
   ]
-})
+}
 
-BaseSearchLinks.propTypes = {
-  variant: PropTypes.object,
-  mainTranscript: PropTypes.object,
-  genesById: PropTypes.object,
+class BaseSearchLinks extends React.PureComponent {
+
+  static propTypes = {
+    variant: PropTypes.object,
+    mainTranscript: PropTypes.object,
+    genesById: PropTypes.object,
+  }
+
+  state = { showAll: false }
+
+  show = () => {
+    this.setState({ showAll: true })
+  }
+
+  render() {
+    const { variant, mainTranscript, genesById } = this.props
+    const { showAll } = this.state
+
+    const links = variantSearchLinks(variant, mainTranscript, genesById)
+    if (links.length < 5 || showAll) {
+      return links
+    }
+
+    return [
+      ...links.slice(0, 3),
+      <DividedButtonLink key="show" icon="ellipsis horizontal" size="mini" padding="0 4px" onClick={this.show} />,
+    ]
+  }
+
 }
 
 const mapStateToProps = state => ({
