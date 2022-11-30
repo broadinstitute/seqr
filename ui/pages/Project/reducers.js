@@ -5,6 +5,7 @@ import {
 } from 'redux/utils/reducerFactories'
 import {
   REQUEST_SAVED_VARIANTS, updateEntity, loadProjectChildEntities, loadFamilyData, loadProjectDetails,
+  loadProjectAnalysisGroups,
 } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -60,6 +61,11 @@ export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
 export const loadProjectOverview = () => loadCurrentProjectChildEntities('overview', REQUEST_PROJECT_OVERVIEW, RECEIVE_PROJECT_OVERVIEW)
 
 export const loadProjectCollaborators = () => loadCurrentProjectChildEntities('collaborators', REQUEST_PROJECT_COLLABORATORS, RECEIVE_PROJECT_COLLABORATORS)
+
+export const loadCurrentProjectAnalysisGroups = () => (dispatch, getState) => {
+  const { currentProjectGuid } = getState()
+  return loadProjectAnalysisGroups(currentProjectGuid)(dispatch, getState)
+}
 
 export const loadProjectLocusLists = () => loadCurrentProjectChildEntities('locus lists', REQUEST_LOCUS_LISTS, RECEIVE_LOCUS_LISTS)
 

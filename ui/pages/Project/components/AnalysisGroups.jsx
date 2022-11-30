@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom'
 import { Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { loadProjectAnalysisGroups } from 'redux/rootReducer'
 import { getAnalysisGroupIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { compareObjects } from 'shared/utils/sortUtils'
+import { loadCurrentProjectAnalysisGroups } from '../reducers'
 import { getProjectAnalysisGroupsByGuid, getCurrentProject } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
@@ -50,7 +50,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = {
-  load: loadProjectAnalysisGroups,
+  load: loadCurrentProjectAnalysisGroups,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(AnalysisGroups)
