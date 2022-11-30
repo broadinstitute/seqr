@@ -445,7 +445,13 @@ export const LOCATION_FIELDS = [
   },
 ]
 
-export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+const REQUIRE_SCORE_FIELD = {
+  name: 'requireScore',
+  component: AlignedBooleanCheckbox,
+  label: 'Require Filtered Predictor',
+  labelHelp: 'Only return variants where the filtered predictor is present. By default, variants are returned where a predictor meets the filtered value or is missing entirely',
+}
+export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
   ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
     const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
@@ -484,7 +490,7 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
       ...filterField,
     }
   },
-)
+)]
 
 export const SNP_QUALITY_FILTER_FIELDS = [
   {
