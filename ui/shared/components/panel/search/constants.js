@@ -449,7 +449,7 @@ const REQUIRE_SCORE_FIELD = {
   name: 'requireScore',
   component: AlignedBooleanCheckbox,
   label: 'Require Filtered Predictor',
-  labelHelp: 'Only return variants where the filtered predictor is present. By default, variants are returned where a predictor meets the filtered value or is missing entirely',
+  labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
 }
 export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
   ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
