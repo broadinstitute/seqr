@@ -4,11 +4,12 @@ import { Link } from 'react-router-dom'
 import { Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
+import { loadProjectAnalysisGroups } from 'redux/rootReducer'
+import { getAnalysisGroupIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { loadProjectAnalysisGroups } from '../reducers'
-import { getProjectAnalysisGroupsByGuid, getCurrentProject, getProjectAnalysisGroupsIsLoading } from '../selectors'
+import { getProjectAnalysisGroupsByGuid, getCurrentProject } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
 const AnalysisGroups = React.memo(({ project, load, loading, analysisGroupsByGuid }) => (
@@ -45,7 +46,7 @@ AnalysisGroups.propTypes = {
 const mapStateToProps = state => ({
   project: getCurrentProject(state),
   analysisGroupsByGuid: getProjectAnalysisGroupsByGuid(state),
-  loading: getProjectAnalysisGroupsIsLoading(state),
+  loading: getAnalysisGroupIsLoading(state),
 })
 
 const mapDispatchToProps = {

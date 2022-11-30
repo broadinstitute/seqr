@@ -45,6 +45,7 @@ const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
 const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
+const RECEIVE_ANALYSIS_GROUPS = 'RECEIVE_ANALYSIS_GROUPS'
 
 // action creators
 
@@ -83,7 +84,7 @@ export const updateProject = (values) => {
   return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)
 }
 
-export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS)
+export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS)
 
 export const loadFamilyDetails = familyGuid => loadFamilyData(
   familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
@@ -324,7 +325,7 @@ const rootReducer = combineReducers({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
-  analysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_DATA),
+  analysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS),
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),

@@ -29,8 +29,6 @@ const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
 const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
 const REQUEST_INDIVIDUALS = 'REQUEST_INDIVIDUALS'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
-const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
-const RECEIVE_ANALYSIS_GROUPS = 'RECEIVE_ANALYSIS_GROUPS'
 const REQUEST_LOCUS_LISTS = 'REQUEST_LOCUS_LISTS'
 const RECEIVE_LOCUS_LISTS = 'RECEIVE_LOCUS_LISTS'
 
@@ -62,8 +60,6 @@ export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
 export const loadProjectOverview = () => loadCurrentProjectChildEntities('overview', REQUEST_PROJECT_OVERVIEW, RECEIVE_PROJECT_OVERVIEW)
 
 export const loadProjectCollaborators = () => loadCurrentProjectChildEntities('collaborators', REQUEST_PROJECT_COLLABORATORS, RECEIVE_PROJECT_COLLABORATORS)
-
-export const loadProjectAnalysisGroups = () => loadCurrentProjectChildEntities('analysis groups', REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS)
 
 export const loadProjectLocusLists = () => loadCurrentProjectChildEntities('locus lists', REQUEST_LOCUS_LISTS, RECEIVE_LOCUS_LISTS)
 
@@ -325,7 +321,6 @@ export const reducers = {
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_PROJECT_OVERVIEW),
   projectCollaboratorsLoading: loadingReducer(REQUEST_PROJECT_COLLABORATORS, RECEIVE_PROJECT_COLLABORATORS),
-  projectAnalysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS),
   projectLocusListsLoading: loadingReducer(REQUEST_LOCUS_LISTS, RECEIVE_LOCUS_LISTS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesSearch: '',
