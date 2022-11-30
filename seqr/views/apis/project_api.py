@@ -21,7 +21,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
-    add_project_tag_types, get_project_analysis_groups
+    add_project_tag_types, get_project_analysis_groups, get_project_locus_lists
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 
 
@@ -251,6 +251,16 @@ def project_analysis_groups(request, project_guid):
     return create_json_response({
         'projectsByGuid': {project_guid: {'analysisGroupsLoaded': True}},
         'analysisGroupsByGuid': get_project_analysis_groups([project], project_guid)
+    })
+
+@login_and_policies_required
+def project_locus_lists(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user)
+    locus_list_json, _ = get_project_locus_lists([project], request.user, include_metadata=True)
+
+    return create_json_response({
+        'projectsByGuid': {project_guid: {'locusListsLoaded': True}},
+        'locusListsByGuid': locus_list_json,
     })
 
 @login_and_policies_required
