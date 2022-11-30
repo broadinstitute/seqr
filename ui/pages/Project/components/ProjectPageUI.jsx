@@ -91,7 +91,7 @@ const ProjectPageUI = React.memo(props => (
             </ProjectSection>
           )}
           <VerticalSpacer height={10} />
-          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} loading={props.loading} collaboratorEdit>
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
             <GeneLists project={props.project} />
           </ProjectSection>
         </Grid.Column>
