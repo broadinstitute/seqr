@@ -253,7 +253,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
 
     @mock.patch('matchmaker.views.matchmaker_api.MME_NODES_BY_NAME', MOCK_NODES_BY_NAME)
-    @responses.activate
     def test_get_mme_nodes(self):
         url = reverse(get_mme_nodes)
         self.check_require_login(url)
@@ -355,13 +354,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         )
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 
-        # The results for internal submissions should link to one another
-        internal_result = MatchmakerResult.objects.get(guid=new_internal_match_guid)
-        self.assertEqual(internal_result.submission.guid, SUBMISSION_GUID)
-        self.assertEqual(internal_result.originating_submission.guid, 'MS000018_P0004517')
-        matched_result = MatchmakerResult.objects.get(submission__guid='MS000018_P0004517')
-        self.assertEqual(matched_result.originating_submission.guid, SUBMISSION_GUID)
-
         # Test external matches
         node_a_match_url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID, 'Node A'])
         response = self.client.get(node_a_match_url, {'incomingQueryGuid': incoming_query_guid})
@@ -380,10 +372,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         # non-analyst users can't see contact notes
         self.assertDictEqual(response_json['mmeContactNotes'], {'st georges, university of london': {}})
-
-        # Test new result model created
-        result_model = MatchmakerResult.objects.get(guid=new_result_guid)
-        self.assertDictEqual(result_model.result_data, NEW_MATCH_JSON)
 
         # Test notifications and removed result cleanup
         finalize_search_url = reverse(finalize_mme_search, args=[SUBMISSION_GUID])
@@ -501,6 +489,17 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'Found 3 total matches for NA19675_1_01 (2 new)',
             'Removed 2 old matches for NA19675_1_01',
         ]])
+
+        # Test new result model created
+        result_model = MatchmakerResult.objects.get(guid=new_result_guid)
+        self.assertDictEqual(result_model.result_data, NEW_MATCH_JSON)
+
+        # The results for internal submissions should link to one another
+        internal_result = MatchmakerResult.objects.get(guid=new_internal_match_guid)
+        self.assertEqual(internal_result.submission.guid, SUBMISSION_GUID)
+        self.assertEqual(internal_result.originating_submission.guid, 'MS000018_P0004517')
+        matched_result = MatchmakerResult.objects.get(submission__guid='MS000018_P0004517')
+        self.assertEqual(matched_result.originating_submission.guid, SUBMISSION_GUID)
 
         # analyst users should see contact notes
         self.login_analyst_user()
