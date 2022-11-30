@@ -230,10 +230,12 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
-        project_fields = {'projectGuid': lambda p: p.guid}
+        project_fields = {'projectGuid': 'guid'}
         if include_project_name:
-            project_fields['name'] = lambda p: p.name
-        response['projectsByGuid'] = {project.guid: {k: v(project) for k, v in project_fields.items()} for project in projects}
+            project_fields['name'] = 'name'
+        if include_igv:
+            project_fields['genomeVersion'] = 'genome_version'
+        response['projectsByGuid'] = {project.guid: {k: getattr(project, field) for k, field in project_fields.items()} for project in projects}
         add_project_tag_types(response['projectsByGuid'])
 
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
