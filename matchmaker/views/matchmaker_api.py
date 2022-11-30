@@ -468,7 +468,6 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
     response = {
         'mmeResultsByGuid': parsed_results_gy_guid,
         'mmeContactNotes': contact_notes,
-        'individualsByGuid': {submission.individual.guid: {'mmeSubmissionGuid': submission.guid}},
         'genesById': genes_by_id,
     }
     if response_json:

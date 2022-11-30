@@ -351,10 +351,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
             },
         })
 
-        # TODO not needed in search response, needed for update
-        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
-            'mmeSubmissionGuid': SUBMISSION_GUID,
-        }})
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
             {'ENSG00000135953', 'ENSG00000240361', 'ENSG00000223972'}
@@ -379,9 +375,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         response = self.client.get(node_b_match_url, {'incomingQueryGuid': incoming_query_guid})
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes',
-        })
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'genesById', 'mmeContactNotes'})
 
         self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
         new_result_guid = next(k for k in response_json['mmeResultsByGuid'].keys())
