@@ -88,9 +88,10 @@ def _search_node_matches(submission_guid, node, user, is_local=False, incoming_q
     else:
         results = _search_external_matches(MME_NODES_BY_NAME[node], patient_data, user)
 
-    # TODO filter for found patient IDs
+    result_patient_ids = [result['patient']['id'] for result in results]
     initial_saved_results = {
-        result.result_data['patient']['id']: result for result in MatchmakerResult.objects.filter(submission=submission)
+        result.result_data['patient']['id']: result
+        for result in MatchmakerResult.objects.filter(submission=submission, result_data__patient__id__in=result_patient_ids)
     }
 
     local_result_submissions = {
