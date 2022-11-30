@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import datetime
 from django.core.mail.message import EmailMessage
-from django.db.models import prefetch_related_objects
+from django.db.models import prefetch_related_objects, Q
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission, MatchmakerSubmissionGenes, \
     MatchmakerIncomingQuery
@@ -160,8 +160,11 @@ def finalize_mme_search(request, submission_guid):
 
         to_remove = to_remove_results.exclude(is_deletable_filter)
         if to_remove:
-            MatchmakerResult.bulk_update(user, {'match_removed': True}, queryset=to_remove)
-            updated_results_json.update({r.guid: {'matchStatus':  _get_json_for_model(r)} for r in to_remove})
+            updated = MatchmakerResult.bulk_update(user, {'match_removed': True}, queryset=to_remove)
+            updated_results_json.update({
+                r.guid: {'matchStatus':  _get_json_for_model(r)}
+                for r in MatchmakerResult.objects.filter(guid__in=updated)
+            })
 
         logger.info('Removed {} old matches for {}'.format(removed_count, submission.submission_id), user)
 
