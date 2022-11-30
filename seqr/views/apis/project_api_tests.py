@@ -8,7 +8,7 @@ from django.urls.base import reverse
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
-    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators
+    project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
@@ -235,13 +235,13 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         response_keys = {
-            'projectsByGuid', 'samplesByGuid', 'locusListsByGuid', 'analysisGroupsByGuid', 'familyTagTypeCounts',
+            'projectsByGuid', 'samplesByGuid', 'familyTagTypeCounts',
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'locusListGuids', 'variantTagTypes', 'variantFunctionalTagTypes', 'overviewLoaded',
-            'projectGuid', 'name', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount', 'analysisGroupsLoaded',
+            'variantTagTypes', 'variantFunctionalTagTypes', 'overviewLoaded',
+            'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
         self.assertSetEqual(set(project_response.keys()), project_fields)
@@ -258,18 +258,10 @@ class ProjectAPITest(object):
             'order': 100,
             'numTags': 1,
         })
-        self.assertListEqual(project_response['locusListGuids'], ['LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'])
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
-        self.assertSetEqual(set(response_json['locusListsByGuid']['LL00005_retina_proteome'].keys()), LOCUS_LIST_FIELDS)
-        pa_fields = deepcopy(LOCUS_LIST_FIELDS)
-        pa_fields.update(PA_LOCUS_LIST_FIELDS)
-        self.assertSetEqual(set(response_json['locusListsByGuid']['LL00049_pid_genes_autosomal_do'].keys()), pa_fields)
-        self.assertSetEqual(
-            set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
-        )
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
             'F000002_2': {'Excluded': 1, 'Known gene for phenotype': 1},
@@ -428,6 +420,25 @@ class ProjectAPITest(object):
         self.assertSetEqual(
             set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
         )
+
+    def test_project_locus_lists(self):
+        url = reverse(project_locus_lists, args=[PROJECT_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        response_json = response.json()
+        response_keys = {'projectsByGuid', 'locusListsByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {
+            'locusListsLoaded': True, 'locusListGuids': ['LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'],
+        }})
+        self.assertEqual(len(response_json['locusListsByGuid']), 2)
+        self.assertSetEqual(set(response_json['locusListsByGuid']['LL00005_retina_proteome'].keys()), LOCUS_LIST_FIELDS)
+        pa_fields = deepcopy(LOCUS_LIST_FIELDS)
+        pa_fields.update(PA_LOCUS_LIST_FIELDS)
+        self.assertSetEqual(set(response_json['locusListsByGuid']['LL00049_pid_genes_autosomal_do'].keys()), pa_fields)
 
     def test_project_family_notes(self):
         url = reverse(project_family_notes, args=[PROJECT_GUID])

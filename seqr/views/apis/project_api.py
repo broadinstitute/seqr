@@ -260,6 +260,7 @@ def project_analysis_groups(request, project_guid):
         'analysisGroupsByGuid': get_project_analysis_groups([project], project_guid)
     })
 
+
 @login_and_policies_required
 def project_locus_lists(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
@@ -269,6 +270,7 @@ def project_locus_lists(request, project_guid):
         'projectsByGuid': {project_guid: {'locusListsLoaded': True, 'locusListGuids': list(locus_list_json.keys())}},
         'locusListsByGuid': locus_list_json,
     })
+
 
 @login_and_policies_required
 def project_family_notes(request, project_guid):
