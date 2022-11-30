@@ -501,14 +501,19 @@ class MatchmakerAPITest(AuthenticationTestCase):
             mock.call('Received 1 invalid matches from Node B', self.collaborator_user),
         ])
         mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [
+            'Found 2 matches in Broad MME for NA19675_1_01 (1 new)',
+            'Found 0 matches in Node A for NA19675_1_01 (0 new)',
             'Found 5 matches from Node B',
-            'Found 3 matches for NA19675_1_01 (2 new)',
+            'Found 1 matches in Node B for NA19675_1_01 (1 new)',
+            'Found 3 total matches for NA19675_1_01 (2 new)',
             'Removed 2 old matches for NA19675_1_01',
         ]])
 
         # analyst users should see contact notes
         self.login_analyst_user()
-        response = self.client.get(url)
+        results.append(REMOVED_MATCH_JSON)
+        responses.replace(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
+        response = self.client.get(node_b_match_url, {'incomingQueryGuid': incoming_query_guid})
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json['mmeContactNotes'], {
@@ -516,11 +521,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'institution': 'st georges, university of london',
                 'comments': 'Some additional data about this institution',
             }})
+        # if previously removed matches have been re-matched, they should no longer be marked as removed
+        self.assertFalse(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
 
-        results.append(REMOVED_MATCH_JSON)
-        responses.replace(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
         self.login_manager()
-        response = self.client.get(url)
+        response = self.client.get(local_search_url)
         result_response = response.json()['mmeResultsByGuid']
         # users should see originating query for results if the have correct project permissions
         self.assertDictEqual(result_response[new_internal_match_guid]['originatingSubmission'], {
@@ -528,8 +533,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'familyGuid': 'F000014_14',
             'projectGuid': 'R0004_non_analyst_project',
         })
-        # if previously removed matches have been re-matched, they should no longer be marked as removed
-        self.assertFalse(result_response['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
 
     @mock.patch('matchmaker.views.matchmaker_api.logger')
     def test_update_mme_submission(self, mock_logger):
