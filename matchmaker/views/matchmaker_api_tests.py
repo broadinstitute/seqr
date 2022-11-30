@@ -191,7 +191,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'variantTagsByGuid',
+            'mmeResultsByGuid', 'genesById', 'savedVariantsByGuid', 'variantTagsByGuid',
             'variantNotesByGuid', 'variantFunctionalDataByGuid', 'mmeContactNotes',
             'mmeSubmissionsByGuid',
         })
@@ -221,9 +221,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'geneId': 'ENSG00000135953',
                 'variantGuid': 'SV0000001_2103343353_r0390_100',
             }],
-        }})
-        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
-            'mmeSubmissionGuid': SUBMISSION_GUID,
         }})
 
         self.assertSetEqual(
@@ -289,7 +286,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'incomingQueryGuid',
+            'mmeResultsByGuid', 'genesById', 'mmeContactNotes', 'incomingQueryGuid',
         })
         incoming_query_guid = response_json['incomingQueryGuid']
 
