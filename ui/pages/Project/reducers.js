@@ -252,20 +252,25 @@ export const getMmeMatches = submissionGuid => (dispatch, getState) => {
 export const searchMmeMatches = submissionGuid => (dispatch) => {
   dispatch({ type: REQUEST_MME_MATCHES })
   const errors = new Set()
-  const searchSingleNode = nodeUrl => new HttpRequestHelper(
-    nodeUrl,
-    (responseJson) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-    },
-    e => errors.add(e.message),
-  ).get()
+  let queryGuid
 
   new HttpRequestHelper('/api/matchmaker/get_mme_nodes',
     ({ mmeNodes }) => {
-      searchSingleNode(`/api/matchmaker/search_local_mme_matches/${submissionGuid}`).then(() => {
-        Promise.all(mmeNodes.map(
-          node => searchSingleNode(`/api/matchmaker/search_mme_matches/${submissionGuid}/${node}`),
-        )).then(() => {
+      new HttpRequestHelper(
+        `/api/matchmaker/search_local_mme_matches/${submissionGuid}`,
+        ({ incomingQueryGuid, ...responseJson }) => {
+          queryGuid = incomingQueryGuid
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        e => errors.add(e.message),
+      ).get().then(() => {
+        Promise.all(mmeNodes.map(node => new HttpRequestHelper(
+          `/api/matchmaker/search_mme_matches/${submissionGuid}/${node}`,
+          (responseJson) => {
+            dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          },
+          e => errors.add(e.message),
+        ).get({ incomingQueryGuid: queryGuid }))).then(() => {
           new HttpRequestHelper(
             `/api/matchmaker/finalize_mme_search/${submissionGuid}`,
             (responseJson) => {

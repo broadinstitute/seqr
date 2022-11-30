@@ -4,7 +4,8 @@ from datetime import datetime
 from django.core.mail.message import EmailMessage
 from django.db.models import prefetch_related_objects
 
-from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission, MatchmakerSubmissionGenes
+from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission, MatchmakerSubmissionGenes, \
+    MatchmakerIncomingQuery
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, get_submission_gene_variants, get_mme_matches, \
     get_gene_ids_for_feature, validate_patient_data, get_hpo_terms_by_id, MME_DISCLAIMER
@@ -61,7 +62,7 @@ def get_individual_mme_matches(request, submission_guid):
 
 @login_and_policies_required
 def get_mme_nodes(request):
-    return create_json_response({'mmeNodes': list(MME_NODES_BY_NAME.keys())})
+    return create_json_response({'mmeNodes': list(MME_NODES_BY_NAME.keys())[:1]})
 
 
 @login_and_policies_required
@@ -71,20 +72,21 @@ def search_local_individual_mme_matches(request, submission_guid):
 
 @login_and_policies_required
 def search_individual_mme_matches(request, submission_guid, node):
-    return _search_node_matches(submission_guid, node, request.user)
+    incoming_query = MatchmakerIncomingQuery.objects.get(guid=request.GET['incomingQueryGuid'])
+    return _search_node_matches(submission_guid, node, request.user, incoming_query=incoming_query)
 
 
-def _search_node_matches(submission_guid, node, user, is_local=False):
+def _search_node_matches(submission_guid, node, user, is_local=False, incoming_query=None):
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
     check_mme_permissions(submission, user)
     patient_data = get_submission_json_for_external_match(submission)
 
+    response_json = {}
     if is_local:
         results, incoming_query = get_mme_matches(patient_data, user=user, originating_submission=submission)
+        response_json['incomingQueryGuid'] = incoming_query.guid
     else:
         results = _search_external_matches(MME_NODES_BY_NAME[node], patient_data, user)
-        raise NotImplementedError
-        incoming_query = None  # TODO
 
     # TODO filter for found patient IDs
     initial_saved_results = {
@@ -115,7 +117,7 @@ def _search_node_matches(submission_guid, node, user, is_local=False):
 
     logger.info('Found {} matches in {} for {} ({} new)'.format(len(results), node, submission.submission_id, new_count), user)
 
-    return _parse_mme_results(submission, list(saved_results.values()), user)
+    return _parse_mme_results(submission, list(saved_results.values()), user, response_json=response_json)
 
 
 @login_and_policies_required

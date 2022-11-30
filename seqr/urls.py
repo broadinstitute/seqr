@@ -272,7 +272,7 @@ api_endpoints = {
     'matchmaker/get_mme_matches/(?P<submission_guid>[\w.|-]+)': get_individual_mme_matches,
     'matchmaker/get_mme_nodes': get_mme_nodes,
     'matchmaker/search_local_mme_matches/(?P<submission_guid>[\w.|-]+)': search_local_individual_mme_matches,
-    'matchmaker/search_mme_matches/(?P<submission_guid>[\w.|-]+)/(?P<node>[\w.|-]+)': search_individual_mme_matches,
+    'matchmaker/search_mme_matches/(?P<submission_guid>[\w.|-]+)/(?P<node>.+)': search_individual_mme_matches,
     'matchmaker/finalize_mme_search/(?P<submission_guid>[\w.|-]+)': finalize_mme_search,
     'matchmaker/submission/create': update_mme_submission,
     'matchmaker/submission/(?P<submission_guid>[\w.|-]+)/update': update_mme_submission,
