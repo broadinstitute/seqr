@@ -170,9 +170,7 @@ const VARIANT_LINKS = [
 ]
 
 const variantSearchLinks = (variant, mainTranscript, genesById) => {
-  const {
-    chrom, endChrom, pos, end, ref, alt, genomeVersion, svType, variantId, transcripts,
-  } = variant
+  const { chrom, endChrom, pos, end, ref, alt, genomeVersion, svType, variantId, transcripts } = variant
 
   const mainGene = genesById[mainTranscript.geneId]
   let genes
