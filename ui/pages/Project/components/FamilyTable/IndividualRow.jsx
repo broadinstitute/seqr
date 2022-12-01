@@ -175,7 +175,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
       ({ modalName, title, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
-        const titleIds = { sampleId: sample.sampleId, individualId: individual.individualId }
+        const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
         return (
           <Modal
             key={modalName(titleIds)}
