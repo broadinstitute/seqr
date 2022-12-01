@@ -8,6 +8,7 @@ from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
 from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase
 
+SEQR_URL = 'https://seqr.broadinstitute.org'
 PROJECT_GUID = 'R0001_1kg'
 NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 INDEX_NAME = 'test_index'
@@ -44,6 +45,7 @@ class DatasetAPITest(object):
     @mock.patch('seqr.views.apis.dataset_api.safe_post_to_slack')
     @mock.patch('seqr.views.apis.dataset_api.send_html_email')
     @mock.patch('seqr.views.apis.dataset_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @urllib3_responses.activate
     def test_add_variants_dataset(self, mock_send_email, mock_send_slack, mock_random):
@@ -262,6 +264,7 @@ class DatasetAPITest(object):
 
         if self.ANVIL_DISABLED:
             mock_send_email.assert_not_called()
+            mock_send_slack.assert_not_called()
         else:
             namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
             mock_send_email.assert_called_with("""Hi Test Manager User,
@@ -273,7 +276,10 @@ We have loaded 1 samples from the AnVIL workspace {anvil_link} to the correspond
             ),
                                                subject='New data available in seqr',
                                                to=['test_user_manager@test.com'])
-        mock_send_slack.assert_not_called()
+            mock_send_slack.assert_called_with(
+                'anvil-data-loading',
+                f'1 new WES samples are loaded in {SEQR_URL}/project/{NON_ANALYST_PROJECT_GUID}/project_page',
+            )
 
     @urllib3_responses.activate
     def test_add_variants_dataset_errors(self):
@@ -453,9 +459,7 @@ class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
     ANVIL_DISABLED = False
 
-    SEQR_URL = 'https://seqr.broadinstitute.org'
-    BREAK = '\n            '
-    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page{BREAK}```{{samples}}```{BREAK}'
+    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
 
     def test_add_variants_dataset(self, *args):
         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)

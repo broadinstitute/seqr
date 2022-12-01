@@ -1188,7 +1188,7 @@ export const PREDICTOR_FIELDS = [
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
   { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
-  { field: 'gnomad_noncoding', fieldTitle: 'gnomAD Constraint', displayOnly: true, warningThreshold: 0, dangerThreshold: 1.5 },
+  { field: 'gnomad_noncoding', fieldTitle: 'gnomAD Constraint', displayOnly: true, warningThreshold: 2.18, dangerThreshold: 4 },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP },
   { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },
