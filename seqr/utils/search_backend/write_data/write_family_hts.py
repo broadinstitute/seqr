@@ -12,7 +12,7 @@ def write_family_hts(file, project):
     family_guids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.familyGuid))
 
     mt = hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').select_globals().select_rows()
-    #print(mt.rows().count()) = 18508448
+    print(f'Total MT rows: {mt.rows().count()}')
     mt = mt.semi_join_cols(families_ht)
     mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
     mt = mt.annotate_entries(**{k: v(mt) for k, v in ANNOTATIONS.items()})
