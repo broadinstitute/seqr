@@ -65,6 +65,11 @@ EXPECTED_EXOMISER_DATA = [
      'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
 ]
 
+EXPECTED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+]
+
 EXPECTED_SEARCH_RESPONSE = {
     'searchedVariants': VARIANTS,
     'savedVariantsByGuid': {
@@ -89,9 +94,10 @@ EXPECTED_SEARCH_RESPONSE = {
     },
     'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
-    'phenotypeGeneScores': {'I000001_na19675': {
-        'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}
-    }},
+    'phenotypeGeneScores': {
+        'I000001_na19675': {'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}},
+        'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
+    },
     'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
 }
 

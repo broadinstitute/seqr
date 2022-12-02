@@ -27,6 +27,7 @@ from seqr.views.apis.family_api import \
     delete_family_note, \
     family_page_data, \
     get_family_rna_seq_data, \
+    get_family_phenotype_gene_scores, \
     family_variant_tag_summary
 
 from seqr.views.apis.individual_api import \
@@ -188,6 +189,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/delete': delete_family_note,
     'family/(?P<family_guid>[\w.|-]+)/rna_seq_data/(?P<gene_id>[\w.|-]+)': get_family_rna_seq_data,
+    'family/(?P<family_guid>[\w.|-]+)/phenotype_gene_scores': get_family_phenotype_gene_scores,
 
     'dashboard': dashboard_page_data,
 
