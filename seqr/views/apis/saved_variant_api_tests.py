@@ -353,7 +353,7 @@ class SavedVariantAPITest(object):
             'pos': 61413835,
             'end': 61414175,
             'predictions': {'strvctvre': 21.9},
-            'transcripts': {},
+            'transcripts': {'ENSG00000240361': []},
             'projectGuid': 'R0001_1kg',
             'familyGuids': ['F000001_1', 'F000002_2'],
             'svType': 'DUP',
@@ -374,10 +374,9 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(
-            set(response_json.keys()),
-            {'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid'},
-        )
+        self.assertSetEqual(set(response_json.keys()), {
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById',
+        })
         self.assertEqual(len(response_json['savedVariantsByGuid']), 1)
         variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
@@ -399,6 +398,8 @@ class SavedVariantAPITest(object):
         notes = [response_json['variantNotesByGuid'][note_guid] for note_guid in response_variant_json.pop('noteGuids')]
         self.assertDictEqual(variant_json, response_variant_json)
         self.assertListEqual(['A promising SV'], [note['note'] for note in notes])
+        self.assertDictEqual(response_json['genesById'], {'ENSG00000240361': {'notes': [mock.ANY]}})
+        self.assertEqual(response_json['genesById']['ENSG00000240361']['notes'][0]['note'], 'A promising SV')
         self.assertDictEqual(response_json['variantTagsByGuid'], {})
         self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {})
 

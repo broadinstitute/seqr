@@ -146,12 +146,12 @@ def _create_variant_note(saved_variants, note_json, user):
                 if any(t['transcriptId'] == main_transcript_id for t in transcripts))
         else:
             gene_id = next(gene_id for gene_id in sorted(saved_variants[0].saved_variant_json['transcripts']))
-        create_model_from_json(GeneNote, {'note': request_json.get('note'), 'gene_id': gene_id}, request.user)
+        create_model_from_json(GeneNote, {'note': note_json.get('note'), 'gene_id': gene_id}, user)
         response['genesById'] = {gene_id: {
-            'notes': get_json_for_gene_notes_by_gene_id([gene_id], request.user)[gene_id],
+            'notes': get_json_for_gene_notes_by_gene_id([gene_id], user)[gene_id],
         }}
 
-    return note, updated_genes
+    return note, response
 
 
 @login_and_policies_required
