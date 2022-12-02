@@ -365,6 +365,7 @@ class SavedVariantAPITest(object):
             'familyGuid': 'F000001_1',
             'tags': [],
             'note': 'A promising SV',
+            'saveAsGeneNote': True,
             'functionalData': [],
             'variant': variant_json,
         }
@@ -372,8 +373,13 @@ class SavedVariantAPITest(object):
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
-        variant_guid = next(iter(response.json()['savedVariantsByGuid']))
+        response_json = response.json()
+        self.assertSetEqual(
+            set(response_json.keys()),
+            {'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid'},
+        )
+        self.assertEqual(len(response_json['savedVariantsByGuid']), 1)
+        variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json.update({'xpos': 2061413835})
@@ -389,11 +395,12 @@ class SavedVariantAPITest(object):
             'tagGuids': [],
             'functionalDataGuids': [],
         })
-        response_json = response.json()
         response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
         notes = [response_json['variantNotesByGuid'][note_guid] for note_guid in response_variant_json.pop('noteGuids')]
         self.assertDictEqual(variant_json, response_variant_json)
         self.assertListEqual(['A promising SV'], [note['note'] for note in notes])
+        self.assertDictEqual(response_json['variantTagsByGuid'], {})
+        self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {})
 
     def test_create_saved_compound_hets(self):
         create_saved_compound_hets_url = reverse(create_saved_variant_handler)
