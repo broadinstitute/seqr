@@ -612,20 +612,17 @@ export const getDefaultMmeSubmission = createSelector(
 export const getMmeResultsBySubmission = createSelector(
   getMmeResultsByGuid,
   getMmeSubmissionsByGuid,
-  (mmeResultsByGuid, mmeSubmissionsByGuid) => Object.values(mmeSubmissionsByGuid).reduce((acc, submission) => {
-    const { submissionGuid, mmeResultGuids = [] } = submission
+  (mmeResultsByGuid, mmeSubmissionsByGuid) => Object.values(mmeResultsByGuid).reduce((acc, result) => {
+    const { submissionGuid } = result
     if (!acc[submissionGuid]) {
       acc[submissionGuid] = { active: [], removed: [] }
     }
-    mmeResultGuids.forEach((resultGuid) => {
-      const result = mmeResultsByGuid[resultGuid]
-      const parsedResult = { ...result.matchStatus, ...result }
-      if (parsedResult.matchRemoved || mmeSubmissionsByGuid[submissionGuid].deletedDate) {
-        acc[submissionGuid].removed.push(parsedResult)
-      } else {
-        acc[submissionGuid].active.push(parsedResult)
-      }
-    })
+    const parsedResult = { ...result.matchStatus, ...result }
+    if (parsedResult.matchRemoved || mmeSubmissionsByGuid[submissionGuid].deletedDate) {
+      acc[submissionGuid].removed.push(parsedResult)
+    } else {
+      acc[submissionGuid].active.push(parsedResult)
+    }
     return acc
   }, { }),
 )

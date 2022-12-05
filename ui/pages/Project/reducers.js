@@ -19,6 +19,7 @@ const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const RECEIVE_SAVED_VARIANT_FAMILIES = 'RECEIVE_SAVED_VARIANT_FAMILIES'
 const UPDATE_SAVED_VARIANT_TABLE_STATE = 'UPDATE_VARIANT_STATE'
 const REQUEST_MME_MATCHES = 'REQUEST_MME_MATCHES'
+const RECEIVE_MME_MATCHES = 'RECEIVE_MME_MATCHES'
 const REQUEST_RNA_SEQ_DATA = 'REQUEST_RNA_SEQ_DATA'
 const REQUEST_PHENOTYPE_GENE_SCORES = 'REQUEST_PHENOTYPE_GENE_SCORES'
 const REQUEST_PROJECT_OVERVIEW = 'REQUEST_PROJECT_OVERVIEW'
@@ -226,13 +227,13 @@ export const updateAnalysisGroup = values => updateEntity(
   values, RECEIVE_DATA, null, 'analysisGroupGuid', null, state => `/api/project/${state.currentProjectGuid}/analysis_groups`,
 )
 
-export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) => {
+export const getMmeMatches = submissionGuid => (dispatch, getState) => {
   const state = getState()
   const submission = state.mmeSubmissionsByGuid[submissionGuid]
-  if (submission && (!submission.mmeResultGuids || search)) {
+  if (submission && !submission.geneVariants) {
     const { familyGuid } = state.individualsByGuid[submission.individualGuid]
     dispatch({ type: REQUEST_MME_MATCHES })
-    new HttpRequestHelper(`/api/matchmaker/${search ? 'search' : 'get'}_mme_matches/${submissionGuid}`,
+    new HttpRequestHelper(`/api/matchmaker/get_mme_matches/${submissionGuid}`,
       (responseJson) => {
         dispatch({
           type: RECEIVE_SAVED_VARIANT_FAMILIES, updates: { [familyGuid]: { loaded: true, noteVariants: true } },
@@ -241,11 +242,52 @@ export const loadMmeMatches = (submissionGuid, search) => (dispatch, getState) =
           type: RECEIVE_DATA,
           updatesById: responseJson,
         })
+        dispatch({ type: RECEIVE_MME_MATCHES, updatesById: {} })
       },
       (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
       }).get()
   }
+}
+
+export const searchMmeMatches = submissionGuid => (dispatch) => {
+  dispatch({ type: REQUEST_MME_MATCHES })
+  const errors = new Set()
+  const queryParams = {}
+
+  new HttpRequestHelper('/api/matchmaker/get_mme_nodes',
+    ({ mmeNodes }) => {
+      new HttpRequestHelper(
+        `/api/matchmaker/search_local_mme_matches/${submissionGuid}`,
+        ({ incomingQueryGuid, ...responseJson }) => {
+          queryParams.incomingQueryGuid = incomingQueryGuid
+          dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        },
+        e => errors.add(e.message),
+      ).get().then(() => {
+        Promise.all(mmeNodes.map(node => new HttpRequestHelper(
+          `/api/matchmaker/search_mme_matches/${submissionGuid}/${node}`,
+          (responseJson) => {
+            dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+          },
+          e => errors.add(e.message),
+        ).get(queryParams))).then(() => {
+          new HttpRequestHelper(
+            `/api/matchmaker/finalize_mme_search/${submissionGuid}`,
+            (responseJson) => {
+              dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+              dispatch({ type: RECEIVE_MME_MATCHES, error: [...errors].join(', '), updatesById: {} })
+            },
+            (e) => {
+              dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
+            },
+          ).get(queryParams)
+        })
+      })
+    },
+    (e) => {
+      dispatch({ type: RECEIVE_MME_MATCHES, error: e.message, updatesById: {} })
+    }).get()
 }
 
 export const loadRnaSeqData = individualGuid => (dispatch, getState) => {
@@ -284,7 +326,7 @@ export const loadPhenotypeGeneScores = individualGuid => (dispatch, getState) =>
 
 export const updateMmeSubmission = (values) => {
   const onSuccess = values.delete ? null : (responseJson, dispatch, getState) => (
-    loadMmeMatches(Object.keys(responseJson.mmeSubmissionsByGuid)[0], true)(dispatch, getState)
+    searchMmeMatches(Object.keys(responseJson.mmeSubmissionsByGuid)[0])(dispatch, getState)
   )
   return updateEntity(values, RECEIVE_DATA, '/api/matchmaker/submission', 'submissionGuid', null, null, onSuccess)
 }
@@ -324,7 +366,7 @@ export const updateSavedVariantTable = updates => ({ type: UPDATE_SAVED_VARIANT_
 
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
-  matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_DATA),
+  matchmakerMatchesLoading: loadingReducer(REQUEST_MME_MATCHES, RECEIVE_MME_MATCHES),
   mmeContactNotes: createObjectsByIdReducer(RECEIVE_DATA, 'mmeContactNotes'),
   rnaSeqDataLoading: loadingReducer(REQUEST_RNA_SEQ_DATA, RECEIVE_DATA),
   phenotypeDataLoading: loadingReducer(REQUEST_PHENOTYPE_GENE_SCORES, RECEIVE_DATA),
