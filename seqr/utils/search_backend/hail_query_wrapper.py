@@ -126,10 +126,7 @@ class BaseHailTableQuery(object):
         self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
 
     def _load_table(self, data_source, samples, intervals=None, exclude_intervals=False):
-        ht = self.import_filtered_ht(data_source, samples, intervals=self._parse_intervals(intervals), exclude_intervals=exclude_intervals)
-        mt = ht.to_matrix_table_row_major(list(self._individuals_by_sample_id.keys()), col_field_name='s')
-        mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
-        mt = mt.unfilter_entries()
+        mt = self.import_filtered_mt(data_source, samples, intervals=self._parse_intervals(intervals), exclude_intervals=exclude_intervals)
         if self.INITIAL_ENTRY_ANNOTATIONS:
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
         if self._filtered_genes:
@@ -138,6 +135,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, intervals=None, **kwargs):
+        # TODO deprecate
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         sample_hts = {
@@ -145,6 +143,27 @@ class BaseHailTableQuery(object):
             for s in samples
         }
         return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
+
+    @classmethod
+    def import_filtered_mt(cls, data_source, samples, intervals=None, **kwargs):
+        load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
+
+        families = {s.individual.family for s in samples}
+        families_mt = None
+        for f in families:
+            family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
+            keys = list(fam_ht.key.keys())
+            family_mt = family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
+
+            if families_mt:
+                families_mt = families_mt.union_cols(family_mt, row_join_type='outer')
+            else:
+                families_mt = family_mt
+
+        # TODO - only read in rows present in families_mt
+        ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
+
+        return families_mt.annotate_rows(**ht[families_mt.row_key])
 
     @staticmethod
     def _filter_gene_ids(mt, gene_ids):
