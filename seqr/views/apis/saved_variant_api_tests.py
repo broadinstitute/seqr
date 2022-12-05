@@ -184,7 +184,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         project = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes', 'projectGuid'})
+        self.assertSetEqual(set(project.keys()), {'variantTagTypes', 'variantFunctionalTagTypes', 'genomeVersion', 'projectGuid'})
         self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
 
         # include locus list details
@@ -353,7 +353,7 @@ class SavedVariantAPITest(object):
             'pos': 61413835,
             'end': 61414175,
             'predictions': {'strvctvre': 21.9},
-            'transcripts': {},
+            'transcripts': {'ENSG00000240361': []},
             'projectGuid': 'R0001_1kg',
             'familyGuids': ['F000001_1', 'F000002_2'],
             'svType': 'DUP',
@@ -365,6 +365,7 @@ class SavedVariantAPITest(object):
             'familyGuid': 'F000001_1',
             'tags': [],
             'note': 'A promising SV',
+            'saveAsGeneNote': True,
             'functionalData': [],
             'variant': variant_json,
         }
@@ -372,8 +373,12 @@ class SavedVariantAPITest(object):
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
-        variant_guid = next(iter(response.json()['savedVariantsByGuid']))
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {
+            'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'genesById',
+        })
+        self.assertEqual(len(response_json['savedVariantsByGuid']), 1)
+        variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json.update({'xpos': 2061413835})
@@ -389,11 +394,14 @@ class SavedVariantAPITest(object):
             'tagGuids': [],
             'functionalDataGuids': [],
         })
-        response_json = response.json()
         response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
         notes = [response_json['variantNotesByGuid'][note_guid] for note_guid in response_variant_json.pop('noteGuids')]
         self.assertDictEqual(variant_json, response_variant_json)
         self.assertListEqual(['A promising SV'], [note['note'] for note in notes])
+        self.assertDictEqual(response_json['genesById'], {'ENSG00000240361': {'notes': [mock.ANY]}})
+        self.assertEqual(response_json['genesById']['ENSG00000240361']['notes'][0]['note'], 'A promising SV')
+        self.assertDictEqual(response_json['variantTagsByGuid'], {})
+        self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {})
 
     def test_create_saved_compound_hets(self):
         create_saved_compound_hets_url = reverse(create_saved_variant_handler)

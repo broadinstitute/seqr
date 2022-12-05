@@ -1320,6 +1320,22 @@
     }
 },
 {
+    "model": "seqr.phenotypeprioritization",
+    "pk": 3,
+    "fields": {
+        "individual": 2,
+        "gene_id": "ENSG00000268903",
+        "tool": "lirical",
+        "rank": 1,
+        "disease_id": "OMIM:219800",
+        "disease_name": "Cystinosis, nephropathic",
+        "scores": {
+            "post_test_probability": 0,
+            "compositeLR": 0.003
+        }
+    }
+},
+{
     "model": "seqr.igvsample",
     "pk": 145,
     "fields": {

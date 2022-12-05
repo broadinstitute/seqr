@@ -882,7 +882,6 @@ export const STATE_WITH_2_FAMILIES = {
     MS021475_na19675_1: {
       submissionGuid: 'MS021475_na19675_1',
       individualGuid: 'I021475_na19675_1',
-      mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
       createdDate: '2018-05-09T10:29:00.000Z',
       submissionId: 'NA19675_1',
       contactHref: 'mailto:matchmaker@broadinstitute.org,test@test.com',
