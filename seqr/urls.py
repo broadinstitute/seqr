@@ -192,7 +192,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/update': update_family_note,
     'family/(?P<family_guid>[\w.|-]+)/note/(?P<note_guid>[\w.|-]+)/delete': delete_family_note,
     'family/(?P<family_guid>[\w.|-]+)/rna_seq_data/(?P<gene_id>[\w.|-]+)': get_family_rna_seq_data,
-    'family/(?P<family_guid>[\w.|-]+)/phenotype_gene_scores': get_family_phenotype_gene_scores,
+    'family/(?P<family_guid>[\w.|-]+)/phenotype_gene_scores': get_family_phenotype_gene_scores,  # noqa: W605
 
     'dashboard': dashboard_page_data,
 
