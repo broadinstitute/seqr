@@ -1896,6 +1896,7 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'new_structural_variants': ['NEW']},
             'freqs': {'sv_callset': {'af': 0.1}},
+            'in_silico': {'strvctvre': '3.1', 'requireScore': True},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},
         })
@@ -1912,6 +1913,7 @@ class EsUtilsTest(TestCase):
                     {'range': {'sf': {'lte': 0.1}}}
                 ]
             }},
+            {'range': {'StrVCTVRE_score': {'gte': 3.1}}},
             {'bool': {
                 'must': [
                     {'bool': {
