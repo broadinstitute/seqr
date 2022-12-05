@@ -5,6 +5,7 @@ import {
 } from 'redux/utils/reducerFactories'
 import {
   REQUEST_SAVED_VARIANTS, updateEntity, loadProjectChildEntities, loadFamilyData, loadProjectDetails,
+  loadProjectAnalysisGroups,
 } from 'redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_GUID, NOTE_TAG_NAME } from 'shared/utils/constants'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -31,6 +32,8 @@ const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
 const REQUEST_FAMILY_VARIANT_SUMMARY = 'REQUEST_FAMILY_VARIANT_SUMMARY'
 const REQUEST_INDIVIDUALS = 'REQUEST_INDIVIDUALS'
 const REQUEST_MME_SUBMISSIONS = 'REQUEST_MME_SUBMISSIONS'
+const REQUEST_LOCUS_LISTS = 'REQUEST_LOCUS_LISTS'
+const RECEIVE_LOCUS_LISTS = 'RECEIVE_LOCUS_LISTS'
 
 // Data actions
 
@@ -60,6 +63,13 @@ export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
 export const loadProjectOverview = () => loadCurrentProjectChildEntities('overview', REQUEST_PROJECT_OVERVIEW, RECEIVE_PROJECT_OVERVIEW)
 
 export const loadProjectCollaborators = () => loadCurrentProjectChildEntities('collaborators', REQUEST_PROJECT_COLLABORATORS, RECEIVE_PROJECT_COLLABORATORS)
+
+export const loadCurrentProjectAnalysisGroups = () => (dispatch, getState) => {
+  const { currentProjectGuid } = getState()
+  return loadProjectAnalysisGroups(currentProjectGuid)(dispatch, getState)
+}
+
+export const loadProjectLocusLists = () => loadCurrentProjectChildEntities('locus lists', REQUEST_LOCUS_LISTS, RECEIVE_LOCUS_LISTS)
 
 export const loadFamilyVariantSummary = familyGuid => loadFamilyData(
   familyGuid, 'discoveryTags', 'variant_tag_summary', REQUEST_FAMILY_VARIANT_SUMMARY,
@@ -378,6 +388,7 @@ export const reducers = {
   mmeSubmissionsLoading: loadingReducer(REQUEST_MME_SUBMISSIONS, RECEIVE_DATA),
   projectOverviewLoading: loadingReducer(REQUEST_PROJECT_OVERVIEW, RECEIVE_PROJECT_OVERVIEW),
   projectCollaboratorsLoading: loadingReducer(REQUEST_PROJECT_COLLABORATORS, RECEIVE_PROJECT_COLLABORATORS),
+  projectLocusListsLoading: loadingReducer(REQUEST_LOCUS_LISTS, RECEIVE_LOCUS_LISTS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     familiesSearch: '',
     familiesSortOrder: SORT_BY_FAMILY_NAME,

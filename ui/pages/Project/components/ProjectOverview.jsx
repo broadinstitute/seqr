@@ -359,16 +359,16 @@ const mapAnalysisStatusStateToProps = (state, ownProps) => ({
 
 const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
 
-const ProjectOverview = React.memo(({ familiesLoading, ...props }) => (
+const ProjectOverview = React.memo(({ familiesLoading, overviewLoading, ...props }) => (
   <Grid>
     <Grid.Column width={5}>
       {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <FamiliesIndividualsOverview {...props} />}
       <VerticalSpacer height={10} />
-      <MatchmakerOverview {...props} />
+      {overviewLoading ? <Dimmer inverted active><Loader /></Dimmer> : <MatchmakerOverview {...props} />}
     </Grid.Column>
     <Grid.Column width={5}>
       <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[props.project.genomeVersion]} />
-      <DatasetOverview {...props} />
+      {overviewLoading ? <Dimmer inverted active><Loader /></Dimmer> : <DatasetOverview {...props} />}
     </Grid.Column>
     <Grid.Column width={6}>
       {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <AnalysisStatusOverview {...props} />}
@@ -381,6 +381,7 @@ const ProjectOverview = React.memo(({ familiesLoading, ...props }) => (
 ProjectOverview.propTypes = {
   project: PropTypes.object.isRequired,
   familiesLoading: PropTypes.bool,
+  overviewLoading: PropTypes.bool,
 }
 
 export default ProjectOverview
