@@ -447,9 +447,11 @@ class BaseHailTableQuery(object):
 
     def _get_quality_filter_expr(self, mt, quality_filter):
         quality_filter = self._format_quality_filter(quality_filter or {})
+        logger.info(f'QUALITY: {quality_filter}')
         quality_filter_expr = None
         for filter_k, value in quality_filter.items():
             field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
+            logger.info(f'{filter_k}, {field}')
             if field:
                 field_filter = hl.is_missing(mt[field]) | (mt[field] > value)
                 if quality_filter_expr is None:
