@@ -152,7 +152,7 @@ class BaseHailTableQuery(object):
         families_mt = None
         for f in families:
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
-            keys = list(fam_ht.key.keys())
+            keys = list(family_ht.key.keys())
             family_mt = family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
 
             if families_mt:
