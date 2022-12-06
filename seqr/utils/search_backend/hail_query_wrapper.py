@@ -447,11 +447,9 @@ class BaseHailTableQuery(object):
 
     def _get_quality_filter_expr(self, mt, quality_filter):
         quality_filter = self._format_quality_filter(quality_filter or {})
-        logger.info(f'QUALITY: {quality_filter}')
         quality_filter_expr = None
         for filter_k, value in quality_filter.items():
             field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
-            logger.info(f'{filter_k}, {field}')
             if field:
                 field_filter = hl.is_missing(mt[field]) | (mt[field] > value)
                 if quality_filter_expr is None:
@@ -477,6 +475,7 @@ class BaseHailTableQuery(object):
         if not inheritance_filter:
             sample_filter = mt.GT.is_non_ref()
             if quality_filter_expr is not None:
+                # TODO: allows families where any individual passes quality filter, should be all individuals
                 sample_filter &= quality_filter_expr
             if inheritance_mode == ANY_AFFECTED:
                 sample_filter &= hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s)
