@@ -748,11 +748,11 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
 
     @classmethod
-    def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        ht = super(BaseVariantHailTableQuery, cls).import_filtered_ht(data_source, samples, intervals=None if exclude_intervals else intervals)
+    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        mt = super(BaseVariantHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
-            ht = hl.filter_intervals(ht, intervals, keep=False)
-        return ht
+            mt = hl.filter_intervals(mt, intervals, keep=False)
+        return mt
 
     def _get_consequence_terms(self):
         return self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
@@ -844,11 +844,11 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     @classmethod
-    def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        ht = super(MitoHailTableQuery, cls).import_filtered_ht(data_source, samples, intervals, exclude_intervals)
+    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        mt = super(MitoHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
         # TODO remove this function after reloading mito sample tables
-        ht = ht.annotate(**{s.sample_id: ht[s.sample_id].annotate(GQ=hl.int(ht[s.sample_id].GQ)) for s in samples})
-        return ht
+        mt = mt.annotate_entries(GQ=hl.int(mt.GQ))
+        return mt
 
     @classmethod
     def _format_quality_filter(cls, quality_filter):
@@ -889,13 +889,13 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
 
     @classmethod
-    def import_filtered_ht(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        ht = super(BaseSvHailTableQuery, cls).import_filtered_ht(data_source, samples)
+    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        mt = super(BaseSvHailTableQuery, cls).import_filtered_mt(data_source, samples)
         if intervals:
-            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
-                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
-            ht = ht.filter(interval_filter)
-        return ht
+            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
+                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(mt.interval))
+            mt = mt.filter_rows(interval_filter)
+        return mt
 
     def _parse_pathogenicity_overrides(self, pathogenicity):
         pass
@@ -1061,6 +1061,7 @@ class MultiDataTypeHailTableQuery(object):
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
+        # TODO import_filtered_mt - full_outer_join_mt?
         data_types = list(data_source.keys())
         sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
 
