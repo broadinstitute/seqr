@@ -117,7 +117,7 @@ const IN_SILICO_GROUP_INDEX_MAP = IN_SILICO_FIELDS.reduce(
 const ANNOTATION_GROUPS_SPLICE = [...ANNOTATION_GROUPS, IN_SILICO_SPLICING_FIELD]
 const ANNOTATION_GROUP_INDEX_MAP = ANNOTATION_GROUPS_SPLICE.reduce((acc, { name }, i) => ({ ...acc, [name]: i }), {})
 
-export const inSilicoFieldLayout = groups => fieldComponents => (
+export const inSilicoFieldLayout = groups => ([requireComponent, ...fieldComponents]) => (
   <Form.Field>
     <Grid divided="vertically">
       {groups.map(group => (
@@ -127,13 +127,16 @@ export const inSilicoFieldLayout = groups => fieldComponents => (
             <Grid>
               <Grid.Row>
                 {IN_SILICO_GROUP_INDEX_MAP[group].map(
-                  i => <Grid.Column key={i} width={3}>{fieldComponents[i]}</Grid.Column>,
+                  i => <Grid.Column key={i} width={3}>{fieldComponents[i - 1]}</Grid.Column>,
                 )}
               </Grid.Row>
             </Grid>
           </Grid.Column>
         </Grid.Row>
       ))}
+      <Grid.Row>
+        <Grid.Column>{requireComponent}</Grid.Column>
+      </Grid.Row>
     </Grid>
   </Form.Field>
 )

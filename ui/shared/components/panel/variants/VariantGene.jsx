@@ -423,6 +423,7 @@ const GENE_DETAIL_SECTIONS = [
   {
     color: 'orange',
     description: 'Phenotype Prioritization',
+    label: 'Prioritized-Gene', // required for using the label as a key and won't be displayed
     showDetails: (gene, indivGeneData) => indivGeneData?.phenotypeGeneScores &&
       indivGeneData.phenotypeGeneScores[gene.geneId],
     detailsDisplay: (gene, indivGeneData) => (Object.entries(indivGeneData.phenotypeGeneScores[gene.geneId]).map(
@@ -464,7 +465,7 @@ const OmimSegments = styled(Segment.Group).attrs({ size: 'tiny', horizontal: tru
   }
 `
 
-const getDetailSections = (configs, gene, compact, labelProps, individualGeneData) => configs.map(
+const getDetailSections = (configs, gene, compact, labelProps, individualGeneData, noExpand) => configs.map(
   ({ showDetails, detailsDisplay, ...sectionConfig }) => (
     {
       ...sectionConfig,
@@ -475,11 +476,11 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
     ...acc,
     ...config.detail.map(detail => ({ ...config, ...detail })),
   ] : [...acc, config]),
-[]).map(({ detail, expandedDisplay, ...sectionConfig }) => (
-  (expandedDisplay && !compact) ? (
+[]).map(({ detail, expandedDisplay, expandedLabel, ...sectionConfig }) => (
+  (expandedDisplay && !compact && !noExpand) ? (
     <OmimSegments key={sectionConfig.label}>
       <Segment color={sectionConfig.color}>
-        <Label size="mini" color={sectionConfig.color} content={sectionConfig.expandedLabel} />
+        <Label size="mini" color={sectionConfig.color} content={expandedLabel} />
       </Segment>
       <Segment color={sectionConfig.color}>
         {detail}
@@ -497,11 +498,11 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 ))
 
 export const GeneDetails = React.memo((
-  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, ...labelProps },
+  { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, ...labelProps },
 ) => {
   const geneDetails = getDetailSections(GENE_DETAIL_SECTIONS, gene, compact, labelProps, individualGeneData)
-  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps)
-  const hasLocusLists = showLocusLists && gene.locusListGuids.length > 0
+  const geneDiseaseDetails = getDetailSections(GENE_DISEASE_DETAIL_SECTIONS, gene, compact, labelProps, null, noExpand)
+  const hasLocusLists = showLocusLists && gene.locusListGuids?.length > 0
   const showDivider = !showInlineDetails && geneDetails.length > 0 && (hasLocusLists || geneDiseaseDetails.length > 0)
 
   return [
@@ -528,6 +529,7 @@ GeneDetails.propTypes = {
   compact: PropTypes.bool,
   showLocusLists: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
+  noExpand: PropTypes.bool,
   individualGeneData: PropTypes.object,
 }
 
@@ -547,10 +549,11 @@ const getGeneConsequence = (geneId, variant) => {
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
 
-const BaseVariantGene = React.memo((
-  { geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData },
-) => {
-  const geneConsequence = getGeneConsequence(geneId, variant)
+export const BaseVariantGene = React.memo(({
+  geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData, geneModalId,
+  noExpand,
+}) => {
+  const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
   if (!gene) {
     return <InlineHeader size="medium" content={geneId} subheader={geneConsequence} />
@@ -563,6 +566,7 @@ const BaseVariantGene = React.memo((
       gene={gene}
       compact={compactDetails}
       showInlineDetails={showInlineDetails}
+      noExpand={noExpand}
       margin={showInlineDetails ? '1em .5em 0px 0px' : null}
       horizontal={showInlineDetails}
       individualGeneData={individualGeneData}
@@ -599,7 +603,7 @@ const BaseVariantGene = React.memo((
 
   const geneSummary = (
     <div>
-      <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={variant.variantId} />
+      <ShowGeneModal gene={gene} fontWeight="bold" size={compact ? 'large' : 'huge'} modalId={geneModalId || variant.variantId} />
       <HorizontalSpacer width={10} />
       {summaryDetail}
       {compoundHetToggle && compoundHetToggle(gene.geneId)}
@@ -638,12 +642,14 @@ const BaseVariantGene = React.memo((
 BaseVariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
   gene: PropTypes.object.isRequired,
-  variant: PropTypes.object.isRequired,
+  variant: PropTypes.object,
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
   hasRnaTpmData: PropTypes.bool,
   individualGeneData: PropTypes.object,
+  geneModalId: PropTypes.string,
+  noExpand: PropTypes.bool,
 }
 
 const getRnaSeqProps = (state, ownProps) => ({
@@ -722,7 +728,7 @@ class VariantGenes extends React.PureComponent {
         {!mainGeneId && (
           <div>
             {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
-              ({ showDetails, detailsDisplay, ...sectionConfig }) => {
+              ({ showDetails, detailsDisplay, expandedDisplay, expandedLabel, ...sectionConfig }) => {
                 const sectionGenes = genes.filter(gene => showDetails(gene))
                 return (
                   <GeneDetailSection

@@ -869,7 +869,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         info = [
             'Loaded Lirical data from gs://seqr_data/lirical_data.tsv.gz',
-            'Project 1kg project nåme with uniçøde: loaded 1 record(s)',
+            'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 1 record(s)',
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
