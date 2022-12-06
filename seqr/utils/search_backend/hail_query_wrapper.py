@@ -792,7 +792,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
         mt = super(VariantHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
         # In production: will not have callset frequency, may rename or rework these fields and filters
-        mt = mt.annotate_rows(callset=hl.struct(**{field: ht[field] for field in ['AF', 'AC', 'AN']}))
+        mt = mt.annotate_rows(callset=hl.struct(**{field: mt[field] for field in ['AF', 'AC', 'AN']}))
         return mt
 
     def _get_quality_filter_expr(self, mt, quality_filter):
