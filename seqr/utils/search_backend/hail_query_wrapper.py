@@ -480,7 +480,8 @@ class BaseHailTableQuery(object):
             if inheritance_mode == ANY_AFFECTED:
                 valid_sample_q = mt.GT.is_non_ref() & hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s)
         else:
-            invalid_inheritance_q = self._get_invalid_inheritance_samples(mt, inheritance_mode, inheritance_filter, inheritance_override_q)
+            invalid_inheritance_q = self._get_invalid_inheritance_samples(
+                mt, inheritance_mode, inheritance_filter, inheritance_override_q)
             if invalid_sample_q is not None:
                 invalid_sample_q |= invalid_inheritance_q
             else:
@@ -809,7 +810,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
             if quality_filter_expr is None:
                 quality_filter_expr = ab_expr
             else:
-                quality_filter_expr &= ab_expr
+                quality_filter_expr |= ab_expr
 
         return quality_filter_expr
 
