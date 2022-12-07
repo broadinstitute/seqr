@@ -151,7 +151,9 @@ class BaseHailTableQuery(object):
         families = {s.individual.family for s in samples}
         families_mt = None
         for f in families:
-            family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
+            family_ht = hl.read_table(
+                f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs
+            ).annotate(familyGuid=f.guid)
             keys = list(family_ht.key.keys())
             family_mt = family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
 
@@ -398,10 +400,9 @@ class BaseHailTableQuery(object):
         if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
             self._set_validated_affected_status(individual_affected_status, max_families)
 
-        sample_family_map = hl.dict({sample_id: i.family.guid for sample_id, i in self._individuals_by_sample_id.items()})
         mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
-            mt, inheritance_mode, inheritance_filter, sample_family_map,
-            self._get_quality_filter_expr(mt, quality_filter),
+            mt, inheritance_mode, inheritance_filter,
+            self._get_invalid_quality_filter_expr(mt, quality_filter),
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
@@ -409,17 +410,17 @@ class BaseHailTableQuery(object):
         elif inheritance_mode == COMPOUND_HET:
             # remove variants where all unaffected individuals are het
             mt = mt.annotate_rows(familyGuids=hl.bind(
-                lambda unphased_families: mt.familyGuids.difference(unphased_families),
-                self._get_family_all_samples_expr(
-                    mt, mt.GT.is_het(), self._affected_status_samples[UNAFFECTED],
-                    family_samples_filter=lambda s: len(s) > 1)
+                lambda fam_unaffected_het_counts: mt.familyGuids.filter(lambda f: fam_unaffected_het_counts[f] < 2),
+                hl.agg.group_by(mt.familyGuid, hl.agg.count_where(
+                    mt.GT.is_het() & hl.set(self._affected_status_samples[UNAFFECTED]).contains(mt.s)
+                )),
             ))
 
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
-            self._matched_family_sample_filter(mt, sample_family_map),
+            self._matched_family_sample_filter(mt),
             hl.agg.collect(hl.struct(
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
@@ -445,17 +446,17 @@ class BaseHailTableQuery(object):
         if max_families and len(affected_families) > max_families[0]:
             raise InvalidSearchException(max_families[1])
 
-    def _get_quality_filter_expr(self, mt, quality_filter):
+    def _get_invalid_quality_filter_expr(self, mt, quality_filter):
         quality_filter = self._format_quality_filter(quality_filter or {})
         quality_filter_expr = None
         for filter_k, value in quality_filter.items():
             field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
             if field:
-                field_filter = hl.is_missing(mt[field]) | (mt[field] > value)
+                field_filter = mt[field] < value
                 if quality_filter_expr is None:
                     quality_filter_expr = field_filter
                 else:
-                    quality_filter_expr &= field_filter
+                    quality_filter_expr |= field_filter
 
         return quality_filter_expr
 
@@ -471,16 +472,31 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(mt, x_interval):
         return x_interval.contains(mt.locus)
 
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
-        if not inheritance_filter:
-            sample_filter = mt.GT.is_non_ref()
-            if quality_filter_expr is not None:
-                # TODO: allows families where any individual passes quality filter, should be all individuals
-                sample_filter &= quality_filter_expr
-            if inheritance_mode == ANY_AFFECTED:
-                sample_filter &= hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s)
-            return hl.agg.filter(sample_filter, hl.agg.collect_as_set(sample_family_map[mt.s]))
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, inheritance_override_q=None):
+        valid_sample_q = hl.is_defined(mt.familyGuid)
+        invalid_sample_q = invalid_quality_samples_q
 
+        if not inheritance_filter:
+            if inheritance_mode == ANY_AFFECTED:
+                valid_sample_q = mt.GT.is_non_ref() & hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s)
+        else:
+            invalid_inheritance_q = self._get_invalid_inheritance_samples(mt, inheritance_mode, inheritance_filter, inheritance_override_q)
+            if invalid_sample_q is not None:
+                invalid_sample_q |= invalid_inheritance_q
+            else:
+                invalid_sample_q = invalid_inheritance_q
+
+        valid_family_expr = hl.agg.filter(valid_sample_q, hl.agg.collect_as_set(mt.familyGuid))
+        if not invalid_sample_q:
+            return valid_family_expr
+
+        return hl.bind(
+            lambda valid, invalid: valid.difference(invalid),
+            valid_family_expr,
+            hl.agg.filter(invalid_sample_q, hl.agg.collect_as_set(mt.familyGuid)),
+        )
+
+    def _get_invalid_inheritance_samples(self, mt, inheritance_mode, inheritance_filter, inheritance_override_q):
         search_sample_ids = set()
         sample_filters = []
 
@@ -510,35 +526,24 @@ class BaseHailTableQuery(object):
                 sample_filters.append((inheritance_filter[status], status_sample_ids))
 
         sample_filter_exprs = [
-            (self.GENOTYPE_QUERY_MAP[genotype](mt.GT) & hl.set(samples).contains(mt.s))
+            self._get_invalid_genotype_q(mt, genotype, samples, inheritance_override_q)
             for genotype, samples in sample_filters
         ]
         sample_filter = sample_filter_exprs[0]
         for sub_filter in sample_filter_exprs[1:]:
             sample_filter |= sub_filter
 
-        if quality_filter_expr is not None:
-            sample_filter &= quality_filter_expr
+        return sample_filter
 
-        return self._get_family_all_samples_expr(mt, sample_filter, search_sample_ids)
+    def _get_invalid_genotype_q(self, mt, genotype, samples, inheritance_override_q):
+        # TODO use already negated queries instead of ~self.GENOTYPE_QUERY_MAP
+        genotype_q = ~self.GENOTYPE_QUERY_MAP[genotype](mt.GT)
+        if inheritance_override_q:
+            genotype_q &= ~inheritance_override_q
+        return genotype_q & hl.set(samples).contains(mt.s)
 
-    def _get_family_all_samples_expr(self, mt, sample_filter, sample_ids, family_samples_filter=None):
-        return hl.bind(
-            lambda samples, family_samples_map: family_samples_map.key_set().filter(lambda f: family_samples_map[f].is_subset(samples)),
-            hl.agg.filter(sample_filter, hl.agg.collect_as_set(mt.s)),
-            self._get_family_samples_map(mt, sample_ids, family_samples_filter),
-        )
-
-    def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
-        sample_ids_by_family = defaultdict(set)
-        for sample_id in sample_ids:
-            sample_ids_by_family[self._individuals_by_sample_id[sample_id].family.guid].add(sample_id)
-        if family_samples_filter:
-            sample_ids_by_family = {k: v for k, v in sample_ids_by_family.items() if family_samples_filter(v)}
-        return hl.dict(sample_ids_by_family) if sample_ids_by_family else hl.empty_dict(hl.tstr, hl.tset(hl.tstr))
-
-    def _matched_family_sample_filter(self, mt, sample_family_map):
-        return mt.familyGuids.contains(sample_family_map[mt.s])
+    def _matched_family_sample_filter(self, mt):
+        return mt.familyGuids.contains(mt.familyGuid)
 
     def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=True):
         if not self._allowed_consequences:
@@ -796,12 +801,12 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         mt = mt.annotate_rows(callset=hl.struct(**{field: mt[field] for field in ['AF', 'AC', 'AN']}))
         return mt
 
-    def _get_quality_filter_expr(self, mt, quality_filter):
+    def _get_invalid_quality_filter_expr(self, mt, quality_filter):
         min_ab = (quality_filter or {}).get('min_ab')
-        quality_filter_expr = super(VariantHailTableQuery, self)._get_quality_filter_expr(mt, quality_filter)
+        quality_filter_expr = super(VariantHailTableQuery, self)._get_invalid_quality_filter_expr(mt, quality_filter)
         if min_ab:
             #  AB only relevant for hets
-            ab_expr = (hl.is_missing(mt.AB) | ~mt.GT.is_het() | (mt.AB > (min_ab / 100)))
+            ab_expr = mt.GT.is_het() & (mt.AB < (min_ab / 100))
             if quality_filter_expr is None:
                 quality_filter_expr = ab_expr
             else:
@@ -905,16 +910,11 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     def get_x_chrom_filter(mt, x_interval):
         return mt.interval.overlaps(x_interval)
 
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr):
-        families_expr = super(BaseSvHailTableQuery, self)._get_matched_families_expr(
-            mt, inheritance_mode, inheritance_filter, sample_family_map, quality_filter_expr)
-        if self._consequence_overrides[NEW_SV_FIELD]:
-            families_expr = hl.bind(
-                lambda families, new_call_families: new_call_families.intersection(families),
-                families_expr,
-                hl.agg.filter(mt.newCall, hl.agg.collect_as_set(sample_family_map[mt.s])),
-            )
-        return families_expr
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, **kwargs):
+        return super(BaseSvHailTableQuery, self)._get_matched_families_expr(
+            mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q,
+            inheritance_override_q=mt.newCall,
+        )
 
 
 class GcnvHailTableQuery(BaseSvHailTableQuery):
@@ -1042,20 +1042,8 @@ class MultiDataTypeHailTableQuery(object):
         if all(sample_set == sample_sets[0] for sample_set in sample_sets[1:]):
             self._sample_ids_by_dataset_type = None
 
-    def _get_family_samples_map(self, mt, sample_ids, family_samples_filter):
-        if not self._sample_ids_by_dataset_type:
-            return super(MultiDataTypeHailTableQuery, self)._get_family_samples_map(mt, sample_ids, family_samples_filter)
-
-        data_type_maps = hl.dict({
-            data_type: super(MultiDataTypeHailTableQuery, self)._get_family_samples_map(
-                mt, data_sample_ids.intersection(sample_ids), family_samples_filter)
-            for data_type, data_sample_ids in self._sample_ids_by_dataset_type.items()
-        })
-
-        return data_type_maps[self.get_row_data_type(mt)]
-
-    def _matched_family_sample_filter(self, mt, sample_family_map):
-        sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt, sample_family_map)
+    def _matched_family_sample_filter(self, mt):
+        sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt)
         if not self._sample_ids_by_dataset_type:
             return sample_filter
         return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)].contains(mt.s)
