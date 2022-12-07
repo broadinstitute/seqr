@@ -75,9 +75,10 @@ def write_main_gcnv_ht(file):
 
     # Export all samples
     st = gt.explode('samples').select('samples', 'start', 'end', 'numExon', 'geneIds')
-    st = st.annotate(samples=st.samples.select(
+    st = st.annotate(s=st.samples.sample_id, samples=st.samples.select(
         'sample_id', 'CN', 'start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall', 'QS'))
-    st.write(f'gs://hail-backend-datasets/{file_name}.samples.ht')
+    samples_mt = st.to_matrix_table(row_key=['variantId'], col_key=['s'])
+    samples_mt.write(f'gs://hail-backend-datasets/{file_name}.mt')
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
