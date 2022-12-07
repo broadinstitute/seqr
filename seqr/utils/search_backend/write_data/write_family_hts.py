@@ -1,18 +1,32 @@
 import argparse
 import hail as hl
 
+VARIANT_TYPE = 'VARIANTS'
 SV_TYPE = 'SV'
+MITO_TYPE = 'MITO'
+
+FORMAT_MT_IMPORT = {
+    SV_TYPE: lambda mt: mt.rename({'rsid': 'variantId'}).key_rows_by('variantId'),
+    MITO_TYPE: lambda mt: mt.transmute_cols(c_mito_cn=mt.mito_cn, c_contamination=mt.contamination),
+}
+
 ANNOTATIONS = {
-    'VARIANTS': {
+    VARIANT_TYPE: {
         'AB': lambda mt: hl.if_else(mt.AD.length() > 1, hl.float(mt.AD[1] / hl.sum(mt.AD)), hl.missing(hl.tfloat)),
     },
     SV_TYPE: {
         'CN': lambda mt: mt.RD_CN,
         'GQ_SV': lambda mt: mt.GQ,
     },
+    MITO_TYPE: {
+        'GQ': lambda mt: hl.int(mt.MQ),
+        'mito_cn': lambda mt: mt.c_mito_cn,
+        'contamination': lambda mt: mt.c_contamination,
+    },
 }
 ENTRY_FIELDS = {
-    'VARIANTS': ['AD', 'DP', 'GQ', 'PL'],
+    VARIANT_TYPE: ['AD', 'DP', 'GQ', 'PL'],
+    MITO_TYPE: ['DP', 'HL'],
 }
 
 
@@ -21,11 +35,12 @@ def write_family_hts(file, project, data_type):
     family_guids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.familyGuid))
 
     mt = hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').select_globals()
-    if data_type == SV_TYPE:
-        mt = mt.rename({'rsid': 'variantId'})
-        mt = mt.key_rows_by('variantId')
+    format_mt = FORMAT_MT_IMPORT.get(data_type)
+    if format_mt:
+        mt = format_mt(mt)
     mt = mt.select_rows()
     print(f'Total MT rows: {mt.rows().count()}')
+
     mt = mt.semi_join_cols(families_ht)
     mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
     annotations = ANNOTATIONS[data_type]
@@ -62,7 +77,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('file')
     p.add_argument('project')
-    p.add_argument('data_type')
+    p.add_argument('data_type', choices=ANNOTATIONS.keys())
     args = p.parse_args()
 
     write_family_hts(args.file, args.project, args.data_type)
