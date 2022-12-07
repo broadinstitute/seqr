@@ -300,7 +300,7 @@ LIRICAL_DATA = [
     ['lirical', '1kg project nåme with uniçøde', 'NA19678', '1', 'ENSG00000105357', 'OMIM:618460',
      'Khan-Khan-Katsanis syndrome', 'post_test_probability', '0', 'compositeLR', '0.066'],
     ['lirical', 'Test Reprocessed Project', 'NA20885', '2', 'ENSG00000105357', 'OMIM:219800',
-     '"Cystinosis, nephropathic"', 'post_test_probability', '0', 'compositeLR', '0.003', '', ''],
+     '"Cystinosis, nephropathic"', 'post_test_probability', '0', 'compositeLR', '', '', ''],
 ]
 EXOMISER_DATA = [
     ['exomiser', 'CMG_Beggs_WGS', 'BEG_1230-1_01', '1', 'ENSG00000105357', 'ORPHA:2131',
@@ -322,12 +322,12 @@ EXPECTED_LIRICAL_DATA = [
      'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 1, 'individualGuid': 'I000002_na19678'},
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
-     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'scores': {'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'}
 ]
 EXPECTED_UPDATED_LIRICAL_DATA = [
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
-     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'scores': {'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'},
     {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
      'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},

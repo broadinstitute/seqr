@@ -462,7 +462,9 @@ def _parse_phenotype_pri_row(row):
             break
         # We have both camel case and snake case in the score field names, so convert them to snake case first (those
         # in snake case kept unchanged), then to camel case.
-        scores[_to_camel_case(_to_snake_case(score_name))] = float(row[f'score{i}'])
+        score = row[f'score{i}']
+        if score:
+            scores[_to_camel_case(_to_snake_case(score_name))] = float(score)
     record['scores'] = scores
 
     yield record
