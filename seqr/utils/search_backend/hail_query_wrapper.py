@@ -487,7 +487,7 @@ class BaseHailTableQuery(object):
                 invalid_sample_q = invalid_inheritance_q
 
         valid_family_expr = hl.agg.filter(valid_sample_q, hl.agg.collect_as_set(mt.familyGuid))
-        if not invalid_sample_q:
+        if invalid_sample_q is None:
             return valid_family_expr
 
         return hl.bind(
@@ -536,11 +536,10 @@ class BaseHailTableQuery(object):
         return sample_filter
 
     def _get_invalid_genotype_q(self, mt, genotype, samples, inheritance_override_q):
-        # TODO use already negated queries instead of ~self.GENOTYPE_QUERY_MAP
-        genotype_q = ~self.GENOTYPE_QUERY_MAP[genotype](mt.GT)
+        genotype_q = self.GENOTYPE_QUERY_MAP[genotype](mt.GT)
         if inheritance_override_q:
-            genotype_q &= ~inheritance_override_q
-        return genotype_q & hl.set(samples).contains(mt.s)
+            genotype_q |= inheritance_override_q
+        return ~genotype_q & hl.set(samples).contains(mt.s)
 
     def _matched_family_sample_filter(self, mt):
         return mt.familyGuids.contains(mt.familyGuid)
