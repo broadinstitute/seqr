@@ -812,12 +812,11 @@ class DataManagerAPITest(AuthenticationTestCase):
 
     @classmethod
     def _join_data(cls, data):
-        return iter(['\t'.join(line) for line in data])
+        return ['\t'.join(line).encode('utf-8') for line in data]
 
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    @mock.patch('seqr.views.utils.dataset_utils.file_iter')
     @mock.patch('seqr.models.logger')
-    def test_load_phenotype_prioritization_data(self, mock_logger, mock_file_iter, mock_subprocess):
+    def test_load_phenotype_prioritization_data(self, mock_logger, mock_subprocess):
         url = reverse(load_phenotype_prioritization_data)
         self.check_data_manager_login(url)
 
@@ -826,45 +825,50 @@ class DataManagerAPITest(AuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'File not found: gs://seqr_data/lirical_data.tsv.gz')
+        mock_subprocess.assert_called_with('gsutil ls gs://seqr_data/lirical_data.tsv.gz', stdout=-1, stderr=-2, shell=True)
 
+        mock_subprocess.reset_mock()
         mock_subprocess.return_value.wait.return_value = 0
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_MISS_HEADER)
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_MISS_HEADER)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Invalid file: missing column(s) project, diseaseId')
-        mock_file_iter.assert_called_with('gs://seqr_data/lirical_data.tsv.gz')
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_PROJECT_DATA)
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_PROJECT_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Both sample ID and project fields are required.')
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + EXOMISER_DATA)
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + EXOMISER_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Multiple tools found lirical and exomiser. Only one in a file is supported.')
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_PROJECT_NOT_EXIST_DATA)
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_PROJECT_NOT_EXIST_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. ')
 
         project = Project.objects.create(created_by=self.data_manager_user,
                                          name='1kg project nåme with uniçøde', workspace_namespace='my-seqr-billing')
-        mock_file_iter.return_value = self._join_data(
+        mock_subprocess.return_value.stdout = self._join_data(
             PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + LIRICAL_PROJECT_NOT_EXIST_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. Projects with conflict name(s) 1kg project nåme with uniçøde.')
         project.delete()
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_EXIST_INDV_DATA)
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_EXIST_INDV_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], "Can't find individuals NA19678x, NA19679x")
 
         # Test a successful operation
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         info = [
@@ -879,10 +883,11 @@ class DataManagerAPITest(AuthenticationTestCase):
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
         # Test uploading new data
         mock_logger.reset_mock()
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         info = [
