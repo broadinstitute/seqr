@@ -420,7 +420,7 @@ class BaseHailTableQuery(object):
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
-            self._matched_family_sample_filter(mt),
+            mt.familyGuids.contains(mt.familyGuid) & self._get_searchable_samples(mt).contains(mt.s),
             hl.agg.collect(hl.struct(
                 individualGuid=sample_individual_map[mt.s],
                 sampleId=mt.s,
@@ -473,12 +473,14 @@ class BaseHailTableQuery(object):
         return x_interval.contains(mt.locus)
 
     def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, inheritance_override_q=None):
+        searchable_samples = self._get_searchable_samples(mt)
         valid_sample_q = hl.is_defined(mt.familyGuid)
         invalid_sample_q = invalid_quality_samples_q
 
         if not inheritance_filter:
             if inheritance_mode == ANY_AFFECTED:
-                valid_sample_q = mt.GT.is_non_ref() & hl.set(self._affected_status_samples[AFFECTED]).contains(mt.s)
+                searchable_samples = searchable_samples.intersection(hl.set(self._affected_status_samples[AFFECTED]))
+                valid_sample_q &= mt.GT.is_non_ref()
         else:
             invalid_inheritance_q = self._get_invalid_inheritance_samples(
                 mt, inheritance_mode, inheritance_filter, inheritance_override_q)
@@ -487,7 +489,8 @@ class BaseHailTableQuery(object):
             else:
                 invalid_sample_q = invalid_inheritance_q
 
-        valid_family_expr = hl.agg.filter(valid_sample_q, hl.agg.collect_as_set(mt.familyGuid))
+        valid_family_expr = hl.agg.filter(
+            valid_sample_q & searchable_samples.contains(mt.s), hl.agg.collect_as_set(mt.familyGuid))
         if invalid_sample_q is None:
             return valid_family_expr
 
@@ -542,8 +545,8 @@ class BaseHailTableQuery(object):
             genotype_q |= inheritance_override_q
         return ~genotype_q & hl.set(samples).contains(mt.s)
 
-    def _matched_family_sample_filter(self, mt):
-        return mt.familyGuids.contains(mt.familyGuid) & hl.set(set(self._individuals_by_sample_id.keys())).contains(mt.s)
+    def _get_searchable_samples(self, mt):
+        return hl.set(set(self._individuals_by_sample_id.keys()))
 
     def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=True):
         if not self._allowed_consequences:
@@ -1042,11 +1045,10 @@ class MultiDataTypeHailTableQuery(object):
         if all(sample_set == sample_sets[0] for sample_set in sample_sets[1:]):
             self._sample_ids_by_dataset_type = None
 
-    def _matched_family_sample_filter(self, mt):
-        sample_filter = super(MultiDataTypeHailTableQuery, self)._matched_family_sample_filter(mt)
-        if not self._sample_ids_by_dataset_type:
-            return sample_filter
-        return sample_filter & hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)].contains(mt.s)
+    def _get_searchable_samples(self, mt):
+        if self._sample_ids_by_dataset_type:
+            return hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)]
+        return super(MultiDataTypeHailTableQuery, self)._get_searchable_samples(mt)
 
     @classmethod
     def import_filtered_ht(cls, data_source, samples, **kwargs):
