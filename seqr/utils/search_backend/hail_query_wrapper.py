@@ -947,10 +947,17 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
             ),
         )
     }
-    INITIAL_ENTRY_ANNOTATIONS = {
+    # INITIAL_ENTRY_ANNOTATIONS = {
+    #     #  gCNV data has no ref/ref calls so add them back in
+    #     'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
+    # } # TODO
+
+    @classmethod
+    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        mt = super(GcnvHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
         #  gCNV data has no ref/ref calls so add them back in
-        'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
-    }
+        mt = mt.unfilter_entries()
+        return mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
 
     def _filter_vcf_filters(self):
         pass
