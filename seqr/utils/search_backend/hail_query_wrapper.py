@@ -852,13 +852,6 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        mt = super(MitoHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
-        # TODO remove this function after reloading mito sample tables
-        mt = mt.annotate_entries(GQ=hl.int(mt.GQ))
-        return mt
-
-    @classmethod
     def _format_quality_filter(cls, quality_filter):
         return {k: v / 100 if k == 'min_hl' else v for k, v in (quality_filter or {}).items()}
 
