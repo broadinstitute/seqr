@@ -65,7 +65,6 @@ class BaseHailTableQuery(object):
         ),
     }
     COMPUTED_ANNOTATION_FIELDS = {}
-    INITIAL_ENTRY_ANNOTATIONS = {}
 
     @property
     def populations_configs(self):
@@ -127,9 +126,6 @@ class BaseHailTableQuery(object):
 
     def _load_table(self, data_source, samples, intervals=None, exclude_intervals=False):
         mt = self.import_filtered_mt(data_source, samples, intervals=self._parse_intervals(intervals), exclude_intervals=exclude_intervals)
-        if self.INITIAL_ENTRY_ANNOTATIONS:
-            logger.info(f'INITIAL_ENTRY_ANNOTATIONS: {", ".join(self.INITIAL_ENTRY_ANNOTATIONS)}')  # TODO
-            mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
         return mt
@@ -949,10 +945,6 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
             ),
         )
     }
-    # INITIAL_ENTRY_ANNOTATIONS = {
-    #     #  gCNV data has no ref/ref calls so add them back in
-    #     'GT': lambda mt: hl.or_else(mt.GT, hl.Call([0, 0]))
-    # } # TODO
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
@@ -1123,16 +1115,7 @@ class MultiDataTypeHailTableQuery(object):
         return {}
 
 
-def _is_gcnv_variant(r):
-    return hl.is_defined(r.svType) & r.svType.startswith('gCNV_')
-
-
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
-
-    INITIAL_ENTRY_ANNOTATIONS = {
-        #  gCNV data has no ref/ref calls so add them back in, do not change for other datasets
-        'GT': lambda mt: hl.if_else(_is_gcnv_variant(mt), GcnvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS['GT'](mt), mt.GT)
-    }
 
     SV_MERGE_FIELDS = {'interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sortedTranscriptConsequences'}
     MERGE_FIELDS = {GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS}
@@ -1147,7 +1130,7 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
     @staticmethod
     def data_type_for_row(r):
-        return hl.if_else(_is_gcnv_variant(r), GCNV_KEY, SV_KEY)
+        return hl.if_else(hl.is_defined(r.svType) & r.svType.startswith('gCNV_'), GCNV_KEY, SV_KEY)
 
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
@@ -1176,7 +1159,6 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
-    INITIAL_ENTRY_ANNOTATIONS = AllSvHailTableQuery.INITIAL_ENTRY_ANNOTATIONS
 
     MERGE_FIELDS = deepcopy(AllVariantHailTableQuery.MERGE_FIELDS)
     MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
