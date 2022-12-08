@@ -49,7 +49,7 @@ class BaseHailTableQuery(object):
     TRANSCRIPT_FIELDS = ['gene_id', 'major_consequence']
     ANNOTATION_OVERRIDE_FIELDS = []
 
-    CORE_FIELDS = ['genotypes', 'allSamples']  # TODO
+    CORE_FIELDS = ['genotypes']
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: hl.array(r.familyGuids),
     }
@@ -152,11 +152,8 @@ class BaseHailTableQuery(object):
         families = {s.individual.family for s in samples}
         families_mt = None
         for f in families:
-            family_ht = hl.read_table(
-                f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs
-            ).annotate(familyGuid=f.guid)
-            keys = list(family_ht.key.keys())
-            family_mt = family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
+            family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
+            family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
 
             if families_mt:
                 families_mt = families_mt.union_cols(family_mt, row_join_type='outer')
@@ -167,6 +164,11 @@ class BaseHailTableQuery(object):
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
 
         return families_mt.annotate_rows(**ht[families_mt.row_key])
+
+    @classmethod
+    def _family_ht_to_mt(cls, family_ht):
+        keys = list(family_ht.key.keys())
+        return family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
 
     @staticmethod
     def _filter_gene_ids(mt, gene_ids):
@@ -427,7 +429,7 @@ class BaseHailTableQuery(object):
                 sampleId=mt.s,
                 numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
                 **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
-            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])), allSamples=hl.agg.collect(mt.s))
+            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
         for sample_id, individual in self._individuals_by_sample_id.items():
@@ -953,8 +955,8 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     # } # TODO
 
     @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        mt = super(GcnvHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
+    def _family_ht_to_mt(cls, family_ht):
+        mt = super(GcnvHailTableQuery, cls)._family_ht_to_mt(family_ht)
         #  gCNV data has no ref/ref calls so add them back in
         mt = mt.unfilter_entries()
         return mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
