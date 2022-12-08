@@ -128,6 +128,7 @@ class BaseHailTableQuery(object):
     def _load_table(self, data_source, samples, intervals=None, exclude_intervals=False):
         mt = self.import_filtered_mt(data_source, samples, intervals=self._parse_intervals(intervals), exclude_intervals=exclude_intervals)
         if self.INITIAL_ENTRY_ANNOTATIONS:
+            logger.info(f'INITIAL_ENTRY_ANNOTATIONS: {", ".join(self.INITIAL_ENTRY_ANNOTATIONS)}')  # TODO
             mt = mt.annotate_entries(**{k: v(mt) for k, v in self.INITIAL_ENTRY_ANNOTATIONS.items()})
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
@@ -914,9 +915,12 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         return mt.interval.overlaps(x_interval)
 
     def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, **kwargs):
+        inheritance_override_q = None
+        if self._consequence_overrides[NEW_SV_FIELD]:
+            inheritance_override_q = mt.newCall
         return super(BaseSvHailTableQuery, self)._get_matched_families_expr(
             mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q,
-            inheritance_override_q=mt.newCall,
+            inheritance_override_q=inheritance_override_q,
         )
 
 
