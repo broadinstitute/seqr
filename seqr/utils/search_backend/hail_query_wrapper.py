@@ -543,7 +543,7 @@ class BaseHailTableQuery(object):
         return ~genotype_q & hl.set(samples).contains(mt.s)
 
     def _matched_family_sample_filter(self, mt):
-        return mt.familyGuids.contains(mt.familyGuid) & hl.set(self._individuals_by_sample_id.keys()).contains(mt.s)
+        return mt.familyGuids.contains(mt.familyGuid) & hl.set(set(self._individuals_by_sample_id.keys())).contains(mt.s)
 
     def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=True):
         if not self._allowed_consequences:
