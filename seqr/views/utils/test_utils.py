@@ -866,7 +866,7 @@ PARSED_VARIANTS = [
         'selectedMainTranscriptId': None,
         'originalAltAlleles': ['T'],
         'populations': {
-            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None, 'het': None,
+            'callset': {'an': 32, 'ac': 2, 'hom': 3, 'af': 0.063, 'hemi': None, 'filter_af': None, 'het': None,
                         'id': None, 'max_hl': None},
             'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0,
                                'filter_af': 0.0004590314436538903, 'het': 0, 'id': None, 'max_hl': None},
