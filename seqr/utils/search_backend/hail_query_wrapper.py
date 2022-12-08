@@ -957,7 +957,9 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         mt = super(GcnvHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
         #  gCNV data has no ref/ref calls so add them back in
         mt = mt.unfilter_entries()
-        return mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
+        mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
+        logger.info(f'genotype counts: {mt.aggregate(hl.agg.counter(mt.GT))}')
+        return mt
 
     def _filter_vcf_filters(self):
         pass
