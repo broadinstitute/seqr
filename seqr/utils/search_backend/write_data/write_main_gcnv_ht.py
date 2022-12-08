@@ -34,7 +34,7 @@ def write_main_gcnv_ht(file):
     gt = ht.group_by('variantId', 'chr', 'svType').aggregate(
         start=hl.agg.min(ht.start),
         end=hl.agg.max(ht.end),
-        numExon=hl.agg.max(ht.numExon),
+        num_exon=hl.agg.max(ht.numExon),
         geneIds=hl.set(hl.agg.collect(ht.geneIds).flatmap(lambda g: g)),
         lof_genes=hl.str(',').join(hl.agg.collect_as_set(ht.genes_LOF_Ensemble_ID)),
         cg_genes=hl.str(',').join(hl.agg.collect_as_set(ht.genes_CG_Ensemble_ID)),
@@ -69,7 +69,7 @@ def write_main_gcnv_ht(file):
             )))),
     }
     vt = gt.annotate(**variant_annotations).select(
-        'numExon', 'svType', *variant_annotations.keys(),
+        'num_exon', 'svType', *variant_annotations.keys(),
     )
     vt.write(f'gs://hail-backend-datasets/{file_name}.ht')
 

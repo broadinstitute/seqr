@@ -929,7 +929,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     BASE_ANNOTATION_FIELDS.update({
         'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
-        'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.numExon, 'numExon', hl.max),
+        'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.num_exon, 'numExon', hl.max),
         'svType': lambda r: r.svType.replace('^gCNV_', ''),
     })
     COMPUTED_ANNOTATION_FIELDS = {
