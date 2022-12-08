@@ -26,9 +26,8 @@ ANNOTATIONS = {
         geneIds=lambda mt: hl.if_else(mt.geneIds == hl.set(mt.samples.geneIds), hl.missing(hl.tarray(hl.tstr)), mt.samples.geneIds),
         **{field: lambda mt: hl.if_else(mt[field] == mt.samples[field], hl.missing(hl.tint32), mt.samples[field])
            for field in ['start', 'end', 'numExon']},
-        **{field: lambda mt: mt.samples[field] for field in [
-            'CN', 'QS', 'defragged', 'prevCall', 'prevOverlap', 'newCall',
-        ]},
+        **{field: lambda mt: hl.int(mt.samples[field]) for field in ['CN', 'QS']},
+        **{field: lambda mt: mt.samples[field] for field in ['defragged', 'prevCall', 'prevOverlap', 'newCall']},
     ),
     MITO_TYPE: {
         'GQ': lambda mt: hl.int(mt.MQ),
