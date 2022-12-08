@@ -49,7 +49,7 @@ class BaseHailTableQuery(object):
     TRANSCRIPT_FIELDS = ['gene_id', 'major_consequence']
     ANNOTATION_OVERRIDE_FIELDS = []
 
-    CORE_FIELDS = ['genotypes']
+    CORE_FIELDS = ['genotypes', 'allSamples']  # TODO
     BASE_ANNOTATION_FIELDS = {
         'familyGuids': lambda r: hl.array(r.familyGuids),
     }
@@ -420,11 +420,6 @@ class BaseHailTableQuery(object):
         mt = mt.filter_rows(mt.familyGuids.size() > 0)
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
-        return mt.annotate_rows(genotypes=hl.agg.collect(hl.struct(
-            familyGuid=mt.familyGuid,
-            sampleId=mt.s,
-            numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
-        )).group_by(lambda x: x.sampleId))
         return mt.annotate_rows(genotypes=hl.agg.filter(
             mt.familyGuids.contains(mt.familyGuid) & self._get_searchable_samples(mt).contains(mt.s),
             hl.agg.collect(hl.struct(
@@ -432,7 +427,7 @@ class BaseHailTableQuery(object):
                 sampleId=mt.s,
                 numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
                 **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
-            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
+            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])), allSamples=hl.agg.collect(mt.s))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
         for sample_id, individual in self._individuals_by_sample_id.items():
