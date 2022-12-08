@@ -8,6 +8,9 @@ MITO_TYPE = 'MITO'
 
 FORMAT_MT_IMPORT = {
     SV_TYPE: lambda mt: mt.rename({'rsid': 'variantId'}).key_rows_by('variantId'),
+    GCNV_TYPE: lambda mt: mt.annotate_entries(
+        GT=hl.if_else((mt.samples.CN == 0) | (mt.samples.CN > 3), hl.Call([1, 1]), hl.Call([0, 1]))
+    ),
     MITO_TYPE: lambda mt: mt.transmute_cols(c_mito_cn=mt.mito_cn, c_contamination=mt.contamination),
 }
 
@@ -20,7 +23,6 @@ ANNOTATIONS = {
         'GQ_SV': lambda mt: mt.GQ,
     },
     GCNV_TYPE: dict(
-        GT=lambda mt: hl.if_else((mt.samples.CN == 0) | (mt.samples.CN > 3), hl.Call([1, 1]), hl.Call([0, 1])),
         geneIds=lambda mt: hl.if_else(mt.geneIds == hl.set(mt.samples.geneIds), hl.missing(hl.tarray(hl.tstr)), mt.samples.geneIds),
         **{field: lambda mt: hl.if_else(mt[field] == mt.samples[field], hl.missing(hl.tint32), mt.samples[field])
            for field in ['start', 'end', 'numExon']},
@@ -41,11 +43,6 @@ ENTRY_FIELDS = {
 
 
 def write_family_hts(file, project, data_type):
-    annotations = ANNOTATIONS[data_type]
-    entry_fields = {'GT'}
-    entry_fields.update(annotations.keys())
-    entry_fields.update(ENTRY_FIELDS.get(data_type, []))
-
     families_ht = hl.import_table(f'gs://seqr-project-subsets/{project}_fam.csv', key='s', delimiter=',')
     family_guids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.familyGuid))
 
@@ -58,6 +55,7 @@ def write_family_hts(file, project, data_type):
 
     mt = mt.semi_join_cols(families_ht)
     mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
+    annotations = ANNOTATIONS[data_type]
     mt = mt.annotate_entries(**{k: v(mt) for k, v in annotations.items()})
 
     print(f'Exporting {len(family_guids)} families')
@@ -69,7 +67,7 @@ def write_family_hts(file, project, data_type):
 
         family_mt = mt.semi_join_cols(family_subset_ht)
         family_ht = family_mt.filter_rows(hl.agg.any(family_mt.GT.is_non_ref())).entries()
-        family_ht = family_ht.select(*entry_fields)
+        family_ht = family_ht.select('GT', *annotations.keys(), *ENTRY_FIELDS.get(data_type, []))
 
         count = family_ht.count()
         print(f'{family_guid}: {family_subset_ht.count()} samples, {count} rows')
