@@ -16,7 +16,9 @@ FORMAT_MT_IMPORT = {
 
 ANNOTATIONS = {
     VARIANT_TYPE: {
-        'AB': lambda mt: hl.if_else(mt.AD.length() > 1, hl.float(mt.AD[1] / hl.sum(mt.AD)), hl.missing(hl.tfloat)),
+        'AB': lambda mt: hl.if_else(
+            (mt.AD.length() > 1) & (hl.sum(mt.AD) != 0), hl.float(mt.AD[1] / hl.sum(mt.AD)), hl.missing(hl.tfloat),
+        ),
     },
     SV_TYPE: {
         'CN': lambda mt: mt.RD_CN,
