@@ -31,6 +31,7 @@ SECOND_SUB_INDICES = ['sub_index_a', 'sub_index_b']
 ES_VARIANTS = [
     {
         '_source': {
+          'homozygote_count': 3,
           'gnomad_exomes_Hemi': None,
           'originalAltAlleles': [
             '1-248367227-TC-T'
@@ -954,7 +955,7 @@ MITO_SOURCE_ONLY_FIELDS = [
 ]
 
 SOURCE_FIELDS = {
-    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
+    'homozygote_count', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
     'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
