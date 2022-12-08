@@ -3,7 +3,7 @@ import hail as hl
 
 VARIANT_TYPE = 'VARIANTS'
 SV_TYPE = 'SV'
-GCNV_TYPE = 'gCNV',
+GCNV_TYPE = 'gCNV'
 MITO_TYPE = 'MITO'
 
 FORMAT_MT_IMPORT = {
