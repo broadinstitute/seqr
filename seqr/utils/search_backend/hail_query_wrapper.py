@@ -424,7 +424,7 @@ class BaseHailTableQuery(object):
             familyGuid=mt.familyGuid,
             sampleId=mt.s,
             numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
-        )))
+        )).group_by(lambda x: x.sampleId))
         return mt.annotate_rows(genotypes=hl.agg.filter(
             mt.familyGuids.contains(mt.familyGuid) & self._get_searchable_samples(mt).contains(mt.s),
             hl.agg.collect(hl.struct(
