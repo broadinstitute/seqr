@@ -421,9 +421,11 @@ class BaseHailTableQuery(object):
 
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
         return mt.annotate_rows(genotypes=hl.agg.filter(
-            mt.familyGuids.contains(mt.familyGuid) & self._get_searchable_samples(mt).contains(mt.s),
+            # mt.familyGuids.contains(mt.familyGuid) & self._get_searchable_samples(mt).contains(mt.s),
+            mt.familyGuids.contains(mt.familyGuid),
             hl.agg.collect(hl.struct(
-                individualGuid=sample_individual_map[mt.s],
+                # individualGuid=sample_individual_map[mt.s],
+                individualGuid=mt.s,
                 sampleId=mt.s,
                 numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
                 **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
@@ -957,9 +959,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         mt = super(GcnvHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
         #  gCNV data has no ref/ref calls so add them back in
         mt = mt.unfilter_entries()
-        mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
-        logger.info(f'genotype counts: {mt.aggregate_entries(hl.agg.counter(mt.GT))}')  # TODO
-        return mt
+        return mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
 
     def _filter_vcf_filters(self):
         pass
