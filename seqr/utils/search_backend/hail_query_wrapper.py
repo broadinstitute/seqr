@@ -592,7 +592,7 @@ class BaseHailTableQuery(object):
             **{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])})  # TODO #2496: sort with self._sort
         ch_ht = ch_ht.annotate(
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
-        ch_ht = ch_ht.key_by(VARIANT_KEY_FIELD).select(GROUPED_VARIANTS_FIELD)
+        ch_ht = ch_ht.select(GROUPED_VARIANTS_FIELD)
 
         self._comp_het_ht = ch_ht.distinct()
 
@@ -643,7 +643,6 @@ class BaseHailTableQuery(object):
         results = results.annotate(
             **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
-        results = results.key_by(VARIANT_KEY_FIELD)
         return results.select(
             'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
@@ -760,6 +759,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         mt = super(BaseVariantHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals=None if exclude_intervals else intervals)
         if intervals and exclude_intervals:
             mt = hl.filter_intervals(mt, intervals, keep=False)
+        mt = mt.key_rows_by(VARIANT_KEY_FIELD)
         return mt
 
     def _get_consequence_terms(self):
@@ -1057,7 +1057,7 @@ class MultiDataTypeHailTableQuery(object):
         data_type_0 = data_types[0]
 
         ht = QUERY_CLASS_MAP[data_type_0].import_filtered_ht(data_source[data_type_0], samples[data_type_0], **kwargs)
-        ht = ht.key_by(VARIANT_KEY_FIELD)
+        # ht = ht.key_by(VARIANT_KEY_FIELD)  moved into import
 
         sample_ids = deepcopy(sample_ids_by_type[data_type_0])
         entry_types = dict(**ht[list(sample_ids)[0]].dtype)
@@ -1068,7 +1068,7 @@ class MultiDataTypeHailTableQuery(object):
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
             sub_ht = data_type_cls.import_filtered_ht(data_source[data_type], samples[data_type], **kwargs)
-            ht = ht.join(sub_ht.key_by(VARIANT_KEY_FIELD), how='outer')
+            ht = ht.join(sub_ht.key_by(VARIANT_KEY_FIELD), how='outer')  # key by moved to import
 
             new_type_samples = sample_ids_by_type[data_type]
             shared_sample_ids = sample_ids.intersection(new_type_samples)
