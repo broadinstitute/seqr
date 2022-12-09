@@ -72,7 +72,6 @@ const BasePhenotypePriGenes = React.memo((
       columns={PHENOTYPE_GENE_INFO_COLUMNS}
       fixedWidth
       defaultSortColumn="rank"
-      rowsPerPage={10}
     />
   </DataLoader>
 ))

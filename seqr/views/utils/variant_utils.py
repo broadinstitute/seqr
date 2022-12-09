@@ -6,7 +6,7 @@ import redis
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
+    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Individual
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -147,9 +147,12 @@ def get_phenotype_prioritization(families, gene_ids=None):
     data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     gene_filter = {'gene_id__in': gene_ids} if gene_ids is not None else {}
+    phenotype_genes = PhenotypePrioritization.objects.none()
+    for indiv in Individual.objects.filter(family__in=families):
+        phenotype_genes |= PhenotypePrioritization.objects.filter(individual=indiv, **gene_filter).order_by('rank')[:10]
+
     data_dicts = _get_json_for_models(
-        PhenotypePrioritization.objects.filter(individual__family__in=families, **gene_filter).order_by('disease_id'),
-        nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
+        phenotype_genes, nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 
     for data in data_dicts:

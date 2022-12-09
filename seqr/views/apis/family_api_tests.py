@@ -510,10 +510,10 @@ class FamilyAPITest(AuthenticationTestCase):
                 'I000001_na19675': {
                     'ENSG00000268903': {
                         'exomiser': [
+                            {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
+                             'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
                             {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
                              'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
-                            {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
-                             'scores': {'compositeLR': 0.066, 'post_test_probability': 0}}
                         ]
                     }
                 },

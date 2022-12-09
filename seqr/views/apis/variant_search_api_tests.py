@@ -59,10 +59,10 @@ expected_detail_saved_variant['mmeSubmissions'] = [
 expected_detail_saved_variant['mainTranscriptId'] = mock.ANY
 
 EXPECTED_EXOMISER_DATA = [
-    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
-     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
     {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
      'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
+    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
 ]
 
 EXPECTED_LIRICAL_DATA = [
