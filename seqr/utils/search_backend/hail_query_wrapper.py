@@ -1008,6 +1008,7 @@ class MultiDataTypeHailTableQuery(object):
         super(MultiDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
     def get_row_data_type(self, r):
+        # TODO add data_type annotation at import time
         return self.data_type_for_row(r)
 
     @staticmethod
