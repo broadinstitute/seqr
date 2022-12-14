@@ -348,6 +348,9 @@ export const STATE1 = {
     projectGuid: 'R0237_1000_genomes_demo',
   },
   user: USER,
+  meta: {
+    anvilLoadingDelayDate: null,
+  },
   caseReviewTableState: {
     familiesFilter: 'ALL',
     familiesSortOrder: 'FAMILY_NAME',
