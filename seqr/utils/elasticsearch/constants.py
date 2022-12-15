@@ -85,6 +85,7 @@ POPULATIONS = {
         'filter_AF': [],
         'AC': 'AC',
         'AN': 'AN',
+        'Hom': 'homozygote_count',
     },
     'topmed': {
         'filter_AF': [],

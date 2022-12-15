@@ -33,14 +33,13 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL,\
-    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, ANVIL_LOADING_DELAY_EMAIL_START_DATE, \
+    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
-ANVIL_LOADING_EMAIL_DATE = None
-ANVIL_LOADING_DELAY_EMAIL = None
 DAG_VERSION = '0.0.1'
 
 
@@ -292,16 +291,16 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
             'Status': 'Loading' if trigger_success else 'Loading Requested'
         })
 
-    if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
-            datetime.strptime(ANVIL_LOADING_EMAIL_DATE, '%Y-%m-%d') <= datetime.now():
+    loading_warning_date = ANVIL_LOADING_DELAY_EMAIL_START_DATE and datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d')
+    if loading_warning_date and loading_warning_date <= datetime.now():
         try:
-            email_body = """Hi {user},
-            {email_content}
+            email_body = f"""Hi {user.get_full_name() or user.email},
+            We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
+            internal retreat or closed for the winter break so we are unable to load data until mid-January 
+            {loading_warning_date.year + 1}. We appreciate your understanding and support of our research team taking 
+            some well-deserved time off and hope you also have a nice break.
             - The seqr team
-            """.format(
-                user=user.get_full_name() or user.email,
-                email_content=ANVIL_LOADING_DELAY_EMAIL,
-            )
+            """
             send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[user.email])
         except Exception as e:
             logger.error('AnVIL loading delay email error: {}'.format(e), user)

@@ -24,12 +24,10 @@ import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
+import { getAnvilLoadingDelayDate } from 'redux/selectors'
 import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
-
-const WARNING_HEADER = 'Planned Data Loading Delay'
-const WARNING_BANNER = null
 
 const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 
@@ -144,7 +142,7 @@ const ADD_DATA_WIZARD_PAGES = [
   { fields: [UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
+const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, anvilLoadingDelayDate, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
@@ -156,11 +154,33 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
         see &nbsp;
         <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
       </Message>
-      {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
+      {anvilLoadingDelayDate ? (
+        <Message
+          error
+          compact
+          header="Planned Data Loading Delay"
+          content={
+            <span>
+              The Broad Institute is currently having an internal retreat or is closed for winter break.
+              <br />
+              As a result, any requests for data to be loaded as of &nbsp;
+              <b>{new Date(`${anvilLoadingDelayDate}T00:00`).toDateString()}</b>
+              &nbsp; will be delayed until the &nbsp;
+              <b>
+                2nd week of January &nbsp;
+                {new Date(`${anvilLoadingDelayDate}T00:00`).getFullYear() + 1}
+              </b>
+              <br />
+              We appreciate your understanding and support of our research team taking some well-deserved time off
+              and hope you also have a nice break.
+            </span>
+          }
+        />
+      ) : null}
     </Segment>
     <FormWizard
       {...props}
-      onSubmit={onAddData || createProjectFromWorkspace}
+      onSubmit={createProject ? createProjectFromWorkspace : onAddData}
       pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
       initialValues={params}
       size="small"
@@ -179,13 +199,17 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
+  anvilLoadingDelayDate: PropTypes.string,
+  createProject: PropTypes.bool,
   onAddData: PropTypes.func,
 }
+
+const mapStateToProps = state => ({
+  anvilLoadingDelayDate: getAnvilLoadingDelayDate(state),
+})
 
 const mapDispatchToProps = {
   onAddData: addDataFromWorkspace,
 }
 
-export const AddWorkspaceDataForm = connect(null, mapDispatchToProps)(LoadWorkspaceDataForm)
-
-export default LoadWorkspaceDataForm
+export default connect(mapStateToProps, mapDispatchToProps)(LoadWorkspaceDataForm)

@@ -838,8 +838,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             'Status': 'Loading Requested',
         }}]})
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', 'We are unable to load your data at this time.')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
     @responses.activate
     def test_create_project_from_workspace_loading_delay_email(self):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -865,8 +864,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
 
         self._test_after_email_date(url, REQUEST_BODY)
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', 'We are unable to load your data at this time.')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
     @responses.activate
     def test_add_workspace_data_loading_delay_email(self):
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
@@ -899,7 +897,10 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         self.mock_send_email.assert_called_with("""Hi Test Manager User,
-            We are unable to load your data at this time.
+            We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
+            internal retreat or closed for the winter break so we are unable to load data until mid-January 
+            2022. We appreciate your understanding and support of our research team taking 
+            some well-deserved time off and hope you also have a nice break.
             - The seqr team
             """, subject='Delay in loading AnVIL in seqr', to=['test_user_manager@test.com'])
         self.mock_api_logger.error.assert_called_with(

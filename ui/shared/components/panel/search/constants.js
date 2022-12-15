@@ -347,7 +347,7 @@ export const SNP_FREQUENCIES = [
   {
     name: THIS_CALLSET_FREQUENCY,
     label: 'This Callset',
-    homHemi: false,
+    homHemi: true,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
   },
 ]
