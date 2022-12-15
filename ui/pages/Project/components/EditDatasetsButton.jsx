@@ -8,7 +8,7 @@ import { ButtonLink, NoBorderTable } from 'shared/components/StyledComponents'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import FileUploadField, { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
 import { BooleanCheckbox, Select } from 'shared/components/form/Inputs'
-import { AddWorkspaceDataForm } from 'shared/components/panel/LoadWorkspaceDataForm'
+import AddWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
