@@ -79,7 +79,7 @@ class AppPageTest(object):
         response = self.client.get(url)
         self._check_page_html(response, 'test_user')
 
-    @mock.patch('seqr.views.react_app.ANVIL_LOADING_DELAY_EMAIL_DATE', '2022-12-01')
+    @mock.patch('seqr.views.react_app.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2022-12-01')
     @mock.patch('seqr.views.react_app.datetime')
     def test_react_page_anvil_loading_delay(self, mock_datetime):
         mock_datetime.strptime.side_effect = datetime.strptime

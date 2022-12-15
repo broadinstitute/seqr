@@ -33,7 +33,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL,\
-    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, ANVIL_LOADING_DELAY_EMAIL_DATE, \
+    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, ANVIL_LOADING_DELAY_EMAIL_START_DATE, \
     SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
@@ -291,7 +291,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
             'Status': 'Loading' if trigger_success else 'Loading Requested'
         })
 
-    loading_warning_date = ANVIL_LOADING_DELAY_EMAIL_DATE and datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_DATE, '%Y-%m-%d')
+    loading_warning_date = ANVIL_LOADING_DELAY_EMAIL_START_DATE and datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d')
     if loading_warning_date and loading_warning_date <= datetime.now():
         try:
             email_body = f"""Hi {user.get_full_name() or user.email},

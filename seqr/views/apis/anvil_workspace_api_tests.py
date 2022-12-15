@@ -838,7 +838,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             'Status': 'Loading Requested',
         }}]})
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
     @responses.activate
     def test_create_project_from_workspace_loading_delay_email(self):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -864,7 +864,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
 
         self._test_after_email_date(url, REQUEST_BODY)
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
     @responses.activate
     def test_add_workspace_data_loading_delay_email(self):
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
