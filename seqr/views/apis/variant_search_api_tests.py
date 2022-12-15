@@ -59,10 +59,10 @@ expected_detail_saved_variant['mmeSubmissions'] = [
 expected_detail_saved_variant['mainTranscriptId'] = mock.ANY
 
 EXPECTED_EXOMISER_DATA = [
-    {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
-     'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
     {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
      'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+    {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
+     'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
 ]
 
 EXPECTED_LIRICAL_DATA = [
@@ -96,7 +96,6 @@ EXPECTED_SEARCH_RESPONSE = {
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
     'phenotypeGeneScores': {
         'I000001_na19675': {'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}},
-        'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
     },
     'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
 }

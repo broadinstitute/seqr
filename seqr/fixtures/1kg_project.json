@@ -1326,7 +1326,7 @@
         "individual": 2,
         "gene_id": "ENSG00000268903",
         "tool": "lirical",
-        "rank": 1,
+        "rank": 11,
         "disease_id": "OMIM:219800",
         "disease_name": "Cystinosis, nephropathic",
         "scores": {

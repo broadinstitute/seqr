@@ -147,12 +147,10 @@ def get_phenotype_prioritization(families, gene_ids=None):
     data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     gene_filter = {'gene_id__in': gene_ids} if gene_ids is not None else {}
-    phenotype_genes = PhenotypePrioritization.objects.none()
-    for indiv in Individual.objects.filter(family__in=families):
-        phenotype_genes |= PhenotypePrioritization.objects.filter(individual=indiv, **gene_filter).order_by('rank')[:10]
-
     data_dicts = _get_json_for_models(
-        phenotype_genes, nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
+        PhenotypePrioritization.objects.filter(
+            individual__family__in=families, rank__lte=10, **gene_filter).order_by('disease_id'),
+        nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 
     for data in data_dicts:
