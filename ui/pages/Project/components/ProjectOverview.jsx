@@ -25,8 +25,7 @@ import {
 import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } from '../reducers'
 import {
   getAnalysisStatusCounts,
-  getProjectAnalysisGroupFamiliesByGuid,
-  getProjectAnalysisGroupIndividualsCount,
+  getProjectAnalysisGroupFamilyIndividualCounts,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissionDetails,
   getMmeSubmissionsLoading,
@@ -142,12 +141,11 @@ const MatchmakerSubmissionOverview = connect(
   mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
 )(BaseMatchmakerSubmissionOverview)
 
-const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
-  const familySizeHistogram = Object.values(familiesByGuid)
-    .map(family => Math.min((family.individualGuids || []).length, 5))
-    .reduce((acc, familySize) => (
-      { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
-    ), {})
+const FamiliesIndividuals = React.memo(({ project, familyCounts, user }) => {
+  const familySizeHistogram = familyCounts.map(familySize => Math.min(familySize, 5)).reduce((acc, familySize) => (
+    { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
+  ), {})
+  const individualsCount = familyCounts.reduce((acc, familySize) => acc + familySize, 0)
 
   let editIndividualsButton = null
   if (user.isPm || (project.hasCaseReview && project.canEdit)) {
@@ -158,7 +156,7 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCo
 
   return (
     <DetailSection
-      title={`${Object.keys(familiesByGuid).length} Families, ${individualsCount} Individuals`}
+      title={`${Object.keys(familyCounts).length} Families, ${individualsCount} Individuals`}
       content={
         sortBy(Object.keys(familySizeHistogram)).map(size => (
           <div key={size}>{`${familySizeHistogram[size]} ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}`}</div>
@@ -171,15 +169,13 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCo
 
 FamiliesIndividuals.propTypes = {
   project: PropTypes.object.isRequired,
-  familiesByGuid: PropTypes.object.isRequired,
-  individualsCount: PropTypes.number,
+  familyCounts: PropTypes.arrayOf(PropTypes.number).isRequired,
   user: PropTypes.object.isRequired,
 }
 
 const mapFamiliesStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
-  individualsCount: getProjectAnalysisGroupIndividualsCount(state, ownProps),
+  familyCounts: getProjectAnalysisGroupFamilyIndividualCounts(state, ownProps),
 })
 
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
