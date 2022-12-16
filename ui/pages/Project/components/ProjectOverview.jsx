@@ -26,6 +26,7 @@ import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } fro
 import {
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamilyIndividualCounts,
+  getProjectAnalysisGroupDataLoadedFamilyIndividualCounts,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissionDetails,
   getMmeSubmissionsLoading,
@@ -141,22 +142,22 @@ const MatchmakerSubmissionOverview = connect(
   mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
 )(BaseMatchmakerSubmissionOverview)
 
-const FamiliesIndividuals = React.memo(({ project, familyCounts, user }) => {
+const FamiliesIndividuals = React.memo(({ project, familyCounts, user, title }) => {
   const familySizeHistogram = familyCounts.map(familySize => Math.min(familySize, 5)).reduce((acc, familySize) => (
     { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
   ), {})
   const individualsCount = familyCounts.reduce((acc, familySize) => acc + familySize, 0)
 
   let editIndividualsButton = null
-  if (user.isPm || (project.hasCaseReview && project.canEdit)) {
+  if (user && (user.isPm || (project.hasCaseReview && project.canEdit))) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
-  } else if (project.canEdit) {
+  } else if (user && project.canEdit) {
     editIndividualsButton = <EditIndividualMetadataButton />
   }
 
   return (
     <DetailSection
-      title={`${Object.keys(familyCounts).length} Families, ${individualsCount} Individuals`}
+      title={`${Object.keys(familyCounts).length} Families, ${individualsCount} Individuals${title || ''}`}
       content={
         sortBy(Object.keys(familySizeHistogram)).map(size => (
           <div key={size}>{`${familySizeHistogram[size]} ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}`}</div>
@@ -170,7 +171,8 @@ const FamiliesIndividuals = React.memo(({ project, familyCounts, user }) => {
 FamiliesIndividuals.propTypes = {
   project: PropTypes.object.isRequired,
   familyCounts: PropTypes.arrayOf(PropTypes.number).isRequired,
-  user: PropTypes.object.isRequired,
+  user: PropTypes.object,
+  title: PropTypes.string,
 }
 
 const mapFamiliesStateToProps = (state, ownProps) => ({
@@ -178,7 +180,14 @@ const mapFamiliesStateToProps = (state, ownProps) => ({
   familyCounts: getProjectAnalysisGroupFamilyIndividualCounts(state, ownProps),
 })
 
+const mapDataLoadedFamiliesStateToProps = (state, ownProps) => ({
+  title: ' With Data',
+  familyCounts: getProjectAnalysisGroupDataLoadedFamilyIndividualCounts(state, ownProps),
+})
+
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
+
+const DataLoadedFamiliesIndividualsOverview = connect(mapDataLoadedFamiliesStateToProps)(FamiliesIndividuals)
 
 const MatchmakerOverview = React.memo(({ project }) => (
   <DetailSection
@@ -369,6 +378,10 @@ const ProjectOverview = React.memo(({ familiesLoading, overviewLoading, ...props
     <Grid.Column width={5}>
       <LoadingSection loading={familiesLoading}>
         <FamiliesIndividualsOverview {...props} />
+      </LoadingSection>
+      <VerticalSpacer height={10} />
+      <LoadingSection loading={familiesLoading}>
+        <DataLoadedFamiliesIndividualsOverview {...props} />
       </LoadingSection>
       <VerticalSpacer height={10} />
       <LoadingSection loading={overviewLoading}>
