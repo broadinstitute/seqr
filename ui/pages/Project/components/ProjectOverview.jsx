@@ -359,19 +359,36 @@ const mapAnalysisStatusStateToProps = (state, ownProps) => ({
 
 const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
 
+const LoadingSection = ({ loading, children }) => (
+  loading ? <Dimmer inverted active><Loader /></Dimmer> : children
+)
+
+LoadingSection.propTypes = {
+  loading: PropTypes.bool,
+  children: PropTypes.node,
+}
+
 const ProjectOverview = React.memo(({ familiesLoading, overviewLoading, ...props }) => (
   <Grid>
     <Grid.Column width={5}>
-      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <FamiliesIndividualsOverview {...props} />}
+      <LoadingSection loading={familiesLoading}>
+        <FamiliesIndividualsOverview {...props} />
+      </LoadingSection>
       <VerticalSpacer height={10} />
-      {overviewLoading ? <Dimmer inverted active><Loader /></Dimmer> : <MatchmakerOverview {...props} />}
+      <LoadingSection loading={overviewLoading}>
+        <MatchmakerOverview {...props} />
+      </LoadingSection>
     </Grid.Column>
     <Grid.Column width={5}>
       <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[props.project.genomeVersion]} />
-      {overviewLoading ? <Dimmer inverted active><Loader /></Dimmer> : <DatasetOverview {...props} />}
+      <LoadingSection loading={overviewLoading}>
+        <DatasetOverview {...props} />
+      </LoadingSection>
     </Grid.Column>
     <Grid.Column width={6}>
-      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <AnalysisStatusOverview {...props} />}
+      <LoadingSection loading={familiesLoading}>
+        <AnalysisStatusOverview {...props} />
+      </LoadingSection>
       <VerticalSpacer height={10} />
       <AnvilOverview {...props} />
     </Grid.Column>
