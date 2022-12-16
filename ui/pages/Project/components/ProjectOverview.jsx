@@ -380,7 +380,7 @@ const ProjectOverview = React.memo(({ familiesLoading, overviewLoading, ...props
         <FamiliesIndividualsOverview {...props} />
       </LoadingSection>
       <VerticalSpacer height={10} />
-      <LoadingSection loading={familiesLoading}>
+      <LoadingSection loading={familiesLoading || overviewLoading}>
         <DataLoadedFamiliesIndividualsOverview {...props} />
       </LoadingSection>
       <VerticalSpacer height={10} />
