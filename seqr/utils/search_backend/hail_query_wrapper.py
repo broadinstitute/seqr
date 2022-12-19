@@ -967,6 +967,13 @@ class SvHailTableQuery(BaseSvHailTableQuery):
     }
     BASE_ANNOTATION_FIELDS.update(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
 
+    @classmethod
+    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
+        mt = super(SvHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
+        # TODO remove after reload main ht with correctly formatted
+        mt = mt.transmute_rows(filters=hl.set(mt.filters))
+        return mt
+
 
 QUERY_CLASS_MAP = {
     VARIANT_DATASET: VariantHailTableQuery,
