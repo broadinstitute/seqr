@@ -131,17 +131,6 @@ class BaseHailTableQuery(object):
         return mt
 
     @classmethod
-    def import_filtered_ht(cls, data_source, samples, intervals=None, **kwargs):
-        # TODO deprecate
-        load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
-        ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
-        sample_hts = {
-            s.sample_id: hl.read_table(f'/hail_datasets/{data_source}_samples/{s.sample_id}.ht', **load_table_kwargs)
-            for s in samples
-        }
-        return ht.annotate(**{sample_id: s_ht[ht.key] for sample_id, s_ht in sample_hts.items()})
-
-    @classmethod
     def import_filtered_mt(cls, data_source, samples, intervals=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
