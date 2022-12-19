@@ -1049,62 +1049,67 @@ class MultiDataTypeHailTableQuery(object):
             return hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)]
         return super(MultiDataTypeHailTableQuery, self)._get_searchable_samples(mt)
 
-    @classmethod
-    def import_filtered_ht(cls, data_source, samples, **kwargs):
-        # TODO import_filtered_mt - full_outer_join_mt?
-        data_types = list(data_source.keys())
-        sample_ids_by_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
+    @staticmethod
+    def join_mts(mt1, mt2):
+        mt = hl.experimental.full_outer_join_mt(mt1, mt2)
 
+        mt = mt.select_cols()
+
+        left_e_fields = set(mt.left_entry.dtype)
+        right_e_fields = set(mt.right_entry.dtype)
+        mt = mt.select_entries(
+            **{k: hl.or_else(mt.left_entry[k], mt.right_entry[k]) for k in left_e_fields.intersection(right_e_fields)},
+            **{k: mt.left_entry[k] for k in left_e_fields.difference(right_e_fields)},
+            **{k: mt.right_entry[k] for k in right_e_fields.difference(left_e_fields)},
+        )
+
+        left_r_fields = set(mt.left_row.dtype)
+        right_r_fields = set(mt.right_row.dtype)
+        left_transcripts_type = dict(**mt.left_row.sortedTranscriptConsequences.dtype.element_type)
+        right_transcripts_type = dict(**mt.right_row.sortedTranscriptConsequences.dtype.element_type)
+        row_expressions = {k: mt.left_row[k] for k in left_r_fields.difference(right_r_fields)}
+        row_expressions.update({k: mt.right_row[k] for k in right_r_fields.difference(left_r_fields)})
+
+        if left_transcripts_type != right_transcripts_type:
+            left_r_fields.remove('sortedTranscriptConsequences')
+            right_r_fields.remove('sortedTranscriptConsequences')
+            struct_types = left_transcripts_type
+            struct_types.update(right_transcripts_type)
+
+            def format_transcript(t):
+                return t.select(
+                    consequence_terms=t.get('consequence_terms', [t.major_consequence]),
+                    **{k: t.get(k, hl.missing(v)) for k, v in struct_types.items() if k != 'consequence_terms'},
+                )
+
+            row_expressions['sortedTranscriptConsequences'] = hl.or_else(
+                mt.left_row.sortedTranscriptConsequences.map(format_transcript),
+                mt.right_row.sortedTranscriptConsequences.map(format_transcript))
+
+        row_expressions.update({
+            k: hl.or_else(mt.left_row[k], mt.right_row[k])
+            for k in left_r_fields.intersection(right_r_fields) if k != VARIANT_KEY_FIELD
+        })
+        return mt.select_rows(**row_expressions)
+
+    @classmethod
+    def import_filtered_mt(cls, data_source, samples, **kwargs):
+        data_types = list(data_source.keys())
         data_type_0 = data_types[0]
 
-        ht = QUERY_CLASS_MAP[data_type_0].import_filtered_ht(data_source[data_type_0], samples[data_type_0], **kwargs)
-        # ht = ht.key_by(VARIANT_KEY_FIELD)  moved into import
-
-        sample_ids = deepcopy(sample_ids_by_type[data_type_0])
-        entry_types = dict(**ht[list(sample_ids)[0]].dtype)
-        entry_fields = {'GT'}
-        entry_fields.update(QUERY_CLASS_MAP[data_type_0].GENOTYPE_FIELDS.values())
-        merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
+        mt = QUERY_CLASS_MAP[data_type_0].import_filtered_mt(data_source[data_type_0], samples[data_type_0], **kwargs)
+        mt = mt.annotate_rows(dataType=data_type_0)
 
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
-            sub_ht = data_type_cls.import_filtered_ht(data_source[data_type], samples[data_type], **kwargs)
-            ht = ht.join(sub_ht.key_by(VARIANT_KEY_FIELD), how='outer')  # key by moved to import
+            sub_mt = data_type_cls.import_filtered_mt(data_source[data_type], samples[data_type], **kwargs)
+            sub_mt = sub_mt.annotate_rows(dataType=data_type)
+            mt = MultiDataTypeHailTableQuery.join_mts(mt, sub_mt)
 
-            new_type_samples = sample_ids_by_type[data_type]
-            shared_sample_ids = sample_ids.intersection(new_type_samples)
-            sample_ids.update(new_type_samples)
-
-            entry_types.update(dict(
-                **ht[f'{list(shared_sample_ids)[0]}_1' if shared_sample_ids else list(new_type_samples)[0]].dtype
-            ))
-            entry_fields.update(data_type_cls.GENOTYPE_FIELDS.values())
-
-            def genotype_expr(sample):
-                return sample.select(**{k: sample.get(k, hl.missing(entry_types[k])) for k in entry_fields})
-
-            transmute_expressions = {
-                k: hl.or_else(format(ht[k]), format(ht[f'{k}_1']))
-                for k, format in cls._import_table_transmute_expressions(ht).items()
-            }
-
-            new_merge_fields = cls.MERGE_FIELDS[data_type]
-            table_merge_fields = merge_fields.intersection(new_merge_fields)
-            table_merge_fields -= set(transmute_expressions.keys())
-            merge_fields.update(new_merge_fields)
-
-            ht = ht.transmute(
-                **transmute_expressions,
-                **{k: hl.or_else(ht[k], ht[f'{k}_1']) for k in table_merge_fields},
-                **{sample_id: genotype_expr(ht[sample_id]) for sample_id in sample_ids - shared_sample_ids},
-                **{sample_id: hl.if_else(
-                    hl.is_missing(ht[sample_id]), genotype_expr(ht[f'{sample_id}_1']), genotype_expr(ht[sample_id])
-                ) for sample_id in shared_sample_ids},
-            )
-
-        return ht
+        return mt
 
     @staticmethod
+    # TODO cleanup
     def _import_table_transmute_expressions(ht):
         return {}
 
