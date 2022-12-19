@@ -8,7 +8,7 @@ CHROMOSOMES = [
 CHROM_NUMBER_TO_CHROM = hl.literal({i: chrom for i, chrom in enumerate(CHROMOSOMES)})
 
 SEQR_FIELDS = [
-    'filters', 'rg37_locus', 'rg37_locus_end', 'svType', 'xpos',
+    'rg37_locus', 'rg37_locus_end', 'svType', 'xpos',
 ]
 RENAME_FIELDS = {
     'bothsides_support': 'bothsidesSupport', 'cpx_intervals': 'cpxIntervals', 'sv_type_detail': 'svTypeDetail',
@@ -27,6 +27,7 @@ def write_main_ht(file):
 
     variant_annotations = {
         'algorithms': hl.str(',').join(ht.algorithms),
+        'filters': hl.set(ht.filters),
         'gnomad_svs': hl.or_missing(hl.is_defined(ht.gnomad_svs_AF), hl.struct(AF=ht.gnomad_svs_AF, ID=ht.gnomad_svs_ID)),
         'interval': hl.interval(
             hl.locus(hl.format('chr%s', ht.contig), ht.start, reference_genome='GRCh38'),

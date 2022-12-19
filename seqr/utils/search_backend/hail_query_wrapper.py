@@ -970,7 +970,7 @@ class SvHailTableQuery(BaseSvHailTableQuery):
     @classmethod
     def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
         mt = super(SvHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
-        # TODO remove after reload main ht with correctly formatted
+        # TODO remove after reload main ht with correctly formatted filters
         mt = mt.transmute_rows(filters=hl.set(mt.filters))
         return mt
 
