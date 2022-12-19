@@ -13,7 +13,7 @@ SEQR_FIELDS = [
 RENAME_FIELDS = {
     'bothsides_support': 'bothsidesSupport', 'cpx_intervals': 'cpxIntervals', 'sv_type_detail': 'svTypeDetail',
 }
-CALLSET_FIELDS = {'AF': 'sf', 'AC': 'sc', 'AN': 'sn', 'Het': 'sv_callset_Het', 'Hom': 'sv_callset_Hom'}
+CALLSET_FIELDS = {'AF': 'sf', 'AC': 'sc', 'AN': 'sn', 'Hom': 'sv_callset_Hom', 'Het': 'sv_callset_Het'}
 
 
 def write_main_ht(file):
@@ -52,6 +52,10 @@ def write_main_ht(file):
 
     ht.write(f'gs://hail-backend-datasets/{file}_parsed.ht')
 
+"""
+'struct{AF: float64, AC: int32, AN: int32, Het: int32, Hom: int32}' 
+'struct{AF: float64, AC: int32, AN: int32, Hom: int32, Het: int32}'
+"""
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
