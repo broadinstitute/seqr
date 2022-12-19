@@ -102,11 +102,18 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   },
 )
 
-export const getProjectAnalysisGroupIndividualsCount = createSelector(
+export const getProjectAnalysisGroupFamilyIndividualCounts = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).reduce(
-    (acc, family) => acc + (family.individualGuids || []).length, 0,
-  ),
+  familiesByGuid => Object.values(familiesByGuid).map(family => (family.individualGuids || []).length),
+)
+
+export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSelector(
+  getProjectAnalysisGroupFamiliesByGuid,
+  getSamplesByFamily,
+  (familiesByGuid, samplesByFamily) => Object.keys(familiesByGuid).map((familyGuid) => {
+    const sampleIndividuals = new Set((samplesByFamily[familyGuid] || []).map(sample => sample.individualGuid))
+    return sampleIndividuals.size
+  }).filter(size => size > 0),
 )
 
 export const getProjectAnalysisGroupIndividualsByGuid = createSelector(

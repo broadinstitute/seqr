@@ -25,8 +25,8 @@ import {
 import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } from '../reducers'
 import {
   getAnalysisStatusCounts,
-  getProjectAnalysisGroupFamiliesByGuid,
-  getProjectAnalysisGroupIndividualsCount,
+  getProjectAnalysisGroupFamilyIndividualCounts,
+  getProjectAnalysisGroupDataLoadedFamilyIndividualCounts,
   getProjectAnalysisGroupSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissionDetails,
   getMmeSubmissionsLoading,
@@ -142,23 +142,22 @@ const MatchmakerSubmissionOverview = connect(
   mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
 )(BaseMatchmakerSubmissionOverview)
 
-const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCount, user }) => {
-  const familySizeHistogram = Object.values(familiesByGuid)
-    .map(family => Math.min((family.individualGuids || []).length, 5))
-    .reduce((acc, familySize) => (
-      { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
-    ), {})
+const FamiliesIndividuals = React.memo(({ project, familyCounts, user, title }) => {
+  const familySizeHistogram = familyCounts.map(familySize => Math.min(familySize, 5)).reduce((acc, familySize) => (
+    { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
+  ), {})
+  const individualsCount = familyCounts.reduce((acc, familySize) => acc + familySize, 0)
 
   let editIndividualsButton = null
-  if (user.isPm || (project.hasCaseReview && project.canEdit)) {
+  if (user && (user.isPm || (project.hasCaseReview && project.canEdit))) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
-  } else if (project.canEdit) {
+  } else if (user && project.canEdit) {
     editIndividualsButton = <EditIndividualMetadataButton />
   }
 
   return (
     <DetailSection
-      title={`${Object.keys(familiesByGuid).length} Families, ${individualsCount} Individuals`}
+      title={`${Object.keys(familyCounts).length} Families, ${individualsCount} Individuals${title || ''}`}
       content={
         sortBy(Object.keys(familySizeHistogram)).map(size => (
           <div key={size}>{`${familySizeHistogram[size]} ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}`}</div>
@@ -171,18 +170,24 @@ const FamiliesIndividuals = React.memo(({ project, familiesByGuid, individualsCo
 
 FamiliesIndividuals.propTypes = {
   project: PropTypes.object.isRequired,
-  familiesByGuid: PropTypes.object.isRequired,
-  individualsCount: PropTypes.number,
-  user: PropTypes.object.isRequired,
+  familyCounts: PropTypes.arrayOf(PropTypes.number).isRequired,
+  user: PropTypes.object,
+  title: PropTypes.string,
 }
 
 const mapFamiliesStateToProps = (state, ownProps) => ({
   user: getUser(state),
-  familiesByGuid: getProjectAnalysisGroupFamiliesByGuid(state, ownProps),
-  individualsCount: getProjectAnalysisGroupIndividualsCount(state, ownProps),
+  familyCounts: getProjectAnalysisGroupFamilyIndividualCounts(state, ownProps),
+})
+
+const mapDataLoadedFamiliesStateToProps = (state, ownProps) => ({
+  title: ' With Data',
+  familyCounts: getProjectAnalysisGroupDataLoadedFamilyIndividualCounts(state, ownProps),
 })
 
 const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesIndividuals)
+
+const DataLoadedFamiliesIndividualsOverview = connect(mapDataLoadedFamiliesStateToProps)(FamiliesIndividuals)
 
 const MatchmakerOverview = React.memo(({ project }) => (
   <DetailSection
@@ -359,19 +364,40 @@ const mapAnalysisStatusStateToProps = (state, ownProps) => ({
 
 const AnalysisStatusOverview = connect(mapAnalysisStatusStateToProps)(AnalysisStatus)
 
+const LoadingSection = ({ loading, children }) => (
+  loading ? <Dimmer inverted active><Loader /></Dimmer> : children
+)
+
+LoadingSection.propTypes = {
+  loading: PropTypes.bool,
+  children: PropTypes.node,
+}
+
 const ProjectOverview = React.memo(({ familiesLoading, overviewLoading, ...props }) => (
   <Grid>
     <Grid.Column width={5}>
-      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <FamiliesIndividualsOverview {...props} />}
+      <LoadingSection loading={familiesLoading}>
+        <FamiliesIndividualsOverview {...props} />
+      </LoadingSection>
       <VerticalSpacer height={10} />
-      {overviewLoading ? <Dimmer inverted active><Loader /></Dimmer> : <MatchmakerOverview {...props} />}
+      <LoadingSection loading={familiesLoading || overviewLoading}>
+        <DataLoadedFamiliesIndividualsOverview {...props} />
+      </LoadingSection>
+      <VerticalSpacer height={10} />
+      <LoadingSection loading={overviewLoading}>
+        <MatchmakerOverview {...props} />
+      </LoadingSection>
     </Grid.Column>
     <Grid.Column width={5}>
       <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[props.project.genomeVersion]} />
-      {overviewLoading ? <Dimmer inverted active><Loader /></Dimmer> : <DatasetOverview {...props} />}
+      <LoadingSection loading={overviewLoading}>
+        <DatasetOverview {...props} />
+      </LoadingSection>
     </Grid.Column>
     <Grid.Column width={6}>
-      {familiesLoading ? <Dimmer inverted active><Loader /></Dimmer> : <AnalysisStatusOverview {...props} />}
+      <LoadingSection loading={familiesLoading}>
+        <AnalysisStatusOverview {...props} />
+      </LoadingSection>
       <VerticalSpacer height={10} />
       <AnvilOverview {...props} />
     </Grid.Column>
