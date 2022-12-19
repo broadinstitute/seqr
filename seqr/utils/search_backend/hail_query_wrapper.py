@@ -980,7 +980,6 @@ DATA_TYPE_POPULATIONS_MAP = {data_type: set(cls.POPULATIONS.keys()) for data_typ
 
 class MultiDataTypeHailTableQuery(object):
 
-    MERGE_FIELDS = {}
     DATA_TYPE_ANNOTATION_FIELDS = []
 
     def __init__(self, data_source, *args, **kwargs):
@@ -1007,29 +1006,19 @@ class MultiDataTypeHailTableQuery(object):
 
         super(MultiDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
-    def get_row_data_type(self, r):
-        # TODO add data_type annotation at import time
-        return self.data_type_for_row(r)
-
-    @staticmethod
-    def data_type_for_row(r):
-        raise NotImplementedError
-
     def _annotation_for_data_type(self, field):
         def field_annotation(r):
-            data_type = self.get_row_data_type(r)
             case = hl.case()
             for cls_type in self._data_types:
                 cls = QUERY_CLASS_MAP[cls_type]
                 if field in cls.BASE_ANNOTATION_FIELDS:
-                    case = case.when(data_type == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
+                    case = case.when(r.dataType == cls_type, cls.BASE_ANNOTATION_FIELDS[field](r))
             return case.or_missing()
         return field_annotation
 
     def population_expression(self, r, population, pop_config):
-        data_type = self.get_row_data_type(r)
         return hl.or_missing(
-            hl.dict(DATA_TYPE_POPULATIONS_MAP)[data_type].contains(population),
+            hl.dict(DATA_TYPE_POPULATIONS_MAP)[r.dataType].contains(population),
             super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
@@ -1046,7 +1035,7 @@ class MultiDataTypeHailTableQuery(object):
 
     def _get_searchable_samples(self, mt):
         if self._sample_ids_by_dataset_type:
-            return hl.dict(self._sample_ids_by_dataset_type)[self.get_row_data_type(mt)]
+            return hl.dict(self._sample_ids_by_dataset_type)[mt.dataType]
         return super(MultiDataTypeHailTableQuery, self)._get_searchable_samples(mt)
 
     @staticmethod
@@ -1108,16 +1097,9 @@ class MultiDataTypeHailTableQuery(object):
 
         return mt
 
-    @staticmethod
-    # TODO cleanup
-    def _import_table_transmute_expressions(ht):
-        return {}
-
 
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
-    SV_MERGE_FIELDS = {'interval', 'svType', 'rg37_locus', 'rg37_locus_end', 'strvctvre', 'sortedTranscriptConsequences'}
-    MERGE_FIELDS = {GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS}
     DATA_TYPE_ANNOTATION_FIELDS = ['end', 'pos']
 
     def __init__(self, *args, **kwargs):
@@ -1127,27 +1109,8 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
             for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()
         }
 
-    @staticmethod
-    def data_type_for_row(r):
-        return hl.if_else(hl.is_defined(r.svType) & r.svType.startswith('gCNV_'), GCNV_KEY, SV_KEY)
-
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
-
-    VARIANT_MERGE_FIELDS = {
-        'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rg37_locus', 'rsid',
-        'sortedTranscriptConsequences', 'xpos',
-    }
-
-    MERGE_FIELDS = {VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS}
-
-    @staticmethod
-    def data_type_for_row(r):
-        return hl.if_else(
-            hl.is_defined(r.high_constraint_region),  # TODO use is_mito after reloading table
-            MITO_DATASET,
-            VARIANT_DATASET,
-        )
 
     @classmethod
     def _format_quality_filter(cls, quality_filter):
@@ -1159,27 +1122,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
 
     GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
 
-    MERGE_FIELDS = deepcopy(AllVariantHailTableQuery.MERGE_FIELDS)
-    MERGE_FIELDS.update(AllSvHailTableQuery.MERGE_FIELDS)
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
-
-    def get_row_data_type(self, r):
-        return hl.if_else(
-            hl.is_defined(r.svType),
-            AllSvHailTableQuery.data_type_for_row(r),
-            AllVariantHailTableQuery.data_type_for_row(r) if MITO_DATASET in self._data_types else VARIANT_DATASET,
-        )
-
-    @staticmethod
-    def _import_table_transmute_expressions(ht):
-        struct_types = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
-        struct_types.update(dict(**ht.sortedTranscriptConsequences_1.dtype.element_type))
-        return {
-            'sortedTranscriptConsequences': lambda consequences: consequences.map(lambda t: t.select(
-                consequence_terms=t.get('consequence_terms', [t.major_consequence]),
-                **{k: t.get(k, hl.missing(struct_types[k])) for k in VariantHailTableQuery.TRANSCRIPT_FIELDS},
-            )),
-       }
 
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):

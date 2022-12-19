@@ -49,7 +49,6 @@ def write_main_ht(file):
         'haplogroup': hl.struct(
             is_defining=hl.if_else(ht.hap_defining_variant, hl.str('Y'), hl.missing(hl.dtype('str'))),
         ),
-        'is_mito': True,
     }
     ht = ht.annotate(**annotations)
     ht = ht.select_globals().select(*SEQR_FIELDS, *annotations.keys())
