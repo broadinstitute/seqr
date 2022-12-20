@@ -18,15 +18,15 @@ CLINVAR_SIGNIFICANCES = {sig: i for i, sig in enumerate([
     'Conflicting_interpretations_of_pathogenicity,_drug_response,_other',
     'Conflicting_interpretations_of_pathogenicity,_other', 'Uncertain_significance',
     'Uncertain_significance,_risk_factor', 'Uncertain_significance,_Affects', 'Uncertain_significance,_association',
-    'Uncertain_significance,_other', 'Affects', 'Affects,_risk_factor', 'Affects,_association', 'other',
-    'drug_response,_risk_factor', 'association', 'confers_sensitivity', 'drug_response', 'not_provided',
+    'Uncertain_significance,_other', 'Affects', 'Affects,_risk_factor', 'Affects,_association', 'other', 'NA',
+    'risk_factor', 'drug_response,_risk_factor', 'association', 'confers_sensitivity', 'drug_response', 'not_provided',
     'Likely_benign,_drug_response,_other', 'Likely_benign,_other', 'Likely_benign', 'Benign/Likely_benign,_risk_factor',
     'Benign/Likely_benign,_drug_response', 'Benign/Likely_benign,_other', 'Benign/Likely_benign', 'Benign,_risk_factor',
     'Benign,_confers_sensitivity', 'Benign,_association,_confers_sensitivity', 'Benign,_drug_response', 'Benign,_other',
     'Benign,_protective', 'Benign', 'protective,_risk_factor', 'protective',
 ])}
 HGMD_SIGNIFICANCES = {sig: i for i, sig in enumerate([
-    'DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV',
+    'DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV', 'R',
 ])}
 
 CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
@@ -71,13 +71,17 @@ CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
     "intergenic_variant",
 ])}
 
-SIFT_FATHMM_MAP = {val: i for i, val in enumerate(['Damaging', 'Tolerated'])}
-POLYPHEN_MAP = {val: i for i, val in enumerate([
-    'Probably Damaging', 'Possibly Damaging', 'Benign',
-])}
-MUT_TASTER_MAP = {val: i for i, val in enumerate([
-    'disease causing', 'disease causing automatic', 'polymorphism', 'polymorphism automatic',
-])}
+SIFT_FATHMM_MAP = {val: i for i, val in enumerate(['D', 'T'])}
+POLYPHEN_MAP = {val: i for i, val in enumerate(['D', 'P', 'B'])}
+MUT_TASTER_MAP = {val: i for i, val in enumerate(['D', 'A', 'N', 'P'])}
+
+
+def predictor_expr(field, map):
+    return hl.bind(
+        lambda pred_key: hl.or_missing(hl.is_defined(pred_key), hl.dict(map)[pred_key]),
+        field.split(';').find(lambda p: p != '.'),
+    )
+
 
 ANNOTATIONS = {
     VARIANT_TYPE: {
@@ -86,23 +90,23 @@ ANNOTATIONS = {
             AC=ht.AC,
             AN=ht.AN,
         ),
-        'clinvar': lambda ht: hl.struct(
+        'clinvar': lambda ht: hl.or_missing(hl.is_defined(ht.clinvar.clinical_significance), hl.struct(
             clinical_significance_id=hl.dict(CLINVAR_SIGNIFICANCES)[ht.clinvar.clinical_significance],
             alleleId=ht.clinvar.allele_id,
             goldStars=ht.clinvar.gold_stars,
-        ),
+        )),
         'dbnsfp': lambda ht: hl.struct(
-            SIFT_pred=hl.dict(SIFT_FATHMM_MAP)[ht.dbnsfp.SIFT_pred],
-            Polyphen2_HVAR_pred=hl.dict(POLYPHEN_MAP)[ht.dbnsfp.Polyphen2_HVAR_pred],
-            MutationTaster_pred=hl.dict(MUT_TASTER_MAP)[ht.dbnsfp.MutationTaster_pred],
-            FATHMM_pred=hl.dict(SIFT_FATHMM_MAP)[ht.dbnsfp.FATHMM_pred],
-            REVEL_score=hl.float(ht.dbnsfp.REVEL_score),
+            SIFT_pred_id=predictor_expr(ht.dbnsfp.SIFT_pred, SIFT_FATHMM_MAP),
+            Polyphen2_HVAR_pred_id=predictor_expr(ht.dbnsfp.Polyphen2_HVAR_pred, POLYPHEN_MAP),
+            MutationTaster_pred_id=predictor_expr(ht.dbnsfp.MutationTaster_pred, MUT_TASTER_MAP),
+            FATHMM_pred_id=predictor_expr(ht.dbnsfp.FATHMM_pred, SIFT_FATHMM_MAP),
+            REVEL_score=hl.parse_float(ht.dbnsfp.REVEL_score),
         ),
-        'hgmd': lambda ht: hl.struct(
+        'hgmd': lambda ht: hl.or_missing(hl.is_defined(ht.hgmd['class']), hl.struct(
             class_id=hl.dict(HGMD_SIGNIFICANCES)[ht.hgmd['class']],
             accession=ht.hgmd.accession,
-        ),
-        'mpc': lambda ht: hl.struct(MPC=hl.float(ht.mpc.MPC)),
+        )),
+        'mpc': lambda ht: hl.struct(MPC=hl.parse_float(ht.mpc.MPC)),
         'sortedTranscriptConsequences': lambda ht: ht.sortedTranscriptConsequences.map(
             lambda t: t.select(
                 'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp', 'lof', 'lof_filter',

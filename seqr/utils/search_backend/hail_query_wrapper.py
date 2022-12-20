@@ -31,6 +31,40 @@ INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
 GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
 SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
 
+CLINVAR_SIGNIFICANCES = [
+    'Pathogenic', 'Pathogenic,_risk_factor', 'Pathogenic,_Affects', 'Pathogenic,_drug_response',
+    'Pathogenic,_drug_response,_protective,_risk_factor', 'Pathogenic,_association', 'Pathogenic,_other',
+    'Pathogenic,_association,_protective', 'Pathogenic,_protective', 'Pathogenic/Likely_pathogenic',
+    'Pathogenic/Likely_pathogenic,_risk_factor', 'Pathogenic/Likely_pathogenic,_drug_response',
+    'Pathogenic/Likely_pathogenic,_other', 'Likely_pathogenic,_risk_factor', 'Likely_pathogenic',
+    'Conflicting_interpretations_of_pathogenicity', 'Conflicting_interpretations_of_pathogenicity,_risk_factor',
+    'Conflicting_interpretations_of_pathogenicity,_Affects',
+    'Conflicting_interpretations_of_pathogenicity,_association,_risk_factor',
+    'Conflicting_interpretations_of_pathogenicity,_other,_risk_factor',
+    'Conflicting_interpretations_of_pathogenicity,_association',
+    'Conflicting_interpretations_of_pathogenicity,_drug_response',
+    'Conflicting_interpretations_of_pathogenicity,_drug_response,_other',
+    'Conflicting_interpretations_of_pathogenicity,_other', 'Uncertain_significance',
+    'Uncertain_significance,_risk_factor', 'Uncertain_significance,_Affects', 'Uncertain_significance,_association',
+    'Uncertain_significance,_other', 'Affects', 'Affects,_risk_factor', 'Affects,_association', 'other', 'NA',
+    'risk_factor', 'drug_response,_risk_factor', 'association', 'confers_sensitivity', 'drug_response', 'not_provided',
+    'Likely_benign,_drug_response,_other', 'Likely_benign,_other', 'Likely_benign', 'Benign/Likely_benign,_risk_factor',
+    'Benign/Likely_benign,_drug_response', 'Benign/Likely_benign,_other', 'Benign/Likely_benign', 'Benign,_risk_factor',
+    'Benign,_confers_sensitivity', 'Benign,_association,_confers_sensitivity', 'Benign,_drug_response', 'Benign,_other',
+    'Benign,_protective', 'Benign', 'protective,_risk_factor', 'protective',
+]
+CLINVAR_SIG_MAP = {sig: i for i, sig in enumerate(CLINVAR_SIGNIFICANCES)}
+HGMD_SIGNIFICANCES = ['DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV', 'R']
+HGMD_SIG_MAP = {sig: i for i, sig in enumerate(HGMD_SIGNIFICANCES)}
+
+PREDICTION_FIELD_ID_LOOKUP = {
+    'fathmm': ['D', 'T'],
+    'mut_taster': ['D', 'A', 'N', 'P'],
+    'polyphen': ['D', 'P', 'B'],
+    'sift': ['D', 'T'],
+}
+
+
 class BaseHailTableQuery(object):
 
     GENOTYPE_QUERY_MAP = {
@@ -84,7 +118,9 @@ class BaseHailTableQuery(object):
                 for population, pop_config in self.populations_configs.items()
             }),
             'predictions': lambda r: hl.struct(**{
-                prediction: r[path[0]][path[1]] for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
+                prediction: hl.array(PREDICTION_FIELD_ID_LOOKUP[prediction])[r[path[0]][path[1]]]
+                if prediction in PREDICTION_FIELD_ID_LOOKUP else r[path[0]][path[1]]
+                for prediction, path in self.PREDICTION_FIELDS_CONFIG.items()
             }),
             'transcripts': lambda r: hl.or_else(
                 r.sortedTranscriptConsequences, hl.empty_array(r.sortedTranscriptConsequences.dtype.element_type)
@@ -264,7 +300,7 @@ class BaseHailTableQuery(object):
         if not frequencies:
             return
 
-        clinvar_path_terms = [f for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES]
+        clinvar_path_terms = [CLINVAR_SIG_MAP[f] for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES]
         has_path_override = bool(clinvar_path_terms) and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
@@ -275,7 +311,7 @@ class BaseHailTableQuery(object):
                 pop_filter = self._mt[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
-                            hl.set(clinvar_path_terms).contains(self._mt.clinvar.clinical_significance) &
+                            hl.set(clinvar_path_terms).contains(self._mt.clinvar.clinical_significance_id) &
                             (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
@@ -315,14 +351,10 @@ class BaseHailTableQuery(object):
         for in_silico, value in in_silico_filters.items():
             score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
             ht_value = self._mt[score_path[0]][score_path[1]]
-            try:
-                float_val = float(value)
-                if ht_value.dtype == hl.tstr:
-                    # In production: store all numeric scores as floats
-                    ht_value = hl.parse_float(ht_value)
-                score_filter = ht_value >= float_val
-            except ValueError:
+            if in_silico in PREDICTION_FIELD_ID_LOOKUP:
                 score_filter = ht_value.startswith(value)
+            else:
+                score_filter = ht_value >= float(value)
 
             if in_silico_q is None:
                 in_silico_q = score_filter
@@ -356,12 +388,16 @@ class BaseHailTableQuery(object):
         annotation_filters = []
 
         if self._consequence_overrides[CLINVAR_KEY]:
-            allowed_significances = hl.set(self._consequence_overrides[CLINVAR_KEY])
-            clinvar_key = 'clinicalSignificance' if use_parsed_fields else 'clinical_significance'
+            if use_parsed_fields:
+                allowed_significances = hl.set(self._consequence_overrides[CLINVAR_KEY])
+                clinvar_key = 'clinicalSignificance'
+            else:
+                allowed_significances = hl.set({CLINVAR_SIG_MAP[s] for s in self._consequence_overrides[CLINVAR_KEY]})
+                clinvar_key = 'clinical_significance_id'
             annotation_filters.append(allowed_significances.contains(mt.clinvar[clinvar_key]))
         if self._consequence_overrides[HGMD_KEY]:
-            allowed_classes = hl.set(self._consequence_overrides[HGMD_KEY])
-            annotation_filters.append(allowed_classes.contains(mt.hgmd['class']))
+            allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in self._consequence_overrides[HGMD_KEY]})
+            annotation_filters.append(allowed_classes.contains(mt.hgmd.class_id))
         if self._consequence_overrides[SPLICE_AI_FIELD]:
             splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
             score_path = ('predictions', 'splice_ai') if use_parsed_fields else self.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
@@ -678,11 +714,11 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'callset': {'hom': None, 'hemi': None, 'het': None},
     }
     PREDICTION_FIELDS_CONFIG = {
-        'fathmm': ('dbnsfp', 'FATHMM_pred'),
-        'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
-        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
+        'fathmm': ('dbnsfp', 'FATHMM_pred_id'),
+        'mut_taster': ('dbnsfp', 'MutationTaster_pred_id'),
+        'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred_id'),
         'revel': ('dbnsfp', 'REVEL_score'),
-        'sift': ('dbnsfp', 'SIFT_pred'),
+        'sift': ('dbnsfp', 'SIFT_pred_id'),
     }
     TRANSCRIPT_FIELDS = BaseHailTableQuery.TRANSCRIPT_FIELDS + [
         'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_filter', 'lof_flags', 'lof_info',
@@ -695,10 +731,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'pos': lambda r: r.locus.position,
         'ref': lambda r: r.alleles[0],
         'alt': lambda r: r.alleles[1],
-        'clinvar': lambda r: hl.struct(  # In production - format in main HT?
-            clinicalSignificance=r.clinvar.clinical_significance,
-            alleleId=r.clinvar.allele_id,
-            goldStars=r.clinvar.gold_stars,
+        'clinvar': lambda r: r.clinvar.select(
+            'alleleId', 'goldStars',
+            clinicalSignificance=hl.array(CLINVAR_SIGNIFICANCES)[r.clinvar.clinical_significance_id],
         ),
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
         'mainTranscriptId': lambda r: r.sortedTranscriptConsequences[0].transcript_id,
@@ -779,19 +814,11 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
     ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
 
-    CORE_FIELDS = BaseVariantHailTableQuery.CORE_FIELDS + ['hgmd']
     BASE_ANNOTATION_FIELDS = {
+        'hgmd': lambda r: r.hgmd.select('accession', **{'class': hl.array(HGMD_SIGNIFICANCES)[r.hgmd.class_id]}),
         'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
-
-    @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        mt = super(VariantHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
-        # In production: will not have callset frequency, may rename or rework these fields and filters
-        # TODO remove
-        mt = mt.annotate_rows(callset=hl.struct(**{field: mt[field] for field in ['AF', 'AC', 'AN']}))
-        return mt
 
     def _get_invalid_quality_filter_expr(self, mt, quality_filter):
         min_ab = (quality_filter or {}).get('min_ab')
