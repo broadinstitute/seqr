@@ -114,13 +114,16 @@ ANNOTATIONS = {
                 sorted_consequence_ids=hl.sorted(t.consequence_terms.map(lambda c: hl.dict(CONSEQUENCE_RANKS)[c])),
             )
         ),
+        # TODO map screen -> region_type
     },
 }
 
-ANNOTATIONS[VARIANT_TYPE].update({k: lambda ht: ht[k] for k in [
-    'cadd', 'eigen', 'exac', 'filters', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_non_coding_constraint',
-    'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'screen', 'splice_ai', 'topmed', 'variantId', 'xpos',
-]})
+SELECT_FIELDS = {
+    VARIANT_TYPE: [
+        'cadd', 'eigen', 'exac', 'filters', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_non_coding_constraint',
+        'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'screen', 'splice_ai', 'topmed', 'variantId', 'xpos',
+    ],
+}
 
 
 def _get_file_path(file):
@@ -153,9 +156,8 @@ def write_main_ht(file, data_type):
     ht = hl.read_table(_get_interval_file_path(file)) if data_type == VARIANT_TYPE else \
         hl.read_matrix_table(_get_file_path(file)).rows()
 
-    annotations = ANNOTATIONS[data_type]
     ht = ht.select_globals()
-    ht = ht.select(**{k: v(ht) for k, v in annotations.items()})
+    ht = ht.select(*SELECT_FIELDS[data_type], **{k: v(ht) for k, v in ANNOTATIONS[data_type].items()})
     ht.write(f'gs://hail-backend-datasets/{file}.ht')
 
 

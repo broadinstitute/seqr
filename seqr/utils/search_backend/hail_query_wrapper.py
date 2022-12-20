@@ -31,6 +31,49 @@ INHERITANCE_FILTERS[COMPOUND_HET][AFFECTED] = COMP_HET_ALT
 GCNV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WES}'
 SV_KEY = f'{SV_DATASET}_{Sample.SAMPLE_TYPE_WGS}'
 
+CONSEQUENCE_RANKS = [
+    "transcript_ablation",
+    "splice_acceptor_variant",
+    "splice_donor_variant",
+    "stop_gained",
+    "frameshift_variant",
+    "stop_lost",
+    "start_lost",  # new in v81
+    "initiator_codon_variant",  # deprecated
+    "transcript_amplification",
+    "inframe_insertion",
+    "inframe_deletion",
+    "missense_variant",
+    "protein_altering_variant",  # new in v79
+    "splice_region_variant",
+    "incomplete_terminal_codon_variant",
+    "start_retained_variant",
+    "stop_retained_variant",
+    "synonymous_variant",
+    "coding_sequence_variant",
+    "mature_miRNA_variant",
+    "5_prime_UTR_variant",
+    "3_prime_UTR_variant",
+    "non_coding_transcript_exon_variant",
+    "non_coding_exon_variant",  # deprecated
+    "intron_variant",
+    "NMD_transcript_variant",
+    "non_coding_transcript_variant",
+    "nc_transcript_variant",  # deprecated
+    "upstream_gene_variant",
+    "downstream_gene_variant",
+    "TFBS_ablation",
+    "TFBS_amplification",
+    "TF_binding_site_variant",
+    "regulatory_region_ablation",
+    "regulatory_region_amplification",
+    "feature_elongation",
+    "regulatory_region_variant",
+    "feature_truncation",
+    "intergenic_variant",
+]
+CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(CONSEQUENCE_RANKS)}
+
 CLINVAR_SIGNIFICANCES = [
     'Pathogenic', 'Pathogenic,_risk_factor', 'Pathogenic,_Affects', 'Pathogenic,_drug_response',
     'Pathogenic,_drug_response,_protective,_risk_factor', 'Pathogenic,_association', 'Pathogenic,_other',
@@ -124,9 +167,7 @@ class BaseHailTableQuery(object):
             }),
             'transcripts': lambda r: hl.or_else(
                 r.sortedTranscriptConsequences, hl.empty_array(r.sortedTranscriptConsequences.dtype.element_type)
-            ).map(
-                lambda t: hl.struct(**{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS})
-            ).group_by(lambda t: t.geneId),
+            ).map(lambda t: self.format_transcript(t)).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
@@ -138,6 +179,9 @@ class BaseHailTableQuery(object):
             response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
             for response_key, field in pop_config.items() if field is not None
         })
+
+    def format_transcript(self, t):
+        return hl.struct(**{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS})
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False, **kwargs):
         self._genome_version = genome_version
@@ -370,11 +414,10 @@ class BaseHailTableQuery(object):
         self._mt = self._mt.filter_rows(in_silico_q | missing_in_silico_q)
 
     def _filter_by_annotations(self, allowed_consequences):
-        annotation_filters =  self._get_annotation_override_filters(self._mt)
+        annotation_filters = self._get_annotation_override_filters(self._mt)
         if allowed_consequences:
-            annotation_filters.append(
-                self._get_consequence_terms().any(lambda ct: hl.set(allowed_consequences).contains(ct))
-            )
+            annotation_filters.append(self._mt.sortedTranscriptConsequences.any(
+                lambda tc: self._is_allowed_consequence_filter(tc, allowed_consequences)))
 
         if not annotation_filters:
             return self._mt
@@ -408,8 +451,10 @@ class BaseHailTableQuery(object):
 
         return annotation_filters
 
-    def _get_consequence_terms(self):
-        return self._mt.sortedTranscriptConsequences.map(lambda tc: tc.major_consequence)
+    @staticmethod
+    def _is_allowed_consequence_filter(tc, allowed_consequences):
+        # TODO change after SV loading
+        return hl.set(allowed_consequences).contains(tc.major_consequence)
 
     def _annotate_filtered_genotypes(self, *args):
         self._mt = self._filter_by_genotype(self._mt, *args)
@@ -753,6 +798,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
         consequence_transcripts = None
         if self._allowed_consequences:
+            # TODO sortedTranscriptConsequences
             consequence_transcripts = get_matching_transcripts(self._allowed_consequences, 'major_consequence')
             if self._allowed_consequences_secondary:
                 consequence_transcripts = hl.if_else(
@@ -786,8 +832,17 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         mt = mt.key_rows_by(VARIANT_KEY_FIELD)
         return mt
 
-    def _get_consequence_terms(self):
-        return self._mt.sortedTranscriptConsequences.flatmap(lambda tc: tc.consequence_terms)
+    def format_transcript(self, t):
+        return super(BaseVariantHailTableQuery, self).format_transcript(
+            t.annotate(major_consequence=hl.array(CONSEQUENCE_RANKS)[t.sorted_consequence_ids[0]])
+        )
+
+    @staticmethod
+    def _is_allowed_consequence_filter(tc, allowed_consequences):
+        allowed_consequence_ids = hl.set({
+            CONSEQUENCE_RANK_MAP[c] for c in allowed_consequences if CONSEQUENCE_RANK_MAP.get(c)
+        })
+        return allowed_consequence_ids.intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
 
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
@@ -1092,10 +1147,7 @@ class MultiDataTypeHailTableQuery(object):
             struct_types.update(right_transcripts_type)
 
             def format_transcript(t):
-                return t.select(
-                    consequence_terms=t.get('consequence_terms', [t.major_consequence]),
-                    **{k: t.get(k, hl.missing(v)) for k, v in struct_types.items() if k != 'consequence_terms'},
-                )
+                return t.select(**{k: t.get(k, hl.missing(v)) for k, v in struct_types.items()})
 
             row_expressions['sortedTranscriptConsequences'] = hl.or_else(
                 mt.left_row.sortedTranscriptConsequences.map(format_transcript),
@@ -1156,6 +1208,14 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             hl.is_defined(mt.svType),
             BaseSvHailTableQuery.get_x_chrom_filter(mt, x_interval),
             VariantHailTableQuery.get_x_chrom_filter(mt, x_interval),
+        )
+
+    @staticmethod
+    def _is_allowed_consequence_filter(tc, allowed_consequences):
+        return hl.if_else(
+            hl.is_defined(tc.sorted_consequence_ids),
+            VariantHailTableQuery.is_allowed_consequence_filter(tc, allowed_consequences),
+            BaseSvHailTableQuery.is_allowed_consequence_filter(tc, allowed_consequences),
         )
 
     def _valid_comp_het_families_expr(self, ch_ht):
