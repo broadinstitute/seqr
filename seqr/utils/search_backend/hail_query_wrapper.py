@@ -679,7 +679,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
     PREDICTION_FIELDS_CONFIG = {
         'fathmm': ('dbnsfp', 'FATHMM_pred'),
-        'mutationtaster': ('dbnsfp', 'MutationTaster_pred'),
+        'mut_taster': ('dbnsfp', 'MutationTaster_pred'),
         'polyphen': ('dbnsfp', 'Polyphen2_HVAR_pred'),
         'revel': ('dbnsfp', 'REVEL_score'),
         'sift': ('dbnsfp', 'SIFT_pred'),
@@ -789,6 +789,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
         mt = super(VariantHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
         # In production: will not have callset frequency, may rename or rework these fields and filters
+        # TODO remove
         mt = mt.annotate_rows(callset=hl.struct(**{field: mt[field] for field in ['AF', 'AC', 'AN']}))
         return mt
 
