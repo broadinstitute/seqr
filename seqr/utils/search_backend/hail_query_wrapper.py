@@ -9,7 +9,8 @@ from seqr.models import Sample, Individual
 from seqr.utils.elasticsearch.utils import InvalidSearchException
 from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, X_LINKED_RECESSIVE, ANY_AFFECTED, NEW_SV_FIELD, \
     INHERITANCE_FILTERS, ALT_ALT, REF_REF, REF_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, MAX_NO_LOCATION_COMP_HET_FAMILIES, \
-    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF
+    CLINVAR_SIGNFICANCE_MAP, HGMD_CLASS_MAP, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_KEY, HGMD_KEY, PATH_FREQ_OVERRIDE_CUTOFF, \
+    SCREEN_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +214,7 @@ class BaseHailTableQuery(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {
-            CLINVAR_KEY: set(), HGMD_KEY: set(), SPLICE_AI_FIELD: None,
+            CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: set(), SPLICE_AI_FIELD: None,
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
         }
         self._save_samples(samples)
@@ -462,6 +463,9 @@ class BaseHailTableQuery(object):
         if self._consequence_overrides[HGMD_KEY]:
             allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in self._consequence_overrides[HGMD_KEY]})
             annotation_filters.append(allowed_classes.contains(mt.hgmd.class_id))
+        if self._consequence_overrides[SCREEN_KEY]:
+            allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in self._consequence_overrides[SCREEN_KEY]})
+            annotation_filters.append(allowed_consequences.contains(mt.screen.region_type_id))
         if self._consequence_overrides[SPLICE_AI_FIELD]:
             splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
             score_path = ('predictions', 'splice_ai') if use_parsed_fields else self.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
@@ -889,7 +893,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
-    ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD]
+    ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD, SCREEN_KEY]
 
     BASE_ANNOTATION_FIELDS = {
         'hgmd': lambda r: r.hgmd.select('accession', **{'class': hl.array(HGMD_SIGNIFICANCES)[r.hgmd.class_id]}),

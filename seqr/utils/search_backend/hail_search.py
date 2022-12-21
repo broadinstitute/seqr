@@ -3,7 +3,7 @@ import logging
 
 from seqr.models import Sample
 from seqr.utils.elasticsearch.utils import InvalidSearchException
-from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD
+from seqr.utils.elasticsearch.constants import RECESSIVE, COMPOUND_HET, NEW_SV_FIELD, SCREEN_KEY
 from seqr.utils.elasticsearch.es_search import EsSearch
 from seqr.utils.search_backend.hail_query_wrapper import QUERY_CLASS_MAP, STRUCTURAL_ANNOTATION_FIELD, \
     AllVariantHailTableQuery, AllSvHailTableQuery, AllDataTypeHailTableQuery
@@ -127,7 +127,8 @@ class HailSearch(object):
         if annotations_secondary:
             annotation_types.update({k for k, v in annotations_secondary.items() if v})
 
-        if NEW_SV_FIELD in annotation_types or annotation_types.issubset(SV_ANNOTATION_TYPES):
+        if SCREEN_KEY not in annotation_types and (
+                NEW_SV_FIELD in annotation_types or annotation_types.issubset(SV_ANNOTATION_TYPES)):
             return Sample.DATASET_TYPE_SV_CALLS
         elif annotation_types.isdisjoint(SV_ANNOTATION_TYPES):
             return Sample.DATASET_TYPE_VARIANT_CALLS
