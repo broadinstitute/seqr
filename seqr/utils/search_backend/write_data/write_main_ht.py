@@ -2,6 +2,9 @@ import argparse
 import hail as hl
 
 VARIANT_TYPE = 'VARIANTS'
+SV_TYPE = 'SV'
+GCNV_TYPE = 'gCNV'
+MITO_TYPE = 'MITO'
 
 CLINVAR_SIGNIFICANCES = {sig: i for i, sig in enumerate([
     'Pathogenic', 'Pathogenic,_risk_factor', 'Pathogenic,_Affects', 'Pathogenic,_drug_response',
@@ -72,6 +75,13 @@ CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
 ])}
 SCREEN_MAP = {c: i for i, c in enumerate(['CTCF-bound', 'CTCF-only', 'DNase-H3K4me3', 'PLS', 'dELS', 'pELS'])}
 
+SV_CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
+    'COPY_GAIN', 'LOF', 'DUP_LOF', 'DUP_PARTIAL', 'INTRONIC', 'INV_SPAN', 'NEAREST_TSS', 'PROMOTER', 'UTR',
+])}
+SV_TYPE_MAP = {c: i for i, c in enumerate([
+    'gCNV_DEL', 'gCNV_DUP',
+])}
+
 SIFT_FATHMM_MAP = {val: i for i, val in enumerate(['D', 'T'])}
 POLYPHEN_MAP = {val: i for i, val in enumerate(['D', 'P', 'B'])}
 MUT_TASTER_MAP = {val: i for i, val in enumerate(['D', 'A', 'N', 'P'])}
@@ -119,6 +129,25 @@ ANNOTATIONS = {
             )
         ),
     },
+    GCNV_TYPE: {
+        'sv_callset': lambda ht: hl.struct(
+            AF=ht.vaf,
+            AC=ht.vac,
+            AN=hl.int(ht.vac/ht.vaf),
+            Hom=hl.missing(hl.dtype('int32')),
+            Het=hl.missing(hl.dtype('int32')),
+        ),
+        'strvctvre': lambda ht: hl.struct(score=ht.strvctvre),
+        'sortedTranscriptConsequences': lambda ht: hl.array(ht.geneIds.map(lambda gene: hl.Struct(
+            gene_id=gene,
+            major_consequence_id=hl.if_else(  # TODO fix search
+                ht.cg_genes.contains(gene),
+                SV_CONSEQUENCE_RANKS['COPY_GAIN'],
+                hl.if_else(ht.lof_genes.contains(gene), SV_CONSEQUENCE_RANKS['LOF'],  hl.missing(hl.tint)),
+            )
+        ))),
+        'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],  # TODO fix search
+    },
 }
 
 SELECT_FIELDS = {
@@ -126,16 +155,18 @@ SELECT_FIELDS = {
         'cadd', 'eigen', 'exac', 'filters', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_non_coding_constraint',
         'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'splice_ai', 'topmed', 'variantId', 'xpos',
     ],
+    GCNV_TYPE: ['interval', 'rg37_locus', 'rg37_locus_end', 'num_exon'],
 }
 
-STARTING_HTS = {
-    VARIANT_TYPE: 'gs://hail-backend-datasets/{}.interval_annotations.ht',
+PARSED_HT_EXTS = {
+    VARIANT_TYPE: 'interval_annotations',
+    GCNV_TYPE: 'grouped',
 }
 
 
 def write_main_ht(file, data_type):
-    ht = hl.read_table(STARTING_HTS[VARIANT_TYPE].format(file)) if VARIANT_TYPE in STARTING_HTS else \
-        hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').rows()
+    ht = hl.read_table(f'gs://hail-backend-datasets/{file}.{PARSED_HT_EXTS[data_type]}.ht') \
+        if data_type in PARSED_HT_EXTS else hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').rows()
 
     ht = ht.select_globals()
     ht = ht.select(*SELECT_FIELDS[data_type], **{k: v(ht) for k, v in ANNOTATIONS[data_type].items()})

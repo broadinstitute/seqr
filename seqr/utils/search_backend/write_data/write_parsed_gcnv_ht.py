@@ -44,34 +44,16 @@ def write_main_gcnv_ht(file):
         samples=hl.agg.collect(ht.row),
     ).key_by('variantId')
 
-    # Export main variants
-    hl.get_reference('GRCh38').add_liftover('gs://hail-common/references/grch38_to_grch37.over.chain.gz', hl.get_reference('GRCh37'))
+    hl.get_reference('GRCh38').add_liftover(
+        'gs://hail-common/references/grch38_to_grch37.over.chain.gz',  hl.get_reference('GRCh37'))
     start_locus = hl.locus(gt.chr, gt.start, reference_genome='GRCh38')
     end_locus = hl.locus(gt.chr, gt.end, reference_genome='GRCh38')
-    variant_annotations = {
-        'interval': hl.interval(start_locus, end_locus),
-        'rg37_locus': hl.liftover(start_locus, 'GRCh37'),
-        'rg37_locus_end': hl.liftover(end_locus, 'GRCh37'),
-        'sv_callset': hl.struct(
-            AF=gt.vaf,
-            AC=gt.vac,
-            AN=hl.int(gt.vac/gt.vaf),
-            Hom=hl.missing(hl.dtype('int32')),
-            Het=hl.missing(hl.dtype('int32')),
-        ),
-        'strvctvre': hl.struct(score=gt.strvctvre),
-        'sortedTranscriptConsequences': hl.array(gt.geneIds.map(lambda gene: hl.Struct(
-            gene_id=gene,
-            major_consequence=hl.if_else(
-                gt.cg_genes.contains(gene),
-                'COPY_GAIN',
-                hl.if_else(gt.lof_genes.contains(gene), 'LOF',  hl.missing(hl.tstr)),
-            )))),
-    }
-    vt = gt.annotate(**variant_annotations).select(
-        'num_exon', 'svType', *variant_annotations.keys(),
+    vt = gt.annotate(
+        interval=hl.interval(start_locus, end_locus),
+        rg37_locus=hl.liftover(start_locus, 'GRCh37'),
+        rg37_locus_end=hl.liftover(end_locus, 'GRCh37'),
     )
-    vt.write(f'gs://hail-backend-datasets/{file_name}.ht')
+    vt.write(f'gs://hail-backend-datasets/{file_name}.grouped.ht')
 
     # Export all samples
     st = gt.explode('samples').select('samples', 'start', 'end', 'numExon', 'geneIds')
@@ -79,6 +61,7 @@ def write_main_gcnv_ht(file):
         'sample_id', 'CN', 'start', 'end', 'numExon', 'geneIds', 'defragged', 'prevCall', 'prevOverlap', 'newCall', 'QS'))
     samples_mt = st.to_matrix_table(row_key=['variantId'], col_key=['s'])
     samples_mt.write(f'gs://hail-backend-datasets/{file_name}.mt')
+
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()

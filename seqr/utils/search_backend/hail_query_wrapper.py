@@ -74,6 +74,14 @@ CONSEQUENCE_RANKS = [
 ]
 CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(CONSEQUENCE_RANKS)}
 
+SV_CONSEQUENCE_RANKS = [
+    'COPY_GAIN', 'LOF', 'DUP_LOF', 'DUP_PARTIAL', 'INTRONIC', 'INV_SPAN', 'NEAREST_TSS', 'PROMOTER', 'UTR',
+]
+SV_CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(SV_CONSEQUENCE_RANKS)}
+SV_TYPES = ['gCNV_DEL', 'gCNV_DUP']
+SV_TYPE_MAP = {c: i for i, c in enumerate(SV_TYPES)}
+
+
 CLINVAR_SIGNIFICANCES = [
     'Pathogenic', 'Pathogenic,_risk_factor', 'Pathogenic,_Affects', 'Pathogenic,_drug_response',
     'Pathogenic,_drug_response,_protective,_risk_factor', 'Pathogenic,_association', 'Pathogenic,_other',
