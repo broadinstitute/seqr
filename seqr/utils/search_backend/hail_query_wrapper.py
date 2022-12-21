@@ -880,6 +880,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'cadd': ('cadd', 'PHRED'),
         'eigen': ('eigen', 'Eigen_phred'),
+        'gnomad_noncoding': ('gnomad_non_coding_constraint', 'z_score'),
         'mpc': ('mpc', 'MPC'),
         'primate_ai': ('primate_ai', 'score'),
         'splice_ai': ('splice_ai', 'delta_score'),
@@ -891,6 +892,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS = {
         'hgmd': lambda r: r.hgmd.select('accession', **{'class': hl.array(HGMD_SIGNIFICANCES)[r.hgmd.class_id]}),
         'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
+        'screenRegionType': lambda r: r.screen.region_type[0],
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
