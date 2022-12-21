@@ -261,7 +261,7 @@ SELECT_FIELDS = {
 PARSED_HT_EXTS = {
     VARIANT_TYPE: 'interval_annotations',
     GCNV_TYPE: 'grouped',
-    SV_TYPE: 'parsed',
+    SV_TYPE: 'annotated',
 }
 
 
