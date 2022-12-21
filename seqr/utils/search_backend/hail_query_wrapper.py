@@ -465,6 +465,7 @@ class BaseHailTableQuery(object):
             annotation_filters.append(allowed_classes.contains(mt.hgmd.class_id))
         if self._consequence_overrides[SCREEN_KEY]:
             allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in self._consequence_overrides[SCREEN_KEY]})
+            logger.info(f'SCREENN OVERRIDE: {self._consequence_overrides[SCREEN_KEY]}; {allowed_consequences}')
             annotation_filters.append(allowed_consequences.contains(mt.screen.region_type_id))
         if self._consequence_overrides[SPLICE_AI_FIELD]:
             splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
