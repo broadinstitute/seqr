@@ -79,6 +79,7 @@ SV_CONSEQUENCE_RANKS = [
 ]
 SV_CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(SV_CONSEQUENCE_RANKS)}
 SV_TYPES = ['gCNV_DEL', 'gCNV_DUP']
+SV_TYPE_DISPLAYS = [t.replace('gCNV_', '') for t in SV_TYPES]
 SV_TYPE_MAP = {c: i for i, c in enumerate(SV_TYPES)}
 
 
@@ -131,7 +132,7 @@ class BaseHailTableQuery(object):
     GENOTYPE_RESPONSE_KEYS = {}
     POPULATIONS = {}
     PREDICTION_FIELDS_CONFIG = {}
-    TRANSCRIPT_FIELDS = ['gene_id', 'major_consequence']
+    TRANSCRIPT_FIELDS = ['gene_id']
     ANNOTATION_OVERRIDE_FIELDS = []
 
     CORE_FIELDS = ['genotypes']
@@ -175,7 +176,10 @@ class BaseHailTableQuery(object):
             }),
             'transcripts': lambda r: hl.or_else(
                 r.sortedTranscriptConsequences, hl.empty_array(r.sortedTranscriptConsequences.dtype.element_type)
-            ).map(lambda t: self.format_transcript(t)).group_by(lambda t: t.geneId),
+            ).map(lambda t: hl.struct(
+                majorConsequence=self.get_major_consequence(t),
+                **{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS},
+            )).group_by(lambda t: t.geneId),
         }
         annotation_fields.update(self.BASE_ANNOTATION_FIELDS)
         if self._genome_version == GENOME_VERSION_LOOKUP[GENOME_VERSION_GRCh38]:
@@ -188,8 +192,9 @@ class BaseHailTableQuery(object):
             for response_key, field in pop_config.items() if field is not None
         })
 
-    def format_transcript(self, t):
-        return hl.struct(**{_to_camel_case(k): t[k] for k in self.TRANSCRIPT_FIELDS})
+    @staticmethod
+    def get_major_consequence(transcript):
+        raise NotImplementedError
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False, **kwargs):
         self._genome_version = genome_version
@@ -454,15 +459,17 @@ class BaseHailTableQuery(object):
             score_path = ('predictions', 'splice_ai') if use_parsed_fields else self.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
             annotation_filters.append(mt[score_path[0]][score_path[1]] >= splice_ai)
         if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
-            allowed_sv_types = hl.set(self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD])
-            annotation_filters.append(allowed_sv_types.contains(mt.svType))
+            allowed_sv_types = hl.set({SV_TYPE_MAP[t] for t in self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]})
+            annotation_filters.append(allowed_sv_types.contains(mt.svType_id))
 
         return annotation_filters
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequences):
-        # TODO change after SV loading
-        return hl.set(allowed_consequences).contains(tc.major_consequence)
+        allowed_consequence_ids = hl.set({
+            SV_CONSEQUENCE_RANK_MAP[c] for c in allowed_consequences if SV_CONSEQUENCE_RANK_MAP.get(c)
+        })
+        return hl.set(allowed_consequence_ids).contains(tc.major_consequence_id)
 
     def _annotate_filtered_genotypes(self, *args):
         self._mt = self._filter_by_genotype(self._mt, *args)
@@ -806,12 +813,11 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
         consequence_transcripts = None
         if self._allowed_consequences:
-            get_major_consequence = lambda t: hl.array(CONSEQUENCE_RANKS)[t.sorted_consequence_ids[0]]
-            consequence_transcripts = get_matching_transcripts(self._allowed_consequences, get_major_consequence)
+            consequence_transcripts = get_matching_transcripts(self._allowed_consequences, self.get_major_consequence)
             if self._allowed_consequences_secondary:
                 consequence_transcripts = hl.if_else(
                     consequence_transcripts.size() > 0, consequence_transcripts,
-                    get_matching_transcripts(self._allowed_consequences_secondary, get_major_consequence))
+                    get_matching_transcripts(self._allowed_consequences_secondary, self.get_major_consequence))
 
         if gene_transcripts is not None:
             if consequence_transcripts is None:
@@ -840,10 +846,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         mt = mt.key_rows_by(VARIANT_KEY_FIELD)
         return mt
 
-    def format_transcript(self, t):
-        return super(BaseVariantHailTableQuery, self).format_transcript(
-            t.annotate(major_consequence=hl.array(CONSEQUENCE_RANKS)[t.sorted_consequence_ids[0]])
-        )
+    @staticmethod
+    def get_major_consequence(transcript):
+        return hl.array(CONSEQUENCE_RANKS)[transcript.sorted_consequence_ids[0]]
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequences):
@@ -965,6 +970,8 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         'pos': lambda r: r.interval.start.position,
         'end': lambda r: r.interval.end.position,
         'rg37LocusEnd': lambda r: hl.struct(contig=r.rg37_locus_end.contig, position=r.rg37_locus_end.position),
+        'svType': lambda r: hl.array(SV_TYPE_DISPLAYS)[r.svType_id],
+
     }
     BASE_ANNOTATION_FIELDS.update(BaseHailTableQuery.BASE_ANNOTATION_FIELDS)
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
@@ -984,6 +991,10 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):
         return mt.interval.overlaps(x_interval)
+
+    @staticmethod
+    def get_major_consequence(transcript):
+        return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
 
     def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, **kwargs):
         inheritance_override_q = None
@@ -1008,7 +1019,6 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         'pos': lambda r: _get_genotype_override_field(r.genotypes, r.interval.start.position, 'start', hl.min),
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.num_exon, 'numExon', hl.max),
-        'svType': lambda r: r.svType.replace('^gCNV_', ''),
     })
     COMPUTED_ANNOTATION_FIELDS = {
         'transcripts': lambda self, r: hl.if_else(
@@ -1040,7 +1050,7 @@ class SvHailTableQuery(BaseSvHailTableQuery):
     POPULATIONS.update(BaseSvHailTableQuery.POPULATIONS)
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + [
-        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'svType', 'svTypeDetail', 'xpos',
+        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'svTypeDetail', 'xpos',
     ]
     BASE_ANNOTATION_FIELDS = {
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
@@ -1213,7 +1223,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):
         return hl.if_else(
-            hl.is_defined(mt.svType),
+            hl.is_defined(mt.svType_id),
             BaseSvHailTableQuery.get_x_chrom_filter(mt, x_interval),
             VariantHailTableQuery.get_x_chrom_filter(mt, x_interval),
         )
@@ -1222,8 +1232,8 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
     def _is_allowed_consequence_filter(tc, allowed_consequences):
         return hl.if_else(
             hl.is_defined(tc.sorted_consequence_ids),
-            VariantHailTableQuery.is_allowed_consequence_filter(tc, allowed_consequences),
-            BaseSvHailTableQuery.is_allowed_consequence_filter(tc, allowed_consequences),
+            BaseVariantHailTableQuery._is_allowed_consequence_filter(tc, allowed_consequences),
+            BaseSvHailTableQuery._is_allowed_consequence_filter(tc, allowed_consequences),
         )
 
     def _valid_comp_het_families_expr(self, ch_ht):

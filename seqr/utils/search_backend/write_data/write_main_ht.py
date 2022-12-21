@@ -140,13 +140,13 @@ ANNOTATIONS = {
         'strvctvre': lambda ht: hl.struct(score=ht.strvctvre),
         'sortedTranscriptConsequences': lambda ht: hl.array(ht.geneIds.map(lambda gene: hl.Struct(
             gene_id=gene,
-            major_consequence_id=hl.if_else(  # TODO fix search
+            major_consequence_id=hl.if_else(
                 ht.cg_genes.contains(gene),
                 SV_CONSEQUENCE_RANKS['COPY_GAIN'],
                 hl.if_else(ht.lof_genes.contains(gene), SV_CONSEQUENCE_RANKS['LOF'],  hl.missing(hl.tint)),
             )
         ))),
-        'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],  # TODO fix search
+        'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],
     },
 }
 
