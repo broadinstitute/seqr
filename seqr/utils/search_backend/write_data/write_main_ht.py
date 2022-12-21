@@ -128,36 +128,14 @@ SELECT_FIELDS = {
     ],
 }
 
-
-def _get_file_path(file):
-    return f'gs://hail-backend-datasets/{file}.mt'
-
-
-def _get_interval_file_path(file):
-    return f'gs://hail-backend-datasets/{file}.interval_annotations.ht'
-
-
-def add_interval_ref_data(file):
-    # TODO on new datasets this will already be annotated in the pipeline
-    hl._set_flags(use_new_shuffle='1')
-    ht = hl.read_matrix_table(_get_file_path(file)).rows()
-    interval_ref_data = hl.read_table('gs://hail-backend-datasets/combined_interval_reference_data.ht').index(
-        ht.locus, all_matches=True
-    )
-    ht = ht.annotate(
-        gnomad_non_coding_constraint=hl.struct(
-            z_score=interval_ref_data.filter(
-                lambda x: hl.is_defined(x.gnomad_non_coding_constraint["z_score"])
-            ).gnomad_non_coding_constraint.z_score.first()
-        ),
-        screen=hl.struct(region_type=interval_ref_data.flatmap(lambda x: x.screen["region_type"])),
-    )
-    ht.write(_get_interval_file_path(file))
+STARTING_HTS = {
+    VARIANT_TYPE: 'gs://hail-backend-datasets/{}.interval_annotations.ht',
+}
 
 
 def write_main_ht(file, data_type):
-    ht = hl.read_table(_get_interval_file_path(file)) if data_type == VARIANT_TYPE else \
-        hl.read_matrix_table(_get_file_path(file)).rows()
+    ht = hl.read_table(STARTING_HTS[VARIANT_TYPE].format(file)) if VARIANT_TYPE in STARTING_HTS else \
+        hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').rows()
 
     ht = ht.select_globals()
     ht = ht.select(*SELECT_FIELDS[data_type], **{k: v(ht) for k, v in ANNOTATIONS[data_type].items()})
@@ -168,10 +146,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('file')
     p.add_argument('data_type', choices=ANNOTATIONS.keys())
-    p.add_argument('--add-interval-ref', action='store_true')
     args = p.parse_args()
 
-    if args.add_interval_ref:
-        add_interval_ref_data(args.file)
-    else:
-        write_main_ht(args.file, args.data_type)
+    write_main_ht(args.file, args.data_type)
