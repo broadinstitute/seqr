@@ -148,6 +148,43 @@ ANNOTATIONS = {
         ))),
         'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],
     },
+    SV_TYPE: {
+        'algorithms': lambda ht: hl.str(',').join(ht.algorithms),
+        'bothsidesSupport': lambda ht: ht.bothsides_support,
+        'cpxIntervals': lambda ht: ht.cpx_intervals,
+        'filters': lambda ht: hl.set(ht.filters),
+        'gnomad_svs': lambda ht: hl.or_missing(
+            hl.is_defined(ht.gnomad_svs_AF), hl.struct(AF=ht.gnomad_svs_AF, ID=ht.gnomad_svs_ID)),
+        'interval': lambda ht: hl.interval(
+            hl.locus(hl.format('chr%s', ht.contig), ht.start, reference_genome='GRCh38'),
+            hl.bind(
+                lambda end_chrom, end_pos: hl.if_else(
+                    ((ht.contig != ht.end_chrom) | (ht.end != ht.end_pos)) & (ht.svType != 'INS') & (
+                        # This is to handle a bug in the SV pipeline, should not go to production
+                        (ht.svType != 'CPX') | (hl.is_valid_locus(hl.format('chr%s', end_chrom), end_pos, 'GRCh38'))
+                    ),
+                    hl.locus(hl.format('chr%s', end_chrom), end_pos, reference_genome='GRCh38'),
+                    hl.locus(hl.format('chr%s', ht.contig), ht.end, reference_genome='GRCh38')
+                ),
+                CHROM_NUMBER_TO_CHROM[hl.int(ht.xstop / 1e9) - 1],
+                hl.int(ht.xstop % int(1e9)),
+            ),
+        ),
+        'sortedTranscriptConsequences': lambda ht: ht.sortedTranscriptConsequences.map(
+            lambda t: t.select('gene_id', 'major_consequence')),
+        'strvctvre': lambda ht: hl.struct(score=ht.StrVCTVRE_score),
+        'sv_callset': lambda ht: hl.struct(
+            AF=ht.sf,
+            AC=ht.sc,
+            AN=ht.sn,
+            Hom=ht.sv_callset_Hom,
+            Het=ht.sv_callset_Het,
+        ),
+        'svSourceDetail': lambda ht: hl.or_missing(
+            ((ht.contig != ht.end_chrom) | (ht.end != ht.end_pos)) & (ht.svType == 'INS'),
+            hl.struct(chrom=ht.end_chrom)),
+        'svTypeDetail': lambda ht: ht.sv_type_detail,
+    }
 }
 
 SELECT_FIELDS = {
@@ -156,11 +193,13 @@ SELECT_FIELDS = {
         'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'splice_ai', 'topmed', 'variantId', 'xpos',
     ],
     GCNV_TYPE: ['interval', 'rg37_locus', 'rg37_locus_end', 'num_exon'],
+    SV_TYPE: ['rg37_locus', 'rg37_locus_end', 'svType', 'xpos'],
 }
 
 PARSED_HT_EXTS = {
     VARIANT_TYPE: 'interval_annotations',
     GCNV_TYPE: 'grouped',
+    SV_TYPE: 'parsed',
 }
 
 
