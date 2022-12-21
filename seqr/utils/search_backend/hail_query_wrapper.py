@@ -78,9 +78,13 @@ SV_CONSEQUENCE_RANKS = [
     'COPY_GAIN', 'LOF', 'DUP_LOF', 'DUP_PARTIAL', 'INTRONIC', 'INV_SPAN', 'NEAREST_TSS', 'PROMOTER', 'UTR',
 ]
 SV_CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(SV_CONSEQUENCE_RANKS)}
-SV_TYPES = ['gCNV_DEL', 'gCNV_DUP']
+SV_TYPES = ['gCNV_DEL', 'gCNV_DUP', 'BND', 'CPX', 'CTX', 'DEL', 'DUP', 'INS', 'INV']
 SV_TYPE_DISPLAYS = [t.replace('gCNV_', '') for t in SV_TYPES]
 SV_TYPE_MAP = {c: i for i, c in enumerate(SV_TYPES)}
+SV_TYPE_DETAILS = [
+    'INS_iDEL', 'INVdel', 'INVdup', 'ME', 'ME:ALU', 'ME:LINE1', 'ME:SVA', 'dDUP', 'dDUP_iDEL', 'delINV', 'delINVdel',
+    'delINVdup', 'dupINV', 'dupINVdel', 'dupINVdup',
+]
 
 
 CLINVAR_SIGNIFICANCES = [
@@ -114,6 +118,8 @@ PREDICTION_FIELD_ID_LOOKUP = {
     'mut_taster': ['D', 'A', 'N', 'P'],
     'polyphen': ['D', 'P', 'B'],
     'sift': ['D', 'T'],
+    'mitotip': ['likely_pathogenic',  'possibly_pathogenic', 'possibly_benign', 'likely_benign'],
+    'haplogroup_defining': ['Y'],
 }
 
 
@@ -925,7 +931,7 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
     PREDICTION_FIELDS_CONFIG = {
         'apogee': ('mitimpact', 'score'),
         'hmtvar': ('hmtvar', 'score'),
-        'mitotip': ('mitotip', 'trna_prediction'),
+        'mitotip': ('mitotip', 'trna_prediction_id'),
         'haplogroup_defining': ('haplogroup', 'is_defining'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
@@ -1050,21 +1056,13 @@ class SvHailTableQuery(BaseSvHailTableQuery):
     POPULATIONS.update(BaseSvHailTableQuery.POPULATIONS)
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + [
-        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'svTypeDetail', 'xpos',
+        'algorithms', 'bothsidesSupport', 'cpxIntervals', 'svSourceDetail', 'xpos',
     ]
     BASE_ANNOTATION_FIELDS = {
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
+        'svTypeDetail': lambda r: hl.array(SV_TYPE_DETAILS)[r.svTypedDetail_id],
     }
     BASE_ANNOTATION_FIELDS.update(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
-
-    @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        mt = super(SvHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals, exclude_intervals)
-        # TODO remove after reload main ht with correctly formatted fields
-        mt = mt.transmute_rows(
-            filters=hl.set(mt.filters),
-            sv_callset=mt.sv_callset.select('AF', 'AC', 'AN', 'Hom', 'Het'))
-        return mt
 
 
 QUERY_CLASS_MAP = {

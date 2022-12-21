@@ -79,12 +79,26 @@ SV_CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
     'COPY_GAIN', 'LOF', 'DUP_LOF', 'DUP_PARTIAL', 'INTRONIC', 'INV_SPAN', 'NEAREST_TSS', 'PROMOTER', 'UTR',
 ])}
 SV_TYPE_MAP = {c: i for i, c in enumerate([
-    'gCNV_DEL', 'gCNV_DUP',
+    'gCNV_DEL', 'gCNV_DUP', 'BND', 'CPX', 'CTX', 'DEL', 'DUP', 'INS', 'INV',
 ])}
+SV_TYPE_DETAIL_MAP = {c: i for i, c in enumerate([
+    'INS_iDEL', 'INVdel', 'INVdup', 'ME', 'ME:ALU', 'ME:LINE1', 'ME:SVA', 'dDUP', 'dDUP_iDEL', 'delINV', 'delINVdel',
+    'delINVdup', 'dupINV', 'dupINVdel', 'dupINVdup',
+])}
+
+CHROMOSOMES = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21',
+    '22', 'X', 'Y', 'M',
+]
+CHROM_NUMBER_TO_CHROM = hl.literal({i: chrom for i, chrom in enumerate(CHROMOSOMES)})
 
 SIFT_FATHMM_MAP = {val: i for i, val in enumerate(['D', 'T'])}
 POLYPHEN_MAP = {val: i for i, val in enumerate(['D', 'P', 'B'])}
 MUT_TASTER_MAP = {val: i for i, val in enumerate(['D', 'A', 'N', 'P'])}
+
+MITOTIP_MAP = {val: i for i, val in enumerate([
+    'likely_pathogenic',  'possibly_pathogenic', 'possibly_benign', 'likely_benign',
+])}
 
 
 def predictor_expr(field, map):
@@ -94,25 +108,34 @@ def predictor_expr(field, map):
     )
 
 
+VARIANT_ANNOTATIONS = {
+    'callset': lambda ht: hl.struct(
+        AF=ht.AF,
+        AC=ht.AC,
+        AN=ht.AN,
+    ),
+    'clinvar': lambda ht: hl.or_missing(hl.is_defined(ht.clinvar.clinical_significance), hl.struct(
+        clinical_significance_id=hl.dict(CLINVAR_SIGNIFICANCES)[ht.clinvar.clinical_significance],
+        alleleId=ht.clinvar.allele_id,
+        goldStars=ht.clinvar.gold_stars,
+    )),
+    'dbnsfp': lambda ht: hl.struct(
+        SIFT_pred_id=predictor_expr(ht.dbnsfp.SIFT_pred, SIFT_FATHMM_MAP),
+        Polyphen2_HVAR_pred_id=predictor_expr(ht.dbnsfp.Polyphen2_HVAR_pred, POLYPHEN_MAP),
+        MutationTaster_pred_id=predictor_expr(ht.dbnsfp.MutationTaster_pred, MUT_TASTER_MAP),
+        FATHMM_pred_id=predictor_expr(ht.dbnsfp.FATHMM_pred, SIFT_FATHMM_MAP),
+        REVEL_score=hl.parse_float(ht.dbnsfp.REVEL_score),
+    ),
+    'sortedTranscriptConsequences': lambda ht: ht.sortedTranscriptConsequences.map(
+        lambda t: t.select(
+            'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp', 'lof', 'lof_filter',
+            'lof_flags', 'lof_info', 'transcript_id', 'transcript_rank',
+            sorted_consequence_ids=hl.sorted(t.consequence_terms.map(lambda c: hl.dict(CONSEQUENCE_RANKS)[c])),
+        )
+    ),
+}
 ANNOTATIONS = {
     VARIANT_TYPE: {
-        'callset': lambda ht: hl.struct(
-            AF=ht.AF,
-            AC=ht.AC,
-            AN=ht.AN,
-        ),
-        'clinvar': lambda ht: hl.or_missing(hl.is_defined(ht.clinvar.clinical_significance), hl.struct(
-            clinical_significance_id=hl.dict(CLINVAR_SIGNIFICANCES)[ht.clinvar.clinical_significance],
-            alleleId=ht.clinvar.allele_id,
-            goldStars=ht.clinvar.gold_stars,
-        )),
-        'dbnsfp': lambda ht: hl.struct(
-            SIFT_pred_id=predictor_expr(ht.dbnsfp.SIFT_pred, SIFT_FATHMM_MAP),
-            Polyphen2_HVAR_pred_id=predictor_expr(ht.dbnsfp.Polyphen2_HVAR_pred, POLYPHEN_MAP),
-            MutationTaster_pred_id=predictor_expr(ht.dbnsfp.MutationTaster_pred, MUT_TASTER_MAP),
-            FATHMM_pred_id=predictor_expr(ht.dbnsfp.FATHMM_pred, SIFT_FATHMM_MAP),
-            REVEL_score=hl.parse_float(ht.dbnsfp.REVEL_score),
-        ),
         'hgmd': lambda ht: hl.or_missing(hl.is_defined(ht.hgmd['class']), hl.struct(
             class_id=hl.dict(HGMD_SIGNIFICANCES)[ht.hgmd['class']],
             accession=ht.hgmd.accession,
@@ -120,13 +143,6 @@ ANNOTATIONS = {
         'mpc': lambda ht: hl.struct(MPC=hl.parse_float(ht.mpc.MPC)),
         'screen': lambda ht: ht.screen.select(
             region_type_id=ht.screen.region_type.map(lambda r: hl.dict(SCREEN_MAP)[r]),
-        ),
-        'sortedTranscriptConsequences': lambda ht: ht.sortedTranscriptConsequences.map(
-            lambda t: t.select(
-                'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp', 'lof', 'lof_filter',
-                'lof_flags', 'lof_info', 'transcript_id', 'transcript_rank',
-                sorted_consequence_ids=hl.sorted(t.consequence_terms.map(lambda c: hl.dict(CONSEQUENCE_RANKS)[c])),
-            )
         ),
     },
     GCNV_TYPE: {
@@ -159,7 +175,7 @@ ANNOTATIONS = {
             hl.locus(hl.format('chr%s', ht.contig), ht.start, reference_genome='GRCh38'),
             hl.bind(
                 lambda end_chrom, end_pos: hl.if_else(
-                    ((ht.contig != ht.end_chrom) | (ht.end != ht.end_pos)) & (ht.svType != 'INS') & (
+                    ((ht.contig != end_chrom) | (ht.end != end_pos)) & (ht.svType != 'INS') & (
                         # This is to handle a bug in the SV pipeline, should not go to production
                         (ht.svType != 'CPX') | (hl.is_valid_locus(hl.format('chr%s', end_chrom), end_pos, 'GRCh38'))
                     ),
@@ -180,21 +196,66 @@ ANNOTATIONS = {
             Hom=ht.sv_callset_Hom,
             Het=ht.sv_callset_Het,
         ),
-        'svSourceDetail': lambda ht: hl.or_missing(
-            ((ht.contig != ht.end_chrom) | (ht.end != ht.end_pos)) & (ht.svType == 'INS'),
-            hl.struct(chrom=ht.end_chrom)),
+        'svSourceDetail': lambda ht: hl.bind(
+            lambda end_chrom, end_pos: hl.or_missing(
+                ((ht.contig != end_chrom) | (ht.end != end_pos)) & (ht.svType == 'INS'),
+                hl.struct(chrom=end_chrom),
+            ),
+            CHROM_NUMBER_TO_CHROM[hl.int(ht.xstop / 1e9) - 1],
+            hl.int(ht.xstop % int(1e9)),
+        ),
         'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],
-        'svTypeDetail': lambda ht: ht.sv_type_detail,
-    }
+        'svTypeDetail_id': lambda ht: hl.or_missing(
+            hl.is_defined(ht.sv_type_detail), hl.dict(SV_TYPE_DETAIL_MAP)[ht.sv_type_detail]),
+    },
+    MITO_TYPE: {
+        'callset_heteroplasmy': lambda ht: hl.struct(
+            AF=ht.AF_het,
+            AC=ht.AC_het,
+            AN=ht.AN,
+        ),
+        'gnomad_mito': lambda ht: hl.struct(
+            AF=ht.gnomad_mito.AF,
+            AC=ht.gnomad_mito.AC,
+            AN=ht.gnomad_mito.AN,
+        ),
+        'gnomad_mito_heteroplasmy': lambda ht: hl.struct(
+            AF=ht.gnomad_mito.AF_het,
+            AC=ht.gnomad_mito.AC_het,
+            AN=ht.gnomad_mito.AN,
+            max_hl=ht.gnomad_mito.max_hl,
+        ),
+        'helix': lambda ht: hl.struct(
+            AF=ht.helix.AF,
+            AC=ht.helix.AC,
+            AN=ht.helix.AN,
+        ),
+        'helix_heteroplasmy': lambda ht: hl.struct(
+            AF=ht.helix.AF_het,
+            AC=ht.helix.AC_het,
+            AN=ht.helix.AN,
+            max_hl=ht.helix.max_hl,
+        ),
+        'mitimpact': lambda ht: hl.struct(score=ht.mitimpact_apogee),
+        'hmtvar': lambda ht: hl.struct(score=ht.hmtvar_hmtVar),
+        'mitotip': lambda ht: hl.struct(trna_prediction_id=predictor_expr(ht.mitotip_mitoTIP, MITOTIP_MAP)),
+        'haplogroup': lambda ht: hl.struct(
+            is_defining=hl.if_else(ht.hap_defining_variant, 0, hl.missing(hl.tint)),
+        ),
+    },
 }
+ANNOTATIONS[VARIANT_TYPE].update(VARIANT_ANNOTATIONS)
+ANNOTATIONS[MITO_TYPE].update(VARIANT_ANNOTATIONS)
 
+VARIANT_SELECT_FIELDS = ['filters', 'rg37_locus', 'rsid', 'variantId', 'xpos']
 SELECT_FIELDS = {
-    VARIANT_TYPE: [
-        'cadd', 'eigen', 'exac', 'filters', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_non_coding_constraint',
-        'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'splice_ai', 'topmed', 'variantId', 'xpos',
+    VARIANT_TYPE: VARIANT_SELECT_FIELDS + [
+        'cadd', 'eigen', 'exac', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_non_coding_constraint',
+        'originalAltAlleles', 'primate_ai', 'splice_ai', 'topmed',
     ],
     GCNV_TYPE: ['interval', 'rg37_locus', 'rg37_locus_end', 'num_exon'],
     SV_TYPE: ['rg37_locus', 'rg37_locus_end', 'xpos'],
+    MITO_TYPE: VARIANT_SELECT_FIELDS + ['mitomap', 'common_low_heteroplasmy',  'high_constraint_region'],
 }
 
 PARSED_HT_EXTS = {
