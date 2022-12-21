@@ -1239,7 +1239,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
     @staticmethod
     def get_major_consequence(transcript):
         return hl.if_else(
-            hl.is_defined(tc.sorted_consequence_ids),
+            hl.is_defined(transcript.sorted_consequence_ids),
             BaseVariantHailTableQuery.get_major_consequence(transcript),
             BaseSvHailTableQuery.get_major_consequence(transcript),
         )

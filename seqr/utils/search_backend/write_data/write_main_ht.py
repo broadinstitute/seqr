@@ -171,7 +171,7 @@ ANNOTATIONS = {
             ),
         ),
         'sortedTranscriptConsequences': lambda ht: ht.sortedTranscriptConsequences.map(
-            lambda t: t.select('gene_id', 'major_consequence')),
+            lambda t: t.select('gene_id', major_consequence_id=hl.dict(SV_CONSEQUENCE_RANKS)[t.major_consequence])),
         'strvctvre': lambda ht: hl.struct(score=ht.StrVCTVRE_score),
         'sv_callset': lambda ht: hl.struct(
             AF=ht.sf,
@@ -183,6 +183,7 @@ ANNOTATIONS = {
         'svSourceDetail': lambda ht: hl.or_missing(
             ((ht.contig != ht.end_chrom) | (ht.end != ht.end_pos)) & (ht.svType == 'INS'),
             hl.struct(chrom=ht.end_chrom)),
+        'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],
         'svTypeDetail': lambda ht: ht.sv_type_detail,
     }
 }
@@ -193,7 +194,7 @@ SELECT_FIELDS = {
         'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'splice_ai', 'topmed', 'variantId', 'xpos',
     ],
     GCNV_TYPE: ['interval', 'rg37_locus', 'rg37_locus_end', 'num_exon'],
-    SV_TYPE: ['rg37_locus', 'rg37_locus_end', 'svType', 'xpos'],
+    SV_TYPE: ['rg37_locus', 'rg37_locus_end', 'xpos'],
 }
 
 PARSED_HT_EXTS = {
