@@ -318,6 +318,7 @@ class BaseHailTableQuery(object):
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
+        logger.info(f'OVERRIDS: {annotation_override_fields}, ({self.ANNOTATION_OVERRIDE_FIELDS})')
         for field in annotation_override_fields:
             value = annotations.pop(field, None)
             if field == SCREEN_KEY:
