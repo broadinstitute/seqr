@@ -73,7 +73,7 @@ CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
     "feature_truncation",
     "intergenic_variant",
 ])}
-SCREEN_MAP = {c: i for i, c in enumerate(['CTCF-bound', 'CTCF-only', 'DNase-H3K4me3', 'PLS', 'dELS', 'pELS'])}
+SCREEN_MAP = {c: i for i, c in enumerate(['CTCF-bound', 'CTCF-only', 'DNase-H3K4me3', 'PLS', 'dELS', 'pELS', 'DNase-only'])}
 
 SV_CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
     'COPY_GAIN', 'LOF', 'DUP_LOF', 'DUP_PARTIAL', 'INTRONIC', 'INV_SPAN', 'NEAREST_TSS', 'PROMOTER', 'UTR',
