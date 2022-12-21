@@ -1060,7 +1060,7 @@ class SvHailTableQuery(BaseSvHailTableQuery):
     ]
     BASE_ANNOTATION_FIELDS = {
         'genotypeFilters': lambda r: hl.str(' ,').join(r.filters),  # In production - format in main HT?
-        'svTypeDetail': lambda r: hl.array(SV_TYPE_DETAILS)[r.svTypedDetail_id],
+        'svTypeDetail': lambda r: hl.array(SV_TYPE_DETAILS)[r.svTypeDetail_id],
     }
     BASE_ANNOTATION_FIELDS.update(BaseSvHailTableQuery.BASE_ANNOTATION_FIELDS)
 
