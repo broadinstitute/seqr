@@ -895,7 +895,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         'hgmd': lambda r: r.hgmd.select('accession', **{'class': hl.array(HGMD_SIGNIFICANCES)[r.hgmd.class_id]}),
         'originalAltAlleles': lambda r: r.originalAltAlleles.map(lambda a: a.split('-')[-1]), # In production - format in main HT
         'screenRegionType': lambda r: hl.or_missing(
-            hl.is_defined(r.screen.region_type_id[0]),
+            r.screen.region_type_id.size() > 0,
             hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_id[0]]),
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
