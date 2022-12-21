@@ -1236,6 +1236,14 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             BaseSvHailTableQuery._is_allowed_consequence_filter(tc, allowed_consequences),
         )
 
+    @staticmethod
+    def get_major_consequence(transcript):
+        return hl.if_else(
+            hl.is_defined(tc.sorted_consequence_ids),
+            BaseVariantHailTableQuery.get_major_consequence(transcript),
+            BaseSvHailTableQuery.get_major_consequence(transcript),
+        )
+
     def _valid_comp_het_families_expr(self, ch_ht):
         valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
 
