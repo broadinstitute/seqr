@@ -214,7 +214,7 @@ class BaseHailTableQuery(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
         self._consequence_overrides = {
-            CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: set(), SPLICE_AI_FIELD: None,
+            CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: None, SPLICE_AI_FIELD: None,
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
         }
         self._save_samples(samples)
@@ -318,11 +318,8 @@ class BaseHailTableQuery(object):
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
-        logger.info(f'OVERRIDS: {annotation_override_fields}, ({self.ANNOTATION_OVERRIDE_FIELDS})')
         for field in annotation_override_fields:
             value = annotations.pop(field, None)
-            if field == SCREEN_KEY:
-                logger.info(f'parse SCREEN OVERRIDE: {value}, ({self.ANNOTATION_OVERRIDE_FIELDS})')
             if field in self.ANNOTATION_OVERRIDE_FIELDS:
                 self._consequence_overrides[field] = value
 
@@ -468,7 +465,6 @@ class BaseHailTableQuery(object):
             annotation_filters.append(allowed_classes.contains(mt.hgmd.class_id))
         if self._consequence_overrides[SCREEN_KEY]:
             allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in self._consequence_overrides[SCREEN_KEY]})
-            logger.info(f'SCREENN OVERRIDE: {self._consequence_overrides[SCREEN_KEY]}; {allowed_consequences}')
             annotation_filters.append(allowed_consequences.contains(mt.screen.region_type_id))
         if self._consequence_overrides[SPLICE_AI_FIELD]:
             splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
