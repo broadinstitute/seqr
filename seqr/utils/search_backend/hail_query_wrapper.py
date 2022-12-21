@@ -789,21 +789,21 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         if not (self._filtered_genes or self._allowed_consequences):
             return hl.missing(hl.dtype('str'))
 
-        get_matching_transcripts = lambda allowed_values, field: results.sortedTranscriptConsequences.filter(
-            lambda t: hl.set(allowed_values).contains(t[field])).map(lambda t: t.transcript_id)
+        get_matching_transcripts = lambda allowed_values, get_field: results.sortedTranscriptConsequences.filter(
+            lambda t: hl.set(allowed_values).contains(get_field(t))).map(lambda t: t.transcript_id)
 
         gene_transcripts = None
         if self._filtered_genes:
-            gene_transcripts = get_matching_transcripts(self._filtered_genes, 'gene_id')
+            gene_transcripts = get_matching_transcripts(self._filtered_genes, lambda t: t.gene_id)
 
         consequence_transcripts = None
         if self._allowed_consequences:
-            # TODO sortedTranscriptConsequences
-            consequence_transcripts = get_matching_transcripts(self._allowed_consequences, 'major_consequence')
+            get_major_consequence = lambda t: hl.array(CONSEQUENCE_RANKS)[t.sorted_consequence_ids[0]]
+            consequence_transcripts = get_matching_transcripts(self._allowed_consequences, get_major_consequence)
             if self._allowed_consequences_secondary:
                 consequence_transcripts = hl.if_else(
                     consequence_transcripts.size() > 0, consequence_transcripts,
-                    get_matching_transcripts(self._allowed_consequences_secondary, 'major_consequence'))
+                    get_matching_transcripts(self._allowed_consequences_secondary, get_major_consequence))
 
         if gene_transcripts is not None:
             if consequence_transcripts is None:
