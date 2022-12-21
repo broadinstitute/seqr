@@ -70,6 +70,7 @@ CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
     "feature_truncation",
     "intergenic_variant",
 ])}
+SCREEN_MAP = {c: i for i, c in enumerate(['CTCF-bound', 'CTCF-only', 'DNase-H3K4me3', 'PLS', 'dELS', 'pELS'])}
 
 SIFT_FATHMM_MAP = {val: i for i, val in enumerate(['D', 'T'])}
 POLYPHEN_MAP = {val: i for i, val in enumerate(['D', 'P', 'B'])}
@@ -107,6 +108,9 @@ ANNOTATIONS = {
             accession=ht.hgmd.accession,
         )),
         'mpc': lambda ht: hl.struct(MPC=hl.parse_float(ht.mpc.MPC)),
+        'screen': lambda ht: ht.screen.select(
+            region_type_id=ht.screen.region_type.map(lambda r: hl.dict(SCREEN_MAP)[r]),
+        ),
         'sortedTranscriptConsequences': lambda ht: ht.sortedTranscriptConsequences.map(
             lambda t: t.select(
                 'amino_acids', 'biotype', 'canonical', 'codons', 'gene_id', 'hgvsc', 'hgvsp', 'lof', 'lof_filter',
@@ -114,14 +118,13 @@ ANNOTATIONS = {
                 sorted_consequence_ids=hl.sorted(t.consequence_terms.map(lambda c: hl.dict(CONSEQUENCE_RANKS)[c])),
             )
         ),
-        # TODO map screen -> region_type
     },
 }
 
 SELECT_FIELDS = {
     VARIANT_TYPE: [
         'cadd', 'eigen', 'exac', 'filters', 'gnomad_exomes', 'gnomad_genomes', 'gnomad_non_coding_constraint',
-        'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'screen', 'splice_ai', 'topmed', 'variantId', 'xpos',
+        'originalAltAlleles', 'primate_ai', 'rg37_locus', 'rsid', 'splice_ai', 'topmed', 'variantId', 'xpos',
     ],
 }
 
