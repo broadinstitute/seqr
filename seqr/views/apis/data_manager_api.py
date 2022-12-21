@@ -397,6 +397,8 @@ def load_phenotype_prioritization_data(request):
     request_json = json.loads(request.body)
 
     file_path = request_json['file']
+    if not does_file_exist(file_path, user=request.user):
+        return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
 
     try:
         tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path)

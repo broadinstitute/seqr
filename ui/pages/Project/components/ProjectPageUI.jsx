@@ -66,9 +66,9 @@ ProjectSectionComponent.propTypes = {
   collaboratorEdit: PropTypes.bool,
 }
 
-const mapSectionStateToProps = state => ({
+const mapSectionStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
-  loading: getProjectDetailsIsLoading(state),
+  loading: ownProps.loading || getProjectDetailsIsLoading(state),
 })
 
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
@@ -82,7 +82,7 @@ const NO_DETAIL_FIELDS = [
 
 const ProjectPageUI = React.memo(props => (
   <Grid stackable>
-    <DataLoader load={props.load} loading={props.loading} content>
+    <DataLoader load={props.load} loading={false} content>
       <Grid.Row>
         <Grid.Column width={4}>
           {props.match.params.analysisGroupGuid ? null : (
@@ -101,10 +101,11 @@ const ProjectPageUI = React.memo(props => (
               project={props.project}
               analysisGroupGuid={props.match.params.analysisGroupGuid}
               familiesLoading={props.familiesLoading}
+              overviewLoading={props.loading}
             />
           </ProjectSection>
           <VerticalSpacer height={10} />
-          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
+          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All" loading={props.loading}>
             <VariantTagTypeBar
               project={props.project}
               analysisGroupGuid={props.match.params.analysisGroupGuid}

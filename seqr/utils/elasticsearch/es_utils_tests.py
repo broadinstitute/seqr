@@ -31,6 +31,7 @@ SECOND_SUB_INDICES = ['sub_index_a', 'sub_index_b']
 ES_VARIANTS = [
     {
         '_source': {
+          'homozygote_count': 3,
           'gnomad_exomes_Hemi': None,
           'originalAltAlleles': [
             '1-248367227-TC-T'
@@ -954,7 +955,7 @@ MITO_SOURCE_ONLY_FIELDS = [
 ]
 
 SOURCE_FIELDS = {
-    'callset_Hom', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
+    'homozygote_count', 'callset_Hemi', 'callset_Het', 'callset_ID', 'sv_callset_Hemi',
     'sv_callset_Hom', 'sv_callset_Het', 'sv_callset_ID', 'algorithms',
 }
 SOURCE_FIELDS.update(MAPPING_FIELDS)
@@ -1896,6 +1897,7 @@ class EsUtilsTest(TestCase):
         search_model = VariantSearch.objects.create(search={
             'annotations': {'new_structural_variants': ['NEW']},
             'freqs': {'sv_callset': {'af': 0.1}},
+            'in_silico': {'strvctvre': '3.1', 'requireScore': True},
             'qualityFilter': {'min_qs': 20},
             'inheritance': {'mode': 'de_novo'},
         })
@@ -1912,6 +1914,7 @@ class EsUtilsTest(TestCase):
                     {'range': {'sf': {'lte': 0.1}}}
                 ]
             }},
+            {'range': {'StrVCTVRE_score': {'gte': 3.1}}},
             {'bool': {
                 'must': [
                     {'bool': {

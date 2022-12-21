@@ -36,6 +36,7 @@ import { getCurrentProject } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
+const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
 
 const Detail = styled.div`
   display: inline-block;
@@ -116,22 +117,22 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const ShowRnaSeqOutliers = ({ sample, hasRnaOutlierData, ...props }) => (hasRnaOutlierData ? (
-  <Modal
-    modalName={`OUTRIDER-${sample.sampleId}`}
-    title={`RNA-Seq OUTRIDER: ${sample.sampleId}`}
-    trigger={<ButtonLink padding="1em 0 0 0" content="Show RNA-Seq OUTRIDER" />}
-  >
-    <React.Suspense fallback={<Loader />}>
-      <RnaSeqOutliers sample={sample} {...props} />
-    </React.Suspense>
-  </Modal>
-) : null)
-
-ShowRnaSeqOutliers.propTypes = {
-  hasRnaOutlierData: PropTypes.bool,
-  sample: PropTypes.object,
-}
+const SHOW_DATA_MODAL_CONFIG = [
+  {
+    shouldShowField: 'hasRnaOutlierData',
+    component: RnaSeqOutliers,
+    modalName: ({ sampleId }) => `OUTRIDER-${sampleId}`,
+    title: ({ sampleId }) => `RNA-Seq OUTRIDER: ${sampleId}`,
+    linkText: 'Show RNA-Seq OUTRIDER',
+  },
+  {
+    shouldShowField: 'hasPhenotypeGeneScores',
+    component: PhenotypePrioritizedGenes,
+    modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
+    title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
+    linkText: 'Show Phenotype Prioritized Genes',
+  },
+]
 
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
@@ -171,11 +172,25 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
-    <ShowRnaSeqOutliers
-      familyGuid={individual.familyGuid}
-      sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
-      hasRnaOutlierData={individual.hasRnaOutlierData}
-    />
+    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
+      ({ modalName, title, linkText, component }) => {
+        const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
+        const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
+        return (
+          <Modal
+            key={modalName(titleIds)}
+            modalName={modalName(titleIds)}
+            title={title(titleIds)}
+            trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
+          >
+            <React.Suspense fallback={<Loader />}>
+              {React.createElement(component,
+                { familyGuid: individual.familyGuid, individualGuid: individual.individualGuid }) }
+            </React.Suspense>
+          </Modal>
+        )
+      },
+    )}
   </div>
 ))
 

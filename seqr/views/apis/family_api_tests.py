@@ -10,7 +10,7 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
-    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data
+    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
@@ -27,6 +27,7 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 INDIVIDUAL_GUID = 'I000001_na19675'
+INDIVIDUAL2_GUID = 'I000002_na19678'
 
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -40,7 +41,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         response_keys = {
-            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid',  'igvSamplesByGuid',
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid', 'igvSamplesByGuid',
             'mmeSubmissionsByGuid',
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
@@ -55,9 +56,12 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
+                             'hasPhenotypeGeneScores'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
+        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL_GUID]['hasPhenotypeGeneScores'])
+        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL2_GUID]['hasPhenotypeGeneScores'])
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
@@ -482,5 +486,47 @@ class FamilyAPITest(AuthenticationTestCase):
             'M': {
                 'individualData': {'NA19675_1': 8.38},
                 'rdgData': [1.01, 8.38],
+            }
+        })
+
+    def test_get_family_phenotype_gene_scores(self):
+        url = reverse(get_family_phenotype_gene_scores, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'genesById': {
+                'ENSG00000268903': {
+                    'chromGrch37': '1', 'chromGrch38': '1', 'clinGen': None, 'cnSensitivity': {},
+                    'codingRegionSizeGrch37': 0, 'codingRegionSizeGrch38': 0, 'constraints': {},
+                    'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {},
+                    'gencodeGeneType': 'processed_pseudogene', 'geneId': 'ENSG00000268903',
+                    'geneSymbol': 'AL627309.7', 'mimNumber': None, 'omimPhenotypes': [],
+                    'startGrch37': 135141, 'startGrch38': 135141
+                }
+            },
+            'phenotypeGeneScores': {
+                'I000001_na19675': {
+                    'ENSG00000268903': {
+                        'exomiser': [
+                            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
+                             'scores': {'exomiser_score': 0.969347946, 'phenotype_score': 0.443567539,
+                                        'variant_score': 0.999200702}},
+                            {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
+                             'scores': {'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205,
+                                        'variant_score': 1}}
+                        ]
+                    }
+                },
+                'I000002_na19678': {
+                    'ENSG00000268903': {
+                        'lirical': [
+                            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
+                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}
+                            }
+                        ]
+                    }
+                }
             }
         })

@@ -324,9 +324,11 @@ class EsSearch(object):
                 self._filter(Q(q_dict))
 
     def _filter_by_in_silico(self, in_silico_filters):
-        in_silico_filters = {k: v for k, v in (in_silico_filters or {}).items() if v is not None and len(v) != 0}
+        in_silico_filters = in_silico_filters or {}
+        require_score = in_silico_filters.pop('requireScore', False)
+        in_silico_filters = {k: v for k, v in in_silico_filters.items() if v is not None and len(v) != 0}
         if in_silico_filters:
-            self._filter(_in_silico_filter(in_silico_filters))
+            self._filter(_in_silico_filter(in_silico_filters, require_score=require_score))
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {pop: v for pop, v in (frequencies or {}).items() if pop in POPULATIONS}
@@ -377,7 +379,7 @@ class EsSearch(object):
             filters.append(pathogenicity_filter)
         splice_ai = self._consequence_overrides.get(SPLICE_AI_FIELD)
         if splice_ai:
-            filters.append(_in_silico_filter({SPLICE_AI_FIELD: splice_ai}, allow_missing=False))
+            filters.append(_in_silico_filter({SPLICE_AI_FIELD: splice_ai}, require_score=True))
         screen = self._consequence_overrides.get(SCREEN_KEY)
         if screen:
             filters.append(Q('terms', screen_region_type=screen))
@@ -1508,7 +1510,7 @@ def _dataset_type_for_annotations(annotations, new_svs=False, screen=False):
     return None
 
 
-def _in_silico_filter(in_silico_filters, allow_missing=True):
+def _in_silico_filter(in_silico_filters, require_score):
     in_silico_qs = []
     for in_silico_filter, value in in_silico_filters.items():
         prediction_key = PREDICTION_FIELD_LOOKUP.get(in_silico_filter.lower(), in_silico_filter)
@@ -1517,7 +1519,7 @@ def _in_silico_filter(in_silico_filters, allow_missing=True):
         except ValueError:
             score_q = Q('prefix', **{prediction_key: value})
 
-        if allow_missing:
+        if not require_score:
             score_q |= ~Q('exists', field=prediction_key)
 
         in_silico_qs.append(score_q)

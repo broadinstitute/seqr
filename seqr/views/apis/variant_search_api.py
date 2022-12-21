@@ -367,9 +367,7 @@ def search_context_handler(request):
     check_projects_view_permission(projects, request.user)
 
     project_guid = projects[0].guid if len(projects) == 1 else None
-    response.update(get_projects_child_entities(
-        projects, project_guid, request.user, include_samples=False, include_locus_list_metadata=False,
-    ))
+    response.update(get_projects_child_entities(projects, project_guid, request.user))
 
     family_models = Family.objects.filter(project__in=projects)
     response['familiesByGuid'] = {f.guid: {

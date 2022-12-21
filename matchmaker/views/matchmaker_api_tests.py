@@ -10,6 +10,7 @@ from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, Matchmak
 from matchmaker.matchmaker_utils import MME_DISCLAIMER
 from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
+    get_mme_nodes, search_local_individual_mme_matches, finalize_mme_search, \
     update_mme_contact_note, update_mme_project_contact
 from seqr.views.utils.test_utils import AuthenticationTestCase
 
@@ -154,6 +155,10 @@ MISMATCHED_GENE_NEW_MATCH_JSON['patient']['id'] = '987'
 
 MOCK_SLACK_TOKEN = 'xoxp-123'
 
+MOCK_NODES_BY_NAME = {
+    'Node A': {'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'},
+    'Node B': {'name': 'Node B', 'token': 'xyz', 'url': 'http://node_b.mme.org/api'},
+}
 
 class EmailException(Exception):
 
@@ -186,7 +191,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'savedVariantsByGuid', 'variantTagsByGuid',
+            'mmeResultsByGuid', 'genesById', 'savedVariantsByGuid', 'variantTagsByGuid',
             'variantNotesByGuid', 'variantFunctionalDataByGuid', 'mmeContactNotes',
             'mmeSubmissionsByGuid',
         })
@@ -194,11 +199,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertSetEqual(
             set(response_json['mmeResultsByGuid'].keys()), {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID}
         )
+        self.assertSetEqual({r['submissionGuid'] for r in response_json['mmeResultsByGuid'].values()}, {SUBMISSION_GUID})
 
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
         self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
-            'mmeResultGuids': mock.ANY,
             'submissionGuid': SUBMISSION_GUID,
             'individualGuid': INDIVIDUAL_GUID,
             'createdDate': '2018-05-23T09:07:49.719Z',
@@ -217,12 +222,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'variantGuid': 'SV0000001_2103343353_r0390_100',
             }],
         }})
-        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
-            'mmeSubmissionGuid': SUBMISSION_GUID,
-        }})
-        self.assertSetEqual(
-            set(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeResultGuids']),
-            {'MR0007228_VCGS_FAM50_156', 'MR0004688_RGP_105_3', RESULT_STATUS_GUID})
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
@@ -253,67 +252,48 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertDictEqual(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID], PARSED_RESULT)
         self.assertFalse('originatingSubmission' in response_json['mmeResultsByGuid']['MR0007228_VCGS_FAM50_156'])
 
+    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES_BY_NAME', MOCK_NODES_BY_NAME)
+    def test_get_mme_nodes(self):
+        url = reverse(get_mme_nodes)
+        self.check_require_login(url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'mmeNodes': ['Node A', 'Node B']})
+
     @mock.patch('seqr.utils.communication_utils.SLACK_TOKEN', MOCK_SLACK_TOKEN)
+    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES_BY_NAME', MOCK_NODES_BY_NAME)
+    @mock.patch('seqr.utils.middleware.logger')
     @mock.patch('seqr.utils.communication_utils.logger')
     @mock.patch('seqr.utils.communication_utils.Slacker')
     @mock.patch('matchmaker.views.matchmaker_api.logger')
     @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
-    @mock.patch('matchmaker.views.matchmaker_api.MME_NODES')
     @responses.activate
-    def test_search_individual_mme_matches(self, mock_nodes, mock_email, mock_logger, mock_slacker, mock_communication_logger):
+    def test_search_individual_mme_matches(self, mock_email, mock_logger, mock_slacker, mock_communication_logger, mock_exception_logger):
         mock_slacker.return_value.chat.post_message.side_effect = ValueError('Unable to connect to slack')
         mock_email.return_value.send.side_effect = Exception('Email error')
 
-        url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID])
-        self.check_collaborator_login(url)
+        local_search_url = reverse(search_local_individual_mme_matches, args=[SUBMISSION_GUID])
+        self.check_collaborator_login(local_search_url)
 
         responses.add(responses.POST, 'http://node_a.com/match', body='Failed request', status=400)
         invalid_results = [INVALID_NEW_MATCH_JSON, INVALID_FEATURES_NEW_MATCH_JSON, INVALID_GENE_NEW_MATCH_JSON]
         results = [NEW_MATCH_JSON, MISMATCHED_GENE_NEW_MATCH_JSON] + invalid_results
         responses.add(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
 
-        # Test invalid inputs
-        mock_nodes.values.return_value = []
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'No external MME nodes are configured')
-        mock_logger.error.assert_called_with('No external MME nodes are configured', self.collaborator_user)
-
-        mock_logger.reset_mock()
-        mock_nodes.values.return_value = [{'name': 'My node'}]
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'No external MME nodes are configured')
-        mock_logger.error.assert_called_with('No external MME nodes are configured', self.collaborator_user)
-
-        # Test successful search
-        mock_logger.reset_mock()
-        mock_nodes.values.return_value = [
-            {'name': 'My node'},
-            {'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'},
-            {'name': 'Node B', 'token': 'xyz', 'url': 'http://node_b.mme.org/api'},
-        ]
-        response = self.client.get(url)
+        # Test successful local match search
+        response = self.client.get(local_search_url)
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {
-            'mmeResultsByGuid', 'individualsByGuid', 'genesById', 'mmeContactNotes', 'mmeSubmissionsByGuid',
+            'mmeResultsByGuid', 'genesById', 'mmeContactNotes', 'incomingQueryGuid',
         })
+        incoming_query_guid = response_json['incomingQueryGuid']
 
-        self.assertEqual(len(response_json['mmeResultsByGuid']), 4)
-        existing_result_guids = {'MR0004688_RGP_105_3', RESULT_STATUS_GUID}
-        for guid in existing_result_guids:
-            self.assertTrue(guid in response_json['mmeResultsByGuid'])
-        new_result_guid = next(
-            k for k, v in response_json['mmeResultsByGuid'].items()
-            if k not in existing_result_guids and v['id'] == '33845')
-        new_internal_match_guid  = next(
-            k for k, v in response_json['mmeResultsByGuid'].items()
-            if k not in existing_result_guids and v['id'] == 'P0004517')
-
-        self.assertDictEqual(response_json['mmeResultsByGuid'][new_result_guid], PARSED_NEW_MATCH_JSON)
-        self.assertTrue(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
+        self.assertEqual(len(response_json['mmeResultsByGuid']), 2)
+        self.assertSetEqual({r['submissionGuid'] for r in response_json['mmeResultsByGuid'].values()}, {SUBMISSION_GUID})
+        self.assertTrue(RESULT_STATUS_GUID in response_json['mmeResultsByGuid'])
+        new_internal_match_guid = next(k for k in response_json['mmeResultsByGuid'].keys() if k != RESULT_STATUS_GUID)
         self.assertFalse(response_json['mmeResultsByGuid'][RESULT_STATUS_GUID]['matchStatus']['matchRemoved'])
         self.assertDictEqual(response_json['mmeResultsByGuid'][new_internal_match_guid], {
             'id': 'P0004517',
@@ -367,39 +347,44 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'createdDate': mock.ANY,
             },
         })
-        self.assertDictEqual(response_json['mmeSubmissionsByGuid'], {SUBMISSION_GUID: {
-            'mmeResultGuids': mock.ANY,
-            'individualGuid': INDIVIDUAL_GUID,
-            'submissionGuid': SUBMISSION_GUID,
-            'createdDate': '2018-05-23T09:07:49.719Z',
-            'lastModifiedDate': '2018-05-23T09:07:49.719Z',
-            'deletedDate': None,
-            'contactName': 'Sam Baxter',
-            'contactHref': 'mailto:matchmaker@broadinstitute.org,test_user@broadinstitute.org',
-            'submissionId': 'NA19675_1_01',
-            'phenotypes': [
-                {'id': 'HP:0001252', 'label': 'Muscular hypotonia', 'observed': 'yes'},
-                {'id': 'HP:0001263', 'label': 'Global developmental delay', 'observed': 'no'},
-                {'id': 'HP:0012469', 'label': 'Infantile spasms', 'observed': 'yes'}
-            ],
-            'geneVariants': [{
-                'geneId': 'ENSG00000135953',
-                'variantGuid': 'SV0000001_2103343353_r0390_100',
-            }],
-        }})
-        self.assertDictEqual(response_json['individualsByGuid'], {INDIVIDUAL_GUID: {
-            'mmeSubmissionGuid': SUBMISSION_GUID,
-        }})
-        self.assertSetEqual(
-            set(response_json['mmeSubmissionsByGuid'][SUBMISSION_GUID]['mmeResultGuids']),
-            set(response_json['mmeResultsByGuid'].keys()))
 
         self.assertSetEqual(
             set(response_json['genesById'].keys()),
             {'ENSG00000135953', 'ENSG00000240361', 'ENSG00000223972'}
         )
+        self.assertDictEqual(response_json['mmeContactNotes'], {})
+
+        # Test external matches
+        node_a_match_url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID, 'Node A'])
+        response = self.client.get(node_a_match_url, {'incomingQueryGuid': incoming_query_guid})
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'],  ['Error searching in Node A: Failed request (400)'])
+
+        node_b_match_url = reverse(search_individual_mme_matches, args=[SUBMISSION_GUID, 'Node B'])
+        response = self.client.get(node_b_match_url, {'incomingQueryGuid': incoming_query_guid})
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid', 'genesById', 'mmeContactNotes'})
+
+        self.assertEqual(len(response_json['mmeResultsByGuid']), 1)
+        new_result_guid = next(k for k in response_json['mmeResultsByGuid'].keys())
+        self.assertDictEqual(response_json['mmeResultsByGuid'][new_result_guid], PARSED_NEW_MATCH_JSON)
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
         # non-analyst users can't see contact notes
         self.assertDictEqual(response_json['mmeContactNotes'], {'st georges, university of london': {}})
+
+        # Test notifications and removed result cleanup
+        finalize_search_url = reverse(finalize_mme_search, args=[SUBMISSION_GUID])
+        response = self.client.get(finalize_search_url, {'incomingQueryGuid': incoming_query_guid})
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), {'mmeResultsByGuid'})
+        self.assertDictEqual(response_json['mmeResultsByGuid'], {
+            'MR0004688_RGP_105_3': {'matchStatus': mock.ANY},
+            'MR0007228_VCGS_FAM50_156': None,
+        })
+        self.assertTrue(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
 
         #  Test removed match is deleted
         self.assertEqual(MatchmakerResult.objects.filter(guid='MR0007228_VCGS_FAM50_156').count(), 0)
@@ -489,14 +474,19 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         mock_logger.error.assert_called_with(
             'Unable to create notification for new MME match: Email error', self.collaborator_user)
+        mock_exception_logger.warning.assert_called_with(
+            'Error searching in Node A: Failed request (400)', self.collaborator_user, detail=expected_patient_body,
+            http_request_json=mock.ANY, traceback=mock.ANY, request_body=mock.ANY,
+        )
         mock_logger.warning.assert_has_calls([
-            mock.call('Error searching in Node A: Failed request (400)', self.collaborator_user, detail=expected_patient_body),
             mock.call('Error searching in Node B: Received invalid results for NA19675_1', self.collaborator_user, detail=invalid_results),
             mock.call('Received 1 invalid matches from Node B', self.collaborator_user),
         ])
         mock_logger.info.assert_has_calls([mock.call(message, self.collaborator_user) for message in [
+            'Found 2 matches in Broad MME for NA19675_1_01 (1 new)',
             'Found 5 matches from Node B',
-            'Found 3 matches for NA19675_1_01 (2 new)',
+            'Found 1 matches in Node B for NA19675_1_01 (1 new)',
+            'Found 3 total matches for NA19675_1_01 (2 new)',
             'Removed 2 old matches for NA19675_1_01',
         ]])
 
@@ -513,7 +503,9 @@ class MatchmakerAPITest(AuthenticationTestCase):
 
         # analyst users should see contact notes
         self.login_analyst_user()
-        response = self.client.get(url)
+        results.append(REMOVED_MATCH_JSON)
+        responses.replace(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
+        response = self.client.get(node_b_match_url, {'incomingQueryGuid': incoming_query_guid})
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json['mmeContactNotes'], {
@@ -521,11 +513,11 @@ class MatchmakerAPITest(AuthenticationTestCase):
                 'institution': 'st georges, university of london',
                 'comments': 'Some additional data about this institution',
             }})
+        # if previously removed matches have been re-matched, they should no longer be marked as removed
+        self.assertFalse(response_json['mmeResultsByGuid']['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
 
-        results.append(REMOVED_MATCH_JSON)
-        responses.replace(responses.POST, 'http://node_b.mme.org/api', status=200, json={'results': results})
         self.login_manager()
-        response = self.client.get(url)
+        response = self.client.get(local_search_url)
         result_response = response.json()['mmeResultsByGuid']
         # users should see originating query for results if the have correct project permissions
         self.assertDictEqual(result_response[new_internal_match_guid]['originatingSubmission'], {
@@ -533,8 +525,6 @@ class MatchmakerAPITest(AuthenticationTestCase):
             'familyGuid': 'F000014_14',
             'projectGuid': 'R0004_non_analyst_project',
         })
-        # if previously removed matches have been re-matched, they should no longer be marked as removed
-        self.assertFalse(result_response['MR0004688_RGP_105_3']['matchStatus']['matchRemoved'])
 
     @mock.patch('matchmaker.views.matchmaker_api.logger')
     def test_update_mme_submission(self, mock_logger):

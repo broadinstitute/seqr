@@ -347,7 +347,7 @@ export const SNP_FREQUENCIES = [
   {
     name: THIS_CALLSET_FREQUENCY,
     label: 'This Callset',
-    homHemi: false,
+    homHemi: true,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
   },
 ]
@@ -445,7 +445,13 @@ export const LOCATION_FIELDS = [
   },
 ]
 
-export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+const REQUIRE_SCORE_FIELD = {
+  name: 'requireScore',
+  component: AlignedBooleanCheckbox,
+  label: 'Require Filtered Predictor',
+  labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
+}
+export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
   ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
     const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
@@ -484,7 +490,7 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
       ...filterField,
     }
   },
-)
+)]
 
 export const SNP_QUALITY_FILTER_FIELDS = [
   {

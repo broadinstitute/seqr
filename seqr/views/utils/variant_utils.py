@@ -143,11 +143,13 @@ def _get_rna_seq_outliers(gene_ids, families):
     return data_by_individual_gene
 
 
-def _get_phenotype_prioritization(gene_ids, families):
+def get_phenotype_prioritization(families, gene_ids=None):
     data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
+    gene_filter = {'gene_id__in': gene_ids} if gene_ids is not None else {}
     data_dicts = _get_json_for_models(
-        PhenotypePrioritization.objects.filter(gene_id__in=gene_ids, individual__family__in=families).order_by('disease_id'),
+        PhenotypePrioritization.objects.filter(
+            individual__family__in=families, rank__lte=10, **gene_filter).order_by('disease_id'),
         nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 
@@ -230,10 +232,12 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
-        project_fields = {'projectGuid': lambda p: p.guid}
+        project_fields = {'projectGuid': 'guid'}
         if include_project_name:
-            project_fields['name'] = lambda p: p.name
-        response['projectsByGuid'] = {project.guid: {k: v(project) for k, v in project_fields.items()} for project in projects}
+            project_fields['name'] = 'name'
+        if include_igv:
+            project_fields['genomeVersion'] = 'genome_version'
+        response['projectsByGuid'] = {project.guid: {k: getattr(project, field) for k, field in project_fields.items()} for project in projects}
         add_project_tag_types(response['projectsByGuid'])
 
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
@@ -248,6 +252,6 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid)
 
-        response['phenotypeGeneScores'] = _get_phenotype_prioritization(genes.keys(), families)
+        response['phenotypeGeneScores'] = get_phenotype_prioritization(families, gene_ids=genes.keys())
 
     return response

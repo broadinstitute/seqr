@@ -42,7 +42,7 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = DISCOVERY_TAGS
 
 PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded', 'projectGuid', 'name'}
 
-PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
+PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'variantFunctionalTagTypes'}
 
 EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
 expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
@@ -60,9 +60,16 @@ expected_detail_saved_variant['mainTranscriptId'] = mock.ANY
 
 EXPECTED_EXOMISER_DATA = [
     {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
-     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+     'scores': {'exomiser_score': 0.969347946, 'phenotype_score': 0.443567539,
+                'variant_score': 0.999200702}},
     {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
-     'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
+     'scores': {'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205,
+                'variant_score': 1}},
+]
+
+EXPECTED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
 ]
 
 EXPECTED_SEARCH_RESPONSE = {
@@ -89,9 +96,10 @@ EXPECTED_SEARCH_RESPONSE = {
     },
     'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
-    'phenotypeGeneScores': {'I000001_na19675': {
-        'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}
-    }},
+    'phenotypeGeneScores': {
+        'I000001_na19675': {'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}},
+        'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
+    },
     'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
 }
 

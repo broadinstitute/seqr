@@ -28,7 +28,12 @@ import {
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
-  loadMmeMatches, updateMmeSubmission, updateMmeSubmissionStatus, sendMmeContactEmail, updateMmeContactNotes,
+  searchMmeMatches,
+  getMmeMatches,
+  updateMmeSubmission,
+  updateMmeSubmissionStatus,
+  sendMmeContactEmail,
+  updateMmeContactNotes,
 } from '../reducers'
 import {
   getMatchmakerMatchesLoading,
@@ -463,7 +468,7 @@ const BaseMatchmakerIndividual = React.memo((
             defaultSortColumn="createdDate"
             defaultSortDescending
             columns={DISPLAY_FIELDS}
-            data={mmeResults.active}
+            data={mmeResults?.active}
             loading={loading}
             emptyContent="No matches found"
             downloadFileName={`MME_matches_${individual.displayName}`}
@@ -510,8 +515,8 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  load: () => dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, false)),
-  searchMme: () => dispatch(loadMmeMatches(ownProps.individual.mmeSubmissionGuid, true)),
+  load: () => dispatch(getMmeMatches(ownProps.individual.mmeSubmissionGuid)),
+  searchMme: () => dispatch(searchMmeMatches(ownProps.individual.mmeSubmissionGuid)),
   onSubmit: values => dispatch(updateMmeSubmission({
     ...values,
     submissionGuid: ownProps.individual.mmeSubmissionGuid,

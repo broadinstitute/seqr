@@ -38,6 +38,10 @@ const EmptyCell = styled(Table.Cell)`
 // Allows dropdowns to be visible inside table cell
 const OverflowCell = styled(Table.Cell)`
   overflow: visible !important;
+  
+  td {
+    overflow: visible !important;
+  }
 `
 
 class FamilyTableRow extends React.PureComponent {

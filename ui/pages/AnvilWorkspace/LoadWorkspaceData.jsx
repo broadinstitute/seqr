@@ -33,7 +33,7 @@ WorkspaceAccessError.propTypes = {
 
 const LoadWorkspaceData = ({ match }) => (
   <div>
-    <LoadWorkspaceDataForm params={match.params} />
+    <LoadWorkspaceDataForm params={match.params} createProject />
   </div>
 )
 

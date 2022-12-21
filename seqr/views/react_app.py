@@ -1,11 +1,12 @@
 import json
 import re
+from datetime import datetime
 from django.contrib.auth.models import User
 from django.core.serializers.json import DjangoJSONEncoder
 from django.middleware.csrf import rotate_token
 from django.template import loader
 from django.http import HttpResponse
-from settings import SEQR_VERSION, CSRF_COOKIE_NAME, DEBUG, LOGIN_URL, GA_TOKEN_ID
+from settings import SEQR_VERSION, CSRF_COOKIE_NAME, DEBUG, LOGIN_URL, GA_TOKEN_ID, ANVIL_LOADING_DELAY_EMAIL_START_DATE
 from seqr.models import WarningMessage
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_current_user
 from seqr.views.utils.permissions_utils import login_active_required
@@ -43,11 +44,15 @@ def render_app_html(request, additional_json=None, include_user=True, status=200
         ui_version = 'local'
         html = html.replace('</head>', '<script defer="defer" src="/app.js"></script></head>')
 
+    should_show_loading_delay = bool(ANVIL_LOADING_DELAY_EMAIL_START_DATE)
+    if should_show_loading_delay:
+        should_show_loading_delay = datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d') < datetime.now()
     initial_json = {'meta':  {
         'version': '{}-{}'.format(SEQR_VERSION, ui_version),
         'hijakEnabled': DEBUG or False,
         'googleLoginEnabled': google_auth_enabled(),
         'warningMessages': [message.json() for message in WarningMessage.objects.all()],
+        'anvilLoadingDelayDate': ANVIL_LOADING_DELAY_EMAIL_START_DATE if should_show_loading_delay else None,
     }}
     if include_user:
         initial_json['user'] = get_json_for_current_user(request.user)

@@ -300,7 +300,7 @@ LIRICAL_DATA = [
     ['lirical', '1kg project nåme with uniçøde', 'NA19678', '1', 'ENSG00000105357', 'OMIM:618460',
      'Khan-Khan-Katsanis syndrome', 'post_test_probability', '0', 'compositeLR', '0.066'],
     ['lirical', 'Test Reprocessed Project', 'NA20885', '2', 'ENSG00000105357', 'OMIM:219800',
-     '"Cystinosis, nephropathic"', 'post_test_probability', '0', 'compositeLR', '0.003', '', ''],
+     '"Cystinosis, nephropathic"', 'post_test_probability', '0', 'compositeLR', '', '', ''],
 ]
 EXOMISER_DATA = [
     ['exomiser', 'CMG_Beggs_WGS', 'BEG_1230-1_01', '1', 'ENSG00000105357', 'ORPHA:2131',
@@ -318,16 +318,22 @@ UPDATE_LIRICAL_DATA = [
 ]
 
 EXPECTED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219801', 'geneId': 'ENSG00000268903', 'diseaseName': 'Cystinosis, no syndrome',
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1},
+     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675'},  # record from the fixture
     {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
      'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 1, 'individualGuid': 'I000002_na19678'},
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
-     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'scores': {'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'}
 ]
 EXPECTED_UPDATED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219801', 'geneId': 'ENSG00000268903', 'diseaseName': 'Cystinosis, no syndrome',
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1},
+     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675'},  # record from the fixture
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
-     'scores': {'compositeLR': 0.003, 'postTestProbability': 0.0},
+     'scores': {'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'},
     {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
      'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
@@ -812,56 +818,68 @@ class DataManagerAPITest(AuthenticationTestCase):
 
     @classmethod
     def _join_data(cls, data):
-        return iter(['\t'.join(line) for line in data])
+        return ['\t'.join(line).encode('utf-8') for line in data]
 
-    @mock.patch('seqr.views.utils.dataset_utils.file_iter')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @mock.patch('seqr.models.logger')
-    def test_load_phenotype_prioritization_data(self, mock_logger, mock_file_iter):
+    def test_load_phenotype_prioritization_data(self, mock_logger, mock_subprocess):
         url = reverse(load_phenotype_prioritization_data)
         self.check_data_manager_login(url)
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_MISS_HEADER)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        request_body = {'file': 'gs://seqr_data/lirical_data.tsv.gz'}
+        mock_subprocess.return_value.wait.return_value = 1
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'File not found: gs://seqr_data/lirical_data.tsv.gz')
+        mock_subprocess.assert_called_with('gsutil ls gs://seqr_data/lirical_data.tsv.gz', stdout=-1, stderr=-2, shell=True)
+
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.wait.return_value = 0
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_MISS_HEADER)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Invalid file: missing column(s) project, diseaseId')
-        mock_file_iter.assert_called_with('lirical_data.tsv.gz')
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_PROJECT_DATA)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_PROJECT_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Both sample ID and project fields are required.')
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + EXOMISER_DATA)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + EXOMISER_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Multiple tools found lirical and exomiser. Only one in a file is supported.')
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_PROJECT_NOT_EXIST_DATA)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_PROJECT_NOT_EXIST_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. ')
 
         project = Project.objects.create(created_by=self.data_manager_user,
                                          name='1kg project nåme with uniçøde', workspace_namespace='my-seqr-billing')
-        mock_file_iter.return_value = self._join_data(
+        mock_subprocess.return_value.stdout = self._join_data(
             PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA + LIRICAL_PROJECT_NOT_EXIST_DATA)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], 'Project CMG_Beggs_WGS not found. Projects with conflict name(s) 1kg project nåme with uniçøde.')
         project.delete()
 
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_EXIST_INDV_DATA)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_NO_EXIST_INDV_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error'], "Can't find individuals NA19678x, NA19679x")
 
         # Test a successful operation
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + LIRICAL_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         info = [
-            'Loaded Lirical data from lirical_data.tsv.gz',
-            'Project 1kg project nåme with uniçøde: loaded 1 record(s)',
+            'Loaded Lirical data from gs://seqr_data/lirical_data.tsv.gz',
+            'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 1 record(s)',
             'Project Test Reprocessed Project: loaded 1 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)
@@ -871,14 +889,15 @@ class DataManagerAPITest(AuthenticationTestCase):
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
+        mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
         # Test uploading new data
         mock_logger.reset_mock()
-        mock_file_iter.return_value = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'file': 'lirical_data.tsv.gz'}))
+        mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         info = [
-            'Loaded Lirical data from lirical_data.tsv.gz',
+            'Loaded Lirical data from gs://seqr_data/lirical_data.tsv.gz',
             'Project 1kg project nåme with uniçøde: deleted 1 record(s), loaded 2 record(s)'
         ]
         self.assertEqual(response.json()['info'], info)

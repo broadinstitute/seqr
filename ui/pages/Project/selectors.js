@@ -48,9 +48,11 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 export const getProjectGuid = state => state.currentProjectGuid
 export const getProjectOverviewIsLoading = state => state.projectOverviewLoading.isLoading
 export const getProjectCollaboratorsIsLoading = state => state.projectCollaboratorsLoading.isLoading
+export const getProjectLocusListsIsLoading = state => state.projectLocusListsLoading.isLoading
 export const getMatchmakerMatchesLoading = state => state.matchmakerMatchesLoading.isLoading
 export const getMatchmakerContactNotes = state => state.mmeContactNotes
 export const getRnaSeqDataLoading = state => state.rnaSeqDataLoading.isLoading
+export const getPhenotypeDataLoading = state => state.phenotypeDataLoading.isLoading
 export const getFamiliesLoading = state => state.familiesLoading.isLoading
 export const getFamilyVariantSummaryLoading = state => state.familyVariantSummaryLoading.isLoading
 export const getIndivdualsLoading = state => state.individualsLoading.isLoading
@@ -100,11 +102,18 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   },
 )
 
-export const getProjectAnalysisGroupIndividualsCount = createSelector(
+export const getProjectAnalysisGroupFamilyIndividualCounts = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).reduce(
-    (acc, family) => acc + (family.individualGuids || []).length, 0,
-  ),
+  familiesByGuid => Object.values(familiesByGuid).map(family => (family.individualGuids || []).length),
+)
+
+export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSelector(
+  getProjectAnalysisGroupFamiliesByGuid,
+  getSamplesByFamily,
+  (familiesByGuid, samplesByFamily) => Object.keys(familiesByGuid).map((familyGuid) => {
+    const sampleIndividuals = new Set((samplesByFamily[familyGuid] || []).map(sample => sample.individualGuid))
+    return sampleIndividuals.size
+  }).filter(size => size > 0),
 )
 
 export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
@@ -611,20 +620,17 @@ export const getDefaultMmeSubmission = createSelector(
 export const getMmeResultsBySubmission = createSelector(
   getMmeResultsByGuid,
   getMmeSubmissionsByGuid,
-  (mmeResultsByGuid, mmeSubmissionsByGuid) => Object.values(mmeSubmissionsByGuid).reduce((acc, submission) => {
-    const { submissionGuid, mmeResultGuids = [] } = submission
+  (mmeResultsByGuid, mmeSubmissionsByGuid) => Object.values(mmeResultsByGuid).reduce((acc, result) => {
+    const { submissionGuid } = result
     if (!acc[submissionGuid]) {
       acc[submissionGuid] = { active: [], removed: [] }
     }
-    mmeResultGuids.forEach((resultGuid) => {
-      const result = mmeResultsByGuid[resultGuid]
-      const parsedResult = { ...result.matchStatus, ...result }
-      if (parsedResult.matchRemoved || mmeSubmissionsByGuid[submissionGuid].deletedDate) {
-        acc[submissionGuid].removed.push(parsedResult)
-      } else {
-        acc[submissionGuid].active.push(parsedResult)
-      }
-    })
+    const parsedResult = { ...result.matchStatus, ...result }
+    if (parsedResult.matchRemoved || mmeSubmissionsByGuid[submissionGuid].deletedDate) {
+      acc[submissionGuid].removed.push(parsedResult)
+    } else {
+      acc[submissionGuid].active.push(parsedResult)
+    }
     return acc
   }, { }),
 )

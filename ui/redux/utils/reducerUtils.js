@@ -10,6 +10,8 @@ export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
+export const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
+export const RECEIVE_ANALYSIS_GROUPS = 'RECEIVE_ANALYSIS_GROUPS'
 
 // A helper action that handles create, update and delete requests
 export const updateEntity = (
@@ -92,3 +94,7 @@ export const loadProjectDetails = projectGuid => (dispatch, getState) => {
       }).get()
   }
 }
+
+export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(
+  projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS,
+)
