@@ -320,6 +320,8 @@ class BaseHailTableQuery(object):
         annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
         for field in annotation_override_fields:
             value = annotations.pop(field, None)
+            if field == SCREEN_KEY:
+                logger.info(f'parse SCREEN OVERRIDE: {value}, ({self.ANNOTATION_OVERRIDE_FIELDS})')
             if field in self.ANNOTATION_OVERRIDE_FIELDS:
                 self._consequence_overrides[field] = value
 
