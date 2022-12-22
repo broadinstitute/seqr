@@ -404,8 +404,10 @@ class BaseHailTableQuery(object):
                 self._mt = self._mt.filter_rows(hl.is_missing(self._mt[pop]) | pop_filter)
 
     def _filter_by_in_silico(self, in_silico_filters):
+        in_silico_filters = in_silico_filters or {}
+        require_score = in_silico_filters.pop('requireScore', False)
         in_silico_filters = {
-            k: v for k, v in (in_silico_filters or {}).items()
+            k: v for k, v in in_silico_filters.items()
             if k in self.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0
         }
         if not in_silico_filters:
@@ -417,7 +419,7 @@ class BaseHailTableQuery(object):
             score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
             ht_value = self._mt[score_path[0]][score_path[1]]
             if in_silico in PREDICTION_FIELD_ID_LOOKUP:
-                score_filter = ht_value.startswith(value)
+                score_filter = ht_value == PREDICTION_FIELD_ID_LOOKUP[prediction].index(value)
             else:
                 score_filter = ht_value >= float(value)
 
@@ -426,13 +428,17 @@ class BaseHailTableQuery(object):
             else:
                 in_silico_q |= score_filter
 
-            missing_score_filter = hl.is_missing(ht_value)
-            if missing_in_silico_q is None:
-                missing_in_silico_q = missing_score_filter
-            else:
-                missing_in_silico_q &= missing_score_filter
+            if not require_score:
+                missing_score_filter = hl.is_missing(ht_value)
+                if missing_in_silico_q is None:
+                    missing_in_silico_q = missing_score_filter
+                else:
+                    missing_in_silico_q &= missing_score_filter
 
-        self._mt = self._mt.filter_rows(in_silico_q | missing_in_silico_q)
+        if not require_score:
+            in_silico_q |= missing_in_silico_q
+
+        self._mt = self._mt.filter_rows(in_silico_q)
 
     def _filter_by_annotations(self, allowed_consequences):
         annotation_filters = self._get_annotation_override_filters(self._mt)
