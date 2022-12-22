@@ -419,7 +419,7 @@ class BaseHailTableQuery(object):
             score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
             ht_value = self._mt[score_path[0]][score_path[1]]
             if in_silico in PREDICTION_FIELD_ID_LOOKUP:
-                score_filter = ht_value == PREDICTION_FIELD_ID_LOOKUP[prediction].index(value)
+                score_filter = ht_value == PREDICTION_FIELD_ID_LOOKUP[in_silico].index(value)
             else:
                 score_filter = ht_value >= float(value)
 
