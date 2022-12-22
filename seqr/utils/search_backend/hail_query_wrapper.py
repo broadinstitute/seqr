@@ -404,12 +404,11 @@ class BaseHailTableQuery(object):
                 self._mt = self._mt.filter_rows(hl.is_missing(self._mt[pop]) | pop_filter)
 
     def _filter_by_in_silico(self, in_silico_filters):
-        in_silico_filters = in_silico_filters or {}
-        require_score = in_silico_filters.pop('requireScore', False)
         in_silico_filters = {
-            k: v for k, v in in_silico_filters.items()
-            if k in self.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0
+            k: v for k, v in (in_silico_filters or {}).items()
+            if k == 'requireScore' or (k in self.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0)
         }
+        require_score = in_silico_filters.pop('requireScore', False)
         if not in_silico_filters:
             return
 
