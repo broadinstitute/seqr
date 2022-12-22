@@ -366,8 +366,8 @@ class BaseHailTableQuery(object):
         if not frequencies:
             return
 
-        clinvar_path_terms = [CLINVAR_SIG_MAP[f] for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES]
-        has_path_override = bool(clinvar_path_terms) and any(
+        clinvar_path_override_expr = self._get_clinvar_path_override_expr()
+        has_path_override = clinvar_path_override_expr is not None and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
         for pop, freqs in sorted(frequencies.items()):
@@ -377,8 +377,7 @@ class BaseHailTableQuery(object):
                 pop_filter = self._mt[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
-                            hl.set(clinvar_path_terms).contains(self._mt.clinvar.clinical_significance_id) &
-                            (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                            clinvar_path_override_expr & (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
                 ac_field = self.populations_configs[pop]['ac']
@@ -476,6 +475,14 @@ class BaseHailTableQuery(object):
 
         return annotation_filters
 
+    def _get_clinvar_path_override_expr(self):
+        clinvar_path_terms = [
+            CLINVAR_SIG_MAP[f] for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
+        ]
+        if not clinvar_path_terms:
+            return None
+        return hl.set(clinvar_path_terms).contains(self._mt.clinvar.clinical_significance_id)
+
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequences):
         allowed_consequence_ids = hl.set({
@@ -499,6 +506,7 @@ class BaseHailTableQuery(object):
         mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
             mt, inheritance_mode, inheritance_filter,
             self._get_invalid_quality_filter_expr(mt, quality_filter),
+            inheritance_override_q=self._get_clinvar_path_override_expr(),
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
@@ -568,7 +576,7 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(mt, x_interval):
         return x_interval.contains(mt.locus)
 
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, inheritance_override_q=None):
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, inheritance_override_q):
         searchable_samples = self._get_searchable_samples(mt)
         valid_sample_q = hl.is_defined(mt.familyGuid)
         invalid_sample_q = invalid_quality_samples_q
@@ -1012,13 +1020,16 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     def get_major_consequence(transcript):
         return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
 
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, **kwargs):
-        inheritance_override_q = None
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, inheritance_override_q):
         if self._consequence_overrides[NEW_SV_FIELD]:
-            inheritance_override_q = mt.newCall
+            new_call_override = mt.newCall
+            if inheritance_override_q is None:
+                inheritance_override_q = new_call_override
+            else:
+                inheritance_override_q |= new_call_override
         return super(BaseSvHailTableQuery, self)._get_matched_families_expr(
             mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q,
-            inheritance_override_q=inheritance_override_q,
+            inheritance_override_q,
         )
 
 
