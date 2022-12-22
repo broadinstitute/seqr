@@ -504,9 +504,7 @@ class BaseHailTableQuery(object):
             self._set_validated_affected_status(individual_affected_status, max_families)
 
         mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(
-            mt, inheritance_mode, inheritance_filter,
-            self._get_invalid_quality_filter_expr(mt, quality_filter),
-            inheritance_override_q=self._get_clinvar_path_override_expr(),
+            mt, inheritance_mode, inheritance_filter, quality_filter,
         ))
 
         if inheritance_mode == X_LINKED_RECESSIVE:
@@ -576,10 +574,14 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(mt, x_interval):
         return x_interval.contains(mt.locus)
 
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, inheritance_override_q):
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, quality_filter, inheritance_override_q=None):
         searchable_samples = self._get_searchable_samples(mt)
         valid_sample_q = hl.is_defined(mt.familyGuid)
-        invalid_sample_q = invalid_quality_samples_q
+
+        invalid_sample_q = self._get_invalid_quality_filter_expr(mt, quality_filter)
+        clinvar_path_override_expr = self._get_clinvar_path_override_expr()
+        if clinvar_path_override_expr is not None:
+            invalid_sample_q = invalid_sample_q & ~clinvar_path_override_expr
 
         if not inheritance_filter:
             if inheritance_mode == ANY_AFFECTED:
@@ -1020,16 +1022,13 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     def get_major_consequence(transcript):
         return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
 
-    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q, inheritance_override_q):
+    def _get_matched_families_expr(self, mt, inheritance_mode, inheritance_filter, quality_filter, **kwargs):
+        inheritance_override_q = None
         if self._consequence_overrides[NEW_SV_FIELD]:
-            new_call_override = mt.newCall
-            if inheritance_override_q is None:
-                inheritance_override_q = new_call_override
-            else:
-                inheritance_override_q |= new_call_override
+            inheritance_override_q = mt.newCall
         return super(BaseSvHailTableQuery, self)._get_matched_families_expr(
-            mt, inheritance_mode, inheritance_filter, invalid_quality_samples_q,
-            inheritance_override_q,
+            mt, inheritance_mode, inheritance_filter, quality_filter,
+            inheritance_override_q=inheritance_override_q,
         )
 
 
