@@ -579,9 +579,10 @@ class BaseHailTableQuery(object):
         valid_sample_q = hl.is_defined(mt.familyGuid)
 
         invalid_sample_q = self._get_invalid_quality_filter_expr(mt, quality_filter)
-        clinvar_path_override_expr = self._get_clinvar_path_override_expr()
-        if clinvar_path_override_expr is not None:
-            invalid_sample_q = invalid_sample_q & ~clinvar_path_override_expr
+        if invalid_sample_q is not None:
+            clinvar_path_override_expr = self._get_clinvar_path_override_expr()
+            if clinvar_path_override_expr is not None:
+                invalid_sample_q = invalid_sample_q & ~clinvar_path_override_expr
 
         if not inheritance_filter:
             if inheritance_mode == ANY_AFFECTED:
