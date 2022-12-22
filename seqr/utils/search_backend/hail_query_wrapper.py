@@ -435,7 +435,7 @@ class BaseHailTableQuery(object):
                 else:
                     missing_in_silico_q &= missing_score_filter
 
-        if not require_score:
+        if missing_in_silico_q is not None:
             in_silico_q |= missing_in_silico_q
 
         self._mt = self._mt.filter_rows(in_silico_q)
