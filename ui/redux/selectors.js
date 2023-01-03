@@ -236,11 +236,13 @@ export const getVariantTagNotesByFamilyVariants = createSelector(
   },
 )
 
-export const getTagTypesByProject = createSelector(
+export const getSelectableTagTypesByProject = createSelector(
   getProjectsByGuid,
   projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
     ...acc,
-    [project.projectGuid]: (project.variantTagTypes || []).filter(vtt => vtt.name !== NOTE_TAG_NAME),
+    [project.projectGuid]: (project.variantTagTypes || []).filter(
+      vtt => vtt.name !== NOTE_TAG_NAME && vtt.name !== 'MME Submission',
+    ),
   }), {}),
 )
 

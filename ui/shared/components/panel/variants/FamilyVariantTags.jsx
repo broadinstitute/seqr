@@ -9,7 +9,7 @@ import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import {
   getFamiliesByGuid,
   getVariantTagNotesByFamilyVariants,
-  getTagTypesByProject,
+  getSelectableTagTypesByProject,
   getFunctionalTagTypesTypesByProject,
   getVariantId,
   getMmeSubmissionsByGuid,
@@ -350,7 +350,7 @@ const mapStateToProps = (state, ownProps) => {
   return {
     variantId,
     family,
-    projectTagTypes: getTagTypesByProject(state)[projectGuid],
+    projectTagTypes: getSelectableTagTypesByProject(state)[projectGuid],
     projectFunctionalTagTypes: getFunctionalTagTypesTypesByProject(state)[projectGuid],
     variantTagNotes: ((getVariantTagNotesByFamilyVariants(state) || {})[ownProps.familyGuid] || {})[variantId],
     mmeSubmissionsByGuid: getMmeSubmissionsByGuid(state),

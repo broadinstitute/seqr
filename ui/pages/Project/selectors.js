@@ -11,13 +11,14 @@ import {
   getVariantMainTranscript,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
+  NOTE_TAG_NAME,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
-  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getTagTypesByProject,
+  getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
   getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants,
 } from 'redux/selectors'
@@ -170,9 +171,8 @@ export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
 )
 
 export const getProjectTagTypes = createSelector(
-  getProjectGuid,
-  getTagTypesByProject,
-  (projectGuid, tagTypesByProject) => tagTypesByProject[projectGuid] || [],
+  getCurrentProject,
+  project => (project.variantTagTypes || []).filter(vtt => vtt.name !== NOTE_TAG_NAME),
 )
 
 export const getTaggedVariantsByFamily = createSelector(
@@ -273,7 +273,7 @@ export const getIndividualTaggedVariants = createSelector(
 
 export const getProjectTagTypeOptions = createSelector(
   getProjectGuid,
-  getTagTypesByProject,
+  getSelectableTagTypesByProject,
   (projectGuid, tagTypesByProject) => tagTypesByProject[projectGuid].map(
     ({ name, variantTagTypeGuid, ...tag }) => ({ value: name, text: name, ...tag }),
   ),
