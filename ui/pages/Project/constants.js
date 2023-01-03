@@ -16,6 +16,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_SAVED_VARIANTS,
   FAMILY_FIELD_NAME_LOOKUP,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
@@ -183,6 +184,8 @@ export const CATEGORY_FAMILY_FILTERS = {
       name: 'No Phenotypes Entered',
       createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
     },
+  ],
+  [FAMILY_FIELD_SAVED_VARIANTS]: [
   ],
 }
 
