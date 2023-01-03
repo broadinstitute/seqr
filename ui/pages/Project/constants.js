@@ -186,11 +186,11 @@ export const CATEGORY_FAMILY_FILTERS = {
       createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
     },
   ],
-  [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, 'Analyst high priority'].map(name => ({
-    value: name,
-    name,
+  [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, 'Analyst high priority'].map(tagName => ({
+    value: tagName,
+    name: tagName,
     createFilter: (individualsByGuid, user, samplesByFamily, familyTagTypeCounts) => ({ familyGuid }) => (
-      (familyTagTypeCounts[familyGuid] || {})[name]
+      (familyTagTypeCounts[familyGuid] || {})[tagName]
     ),
   })),
 }
