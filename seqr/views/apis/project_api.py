@@ -318,11 +318,26 @@ def _add_tag_type_counts(project, project_variant_tags):
         'numTags': num_tags,
     }
 
-    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
-        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
+    project_variants = VariantTag.objects.filter(saved_variants__family__project=project)
+
+    mme_counts_by_family = project_variants.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
+        .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
+    mme_tag_type = {
+        'variantTagTypeGuid': 'mmeSubmissionVariants',
+        'name': 'MME Submission',
+        'category': 'Matchmaker',
+        'description': '',
+        'color': '#6435c9',
+        'order': 99,
+    }
+    project_variant_tags.append(mme_tag_type)
+
+    tag_counts_by_type_and_family = project_variants.values(
+        'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
     for tag_type in project_variant_tags:
-        current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
-                                   counts['variant_tag_type__name'] == tag_type['name']]
+        current_tag_type_counts = mme_counts_by_family if tag_type['name'] == 'MME Submission' else [
+            counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == tag_type['name']
+        ]
         num_tags = sum(count['count'] for count in current_tag_type_counts)
         tag_type.update({
             'numTags': num_tags,
