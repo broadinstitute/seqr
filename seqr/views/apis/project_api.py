@@ -322,15 +322,6 @@ def _add_tag_type_counts(project, project_variant_tags):
 
     mme_counts_by_family = project_variants.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
         .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
-    mme_tag_type = {
-        'variantTagTypeGuid': 'mmeSubmissionVariants',
-        'name': 'MME Submission',
-        'category': 'Matchmaker',
-        'description': '',
-        'color': '#6435c9',
-        'order': 99,
-    }
-    project_variant_tags.append(mme_tag_type)
 
     tag_counts_by_type_and_family = project_variants.values(
         'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))

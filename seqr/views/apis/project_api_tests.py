@@ -258,6 +258,16 @@ class ProjectAPITest(object):
             'order': 100,
             'numTags': 1,
         })
+        mme_tag_type = project_response['variantTagTypes'][-2]
+        self.assertDictEqual(mme_tag_type, {
+            'variantTagTypeGuid': 'mmeSubmissionVariants',
+            'name': 'MME Submission',
+            'category': 'Matchmaker',
+            'description': '',
+            'color': '#6435c9',
+            'order': 99,
+            'numTags': 1,
+        })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 

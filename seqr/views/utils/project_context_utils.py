@@ -141,6 +141,15 @@ def add_project_tag_types(projects_by_guid):
             project_guid = vtt.project.guid if vtt.project else None
             project_tag_types[project_guid].append(variant_tag_types_by_guid[vtt.guid])
 
+    project_tag_types[None].append({
+        'variantTagTypeGuid': 'mmeSubmissionVariants',
+        'name': 'MME Submission',
+        'category': 'Matchmaker',
+        'description': '',
+        'color': '#6435c9',
+        'order': 99,
+    })
+
     for project_guid, project_json in projects_by_guid.items():
         project_json.update({
             'variantTagTypes': sorted(
