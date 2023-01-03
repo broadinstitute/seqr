@@ -15,7 +15,7 @@ import {
   getMmeSubmissionsByGuid,
   getGenesById,
 } from 'redux/selectors'
-import { DISCOVERY_CATEGORY_NAME } from 'shared/utils/constants'
+import { DISCOVERY_CATEGORY_NAME, MME_TAG_NAME } from 'shared/utils/constants'
 import AcmgModal from '../acmg/AcmgModal'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
@@ -210,7 +210,7 @@ const MatchmakerLabel = ({ variant, family, mmeSubmissionsByGuid, genesById }) =
         as={NavLink}
         to={`/project/${family.projectGuid}/family_page/${family.familyGuid}/matchmaker_exchange`}
         target="_blank"
-        content="MME Submission"
+        content={MME_TAG_NAME}
         color="violet"
         size="small"
       />}

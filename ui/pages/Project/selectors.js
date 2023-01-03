@@ -12,6 +12,7 @@ import {
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
   NOTE_TAG_NAME,
+  MME_TAG_NAME,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
@@ -213,8 +214,11 @@ export const getSavedVariantTagTypeCountsByFamily = createSelector(
   variantsByFamily => Object.entries(variantsByFamily).reduce(
     (acc, [familyGuid, variants]) => ({
       ...acc,
-      [familyGuid]: variants.reduce((acc2, { tags }) => {
+      [familyGuid]: variants.reduce((acc2, { tags, mmeSubmissions = [] }) => {
         const counts = {}
+        if (mmeSubmissions.length) {
+          counts[MME_TAG_NAME] = (acc2[MME_TAG_NAME] || 0) + 1
+        }
         tags.forEach(({ name }) => {
           if (!counts[name]) {
             counts[name] = acc2[name] || 0
@@ -229,8 +233,13 @@ export const getSavedVariantTagTypeCountsByFamily = createSelector(
 
 export const getSavedVariantTagTypeCounts = createSelector(
   getVariantTagsByGuid,
-  variantTagsByGuid => Object.values(variantTagsByGuid).reduce(
-    (acc, { name }) => ({ ...acc, [name]: (acc[name] || 0) + 1 }), {},
+  getSavedVariantsByGuid,
+  (variantTagsByGuid, savedVariantsByGuid) => Object.values(variantTagsByGuid).reduce(
+    (acc, { name }) => ({ ...acc, [name]: (acc[name] || 0) + 1 }), {
+      [MME_TAG_NAME]: Object.values(savedVariantsByGuid).filter(
+        ({ mmeSubmissions = [] }) => mmeSubmissions.length > 0,
+      ).length,
+    },
   ),
 )
 
