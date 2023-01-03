@@ -83,6 +83,8 @@ const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 
+const SHOW_HAS_MME = 'SHOW_HAS_MME'
+
 const getFamilyCaseReviewStatuses  = (family, individualsByGuid) => {
   const statuses = family.individualGuids.map(
     individualGuid => (individualsByGuid[individualGuid] || {}).caseReviewStatus,
@@ -186,6 +188,11 @@ export const CATEGORY_FAMILY_FILTERS = {
     },
   ],
   [FAMILY_FIELD_SAVED_VARIANTS]: [
+    {
+      value: SHOW_HAS_MME,
+      name: 'MME Submission',
+      createFilter: () => family => !!family,  // TODO
+    },
   ],
 }
 
