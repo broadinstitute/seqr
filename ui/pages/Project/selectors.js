@@ -460,16 +460,19 @@ export const getVisibleFamilies = createSelector(
   getIndividualsByGuid,
   getSamplesByFamily,
   getUser,
+  getFamilyTagTypeCounts,
   getFamiliesSearch,
   getFamiliesFilterFunc,
   (
-    familiesByGuid, familiesBySearchString, individualsByGuid, samplesByFamily, user, familiesSearch, familyFilter,
+    familiesByGuid, familiesBySearchString, individualsByGuid, samplesByFamily, user, familyTagTypeCounts,
+    familiesSearch, familyFilter,
   ) => {
     const searchedFamilies = familiesBySearchString ? Object.keys(familiesBySearchString).filter(
       familySearchString => familySearchString.includes(familiesSearch),
     ).map(familySearchString => familiesBySearchString[familySearchString]) : Object.values(familiesByGuid)
     return familyFilter ?
-      searchedFamilies.filter(familyFilter(individualsByGuid, user, samplesByFamily)) : searchedFamilies
+      searchedFamilies.filter(familyFilter(individualsByGuid, user, samplesByFamily, familyTagTypeCounts)) :
+      searchedFamilies
   },
 )
 
