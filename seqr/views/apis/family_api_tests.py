@@ -133,7 +133,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
 
         self.assertDictEqual(response_json['familyTagTypeCounts'], {
-            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
+            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
 

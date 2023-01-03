@@ -258,12 +258,22 @@ class ProjectAPITest(object):
             'order': 100,
             'numTags': 1,
         })
+        mme_tag_type = project_response['variantTagTypes'][-2]
+        self.assertDictEqual(mme_tag_type, {
+            'variantTagTypeGuid': 'mmeSubmissionVariants',
+            'name': 'MME Submission',
+            'category': 'Matchmaker',
+            'description': '',
+            'color': '#6435c9',
+            'order': 99,
+            'numTags': 1,
+        })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
         self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
-            'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
+            'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
             'F000002_2': {'Excluded': 1, 'Known gene for phenotype': 1},
         })
 
@@ -273,7 +283,7 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
             response.json()['familyTagTypeCounts'],
-            {'F000012_12': {'Tier 1 - Novel gene and phenotype': 1}},
+            {'F000012_12': {'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 2}},
         )
 
         # Test empty project

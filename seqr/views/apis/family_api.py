@@ -72,11 +72,13 @@ def family_variant_tag_summary(request, family_guid):
 
     response = families_discovery_tags([{'familyGuid': family_guid}])
 
-    family_tag_type_counts = VariantTag.objects.filter(saved_variants__family=family).values(
-        'variant_tag_type__name').annotate(count=Count('*'))
+    tags = VariantTag.objects.filter(saved_variants__family=family)
+    family_tag_type_counts = tags.values('variant_tag_type__name').annotate(count=Count('*'))
     response['familyTagTypeCounts'] = {
         family_guid: {c['variant_tag_type__name']: c['count'] for c in family_tag_type_counts},
     }
+    response['familyTagTypeCounts'][family_guid]['MME Submission'] = tags.filter(
+        saved_variants__matchmakersubmissiongenes__isnull=False).values('saved_variants__guid').distinct().count()
 
     response['projectsByGuid'] = {project.guid: {}}
     add_project_tag_types(response['projectsByGuid'])
