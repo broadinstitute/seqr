@@ -12,7 +12,7 @@ import AddWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
 import { DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS } from 'shared/utils/constants'
 
 import { addVariantsDataset, addIGVDataset } from '../reducers'
-import { getProjectGuid } from '../selectors'
+import { getCurrentProject, getProjectGuid } from '../selectors'
 
 const UPLOADER_STYLES = { placeHolderStyle: { paddingLeft: '5%', paddingRight: '5%' } }
 
@@ -171,8 +171,13 @@ const PANES = [
 
 const IGV_ONLY_PANES = [PANES[1]]
 
-const EditDatasetsButton = React.memo(({ project, user }) => {
-  const showLoadWorkspaceData = project.workspaceName && !project.isAnalystProject && project.canEdit
+const mapAddDataStateToProps = state => ({
+  params: getCurrentProject(state),
+})
+
+const AddProjectWorkspaceDataForm = connect(mapAddDataStateToProps)(AddWorkspaceDataForm)
+
+const EditDatasetsButton = React.memo(({ showLoadWorkspaceData, user }) => {
   const showEditDatasets = user.isDataManager || user.isPm
   return (
     (showEditDatasets || showLoadWorkspaceData) ? (
@@ -183,8 +188,7 @@ const EditDatasetsButton = React.memo(({ project, user }) => {
         trigger={<ButtonLink>{showEditDatasets ? 'Edit Datasets' : 'Load Additional Data'}</ButtonLink>}
       >
         {showEditDatasets ? <Tab panes={user.isDataManager ? PANES : IGV_ONLY_PANES} /> : (
-          <AddWorkspaceDataForm
-            params={project}
+          <AddProjectWorkspaceDataForm
             successMessage="Your request to load data has been submitted. Loading data from AnVIL to seqr is a slow process, and generally takes a week. You will receive an email letting you know once your new data is available."
           />
         )}
@@ -194,7 +198,7 @@ const EditDatasetsButton = React.memo(({ project, user }) => {
 })
 
 EditDatasetsButton.propTypes = {
-  project: PropTypes.object.isRequired,
+  showLoadWorkspaceData: PropTypes.bool,
   user: PropTypes.object,
 }
 
