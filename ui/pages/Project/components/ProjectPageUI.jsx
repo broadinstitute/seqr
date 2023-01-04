@@ -72,7 +72,7 @@ const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
-const ProjectPageUI = React.memo(({ match, load, project, loading, familiesLoading }) => (
+const ProjectPageUI = React.memo(({ match, load, loading, familiesLoading }) => (
   <Grid stackable>
     <DataLoader load={load} loading={false} content>
       <Grid.Row>
@@ -83,14 +83,13 @@ const ProjectPageUI = React.memo(({ match, load, project, loading, familiesLoadi
             </ProjectSection>
           )}
           <VerticalSpacer height={10} />
-          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={project} />} collaboratorEdit>
-            <GeneLists project={project} />
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton />} collaboratorEdit>
+            <GeneLists />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={8}>
           <ProjectSection label="Overview">
             <ProjectOverview
-              project={project}
               analysisGroupGuid={match.params.analysisGroupGuid}
               familiesLoading={familiesLoading}
               overviewLoading={loading}
@@ -98,10 +97,7 @@ const ProjectPageUI = React.memo(({ match, load, project, loading, familiesLoadi
           </ProjectSection>
           <VerticalSpacer height={10} />
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All" loading={loading}>
-            <VariantTags
-              project={project}
-              analysisGroupGuid={match.params.analysisGroupGuid}
-            />
+            <VariantTags analysisGroupGuid={match.params.analysisGroupGuid} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
@@ -125,7 +121,6 @@ const ProjectPageUI = React.memo(({ match, load, project, loading, familiesLoadi
 ))
 
 ProjectPageUI.propTypes = {
-  project: PropTypes.object.isRequired,
   match: PropTypes.object,
   load: PropTypes.func,
   loading: PropTypes.bool,
@@ -133,7 +128,6 @@ ProjectPageUI.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  project: getCurrentProject(state),
   loading: getProjectOverviewIsLoading(state),
   familiesLoading: getFamiliesLoading(state),
 })

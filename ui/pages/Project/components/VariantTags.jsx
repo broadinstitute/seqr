@@ -9,7 +9,7 @@ import { ColoredIcon, HelpIcon, NoBorderTable } from 'shared/components/StyledCo
 import { NOTE_TAG_NAME } from 'shared/utils/constants'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
-import { getAnalysisGroupTagTypeCounts, getProjectTagTypes, getTagTypeCounts } from '../selectors'
+import { getAnalysisGroupTagTypeCounts, getCurrentProject, getProjectTagTypes, getTagTypeCounts } from '../selectors'
 
 const TableRow = styled(Table.Row)`
   padding: 0px !important;`
@@ -91,6 +91,7 @@ VariantTags.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
+  project: getCurrentProject(state),
   tagTypes: getProjectTagTypes(state),
   tagTypeCounts: ownProps.analysisGroupGuid ?
     getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),

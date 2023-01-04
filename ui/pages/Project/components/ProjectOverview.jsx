@@ -24,6 +24,7 @@ import {
 } from 'shared/utils/constants'
 import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } from '../reducers'
 import {
+  getCurrentProject,
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamilyIndividualCounts,
   getProjectAnalysisGroupDataLoadedFamilyIndividualCounts,
@@ -434,4 +435,8 @@ ProjectOverview.propTypes = {
   overviewLoading: PropTypes.bool,
 }
 
-export default ProjectOverview
+const mapStateToProps = state => ({
+  project: getCurrentProject(state),
+})
+
+export default connect(mapStateToProps)(ProjectOverview)
