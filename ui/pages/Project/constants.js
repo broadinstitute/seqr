@@ -125,6 +125,7 @@ const ASSIGNED_TO_ME_FILTER = {
   name: 'Assigned To Me',
   createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
+const ANALYST_HIGH_PRIORITY_TAG = 'Analyst high priority'
 
 export const CATEGORY_FAMILY_FILTERS = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: [
@@ -186,7 +187,7 @@ export const CATEGORY_FAMILY_FILTERS = {
       createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
     },
   ],
-  [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, 'Analyst high priority'].map(tagName => ({
+  [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, ANALYST_HIGH_PRIORITY_TAG].map(tagName => ({
     value: tagName,
     name: tagName,
     createFilter: (individualsByGuid, user, samplesByFamily, familyTagTypeCounts) => ({ familyGuid }) => (
