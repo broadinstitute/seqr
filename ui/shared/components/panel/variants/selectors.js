@@ -231,12 +231,13 @@ export const getVisibleSortedSavedVariants = createSelector(
   getVariantTagsByGuid,
   getFamiliesByGuid,
   getProjectsByGuid,
+  getIndividualGeneDataByFamilyGene,
   (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user, variantTagsByGuid,
-    familiesByGuid, projectsByGuid) => {
+    familiesByGuid, projectsByGuid, individualGeneDataByFamilyGene) => {
     // Always secondary sort on xpos
     pairedFilteredSavedVariants.sort((a, b) => VARIANT_SORT_LOOKUP[sort](
       Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b,
-      genesById, variantTagsByGuid, user, familiesByGuid, projectsByGuid,
+      genesById, variantTagsByGuid, user, familiesByGuid, projectsByGuid, individualGeneDataByFamilyGene,
     ) || (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos)
     return pairedFilteredSavedVariants.slice(...visibleIndices)
   },
