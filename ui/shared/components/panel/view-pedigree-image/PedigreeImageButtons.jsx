@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Message, Loader, Button, Segment } from 'semantic-ui-react'
+import { Loader, Button, Segment } from 'semantic-ui-react'
 
 import { updateFamily } from 'redux/rootReducer'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
@@ -20,17 +20,16 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
     onSuccess: PropTypes.func,
   }
 
-  state = { error: null, confirmedNoPhi: false }
+  state = { confirmedNoPhi: false }
 
   constructor(props) {
     super(props)
     this.modalId = `uploadPedigree-${props.family.familyGuid}`
   }
 
-  onFinished = (xhr) => {
+  onFinished = (xhrResponse) => {
     const { onSuccess } = this.props
-    return xhr.status === 200 ? onSuccess(JSON.parse(xhr.response), this.modalId) :
-      this.setState({ error: `Error: ${xhr.statusText} (${xhr.status})` })
+    return onSuccess(xhrResponse, this.modalId)
   }
 
   confirmNoPhi = () => {
@@ -39,7 +38,7 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
 
   render() {
     const { family } = this.props
-    const { error, confirmedNoPhi } = this.state
+    const { confirmedNoPhi } = this.state
     return (
       <Modal
         title={`Upload Pedigree for Family ${family.familyId}`}
@@ -55,6 +54,7 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
               auto
               maxFiles={1}
               dropzoneLabel="Drag and drop or click to upload pedigree image"
+              showError
             />
           </React.Suspense>
         ) : (
@@ -67,7 +67,6 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
             <Button primary floated="right" content="Continue" onClick={this.confirmNoPhi} />
           </Segment>
         )}
-        {error && <Message error content={error} />}
       </Modal>
     )
   }
