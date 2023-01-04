@@ -126,6 +126,9 @@ def families_discovery_tags(families):
     }
 
 
+MME_TAG_NAME = 'MME Submission'
+
+
 def add_project_tag_types(projects_by_guid):
     variant_tag_types_models = VariantTagType.objects.filter(Q(project__guid__in=projects_by_guid.keys()) | Q(project__isnull=True))
     variant_tag_types = _get_json_for_models(variant_tag_types_models)
@@ -143,7 +146,7 @@ def add_project_tag_types(projects_by_guid):
 
     project_tag_types[None].append({
         'variantTagTypeGuid': 'mmeSubmissionVariants',
-        'name': 'MME Submission',
+        'name': MME_TAG_NAME,
         'category': 'Matchmaker',
         'description': '',
         'color': '#6435c9',
