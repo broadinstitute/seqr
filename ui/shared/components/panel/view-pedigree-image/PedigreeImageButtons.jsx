@@ -1,13 +1,14 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Loader, Button, Segment } from 'semantic-ui-react'
+import { Loader } from 'semantic-ui-react'
 
 import { updateFamily } from 'redux/rootReducer'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../../buttons/DeleteButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
+import PhiWarningUploadField from '../../form/PhiWarningUploadField'
 import Modal from '../../modal/Modal'
 import { ButtonLink } from '../../StyledComponents'
 
@@ -20,8 +21,6 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
     onSuccess: PropTypes.func,
   }
 
-  state = { confirmedNoPhi: false }
-
   constructor(props) {
     super(props)
     this.modalId = `uploadPedigree-${props.family.familyGuid}`
@@ -32,20 +31,15 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
     return onSuccess(xhrResponse, this.modalId)
   }
 
-  confirmNoPhi = () => {
-    this.setState({ confirmedNoPhi: true })
-  }
-
   render() {
     const { family } = this.props
-    const { confirmedNoPhi } = this.state
     return (
       <Modal
         title={`Upload Pedigree for Family ${family.familyId}`}
         modalName={this.modalId}
         trigger={<ButtonLink content="Upload New Image" icon="upload" labelPosition="right" />}
       >
-        {confirmedNoPhi ? (
+        <PhiWarningUploadField>
           <React.Suspense fallback={<Loader />}>
             <XHRUploaderWithEvents
               onUploadFinished={this.onFinished}
@@ -57,16 +51,7 @@ class BaseEditPedigreeImageButton extends React.PureComponent {
               showError
             />
           </React.Suspense>
-        ) : (
-          <Segment basic compact textAlign="center" size="large">
-            <i>seqr </i>
-            is not a HIPAA-compliant platform. By proceeding, I affirm that this image does not contain any
-            protected health information (PHI), either in the image itself or in the image metadata.
-            <br />
-            <br />
-            <Button primary floated="right" content="Continue" onClick={this.confirmNoPhi} />
-          </Segment>
-        )}
+        </PhiWarningUploadField>
       </Modal>
     )
   }
