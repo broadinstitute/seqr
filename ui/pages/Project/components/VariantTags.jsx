@@ -7,8 +7,9 @@ import { Popup, Table } from 'semantic-ui-react'
 
 import { ColoredIcon, HelpIcon, NoBorderTable } from 'shared/components/StyledComponents'
 import { NOTE_TAG_NAME } from 'shared/utils/constants'
-import { getSavedVariantsLinkPath } from './VariantTagTypeBar'
-import { getProjectTagTypes } from '../selectors'
+import { VerticalSpacer } from 'shared/components/Spacers'
+import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
+import { getAnalysisGroupTagTypeCounts, getProjectTagTypes, getTagTypeCounts } from '../selectors'
 
 const TableRow = styled(Table.Row)`
   padding: 0px !important;`
@@ -48,26 +49,36 @@ TagSummary.propTypes = {
 const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeCounts }) => {
   const noteTagType = analysisGroupGuid ? null : (project.variantTagTypes || []).find(vtt => vtt.name === NOTE_TAG_NAME)
   return (
-    <NoBorderTable basic="very" compact="very">
-      <Table.Body>
-        {
-          tagTypes.filter(variantTagType => variantTagType && tagTypeCounts[variantTagType.name] > 0).map(
-            variantTagType => (
-              <TagSummary
-                key={variantTagType.variantTagTypeGuid}
-                variantTagType={variantTagType}
-                count={tagTypeCounts[variantTagType.name]}
-                project={project}
-                analysisGroupGuid={analysisGroupGuid}
-              />
-            ),
-          )
-        }
-        {noteTagType && noteTagType.numTags > 0 && (
-          <TagSummary variantTagType={noteTagType} count={noteTagType.numTags} project={project} />
-        )}
-      </Table.Body>
-    </NoBorderTable>
+    <div>
+      <VariantTagTypeBar
+        project={project}
+        analysisGroupGuid={analysisGroupGuid}
+        tagTypeCounts={tagTypeCounts}
+        height={20}
+        showAllPopupCategories
+      />
+      <VerticalSpacer height={10} />
+      <NoBorderTable basic="very" compact="very">
+        <Table.Body>
+          {
+            tagTypes.filter(variantTagType => variantTagType && tagTypeCounts[variantTagType.name] > 0).map(
+              variantTagType => (
+                <TagSummary
+                  key={variantTagType.variantTagTypeGuid}
+                  variantTagType={variantTagType}
+                  count={tagTypeCounts[variantTagType.name]}
+                  project={project}
+                  analysisGroupGuid={analysisGroupGuid}
+                />
+              ),
+            )
+          }
+          {noteTagType && noteTagType.numTags > 0 && (
+            <TagSummary variantTagType={noteTagType} count={noteTagType.numTags} project={project} />
+          )}
+        </Table.Body>
+      </NoBorderTable>
+    </div>
   )
 })
 
@@ -78,8 +89,10 @@ VariantTags.propTypes = {
   analysisGroupGuid: PropTypes.string,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   tagTypes: getProjectTagTypes(state),
+  tagTypeCounts: ownProps.analysisGroupGuid ?
+    getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
 })
 
 export default connect(mapStateToProps)(VariantTags)

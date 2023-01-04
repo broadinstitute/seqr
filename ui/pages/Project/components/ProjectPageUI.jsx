@@ -15,14 +15,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
-import {
-  getCurrentProject,
-  getAnalysisStatusCounts,
-  getProjectOverviewIsLoading,
-  getFamiliesLoading,
-  getTagTypeCounts,
-  getAnalysisGroupTagTypeCounts,
-} from '../selectors'
+import { getCurrentProject, getProjectOverviewIsLoading, getFamiliesLoading } from '../selectors'
 import { loadProjectOverview } from '../reducers'
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
@@ -31,7 +24,6 @@ import ProjectCollaborators from './ProjectCollaborators'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
-import VariantTagTypeBar from './VariantTagTypeBar'
 
 const ProjectSectionComponent = React.memo((
   { loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit },
@@ -80,44 +72,35 @@ const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
-const ProjectPageUI = React.memo(props => (
+const ProjectPageUI = React.memo(({ match, load, project, loading, familiesLoading }) => (
   <Grid stackable>
-    <DataLoader load={props.load} loading={false} content>
+    <DataLoader load={load} loading={false} content>
       <Grid.Row>
         <Grid.Column width={4}>
-          {props.match.params.analysisGroupGuid ? null : (
+          {match.params.analysisGroupGuid ? null : (
             <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
               <AnalysisGroups />
             </ProjectSection>
           )}
           <VerticalSpacer height={10} />
-          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
-            <GeneLists project={props.project} />
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={project} />} collaboratorEdit>
+            <GeneLists project={project} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={8}>
           <ProjectSection label="Overview">
             <ProjectOverview
-              project={props.project}
-              analysisGroupGuid={props.match.params.analysisGroupGuid}
-              familiesLoading={props.familiesLoading}
-              overviewLoading={props.loading}
+              project={project}
+              analysisGroupGuid={match.params.analysisGroupGuid}
+              familiesLoading={familiesLoading}
+              overviewLoading={loading}
             />
           </ProjectSection>
           <VerticalSpacer height={10} />
-          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All" loading={props.loading}>
-            <VariantTagTypeBar
-              project={props.project}
-              analysisGroupGuid={props.match.params.analysisGroupGuid}
-              tagTypeCounts={props.tagTypeCounts}
-              height={20}
-              showAllPopupCategories
-            />
-            <VerticalSpacer height={10} />
+          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All" loading={loading}>
             <VariantTags
-              project={props.project}
-              analysisGroupGuid={props.match.params.analysisGroupGuid}
-              tagTypeCounts={props.tagTypeCounts}
+              project={project}
+              analysisGroupGuid={match.params.analysisGroupGuid}
             />
           </ProjectSection>
         </Grid.Column>
@@ -147,16 +130,12 @@ ProjectPageUI.propTypes = {
   load: PropTypes.func,
   loading: PropTypes.bool,
   familiesLoading: PropTypes.bool,
-  tagTypeCounts: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapStateToProps = state => ({
   project: getCurrentProject(state),
-  analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
   loading: getProjectOverviewIsLoading(state),
   familiesLoading: getFamiliesLoading(state),
-  tagTypeCounts: ownProps.match.params.analysisGroupGuid ?
-    getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
 })
 
 const mapDispatchToProps = {
