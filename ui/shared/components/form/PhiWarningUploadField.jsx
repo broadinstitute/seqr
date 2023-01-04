@@ -22,9 +22,9 @@ class PhiWarningUploadField extends React.PureComponent {
     return confirmedNoPhi ? children : (
       <Segment basic compact textAlign="center" size="large">
         <i>seqr </i>
-        is not a HIPAA-compliant platform. By proceeding, I affirm that this &nbsp;
+        is not a HIPAA-compliant platform. By proceeding, I affirm that this&nbsp;
         {fileDescriptor}
-        &nbsp; does not contain any protected health information (PHI), &nbsp;
+        &nbsp;does not contain any protected health information (PHI), &nbsp;
         {disclaimerDetail}
         <br />
         <br />
