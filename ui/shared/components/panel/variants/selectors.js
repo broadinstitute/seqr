@@ -22,7 +22,7 @@ export const getIndividualGeneDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
   getPhenotypeGeneScoresByIndividual,
-  (individualsByGuid, rnaSeqDataByIndividual, phenotypeGeneScoresByIndividual) => (
+  (individualsByGuid, rnaSeqDataByIndividual = {}, phenotypeGeneScoresByIndividual = {}) => (
     Object.entries(individualsByGuid).reduce((acc, [individualGuid, { familyGuid, displayName }]) => {
       const rnaSeqData = rnaSeqDataByIndividual[individualGuid]?.outliers
       const phenotypeGeneScores = phenotypeGeneScoresByIndividual[individualGuid]
