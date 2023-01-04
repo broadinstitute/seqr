@@ -28,7 +28,7 @@ class PhiWarningUploadField extends React.PureComponent {
         {disclaimerDetail}
         <br />
         <br />
-        <Button primary floated="right" content="Continue" onClick={this.confirmNoPhi} />
+        <Button primary floated="right" content="I Agree" onClick={this.confirmNoPhi} />
       </Segment>
     )
   }
