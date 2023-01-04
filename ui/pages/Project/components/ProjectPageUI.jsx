@@ -72,12 +72,12 @@ const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
 ]
 
-const ProjectPageUI = React.memo(({ match, load, loading, familiesLoading }) => (
+const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLoading }) => (
   <Grid stackable>
     <DataLoader load={load} loading={false} content>
       <Grid.Row>
         <Grid.Column width={4}>
-          {match.params.analysisGroupGuid ? null : (
+          {analysisGroupGuid ? null : (
             <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
               <AnalysisGroups />
             </ProjectSection>
@@ -90,14 +90,14 @@ const ProjectPageUI = React.memo(({ match, load, loading, familiesLoading }) => 
         <Grid.Column width={8}>
           <ProjectSection label="Overview">
             <ProjectOverview
-              analysisGroupGuid={match.params.analysisGroupGuid}
+              analysisGroupGuid={analysisGroupGuid}
               familiesLoading={familiesLoading}
               overviewLoading={loading}
             />
           </ProjectSection>
           <VerticalSpacer height={10} />
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All" loading={loading}>
-            <VariantTags analysisGroupGuid={match.params.analysisGroupGuid} />
+            <VariantTags analysisGroupGuid={analysisGroupGuid} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
@@ -121,7 +121,7 @@ const ProjectPageUI = React.memo(({ match, load, loading, familiesLoading }) => 
 ))
 
 ProjectPageUI.propTypes = {
-  match: PropTypes.object,
+  analysisGroupGuid: PropTypes.string,
   load: PropTypes.func,
   loading: PropTypes.bool,
   familiesLoading: PropTypes.bool,
@@ -138,4 +138,6 @@ const mapDispatchToProps = {
 
 export { ProjectPageUI as ProjectPageUIComponent }
 
-export default connect(mapStateToProps, mapDispatchToProps)(ProjectPageUI)
+export default connect(mapStateToProps, mapDispatchToProps)(
+  ({ match, ...props }) => <ProjectPageUI analysisGroupGuid={match.params.analysisGroupGuid} {...props} />,
+)
