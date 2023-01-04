@@ -8,11 +8,11 @@ import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { closeModal } from 'redux/utils/modalReducer'
 import DeleteButton from '../../buttons/DeleteButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
+import PhiWarningUploadField from '../../form/PhiWarningUploadField'
 import Modal from '../../modal/Modal'
 import { ButtonLink } from '../../StyledComponents'
 
 const XHRUploaderWithEvents = React.lazy(() => import('../../form/XHRUploaderWithEvents'))
-const PhiWarningUploadField = React.lazy(() => import('../../form/PhiWarningUploadField'))
 
 const getModalId = family => `uploadPedigree-${family.familyGuid}`
 
@@ -22,8 +22,8 @@ const BaseEditPedigreeImageButton = ({ family, onSuccess }) => (
     modalName={getModalId(family)}
     trigger={<ButtonLink content="Upload New Image" icon="upload" labelPosition="right" />}
   >
-    <React.Suspense fallback={<Loader />}>
-      <PhiWarningUploadField>
+    <PhiWarningUploadField fileDescriptor="image" disclaimerDetail="either in the image itself or in the image metadata">
+      <React.Suspense fallback={<Loader />}>
         <XHRUploaderWithEvents
           onUploadFinished={onSuccess}
           url={`/api/family/${family.familyGuid}/update_pedigree_image`}
@@ -33,8 +33,8 @@ const BaseEditPedigreeImageButton = ({ family, onSuccess }) => (
           dropzoneLabel="Drag and drop or click to upload pedigree image"
           showError
         />
-      </PhiWarningUploadField>
-    </React.Suspense>
+      </React.Suspense>
+    </PhiWarningUploadField>
   </Modal>
 )
 

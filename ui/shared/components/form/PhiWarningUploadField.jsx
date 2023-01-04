@@ -6,6 +6,8 @@ class PhiWarningUploadField extends React.PureComponent {
 
   static propTypes = {
     children: PropTypes.node,
+    fileDescriptor: PropTypes.string,
+    disclaimerDetail: PropTypes.string,
   }
 
   state = { confirmedNoPhi: false }
@@ -16,12 +18,14 @@ class PhiWarningUploadField extends React.PureComponent {
 
   render() {
     const { confirmedNoPhi } = this.state
-    const { children } = this.props
+    const { children, fileDescriptor, disclaimerDetail } = this.props
     return confirmedNoPhi ? children : (
       <Segment basic compact textAlign="center" size="large">
         <i>seqr </i>
-        is not a HIPAA-compliant platform. By proceeding, I affirm that this image does not contain any
-        protected health information (PHI), either in the image itself or in the image metadata.
+        is not a HIPAA-compliant platform. By proceeding, I affirm that this &nbsp;
+        {fileDescriptor}
+        &nbsp; does not contain any protected health information (PHI), &nbsp;
+        {disclaimerDetail}
         <br />
         <br />
         <Button primary floated="right" content="Continue" onClick={this.confirmNoPhi} />
