@@ -212,16 +212,13 @@ class ProjectAPITest(object):
         self.assertListEqual(list(response_json['projectsByGuid'].keys()), [DEMO_PROJECT_GUID])
         self.assertFalse(response_json['projectsByGuid'][DEMO_PROJECT_GUID]['canEdit'])
 
-    def _check_empty_project(self, empty_url, response_keys, project_loaded_key=None):
+    def _check_empty_project(self, empty_url, response_keys):
         response = self.client.get(empty_url)
         if self.HAS_EMPTY_PROJECT:
             self.assertEqual(response.status_code, 200)
             response_json = response.json()
             self.assertSetEqual(set(response_json.keys()), response_keys)
-            expected_response = {k: {} for k in response_keys}
-            expected_response['projectsByGuid'] = {
-                EMPTY_PROJECT_GUID: {project_loaded_key: True}
-            } if project_loaded_key else mock.ANY
+            expected_response = {k: {EMPTY_PROJECT_GUID: mock.ANY} if k == 'projectsByGuid' else {} for k in response_keys}
             self.assertDictEqual(response_json, expected_response)
         else:
             self.assertEqual(response.status_code, 403)
@@ -240,7 +237,7 @@ class ProjectAPITest(object):
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'variantTagTypes', 'variantFunctionalTagTypes', 'overviewLoaded',
+            'variantTagTypes', 'variantFunctionalTagTypes',
             'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -288,7 +285,6 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(response.json(), {'projectsByGuid': {PROJECT_GUID: {
-            'collaboratorsLoaded': True,
             'collaborators': self.PROJECT_COLLABORATORS,
             'collaboratorGroups': self.PROJECT_COLLABORATOR_GROUPS,
         }}})
@@ -316,7 +312,7 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        response_keys = {'projectsByGuid', 'familiesByGuid', 'genesById'}
+        response_keys = {'familiesByGuid', 'genesById'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         family_1 = response_json['familiesByGuid']['F000001_1']
@@ -339,12 +335,11 @@ class ProjectAPITest(object):
             len(response_json['familiesByGuid'][family_guid]['discoveryTags']) for family_guid in no_discovery_families
         }, {0})
 
-        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'familiesLoaded': True}})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
 
         # Test empty project
         empty_url = reverse(project_families, args=[EMPTY_PROJECT_GUID])
-        self._check_empty_project(empty_url, response_keys, 'familiesLoaded')
+        self._check_empty_project(empty_url, response_keys)
 
         # Test analyst users have internal fields returned
         self.login_analyst_user()
@@ -370,9 +365,8 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        response_keys = {'projectsByGuid',  'individualsByGuid'}
+        response_keys = {'individualsByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
-        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'individualsLoaded': True}})
 
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), INDIVIDUAL_FIELDS)
         self.assertSetEqual(
@@ -386,7 +380,7 @@ class ProjectAPITest(object):
 
         # Test empty project
         empty_url = reverse(project_individuals, args=[EMPTY_PROJECT_GUID])
-        self._check_empty_project(empty_url, response_keys, 'individualsLoaded')
+        self._check_empty_project(empty_url, response_keys)
 
         # Test analyst users have internal fields returned
         self.login_analyst_user()
@@ -413,9 +407,8 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        response_keys = {'projectsByGuid', 'analysisGroupsByGuid'}
+        response_keys = {'analysisGroupsByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
-        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'analysisGroupsLoaded': True}})
         self.assertEqual(len(response_json['analysisGroupsByGuid']), 2)
         self.assertSetEqual(
             set(next(iter(response_json['analysisGroupsByGuid'].values())).keys()), ANALYSIS_GROUP_FIELDS
@@ -432,7 +425,7 @@ class ProjectAPITest(object):
         response_keys = {'projectsByGuid', 'locusListsByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {
-            'locusListsLoaded': True, 'locusListGuids': ['LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'],
+            'locusListGuids': ['LL00049_pid_genes_autosomal_do', 'LL00005_retina_proteome'],
         }})
         self.assertEqual(len(response_json['locusListsByGuid']), 2)
         self.assertSetEqual(set(response_json['locusListsByGuid']['LL00005_retina_proteome'].keys()), LOCUS_LIST_FIELDS)
@@ -448,9 +441,8 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        response_keys = {'projectsByGuid', 'familyNotesByGuid'}
+        response_keys = {'familyNotesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
-        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'familyNotesLoaded': True}})
         self.assertEqual(len(response_json['familyNotesByGuid']), 3)
         self.assertSetEqual(
             set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS
@@ -458,7 +450,7 @@ class ProjectAPITest(object):
 
         # Test empty project
         empty_url = reverse(project_family_notes, args=[EMPTY_PROJECT_GUID])
-        self._check_empty_project(empty_url, response_keys, 'familyNotesLoaded')
+        self._check_empty_project(empty_url, response_keys)
 
     def test_project_mme_submisssions(self):
         url = reverse(project_mme_submisssions, args=[PROJECT_GUID])
@@ -468,9 +460,8 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        response_keys = {'projectsByGuid', 'mmeSubmissionsByGuid', 'familyNotesByGuid'}
+        response_keys = {'mmeSubmissionsByGuid', 'familyNotesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
-        self.assertDictEqual(response_json['projectsByGuid'], {PROJECT_GUID: {'mmeSubmissionsLoaded': True}})
         self.assertSetEqual(set(response_json['mmeSubmissionsByGuid'].keys()), {'MS000001_na19675'})
         submission_fields = {'geneIds'}
         submission_fields.update(MATCHMAKER_SUBMISSION_FIELDS)
@@ -480,7 +471,7 @@ class ProjectAPITest(object):
 
         # Test empty project
         empty_url = reverse(project_mme_submisssions, args=[EMPTY_PROJECT_GUID])
-        self._check_empty_project(empty_url, response_keys, 'mmeSubmissionsLoaded')
+        self._check_empty_project(empty_url, response_keys)
 
 
 BASE_COLLABORATORS = [
