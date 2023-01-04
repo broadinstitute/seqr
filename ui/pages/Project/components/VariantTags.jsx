@@ -48,6 +48,7 @@ TagSummary.propTypes = {
 
 const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeCounts }) => {
   const noteTagType = analysisGroupGuid ? null : (project.variantTagTypes || []).find(vtt => vtt.name === NOTE_TAG_NAME)
+  // TODO clean up project
   return (
     <div>
       <VariantTagTypeBar
