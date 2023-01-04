@@ -9,14 +9,14 @@ import DataLoader from 'shared/components/DataLoader'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { loadCurrentProjectAnalysisGroups } from '../reducers'
-import { getProjectAnalysisGroupsByGuid, getCurrentProject } from '../selectors'
+import { getProjectAnalysisGroupsByGuid, getProjectGuid } from '../selectors'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 
-const AnalysisGroups = React.memo(({ project, load, loading, analysisGroupsByGuid }) => (
+const AnalysisGroups = React.memo(({ projectGuid, load, loading, analysisGroupsByGuid }) => (
   <DataLoader load={load} loading={loading} content={analysisGroupsByGuid}>
     {Object.values(analysisGroupsByGuid).sort(compareObjects('name')).map(ag => (
       <div key={ag.name}>
-        <Link to={`/project/${project.projectGuid}/analysis_group/${ag.analysisGroupGuid}`}>{ag.name}</Link>
+        <Link to={`/project/${projectGuid}/analysis_group/${ag.analysisGroupGuid}`}>{ag.name}</Link>
         <Popup
           position="right center"
           trigger={<HelpIcon />}
@@ -37,14 +37,14 @@ const AnalysisGroups = React.memo(({ project, load, loading, analysisGroupsByGui
 ))
 
 AnalysisGroups.propTypes = {
-  project: PropTypes.object,
+  projectGuid: PropTypes.string,
   analysisGroupsByGuid: PropTypes.object.isRequired,
   loading: PropTypes.bool,
   load: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
-  project: getCurrentProject(state),
+  projectGuid: getProjectGuid(state),
   analysisGroupsByGuid: getProjectAnalysisGroupsByGuid(state),
   loading: getAnalysisGroupIsLoading(state),
 })
