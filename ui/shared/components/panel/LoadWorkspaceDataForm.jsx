@@ -49,6 +49,18 @@ const BLANK_EXPORT = {
   processRow: val => val,
 }
 
+const DEMO_EXPORT = {
+  ...BLANK_EXPORT,
+  filename: 'demo_individuals',
+  rawData: [
+    ['FAM1', 'FAM1_1', 'FAM1_2', 'FAM1_3', 'Male', 'Affected', ''],
+    ['FAM1', 'FAM1_4', 'FAM1_2', 'FAM1_3', '', 'Affected', 'an affected sibling'],
+    ['FAM1', 'FAM1_2', '', '', 'Male', 'Unaffected', ''],
+    ['FAM1', 'FAM1_3', '', '', 'Female', '', 'affected status of mother unknown'],
+    ['FAM2', 'FAM2_1', '', '', 'Female', 'Affected', 'a proband-only family'],
+  ],
+}
+
 const PHI_DISCALIMER = `including in any of the IDs or in the notes. PHI includes names, contact information, 
 birth dates, and any other identifying information`
 
@@ -60,6 +72,8 @@ const UploadPedigreeField = React.memo(({ name, error }) => (
         <BulkUploadForm
           name={name}
           blankExportConfig={BLANK_EXPORT}
+          exportConfig={DEMO_EXPORT}
+          templateLinkContent="an example pedigree"
           requiredFields={REQUIRED_FIELDS}
           optionalFields={OPTIONAL_FIELDS}
           uploadFormats={FILE_FORMATS}
