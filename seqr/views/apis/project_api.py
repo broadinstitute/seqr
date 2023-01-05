@@ -21,7 +21,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
-    add_project_tag_types, get_project_analysis_groups, get_project_locus_lists
+    add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 
 
@@ -311,11 +311,17 @@ def _add_tag_type_counts(project, project_variant_tags):
         'numTags': num_tags,
     }
 
-    tag_counts_by_type_and_family = VariantTag.objects.filter(saved_variants__family__project=project)\
-        .values('saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
+    project_variants = VariantTag.objects.filter(saved_variants__family__project=project)
+
+    mme_counts_by_family = project_variants.filter(saved_variants__matchmakersubmissiongenes__isnull=False) \
+        .values('saved_variants__family__guid').annotate(count=Count('saved_variants__guid', distinct=True))
+
+    tag_counts_by_type_and_family = project_variants.values(
+        'saved_variants__family__guid', 'variant_tag_type__name').annotate(count=Count('guid', distinct=True))
     for tag_type in project_variant_tags:
-        current_tag_type_counts = [counts for counts in tag_counts_by_type_and_family if
-                                   counts['variant_tag_type__name'] == tag_type['name']]
+        current_tag_type_counts = mme_counts_by_family if tag_type['name'] == MME_TAG_NAME else [
+            counts for counts in tag_counts_by_type_and_family if counts['variant_tag_type__name'] == tag_type['name']
+        ]
         num_tags = sum(count['count'] for count in current_tag_type_counts)
         tag_type.update({
             'numTags': num_tags,
