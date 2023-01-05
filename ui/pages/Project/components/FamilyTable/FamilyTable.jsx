@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Table, Icon, Popup, Visibility } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { withRouter } from 'react-router'
 
 import DataLoader from 'shared/components/DataLoader'
 import { ExportTableButtonContent, DownloadButton } from 'shared/components/buttons/ExportTableButton'
@@ -161,7 +160,7 @@ const FamilyTable = React.memo(({
         fields={noDetailFields}
         tableName={tableName}
         showVariantDetails={showVariantDetails}
-        analysisGroupGuid={props.match.params.analysisGroupGuid}
+        analysisGroupGuid={props.analysisGroupGuid}
       />
     </Table>
     <Table striped compact attached="bottom">
@@ -198,7 +197,7 @@ FamilyTable.propTypes = {
   showVariantDetails: PropTypes.bool,
   noDetailFields: PropTypes.arrayOf(PropTypes.object),
   tableName: PropTypes.string,
-  match: PropTypes.object,
+  analysisGroupGuid: PropTypes.string,
 }
 
 const mapStateToProps = (state, ownProps) => ({
@@ -212,4 +211,4 @@ const mapDispatchToProps = {
   loadExportData: loadProjectExportData,
 }
 
-export default withRouter(connect(mapStateToProps, mapDispatchToProps)(FamilyTable))
+export default connect(mapStateToProps, mapDispatchToProps)(FamilyTable)

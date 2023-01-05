@@ -111,6 +111,7 @@ const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLo
       <Grid.Column width={16}>
         <SectionHeader>Families</SectionHeader>
         <FamilyTable
+          analysisGroupGuid={analysisGroupGuid}
           showVariantDetails
           detailFields={FAMILY_DETAIL_FIELDS}
           noDetailFields={NO_DETAIL_FIELDS}
