@@ -4,7 +4,7 @@ import { STATE_WITH_2_FAMILIES } from 'pages/Project/fixtures'
 import {
   getVariantTagNotesByFamilyVariants,
   getSearchGeneBreakdownValues,
-  getTagTypesByProject,
+  getSelectableTagTypesByProject,
   getUserOptions,
 } from './selectors'
 import {FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
@@ -36,8 +36,8 @@ test('getSearchGeneBreakdownValues', () => {
   }])
 })
 
-test('getTagTypesByProject', () => {
-  expect(getTagTypesByProject(STATE, {})).toEqual(
+test('getSelectableTagTypesByProject', () => {
+  expect(getSelectableTagTypesByProject(STATE, {})).toEqual(
     { R0237_1000_genomes_demo: [] },
   )
 })
