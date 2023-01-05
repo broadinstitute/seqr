@@ -493,8 +493,8 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   },
 )
 
-export const getEntityExportConfig = ({ project, tableName, fileName, fields }) => ({
-  filename: `${project.name.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
+export const getEntityExportConfig = ({ projectName, tableName, fileName, fields }) => ({
+  filename: `${projectName.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
   headers: fields.map(config => config.header),
   processRow: family => fields.map((config) => {
     const val = family[config.field]
@@ -551,10 +551,10 @@ const getSamplesExportData = createSelector(
 )
 
 export const getProjectExportUrls = createSelector(
-  getCurrentProject,
+  state => getCurrentProject(state).name,
   (state, ownProps) => (ownProps || {}).tableName,
   getAnalysisGroupGuid,
-  (project, tableName, analysisGroupGuid) => {
+  (projectName, tableName, analysisGroupGuid) => {
     const ownProps = { tableName, analysisGroupGuid }
     const isCaseReview = tableName === CASE_REVIEW_TABLE_NAME
     return [
@@ -562,7 +562,7 @@ export const getProjectExportUrls = createSelector(
         name: 'Families',
         getRawData: state => getFamiliesExportData(state, ownProps),
         ...getEntityExportConfig({
-          project,
+          projectName,
           tableName,
           fileName: 'families',
           fields: isCaseReview ? CASE_REVIEW_FAMILY_EXPORT_DATA : FAMILY_EXPORT_DATA,
@@ -572,7 +572,7 @@ export const getProjectExportUrls = createSelector(
         name: 'Individuals',
         getRawData: state => getIndividualsExportData(state, ownProps),
         ...getEntityExportConfig({
-          project,
+          projectName,
           tableName,
           fileName: 'individuals',
           fields: isCaseReview ? CASE_REVIEW_INDIVIDUAL_EXPORT_DATA : INDIVIDUAL_EXPORT_DATA,
@@ -581,7 +581,7 @@ export const getProjectExportUrls = createSelector(
       {
         name: 'Samples',
         getRawData: state => getSamplesExportData(state, ownProps),
-        ...getEntityExportConfig({ project, tableName, fileName: 'samples', fields: SAMPLE_EXPORT_DATA }),
+        ...getEntityExportConfig({ projectName, tableName, fileName: 'samples', fields: SAMPLE_EXPORT_DATA }),
       },
     ]
   },
