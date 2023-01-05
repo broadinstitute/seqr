@@ -102,8 +102,32 @@ class FamilyTableRow extends React.PureComponent {
 
 }
 
+const BaseFamilyTableRows = ({ visibleFamilies, ...props }) => (
+  visibleFamilies.length > 0 ? visibleFamilies.map(family => (
+    <FamilyTableRow
+      key={family.familyGuid}
+      familyGuid={family.familyGuid}
+      {...props}
+    />
+  )) : (
+    <Table.Row>
+      <EmptyCell content="0 families found" />
+    </Table.Row>
+  )
+)
+
+const mapFamilyRowsStateToProps = (state, ownProps) => ({
+  visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
+})
+
+BaseFamilyTableRows.propTypes = {
+  visibleFamilies: PropTypes.arrayOf(PropTypes.object).isRequired,
+}
+
+const FamilyTableRows = connect(mapFamilyRowsStateToProps)(BaseFamilyTableRows)
+
 const FamilyTable = React.memo(({
-  visibleFamilies, load, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails,
+  load, loading, headerStatus, exportUrls, noDetailFields, tableName, showVariantDetails,
   loadExportData, exportDataLoading, ...props
 }) => (
   <DataLoader load={load} loading={false} content>
@@ -143,20 +167,14 @@ const FamilyTable = React.memo(({
     <Table striped compact attached="bottom">
       <Table.Body>
         {loading && <TableLoading />}
-        {!loading && (visibleFamilies.length > 0 ? visibleFamilies.map(family => (
-          <FamilyTableRow
-            key={family.familyGuid}
-            familyGuid={family.familyGuid}
+        {!loading && (
+          <FamilyTableRows
             noDetailFields={noDetailFields}
             showVariantDetails={showVariantDetails}
             tableName={tableName}
             {...props}
           />
-        )) : (
-          <Table.Row>
-            <EmptyCell content="0 families found" />
-          </Table.Row>
-        ))}
+        )}
       </Table.Body>
       <Table.Footer>
         <Table.Row>
@@ -171,7 +189,6 @@ const FamilyTable = React.memo(({
 export { FamilyTable as FamilyTableComponent }
 
 FamilyTable.propTypes = {
-  visibleFamilies: PropTypes.arrayOf(PropTypes.object).isRequired,
   loading: PropTypes.bool,
   load: PropTypes.func,
   exportDataLoading: PropTypes.bool,
@@ -185,7 +202,6 @@ FamilyTable.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  visibleFamilies: getVisibleFamiliesInSortedOrder(state, ownProps),
   loading: getFamiliesLoading(state) || getProjectOverviewIsLoading(state),
   exportDataLoading: getFamiliesLoading(state) || getIndivdualsLoading(state),
   exportUrls: getProjectExportUrls(state, ownProps),
