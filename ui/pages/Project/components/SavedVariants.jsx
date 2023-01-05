@@ -13,6 +13,8 @@ import {
   VARIANT_HIDE_REVIEW_FIELD,
   VARIANT_HIDE_KNOWN_GENE_FOR_PHENOTYPE_FIELD,
   VARIANT_PER_PAGE_FIELD,
+  EXCLUDED_TAG_NAME,
+  REVIEW_TAG_NAME,
 } from 'shared/utils/constants'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { LargeMultiselect, Dropdown } from 'shared/components/form/Inputs'
@@ -58,6 +60,10 @@ const FILTER_FIELDS = [
   },
 ]
 const NON_DISCOVERY_FILTER_FIELDS = FILTER_FIELDS.filter(({ name }) => name !== 'hideKnownGeneForPhenotype')
+
+const EXCLUDED_TAGS = [EXCLUDED_TAG_NAME]
+const REVIEW_TAGS = [REVIEW_TAG_NAME]
+const EXCLUDED_AND_REVIEW_TAGS = [...EXCLUDED_TAGS, ...REVIEW_TAGS]
 
 const mapVariantLinkStateToProps = (state, ownProps) => {
   const familyGuid = ownProps.meta.data.formId
@@ -202,8 +208,14 @@ class BaseProjectSavedVariants extends React.PureComponent {
     }])
   }
 
-  tableSummary = (summaryProps) => {
+  tableSummary = ({ hideExcluded, hideReviewOnly }) => {
     const { project, tagTypeCounts, match } = this.props
+    let excludeItems
+    if (hideExcluded) {
+      excludeItems = hideReviewOnly ? EXCLUDED_AND_REVIEW_TAGS : EXCLUDED_TAGS
+    } else if (hideReviewOnly) {
+      excludeItems = REVIEW_TAGS
+    }
     return (
       <Grid.Row>
         <Grid.Column width={16}>
@@ -213,7 +225,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
             analysisGroupGuid={match.params.analysisGroupGuid}
             tagTypeCounts={tagTypeCounts}
             tagTypes={project.variantTagTypes}
-            {...summaryProps}
+            excludeItems={excludeItems}
           />
         </Grid.Column>
       </Grid.Row>
