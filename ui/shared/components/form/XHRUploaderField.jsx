@@ -17,9 +17,9 @@ class UploaderFieldComponent extends React.PureComponent {
     uploaderProps: PropTypes.object,
   }
 
-  onFinished = (xhr, uploaderState) => {
+  onFinished = (xhrResponse, uploaderState) => {
     const { input } = this.props
-    input.onChange({ uploaderState, ...JSON.parse(xhr.response) })
+    input.onChange({ uploaderState, ...xhrResponse })
   }
 
   render() {
