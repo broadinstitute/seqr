@@ -421,7 +421,7 @@ const ProjectOverview = React.memo(({
       <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[genomeVersion]} />
       <LoadingSection loading={overviewLoading}>
         <DatasetOverview
-          showLoadWorkspaceData={workspaceName && !isAnalystProject && canEdit}
+          showLoadWorkspaceData={!!workspaceName && !isAnalystProject && canEdit}
           hasAnvil={!!workspaceName}
           analysisGroupGuid={analysisGroupGuid}
         />
