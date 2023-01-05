@@ -48,10 +48,10 @@ TagSummary.propTypes = {
   analysisGroupGuid: PropTypes.string,
 }
 
-const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeCounts }) => (
+const VariantTags = React.memo(({ projectGuid, analysisGroupGuid, tagTypes, tagTypeCounts }) => (
   <div>
     <VariantTagTypeBar
-      projectGuid={project.projectGuid}
+      projectGuid={projectGuid}
       analysisGroupGuid={analysisGroupGuid}
       tagTypes={tagTypes}
       tagTypeCounts={tagTypeCounts}
@@ -69,7 +69,7 @@ const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeC
                 key={variantTagType.variantTagTypeGuid}
                 variantTagType={variantTagType}
                 count={tagTypeCounts[variantTagType.name]}
-                projectGuid={project.projectGuid}
+                projectGuid={projectGuid}
                 analysisGroupGuid={analysisGroupGuid}
               />
             ),
@@ -81,17 +81,20 @@ const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeC
 ))
 
 VariantTags.propTypes = {
-  project: PropTypes.object.isRequired,
-  tagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  projectGuid: PropTypes.string.isRequired,
+  tagTypes: PropTypes.arrayOf(PropTypes.object),
   tagTypeCounts: PropTypes.object,
   analysisGroupGuid: PropTypes.string,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  project: getCurrentProject(state),
-  tagTypes: getCurrentProject(state).variantTagTypes,
-  tagTypeCounts: ownProps.analysisGroupGuid ?
-    getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
-})
+const mapStateToProps = (state, ownProps) => {
+  const { projectGuid, variantTagTypes } = getCurrentProject(state)
+  return {
+    projectGuid,
+    tagTypes: variantTagTypes,
+    tagTypeCounts: ownProps.analysisGroupGuid ?
+      getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
+  }
+}
 
 export default connect(mapStateToProps)(VariantTags)
