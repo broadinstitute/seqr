@@ -6,7 +6,7 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
 import { getProjectTagTypes } from '../selectors'
 
-export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGuid, tag }) => {
+export const getSavedVariantsLinkPath = ({ projectGuid, analysisGroupGuid, familyGuid, tag }) => {
   let path = tag ? `/${tag}` : ''
   if (familyGuid) {
     path = `/family/${familyGuid}${path}`
@@ -14,12 +14,12 @@ export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGui
     path = `/analysis_group/${analysisGroupGuid}${path}`
   }
 
-  return `/project/${project.projectGuid}/saved_variants${path}`
+  return `/project/${projectGuid}/saved_variants${path}`
 }
 
 const VariantTagTypeBar = React.memo(({
-  tagTypes, tagTypeCounts, project, familyGuid, analysisGroupGuid, sectionLinks = true, hideExcluded, hideReviewOnly,
-  ...props
+  tagTypes, tagTypeCounts, projectGuid, familyGuid, analysisGroupGuid, hideExcluded, hideReviewOnly,
+  sectionLinks = true, ...props
 }) => (
   <HorizontalStackedBar
     {...props}
@@ -28,7 +28,7 @@ const VariantTagTypeBar = React.memo(({
     showTotal={false}
     title="Saved Variants"
     noDataMessage="No Saved Variants"
-    linkPath={getSavedVariantsLinkPath({ project, analysisGroupGuid, familyGuid })}
+    linkPath={getSavedVariantsLinkPath({ projectGuid, analysisGroupGuid, familyGuid })}
     sectionLinks={sectionLinks}
     dataCounts={tagTypeCounts}
     data={(hideExcluded || hideReviewOnly) ? tagTypes.filter(
@@ -38,7 +38,7 @@ const VariantTagTypeBar = React.memo(({
 ))
 
 VariantTagTypeBar.propTypes = {
-  project: PropTypes.object.isRequired,
+  projectGuid: PropTypes.string.isRequired,
   tagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
   tagTypeCounts: PropTypes.object,
   familyGuid: PropTypes.string,

@@ -139,7 +139,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
     const isCategory = categoryOptions.includes(newTag)
     updateTableField('categoryFilter')(isCategory ? newTag : null)
     return getSavedVariantsLinkPath({
-      project,
+      projectGuid: project.projectGuid,
       analysisGroupGuid: match.params.analysisGroupGuid,
       tag: !isCategory && newTag !== ALL_FILTER && newTag,
       familyGuid: match.params.familyGuid,
@@ -190,7 +190,9 @@ class BaseProjectSavedVariants extends React.PureComponent {
       content: (
         <LabelLink
           to={getSavedVariantsLinkPath({
-            project, analysisGroupGuid: match.params.analysisGroupGuid, familyGuid: match.params.familyGuid,
+            projectGuid: project.projectGuid,
+            analysisGroupGuid: match.params.analysisGroupGuid,
+            familyGuid: match.params.familyGuid,
           })}
         >
           All Saved
@@ -207,7 +209,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
         <Grid.Column width={16}>
           <VariantTagTypeBar
             height={30}
-            project={project}
+            projectGuid={project.projectGuid}
             analysisGroupGuid={match.params.analysisGroupGuid}
             tagTypeCounts={tagTypeCounts}
             {...summaryProps}

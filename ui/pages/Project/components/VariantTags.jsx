@@ -17,14 +17,14 @@ const TableRow = styled(Table.Row)`
 const TableCell = styled(Table.Cell)`
   padding: 0 0 0 10px !important;`
 
-const TagSummary = ({ variantTagType, count, project, analysisGroupGuid }) => (
+const TagSummary = ({ variantTagType, count, projectGuid, analysisGroupGuid }) => (
   <TableRow>
     <TableCell collapsing>
       <ColoredIcon name="square" size="small" color={variantTagType.color} />
       <b>{count}</b>
     </TableCell>
     <TableCell>
-      <Link to={getSavedVariantsLinkPath({ project, analysisGroupGuid, tag: variantTagType.name })}>
+      <Link to={getSavedVariantsLinkPath({ projectGuid, analysisGroupGuid, tag: variantTagType.name })}>
         {variantTagType.name}
       </Link>
       {variantTagType.description && (
@@ -42,7 +42,7 @@ const TagSummary = ({ variantTagType, count, project, analysisGroupGuid }) => (
 TagSummary.propTypes = {
   variantTagType: PropTypes.object.isRequired,
   count: PropTypes.number,
-  project: PropTypes.object,
+  projectGuid: PropTypes.string,
   analysisGroupGuid: PropTypes.string,
 }
 
@@ -52,7 +52,7 @@ const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeC
   return (
     <div>
       <VariantTagTypeBar
-        project={project}
+        projectGuid={project.projectGuid}
         analysisGroupGuid={analysisGroupGuid}
         tagTypeCounts={tagTypeCounts}
         height={20}
@@ -68,14 +68,14 @@ const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeC
                   key={variantTagType.variantTagTypeGuid}
                   variantTagType={variantTagType}
                   count={tagTypeCounts[variantTagType.name]}
-                  project={project}
+                  projectGuid={project.projectGuid}
                   analysisGroupGuid={analysisGroupGuid}
                 />
               ),
             )
           }
           {noteTagType && noteTagType.numTags > 0 && (
-            <TagSummary variantTagType={noteTagType} count={noteTagType.numTags} project={project} />
+            <TagSummary variantTagType={noteTagType} count={noteTagType.numTags} projectGuid={project.projectGuid} />
           )}
         </Table.Body>
       </NoBorderTable>
