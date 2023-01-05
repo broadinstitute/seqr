@@ -186,9 +186,9 @@ class PedigreeInfoUtilsTest(object):
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
              'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
              }])
-        self.assertListEqual(
-            warnings,
-            ["SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID"])
+        self.assertListEqual(warnings, [
+            "SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. "
+            "Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID"])
 
         mock_email.assert_called_with(
             subject='SK-3QVD Merged Sample Pedigree File',

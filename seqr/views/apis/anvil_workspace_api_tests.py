@@ -679,8 +679,9 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(response_json['errors'],
-                             ['NA19679 is the mother of NA19674 but is not included. Make sure to create an additional record with NA19679 as the Individual ID'])
+        self.assertListEqual(response_json['errors'], [
+            'NA19679 is the mother of NA19674 but is not included. Make sure to create an additional record with NA19679 as the Individual ID',
+        ])
 
         # test missing samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA_EXTRA_SAMPLE

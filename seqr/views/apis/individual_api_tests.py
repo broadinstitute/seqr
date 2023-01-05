@@ -157,8 +157,9 @@ class IndividualAPITest(AuthenticationTestCase):
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'],
-                             ["NA20870 is the mother of NA19678_1 but is not included. Make sure to create an additional record with NA20870 as the Individual ID"])
+        self.assertListEqual(response.json()['errors'], [
+            "NA20870 is the mother of NA19678_1 but is not included. Make sure to create an additional record with NA20870 as the Individual ID",
+        ])
 
         # send valid request
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
@@ -308,7 +309,10 @@ class IndividualAPITest(AuthenticationTestCase):
             'test.tsv', 'Family ID	Individual ID	Paternal ID\n"1"	"NA19675_1"	"NA19678_dad"'.encode('utf-8'))})
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
-            'errors': ["NA19678_dad is the father of NA19675_1 but is not included. Make sure to create an additional record with NA19678_dad as the Individual ID"], 'warnings': []
+            'errors': [
+                "NA19678_dad is the father of NA19675_1 but is not included. Make sure to create an additional record with NA19678_dad as the Individual ID",
+            ],
+            'warnings': [],
         })
 
         # send valid requests
