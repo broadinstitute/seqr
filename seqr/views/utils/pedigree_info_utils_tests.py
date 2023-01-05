@@ -75,7 +75,9 @@ class PedigreeInfoUtilsTest(object):
             'ind2 is recorded as the mother of ind1 but they have different family ids: fam2 and fam1',
             'ind2 is recorded as their own father',
         ])
-        self.assertListEqual(ec.exception.warnings, ["ind3 is the father of ind1 but is not included. Make sure to create an additional record with ind3 as the Individual ID"])
+        self.assertListEqual(ec.exception.warnings, [
+            "ind3 is the father of ind1 but is not included. Make sure to create an additional record with ind3 as the Individual ID"
+        ])
 
         no_error_data = [['A pedigree file'], ['# Some comments'],
              ['#family_id', '#individual_id', 'previous_individual_id', 'notes_for_import', 'other_data', 'sex', 'affected', 'father', 'mother', 'phenotype: coded', 'proband_relation'],
