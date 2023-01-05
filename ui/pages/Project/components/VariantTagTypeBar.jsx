@@ -48,8 +48,4 @@ VariantTagTypeBar.propTypes = {
   hideReviewOnly: PropTypes.bool,
 }
 
-const mapStateToProps = state => ({
-  tagTypes: getProjectTagTypes(state),
-})
-
-export default connect(mapStateToProps)(VariantTagTypeBar)
+export default VariantTagTypeBar

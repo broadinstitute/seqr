@@ -212,6 +212,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
             projectGuid={project.projectGuid}
             analysisGroupGuid={match.params.analysisGroupGuid}
             tagTypeCounts={tagTypeCounts}
+            tagTypes={project.variantTagTypes}
             {...summaryProps}
           />
         </Grid.Column>

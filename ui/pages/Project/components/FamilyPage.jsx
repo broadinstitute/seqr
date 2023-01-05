@@ -66,6 +66,7 @@ const BaseVariantDetail = (
       projectGuid={project.projectGuid}
       familyGuid={family.familyGuid}
       tagTypeCounts={tagTypeCounts}
+      tagTypes={project.variantTagTypes}
       sectionLinks={false}
     />
     <HorizontalSpacer width={10} />

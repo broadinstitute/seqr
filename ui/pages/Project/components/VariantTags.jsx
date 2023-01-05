@@ -54,6 +54,7 @@ const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeC
       <VariantTagTypeBar
         projectGuid={project.projectGuid}
         analysisGroupGuid={analysisGroupGuid}
+        tagTypes={tagTypes}
         tagTypeCounts={tagTypeCounts}
         height={20}
         showAllPopupCategories
