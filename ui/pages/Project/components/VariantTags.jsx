@@ -9,7 +9,9 @@ import { ColoredIcon, HelpIcon, NoBorderTable } from 'shared/components/StyledCo
 import { NOTE_TAG_NAME } from 'shared/utils/constants'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
-import { getAnalysisGroupTagTypeCounts, getCurrentProject, getProjectTagTypes, getTagTypeCounts } from '../selectors'
+import { getAnalysisGroupTagTypeCounts, getCurrentProject, getTagTypeCounts } from '../selectors'
+
+const NOTE_TAGS = [NOTE_TAG_NAME]
 
 const TableRow = styled(Table.Row)`
   padding: 0px !important;`
@@ -46,43 +48,37 @@ TagSummary.propTypes = {
   analysisGroupGuid: PropTypes.string,
 }
 
-const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeCounts }) => {
-  const noteTagType = analysisGroupGuid ? null : (project.variantTagTypes || []).find(vtt => vtt.name === NOTE_TAG_NAME)
-  // TODO clean up project
-  return (
-    <div>
-      <VariantTagTypeBar
-        projectGuid={project.projectGuid}
-        analysisGroupGuid={analysisGroupGuid}
-        tagTypes={tagTypes}
-        tagTypeCounts={tagTypeCounts}
-        height={20}
-        showAllPopupCategories
-      />
-      <VerticalSpacer height={10} />
-      <NoBorderTable basic="very" compact="very">
-        <Table.Body>
-          {
-            tagTypes.filter(variantTagType => variantTagType && tagTypeCounts[variantTagType.name] > 0).map(
-              variantTagType => (
-                <TagSummary
-                  key={variantTagType.variantTagTypeGuid}
-                  variantTagType={variantTagType}
-                  count={tagTypeCounts[variantTagType.name]}
-                  projectGuid={project.projectGuid}
-                  analysisGroupGuid={analysisGroupGuid}
-                />
-              ),
-            )
-          }
-          {noteTagType && noteTagType.numTags > 0 && (
-            <TagSummary variantTagType={noteTagType} count={noteTagType.numTags} projectGuid={project.projectGuid} />
-          )}
-        </Table.Body>
-      </NoBorderTable>
-    </div>
-  )
-})
+const VariantTags = React.memo(({ project, analysisGroupGuid, tagTypes, tagTypeCounts }) => (
+  <div>
+    <VariantTagTypeBar
+      projectGuid={project.projectGuid}
+      analysisGroupGuid={analysisGroupGuid}
+      tagTypes={tagTypes}
+      tagTypeCounts={tagTypeCounts}
+      height={20}
+      excludeItems={NOTE_TAGS}
+      showAllPopupCategories
+    />
+    <VerticalSpacer height={10} />
+    <NoBorderTable basic="very" compact="very">
+      <Table.Body>
+        {
+          tagTypes?.filter(variantTagType => variantTagType && tagTypeCounts[variantTagType.name] > 0).map(
+            variantTagType => (
+              <TagSummary
+                key={variantTagType.variantTagTypeGuid}
+                variantTagType={variantTagType}
+                count={tagTypeCounts[variantTagType.name]}
+                projectGuid={project.projectGuid}
+                analysisGroupGuid={analysisGroupGuid}
+              />
+            ),
+          )
+        }
+      </Table.Body>
+    </NoBorderTable>
+  </div>
+))
 
 VariantTags.propTypes = {
   project: PropTypes.object.isRequired,
@@ -93,7 +89,7 @@ VariantTags.propTypes = {
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
-  tagTypes: getProjectTagTypes(state),
+  tagTypes: getCurrentProject(state).variantTagTypes,
   tagTypeCounts: ownProps.analysisGroupGuid ?
     getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
 })

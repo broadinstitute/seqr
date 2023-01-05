@@ -11,7 +11,6 @@ import {
   getVariantMainTranscript,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
-  NOTE_TAG_NAME,
   MME_TAG_NAME,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
@@ -171,11 +170,6 @@ export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
   },
 )
 
-export const getProjectTagTypes = createSelector(
-  getCurrentProject,
-  project => (project.variantTagTypes || []).filter(vtt => vtt.name !== NOTE_TAG_NAME),
-)
-
 export const getTaggedVariantsByFamily = createSelector(
   getSavedVariantsByGuid,
   getGenesById,
@@ -254,8 +248,8 @@ export const getAnalysisGroupTagTypeCounts = createSelector(
 )
 
 export const getTagTypeCounts = createSelector(
-  getProjectTagTypes,
-  tagTypes => tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
+  getCurrentProject,
+  project => project?.variantTagTypes?.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
 )
 
 export const getVariantGeneId = ({ variantGuid, geneId }, variantGeneId) => `${variantGuid}-${variantGeneId || geneId}`
