@@ -18,7 +18,7 @@ from seqr.utils.elasticsearch.constants import XPOS_SORT_KEY, COMPOUND_HET, RECE
     GRCH38_LOCUS_FIELD, MAX_SEARCH_CLAUSES, SV_SAMPLE_OVERRIDE_FIELD_CONFIGS, \
     PREDICTION_FIELD_LOOKUP, SPLICE_AI_FIELD, CLINVAR_KEY, HGMD_KEY, CLINVAR_PATH_SIGNIFICANCES, \
     PATH_FREQ_OVERRIDE_CUTOFF, MAX_NO_LOCATION_COMP_HET_FAMILIES, NEW_SV_FIELD, AFFECTED, UNAFFECTED, HAS_ALT, \
-    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY
+    get_prediction_response_key, XSTOP_FIELD, GENOTYPE_FIELDS, SCREEN_KEY, MAX_INDEX_SEARCHES
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, get_chrom_pos
@@ -653,9 +653,11 @@ class EsSearch(object):
         num_results_for_search = num_results * len(self._indices) if deduplicate else num_results
         if num_results_for_search > MAX_VARIANTS and deduplicate:
             num_results_for_search = MAX_VARIANTS
-        search = self._get_paginated_searches(
+        searches, log_messages = self._get_paginated_searches(
             self.index_name, page=page, num_results=num_results_for_search, start_index=start_index
-        )[0]
+        )
+        logger.info(log_messages[0], self._user)
+        search = searches[0]
         response = self._execute_search(search)
         parsed_response = self._parse_response(response)
         return self._process_single_search_response(
@@ -689,7 +691,8 @@ class EsSearch(object):
         if self.CACHED_COUNTS_KEY and not self.previous_search_results.get(self.CACHED_COUNTS_KEY):
             self.previous_search_results[self.CACHED_COUNTS_KEY] = {}
 
-        ms = MultiSearch()
+        paginated_index_searches = {}
+        index_logs = {}
         for index_name in indices:
             start_index = 0
             if self.CACHED_COUNTS_KEY:
@@ -701,13 +704,35 @@ class EsSearch(object):
                 else:
                     self.previous_search_results[self.CACHED_COUNTS_KEY][index_name] = {'loaded': 0, 'total': 0}
 
-            searches = self._get_paginated_searches(index_name, start_index=start_index, **kwargs)
+            searches, log_messages = self._get_paginated_searches(index_name, start_index=start_index, **kwargs)
+            if searches:
+                paginated_index_searches[index_name] = searches
+                index_logs[index_name] = log_messages
+
+        if len(paginated_index_searches) > MAX_INDEX_SEARCHES:
+            has_possible_hit_indices = self._get_possible_hit_indices(num_indices=len(paginated_index_searches))
+            paginated_index_searches = {
+                index_name: searches for index_name, searches in paginated_index_searches.items()
+                if index_name in has_possible_hit_indices
+            }
+
+        ms = MultiSearch()
+        for index_name, searches in paginated_index_searches.items():
             for search in searches:
                 ms = ms.add(search)
+            for message in index_logs[index_name]:
+                logger.info(message, self._user)
 
         responses = self._execute_search(ms) if ms._searches else []
         parsed_responses = [self._parse_response(response) for response in responses]
         return self._process_multi_search_responses(parsed_responses, **kwargs)
+
+    def _get_possible_hit_indices(self, num_indices):
+        has_hit_agg_search = self._search.index(self.index_name)[:0]
+        has_hit_agg_search.aggs.bucket('indices', 'terms', field='_index', size=num_indices)
+        response = has_hit_agg_search.using(self._client).execute()
+        logger.info(f'Filtering search to {len(response.aggregations.indices)} indices with possible hits', self._user)
+        return [agg['key'] for agg in response.aggregations.indices]
 
     def _process_multi_search_responses(self, parsed_responses, page=1, num_results=100):
         new_results = []
@@ -1221,13 +1246,14 @@ class EsSearch(object):
 
     def _get_paginated_searches(self, index_name, page=1, num_results=100, start_index=None):
         searches = []
+        log_messages = []
         for search in self._index_searches.get(index_name, [self._search]):
             search = search.index(index_name.split(','))
 
             if search.aggs.to_dict():
                 # For compound het search get results from aggregation instead of top level hits
                 search = search[:1]
-                logger.info('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name), self._user)
+                log_messages.append('Loading {}s for {}'.format(self.AGGREGATION_NAME, index_name))
             else:
                 end_index = page * num_results
                 if start_index is None:
@@ -1240,10 +1266,10 @@ class EsSearch(object):
 
                 search = search[start_index:end_index]
                 search = search.source(QUERY_FIELD_NAMES)
-                logger.info('Loading {} records {}-{}'.format(index_name, start_index, end_index), self._user)
+                log_messages.append('Loading {} records {}-{}'.format(index_name, start_index, end_index))
 
             searches.append(search)
-        return searches
+        return searches, log_messages
 
     def _execute_search(self, search):
         logger.debug(json.dumps(search.to_dict(), indent=2), self._user)
