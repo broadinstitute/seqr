@@ -160,7 +160,7 @@ LocustListsContainer.propTypes = {
   children: PropTypes.node,
 }
 
-const AddGeneLists = React.memo(({ projectGuid, name, onSubmit }) => (
+const AddGeneLists = React.memo(({ projectGuid, projectName, onSubmit }) => (
   <UpdateButton
     modalTitle="Add Gene Lists"
     modalId={`add-gene-list-${projectGuid}`}
@@ -168,7 +168,7 @@ const AddGeneLists = React.memo(({ projectGuid, name, onSubmit }) => (
     modalSize="large"
     buttonText="Add Gene List"
     editIconName="plus"
-    formContainer={<LocustListsContainer projectName={name} />}
+    formContainer={<LocustListsContainer projectName={projectName} />}
     onSubmit={onSubmit}
     formFields={LOCUS_LIST_FIELDS}
     showErrorPanel
@@ -177,13 +177,13 @@ const AddGeneLists = React.memo(({ projectGuid, name, onSubmit }) => (
 
 AddGeneLists.propTypes = {
   projectGuid: PropTypes.string,
-  name: PropTypes.string,
+  projectName: PropTypes.string,
   onSubmit: PropTypes.func,
 }
 
 const mapButtonStateToProps = (state) => {
   const { projectGuid, name } = getCurrentProject(state)
-  return { projectGuid, name }
+  return { projectGuid, projectName: name }
 }
 
 const mapDispatchToProps = { onSubmit: updateLocusLists }
