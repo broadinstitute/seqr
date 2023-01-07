@@ -37,7 +37,7 @@ class Command(BaseCommand):
         total_deleted += deleted
         all_deletion_counts.update(deletion_counts)
 
-        deleted, deletion_counts = SavedVariant.bulk_delete(user=None, family__project__in=projects)
+        deleted, deletion_counts = SavedVariant.bulk_delete(user=None, family__project__in=projects, matchmakersubmissiongenes__isnull=True)
         total_deleted += deleted
         all_deletion_counts.update(deletion_counts)
 

@@ -14,7 +14,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
     GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
-    VARIANT_NOTE_FIELDS, TAG_FIELDS
+    VARIANT_NOTE_FIELDS, TAG_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_DETAIL_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
 PROJECT_GUID = 'R0001_1kg'
@@ -23,10 +23,10 @@ SEARCH = {'filters': {}, 'inheritance': None}
 PROJECT_FAMILIES = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1', 'F000002_2']}]
 
 VARIANTS_WITH_DISCOVERY_TAGS = deepcopy(VARIANTS)
-VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
+DISCOVERY_TAGS = [{
     'savedVariant': {
         'variantGuid': 'SV0000006_1248367227_r0003_tes',
-        'familyGuid': 'F000011_11',
+        'familyGuid': 'F000012_12',
         'projectGuid': 'R0003_test',
     },
     'tagGuid': 'VT1726961_2103343353_r0003_tes',
@@ -38,32 +38,67 @@ VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = [{
     'lastModifiedDate': '2018-05-29T16:32:51.449Z',
     'createdBy': None,
 }]
+VARIANTS_WITH_DISCOVERY_TAGS[2]['discoveryTags'] = DISCOVERY_TAGS
 
-PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded'}
-PROJECT_CONTEXT_FIELDS.update(PROJECT_FIELDS)
+PROJECT_CONTEXT_FIELDS = {'locusListGuids', 'datasetTypes', 'analysisGroupsLoaded', 'projectGuid', 'name'}
 
-PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'variantTagTypes', 'variantFunctionalTagTypes'}
+PROJECT_TAG_TYPE_FIELDS = {'projectGuid', 'genomeVersion', 'variantTagTypes', 'variantFunctionalTagTypes'}
+
+EXPECTED_TAG = {k: mock.ANY for k in TAG_FIELDS}
+expected_functional_tag = {k: mock.ANY for k in FUNCTIONAL_FIELDS}
+EXPECTED_GENE = {k: mock.ANY for k in GENE_VARIANT_FIELDS}
+EXPECTED_GENE['locusListGuids'] = []
+expected_pa_gene = deepcopy(EXPECTED_GENE)
+expected_pa_gene['locusListGuids'] = ['LL00049_pid_genes_autosomal_do']
+expected_pa_gene['panelAppDetail'] = mock.ANY
+EXPECTED_SAVED_VARIANT = {k: mock.ANY for k in SAVED_VARIANT_DETAIL_FIELDS}
+expected_detail_saved_variant = deepcopy(EXPECTED_SAVED_VARIANT)
+expected_detail_saved_variant['mmeSubmissions'] = [
+    {'geneId': 'ENSG00000135953', 'submissionGuid': 'MS000001_na19675', 'variantGuid': 'SV0000001_2103343353_r0390_100'},
+]
+expected_detail_saved_variant['mainTranscriptId'] = mock.ANY
+
+EXPECTED_EXOMISER_DATA = [
+    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+    {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
+     'scores': {'compositeLR': 0.066, 'post_test_probability': 0}},
+]
+
+EXPECTED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+]
 
 EXPECTED_SEARCH_RESPONSE = {
     'searchedVariants': VARIANTS,
-    'savedVariantsByGuid': {'SV0000001_2103343353_r0390_100': mock.ANY, 'SV0000002_1248367227_r0390_100': mock.ANY},
-    'genesById': {'ENSG00000227232': mock.ANY, 'ENSG00000268903': mock.ANY, 'ENSG00000233653': mock.ANY},
+    'savedVariantsByGuid': {
+        'SV0000001_2103343353_r0390_100': expected_detail_saved_variant,
+        'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT,
+    },
+    'genesById': {'ENSG00000227232': expected_pa_gene, 'ENSG00000268903': EXPECTED_GENE, 'ENSG00000233653': EXPECTED_GENE},
+    'transcriptsById': {'ENST00000624735': {'isManeSelect': False, 'refseqId': None, 'transcriptId': 'ENST00000624735'}},
     'search': {
         'search': SEARCH,
         'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': mock.ANY}],
         'totalResults': 3,
     },
     'variantTagsByGuid': {
-        'VT1708633_2103343353_r0390_100': mock.ANY, 'VT1726945_2103343353_r0390_100': mock.ANY,
-        'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726961_2103343353_r0390_100': mock.ANY,
+        'VT1708633_2103343353_r0390_100': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
+        'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726961_2103343353_r0390_100': EXPECTED_TAG,
     },
-    'variantNotesByGuid': {'VN0714935_2103343353_r0390_100': mock.ANY},
+    'variantNotesByGuid': {'VN0714935_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS}},
     'variantFunctionalDataByGuid': {
-        'VFD0000023_1248367227_r0390_10': mock.ANY, 'VFD0000024_1248367227_r0390_10': mock.ANY,
-        'VFD0000025_1248367227_r0390_10': mock.ANY, 'VFD0000026_1248367227_r0390_10': mock.ANY,
+        'VFD0000023_1248367227_r0390_10': expected_functional_tag, 'VFD0000024_1248367227_r0390_10': expected_functional_tag,
+        'VFD0000025_1248367227_r0390_10': expected_functional_tag, 'VFD0000026_1248367227_r0390_10': expected_functional_tag,
     },
-    'locusListsByGuid': {LOCUS_LIST_GUID: mock.ANY},
+    'locusListsByGuid': {LOCUS_LIST_GUID: {'intervals': mock.ANY}},
     'rnaSeqData': {'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}}},
+    'phenotypeGeneScores': {
+        'I000001_na19675': {'ENSG00000268903': {'exomiser': EXPECTED_EXOMISER_DATA}},
+        'I000002_na19678': {'ENSG00000268903': {'lirical': EXPECTED_LIRICAL_DATA}},
+    },
+    'mmeSubmissionsByGuid': {'MS000001_na19675': {k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS}},
 }
 
 EXPECTED_SEARCH_CONTEXT_RESPONSE = {
@@ -180,13 +215,10 @@ class VariantSearchAPITest(object):
             self.assertSetEqual(set(next(iter(response_json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
 
 
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.utils.middleware.logger.error')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variant_gene_counts')
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
-    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger, mock_analyst_group):
+    def test_query_variants(self, mock_get_variants, mock_get_gene_counts, mock_error_logger):
         url = reverse(query_variants_handler, args=['abc'])
         self.check_collaborator_login(url, request_data={'projectFamilies': PROJECT_FAMILIES})
         url = reverse(query_variants_handler, args=[SEARCH_HASH])
@@ -371,13 +403,16 @@ class VariantSearchAPITest(object):
         expected_search_response = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_response.update({
             'searchedVariants': COMP_HET_VARAINTS,
-            'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': mock.ANY},
-            'genesById': {'ENSG00000233653': mock.ANY},
+            'savedVariantsByGuid': {'SV0000002_1248367227_r0390_100': EXPECTED_SAVED_VARIANT},
+            'genesById': {'ENSG00000233653': EXPECTED_GENE},
+            'transcriptsById': {},
             'variantTagsByGuid': {
-                'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726945_2103343353_r0390_100': mock.ANY,
+                'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
             },
             'variantFunctionalDataByGuid': {},
+            'phenotypeGeneScores': {},
             'rnaSeqData': {},
+            'mmeSubmissionsByGuid': {},
         })
         expected_search_response['search']['totalResults'] = 1
         self.assertDictEqual(response_json, expected_search_response)
@@ -388,16 +423,12 @@ class VariantSearchAPITest(object):
         self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants
         response = self.client.get('{}?sort=pathogenicity'.format(url))
-        self.assertEqual(response.status_code, 403)
-
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-        response = self.client.get('{}?sort=pathogenicity'.format(url))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS
-        expected_search_results['familiesByGuid'] = {'F000011_11': mock.ANY}
+        expected_search_results['savedVariantsByGuid']['SV0000002_1248367227_r0390_100']['discoveryTags'] = DISCOVERY_TAGS
+        expected_search_results['familiesByGuid'] = {'F000012_12': mock.ANY}
         self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
         self.assertDictEqual(response_json, expected_search_results)
         self._assert_expected_results_context(response_json)
@@ -468,7 +499,8 @@ class VariantSearchAPITest(object):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13'}
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH
+            'allGenomeProjectFamilies': '37', 'search': SEARCH,
+            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1']}]
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -492,7 +524,8 @@ class VariantSearchAPITest(object):
         mock_get_variants.side_effect = _get_es_variants
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'projectGuids': ['R0003_test'], 'search': SEARCH
+            'projectGuids': ['R0003_test'], 'search': SEARCH,
+            'projectFamilies': [{'projectGuid':  'R0003_test', 'familyGuids': ['F000011_11']}],
         }))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -724,16 +757,38 @@ class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'variant_searches']
 
 
-def assert_no_list_ws_has_al(self, acl_call_count, workspace_name=None):
+def assert_no_list_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None):
     self.mock_list_workspaces.assert_not_called()
-    assert_ws_has_al(self, acl_call_count, workspace_name)
+    assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name)
 
-def assert_ws_has_al(self, acl_call_count, workspace_name=None):
+
+def assert_has_list_ws(self):
+    self.mock_list_workspaces.assert_has_calls([
+        mock.call(self.no_access_user),
+        mock.call(self.collaborator_user),
+    ])
+
+
+def assert_no_al_has_list_ws(self, group_count=1):
+    assert_has_list_ws(self)
+    self.mock_get_ws_access_level.assert_not_called()
+    assert_workspace_calls(self, group_count)
+
+
+def assert_ws_has_al(self, acl_call_count, group_call_count, workspace_name=None, user=None):
     if not workspace_name:
         workspace_name = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
-    self.mock_get_ws_access_level.assert_called_with(mock.ANY, 'my-seqr-billing', workspace_name)
+    self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', workspace_name)
     self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+    assert_workspace_calls(self, group_call_count, user)
+
+
+def assert_workspace_calls(self, group_call_count, user=None):
+    self.assertEqual(self.mock_get_groups.call_count, group_call_count)
+    self.mock_get_groups.assert_called_with(user or self.collaborator_user)
+
     self.mock_get_ws_acl.assert_not_called()
+    self.mock_get_group_members.assert_not_called()
 
 
 # Test for permissions from AnVIL only
@@ -742,35 +797,28 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_no_list_ws_has_al(self, 17)
+        assert_ws_has_al(self, 1, 9, user=self.analyst_user)
+        assert_has_list_ws(self)
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        calls = [
-            mock.call(self.no_access_user),
-            mock.call(self.collaborator_user),
-        ]
-        self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'),
-        ])
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
-        self.mock_get_ws_acl.assert_not_called()
+        assert_no_al_has_list_ws(self)
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
-        assert_no_list_ws_has_al(self, 3, workspace_name='anvil-project 1000 Genomes Demo')
+        assert_no_al_has_list_ws(self)
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        self.mock_list_workspaces.assert_called_with(self.collaborator_user)
-        assert_ws_has_al(self, 17)
+        assert_no_al_has_list_ws(self, 12)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 4)
+        assert_no_list_ws_has_al(self, 4, 1)
 
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
+        assert_workspace_calls(self, 6, user=self.no_access_user)
         self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_ws_access_level.assert_not_called()
+

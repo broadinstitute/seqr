@@ -5,12 +5,13 @@ from django.utils import timezone
 from tqdm import tqdm
 import random
 
-from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm
+from seqr.models import Sample, Individual, Family, RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
-from settings import ANALYST_PROJECT_CATEGORY
+from seqr.views.utils.permissions_utils import get_internal_projects
+from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
 
 logger = SeqrLogger(__name__)
 
@@ -403,7 +404,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
     samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
-        projects=Project.objects.filter(projectcategory__name=ANALYST_PROJECT_CATEGORY),
+        projects=get_internal_projects(),
         user=user,
         sample_ids=samples_by_id.keys(),
         data_source=data_source,
@@ -420,12 +421,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     individual_db_ids = {s.individual_id for s in samples}
     to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
     if to_delete:
-        prefetch_related_objects(to_delete, 'sample')
-        logger.info(f'delete {len(to_delete)} {model_cls.__name__}s', user, db_update={
-            'dbEntity': model_cls.__name__, 'numEntities': len(to_delete), 'updateType': 'bulk_delete',
-            'parentEntityIds': list({model.sample.guid for model in to_delete}),
-        })
-        to_delete.delete()
+        model_cls.bulk_delete(user, to_delete)
 
     loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     samples_to_load = {
@@ -451,3 +447,51 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         logger.warning(warning, user)
 
     return samples_to_load, info, warnings
+
+
+PHENOTYPE_PRIORITIZATION_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName']
+PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER = PHENOTYPE_PRIORITIZATION_HEADER + ['scoreName1', 'score1']
+MAX_SCORES = 16
+
+
+def _parse_phenotype_pri_row(row):
+    record = {_to_snake_case(key): row.get(key) for key in PHENOTYPE_PRIORITIZATION_HEADER}
+
+    scores = {}
+    for i in range(1, MAX_SCORES):
+        score_name = row.get(f'scoreName{i}')
+        if not score_name:
+            break
+        # We have both camel case and snake case in the score field names, so convert them to snake case first (those
+        # in snake case kept unchanged), then to camel case.
+        score = row[f'score{i}']
+        if score:
+            scores[_to_camel_case(_to_snake_case(score_name))] = float(score)
+    record['scores'] = scores
+
+    yield record
+
+
+def load_phenotype_prioritization_data_file(file_path):
+    data_by_project_sample_id = defaultdict(lambda: defaultdict(list))
+    f = file_iter(file_path)
+    header = _parse_tsv_row(next(f))
+    missing_cols = [col for col in PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER if col not in header]
+    if missing_cols:
+        raise ValueError(f'Invalid file: missing column(s) {", ".join(missing_cols)}')
+
+    tool = None
+    for line in tqdm(f, unit=' rows'):
+        row = dict(zip(header, _parse_tsv_row(line)))
+        for row_dict in _parse_phenotype_pri_row(row):
+            sample_id = row_dict.pop('sample_id', None)
+            project = row_dict.pop('project', None)
+            if not sample_id or not project:
+                raise ValueError('Both sample ID and project fields are required.')
+            data_by_project_sample_id[project][sample_id].append(row_dict)
+            if not tool:
+                tool = row_dict['tool']
+            elif tool != row_dict['tool']:
+                raise ValueError(f'Multiple tools found {tool} and {row_dict["tool"]}. Only one in a file is supported.')
+
+    return tool, data_by_project_sample_id

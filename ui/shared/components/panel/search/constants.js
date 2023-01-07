@@ -24,6 +24,7 @@ import {
   SPLICE_AI_FIELD,
   VEP_GROUP_SV_NEW,
   PANEL_APP_CONFIDENCE_LEVELS,
+  SCREEN_LABELS,
 } from 'shared/utils/constants'
 
 import LocusListItemsFilter from './LocusListItemsFilter'
@@ -243,6 +244,18 @@ export const ANNOTATION_GROUPS = Object.entries(GROUPED_VEP_CONSEQUENCES).map(([
   name, options, groupLabel: snakecaseToTitlecase(name),
 }))
 
+const SCREEN_GROUP = 'SCREEN'
+const SCREEN_VALUES = ['PLS', 'pELS', 'dELS', 'DNase-H3K4me3', 'CTCF-only', 'DNase-only', 'low-DNase']
+ANNOTATION_GROUPS.push({
+  name: SCREEN_GROUP,
+  groupLabel: SCREEN_GROUP,
+  options: SCREEN_VALUES.map(value => ({
+    value,
+    text: SCREEN_LABELS[value] || value,
+    description: 'SCREEN: Search Candidate cis-Regulatory Elements by ENCODE. Registry of cCREs V3’',
+  })),
+})
+
 export const ALL_IMPACT_GROUPS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
@@ -271,6 +284,11 @@ export const MODERATE_IMPACT_GROUPS = [
 export const CODING_IMPACT_GROUPS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
+]
+export const CODING_IMPACT_GROUPS_SCREEN = [
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+  SCREEN_GROUP,
 ]
 export const ALL_ANNOTATION_FILTER = {
   text: 'All',
@@ -329,7 +347,7 @@ export const SNP_FREQUENCIES = [
   {
     name: THIS_CALLSET_FREQUENCY,
     label: 'This Callset',
-    homHemi: false,
+    homHemi: true,
     labelHelp: 'Filter by allele count (AC) or by allele frequency (AF) among the samples in this family plus the rest of the samples that were joint-called as part of variant calling for this project.',
   },
 ]
@@ -427,7 +445,13 @@ export const LOCATION_FIELDS = [
   },
 ]
 
-export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
+const REQUIRE_SCORE_FIELD = {
+  name: 'requireScore',
+  component: AlignedBooleanCheckbox,
+  label: 'Require Filtered Predictor',
+  labelHelp: 'Only return variants where at least one filtered predictor is present. By default, variants are returned if a predictor meets the filtered value or is missing entirely',
+}
+export const IN_SILICO_FIELDS = [REQUIRE_SCORE_FIELD, ...PREDICTOR_FIELDS.filter(({ displayOnly }) => !displayOnly).map(
   ({ field, fieldTitle, warningThreshold, dangerThreshold, indicatorMap, group, min, max }) => {
     const label = fieldTitle || snakecaseToTitlecase(field)
     const filterField = { name: field, label, group }
@@ -466,7 +490,7 @@ export const IN_SILICO_FIELDS = PREDICTOR_FIELDS.filter(({ displayOnly }) => !di
       ...filterField,
     }
   },
-)
+)]
 
 export const SNP_QUALITY_FILTER_FIELDS = [
   {

@@ -14,7 +14,7 @@ EXPECTED_SUCCESS_STORY = {'project_guid': 'R0001_1kg', 'family_guid': 'F000013_1
 
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
-    u'numberOfUniqueGenes': 4,
+    u'numberOfUniqueGenes': 3,
     u'numberOfCases': 4,
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
@@ -25,32 +25,30 @@ EXPECTED_MME_DETAILS_METRICS = {
 SAVED_VARIANT_RESPONSE_KEYS = {
     'projectsByGuid', 'locusListsByGuid', 'savedVariantsByGuid', 'variantFunctionalDataByGuid', 'genesById',
     'variantNotesByGuid', 'individualsByGuid', 'variantTagsByGuid', 'familiesByGuid', 'familyNotesByGuid',
+    'mmeSubmissionsByGuid', 'transcriptsById',
 }
 
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(object):
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
         url = reverse(mme_details)
         self.check_require_login(url)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'genesById': {}, 'submissions': []})
+        self.assertDictEqual(response.json(), {'genesById': {}, 'savedVariantsByGuid': {}, 'submissions': []})
 
         # Test behavior for non-analysts
         self.login_manager()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'genesById', 'submissions'})
-        self.assertEqual(len(response_json['genesById']), 4)
+        response_keys = {'genesById', 'submissions', 'savedVariantsByGuid'}
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertSetEqual(set(response_json['genesById'].keys()),
-                            {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
+                            {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
 
         # Test analyst behavior
@@ -59,23 +57,16 @@ class SummaryDataAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'metrics', 'genesById', 'submissions'})
+        response_keys.add('metrics')
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertDictEqual(response_json['metrics'], EXPECTED_MME_DETAILS_METRICS)
-        self.assertEqual(len(response_json['genesById']), 4)
-        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000233750', 'ENSG00000227232', 'ENSG00000223972', 'ENSG00000186092'})
+        self.assertEqual(len(response_json['genesById']), 3)
+        self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), 3)
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_success_story(self, mock_analyst_group):
+    def test_success_story(self):
         url = reverse(success_story, args=['all'])
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -95,9 +86,8 @@ class SummaryDataAPITest(object):
         self.assertEqual(len(response_json['rows']), 1)
         self.assertDictEqual(response_json['rows'][0], EXPECTED_SUCCESS_STORY)
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
+        self.check_no_analyst_no_access(url)
+
     @mock.patch('seqr.views.apis.summary_data_api.MAX_SAVED_VARIANTS', 1)
     def test_saved_variants_page(self):
         url = reverse(saved_variants_page, args=['Tier 1 - Novel gene and phenotype'])
@@ -143,18 +133,10 @@ class SummaryDataAPITest(object):
         expected_variant_guids.add('SV0000002_1248367227_r0390_100')
         self.assertSetEqual(set(response.json()['savedVariantsByGuid'].keys()), expected_variant_guids)
 
-    @mock.patch('seqr.views.apis.summary_data_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     @mock.patch('seqr.views.apis.summary_data_api.load_uploaded_file')
-    def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file, mock_analyst_group):
+    def test_bulk_update_family_analysed_by(self, mock_load_uploaded_file):
         url = reverse(bulk_update_family_analysed_by)
         self.check_analyst_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
 
         mock_load_uploaded_file.return_value = [['foo', 'bar']]
         response = self.client.post(url, content_type='application/json', data=json.dumps(
@@ -184,6 +166,8 @@ class SummaryDataAPITest(object):
         self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
         self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
 
+        self.check_no_analyst_no_access(url)
+
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -191,10 +175,13 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     MANAGER_VARIANT_GUID = 'SV0000006_1248367227_r0004_non'
 
 
-def assert_has_expected_calls(self, users):
+def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
     calls = [mock.call(user) for user in users]
     self.mock_list_workspaces.assert_has_calls(calls)
+    group_calls = [call for i, call in enumerate(calls) if i in skip_group_call_idxs] if skip_group_call_idxs else calls
+    self.mock_get_groups.assert_has_calls(group_calls)
     self.mock_get_ws_acl.assert_not_called()
+    self.mock_get_group_members.assert_not_called()
     self.mock_get_ws_access_level.assert_not_called()
 
 # Test for permissions from AnVIL only
@@ -211,4 +198,4 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
-        ])
+        ], skip_group_call_idxs=[2])

@@ -146,9 +146,20 @@ const DosageSensitivity = ({ gene, clingenField, scoreFields, sensitivityType, t
       scores={gene.cnSensitivity}
       fields={scoreFields}
       rankDescription="intolerant of LoF mutations"
-      note={`These are a score under development by the Talkowski lab that predict whether a gene is ${sensitivityType}
-      based on large chromosomal microarray data set analysis. Scores >${threshold} are considered to have high
-      likelihood to be ${sensitivityType}.`}
+      note={(
+        <span>
+          These are a score developed by the Talkowski lab [
+          <a href="https://pubmed.ncbi.nlm.nih.gov/35917817" target="_blank" rel="noreferrer">
+            Collins et al. 2022
+          </a>
+          ] that predict whether a gene is &nbsp;
+          {sensitivityType}
+          &nbsp; based on large chromosomal microarray data set analysis. Scores &gt;
+          {threshold}
+          &nbsp; are considered to have high likelihood to be &nbsp;
+          {sensitivityType}
+        </span>
+      )}
     />
   </div>
 )
@@ -161,8 +172,10 @@ DosageSensitivity.propTypes = {
   gene: PropTypes.object,
 }
 
-const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHI-score' }]
-const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTS-score' }]
+export const HI_THRESHOLD = 0.86
+export const TS_THRESHOLD = 0.94
+const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHaplo' }]
+const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTriplo' }]
 const STAT_DETAILS = [
   { title: 'Coding Size', content: gene => `${((gene.codingRegionSizeGrch38 || gene.codingRegionSizeGrch37) / 1000).toPrecision(2)}kb` },
   {
@@ -204,7 +217,7 @@ const STAT_DETAILS = [
         clingenField="haploinsufficiency"
         scoreFields={HAPLOINSUFFICIENT_FIELDS}
         sensitivityType="haploinsufficient"
-        threshold="0.84"
+        threshold={HI_THRESHOLD}
       />
     ),
   },
@@ -216,7 +229,7 @@ const STAT_DETAILS = [
         clingenField="triplosensitivity"
         scoreFields={TRIPLOSENSITIVE_FIELDS}
         sensitivityType="triplosensitive"
-        threshold="0.993"
+        threshold={TS_THRESHOLD}
       />
     ),
   },
@@ -305,6 +318,7 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
     { title: 'primAD', link: `http://primad.basespace.illumina.com/gene/${gene.geneSymbol}?dataset=gnomad_r3`, description: 'Primate Genome Aggregation Database' },
     gene.mgiMarkerId ? { title: 'MGI', link: `http://www.informatics.jax.org/marker/${gene.mgiMarkerId}`, description: 'Mouse Genome Informatics' } : null,
     gene.mgiMarkerId ? { title: 'IMPC', link: `https://www.mousephenotype.org/data/genes/${gene.mgiMarkerId}`, description: 'International Mouse Phenotyping Consortium' } : null,
+    { title: 'KEGG', link: `https://www.kegg.jp/kegg-bin/search_pathway_text?keyword=${gene.geneSymbol}&viewImage=true`, description: 'Pathway maps representing known molecular interaction' },
     gene.clinGen ? { title: 'ClinGen', link: gene.clinGen.href, description: 'ClinGen Dosage Sensitivity' } : null,
     { title: 'ClinVar', link: `https://www.ncbi.nlm.nih.gov/clinvar?term=${gene.geneSymbol}[gene]`, description: 'Aggregated information about human genomic variation' },
     user.isAnalyst ? { title: 'HGMD', link: `https://my.qiagendigitalinsights.com/bbp/view/hgmd/pro/gene.php?gene=${gene.geneSymbol}`, description: 'Human Gene Mutation Database ' } : null,

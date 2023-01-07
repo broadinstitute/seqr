@@ -406,6 +406,7 @@ export const STATE_WITH_2_FAMILIES = {
     displayName: 'Test User',
   },
   savedVariantTableState: { hideExcluded: true, recordsPerPage: 1 },
+  projectCollaboratorsLoading: {},
   projectSavedVariantsLoading: {},
   familyDetailsLoading: {},
   savedVariantsByGuid: {
@@ -881,7 +882,6 @@ export const STATE_WITH_2_FAMILIES = {
     MS021475_na19675_1: {
       submissionGuid: 'MS021475_na19675_1',
       individualGuid: 'I021475_na19675_1',
-      mmeResultGuids: ['MR0005038_HK018_0047','MR0004688_RGP_105_3'],
       createdDate: '2018-05-09T10:29:00.000Z',
       submissionId: 'NA19675_1',
       contactHref: 'mailto:matchmaker@populationgenomics.org.au,test@test.com',
@@ -891,8 +891,8 @@ export const STATE_WITH_2_FAMILIES = {
         {id: "HP:0001371", label: "Flexion contracture", observed: "yes"}
       ],
       geneVariants: [
-        { geneId: "ENSG00000228198", alt: 'T', ref: 'TC', chrom: '1', pos: 248367227 },
-        { geneId: "ENSG00000228198", alt: null, ref: null, chrom: '1', pos: 248367227, end: 248369100 }
+        { geneId: "ENSG00000228198", variantGuid: 'SV0000004_116042722_r0390_1000' },
+        { geneId: "ENSG00000228198", variantGuid: 'SV0000002_SV48367227_r0390_100' },
       ],
     }
   },

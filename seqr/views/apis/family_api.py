@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.db.models import Count
 
 from matchmaker.models import MatchmakerSubmission
+from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, \
@@ -16,9 +17,11 @@ from seqr.views.utils.note_utils import create_note_handler, update_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
     get_json_for_matchmaker_submissions, get_json_for_analysis_groups
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
+    PhenotypePrioritization
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
-    login_and_policies_required, service_account_access, user_is_analyst, has_case_review_permissions
+    login_and_policies_required, user_is_analyst, has_case_review_permissions, service_account_access
+from seqr.views.utils.variant_utils import get_phenotype_prioritization
 
 
 FAMILY_ID_FIELD = 'familyId'
@@ -47,6 +50,11 @@ def family_page_data(request, family_guid):
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
     if sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqtpm=None):
         response['familiesByGuid'][family_guid]['hasRnaTpmData'] = True
+
+    has_phentoype_score_indivs = PhenotypePrioritization.objects.filter(individual__family=family).values_list(
+        'individual__guid', flat=True)
+    for individual_guid in has_phentoype_score_indivs:
+        response['individualsByGuid'][individual_guid]['hasPhenotypeGeneScores'] = True
 
     submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(individual__family=family))
     individual_mme_submission_guids = {s['individualGuid']: s['submissionGuid'] for s in submissions}
@@ -426,6 +434,19 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
             RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene_id).order_by('tpm').values_list('tpm', flat=True))
 
     return create_json_response(response)
+
+
+@login_and_policies_required
+def get_family_phenotype_gene_scores(request, family_guid):
+    family = Family.objects.get(guid=family_guid)
+    check_project_permissions(family.project, request.user)
+
+    phenotype_prioritization = get_phenotype_prioritization([family])
+    gene_ids = {gene_id for indiv in phenotype_prioritization.values() for gene_id in indiv.keys()}
+    return create_json_response({
+        'phenotypeGeneScores': phenotype_prioritization,
+        'genesById': get_genes_for_variant_display(gene_ids)
+    })
 
 
 # SERVICE ACCOUNT METHODS

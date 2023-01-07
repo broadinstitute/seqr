@@ -229,6 +229,7 @@ def _update_individual_phenotips_fields(indiv, phenotips_json):
 class Migration(migrations.Migration):
 
     dependencies = [
+        ('reference_data', '0001_initial'),
         ('seqr', '0009_auto_20200402_2219'),
     ]
 

@@ -5,7 +5,8 @@ import {
   getPairedSelectedSavedVariants,
   getVisibleSortedSavedVariants,
   getPairedFilteredSavedVariants,
-  getRnaSeqOutilerDataByFamilyGene,
+  getIndividualGeneDataByFamilyGene,
+  getIndividualPhenotypeGeneScores,
 } from './selectors'
 
 test('getPairedSelectedSavedVariants', () => {
@@ -73,7 +74,7 @@ test('getVisibleSortedSavedVariants', () => {
   expect(savedVariants[0].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
 })
 
-const RNA_SEQ_STATE = {
+const RNA_SEQ_PHENOTYPE_PRIORITIZATION_STATE = {
   rnaSeqDataByIndividual: {
     I021476_na19678_1: {
       outliers: {
@@ -89,23 +90,69 @@ const RNA_SEQ_STATE = {
     },
     I021476_na19678_2: { outliers: { ENSG00000228198: { isSignificant: true, pValue: 0.0214 } } },
   },
+  phenotypeGeneScoresByIndividual: {
+    I021476_na19678_1: {
+      ENSG00000228198: {
+        lirical: [{
+          diseaseId: 'OMIM:618460',
+          diseaseName: 'Khan-Khan-Katsanis syndrome',
+          rank: 1,
+          scores: { compositeLR: 0.066, post_test_probability: 0 },
+        }],
+      },
+    },
+  },
   ...STATE_WITH_2_FAMILIES,
 }
 
-test('getRnaSeqOutilerDataByFamilyGene', () => {
-  expect(getRnaSeqOutilerDataByFamilyGene(RNA_SEQ_STATE)).toEqual({
+test('getIndividualGeneDataByFamilyGene', () => {
+  expect(getIndividualGeneDataByFamilyGene(RNA_SEQ_PHENOTYPE_PRIORITIZATION_STATE)).toEqual({
     F011652_1: {
-      ENSG00000228198: {
-        NA19678: { isSignificant: true, pValue: 0.0004 },
-        NA19679_1: { isSignificant: true, pValue: 0.01 },
+      rnaSeqData: {
+        ENSG00000228198: [
+          { individualName: 'NA19678', isSignificant: true, pValue: 0.0004 },
+          { individualName: 'NA19679_1', isSignificant: true, pValue: 0.01 },
+        ],
+        ENSG00000164458: [
+          { individualName: 'NA19678', isSignificant: true, pValue: 0.0073 },
+        ],
       },
-      ENSG00000164458: {
-        NA19678: { isSignificant: true, pValue: 0.0073 },
+      phenotypeGeneScores: {
+        ENSG00000228198: {
+          lirical: [{
+            individualName: 'NA19678',
+            diseaseId: 'OMIM:618460',
+            diseaseName: 'Khan-Khan-Katsanis syndrome',
+            rowId: 'NA19678-OMIM:618460',
+            rank: 1,
+            scores: { compositeLR: 0.066, post_test_probability: 0 },
+          }],
+        },
       },
     },
     F011652_2: {
-      ENSG00000228198: { NA19678_2: { isSignificant: true, pValue: 0.0214 } },
+      rnaSeqData: {
+        ENSG00000228198: [{ individualName: 'NA19678_2', isSignificant: true, pValue: 0.0214 }],
+      },
     },
   })
 })
 
+test('getIndividualPhenotypeGeneScores', () => {
+  expect(getIndividualPhenotypeGeneScores(RNA_SEQ_PHENOTYPE_PRIORITIZATION_STATE)).toEqual({
+    I021476_na19678_1: [
+      {
+        tool: 'lirical',
+        diseaseId: 'OMIM:618460',
+        diseaseName: 'Khan-Khan-Katsanis syndrome',
+        gene: {
+          geneId: 'ENSG00000228198',
+          geneSymbol: 'OR2M3',
+        },
+        rowId: 'ENSG00000228198OMIM:618460',
+        rank: 1,
+        scores: { compositeLR: 0.066, post_test_probability: 0 },
+      },
+    ],
+  })
+})

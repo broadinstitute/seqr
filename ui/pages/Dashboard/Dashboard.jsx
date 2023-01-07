@@ -164,7 +164,7 @@ const COLUMNS = [
     name: 'canEdit',
     width: 1,
     textAlign: 'right',
-    format: project => project.canEdit && <ProjectEllipsisMenu project={project} />,
+    format: project => <ProjectEllipsisMenu project={project} />,
     downloadColumn: 'Can Edit',
     noFormatExport: true,
   },

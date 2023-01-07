@@ -7,7 +7,6 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class AwesomebarAPITest(object):
 
-    @mock.patch('seqr.views.apis.awesomebar_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.views.apis.awesomebar_api.MAX_STRING_LENGTH', 20)
     @mock.patch('seqr.views.apis.awesomebar_api.MAX_RESULTS_PER_CATEGORY', 5)
     def test_awesomebar_autocomplete_handler(self):
@@ -86,15 +85,15 @@ class AwesomebarAPITest(object):
         self.assertEqual(len(genes), 5)
         self.assertListEqual(
             [g['title'] for g in genes],
-            ['ENSG00000186092', 'ENSG00000185097', 'DDX11L1', 'ENSG00000237613', 'ENSG00000240361'],
+            ['ENSG00000135953', 'ENSG00000186092', 'ENSG00000185097', 'DDX11L1', 'ENSG00000237613'],
         )
-        self.assertDictEqual(genes[0], {
+        self.assertDictEqual(genes[1], {
             'key': 'ENSG00000186092',
             'title': 'ENSG00000186092',
             'description': '(OR4F5)',
             'href': '/summary_data/gene_info/ENSG00000186092',
         })
-        self.assertDictEqual(genes[2], {
+        self.assertDictEqual(genes[3], {
             'key': 'ENSG00000223972',
             'title': 'DDX11L1',
             'description': '(ENSG00000223972)',
@@ -161,5 +160,5 @@ class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
             mock.call(self.collaborator_user),
         ]
         self.mock_list_workspaces.assert_has_calls(calls)
-        self.mock_get_ws_acl.assert_not_called()
+        self.assert_no_extra_anvil_calls()
         self.mock_get_ws_access_level.assert_not_called()

@@ -17,7 +17,7 @@ services:
 
 
   redis:
-    image: gcr.io/seqr-project/redis:gcloud-prod
+    image: redis:6.2.7
     healthcheck:
       test: redis-cli ping
       interval: 3s
