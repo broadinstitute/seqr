@@ -8,7 +8,7 @@ from seqr.models import Sample, Family
 from seqr.views.apis.dataset_api import add_variants_dataset_handler
 from seqr.views.utils.test_utils import urllib3_responses, AuthenticationTestCase, AnvilAuthenticationTestCase
 
-SEQR_URL = 'https://seqr.broadinstitute.org'
+SEQR_URL = 'https://seqr.populationgenomics.org.au'
 PROJECT_GUID = 'R0001_1kg'
 NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
 INDEX_NAME = 'test_index'
@@ -44,7 +44,7 @@ class DatasetAPITest(object):
     @mock.patch('seqr.views.utils.dataset_utils.random.randint')
     @mock.patch('seqr.views.apis.dataset_api.safe_post_to_slack')
     @mock.patch('seqr.views.apis.dataset_api.send_html_email')
-    @mock.patch('seqr.views.apis.dataset_api.BASE_URL', 'https://seqr.broadinstitute.org/')
+    @mock.patch('seqr.views.apis.dataset_api.BASE_URL', 'https://seqr.populationgenomics.org.au/')
     @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL', 'anvil-data-loading')
     @mock.patch('seqr.views.apis.dataset_api.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @urllib3_responses.activate

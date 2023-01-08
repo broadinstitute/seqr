@@ -51,7 +51,7 @@ class UsersAPITest(object):
         response_json = response.json()
         users = {
             ANALYST_USERNAME: {
-                'displayName': 'Test User', 'username': 'test_user', 'email': 'test_user@broadinstitute.org',
+                'displayName': 'Test User', 'username': 'test_user', 'email': 'seqr+test_user@populationgenomics.org.au',
             },
             'test_pm_user': {
                 'displayName': 'Test PM User', 'username': 'test_pm_user', 'email': 'test_pm_user@test.com',
@@ -59,6 +59,8 @@ class UsersAPITest(object):
         }
         users.update(self.COLLABORATOR_JSON)
         users.pop('analysts@firecloud.org', None)
+        # self.assertEqual(users[ANALYST_USERNAME]['email'], response_json[ANALYST_USERNAME]['email'])
+        self.maxDiff = None
         self.assertDictEqual(response_json, users)
 
     def test_get_all_collaborator_options(self):

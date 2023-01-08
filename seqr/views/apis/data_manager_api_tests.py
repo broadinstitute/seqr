@@ -884,7 +884,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_MISS_HEADER)
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Invalid file: missing column(s) project, diseaseId')
+        self.assertEqual(response.json()['error'], 'Invalid file: missing column(s) project, diseaseId', msg=response.json())
         mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
         mock_subprocess.reset_mock()

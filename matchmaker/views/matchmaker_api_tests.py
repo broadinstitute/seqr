@@ -649,7 +649,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
         # test model update
         submission = MatchmakerSubmission.objects.get(guid=new_submission_guid)
         self.assertEqual(submission.contact_name, 'Test Name')
-        self.assertEqual(submission.contact_href, 'mailto:matchmaker@broadinstitute.org')
+        self.assertEqual(submission.contact_href, 'mailto:matchmaker@populationgenomics.org.au')
         self.assertEqual(submission.label, 'HG00733')
         self.assertIsNone(submission.deleted_date)
         self.assertListEqual(submission.features, update_body['phenotypes'])

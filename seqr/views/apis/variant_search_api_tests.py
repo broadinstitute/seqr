@@ -423,7 +423,7 @@ class VariantSearchAPITest(object):
         self.login_analyst_user()
         mock_get_variants.side_effect = _get_es_variants
         response = self.client.get('{}?sort=pathogenicity'.format(url))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, msg=response.json())
         response_json = response.json()
         expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
         expected_search_results['searchedVariants'] = VARIANTS_WITH_DISCOVERY_TAGS

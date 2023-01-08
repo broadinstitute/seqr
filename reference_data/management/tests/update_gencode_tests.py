@@ -228,10 +228,10 @@ class UpdateGencodeTest(TestCase):
         self.assertEqual(gene_info.strand_grch37, '-')
 
         # Test only reloading transcripts
-        url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/gencode.v31.annotation.gtf.gz'
+        url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.annotation.gtf.gz'
         responses.add(responses.HEAD, url, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url, body=self.gzipped_gtf_data, stream=True)
-        url_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_31/GRCh37_mapping/gencode.v31lift37.annotation.gtf.gz'
+        url_lift = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/GRCh37_mapping/gencode.v39lift37.annotation.gtf.gz'
         responses.add(responses.HEAD, url_lift, headers={"Content-Length": "1024"})
         responses.add(responses.GET, url_lift, body=self.gzipped_gtf_data, stream=True)
 
@@ -239,7 +239,7 @@ class UpdateGencodeTest(TestCase):
 
         self.assertEqual(GeneInfo.objects.all().count(), 2)
         self.assertEqual(TranscriptInfo.objects.all().count(), 2)
-        self._has_expected_new_transcripts(expected_release=31)
+        self._has_expected_new_transcripts(expected_release=39)
         mock_utils_logger.info.assert_has_calls([
             mock.call('Loading {} (genome version: 37)'.format(self.temp_file_path)),
             mock.call('Creating 2 TranscriptInfo records'),

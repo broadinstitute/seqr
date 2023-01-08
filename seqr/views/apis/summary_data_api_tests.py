@@ -125,7 +125,7 @@ class SummaryDataAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
         expected_variant_guids.discard(self.MANAGER_VARIANT_GUID)
-        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
+        self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids, msg=response_json['savedVariantsByGuid'])
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
         response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))

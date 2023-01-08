@@ -330,7 +330,7 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
                 'id': 'NA20885',
                 'label': 'NA20885',
                 'contact': {
-                    'href': 'mailto:matchmaker@broadinstitute.org',
+                    'href': 'mailto:matchmaker@populationgenomics.org.au',
                     'name': 'Sam Baxter',
                     'institution': 'Broad Center for Mendelian Genomics',
                 },
@@ -381,11 +381,11 @@ be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."
 
     {match}
 
-    We sent this email alert to: matchmaker@broadinstitute.org
+    We sent this email alert to: matchmaker@populationgenomics.org.au
 
 Thank you for using the matchbox system for the Matchmaker Exchange at the Broad Center for Mendelian Genomics. 
-Our website can be found at https://seqr.broadinstitute.org/matchmaker/matchbox and our legal disclaimers can 
-be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
+Our website can be found at https://seqr.populationgenomics.org.au/matchmaker/matchbox and our legal disclaimers can 
+be found found at https://seqr.populationgenomics.org.au/matchmaker/disclaimer."""
 
         mock_post_to_slack.assert_called_with('matchmaker_matches', message)
 
@@ -393,8 +393,8 @@ be found found at https://seqr.broadinstitute.org/matchmaker/disclaimer."""
             mock.call(
                 subject='Received new MME match',
                 body=message,
-                to=['matchmaker@broadinstitute.org'],
-                from_email='matchmaker@broadinstitute.org',
+                to=['matchmaker@populationgenomics.org.au'],
+                from_email='matchmaker@populationgenomics.org.au',
             ),
             mock.call().send(),
         ])
