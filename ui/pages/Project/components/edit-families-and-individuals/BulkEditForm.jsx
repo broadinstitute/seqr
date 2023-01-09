@@ -39,11 +39,11 @@ const mapStateToProps = (state, ownProps) => {
       getRawData: state2 => Object.values(
         (ownProps.getRawData || getProjectAnalysisGroupIndividualsByGuid)(state2, ownProps),
       ),
-      ...getEntityExportConfig({ project, fileName: ownProps.name, fields }),
+      ...getEntityExportConfig({ projectName: project.name, fileName: ownProps.name, fields }),
     },
     blankExportConfig: {
       rawData: [],
-      ...getEntityExportConfig({ project, fileName: 'template', fields }),
+      ...getEntityExportConfig({ projectName: project.name, fileName: 'template', fields }),
     },
   }
 }

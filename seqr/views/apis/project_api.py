@@ -195,7 +195,6 @@ def project_families(request, project_guid):
             'caseReviewStatusLastModified': family.case_review_status_last_modified,
             'hasFeatures': family.guid in has_features_families,
         })
-    response['projectsByGuid'] = {project_guid: {'familiesLoaded': True}}
     return create_json_response(response)
 
 
@@ -217,7 +216,6 @@ def project_overview(request, project_guid):
 
     project_json = response['projectsByGuid'][project_guid]
     project_json.update({
-        'overviewLoaded': True,
         'mmeSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=True).count(),
         'mmeDeletedSubmissionCount': project_mme_submissions.filter(deleted_date__isnull=False).count(),
     })
@@ -233,7 +231,6 @@ def project_collaborators(request, project_guid):
 
     return create_json_response({
         'projectsByGuid': {project_guid: {
-            'collaboratorsLoaded': True,
             'collaborators': get_json_for_project_collaborator_list(request.user, project),
             'collaboratorGroups': get_json_for_project_collaborator_groups(project),
         }}
@@ -247,7 +244,6 @@ def project_individuals(request, project_guid):
         Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid, add_hpo_details=True)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'individualsLoaded': True}},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
     })
 
@@ -256,7 +252,6 @@ def project_analysis_groups(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'analysisGroupsLoaded': True}},
         'analysisGroupsByGuid': get_project_analysis_groups([project], project_guid)
     })
 
@@ -267,7 +262,7 @@ def project_locus_lists(request, project_guid):
     locus_list_json, _ = get_project_locus_lists([project], request.user, include_metadata=True)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'locusListsLoaded': True, 'locusListGuids': list(locus_list_json.keys())}},
+        'projectsByGuid': {project_guid: {'locusListGuids': list(locus_list_json.keys())}},
         'locusListsByGuid': locus_list_json,
     })
 
@@ -278,7 +273,6 @@ def project_family_notes(request, project_guid):
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project), is_analyst=False)
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'familyNotesLoaded': True}},
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
     })
 
@@ -297,7 +291,6 @@ def project_mme_submisssions(request, project_guid):
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project))
 
     return create_json_response({
-        'projectsByGuid': {project_guid: {'mmeSubmissionsLoaded': True}},
         'mmeSubmissionsByGuid': submissions_by_guid,
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
     })

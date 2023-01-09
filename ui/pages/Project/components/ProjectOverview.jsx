@@ -24,6 +24,7 @@ import {
 } from 'shared/utils/constants'
 import { updateProjectMmeContact, loadMmeSubmissions, updateAnvilWorkspace } from '../reducers'
 import {
+  getCurrentProject,
   getAnalysisStatusCounts,
   getProjectAnalysisGroupFamilyIndividualCounts,
   getProjectAnalysisGroupDataLoadedFamilyIndividualCounts,
@@ -93,9 +94,9 @@ const MME_CONTACT_FIELDS = [
   },
 ]
 
-const BaseMatchmakerSubmissionOverview = React.memo(({ project, mmeSubmissions, onSubmit, load, loading }) => (
+const BaseMatchmakerSubmissionOverview = React.memo(({ canEdit, mmeSubmissions, onSubmit, load, loading }) => (
   <DataLoader load={load} loading={false} content>
-    {project.canEdit && (
+    {canEdit && (
       <UpdateButton
         onSubmit={onSubmit}
         buttonText="Add Contact to MME Submissions"
@@ -124,7 +125,7 @@ BaseMatchmakerSubmissionOverview.propTypes = {
   mmeSubmissions: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   load: PropTypes.func,
-  project: PropTypes.object,
+  canEdit: PropTypes.bool,
   onSubmit: PropTypes.func,
 }
 
@@ -142,16 +143,16 @@ const MatchmakerSubmissionOverview = connect(
   mapMatchmakerSubmissionsStateToProps, mapDispatchToProps,
 )(BaseMatchmakerSubmissionOverview)
 
-const FamiliesIndividuals = React.memo(({ project, familyCounts, user, title }) => {
+const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, user, title }) => {
   const familySizeHistogram = familyCounts.map(familySize => Math.min(familySize, 5)).reduce((acc, familySize) => (
     { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
   ), {})
   const individualsCount = familyCounts.reduce((acc, familySize) => acc + familySize, 0)
 
   let editIndividualsButton = null
-  if (user && (user.isPm || (project.hasCaseReview && project.canEdit))) {
+  if (user && (user.isPm || (hasCaseReview && canEdit))) {
     editIndividualsButton = <EditFamiliesAndIndividualsButton />
-  } else if (user && project.canEdit) {
+  } else if (user && canEdit) {
     editIndividualsButton = <EditIndividualMetadataButton />
   }
 
@@ -169,8 +170,9 @@ const FamiliesIndividuals = React.memo(({ project, familyCounts, user, title }) 
 })
 
 FamiliesIndividuals.propTypes = {
-  project: PropTypes.object.isRequired,
   familyCounts: PropTypes.arrayOf(PropTypes.number).isRequired,
+  canEdit: PropTypes.bool,
+  hasCaseReview: PropTypes.bool,
   user: PropTypes.object,
   title: PropTypes.string,
 }
@@ -189,28 +191,31 @@ const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesInd
 
 const DataLoadedFamiliesIndividualsOverview = connect(mapDataLoadedFamiliesStateToProps)(FamiliesIndividuals)
 
-const MatchmakerOverview = React.memo(({ project }) => (
+const MatchmakerOverview = React.memo(({ projectName, mmeSubmissionCount, mmeDeletedSubmissionCount, canEdit }) => (
   <DetailSection
     title="Matchmaker Submissions"
-    content={project.mmeSubmissionCount ? (
+    content={mmeSubmissionCount ? (
       <div>
-        {`${project.mmeSubmissionCount} submissions `}
+        {`${mmeSubmissionCount} submissions `}
         <Modal
           trigger={<ButtonLink icon="external" size="tiny" />}
-          title={`Matchmaker Submissions for ${project.name}`}
+          title={`Matchmaker Submissions for ${projectName}`}
           modalName="mmeSubmissions"
           size="large"
         >
-          <MatchmakerSubmissionOverview project={project} />
+          <MatchmakerSubmissionOverview canEdit={canEdit} />
         </Modal>
-        {project.mmeDeletedSubmissionCount > 0 && <div>{`${project.mmeDeletedSubmissionCount} removed submissions`}</div>}
+        {mmeDeletedSubmissionCount > 0 && <div>{`${mmeDeletedSubmissionCount} removed submissions`}</div>}
       </div>
     ) : 'No Submissions'}
   />
 ))
 
 MatchmakerOverview.propTypes = {
-  project: PropTypes.object.isRequired,
+  projectName: PropTypes.string.isRequired,
+  canEdit: PropTypes.bool,
+  mmeSubmissionCount: PropTypes.number,
+  mmeDeletedSubmissionCount: PropTypes.number,
 }
 
 class DatasetSection extends React.PureComponent {
@@ -248,7 +253,7 @@ class DatasetSection extends React.PureComponent {
 
 }
 
-const Dataset = React.memo(({ project, samplesByType, user }) => {
+const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, user }) => {
   const datasetSections = Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
@@ -264,7 +269,7 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
       content: (
         <div>
           No Datasets Loaded
-          {project.workspaceName && (
+          {hasAnvil && (
             <div>
               <i>Where is my data? </i>
               <Popup
@@ -290,14 +295,16 @@ const Dataset = React.memo(({ project, samplesByType, user }) => {
   return datasetSections.map((sectionProps, i) => (
     <DetailSection
       {...sectionProps}
-      button={(datasetSections.length - 1 === i) ? <EditDatasetsButton project={project} user={user} /> : null}
+      button={(datasetSections.length - 1 === i) ?
+        <EditDatasetsButton showLoadWorkspaceData={showLoadWorkspaceData} user={user} /> : null}
     />
   ))
 })
 
 Dataset.propTypes = {
-  project: PropTypes.object.isRequired,
   samplesByType: PropTypes.object.isRequired,
+  hasAnvil: PropTypes.bool,
+  showLoadWorkspaceData: PropTypes.bool,
   user: PropTypes.object.isRequired,
 }
 
@@ -308,20 +315,25 @@ const mapDatasetStateToProps = (state, ownProps) => ({
 
 const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)
 
-const Anvil = React.memo(({ project, user, onSubmit }) => (
-  (project.workspaceName || user.isPm) && user.isAnvil && (
+const mapAnvilButtonStateToProps = state => ({
+  initialValues: getCurrentProject(state),
+})
+
+const UpdateAnvilButton = connect(mapAnvilButtonStateToProps)(UpdateButton)
+
+const Anvil = React.memo(({ workspaceName, workspaceNamespace, user, onSubmit }) => (
+  (workspaceName || user.isPm) && user.isAnvil && (
     <DetailSection
       title="AnVIL Workspace"
-      content={project.workspaceName ? (
-        <a href={`${ANVIL_URL}/#workspaces/${project.workspaceNamespace}/${project.workspaceName}`} target="_blank" rel="noreferrer">
-          {project.workspaceName}
+      content={workspaceName ? (
+        <a href={`${ANVIL_URL}/#workspaces/${workspaceNamespace}/${workspaceName}`} target="_blank" rel="noreferrer">
+          {workspaceName}
         </a>
       ) : 'None'}
       button={user.isPm && (
-        <UpdateButton
+        <UpdateAnvilButton
           onSubmit={onSubmit}
           formFields={ANVIL_FIELDS}
-          initialValues={project}
           modalTitle="Edit AnVIL Workspace"
           modalId="editAnvilWorkspace"
           buttonText="Edit Workspace"
@@ -332,8 +344,9 @@ const Anvil = React.memo(({ project, user, onSubmit }) => (
 ))
 
 Anvil.propTypes = {
-  project: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
+  workspaceName: PropTypes.string,
+  workspaceNamespace: PropTypes.string,
   onSubmit: PropTypes.func,
 }
 
@@ -373,41 +386,95 @@ LoadingSection.propTypes = {
   children: PropTypes.node,
 }
 
-const ProjectOverview = React.memo(({ familiesLoading, overviewLoading, ...props }) => (
+const ProjectOverview = React.memo(({
+  familiesLoading, overviewLoading, analysisGroupGuid, projectName, genomeVersion, workspaceName, workspaceNamespace,
+  canEdit, hasCaseReview, isAnalystProject, mmeSubmissionCount, mmeDeletedSubmissionCount,
+}) => (
   <Grid>
     <Grid.Column width={5}>
       <LoadingSection loading={familiesLoading}>
-        <FamiliesIndividualsOverview {...props} />
+        <FamiliesIndividualsOverview
+          canEdit={canEdit}
+          hasCaseReview={hasCaseReview}
+          analysisGroupGuid={analysisGroupGuid}
+        />
       </LoadingSection>
       <VerticalSpacer height={10} />
       <LoadingSection loading={familiesLoading || overviewLoading}>
-        <DataLoadedFamiliesIndividualsOverview {...props} />
+        <DataLoadedFamiliesIndividualsOverview
+          canEdit={canEdit}
+          hasCaseReview={hasCaseReview}
+          analysisGroupGuid={analysisGroupGuid}
+        />
       </LoadingSection>
       <VerticalSpacer height={10} />
       <LoadingSection loading={overviewLoading}>
-        <MatchmakerOverview {...props} />
+        <MatchmakerOverview
+          projectName={projectName}
+          mmeSubmissionCount={mmeSubmissionCount}
+          mmeDeletedSubmissionCount={mmeDeletedSubmissionCount}
+          canEdit={canEdit}
+        />
       </LoadingSection>
     </Grid.Column>
     <Grid.Column width={5}>
-      <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[props.project.genomeVersion]} />
+      <DetailSection title="Genome Version" content={GENOME_VERSION_LOOKUP[genomeVersion]} />
       <LoadingSection loading={overviewLoading}>
-        <DatasetOverview {...props} />
+        <DatasetOverview
+          showLoadWorkspaceData={!!workspaceName && !isAnalystProject && canEdit}
+          hasAnvil={!!workspaceName}
+          analysisGroupGuid={analysisGroupGuid}
+        />
       </LoadingSection>
     </Grid.Column>
     <Grid.Column width={6}>
       <LoadingSection loading={familiesLoading}>
-        <AnalysisStatusOverview {...props} />
+        <AnalysisStatusOverview analysisGroupGuid={analysisGroupGuid} />
       </LoadingSection>
       <VerticalSpacer height={10} />
-      <AnvilOverview {...props} />
+      <AnvilOverview workspaceName={workspaceName} workspaceNamespace={workspaceNamespace} />
     </Grid.Column>
   </Grid>
 ))
 
 ProjectOverview.propTypes = {
-  project: PropTypes.object.isRequired,
+  projectName: PropTypes.string,
+  genomeVersion: PropTypes.string,
+  workspaceName: PropTypes.string,
+  workspaceNamespace: PropTypes.string,
+  canEdit: PropTypes.bool,
+  hasCaseReview: PropTypes.bool,
+  isAnalystProject: PropTypes.bool,
+  mmeSubmissionCount: PropTypes.number,
+  mmeDeletedSubmissionCount: PropTypes.number,
+  analysisGroupGuid: PropTypes.string,
   familiesLoading: PropTypes.bool,
   overviewLoading: PropTypes.bool,
 }
 
-export default ProjectOverview
+const mapStateToProps = (state) => {
+  const {
+    name,
+    genomeVersion,
+    workspaceName,
+    workspaceNamespace,
+    canEdit,
+    hasCaseReview,
+    isAnalystProject,
+    mmeSubmissionCount,
+    mmeDeletedSubmissionCount,
+  } = getCurrentProject(state)
+  return {
+    projectName: name,
+    genomeVersion,
+    workspaceName,
+    workspaceNamespace,
+    canEdit,
+    hasCaseReview,
+    isAnalystProject,
+    mmeSubmissionCount,
+    mmeDeletedSubmissionCount,
+  }
+}
+
+export default connect(mapStateToProps)(ProjectOverview)

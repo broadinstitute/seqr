@@ -63,9 +63,10 @@ const BaseVariantDetail = (
     <VariantTagTypeBar
       height={15}
       width="calc(100% - 2.5em)"
-      project={project}
+      projectGuid={project.projectGuid}
       familyGuid={family.familyGuid}
       tagTypeCounts={tagTypeCounts}
+      tagTypes={project.variantTagTypes}
       sectionLinks={false}
     />
     <HorizontalSpacer width={10} />
