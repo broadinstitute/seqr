@@ -75,13 +75,15 @@ class PedigreeInfoUtilsTest(object):
             'ind2 is recorded as the mother of ind1 but they have different family ids: fam2 and fam1',
             'ind2 is recorded as their own father',
         ])
-        self.assertListEqual(ec.exception.warnings, ["ind3 is the father of ind1 but doesn't have a separate record in the table"])
+        self.assertListEqual(ec.exception.warnings, [
+            "ind3 is the father of ind1 but is not included. Make sure to create an additional record with ind3 as the Individual ID"
+        ])
 
         no_error_data = [['A pedigree file'], ['# Some comments'],
              ['#family_id', '#individual_id', 'previous_individual_id', 'notes_for_import', 'other_data', 'sex', 'affected', 'father', 'mother', 'phenotype: coded', 'proband_relation'],
              ['fam1', 'ind1', 'ind1_old_id', 'some notes', 'some more notes', 'male', 'aff.', '.', 'ind2', 'HPO:12345', ''],
              ['fam1', 'ind2', '', ' ', '', 'female', 'u', '.', 'ind3', 'HPO:56789', 'mother']]
-        no_error_warnings = ["ind3 is the mother of ind2 but doesn't have a separate record in the table"]
+        no_error_warnings = ["ind3 is the mother of ind2 but is not included. Make sure to create an additional record with ind3 as the Individual ID"]
         records, warnings = parse_pedigree_table(no_error_data, FILENAME, self.collaborator_user)
         self.assertListEqual(records, [
             {'familyId': 'fam1', 'individualId': 'ind1', 'sex': 'M', 'affected': 'A', 'paternalId': '',
@@ -186,9 +188,9 @@ class PedigreeInfoUtilsTest(object):
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
              'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
              }])
-        self.assertListEqual(
-            warnings,
-            ["SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but doesn't have a separate record in the table"])
+        self.assertListEqual(warnings, [
+            "SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. "
+            "Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID"])
 
         mock_email.assert_called_with(
             subject='SK-3QVD Merged Sample Pedigree File',

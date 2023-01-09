@@ -257,7 +257,9 @@ def validate_fam_file_records(records, fail_on_warnings=False):
 
             # is there a separate record for the parent id?
             if parent_id not in records_by_id:
-                warnings.append("%(parent_id)s is the %(parent_id_type)s of %(individual_id)s but doesn't have a separate record in the table" % locals())
+                warnings.append(
+                    f'{parent_id} is the {parent_id_type} of {individual_id} but is not included. '
+                    f'Make sure to create an additional record with {parent_id} as the Individual ID')
                 continue
 
             # is the parent the same individuals
