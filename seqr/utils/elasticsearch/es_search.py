@@ -710,11 +710,17 @@ class EsSearch(object):
                 index_logs[index_name] = log_messages
 
         if len(paginated_index_searches) > MAX_INDEX_SEARCHES:
-            has_possible_hit_indices = self._get_possible_hit_indices(num_indices=len(paginated_index_searches))
-            paginated_index_searches = {
-                index_name: searches for index_name, searches in paginated_index_searches.items()
-                if index_name in has_possible_hit_indices
-            }
+            index_possible_variants, all_inheritance_response = self._get_possible_hit_indices()
+            if index_possible_variants:
+                paginated_index_searches = {
+                    index_name: [
+                        search.query('ids', values=possible_ids) for search in paginated_index_searches[index_name]
+                    ] for index_name, possible_ids in index_possible_variants.items()
+                    if paginated_index_searches.get(index_name)
+                }
+            elif all_inheritance_response is not None:
+                # all inheritance search succeeded but has no results, return an empty response
+                return self._parse_response(all_inheritance_response)
 
         ms = MultiSearch()
         for index_name, searches in paginated_index_searches.items():
@@ -727,12 +733,18 @@ class EsSearch(object):
         parsed_responses = [self._parse_response(response) for response in responses]
         return self._process_multi_search_responses(parsed_responses, **kwargs)
 
-    def _get_possible_hit_indices(self, num_indices):
-        has_hit_agg_search = self._search.index(self.index_name)[:0]
-        has_hit_agg_search.aggs.bucket('indices', 'terms', field='_index', size=num_indices)
-        response = has_hit_agg_search.using(self._client).execute()
-        logger.info(f'Filtering search to {len(response.aggregations.indices)} indices with possible hits', self._user)
-        return [agg['key'] for agg in response.aggregations.indices]
+    def _get_possible_hit_indices(self):
+        no_inheritance_search = self._search.index(self.index_name).source('')[:200]
+        response = no_inheritance_search.using(self._client).execute()
+        if response.hits.total['value'] > len(response.hits):
+            return None, None
+
+        index_possible_variants = defaultdict(list)
+        for hit in response.hits:
+            index_possible_variants[hit.meta.index].append(hit.meta.id)
+
+        logger.info(f'Filtering search to {len(index_possible_variants)} indices with possible hits', self._user)
+        return index_possible_variants, response
 
     def _process_multi_search_responses(self, parsed_responses, page=1, num_results=100):
         new_results = []
