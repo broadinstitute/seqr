@@ -191,7 +191,7 @@ const FamiliesIndividualsOverview = connect(mapFamiliesStateToProps)(FamiliesInd
 
 const DataLoadedFamiliesIndividualsOverview = connect(mapDataLoadedFamiliesStateToProps)(FamiliesIndividuals)
 
-const MatchmakerOverview = React.memo(({ name, mmeSubmissionCount, mmeDeletedSubmissionCount, canEdit }) => (
+const MatchmakerOverview = React.memo(({ projectName, mmeSubmissionCount, mmeDeletedSubmissionCount, canEdit }) => (
   <DetailSection
     title="Matchmaker Submissions"
     content={mmeSubmissionCount ? (
@@ -199,7 +199,7 @@ const MatchmakerOverview = React.memo(({ name, mmeSubmissionCount, mmeDeletedSub
         {`${mmeSubmissionCount} submissions `}
         <Modal
           trigger={<ButtonLink icon="external" size="tiny" />}
-          title={`Matchmaker Submissions for ${name}`}
+          title={`Matchmaker Submissions for ${projectName}`}
           modalName="mmeSubmissions"
           size="large"
         >
@@ -212,7 +212,7 @@ const MatchmakerOverview = React.memo(({ name, mmeSubmissionCount, mmeDeletedSub
 ))
 
 MatchmakerOverview.propTypes = {
-  name: PropTypes.string.isRequired,
+  projectName: PropTypes.string.isRequired,
   canEdit: PropTypes.bool,
   mmeSubmissionCount: PropTypes.number,
   mmeDeletedSubmissionCount: PropTypes.number,
@@ -387,7 +387,7 @@ LoadingSection.propTypes = {
 }
 
 const ProjectOverview = React.memo(({
-  familiesLoading, overviewLoading, analysisGroupGuid, name, genomeVersion, workspaceName, workspaceNamespace,
+  familiesLoading, overviewLoading, analysisGroupGuid, projectName, genomeVersion, workspaceName, workspaceNamespace,
   canEdit, hasCaseReview, isAnalystProject, mmeSubmissionCount, mmeDeletedSubmissionCount,
 }) => (
   <Grid>
@@ -410,7 +410,7 @@ const ProjectOverview = React.memo(({
       <VerticalSpacer height={10} />
       <LoadingSection loading={overviewLoading}>
         <MatchmakerOverview
-          name={name}
+          projectName={projectName}
           mmeSubmissionCount={mmeSubmissionCount}
           mmeDeletedSubmissionCount={mmeDeletedSubmissionCount}
           canEdit={canEdit}
@@ -438,7 +438,7 @@ const ProjectOverview = React.memo(({
 ))
 
 ProjectOverview.propTypes = {
-  name: PropTypes.string,
+  projectName: PropTypes.string,
   genomeVersion: PropTypes.string,
   workspaceName: PropTypes.string,
   workspaceNamespace: PropTypes.string,
@@ -465,7 +465,7 @@ const mapStateToProps = (state) => {
     mmeDeletedSubmissionCount,
   } = getCurrentProject(state)
   return {
-    name,
+    projectName: name,
     genomeVersion,
     workspaceName,
     workspaceNamespace,
