@@ -23,6 +23,7 @@ import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
+import PhiWarningUploadField from 'shared/components/form/PhiWarningUploadField'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { getAnvilLoadingDelayDate } from 'redux/selectors'
 import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
@@ -48,19 +49,38 @@ const BLANK_EXPORT = {
   processRow: val => val,
 }
 
+const DEMO_EXPORT = {
+  ...BLANK_EXPORT,
+  filename: 'demo_individuals',
+  rawData: [
+    ['FAM1', 'FAM1_1', 'FAM1_2', 'FAM1_3', 'Male', 'Affected', ''],
+    ['FAM1', 'FAM1_4', 'FAM1_2', 'FAM1_3', '', 'Affected', 'an affected sibling'],
+    ['FAM1', 'FAM1_2', '', '', 'Male', 'Unaffected', ''],
+    ['FAM1', 'FAM1_3', '', '', 'Female', '', 'affected status of mother unknown'],
+    ['FAM2', 'FAM2_1', '', '', 'Female', 'Affected', 'a proband-only family'],
+  ],
+}
+
+const PHI_DISCALIMER = `including in any of the IDs or in the notes. PHI includes names, contact information, 
+birth dates, and any other identifying information`
+
 const UploadPedigreeField = React.memo(({ name, error }) => (
   <div className={`${error ? 'error' : ''} field`}>
     <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm" color={error ? 'red' : null}>
-      <BulkUploadForm
-        name={name}
-        blankExportConfig={BLANK_EXPORT}
-        requiredFields={REQUIRED_FIELDS}
-        optionalFields={OPTIONAL_FIELDS}
-        uploadFormats={FILE_FORMATS}
-        actionDescription="load individual data from an AnVIL workspace to a new seqr project"
-        url="/api/upload_temp_file"
-      />
+      <PhiWarningUploadField fileDescriptor="pedigree file" disclaimerDetail={PHI_DISCALIMER}>
+        <BulkUploadForm
+          name={name}
+          blankExportConfig={BLANK_EXPORT}
+          exportConfig={DEMO_EXPORT}
+          templateLinkContent="an example pedigree"
+          requiredFields={REQUIRED_FIELDS}
+          optionalFields={OPTIONAL_FIELDS}
+          uploadFormats={FILE_FORMATS}
+          actionDescription="load individual data from an AnVIL workspace to a new seqr project"
+          url="/api/upload_temp_file"
+        />
+      </PhiWarningUploadField>
     </Segment>
   </div>
 ))

@@ -239,6 +239,7 @@ export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 export const FAMILY_FIELD_ANALYSIS_GROUPS = 'analysisGroups'
+export const FAMILY_FIELD_SAVED_VARIANTS = 'savedVariants'
 
 export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
@@ -257,6 +258,7 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
   [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
   [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
+  [FAMILY_FIELD_SAVED_VARIANTS]: 'Saved Variants',
 }
 
 export const FAMILY_NOTES_FIELDS = [
@@ -948,6 +950,7 @@ export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
 export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
 export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
+export const MME_TAG_NAME = 'MME Submission'
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'

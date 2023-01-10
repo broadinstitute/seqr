@@ -1,12 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
 
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
-import { EXCLUDED_TAG_NAME, REVIEW_TAG_NAME } from 'shared/utils/constants'
-import { getProjectTagTypes } from '../selectors'
 
-export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGuid, tag }) => {
+export const getSavedVariantsLinkPath = ({ projectGuid, analysisGroupGuid, familyGuid, tag }) => {
   let path = tag ? `/${tag}` : ''
   if (familyGuid) {
     path = `/family/${familyGuid}${path}`
@@ -14,12 +11,11 @@ export const getSavedVariantsLinkPath = ({ project, analysisGroupGuid, familyGui
     path = `/analysis_group/${analysisGroupGuid}${path}`
   }
 
-  return `/project/${project.projectGuid}/saved_variants${path}`
+  return `/project/${projectGuid}/saved_variants${path}`
 }
 
 const VariantTagTypeBar = React.memo(({
-  tagTypes, tagTypeCounts, project, familyGuid, analysisGroupGuid, sectionLinks = true, hideExcluded, hideReviewOnly,
-  ...props
+  tagTypes, tagTypeCounts, projectGuid, familyGuid, analysisGroupGuid, sectionLinks = true, ...props
 }) => (
   <HorizontalStackedBar
     {...props}
@@ -28,18 +24,16 @@ const VariantTagTypeBar = React.memo(({
     showTotal={false}
     title="Saved Variants"
     noDataMessage="No Saved Variants"
-    linkPath={getSavedVariantsLinkPath({ project, analysisGroupGuid, familyGuid })}
+    linkPath={getSavedVariantsLinkPath({ projectGuid, analysisGroupGuid, familyGuid })}
     sectionLinks={sectionLinks}
     dataCounts={tagTypeCounts}
-    data={(hideExcluded || hideReviewOnly) ? tagTypes.filter(
-      vtt => !(hideExcluded && vtt.name === EXCLUDED_TAG_NAME) && !(hideReviewOnly && vtt.name === REVIEW_TAG_NAME),
-    ) : tagTypes}
+    data={tagTypes}
   />
 ))
 
 VariantTagTypeBar.propTypes = {
-  project: PropTypes.object.isRequired,
-  tagTypes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  projectGuid: PropTypes.string.isRequired,
+  tagTypes: PropTypes.arrayOf(PropTypes.object),
   tagTypeCounts: PropTypes.object,
   familyGuid: PropTypes.string,
   analysisGroupGuid: PropTypes.string,
@@ -48,8 +42,4 @@ VariantTagTypeBar.propTypes = {
   hideReviewOnly: PropTypes.bool,
 }
 
-const mapStateToProps = state => ({
-  tagTypes: getProjectTagTypes(state),
-})
-
-export default connect(mapStateToProps)(VariantTagTypeBar)
+export default VariantTagTypeBar

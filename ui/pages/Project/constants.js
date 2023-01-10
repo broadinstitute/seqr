@@ -16,6 +16,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_SAVED_VARIANTS,
   FAMILY_FIELD_NAME_LOOKUP,
   INDIVIDUAL_FIELD_ID,
   INDIVIDUAL_FIELD_PATERNAL_ID,
@@ -34,6 +35,7 @@ import {
   FAMILY_NOTES_FIELDS,
   SNP_DATA_TYPE,
   FAMILY_ANALYSED_BY_DATA_TYPES,
+  MME_TAG_NAME,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -123,6 +125,7 @@ const ASSIGNED_TO_ME_FILTER = {
   name: 'Assigned To Me',
   createFilter: (individualsByGuid, user) => family => familyIsAssignedToMe(family, user),
 }
+const ANALYST_HIGH_PRIORITY_TAG = 'Analyst high priority'
 
 export const CATEGORY_FAMILY_FILTERS = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: [
@@ -184,6 +187,13 @@ export const CATEGORY_FAMILY_FILTERS = {
       createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
     },
   ],
+  [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, ANALYST_HIGH_PRIORITY_TAG].map(tagName => ({
+    value: tagName,
+    name: tagName,
+    createFilter: (individualsByGuid, user, samplesByFamily, familyTagTypeCounts) => ({ familyGuid }) => (
+      (familyTagTypeCounts[familyGuid] || {})[tagName]
+    ),
+  })),
 }
 
 export const FAMILY_FILTER_LOOKUP = Object.values(CATEGORY_FAMILY_FILTERS).reduce(

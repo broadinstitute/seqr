@@ -1311,7 +1311,9 @@ def _set_discovery_details(row, variant_tag_names, variants):
     # Set values
     for variant in variants:
         for f in variant.variantfunctionaldata_set.all():
-            functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
+            functional_field = FUNCTIONAL_DATA_FIELD_MAP.get(f.functional_data_tag)
+            if not functional_field:
+                continue
             if functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
                 value = f.metadata
                 if functional_field == ADDITIONAL_KINDREDS_FIELD:

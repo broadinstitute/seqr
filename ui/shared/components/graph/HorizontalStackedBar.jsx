@@ -50,25 +50,28 @@ class HorizontalStackedBar extends React.PureComponent {
     showPercent: PropTypes.bool,
     showTotal: PropTypes.bool,
     sectionLinks: PropTypes.bool,
+    excludeItems: PropTypes.arrayOf(PropTypes.string),
   }
 
   render() {
     const {
-      title, data, dataCounts, width, height, linkPath, sectionLinks, showAllPopupCategories, minPercent = 1,
-      noDataMessage = 'No Data', showPercent = true, showTotal = true,
+      title, width, height, linkPath, sectionLinks, showAllPopupCategories, dataCounts, excludeItems,
+      minPercent = 1, noDataMessage = 'No Data', showPercent = true, showTotal = true,
     } = this.props
-    const total = (dataCounts ? Object.values(dataCounts) : data.map(({ count }) => count)).reduce(
-      (acc, count) => acc + count, 0,
-    )
+    let { data = [] } = this.props
+
+    if (excludeItems) {
+      data = data.filter(t => !excludeItems.includes(t.name))
+    }
+    data = data.map(({ count, ...item }) => ({ ...item, count: (dataCounts ? dataCounts[item.name] : count) || 0 }))
+
+    const total = data.reduce((acc, { count }) => acc + count, 0)
 
     if (total === 0) {
       return <BarContainer width={width} height={height}>{noDataMessage}</BarContainer>
     }
 
-    const dataWithPercents = data.map((d) => {
-      const count = dataCounts ? dataCounts[d.name] : d.count
-      return { ...d, count: count || 0, percent: (100 * (count || 0)) / total }
-    })
+    const dataWithPercents = data.map(d => ({ ...d, percent: (100 * (d.count || 0)) / total }))
     let currCategory = null
     const popupData = dataWithPercents.reduce((acc, d) => {
       if (d.count <= 0 && !showAllPopupCategories) {
