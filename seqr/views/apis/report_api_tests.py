@@ -441,9 +441,11 @@ class ReportAPITest(object):
             response.json()['error'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
         self.assertEqual(len(responses.calls), 3)
+        first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889'," \
+                        "{SeqrCollaboratorSampleID}='NA20885')"
         expected_params = {
             'fields[]': mock.ANY,
-            'filterByFormula':  "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885')",
+            'filterByFormula': first_formula,
         }
         expected_fields = [
             'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
