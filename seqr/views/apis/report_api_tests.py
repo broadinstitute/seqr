@@ -397,6 +397,7 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+    @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 4)
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
@@ -439,29 +440,34 @@ class ReportAPITest(object):
         self.assertEqual(
             response.json()['error'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
-        self.assertEqual(len(responses.calls), 2)
+        self.assertEqual(len(responses.calls), 3)
         expected_params = {
             'fields[]': mock.ANY,
-            'filterByFormula':  "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885',{SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')",
+            'filterByFormula':  "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885')",
         }
-        expected_fields =  [
+        expected_fields = [
             'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
             'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
         ]
         self.assertDictEqual(responses.calls[0].request.params, expected_params)
         self.assertListEqual(_get_list_param(responses.calls[0].request, 'fields%5B%5D'), expected_fields)
-        expected_params['offset'] = 'abc123'
-        self.assertDictEqual(responses.calls[1].request.params, expected_params)
+        expected_offset_params = {'offset': 'abc123'}
+        expected_offset_params.update(expected_params)
+        self.assertDictEqual(responses.calls[1].request.params, expected_offset_params)
         self.assertListEqual(_get_list_param(responses.calls[1].request, 'fields%5B%5D'), expected_fields)
+        expected_params['filterByFormula'] = "OR({SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')"
+        self.assertDictEqual(responses.calls[2].request.params, expected_params)
+        self.assertListEqual(_get_list_param(responses.calls[2].request, 'fields%5B%5D'), expected_fields)
 
         # Test success
+        responses.calls.reset()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
-        self.assertEqual(len(responses.calls), 4)
-        self.assertDictEqual(responses.calls[3].request.params, {
+        self.assertEqual(len(responses.calls), 3)
+        self.assertDictEqual(responses.calls[2].request.params, {
             'fields[]': 'CollaboratorID',
             'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
         })
