@@ -288,6 +288,10 @@ class EsSearch(object):
         clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
 
         annotations = {k: v for k, v in (annotations or {}).items() if v}
+        # Temporal code for migrating SV data file formats, will be delete after the migration finished
+        if annotations.get('structural_consequence') and 'MSV_EXON_OVERLAP' in annotations['structural_consequence']:
+            annotations['structural_consequence'].append('MSV_EXON_OVR')
+        # End of the temporal code
         new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
         screen = annotations.pop(SCREEN_KEY, None)
@@ -811,6 +815,11 @@ class EsSearch(object):
             {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
             for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
         ]
+        # Temporal code for SV data file format migration
+        for trans in sorted_transcripts:
+            if trans.get('majorConsequence') and trans['majorConsequence'] == 'MSV_EXON_OVR':
+                trans['majorConsequence'] = 'MSV_EXON_OVERLAP'
+        # End of temporal code
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)
