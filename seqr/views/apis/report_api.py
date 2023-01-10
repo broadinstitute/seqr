@@ -897,6 +897,7 @@ FUNCTIONAL_DATA_FIELD_MAP = {
     "Animal Model": "animal_model",
     "Non-human cell culture model": "non_human_cell_culture_model",
     "Rescue": "rescue",
+    'Incomplete Penetrance': 'incomplete_penetrance',
 }
 METADATA_FUNCTIONAL_DATA_FIELDS = {
     "genome_wide_linkage",
