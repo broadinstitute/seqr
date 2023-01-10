@@ -460,14 +460,13 @@ class ReportAPITest(object):
         self.assertListEqual(_get_list_param(responses.calls[2].request, 'fields%5B%5D'), expected_fields)
 
         # Test success
-        responses.calls.reset()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
-        self.assertEqual(len(responses.calls), 3)
-        self.assertDictEqual(responses.calls[2].request.params, {
+        self.assertEqual(len(responses.calls), 6)
+        self.assertDictEqual(responses.calls[-1].request.params, {
             'fields[]': 'CollaboratorID',
             'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
         })
