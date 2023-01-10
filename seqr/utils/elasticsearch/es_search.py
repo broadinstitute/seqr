@@ -720,7 +720,7 @@ class EsSearch(object):
                 }
             elif all_inheritance_response is not None:
                 # all inheritance search succeeded but has no results, return an empty response
-                return self._parse_response(all_inheritance_response)
+                return self._process_single_search_response(self._parse_response(all_inheritance_response), **kwargs)
 
         ms = MultiSearch()
         for index_name, searches in paginated_index_searches.items():
