@@ -1335,11 +1335,6 @@ class EsUtilsTest(TestCase):
         else:
             expected_search['_source'] = mock.ANY
 
-        if executed_search != expected_search:
-            act = executed_search['query']['bool']['filter']
-            exp = expected_search_params['filters']
-            import pdb; pdb.set_trace()
-
         self.assertDictEqual(executed_search, expected_search)
 
         if not expected_search_params.get('gene_count_aggs'):
@@ -2778,7 +2773,7 @@ class EsUtilsTest(TestCase):
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_SEARCHES', 1)
     @urllib3_responses.activate
-    def test_multi_project_get_es_variants(self):
+    def test_multi_project_prefilter_indices_get_es_variants(self):
         setup_responses()
         search_model = VariantSearch.objects.create(search={
             'inheritance': {'mode': 'de_novo'},
