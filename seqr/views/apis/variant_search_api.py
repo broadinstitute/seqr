@@ -473,8 +473,8 @@ def _check_results_permission(results_model, user, project_perm_check=None):
 
 def _get_search_context(results_model):
     project_families = defaultdict(list)
-    for family in results_model.families.prefetch_related('project').all():
-        project_families[family.project.guid].append(family.guid)
+    for family_guid, project_guid in results_model.families.values_list('guid', 'project__guid'):
+        project_families[project_guid].append(family_guid)
 
     return {
         'search': results_model.variant_search.search,

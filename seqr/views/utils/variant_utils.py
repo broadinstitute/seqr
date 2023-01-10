@@ -159,10 +159,10 @@ def get_phenotype_prioritization(families, gene_ids=None):
     return data_by_individual_gene
 
 
-def _add_family_has_rna_tpm(families_by_guid):
-    tpm_families = RnaSeqTpm.objects.filter(
-        sample__individual__family__guid__in=families_by_guid.keys()
-    ).values_list('sample__individual__family__guid', flat=True).distinct()
+def _add_family_has_rna_tpm(families, families_by_guid):
+    tpm_families = families.filter(
+        guid__in=families_by_guid.keys(), individual__sample__rnaseqtpm__isnull=False,
+    ).values_list('guid', flat=True).distinct()
     for family_guid in tpm_families:
         families_by_guid[family_guid]['hasRnaTpmData'] = True
 
@@ -250,7 +250,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), families)
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
-            _add_family_has_rna_tpm(families_by_guid)
+            _add_family_has_rna_tpm(families, families_by_guid)
 
         response['phenotypeGeneScores'] = get_phenotype_prioritization(families, gene_ids=genes.keys())
 
