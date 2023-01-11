@@ -477,6 +477,54 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
     return results
 
 
+def _format_functional_tags(tags):
+    for tag in tags:
+        name = tag.pop('functionalDataTag')
+        display_data = VariantFunctionalData.FUNCTIONAL_DATA_TAG_LOOKUP[name]
+        tag.update({
+            'name': name,
+            'metadataTitle': display_data.get('metadata_title', 'Notes'),
+            'color': display_data['color'],
+        })
+    return tags
+
+
+def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, tag_filter=None):
+    variant_tag_id_map = defaultdict(list)
+    for savedvariant_id, tag_id in tag_cls.saved_variants.through.objects.filter(
+            savedvariant_id__in=saved_variant_id_map.keys()).values_list(
+        'savedvariant_id', f'{tag_cls.__name__.lower()}_id',
+    ):
+        variant_tag_id_map[tag_id].append(savedvariant_id)
+    tag_models = tag_cls.objects.filter(id__in=variant_tag_id_map.keys())
+    if tag_filter:
+        tag_models = tag_models.filter(**tag_filter)
+
+    guid_key = 'tagGuid'
+    nested_fields = None
+    if tag_cls == VariantTag:
+        nested_fields = [
+            {'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
+    elif tag_cls == VariantNote:
+        guid_key = 'noteGuid'
+
+    tags = _get_json_for_queryset(
+        tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
+    if tag_cls == VariantFunctionalData:
+        _format_functional_tags(tags)
+
+    variant_tag_map = defaultdict(list)
+    for tag in tags:
+        tag['variantGuids'] = []
+        variant_ids = variant_tag_id_map[tag.pop('id')]
+        for variant_id in variant_ids:
+            variant_guid = saved_variant_id_map[variant_id]
+            variant_tag_map[variant_guid].append(tag[guid_key])
+            tag['variantGuids'].append(variant_guid)
+
+    return tags, variant_tag_map
+
+
 def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
@@ -487,48 +535,18 @@ def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     for guid, variant in variants_by_guid.items():
         saved_variant_id_map[variant.pop('id')] = guid
 
-    variant_tag_id_map = defaultdict(list)
-    for tag_mapping in VariantTag.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
-        variant_tag_id_map[tag_mapping.varianttag_id].append(tag_mapping.savedvariant_id)
-    tag_models = VariantTag.objects.filter(id__in=variant_tag_id_map.keys())
+    tags, variant_tag_map = get_json_for_saved_variants_child_entities(VariantTag, saved_variant_id_map)
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variants_by_guid[variant_guid]['tagGuids'] = tag_guids
 
-    tags = get_json_for_variant_tags(tag_models, add_variant_guids=False, additional_model_fields=['id'])
-    for tag in tags:
-        tag['variantGuids'] = []
-        variant_ids = variant_tag_id_map[tag.pop('id')]
-        for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map[variant_id]
-            variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
-            tag['variantGuids'].append(variant_guid)
+    functional_data, variant_tag_map = get_json_for_saved_variants_child_entities(
+        VariantFunctionalData, saved_variant_id_map)
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variants_by_guid[variant_guid]['functionalDataGuids'] = tag_guids
 
-    variant_functional_id_map = defaultdict(list)
-    for functional_mapping in VariantFunctionalData.saved_variants.through.objects.filter(
-            savedvariant_id__in=saved_variant_id_map.keys()):
-        variant_functional_id_map[functional_mapping.variantfunctionaldata_id].append(functional_mapping.savedvariant_id)
-    functional_models = VariantFunctionalData.objects.filter(id__in=variant_functional_id_map.keys())
-
-    functional_data = get_json_for_variant_functional_data_tags(functional_models, add_variant_guids=False, additional_model_fields=['id'])
-    for tag in functional_data:
-        tag['variantGuids'] = []
-        variant_ids = variant_functional_id_map[tag.pop('id')]
-        for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map[variant_id]
-            variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
-            tag['variantGuids'].append(variant_guid)
-
-    variant_note_id_map = defaultdict(list)
-    for note_mapping in VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
-        variant_note_id_map[note_mapping.variantnote_id].append(note_mapping.savedvariant_id)
-    note_models = VariantNote.objects.filter(id__in=variant_note_id_map.keys())
-
-    notes = _get_json_for_variant_notes(note_models, additional_model_fields=['id'])
-    for note in notes:
-        note['variantGuids'] = []
-        variant_ids = variant_note_id_map[note.pop('id')]
-        for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map[variant_id]
-            variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
-            note['variantGuids'].append(variant_guid)
+    notes, variant_tag_map = get_json_for_saved_variants_child_entities(VariantNote, saved_variant_id_map)
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variants_by_guid[variant_guid]['noteGuids'] = tag_guids
 
     response = {
         'variantTagsByGuid': {tag['tagGuid']: tag for tag in tags},
@@ -545,33 +563,24 @@ def get_json_for_discovery_tags(variants, user):
     response = {}
     discovery_tags = defaultdict(list)
 
-    tag_models = VariantTag.objects.filter(
-        variant_tag_type__category='CMG Discovery Tags',
-        saved_variants__variant_id__in={variant['variantId'] for variant in variants},
-        saved_variants__family__project__guid__in=get_project_guids_user_can_view(user),
-    )
-    if tag_models:
-        discovery_tag_json = get_json_for_variant_tags(tag_models, add_variant_guids=False)
+    saved_variants = SavedVariant.objects.filter(
+        variant_id__in={variant['variantId'] for variant in variants},
+        family__project__guid__in=get_project_guids_user_can_view(user),
+    ).only('id', 'guid', 'ref', 'alt', 'xpos', 'family_id').prefetch_related('family', 'family__project')
+    saved_variants_by_guid = {sv.guid: sv for sv in saved_variants}
+    saved_variant_id_map = {sv.id: guid for guid, sv in saved_variants_by_guid.items()}
 
-        tag_id_map = {tag.guid: tag.id for tag in tag_models}
-        variant_tag_id_map = defaultdict(list)
-        variant_ids = set()
-        for tag_mapping in VariantTag.saved_variants.through.objects.filter(
-                varianttag_id__in=tag_id_map.values()):
-            variant_tag_id_map[tag_mapping.varianttag_id].append(tag_mapping.savedvariant_id)
-            variant_ids.add(tag_mapping.savedvariant_id)
-        saved_variants_by_id = {var.id: var for var in SavedVariant.objects.filter(id__in=variant_ids).only(
-            'guid', 'ref', 'alt', 'xpos', 'family_id').prefetch_related('family', 'family__project')
-        }
-
+    discovery_tag_json, variant_tag_map = get_json_for_saved_variants_child_entities(
+        VariantTag, saved_variant_id_map, tag_filter={'variant_tag_type__category': 'CMG Discovery Tags'})
+    if discovery_tag_json:
         existing_families = set()
         for variant in variants:
             existing_families.update(variant['familyGuids'])
 
         families = set()
         for tag in discovery_tag_json:
-            for variant_id in variant_tag_id_map[tag_id_map[tag['tagGuid']]]:
-                variant = saved_variants_by_id[variant_id]
+            for variant_guid in tag.pop('variantGuids'):
+                variant = saved_variants_by_guid[variant_guid]
                 if variant.family.guid not in existing_families:
                     families.add(variant.family)
                 tag_json = {'savedVariant': {
@@ -588,57 +597,6 @@ def get_json_for_discovery_tags(variants, user):
 
         response['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(list(families))}
     return discovery_tags, response
-
-
-def get_json_for_variant_tags(tags, add_variant_guids=True, **kwargs):
-    """Returns a JSON representation of the given variant tags.
-
-    Args:
-        tag (object): Django models for the VariantTag.
-    Returns:
-        dict: json objects
-    """
-    additional_values = {}
-    if add_variant_guids:
-        additional_values['variantGuids'] = ArrayAgg('saved_variants__guid')
-
-    nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
-    return _get_json_for_queryset(tags, nested_fields=nested_fields, guid_key='tagGuid', additional_values=additional_values, **kwargs)
-
-
-def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True, **kwargs):
-    """Returns a JSON representation of the given variant tags.
-
-    Args:
-        tags (object): Django models for the VariantFunctionalData.
-    Returns:
-        dict: json objects
-    """
-    additional_values = {}
-    if add_variant_guids:
-        additional_values['variantGuids'] = ArrayAgg('saved_variants__guid')
-
-    results = _get_json_for_queryset(tags, guid_key='tagGuid', additional_values=additional_values, **kwargs)
-    for result in results:
-        name = result.pop('functionalDataTag')
-        display_data = VariantFunctionalData.FUNCTIONAL_DATA_TAG_LOOKUP[name]
-        result.update({
-            'name': name,
-            'metadataTitle': display_data.get('metadata_title', 'Notes'),
-            'color': display_data['color'],
-        })
-    return results
-
-
-def _get_json_for_variant_notes(notes, **kwargs):
-    """Returns a JSON representation of the given variant notes.
-
-    Args:
-        notes (object): Django model for the VariantNote.
-    Returns:
-        dict: json objects
-    """
-    return _get_json_for_queryset(notes, guid_key='noteGuid', **kwargs)
 
 
 def get_json_for_variant_note(note):

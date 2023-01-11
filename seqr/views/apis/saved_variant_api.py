@@ -3,13 +3,13 @@ import json
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    Family, GeneNote
+    Family, GeneNote, Project
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
-    get_json_for_variant_tags, get_json_for_variant_functional_data_tags, get_json_for_gene_notes_by_gene_id
+    get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
 from seqr.views.utils.variant_utils import update_project_saved_variant_json, reset_cached_search_results, \
@@ -208,8 +208,7 @@ def _get_tag_type_create_data(tag, saved_variants=None):
 def update_variant_tags_handler(request, variant_guids):
     return _update_variant_tag_models(
         request, variant_guids, tag_key='tags', response_guid_key='tagGuids', model_cls=VariantTag,
-        get_tag_create_data=_get_tag_type_create_data, get_tags_json=get_json_for_variant_tags,
-        delete_variants_if_empty=True)
+        get_tag_create_data=_get_tag_type_create_data, delete_variants_if_empty=True)
 
 @login_and_policies_required
 def update_variant_acmg_classification_handler(request, variant_guid):
@@ -235,16 +234,15 @@ def _update_variant_acmg_classification(request, variant_guid):
 def update_variant_functional_data_handler(request, variant_guids):
     return _update_variant_tag_models(
         request, variant_guids, tag_key='functionalData', model_cls=VariantFunctionalData,
-        get_tag_create_data=lambda tag, **kwargs: {'functional_data_tag': tag.get('name')},
-        get_tags_json=get_json_for_variant_functional_data_tags)
+        get_tag_create_data=lambda tag, **kwargs: {'functional_data_tag': tag.get('name')})
 
 
-def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_tag_create_data, get_tags_json, response_guid_key=None, delete_variants_if_empty=False):
+def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_tag_create_data, response_guid_key=None, delete_variants_if_empty=False):
     request_json = json.loads(request.body)
 
     family_guid = request_json.pop('familyGuid')
-    family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    project = Project.objects.get(family__guid=family_guid)
+    check_project_permissions(project, request.user)
 
     all_variant_guids = set(variant_guids.split(','))
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -257,17 +255,20 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
     updated_data = request_json.get(tag_key, [])
     deleted_guids = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, tag_type)
 
-    updated_models = _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data)
-    updates = {tag['tagGuid']: tag for tag in get_tags_json(updated_models)}
+    _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data)
+
+    saved_variant_id_map = {sv.id: sv.guid for sv in saved_variants}
+    tags, variant_tag_map = get_json_for_saved_variants_child_entities(model_cls, saved_variant_id_map)
+    updates = {tag['tagGuid']: tag for tag in tags}
     updates.update({guid: None for guid in deleted_guids})
 
     if not response_guid_key:
         response_guid_key = '{}Guids'.format(tag_key)
     saved_variants_by_guid = {}
     for saved_variant in saved_variants:
-        tags = _get_tag_set(saved_variant, tag_type).all()
-        saved_variants_by_guid[saved_variant.guid] = {response_guid_key: [t.guid for t in tags]}
-        if delete_variants_if_empty and not tags:
+        tag_guids = variant_tag_map[saved_variant.guid]
+        saved_variants_by_guid[saved_variant.guid] = {response_guid_key: tag_guids}
+        if delete_variants_if_empty and not tag_guids:
             if saved_variant.variantnote_set.count() == 0 and saved_variant.matchmakersubmissiongenes_set.count() == 0:
                 saved_variant.delete_model(request.user, user_can_delete=True)
                 saved_variants_by_guid[saved_variant.guid] = None
