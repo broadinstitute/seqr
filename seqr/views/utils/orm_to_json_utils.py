@@ -477,18 +477,6 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
     return results
 
 
-def get_json_for_saved_variant(saved_variant, **kwargs):
-    """Returns a JSON representation of the given variant.
-
-    Args:
-        saved_variant (object): Django model for the SavedVariant.
-    Returns:
-        dict: json object
-    """
-
-    return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
-
-
 def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
@@ -533,7 +521,7 @@ def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
         variant_note_id_map[note_mapping.variantnote_id].append(note_mapping.savedvariant_id)
     note_models = VariantNote.objects.filter(id__in=variant_note_id_map.keys())
 
-    notes = get_json_for_variant_notes(note_models, add_variant_guids=False, additional_model_fields=['id'])
+    notes = _get_json_for_variant_notes(note_models, additional_model_fields=['id'])
     for note in notes:
         note['variantGuids'] = []
         variant_ids = variant_note_id_map[note.pop('id')]
@@ -642,7 +630,7 @@ def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True, **kw
     return results
 
 
-def get_json_for_variant_notes(notes, add_variant_guids=True, **kwargs):
+def _get_json_for_variant_notes(notes, **kwargs):
     """Returns a JSON representation of the given variant notes.
 
     Args:
@@ -650,18 +638,10 @@ def get_json_for_variant_notes(notes, add_variant_guids=True, **kwargs):
     Returns:
         dict: json objects
     """
-    def _process_result(note_json, note):
-        if add_variant_guids:
-            note_json['variantGuids'] = [variant.guid for variant in note.saved_variants.all()]
-
-    additional_values = {}
-    if add_variant_guids:
-        additional_values['variantGuids'] = ArrayAgg('saved_variants__guid')
-
-    return _get_json_for_queryset(notes, guid_key='noteGuid', additional_values=additional_values, **kwargs)
+    return _get_json_for_queryset(notes, guid_key='noteGuid', **kwargs)
 
 
-def get_json_for_variant_note(note, **kwargs):
+def get_json_for_variant_note(note):
     """Returns a JSON representation of the given variant note.
 
     Args:
@@ -669,8 +649,7 @@ def get_json_for_variant_note(note, **kwargs):
     Returns:
         dict: json object
     """
-
-    return _get_json_for_model(note, get_json_for_models=get_json_for_variant_notes, **kwargs)
+    return _get_json_for_model(note, guid_key='noteGuid')
 
 
 def get_json_for_gene_notes(notes, user):

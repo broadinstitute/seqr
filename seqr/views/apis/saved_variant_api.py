@@ -117,7 +117,7 @@ def create_variant_note_handler(request, variant_guids):
 
     # update saved_variants
     note, response = _create_variant_note(saved_variants, request_json, request.user)
-    note_json = get_json_for_variant_note(note, add_variant_guids=False)
+    note_json = get_json_for_variant_note(note)
     note_json['variantGuids'] = all_variant_guids
     response.update({
         'savedVariantsByGuid': {
@@ -163,7 +163,7 @@ def update_variant_note_handler(request, variant_guids, note_guid):
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, user=request.user, allow_unknown_keys=True)
 
-    note_json = get_json_for_variant_note(note, add_variant_guids=False)
+    note_json = get_json_for_variant_note(note)
     note_json['variantGuids'] = variant_guids.split(',')
 
     return create_json_response({
