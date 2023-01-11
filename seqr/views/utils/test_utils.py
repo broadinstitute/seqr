@@ -1165,6 +1165,13 @@ PARSED_SV_WGS_VARIANT = {
                 'geneSymbol': 'FBXO28',
                 'majorConsequence': 'MSV_EXON_OVERLAP'
             }
+        ],
+        'ENSG00000228201': [
+            {
+                'geneId': 'ENSG00000228201',
+                'geneSymbol': 'FAM131C',
+                'majorConsequence': 'INTRAGENIC_EXON_DUP'
+            }
         ]
     },
     'variantId': 'prefix_19107_CPX',
