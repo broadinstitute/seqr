@@ -59,7 +59,7 @@ def create_saved_variant_handler(request):
     if not isinstance(variant_json['variant'], list):
         variants_json = [variants_json]
 
-    saved_variants = []
+    saved_variant_guids = []
     for single_variant_json in variants_json:
         try:
             parsed_variant_json = _get_parsed_variant_args(single_variant_json, family)
@@ -68,7 +68,8 @@ def create_saved_variant_handler(request):
         saved_variant, _ = get_or_create_model_from_json(
             SavedVariant, create_json=parsed_variant_json,
             update_json={'saved_variant_json': single_variant_json}, user=request.user, update_on_create_only=True)
-        saved_variants.append(saved_variant)
+        saved_variant_guids.append(saved_variant.guid)
+    saved_variants = SavedVariant.objects.filter(guid__in=saved_variant_guids)
 
     response = {}
     if variant_json.get('note'):
