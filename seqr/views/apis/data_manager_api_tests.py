@@ -318,6 +318,9 @@ UPDATE_LIRICAL_DATA = [
 ]
 
 EXPECTED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219801', 'geneId': 'ENSG00000268903', 'diseaseName': 'Cystinosis, no syndrome',
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1},
+     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675'},  # record from the fixture
     {'diseaseId': 'OMIM:618460', 'geneId': 'ENSG00000105357', 'diseaseName': 'Khan-Khan-Katsanis syndrome',
      'scores': {'compositeLR': 0.066, 'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 1, 'individualGuid': 'I000002_na19678'},
@@ -326,6 +329,9 @@ EXPECTED_LIRICAL_DATA = [
      'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'}
 ]
 EXPECTED_UPDATED_LIRICAL_DATA = [
+    {'diseaseId': 'OMIM:219801', 'geneId': 'ENSG00000268903', 'diseaseName': 'Cystinosis, no syndrome',
+     'scores': {'compositeLR': 0.003, 'post_test_probability': 0.1},
+     'tool': 'lirical', 'rank': 11, 'individualGuid': 'I000001_na19675'},  # record from the fixture
     {'diseaseId': 'OMIM:219800', 'geneId': 'ENSG00000105357', 'diseaseName': 'Cystinosis, nephropathic',
      'scores': {'postTestProbability': 0.0},
      'tool': 'lirical', 'rank': 2, 'individualGuid': 'I000015_na20885'},

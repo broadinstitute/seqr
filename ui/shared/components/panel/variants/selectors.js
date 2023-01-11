@@ -3,6 +3,7 @@ import { createSelector } from 'reselect'
 import { toSnakecase } from 'shared/utils/stringUtils'
 import {
   NOTE_TAG_NAME,
+  MME_TAG_NAME,
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -148,6 +149,8 @@ export const getPairedSelectedSavedVariants = createSelector(
 
     if (tag === NOTE_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ noteGuids }) => noteGuids.length)
+    } else if (tag === MME_TAG_NAME) {
+      pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
     } else if (tag && tag !== SHOW_ALL) {
       pairedVariants = matchingVariants(
         pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag),

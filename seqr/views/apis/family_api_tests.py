@@ -133,7 +133,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
 
         self.assertDictEqual(response_json['familyTagTypeCounts'], {
-            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
+            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
 
@@ -511,9 +511,11 @@ class FamilyAPITest(AuthenticationTestCase):
                     'ENSG00000268903': {
                         'exomiser': [
                             {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
-                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}},
+                             'scores': {'exomiser_score': 0.969347946, 'phenotype_score': 0.443567539,
+                                        'variant_score': 0.999200702}},
                             {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
-                             'scores': {'compositeLR': 0.066, 'post_test_probability': 0}}
+                             'scores': {'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205,
+                                        'variant_score': 1}}
                         ]
                     }
                 },
