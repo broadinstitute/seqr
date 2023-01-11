@@ -162,39 +162,40 @@ const collaboratorDisplay = ({ displayName, email }) => (
 
 const groupNameDisplay = ({ name }) => name
 
-const ProjectCollaborators = React.memo((
-  { project, user, loading, load, onSubmit, onGroupSubmit, addCollaborator },
-) => {
-  const canEdit = project.canEdit && !user.isAnvil
+const ProjectCollaborators = React.memo(({
+  canEdit, workspaceName, collaborators, collaboratorGroups, user, loading, load, onSubmit, onGroupSubmit,
+  addCollaborator,
+}) => {
+  const canEditCollaboratots = canEdit && !user.isAnvil
   return (
-    <DataLoader load={load} loading={loading} content={project.collaborators}>
+    <DataLoader load={load} loading={loading} content={collaborators}>
       <ProjectAccessSection
         title="Collaborator"
         idField="email"
         displayField="displayName"
         deleteMessage=" They will still have their user account and be able to log in, but will not be able to access this project anymore."
-        entities={project.collaborators}
-        canEdit={canEdit}
+        entities={collaborators}
+        canEdit={canEditCollaboratots}
         onSubmit={onSubmit}
         onAdd={addCollaborator}
         addEntityFields={CREATE_FIELDS}
         rowDisplay={collaboratorDisplay}
       />
-      {project.collaboratorGroups?.length > 0 && <Header subheader="Groups" size="small" />}
+      {collaboratorGroups?.length > 0 && <Header subheader="Groups" size="small" />}
       <ProjectAccessSection
         title="Collaborator Group"
         idField="name"
-        entities={project.collaboratorGroups}
-        canEdit={canEdit}
+        entities={collaboratorGroups}
+        canEdit={canEditCollaboratots}
         onSubmit={onGroupSubmit}
         onAdd={onGroupSubmit}
         addEntityFields={CREATE_GROUP_FIELDS}
         rowDisplay={groupNameDisplay}
       />
-      {user.isAnvil && project.workspaceName && (
+      {user.isAnvil && workspaceName && (
         <Segment basic size="small" textAlign="right">
           <i>Collaborators fetched from AnVIL</i>
-          {project.canEdit && (
+          {canEdit && (
             <Popup
               trigger={<HelpIcon color="black" />}
               content={`Project collaborators are managed in AnVIL. Users with access to the associated workspace have
@@ -209,8 +210,11 @@ const ProjectCollaborators = React.memo((
 })
 
 ProjectCollaborators.propTypes = {
-  project: PropTypes.object.isRequired,
   user: PropTypes.object.isRequired,
+  canEdit: PropTypes.bool,
+  workspaceName: PropTypes.string,
+  collaborators: PropTypes.arrayOf(PropTypes.object),
+  collaboratorGroups: PropTypes.arrayOf(PropTypes.object),
   loading: PropTypes.bool,
   load: PropTypes.func,
   onSubmit: PropTypes.func,
@@ -218,11 +222,17 @@ ProjectCollaborators.propTypes = {
   addCollaborator: PropTypes.func,
 }
 
-const mapStateToProps = state => ({
-  project: getCurrentProject(state),
-  user: getUser(state),
-  loading: getProjectCollaboratorsIsLoading(state),
-})
+const mapStateToProps = (state) => {
+  const { canEdit, workspaceName, collaborators, collaboratorGroups } = getCurrentProject(state)
+  return {
+    canEdit,
+    workspaceName,
+    collaborators,
+    collaboratorGroups,
+    user: getUser(state),
+    loading: getProjectCollaboratorsIsLoading(state),
+  }
+}
 
 const mapDispatchToProps = {
   load: loadProjectCollaborators,

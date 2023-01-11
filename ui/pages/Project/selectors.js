@@ -11,7 +11,6 @@ import {
   getVariantMainTranscript,
   INDIVIDUAL_EXPORT_DATA,
   INDIVIDUAL_HAS_DATA_FIELD,
-  NOTE_TAG_NAME,
   MME_TAG_NAME,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
@@ -171,11 +170,6 @@ export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
   },
 )
 
-export const getProjectTagTypes = createSelector(
-  getCurrentProject,
-  project => (project.variantTagTypes || []).filter(vtt => vtt.name !== NOTE_TAG_NAME),
-)
-
 export const getTaggedVariantsByFamily = createSelector(
   getSavedVariantsByGuid,
   getGenesById,
@@ -254,8 +248,8 @@ export const getAnalysisGroupTagTypeCounts = createSelector(
 )
 
 export const getTagTypeCounts = createSelector(
-  getProjectTagTypes,
-  tagTypes => tagTypes.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
+  getCurrentProject,
+  project => project?.variantTagTypes?.reduce((acc, { name, numTags }) => ({ ...acc, [name]: numTags }), {}),
 )
 
 export const getVariantGeneId = ({ variantGuid, geneId }, variantGeneId) => `${variantGuid}-${variantGeneId || geneId}`
@@ -499,8 +493,8 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   },
 )
 
-export const getEntityExportConfig = ({ project, tableName, fileName, fields }) => ({
-  filename: `${project.name.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
+export const getEntityExportConfig = ({ projectName, tableName, fileName, fields }) => ({
+  filename: `${projectName.replace(' ', '_').toLowerCase()}_${tableName ? `${toSnakecase(tableName)}_` : ''}${fileName}`,
   headers: fields.map(config => config.header),
   processRow: family => fields.map((config) => {
     const val = family[config.field]
@@ -557,10 +551,10 @@ const getSamplesExportData = createSelector(
 )
 
 export const getProjectExportUrls = createSelector(
-  getCurrentProject,
+  state => getCurrentProject(state).name,
   (state, ownProps) => (ownProps || {}).tableName,
   getAnalysisGroupGuid,
-  (project, tableName, analysisGroupGuid) => {
+  (projectName, tableName, analysisGroupGuid) => {
     const ownProps = { tableName, analysisGroupGuid }
     const isCaseReview = tableName === CASE_REVIEW_TABLE_NAME
     return [
@@ -568,7 +562,7 @@ export const getProjectExportUrls = createSelector(
         name: 'Families',
         getRawData: state => getFamiliesExportData(state, ownProps),
         ...getEntityExportConfig({
-          project,
+          projectName,
           tableName,
           fileName: 'families',
           fields: isCaseReview ? CASE_REVIEW_FAMILY_EXPORT_DATA : FAMILY_EXPORT_DATA,
@@ -578,7 +572,7 @@ export const getProjectExportUrls = createSelector(
         name: 'Individuals',
         getRawData: state => getIndividualsExportData(state, ownProps),
         ...getEntityExportConfig({
-          project,
+          projectName,
           tableName,
           fileName: 'individuals',
           fields: isCaseReview ? CASE_REVIEW_INDIVIDUAL_EXPORT_DATA : INDIVIDUAL_EXPORT_DATA,
@@ -587,7 +581,7 @@ export const getProjectExportUrls = createSelector(
       {
         name: 'Samples',
         getRawData: state => getSamplesExportData(state, ownProps),
-        ...getEntityExportConfig({ project, tableName, fileName: 'samples', fields: SAMPLE_EXPORT_DATA }),
+        ...getEntityExportConfig({ projectName, tableName, fileName: 'samples', fields: SAMPLE_EXPORT_DATA }),
       },
     ]
   },
