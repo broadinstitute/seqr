@@ -435,10 +435,10 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
 
 @login_and_policies_required
 def get_family_phenotype_gene_scores(request, family_guid):
-    family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    project = Project.objects.get(family__guid=family_guid)
+    check_project_permissions(project, request.user)
 
-    phenotype_prioritization = get_phenotype_prioritization([family])
+    phenotype_prioritization = get_phenotype_prioritization([family_guid])
     gene_ids = {gene_id for indiv in phenotype_prioritization.values() for gene_id in indiv.keys()}
     return create_json_response({
         'phenotypeGeneScores': phenotype_prioritization,
