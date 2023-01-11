@@ -226,16 +226,14 @@ SORT_FIELDS = {
                     'prioritized_gene_rank': _get_gene_rank,
                 },
                 'source': """
-                    if (!doc.containsKey('geneIds') || doc['geneIds'].empty) {
-                        return 1000;
-                    }
-                    String gene_ids = params.prioritized_gene_rank.keySet()
-                    for (int i = 0; i < doc['geneIds'].length; ++i) {
-                        Number
-                        if (gene_ids.contains(doc['geneIds'][i])) {
-                            return params.prioritized_gene_rank;
+                    int min_rank = 1000;
+                    if (doc.containsKey('geneIds') and !doc['geneIds'].empty) {
+                        for (int i = 0; i < doc['geneIds'].length; ++i) {
+                            int rank = params.prioritized_gene_rank.get(doc['geneIds'][i]);
+                            min_rank = (rank && (rank < min_rank))? rank : min_rank;
                         }
-                    } 
+                    }
+                    return min_rank;
                 """
             }
         }
