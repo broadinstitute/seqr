@@ -610,6 +610,17 @@ const VEP_SV_CONSEQUENCES = [
     value: 'LOF',
   },
   {
+    description: 'An SV which is predicted to result in intragenic exonic duplication without breaking any coding sequences' +
+        ' (previously called "Loss of function via Duplication")',
+    text: 'Intragenic Exon Duplication',
+    value: 'INTRAGENIC_EXON_DUP',
+  },
+  {
+    description: 'The duplication SV has one breakpoint in the coding sequence',
+    text: 'Partial Exon Duplication',
+    value: 'PARTIAL_EXON_DUP',
+  },
+  {
     description: 'A copy-gain effect',
     text: 'Copy Gain',
     value: 'COPY_GAIN',
@@ -652,20 +663,9 @@ const VEP_SV_CONSEQUENCES = [
     value: 'BREAKEND_EXONIC',
   },
   {
-    description: 'An SV which is predicted to result in intragenic exonic duplication without breaking any coding sequences' +
-        ' (previously called "Loss of function via Duplication")',
-    text: 'Intragenic Exon Duplication',
-    value: 'INTRAGENIC_EXON_DUP',
-  },
-  {
     description: 'An SV is predicted to duplicate the transcription start site',
     text: 'Transcription Start Site Duplication',
     value: 'TSS_DUP',
-  },
-  {
-    description: 'The duplication SV has one breakpoint in the coding sequence',
-    text: 'Partial Exon Duplication',
-    value: 'PARTIAL_EXON_DUP',
   },
 ]
 
