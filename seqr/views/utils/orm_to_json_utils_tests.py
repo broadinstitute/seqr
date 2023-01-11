@@ -4,8 +4,7 @@ from copy import deepcopy
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \
     VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, _get_json_for_family, \
-    _get_json_for_individual, get_json_for_sample, get_json_for_saved_variants, get_json_for_variant_tags, \
-    get_json_for_variant_functional_data_tags, get_json_for_variant_note, get_json_for_locus_list, \
+    _get_json_for_individual, get_json_for_sample, get_json_for_saved_variants, get_json_for_variant_note, get_json_for_locus_list, \
     get_json_for_saved_search, get_json_for_saved_variants_with_tags, get_json_for_current_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
@@ -208,16 +207,6 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(next(iter(json['variantFunctionalDataByGuid'].values())).keys()), FUNCTIONAL_FIELDS)
         for tag_guid in v1_functional_guids:
             self.assertListEqual(json['variantFunctionalDataByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
-
-    def test_json_for_variant_tags(self):
-        tags = VariantTag.objects.all()[:1]
-        json = get_json_for_variant_tags(tags)[0]
-        self.assertSetEqual(set(json.keys()), TAG_FIELDS)
-
-    def test_json_for_variant_functional_data(self):
-        tags = VariantFunctionalData.objects.all()[:1]
-        json = get_json_for_variant_functional_data_tags(tags)[0]
-        self.assertSetEqual(set(json.keys()), FUNCTIONAL_FIELDS)
 
     def test_json_for_variant_note(self):
         tag = VariantNote.objects.first()

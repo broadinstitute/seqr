@@ -297,7 +297,6 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, t
 
 def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=VariantTag, get_tag_create_data=_get_tag_type_create_data):
     tags = tags_json.get(tag_key, [])
-    updated_models = []
     for tag in tags:
         if tag.get('tagGuid'):
             model = model_cls.objects.get(guid=tag.get('tagGuid'))
@@ -310,9 +309,6 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
             })
             model = create_model_from_json(model_cls, create_data, user)
             model.saved_variants.set(saved_variants)
-
-        updated_models.append(model)
-    return updated_models
 
 
 @login_and_policies_required

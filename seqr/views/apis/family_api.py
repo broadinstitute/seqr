@@ -19,7 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_f
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization
+    PhenotypePrioritization, Project
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 from seqr.views.utils.variant_utils import get_phenotype_prioritization

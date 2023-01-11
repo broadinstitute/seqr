@@ -777,7 +777,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(functional_data['VFD0000023_1248367227_r0390_10']['name'], 'Biochemical Function')
         self.assertEqual(functional_data['VFD0000023_1248367227_r0390_10']['metadata'], 'An updated note')
         self.assertEqual(functional_data[new_guid]['name'], 'Bonferroni corrected p-value')
-        self.assertEqual(functional_data[new_guid]['metadata'], 0.05)
+        self.assertEqual(functional_data[new_guid]['metadata'], '0.05')
 
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual(
@@ -839,7 +839,7 @@ class SavedVariantAPITest(object):
             'functionalData': [
                 {'name': 'Biochemical Function',
                  'metadata': 'An updated note'},
-                {'name': 'Bonferroni corrected p-value', 'metadata': 0.05}
+                {'name': 'Bonferroni corrected p-value', 'metadata': '0.05'}
             ],
             'familyGuid': 'F000001_1'
         }))
@@ -853,7 +853,7 @@ class SavedVariantAPITest(object):
             {"Biochemical Function", "Bonferroni corrected p-value"},
             {vt['name'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
         self.assertSetEqual(
-            {"An updated note", 0.05},
+            {"An updated note", '0.05'},
             {vt['metadata'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
         variant_functional_data = VariantFunctionalData.objects.filter(
             saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
