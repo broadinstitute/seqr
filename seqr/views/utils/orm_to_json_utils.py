@@ -4,9 +4,11 @@ Utility functions for converting Django ORM object to JSON
 
 import json
 from collections import defaultdict
-from django.db.models import prefetch_related_objects, Prefetch, Count
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import prefetch_related_objects, Prefetch, Count, Value, F
+from django.db.models.functions.comparison import Coalesce, NullIf
 from django.db.models.fields.files import ImageFieldFile
-from django.db.models.functions import Lower
+from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
@@ -104,6 +106,39 @@ def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwarg
 
 def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
+
+
+def _full_name_expr(field):
+    return Trim(Concat(f'{field}__first_name', Value(' '), f'{field}__last_name'))
+
+
+def _get_json_for_queryset(models, nested_fields=None, user=None, is_analyst=None, additional_values=None, guid_key=None, additional_model_fields=None):
+    model_class = models.model
+    fields = _get_model_json_fields(model_class, user, is_analyst, additional_model_fields)
+
+    field_key_map = {_to_camel_case(field): field for field in fields}
+    if 'guid' in field_key_map:
+        guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
+        field_key_map[guid_key] = field_key_map.pop('guid')
+
+    no_modify_fields = [field for key, field in field_key_map.items() if key == field]
+    value_fields = {key: F(field) for key, field in field_key_map.items() if key != field}
+    value_fields.update({
+        key: Coalesce(NullIf(_full_name_expr(field), ''), f'{field}__email')
+        for key, field in field_key_map.items() if field.endswith('last_modified_by') or field == 'created_by'
+    })
+    value_fields.update(additional_values or {})
+
+    if 'guid' in value_fields:
+        guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
+        value_fields[guid_key] = value_fields.pop('guid')
+
+    for nested_field in (nested_fields or []):
+        # TODO better syntax for nested fields?
+        key = nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))
+        value_fields[key] = Value(nested_field['value']) if nested_field.get('value') else F('_'.join(nested_field['fields']))
+
+    return models.values(*no_modify_fields, **value_fields)
 
 
 MODEL_USER_FIELDS = [
@@ -419,22 +454,25 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_details=False):
-    """Returns a JSON representation of the given variant.
-    Args:
-        saved_variants (object): Django model for the SavedVariant.
-    Returns:
-        dict: json object
-    """
-    def _process_result(variant_json, saved_variant):
-        if add_details:
-            variant_json.update({k: v for k, v in saved_variant.saved_variant_json.items() if k not in variant_json})
-        variant_json['familyGuids'] = [saved_variant.family.guid]
-        return variant_json
+def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None):
+    additional_values = {
+        'familyGuids': ArrayAgg('family__guid'),
+    }
+    additional_fields = []
+    additional_fields += additional_model_fields or []
+    if add_details:
+        additional_fields.append('saved_variant_json')
 
-    prefetch_related_objects(saved_variants, 'family')
+    results = _get_json_for_queryset(
+        saved_variants, guid_key='variantGuid', additional_values=additional_values,
+        additional_model_fields=additional_fields,
+    )
 
-    return _get_json_for_models(saved_variants, guid_key='variantGuid', process_result=_process_result)
+    if add_details:
+        for result in results:
+            result.update({k: v for k, v in result.pop('savedVariantJson').items() if k not in result})
+
+    return results
 
 
 def get_json_for_saved_variant(saved_variant, **kwargs):
@@ -452,10 +490,12 @@ def get_json_for_saved_variant(saved_variant, **kwargs):
 def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
-        for variant in get_json_for_saved_variants(saved_variants, **kwargs)
+        for variant in get_json_for_saved_variants(saved_variants, additional_model_fields=['id'], **kwargs)
     }
 
-    saved_variant_id_map = {var.id: var.guid for var in saved_variants}
+    saved_variant_id_map = {}
+    for guid, variant in variants_by_guid.items():
+        saved_variant_id_map[variant.pop('id')] = guid
 
     variant_tag_id_map = defaultdict(list)
     for tag_mapping in VariantTag.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
