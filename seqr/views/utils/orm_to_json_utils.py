@@ -228,7 +228,6 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     Returns:
         array: json objects
     """
-    # TODO should use queryset, at least in add_families_context
     if not families:
         return []
 
@@ -284,7 +283,6 @@ def _get_json_for_family(family, user=None, **kwargs):
 
 
 def get_json_for_family_notes(notes, **kwargs):
-    #  TODO should use queryset, at least in add_families_context
     return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}], **kwargs)
 
 
@@ -322,7 +320,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     Returns:
         array: array of json objects
     """
-    # TODO should use queryset, at least in add_families_context
 
     if not individuals:
         return []
