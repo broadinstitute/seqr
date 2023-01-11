@@ -1,5 +1,6 @@
 from reference_data.models import Omim, GeneConstraint
-from seqr.models import Individual, Sample
+from seqr.models import Individual, Sample, PhenotypePrioritization
+from collections import defaultdict
 
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
@@ -172,6 +173,15 @@ CLINVAR_SORT = {
     }
 }
 
+
+def _get_gene_rank(individuals):
+    ranks_by_gene = defaultdict(list)
+    for record in PhenotypePrioritization.objects.filter(individual__in=individuals):
+        ranks_by_gene[record.gene_id].append(record.rank)
+    for gene in ranks_by_gene:
+        ranks_by_gene[gene] = min(ranks_by_gene[gene])
+    return dict(ranks_by_gene)
+
 SORT_FIELDS = {
     PATHOGENICTY_SORT_KEY: [CLINVAR_SORT],
     PATHOGENICTY_HGMD_SORT_KEY: [CLINVAR_SORT, {
@@ -204,6 +214,28 @@ SORT_FIELDS = {
                         }
                     } 
                     return 1
+                """
+            }
+        }
+    }],
+    'prioritized_gene': [{
+        '_script': {
+            'type': 'number',
+            'script': {
+                'params': {
+                    'prioritized_gene_rank': _get_gene_rank,
+                },
+                'source': """
+                    if (!doc.containsKey('geneIds') || doc['geneIds'].empty) {
+                        return 1000;
+                    }
+                    String gene_ids = params.prioritized_gene_rank.keySet()
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        Number
+                        if (gene_ids.contains(doc['geneIds'][i])) {
+                            return params.prioritized_gene_rank;
+                        }
+                    } 
                 """
             }
         }
