@@ -610,9 +610,15 @@ const VEP_SV_CONSEQUENCES = [
     value: 'LOF',
   },
   {
-    description: 'A loss of function effect via intragenic exonic duplication',
-    text: 'Loss of function via Duplication',
-    value: 'DUP_LOF',
+    description: 'An SV which is predicted to result in intragenic exonic duplication without breaking any coding sequences' +
+        ' (previously called "Loss of function via Duplication")',
+    text: 'Intragenic Exon Duplication',
+    value: 'INTRAGENIC_EXON_DUP',
+  },
+  {
+    description: 'The duplication SV has one breakpoint in the coding sequence',
+    text: 'Partial Exon Duplication',
+    value: 'PARTIAL_EXON_DUP',
   },
   {
     description: 'A copy-gain effect',
@@ -625,9 +631,11 @@ const VEP_SV_CONSEQUENCES = [
     value: 'DUP_PARTIAL',
   },
   {
-    description: 'A multiallelic SV predicted to have a Loss of function, Loss of function via Duplication, Copy Gain, or Duplication Partial effect',
+    description: 'A multiallelic SV would be predicted to have a Loss of function, Intragenic Exon Duplication, Copy Gain,' +
+        ' Duplication Partial, Duplication at the Transcription Start Site (TSS_DUP), or Duplication with a breakpoint' +
+        ' in the coding sequence annotation if the SV were biallelic',
     text: 'Multiallelic SV',
-    value: 'MSV_EXON_OVR',
+    value: 'MSV_EXON_OVERLAP',
   },
   {
     description: 'An SV contained entirely within an intron',
@@ -645,14 +653,19 @@ const VEP_SV_CONSEQUENCES = [
     value: 'UTR',
   },
   {
-    description: 'An SV that does not overlap coding sequence',
-    text: 'Intergenic',
-    value: 'INTERGENIC',
-  },
-  {
     description: 'An SV which disrupts a promoter sequence (within 1kb)',
     text: 'Promoter',
     value: 'PROMOTER',
+  },
+  {
+    description: 'An SV which the SV breakend is predicted to fall in an exon',
+    text: 'Breakend Exonic',
+    value: 'BREAKEND_EXONIC',
+  },
+  {
+    description: 'An SV is predicted to duplicate the transcription start site',
+    text: 'Transcription Start Site Duplication',
+    value: 'TSS_DUP',
   },
 ]
 

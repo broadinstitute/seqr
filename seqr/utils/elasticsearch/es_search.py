@@ -288,6 +288,14 @@ class EsSearch(object):
         clinvar_terms, hgmd_classes = _parse_pathogenicity_filter(pathogenicity or {})
 
         annotations = {k: v for k, v in (annotations or {}).items() if v}
+
+        # Temporary code, remove it after all the SV indices are reloaded
+        if annotations.get('structural_consequence'):
+            if 'MSV_EXON_OVERLAP' in annotations['structural_consequence']:
+                annotations['structural_consequence'].append('MSV_EXON_OVR')
+            if 'INTRAGENIC_EXON_DUP' in annotations['structural_consequence']:
+                annotations['structural_consequence'].append('DUP_LOF')
+
         new_svs = bool(annotations.pop(NEW_SV_FIELD, False))
         splice_ai = annotations.pop(SPLICE_AI_FIELD, None)
         screen = annotations.pop(SCREEN_KEY, None)
@@ -848,6 +856,15 @@ class EsSearch(object):
             {_to_camel_case(k): v for k, v in transcript.to_dict().items()}
             for transcript in hit[SORTED_TRANSCRIPTS_FIELD_KEY] or []
         ]
+
+        # Temporary code, remove it after all the SV indices are reloaded
+        for trans in sorted_transcripts:
+            if trans.get('majorConsequence'):
+                if trans['majorConsequence'] == 'MSV_EXON_OVR':
+                    trans['majorConsequence'] = 'MSV_EXON_OVERLAP'
+                elif trans['majorConsequence'] == 'DUP_LOF':
+                    trans['majorConsequence'] = 'INTRAGENIC_EXON_DUP'
+
         transcripts = defaultdict(list)
         for transcript in sorted_transcripts:
             transcripts[transcript['geneId']].append(transcript)

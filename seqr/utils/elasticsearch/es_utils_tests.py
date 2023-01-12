@@ -449,6 +449,16 @@ ES_SV_WGS_VARIANT = {
           'gene_symbol': 'OR4F5',
           'major_consequence': 'DUP_PARTIAL',
           'gene_id': 'ENSG00000228198'
+        },
+        {
+            'gene_symbol': 'FBXO28',
+            'major_consequence': 'MSV_EXON_OVR',
+            'gene_id': 'ENSG00000228199'
+        },
+        {
+            'gene_symbol': 'FAM131C',
+            'major_consequence': 'DUP_LOF',
+            'gene_id': 'ENSG00000228201'
         }
       ],
       'cpx_intervals': [{'type': 'DUP', 'chrom': '2', 'start': 1000, 'end': 3000},
@@ -456,6 +466,8 @@ ES_SV_WGS_VARIANT = {
       'sv_type_detail': 'dupINV',
       'gnomad_svs_ID': 'gnomAD-SV_v2.1_BND_1_1',
       'gnomad_svs_AF': 0.00679,
+      'gnomad_svs_AC': 22,
+      'gnomad_svs_AN': 3240,
       'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
@@ -2014,13 +2026,16 @@ class EsUtilsTest(TestCase):
             dict(filters=[filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
 
-        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.search['annotations'] = {
+            'structural': ['DEL'], 'structural_consequence': ['MSV_EXON_OVERLAP', 'INTRAGENIC_EXON_DUP']}
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
 
         get_es_variants(results_model, num_results=5)
         self.assertExecutedSearch(
-            filters=[{'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['DEL']}}, path_filter]}}],
+            filters=[{'bool': {'should': [{'terms': {
+                'transcriptConsequenceTerms': ['DEL', 'DUP_LOF', 'INTRAGENIC_EXON_DUP', 'MSV_EXON_OVERLAP', 'MSV_EXON_OVR']
+            }}, path_filter]}}],
             start_index=0, size=5, index=SV_INDEX_NAME)
 
     @urllib3_responses.activate
