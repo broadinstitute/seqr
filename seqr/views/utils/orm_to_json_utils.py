@@ -267,7 +267,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     return _get_json_for_models(families, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
 
 
-def get_json_for_family(family, user):
+def get_json_for_family(family, user, is_analyst=None):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -278,7 +278,7 @@ def get_json_for_family(family, user):
         dict: json object
     """
 
-    return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user)
+    return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, is_analyst=is_analyst)
 
 
 FAMILY_NOTE_KWARGS = dict(guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])

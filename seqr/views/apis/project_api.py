@@ -188,12 +188,12 @@ def project_families(request, project_guid):
     annotated_models = family_models.annotate(
         case_review_statuses=ArrayAgg('individual__case_review_status', distinct=True),
         case_review_status_last_modified=Max('individual__case_review_status_last_modified_date')
-    )
-    for family in annotated_models:
-        response['familiesByGuid'][family.guid].update({
-            'caseReviewStatuses': family.case_review_statuses,
-            'caseReviewStatusLastModified': family.case_review_status_last_modified,
-            'hasFeatures': family.guid in has_features_families,
+    ).values_list('guid', 'case_review_statuses', 'case_review_status_last_modified')
+    for guid, case_review_statuses, case_review_status_last_modified in annotated_models:
+        response['familiesByGuid'][guid].update({
+            'caseReviewStatuses': case_review_statuses,
+            'caseReviewStatusLastModified': case_review_status_last_modified,
+            'hasFeatures': guid in has_features_families,
         })
     return create_json_response(response)
 

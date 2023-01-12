@@ -5,7 +5,7 @@ from seqr.models import Individual, Sample, IgvSample, AnalysisGroup, LocusList,
     VariantFunctionalData, FamilyNote, SavedVariant
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
-    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
+    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_family, \
     get_json_for_family_notes, get_json_for_saved_variants
 
 
@@ -53,19 +53,31 @@ def get_project_locus_lists(projects, user, include_metadata=False):
     return {ll['locusListGuid']: ll for ll in locus_lists}, locus_lists_models
 
 
-def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True):
+def add_family_context(response, family, user, is_analyst):
+    family_json = get_json_for_family(family, user, is_analyst=is_analyst)
+
+    return _add_parsed_families_context(response, [family_json], family_json['projectGuid'], user, is_analyst)
+
+
+def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, **kwargs):
     families = _get_json_for_families(
         family_models, user, project_guid=project_guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__in=family_models), is_analyst=is_analyst)
+    return _add_parsed_families_context(response, families, project_guid, user, is_analyst, has_case_review_perm, **kwargs)
 
-    individual_models = Individual.objects.filter(family__in=family_models)
+
+def _add_parsed_families_context(response, families, project_guid, user, is_analyst, has_case_review_perm=None, include_igv=True):
+    families_by_guid = {f['familyGuid']: f for f in families}
+
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__guid__in=families_by_guid.keys()), is_analyst=is_analyst)
+
+    individual_models = Individual.objects.filter(family__guid__in=families_by_guid.keys())
     individuals = _get_json_for_individuals(
         individual_models, user=user, project_guid=project_guid, add_hpo_details=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
     context = {
-        'familiesByGuid': {f['familyGuid']: f for f in families},
+        'familiesByGuid': families_by_guid,
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
     }

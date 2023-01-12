@@ -16,7 +16,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
     get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_families
-from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
+from seqr.views.utils.project_context_utils import add_family_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
     PhenotypePrioritization, Project
@@ -34,7 +34,6 @@ def family_page_data(request, family_guid):
     project = family.project
     check_project_permissions(project, request.user)
     is_analyst = user_is_analyst(request.user)
-    has_case_review_perm = has_case_review_permissions(project, request.user)
 
     sample_models = Sample.objects.filter(individual__family=family)
     samples = get_json_for_samples(sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst)
@@ -42,7 +41,7 @@ def family_page_data(request, family_guid):
         'samplesByGuid': {s['sampleGuid']: s for s in samples},
     }
 
-    add_families_context(response, [family], project.guid, request.user, is_analyst, has_case_review_perm)
+    add_family_context(response, family, request.user, is_analyst)
     response['familiesByGuid'][family_guid]['detailsLoaded'] = True
 
     outlier_samples = sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqoutlier=None)
@@ -139,7 +138,7 @@ def edit_families_handler(request, project_guid):
                 {'error': 'Invalid previous family ids: {}'.format(', '.join(missing_ids))}, status=400)
         family_models.update(prev_id_models)
 
-    updated_families = []
+    updated_family_ids = []
     for fields in modified_families:
         if fields.get('familyGuid'):
             family = family_models[fields['familyGuid']]
@@ -151,12 +150,12 @@ def edit_families_handler(request, project_guid):
                 update_json=None, user=request.user)
 
         update_family_from_json(family, fields, user=request.user, allow_unknown_keys=True)
-        updated_families.append(family)
+        updated_family_ids.append(family.id)
 
     updated_families_by_guid = {
         'familiesByGuid': {
-            family['familyGuid']: family for family in
-            _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
+            family['familyGuid']: family for family in _get_json_for_families(
+                Family.objects.filter(id__in=updated_family_ids), request.user, add_individual_guids_field=True)
         }
     }
 
