@@ -226,6 +226,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     Returns:
         array: json objects
     """
+    # TODO
     if not families:
         return []
 
@@ -281,6 +282,7 @@ def _get_json_for_family(family, user=None, **kwargs):
 
 
 def get_json_for_family_notes(notes, **kwargs):
+    # TODO
     return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}], **kwargs)
 
 
@@ -318,7 +320,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     Returns:
         array: array of json objects
     """
-
+    # TODO
     if not individuals:
         return []
 
@@ -641,6 +643,7 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
         array: json objects
     """
 
+    # TODO
     def _process_result(result, locus_list):
         gene_set = locus_list.locuslistgene_set
         interval_set = locus_list.locuslistinterval_set
@@ -793,6 +796,7 @@ def _set_collaborator_permissions(collaborator_json, include_permissions, can_ed
 
 
 def get_json_for_saved_searches(searches, user):
+    # TODO
     is_analyst = user_is_analyst(user)
     def _process_result(result, search):
         # Do not apply HGMD filters in shared searches for non-analyst users

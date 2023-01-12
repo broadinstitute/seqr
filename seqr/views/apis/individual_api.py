@@ -19,8 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_js
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families,\
-    get_updated_pedigree_json
+from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -319,12 +318,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
 
 
 def _update_and_parse_individuals_and_families(project, individual_records, user):
-    updated_individuals, updated_families, updated_notes = add_or_update_individuals_and_families(
-        project, individual_records, user
-    )
-
-    pedigree_json = get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user)
-
+    pedigree_json = add_or_update_individuals_and_families(project, individual_records, user)
     return create_json_response(pedigree_json)
 
 

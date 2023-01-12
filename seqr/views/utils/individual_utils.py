@@ -28,7 +28,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False):
     """
     Add or update individual and family records in the given project.
 
@@ -84,7 +84,14 @@ def add_or_update_individuals_and_families(project, individual_records, user):
 
     _remove_pedigree_images(updated_families, user)
 
-    return list(updated_individuals), list(updated_families), updated_notes
+    pedigree_json = None
+    if get_update_json:
+        pedigree_json = _get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user)
+
+    if get_updated_individual_ids:
+        return pedigree_json, {i.individual_id for i in updated_individuals}
+
+    return pedigree_json
 
 
 def _update_from_record(record, user, families_by_id, individual_lookup, updated_families, updated_individuals, parent_updates, updated_notes):
@@ -189,14 +196,14 @@ def get_parsed_feature(feature):
     return feature_json
 
 
-def get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user):
+def _get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user):
     individuals_by_guid = {
         individual['individualGuid']: individual for individual in
-        _get_json_for_individuals(updated_individuals, user, add_sample_guids_field=True)
+        _get_json_for_individuals(list(updated_individuals), user, add_sample_guids_field=True)
     }
     families_by_guid = {
         family['familyGuid']: family for family in
-        _get_json_for_families(updated_families, user, add_individual_guids_field=True)
+        _get_json_for_families(list(updated_families), user, add_individual_guids_field=True)
     }
 
     response = {

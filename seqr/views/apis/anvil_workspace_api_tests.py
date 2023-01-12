@@ -695,7 +695,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         if test_add_data:
             updated_anvil_variables = ADD_DATA_UPDATED_ANVIL_VARIABLES
             genome_version = 'GRCh37'
-            temp_file_data = b's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA19678\nNA20870\nNA20874'
+            temp_file_data = b's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA20870\nNA20874'
         else:
             updated_anvil_variables = UPDATED_ANVIL_VARIABLES
             genome_version = 'GRCh38'
@@ -754,7 +754,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
             'Initial Request Date': '2021-03-01',
-            'Number of Samples': 10 if test_add_data else 3,
+            'Number of Samples': 9 if test_add_data else 3,
             'Status': 'Loading',
         }}]})
         self.assertEqual(responses.calls[call_cnt+1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
