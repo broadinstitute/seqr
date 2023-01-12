@@ -2,11 +2,9 @@
 Utility functions for converting Django ORM object to JSON
 """
 
-import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Prefetch, Count, Value, F, CharField
-from django.db.models.functions.comparison import Coalesce, NullIf
+from django.db.models import prefetch_related_objects, Count, Value, F, CharField
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim
 from django.contrib.auth.models import User
@@ -567,7 +565,7 @@ def get_json_for_discovery_tags(variants, user):
     saved_variants_by_guid = {sv.guid: sv for sv in saved_variants}
     saved_variant_id_map = {sv.id: guid for guid, sv in saved_variants_by_guid.items()}
 
-    discovery_tag_json, variant_tag_map = get_json_for_saved_variants_child_entities(
+    discovery_tag_json, _ = get_json_for_saved_variants_child_entities(
         VariantTag, saved_variant_id_map, tag_filter={'variant_tag_type__category': 'CMG Discovery Tags'})
     if discovery_tag_json:
         existing_families = set()

@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
 from django.db.utils import IntegrityError
-from django.db.models import Q, prefetch_related_objects
+from django.db.models import Q
 from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
