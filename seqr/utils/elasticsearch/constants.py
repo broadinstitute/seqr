@@ -1,6 +1,7 @@
+from django.db.models import Min
+
 from reference_data.models import Omim, GeneConstraint
 from seqr.models import Individual, Sample, PhenotypePrioritization
-from collections import defaultdict
 
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
@@ -174,13 +175,14 @@ CLINVAR_SORT = {
 }
 
 
-def _get_ranks_by_gene(families):
-    ranks_by_gene = defaultdict(list)
-    for record in PhenotypePrioritization.objects.filter(individual__family=families[0]):
-        ranks_by_gene[record.gene_id].append(record.rank)
-    for gene in ranks_by_gene:
-        ranks_by_gene[gene] = min(ranks_by_gene[gene])
-    return dict(ranks_by_gene)
+def _get_phenotype_priority_ranks_by_gene(families, *args):
+    from seqr.utils.elasticsearch.utils import InvalidSearchException
+    if len(families) > 1:
+        raise InvalidSearchException('Sorting on multiple families search results is not supported.')
+
+    family_ranks = PhenotypePrioritization.objects.filter(
+        individual__family=families[0], rank__lte=100).values('gene_id').annotate(min_rank=Min('rank'))
+    return {agg['gene_id']: agg['min_rank'] for agg in family_ranks}
 
 
 SORT_FIELDS = {
@@ -224,7 +226,7 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'prioritized_ranks_by_gene': _get_ranks_by_gene,
+                    'prioritized_ranks_by_gene': _get_phenotype_priority_ranks_by_gene,
                 },
                 'source': """
                     int min_rank = 1000000;

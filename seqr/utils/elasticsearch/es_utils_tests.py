@@ -3219,6 +3219,32 @@ class EsUtilsTest(TestCase):
                 }
             }, 'xpos', 'variantId'])
 
+        with self.assertRaises(InvalidSearchException) as se:
+            get_es_variants(results_model, sort='prioritized_gene', num_results=2)
+        self.assertEqual(str(se.exception), 'Sorting on multiple families search results is not supported.')
+
+        results_model.families.set(Family.objects.filter(guid='F000001_1'))
+        get_es_variants(results_model, sort='prioritized_gene', num_results=2)
+        family_sample_filter = {'bool': {
+            '_name': 'F000001_1',
+            'must': [{'bool': {
+                'should': [{'terms': {'samples_num_alt_1': ['NA19675']}},
+                           {'terms': {'samples_num_alt_2': ['NA19675']}},
+                           {'terms': {'samples': ['NA19675']}}]
+            }}]}}
+        self.assertExecutedSearch(filters=[ANNOTATION_QUERY, family_sample_filter], index=INDEX_NAME, size=2, sort=[
+            {
+                '_script': {
+                    'type': 'number',
+                    'script': {
+                        'params': {
+                            'prioritized_ranks_by_gene': {'ENSG00000268903': 1}
+                        },
+                        'source': mock.ANY,
+                    }
+                }
+            }, 'xpos', 'variantId'])
+
     @urllib3_responses.activate
     def test_genotype_inheritance_filter(self):
         setup_responses()
