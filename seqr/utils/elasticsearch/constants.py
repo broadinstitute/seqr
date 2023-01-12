@@ -174,13 +174,14 @@ CLINVAR_SORT = {
 }
 
 
-def _get_gene_rank(individuals):
+def _get_ranks_by_gene(families):
     ranks_by_gene = defaultdict(list)
-    for record in PhenotypePrioritization.objects.filter(individual__in=individuals):
+    for record in PhenotypePrioritization.objects.filter(individual__family=families[0]):
         ranks_by_gene[record.gene_id].append(record.rank)
     for gene in ranks_by_gene:
         ranks_by_gene[gene] = min(ranks_by_gene[gene])
     return dict(ranks_by_gene)
+
 
 SORT_FIELDS = {
     PATHOGENICTY_SORT_KEY: [CLINVAR_SORT],
@@ -223,16 +224,15 @@ SORT_FIELDS = {
             'type': 'number',
             'script': {
                 'params': {
-                    'prioritized_gene_rank': _get_gene_rank,
+                    'prioritized_ranks_by_gene': _get_ranks_by_gene,
                 },
                 'source': """
-                    int min_rank = 1000;
-                    if (doc.containsKey('geneIds') and !doc['geneIds'].empty) {
-                        for (int i = 0; i < doc['geneIds'].length; ++i) {
-                            int rank = params.prioritized_gene_rank.get(doc['geneIds'][i]);
-                            min_rank = (rank && (rank < min_rank))? rank : min_rank;
+                    int min_rank = 1000000;
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        if (params.prioritized_ranks_by_gene.getOrDefault(doc['geneIds'][i], 1000000) < min_rank) {
+                            min_rank = params.prioritized_ranks_by_gene.get(doc['geneIds'][i])
                         }
-                    }
+                    } 
                     return min_rank;
                 """
             }
