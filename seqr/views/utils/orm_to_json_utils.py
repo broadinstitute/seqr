@@ -281,13 +281,15 @@ def _get_json_for_family(family, user=None, **kwargs):
     return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
 
 
+FAMILY_NOTE_KWARGS = dict(guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
+
+
 def get_json_for_family_notes(notes, **kwargs):
-    # TODO
-    return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}], **kwargs)
+    return _get_json_for_queryset(notes, **FAMILY_NOTE_KWARGS, **kwargs)
 
 
 def get_json_for_family_note(note):
-    return _get_json_for_model(note, get_json_for_models=get_json_for_family_notes)
+    return _get_json_for_model(note, **FAMILY_NOTE_KWARGS)
 
 def _process_individual_result(add_sample_guids_field):
     def _process_result(result, individual):
