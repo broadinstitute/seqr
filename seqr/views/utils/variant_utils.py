@@ -199,7 +199,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     loaded_family_guids = set()
     for variant in variants:
         loaded_family_guids.update(variant['familyGuids'])
-    projects = Project.objects.filter(family__guid__in=loaded_family_guids)
+    projects = Project.objects.filter(family__guid__in=loaded_family_guids).distinct()
     project = list(projects)[0] if len(projects) == 1 else None
 
     discovery_tags = None
