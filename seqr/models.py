@@ -333,8 +333,8 @@ class Family(ModelWithGUID):
         unique_together = ('project', 'family_id')
 
         json_fields = [
-            'guid', 'family_id', 'display_name', 'description', 'analysis_status', 'pedigree_image', 'created_date',
-            'post_discovery_omim_number', 'assigned_analyst', 'pedigree_dataset', 'coded_phenotype',
+            'guid', 'family_id', 'description', 'analysis_status', 'created_date',
+            'post_discovery_omim_number', 'pedigree_dataset', 'coded_phenotype',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',

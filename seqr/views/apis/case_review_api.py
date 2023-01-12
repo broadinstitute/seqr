@@ -6,8 +6,8 @@ import json
 from django.core.exceptions import PermissionDenied
 
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
-from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_family, _get_json_for_individual
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
 from seqr.views.utils.permissions_utils import has_case_review_permissions, login_and_policies_required
 from seqr.models import Family, Individual
 
@@ -42,8 +42,10 @@ def _update_case_review(model, project, request, field, get_response_json):
 def _update_family_case_review(family_guid, request, field):
     family = Family.objects.get(guid=family_guid)
     project = family.project
+    model_field = _to_snake_case(field)
 
-    return _update_case_review(family, project, request, field, get_json_for_family)
+    return _update_case_review(family, project, request, field,
+                               get_response_json=lambda model, *args: {field: getattr(model, model_field)})
 
 def _update_individual_case_review(individual_guid, request, field):
     individual = Individual.objects.get(guid=individual_guid)

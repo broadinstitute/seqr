@@ -5,7 +5,7 @@ from seqr.models import Individual, Sample, IgvSample, AnalysisGroup, LocusList,
     VariantFunctionalData, FamilyNote, SavedVariant
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
-    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, get_json_for_family, \
+    get_json_for_analysis_groups, get_json_for_samples, get_json_for_locus_lists, \
     get_json_for_family_notes, get_json_for_saved_variants
 
 
@@ -54,7 +54,7 @@ def get_project_locus_lists(projects, user, include_metadata=False):
 
 
 def add_family_context(response, family, user, is_analyst):
-    family_json = get_json_for_family(family, user, is_analyst=is_analyst)
+    family_json = _get_json_for_families(family, user, is_analyst=is_analyst)
 
     return _add_parsed_families_context(response, [family_json], family_json['projectGuid'], user, is_analyst)
 

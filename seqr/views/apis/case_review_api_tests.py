@@ -33,7 +33,6 @@ class CaseReviewAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
         self.assertEqual(response_json[FAMILY_GUID]['caseReviewNotes'], 'some case review notes')
 
         # send request for invalid project
@@ -55,7 +54,6 @@ class CaseReviewAPITest(AuthenticationTestCase):
         response_json = response.json()
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
         self.assertEqual(response_json[FAMILY_GUID]['caseReviewSummary'], 'some case review notes')
 
         # send request for invalid project

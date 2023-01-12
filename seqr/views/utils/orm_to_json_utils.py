@@ -5,7 +5,6 @@ Utility functions for converting Django ORM object to JSON
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When
-from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
@@ -252,35 +251,6 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     kwargs = _get_family_json_func_kwargs(families[0], user, has_case_review_perm, project_guid)
 
     return _get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=additional_values, **kwargs)
-
-
-def get_json_for_family(family, user, is_analyst=None):
-    # TODO simplify, possibly unneccessary
-    def _get_pedigree_image_url(pedigree_image):
-        if isinstance(pedigree_image, ImageFieldFile):
-            try:
-                pedigree_image = pedigree_image.url
-            except Exception:
-                pedigree_image = None
-        return pedigree_image
-
-    def _process_result(result, family):
-        result['analysedBy'] = _get_json_for_models(family.familyanalysedby_set.all(), user=user, is_analyst=is_analyst)
-        pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
-        result['pedigreeImage'] = pedigree_image
-        if not result['displayName']:
-            result['displayName'] = result['familyId']
-        if result['assignedAnalyst']:
-            result['assignedAnalyst'] = {
-                'fullName': result['assignedAnalyst'].get_full_name(),
-                'email': result['assignedAnalyst'].email,
-            }
-        else:
-            result['assignedAnalyst'] = None
-
-    kwargs = _get_family_json_func_kwargs(family, user)
-
-    return _get_json_for_model(family, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
 
 
 FAMILY_NOTE_KWARGS = dict(guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
