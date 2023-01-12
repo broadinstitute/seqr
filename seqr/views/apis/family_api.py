@@ -14,8 +14,8 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
     get_or_create_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
-from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
-    get_json_for_matchmaker_submissions, get_json_for_analysis_groups
+from seqr.views.utils.orm_to_json_utils import get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
+    get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_families
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
@@ -155,7 +155,8 @@ def edit_families_handler(request, project_guid):
 
     updated_families_by_guid = {
         'familiesByGuid': {
-            family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in updated_families
+            family['familyGuid']: family for family in
+            _get_json_for_families(updated_families, request.user, add_individual_guids_field=True)
         }
     }
 
@@ -218,7 +219,7 @@ def update_family_fields_handler(request, family_guid):
     ])
 
     return create_json_response({
-        family.guid: _get_json_for_family(family, request.user)
+        family.guid: get_json_for_family(family, request.user)
     })
 
 
@@ -247,7 +248,7 @@ def update_family_assigned_analyst(request, family_guid):
     update_model_from_json(family, {'assigned_analyst': assigned_analyst}, request.user)
 
     return create_json_response({
-        family.guid: _get_json_for_family(family, request.user)
+        family.guid: get_json_for_family(family, request.user)
     })
 
 
@@ -268,7 +269,7 @@ def update_family_analysed_by(request, family_guid):
     create_model_from_json(FamilyAnalysedBy, {'family': family, 'data_type': request_json['dataType']}, request.user)
 
     return create_json_response({
-        family.guid: _get_json_for_family(family, request.user)
+        family.guid: get_json_for_family(family, request.user)
     })
 
 
@@ -295,7 +296,7 @@ def update_family_pedigree_image(request, family_guid):
     update_model_from_json(family, {'pedigree_image': pedigree_image}, request.user)
 
     return create_json_response({
-        family.guid: _get_json_for_family(family, request.user)
+        family.guid: get_json_for_family(family, request.user)
     })
 
 

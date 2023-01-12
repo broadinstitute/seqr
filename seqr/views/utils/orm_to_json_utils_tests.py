@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 import mock
 from copy import deepcopy
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantNote, LocusList, VariantSearch
-from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, _get_json_for_family, \
+from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, get_json_for_family, \
     _get_json_for_individual, get_json_for_sample, get_json_for_saved_variants, get_json_for_variant_note, get_json_for_locus_list, \
     get_json_for_saved_search, get_json_for_saved_variants_with_tags, get_json_for_current_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
@@ -98,25 +98,25 @@ class JSONUtilsTest(object):
 
     def test_json_for_family(self):
         family = Family.objects.filter(project__has_case_review=False).first()
-        json = _get_json_for_family(family)
+        json = get_json_for_family(family)
         self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
 
         user = User.objects.get(username='test_user')
-        json = _get_json_for_family(family, user, add_individual_guids_field=True)
+        json = get_json_for_family(family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), INTERNAL_FAMILY_FIELDS)
 
         case_review_family = Family.objects.filter(project__has_case_review=True).first()
-        json = _get_json_for_family(case_review_family)
+        json = get_json_for_family(case_review_family)
         self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
 
         fields = set()
         fields.update(INTERNAL_FAMILY_FIELDS)
         fields.update(CASE_REVIEW_FAMILY_FIELDS)
-        json = _get_json_for_family(case_review_family, user, add_individual_guids_field=True)
+        json = get_json_for_family(case_review_family, user, add_individual_guids_field=True)
         self.assertSetEqual(set(json.keys()), fields)
 
         self.mock_analyst_group.__str__.return_value = ''
-        json = _get_json_for_family(family, user)
+        json = get_json_for_family(family, user)
         self.assertSetEqual(set(json.keys()), FAMILY_FIELDS)
 
     def test_json_for_individual(self):
