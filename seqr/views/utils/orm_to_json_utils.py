@@ -4,21 +4,21 @@ Utility functions for converting Django ORM object to JSON
 
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Count, Value, F, CharField
+from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When
 from django.db.models.fields.files import ImageFieldFile
-from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim
+from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_VIEW, CAN_EDIT, \
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
     is_internal_anvil_project, get_project_guids_user_can_view, get_anvil_analyst_user_emails
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
-from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
+from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL, MEDIA_URL
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -110,6 +110,10 @@ def _full_name_expr(field):
     return Trim(Concat(f'{field}__first_name', Value(' '), f'{field}__last_name'))
 
 
+def _user_expr(field):
+    return Coalesce(NullIf(_full_name_expr(field), Value('')), f'{field}__email', output_field=CharField())
+
+
 def _get_json_for_queryset(models, nested_fields=None, user=None, is_analyst=None, additional_values=None, guid_key=None, additional_model_fields=None):
     model_class = models.model
     fields = _get_model_json_fields(model_class, user, is_analyst, additional_model_fields)
@@ -122,8 +126,8 @@ def _get_json_for_queryset(models, nested_fields=None, user=None, is_analyst=Non
     no_modify_fields = [field for key, field in field_key_map.items() if key == field]
     value_fields = {key: F(field) for key, field in field_key_map.items() if key != field}
     value_fields.update({
-        key: Coalesce(NullIf(_full_name_expr(field), Value('')), f'{field}__email', output_field=CharField())
-        for key, field in field_key_map.items() if field.endswith('last_modified_by') or field == 'created_by'
+        key: _user_expr(field) for key, field in field_key_map.items()
+        if field.endswith('last_modified_by') or field == 'created_by'
     })
     value_fields.update(additional_values or {})
 
@@ -215,21 +219,43 @@ def _get_case_review_fields(model, has_case_review_perm, user, get_project):
     return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=None):
-    """Returns a JSON representation of the given Family.
+def _get_family_json_func_kwargs(family, user, has_case_review_perm=None, project_guid=None):
+    kwargs = {'additional_model_fields': _get_case_review_fields(
+        family, has_case_review_perm, user, lambda f: f.project)
+    }
+    kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
+    return kwargs
 
-    Args:
-        families (array): array of django models representing the family.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-        add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
-        project_guid (boolean): An optional field to use as the projectGuid instead of querying the DB
-    Returns:
-        array: json objects
-    """
-    # TODO
-    if not families:
+
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=None):
+
+    if not families.exists():
         return []
 
+    additional_values = {
+        'analysedBy': ArrayAgg(JSONObject(
+            createdBy=_user_expr('created_by'),
+            dataType='familyanalysedby__data_type',
+            lastModifiedDate='familyanalysedby__last_modified_date',
+        ), filter=Q(familyanalysedby__isnull=False)),
+        'assignedAnalyst': Case(
+            When(assigned_analyst__isnull=False, then=JSONObject(
+                fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
+            )), default=Value(None),
+        ),
+        'displayName': Coalesce(NullIf('display_name', Value('')), 'family_id'),
+        'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
+    }
+    if add_individual_guids_field:
+        additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
+
+    kwargs = _get_family_json_func_kwargs(families[0], user, has_case_review_perm, project_guid)
+
+    return _get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=additional_values, **kwargs)
+
+
+def get_json_for_family(family, user, is_analyst=None):
+    # TODO simplify, possibly unneccessary
     def _get_pedigree_image_url(pedigree_image):
         if isinstance(pedigree_image, ImageFieldFile):
             try:
@@ -242,8 +268,6 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         result['analysedBy'] = _get_json_for_models(family.familyanalysedby_set.all(), user=user, is_analyst=is_analyst)
         pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
         result['pedigreeImage'] = pedigree_image
-        if add_individual_guids_field:
-            result['individualGuids'] = [i.guid for i in family.individual_set.all()]
         if not result['displayName']:
             result['displayName'] = result['familyId']
         if result['assignedAnalyst']:
@@ -254,31 +278,9 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         else:
             result['assignedAnalyst'] = None
 
-    prefetch_related_objects(families, 'assigned_analyst')
-    prefetch_related_objects(families, 'familyanalysedby_set__created_by')
-    if add_individual_guids_field:
-        prefetch_related_objects(families, 'individual_set')
+    kwargs = _get_family_json_func_kwargs(family, user)
 
-    kwargs = {'additional_model_fields': _get_case_review_fields(
-        families[0], has_case_review_perm, user, lambda family: family.project)
-    }
-    kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
-
-    return _get_json_for_models(families, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
-
-
-def get_json_for_family(family, user, is_analyst=None):
-    """Returns a JSON representation of the given Family.
-
-    Args:
-        family (object): Django model representing the family.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-        add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
-    Returns:
-        dict: json object
-    """
-
-    return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, is_analyst=is_analyst)
+    return _get_json_for_model(family, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
 
 
 FAMILY_NOTE_KWARGS = dict(guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
@@ -576,12 +578,12 @@ def get_json_for_discovery_tags(variants, user):
         for variant in variants:
             existing_families.update(variant['familyGuids'])
 
-        families = set()
+        family_ids = set()
         for tag in discovery_tag_json:
             for variant_guid in tag.pop('variantGuids'):
                 variant = saved_variants_by_guid[variant_guid]
                 if variant.family.guid not in existing_families:
-                    families.add(variant.family)
+                    family_ids.add(variant.family_id)
                 tag_json = {'savedVariant': {
                     'variantGuid': variant.guid,
                     'familyGuid': variant.family.guid,
@@ -594,7 +596,9 @@ def get_json_for_discovery_tags(variants, user):
                 )
                 discovery_tags[variant_key].append(tag_json)
 
-        response['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(list(families))}
+        response['familiesByGuid'] = {
+            f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(id__in=family_ids))
+        }
     return discovery_tags, response
 
 
