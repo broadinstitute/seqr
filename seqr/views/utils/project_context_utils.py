@@ -53,20 +53,10 @@ def get_project_locus_lists(projects, user, include_metadata=False):
     return {ll['locusListGuid']: ll for ll in locus_lists}, locus_lists_models
 
 
-def add_family_context(response, family, user, is_analyst):
-    family_json = _get_json_for_families(family, user, is_analyst=is_analyst)
-
-    return _add_parsed_families_context(response, [family_json], family_json['projectGuid'], user, is_analyst)
-
-
-def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, **kwargs):
+def add_families_context(response, family_models, project_guid, user, is_analyst, has_case_review_perm, include_igv=True):
     families = _get_json_for_families(
         family_models, user, project_guid=project_guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    return _add_parsed_families_context(response, families, project_guid, user, is_analyst, has_case_review_perm, **kwargs)
-
-
-def _add_parsed_families_context(response, families, project_guid, user, is_analyst, has_case_review_perm=None, include_igv=True):
     families_by_guid = {f['familyGuid']: f for f in families}
 
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__guid__in=families_by_guid.keys()), is_analyst=is_analyst)
