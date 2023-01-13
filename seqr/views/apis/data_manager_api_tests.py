@@ -888,7 +888,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_logger.info.assert_called_with('create PhenotypePrioritizations', self.data_manager_user, db_update=db_update)
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
-        self.assertListEqual(saved_data, EXPECTED_LIRICAL_DATA)
+        self.assertListEqual(sorted(saved_data, key=lambda d: d['individualGuid']), EXPECTED_LIRICAL_DATA)
         mock_subprocess.assert_called_with('gsutil cat gs://seqr_data/lirical_data.tsv.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
 
         # Test uploading new data
