@@ -1342,7 +1342,7 @@
     "pk": 4,
     "fields": {
         "individual": 1,
-        "gene_id": "ENSG00000268903",
+        "gene_id": "ENSG00000268904",
         "tool": "lirical",
         "rank": 11,
         "disease_id": "OMIM:219801",

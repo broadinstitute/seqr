@@ -88,7 +88,7 @@ class EsSearch(object):
 
         self._sort = deepcopy(SORT_FIELDS.get(sort, [])) if sort else None
         if self._sort:
-            self._sort_variants()
+            self._sort_variants(families)
 
     @staticmethod
     def _parse_xstop(result):
@@ -198,7 +198,7 @@ class EsSearch(object):
         self._set_indices(update_indices)
         return self
 
-    def _sort_variants(self):
+    def _sort_variants(self, families):
         main_sort_dict = self._sort[0] if len(self._sort) and isinstance(self._sort[0], dict) else None
 
         # Add parameters to scripts
@@ -206,7 +206,7 @@ class EsSearch(object):
             called_params = None
             for key, val_func in self._sort[0]['_script']['script']['params'].items():
                 if callable(val_func):
-                    self._sort[0]['_script']['script']['params'][key] = val_func()
+                    self._sort[0]['_script']['script']['params'][key] = val_func(families)
                     called_params = self._sort[0]['_script']['script']['params']
             if called_params:
                 for sort_dict in self._sort[1:]:
