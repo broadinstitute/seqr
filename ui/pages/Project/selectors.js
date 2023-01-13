@@ -105,17 +105,23 @@ export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
 
 export const getProjectAnalysisGroupFamilyIndividualCounts = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  familiesByGuid => Object.values(familiesByGuid).map(
-    family => ({ size: (family.individualGuids || []).length, numParents: family.numParents }),
-  ),
+  familiesByGuid => Object.values(familiesByGuid).map(family => ({
+    size: (family.individualGuids || []).length,
+    hasMom: (family.maternalGuids || []).length === 1,
+    hasDad: (family.paternalGuids || []).length === 1,
+  })),
 )
 
 export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getSamplesByFamily,
-  (familiesByGuid, samplesByFamily) => Object.values(familiesByGuid).map((({ familyGuid, numParents }) => {
-    const sampleIndividuals = new Set((samplesByFamily[familyGuid] || []).map(sample => sample.individualGuid))
-    return { size: sampleIndividuals.size, numParents }
+  (familiesByGuid, samplesByFamily) => Object.values(familiesByGuid).map(((family) => {
+    const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).map(sample => sample.individualGuid))
+    return {
+      size: sampleIndividuals.size,
+      hasMom: (family.maternalGuids || []).some(guid => sampleIndividuals.has(guid)),
+      hasDad: (family.paternalGuids || []).some(guid => sampleIndividuals.has(guid)),
+    }
   })).filter(({ size }) => size > 0),
 )
 

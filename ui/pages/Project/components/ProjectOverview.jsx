@@ -148,6 +148,7 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
     { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
   ), {})
   const individualsCount = familyCounts.reduce((acc, { size }) => acc + size, 0)
+  // TODO use hasMom and hasDad fields to determine correct labels
 
   let editIndividualsButton = null
   if (user && (user.isPm || (hasCaseReview && canEdit))) {
