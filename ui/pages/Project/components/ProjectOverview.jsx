@@ -41,12 +41,12 @@ const DetailContent = styled.div`
 `
 
 const FAMILY_SIZE_LABELS = {
-  0: plural => ` ${plural ? 'families' : 'family'} with no individuals`,
-  1: plural => ` ${plural ? 'families' : 'family'} with 1 individual`,
-  2: plural => ` ${plural ? 'families' : 'family'} with 2 individuals`,
+  0: () => 'No individuals',
+  1: () => '1 individual',
+  2: () => '2 individuals',
   3: plural => ` trio${plural ? 's' : ''}`,
   4: plural => ` quad${plural ? 's' : ''}`,
-  5: plural => ` ${plural ? 'families' : 'family'} with 5+ individuals`,
+  5: () => '5+ individuals',
 }
 
 const DetailSection = React.memo(({ title, content, button }) => (
@@ -63,7 +63,7 @@ const DetailSection = React.memo(({ title, content, button }) => (
 ))
 
 DetailSection.propTypes = {
-  title: PropTypes.string.isRequired,
+  title: PropTypes.node.isRequired,
   content: PropTypes.node.isRequired,
   button: PropTypes.node,
 }
@@ -144,10 +144,10 @@ const MatchmakerSubmissionOverview = connect(
 )(BaseMatchmakerSubmissionOverview)
 
 const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, user, title }) => {
-  const familySizeHistogram = familyCounts.map(familySize => Math.min(familySize, 5)).reduce((acc, familySize) => (
+  const familySizeHistogram = familyCounts.map(({ size }) => Math.min(size, 5)).reduce((acc, familySize) => (
     { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
   ), {})
-  const individualsCount = familyCounts.reduce((acc, familySize) => acc + familySize, 0)
+  const individualsCount = familyCounts.reduce((acc, { size }) => acc + size, 0)
 
   let editIndividualsButton = null
   if (user && (user.isPm || (hasCaseReview && canEdit))) {
@@ -158,10 +158,19 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
 
   return (
     <DetailSection
-      title={`${Object.keys(familyCounts).length} Families, ${individualsCount} Individuals${title || ''}`}
+      title={(
+        <span>
+          {`${Object.keys(familyCounts).length} Families${title || ''},`}
+          <br />
+          {`${individualsCount} Individuals${title || ''}`}
+        </span>
+      )}
       content={
         sortBy(Object.keys(familySizeHistogram)).map(size => (
-          <div key={size}>{`${familySizeHistogram[size]} ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}`}</div>
+          <div key={size}>
+            <i>{familySizeHistogram[size]}</i>
+            {` - ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}`}
+          </div>
         ))
       }
       button={editIndividualsButton}
@@ -170,7 +179,7 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
 })
 
 FamiliesIndividuals.propTypes = {
-  familyCounts: PropTypes.arrayOf(PropTypes.number).isRequired,
+  familyCounts: PropTypes.arrayOf(PropTypes.object).isRequired,
   canEdit: PropTypes.bool,
   hasCaseReview: PropTypes.bool,
   user: PropTypes.object,
