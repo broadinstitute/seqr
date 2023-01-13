@@ -185,15 +185,12 @@ def project_families(request, project_guid):
     )
     response = families_discovery_tags(families)
     has_features_families = set(family_models.filter(individual__features__isnull=False).values_list('guid', flat=True))
-    annotated_families = family_models.annotate(
-        **{f'{parent}_count': Count(
-            f'individual__{parent}_id', filter=Q(**{f'individual__{parent}_id__isnull': False}), distinct=True,
-        ) for parent in ['mother', 'father']}
-    ).values(
+    annotated_families = family_models.values(
         'guid',
         caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
         caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
-        numParents=F('mother_count') + F('father_count'),
+        maternalGuids=ArrayAgg('individual__mother__guid', distinct=True, filter=Q(individual__mother__isnull=False)),
+        paternalGuids=ArrayAgg('individual__father__guid', distinct=True, filter=Q(individual__father__isnull=False))
     )
     for family in annotated_families:
         family_guid = family.pop('guid')
