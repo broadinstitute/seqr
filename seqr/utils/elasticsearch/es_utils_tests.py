@@ -412,7 +412,7 @@ ES_SV_VARIANT = {
           'gene_id': 'ENSG00000135953'
         },
         {
-          'gene_id': 'ENSG00000037183'
+          'gene_id': 'ENSG00000186092'
         },
       ],
       'geneIds': ['ENSG00000228198'],
@@ -449,6 +449,16 @@ ES_SV_WGS_VARIANT = {
           'gene_symbol': 'OR4F5',
           'major_consequence': 'DUP_PARTIAL',
           'gene_id': 'ENSG00000228198'
+        },
+        {
+            'gene_symbol': 'FBXO28',
+            'major_consequence': 'MSV_EXON_OVR',
+            'gene_id': 'ENSG00000228199'
+        },
+        {
+            'gene_symbol': 'FAM131C',
+            'major_consequence': 'DUP_LOF',
+            'gene_id': 'ENSG00000228201'
         }
       ],
       'cpx_intervals': [{'type': 'DUP', 'chrom': '2', 'start': 1000, 'end': 3000},
@@ -456,6 +466,8 @@ ES_SV_WGS_VARIANT = {
       'sv_type_detail': 'dupINV',
       'gnomad_svs_ID': 'gnomAD-SV_v2.1_BND_1_1',
       'gnomad_svs_AF': 0.00679,
+      'gnomad_svs_AC': 22,
+      'gnomad_svs_AN': 3240,
       'geneIds': ['ENSG00000228198'],
       'sf': 0.000693825,
       'sn': 10088
@@ -673,7 +685,7 @@ PARSED_SV_COMPOUND_HET_VARIANTS[0].update({
     'svType': 'DEL',
 })
 del PARSED_SV_COMPOUND_HET_VARIANTS[0]['svSourceDetail']
-PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000037183'] = [{'geneId': 'ENSG00000037183'}]
+PARSED_SV_COMPOUND_HET_VARIANTS[0]['transcripts']['ENSG00000186092'] = [{'geneId': 'ENSG00000186092'}]
 for gen in PARSED_SV_COMPOUND_HET_VARIANTS[0]['genotypes'].values():
     gen.update({'start': None, 'end': None, 'numExon': None, 'geneIds': None})
 PARSED_SV_COMPOUND_HET_VARIANTS[1]['familyGuids'] = ['F000002_2']
@@ -1226,6 +1238,12 @@ def create_mock_response(search, index=INDEX_NAME):
 
         response_dict['aggregations'] = {'genes': {'buckets': buckets}}
 
+    if len(response_dict['hits']['hits']) == 0:
+        response_dict['hits']['total']['value'] = 0
+    elif gene_ids_filters == {'ENSG00000186092'}:
+        response_dict['hits']['total']['value'] = 1
+
+
     return response_dict
 
 def get_indices_from_url(url):
@@ -1277,13 +1295,14 @@ class EsUtilsTest(TestCase):
         Sample.objects.filter(sample_id='NA19678').update(is_active=False)
         self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
 
-    def assertExecutedSearch(self, filters=None, start_index=0, size=2, index=INDEX_NAME, **kwargs):
-        executed_search = urllib3_responses.call_request_json()
-        searched_indices = get_indices_from_url(urllib3_responses.calls[-1].request.url)
+    def assertExecutedSearch(self, filters=None, start_index=0, size=2, index=INDEX_NAME, expected_source_fields=SOURCE_FIELDS, call_index=-1, **kwargs):
+        executed_search = urllib3_responses.call_request_json(index=call_index)
+        searched_indices = get_indices_from_url(urllib3_responses.calls[call_index].request.url)
         self.assertListEqual(sorted(searched_indices.split(',')), sorted(index.split(',')))
         self.assertSameSearch(
             executed_search,
-            dict(filters=filters, start_index=start_index, size=size, **kwargs)
+            dict(filters=filters, start_index=start_index, size=size, **kwargs),
+            expected_source_fields=expected_source_fields,
         )
 
     def assertExecutedSearches(self, searches):
@@ -1293,7 +1312,7 @@ class EsUtilsTest(TestCase):
             self.assertDictEqual(executed_search[i * 2], {'index': expected_search.get('index', INDEX_NAME).split(',')})
             self.assertSameSearch(executed_search[(i * 2) + 1], expected_search)
 
-    def assertSameSearch(self, executed_search, expected_search_params):
+    def assertSameSearch(self, executed_search, expected_search_params, expected_source_fields=SOURCE_FIELDS):
         expected_search = {
             'from': expected_search_params['start_index'],
             'size': expected_search_params['size']
@@ -1305,6 +1324,9 @@ class EsUtilsTest(TestCase):
                     'filter': expected_search_params['filters']
                 }
             }
+
+        if expected_search_params.get('query'):
+            expected_search['query']['bool']['must'] = expected_search_params['query']
 
         if not expected_search_params.get('unsorted'):
             expected_search['sort'] = expected_search_params.get('sort') or ['xpos', 'variantId']
@@ -1330,7 +1352,7 @@ class EsUtilsTest(TestCase):
         if not expected_search_params.get('gene_count_aggs'):
             source = executed_search['aggs']['genes']['aggs']['vars_by_gene']['top_hits']['_source'] \
                 if expected_search_params.get('gene_aggs')  else executed_search['_source']
-            self.assertSetEqual(SOURCE_FIELDS, set(source))
+            self.assertSetEqual(expected_source_fields, set(source))
 
     def assertCachedResults(self, results_model, expected_results, sort='xpos'):
         cache_key = 'search_results__{}__{}'.format(results_model.guid, sort)
@@ -2004,13 +2026,16 @@ class EsUtilsTest(TestCase):
             dict(filters=[filter, ALL_INHERITANCE_QUERY], start_index=0, size=5, index=INDEX_NAME),
         ])
 
-        search_model.search['annotations'] = {'structural': ['DEL']}
+        search_model.search['annotations'] = {
+            'structural': ['DEL'], 'structural_consequence': ['MSV_EXON_OVERLAP', 'INTRAGENIC_EXON_DUP']}
         search_model.save()
         _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
 
         get_es_variants(results_model, num_results=5)
         self.assertExecutedSearch(
-            filters=[{'bool': {'should': [{'terms': {'transcriptConsequenceTerms': ['DEL']}}, path_filter]}}],
+            filters=[{'bool': {'should': [{'terms': {
+                'transcriptConsequenceTerms': ['DEL', 'DUP_LOF', 'INTRAGENIC_EXON_DUP', 'MSV_EXON_OVERLAP', 'MSV_EXON_OVR']
+            }}, path_filter]}}],
             start_index=0, size=5, index=SV_INDEX_NAME)
 
     @urllib3_responses.activate
@@ -2760,6 +2785,142 @@ class EsUtilsTest(TestCase):
                     }},
                 ], start_index=0, size=2, index=INDEX_NAME)
         ])
+
+    @mock.patch('seqr.utils.elasticsearch.es_search.MAX_INDEX_SEARCHES', 1)
+    @urllib3_responses.activate
+    def test_multi_project_prefilter_indices_get_es_variants(self):
+        setup_responses()
+        search_model = VariantSearch.objects.create(search={
+            'inheritance': {'mode': 'de_novo'},
+            'qualityFilter': {'min_gq': 10},
+            'locus': {'rawItems': 'ENSG00000228198'},
+        })
+        results_model = VariantSearchResults.objects.create(variant_search=search_model)
+        results_model.families.set(Family.objects.filter(project__id__in=[1, 3]))
+
+        _, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(total_results, 14)
+
+        gene_filter = {'terms': {'geneIds': ['ENSG00000228198']}}
+        prefilter_search = dict(
+            filters=[gene_filter], index=f'{SV_INDEX_NAME},{SECOND_INDEX_NAME},{INDEX_NAME}',
+            size=200, expected_source_fields=set(),
+        )
+        sv_search = dict(
+            filters=[
+                gene_filter,
+                {'bool': {
+                    'must': [
+                        {'bool': {
+                            'must_not': [{'term': {'samples': 'HG00732'}}, {'term': {'samples': 'HG00733'}}],
+                            'must': [{'term': {'samples': 'HG00731'}}],
+                        }},
+                        {'bool': {
+                            'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                            ],
+                        }},
+                    ],
+                    '_name': 'F000002_2'
+                }}
+            ], start_index=0, size=2, index=SV_INDEX_NAME)
+        self.assertEqual(len(urllib3_responses.calls), 2)
+        self.assertExecutedSearch(call_index=0, **prefilter_search)
+        # Search total is greater than returned hits, so proceed with regular multi-search
+        self.assertExecutedSearches([
+            sv_search,
+            dict(filters=[
+                gene_filter,
+                {
+                    'bool': {'must': [
+                        {'bool': {'should': [
+                            {'term': {'samples_num_alt_1': 'NA20885'}},
+                            {'term': {'samples_num_alt_2': 'NA20885'}},
+                        ]}}, {'bool': {'must_not': [
+                            {'term': {'samples_gq_0_to_5': 'NA20885'}},
+                            {'term': {'samples_gq_5_to_10': 'NA20885'}},
+                        ]}}
+                    ],
+                        '_name': 'F000011_11'
+                    }}
+            ], start_index=0, size=2, index=SECOND_INDEX_NAME),
+            dict(filters=[
+                    gene_filter,
+                    {'bool': {'should': [
+                        {'bool': {'must': [
+                            {'bool': {'should': [
+                                {'term': {'samples_num_alt_1': 'NA19675'}},
+                                {'term': {'samples_num_alt_2': 'NA19675'}},
+                            ]}}, {'bool': {'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA19675'}},
+                                {'term': {'samples_gq_5_to_10': 'NA19675'}},
+                            ]}}], '_name': 'F000001_1'}},
+                        {'bool': {'must': [
+                            {'bool': {'should': [
+                                {'term': {'samples_num_alt_1': 'HG00731'}},
+                                {'term': {'samples_num_alt_2': 'HG00731'}},
+                            ], 'must_not': [
+                                {'term': {'samples_no_call': 'HG00732'}},
+                                {'term': {'samples_num_alt_1': 'HG00732'}},
+                                {'term': {'samples_num_alt_2': 'HG00732'}},
+                                {'term': {'samples_no_call': 'HG00733'}},
+                                {'term': {'samples_num_alt_1': 'HG00733'}},
+                                {'term': {'samples_num_alt_2': 'HG00733'}},
+                            ], 'minimum_should_match': 1}},
+                            {'bool': {
+                                'must_not': [
+                                    {'term': {'samples_gq_0_to_5': 'HG00731'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00731'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00732'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00732'}},
+                                    {'term': {'samples_gq_0_to_5': 'HG00733'}},
+                                    {'term': {'samples_gq_5_to_10': 'HG00733'}},
+                                ],
+                            }},
+                        ],
+                            '_name': 'F000002_2'
+                        }},
+                        {'bool': {'must': [
+                            {'bool': {'should': [
+                                {'term': {'samples_num_alt_1': 'NA20870'}},
+                                {'term': {'samples_num_alt_2': 'NA20870'}},
+                            ]}}, {'bool': {'must_not': [
+                                {'term': {'samples_gq_0_to_5': 'NA20870'}},
+                                {'term': {'samples_gq_5_to_10': 'NA20870'}},
+                            ]}}], '_name': 'F000003_3'}},
+                    ]}}], start_index=0, size=2, index=INDEX_NAME),
+        ])
+
+        # Test successful prefilter
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+        gene_filter['terms']['geneIds'] = ['ENSG00000186092']
+        search_model.search['locus']['rawItems'] = 'ENSG00000186092'
+        search_model.save()
+
+        _, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(total_results, 1)
+        self.assertEqual(len(urllib3_responses.calls), 4)
+        self.assertExecutedSearch(call_index=2, **prefilter_search)
+        sv_search['query'] = [{'ids': {'values': ['prefix_19107_DEL']}}]
+        self.assertExecutedSearches([sv_search])
+
+        # Test no results in prefilter
+        _set_cache('search_results__{}__xpos'.format(results_model.guid), None)
+        gene_filter['terms']['geneIds'] = ['ENSG00000269732']
+        search_model.search['locus']['rawItems'] = 'ENSG00000269732'
+        search_model.save()
+
+        _, total_results = get_es_variants(results_model, num_results=2)
+        self.assertEqual(total_results, 0)
+        # Only the prefliter search is run, no multi-search
+        self.assertEqual(len(urllib3_responses.calls), 5)
+        self.assertExecutedSearch(**prefilter_search)
+
 
     @mock.patch('seqr.utils.elasticsearch.es_search.MAX_VARIANTS', 3)
     @urllib3_responses.activate

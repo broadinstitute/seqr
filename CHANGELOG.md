@@ -2,6 +2,9 @@
 
 ## dev
 
+## 1/11/23
+* Require PHI disclaimer when uploading AnVIL pedigree
+
 ## 11/9/22
 * Add PhenotypePrioritization model (REQUIRES DB MIGRATION)
 
