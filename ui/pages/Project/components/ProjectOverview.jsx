@@ -144,11 +144,18 @@ const MatchmakerSubmissionOverview = connect(
 )(BaseMatchmakerSubmissionOverview)
 
 const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, user, title }) => {
-  const familySizeHistogram = familyCounts.map(({ size }) => Math.min(size, 5)).reduce((acc, familySize) => (
-    { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
-  ), {})
+  const familySizeHistogram = familyCounts.reduce((acc, { size, hasMom, hasDad }) => {
+    const familySize = Math.min(size, 5)
+    const sizeAcc = acc[familySize] || { total: 0, withParents: 0 }
+    sizeAcc.total += 1
+    if (familySize === 2 && (hasMom || hasDad)) {
+      sizeAcc.withParents += 1
+    } else if (familySize > 2 && hasMom && hasDad) {
+      sizeAcc.withParents += 1
+    }
+    return { ...acc, [familySize]: sizeAcc }
+  }, {})
   const individualsCount = familyCounts.reduce((acc, { size }) => acc + size, 0)
-  // TODO use hasMom and hasDad fields to determine correct labels
 
   let editIndividualsButton = null
   if (user && (user.isPm || (hasCaseReview && canEdit))) {
@@ -169,8 +176,8 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
       content={
         sortBy(Object.keys(familySizeHistogram)).map(size => (
           <div key={size}>
-            <i>{familySizeHistogram[size]}</i>
-            {` - ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size] > 1)}`}
+            <i>{familySizeHistogram[size].total}</i>
+            {` - ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size].total > 1)}`}
           </div>
         ))
       }
