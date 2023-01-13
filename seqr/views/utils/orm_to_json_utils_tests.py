@@ -1,11 +1,9 @@
 from django.contrib.auth.models import User
 import mock
 from copy import deepcopy
-from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantTag, VariantFunctionalData, \
-    VariantNote, LocusList, VariantSearch
+from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, _get_json_for_family, \
-    _get_json_for_individual, get_json_for_sample, get_json_for_saved_variant, get_json_for_variant_tags, \
-    get_json_for_variant_functional_data_tags, get_json_for_variant_note, get_json_for_locus_list, \
+    _get_json_for_individual, get_json_for_sample, get_json_for_saved_variants, get_json_for_variant_note, get_json_for_locus_list, \
     get_json_for_saved_search, get_json_for_saved_variants_with_tags, get_json_for_current_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
@@ -148,8 +146,8 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(json.keys()), IGV_SAMPLE_FIELDS)
 
     def test_json_for_saved_variant(self):
-        variant = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100')
-        json = get_json_for_saved_variant(variant)
+        variants = SavedVariant.objects.filter(guid='SV0000001_2103343353_r0390_100')
+        json = get_json_for_saved_variants(variants)[0]
 
         self.assertSetEqual(set(json.keys()), SAVED_VARIANT_FIELDS)
         self.assertListEqual(json['familyGuids'], ["F000001_1"])
@@ -157,8 +155,8 @@ class JSONUtilsTest(object):
 
         fields = set()
         fields.update(SAVED_VARIANT_FIELDS)
-        fields.update(list(variant.saved_variant_json.keys()))
-        json = get_json_for_saved_variant(variant, add_details=True)
+        fields.update(list(variants.first().saved_variant_json.keys()))
+        json = get_json_for_saved_variants(variants, add_details=True)[0]
         self.assertSetEqual(set(json.keys()), fields)
         self.assertListEqual(json['familyGuids'], ["F000001_1"])
         self.assertEqual(json['variantId'], '21-3343353-GAGA-G')
@@ -209,20 +207,12 @@ class JSONUtilsTest(object):
         for tag_guid in v1_functional_guids:
             self.assertListEqual(json['variantFunctionalDataByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
 
-    def test_json_for_variant_tags(self):
-        tags = VariantTag.objects.all()[:1]
-        json = get_json_for_variant_tags(tags)[0]
-        self.assertSetEqual(set(json.keys()), TAG_FIELDS)
-
-    def test_json_for_variant_functional_data(self):
-        tags = VariantFunctionalData.objects.all()[:1]
-        json = get_json_for_variant_functional_data_tags(tags)[0]
-        self.assertSetEqual(set(json.keys()), FUNCTIONAL_FIELDS)
-
     def test_json_for_variant_note(self):
         tag = VariantNote.objects.first()
         json = get_json_for_variant_note(tag)
-        self.assertSetEqual(set(json.keys()), VARIANT_NOTE_FIELDS)
+        fields = deepcopy(VARIANT_NOTE_FIELDS)
+        fields.remove('variantGuids')
+        self.assertSetEqual(set(json.keys()), fields)
 
     def test_json_for_saved_search(self):
         search = VariantSearch.objects.first()

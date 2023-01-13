@@ -220,7 +220,7 @@ def check_user_created_object_permissions(obj, user):
 
 def check_projects_view_permission(projects, user):
     can_view = set(get_project_guids_user_can_view(user, limit_data_manager=False))
-    no_access_projects = {p.guid for p in projects} - can_view
+    no_access_projects = set(projects.values_list('guid', flat=True)) - can_view
     if no_access_projects:
         raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
 

@@ -19,7 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_f
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization
+    PhenotypePrioritization, Project
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions
 from seqr.views.utils.variant_utils import get_phenotype_prioritization
@@ -435,10 +435,10 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
 
 @login_and_policies_required
 def get_family_phenotype_gene_scores(request, family_guid):
-    family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    project = Project.objects.get(family__guid=family_guid)
+    check_project_permissions(project, request.user)
 
-    phenotype_prioritization = get_phenotype_prioritization([family])
+    phenotype_prioritization = get_phenotype_prioritization([family_guid])
     gene_ids = {gene_id for indiv in phenotype_prioritization.values() for gene_id in indiv.keys()}
     return create_json_response({
         'phenotypeGeneScores': phenotype_prioritization,

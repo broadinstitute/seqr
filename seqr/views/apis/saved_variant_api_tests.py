@@ -8,7 +8,7 @@ from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctional
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, update_saved_variant_json, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
-from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variant
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
     FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, AnvilAuthenticationTestCase
@@ -777,7 +777,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(functional_data['VFD0000023_1248367227_r0390_10']['name'], 'Biochemical Function')
         self.assertEqual(functional_data['VFD0000023_1248367227_r0390_10']['metadata'], 'An updated note')
         self.assertEqual(functional_data[new_guid]['name'], 'Bonferroni corrected p-value')
-        self.assertEqual(functional_data[new_guid]['metadata'], 0.05)
+        self.assertEqual(functional_data[new_guid]['metadata'], '0.05')
 
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual(
@@ -839,7 +839,7 @@ class SavedVariantAPITest(object):
             'functionalData': [
                 {'name': 'Biochemical Function',
                  'metadata': 'An updated note'},
-                {'name': 'Bonferroni corrected p-value', 'metadata': 0.05}
+                {'name': 'Bonferroni corrected p-value', 'metadata': '0.05'}
             ],
             'familyGuid': 'F000001_1'
         }))
@@ -853,7 +853,7 @@ class SavedVariantAPITest(object):
             {"Biochemical Function", "Bonferroni corrected p-value"},
             {vt['name'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
         self.assertSetEqual(
-            {"An updated note", 0.05},
+            {"An updated note", '0.05'},
             {vt['metadata'] for vt in response.json()['variantFunctionalDataByGuid'].values()})
         variant_functional_data = VariantFunctionalData.objects.filter(
             saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
@@ -912,9 +912,10 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'savedVariantsByGuid': {VARIANT_GUID: {'selectedMainTranscriptId': transcript_id}}})
 
-        saved_variant = SavedVariant.objects.get(guid=VARIANT_GUID)
-        self.assertEqual(saved_variant.selected_main_transcript_id, transcript_id)
-        self.assertEqual(get_json_for_saved_variant(saved_variant, add_details=True)['selectedMainTranscriptId'], transcript_id)
+        saved_variants = SavedVariant.objects.filter(guid=VARIANT_GUID)
+        self.assertEqual(len(saved_variants), 1)
+        self.assertEqual(saved_variants.first().selected_main_transcript_id, transcript_id)
+        self.assertEqual(get_json_for_saved_variants(saved_variants, add_details=True)[0]['selectedMainTranscriptId'], transcript_id)
 
     def test_update_variant_acmg_classification(self):
         update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])
