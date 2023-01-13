@@ -180,7 +180,7 @@ CLINVAR_SORT = {
 def _get_phenotype_priority_ranks_by_gene(families, *args):
     from seqr.utils.elasticsearch.utils import InvalidSearchException
     if len(families) > 1:
-        raise InvalidSearchException('Sorting on multiple families search results is not supported.')
+        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
     family_ranks = PhenotypePrioritization.objects.filter(
         individual__family=families[0], rank__lte=100).values('gene_id').annotate(min_rank=Min('rank'))
@@ -236,7 +236,7 @@ SORT_FIELDS = {
                         if (params.prioritized_ranks_by_gene.getOrDefault(doc['geneIds'][i], 1000000) < min_rank) {
                             min_rank = params.prioritized_ranks_by_gene.get(doc['geneIds'][i])
                         }
-                    } 
+                    }
                     return min_rank;
                 """
             }

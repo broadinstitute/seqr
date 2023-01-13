@@ -3382,7 +3382,7 @@ class EsUtilsTest(TestCase):
 
         with self.assertRaises(InvalidSearchException) as se:
             get_es_variants(results_model, sort='prioritized_gene', num_results=2)
-        self.assertEqual(str(se.exception), 'Sorting on multiple families search results is not supported.')
+        self.assertEqual(str(se.exception), 'Phenotype sort is only supported for single-family search.')
 
         results_model.families.set(Family.objects.filter(guid='F000001_1'))
         get_es_variants(results_model, sort='prioritized_gene', num_results=2)
