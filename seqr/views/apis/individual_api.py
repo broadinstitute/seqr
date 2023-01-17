@@ -150,7 +150,7 @@ def edit_individuals_handler(request, project_guid):
     related_individuals = Individual.objects.filter(
         family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
     related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
-    individuals_list = modified_individuals_list + related_individuals_json
+    individuals_list = modified_individuals_list + list(related_individuals_json)
 
     validate_fam_file_records(individuals_list, fail_on_warnings=True)
 
@@ -257,7 +257,7 @@ def receive_individuals_table_handler(request, project_guid):
         related_individuals_json = _get_json_for_individuals(
             related_individuals, project_guid=project_guid, family_fields=['family_id'])
 
-        validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True)
+        validate_fam_file_records(json_records + list(related_individuals_json), fail_on_warnings=True)
 
     # send back some stats
     individual_ids_by_family = defaultdict(set)

@@ -263,23 +263,6 @@ def get_json_for_family_notes(notes, **kwargs):
 def get_json_for_family_note(note):
     return _get_json_for_model(note, **FAMILY_NOTE_KWARGS)
 
-def _process_individual_result(add_sample_guids_field):
-    def _process_result(result, individual):
-        mother = individual.mother
-        father = individual.father
-
-        result.update({
-            'maternalGuid': mother.guid if mother else None,
-            'paternalGuid': father.guid if father else None,
-            'maternalId': mother.individual_id if mother else None,
-            'paternalId': father.individual_id if father else None,
-            'displayName': result['displayName'] or result['individualId'],
-        })
-
-        if add_sample_guids_field:
-            result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
-            result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
-    return _process_result
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
                               family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
@@ -294,14 +277,11 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     Returns:
         array: array of json objects
     """
-    # TODO
-    if not individuals:
+    if not individuals.exists():
         return []
 
-    kwargs = {
-        'additional_model_fields': _get_case_review_fields(
+    additional_model_fields = _get_case_review_fields(
             individuals[0], has_case_review_perm, user, lambda indiv: indiv.family.project)
-    }
     nested_fields = [
         {'fields': ('family', 'guid'), 'value': family_guid},
         {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
@@ -309,19 +289,29 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if family_fields:
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-    kwargs.update({'nested_fields': nested_fields})
 
     if add_hpo_details:
-        kwargs['additional_model_fields'] += [
+        additional_model_fields += [
             'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features']
 
-    prefetch_related_objects(individuals, 'mother')
-    prefetch_related_objects(individuals, 'father')
+    additional_values = {
+        'maternalGuid': F('mother__guid'),
+        'paternalGuid': F('father__guid'),
+        'maternalId': F('mother__individual_id'),
+        'paternalId': F('father__individual_id'),
+        'displayName': Coalesce(NullIf('display_name', Value('')), 'individual_id', output_field=CharField()),
+    }
     if add_sample_guids_field:
-        prefetch_related_objects(individuals, 'sample_set')
-        prefetch_related_objects(individuals, 'igvsample_set')
+        additional_values.update({
+            f'{field}Guids': ArrayAgg(f'{field.lower()}__guid', filter=Q(**{f'{field.lower()}__isnull': False}))
+            for field in ['sample', 'igvSample']
+        })
 
-    parsed_individuals = _get_json_for_models(individuals, user=user, is_analyst=is_analyst, process_result=_process_individual_result(add_sample_guids_field), **kwargs)
+    parsed_individuals = _get_json_for_queryset(
+        individuals, user=user, is_analyst=is_analyst, additional_values=additional_values,
+        additional_model_fields=additional_model_fields, nested_fields=nested_fields,
+    )
+
     if add_hpo_details:
         add_individual_hpo_details(parsed_individuals)
 
