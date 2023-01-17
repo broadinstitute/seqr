@@ -733,7 +733,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
     response = {
         'individualsByGuid': {
             individual['individualGuid']: individual for individual in _get_json_for_individuals(
-            list(individuals_by_guid.values()), user=request.user, add_hpo_details=True, project_guid=project_guid,
+            individuals, user=request.user, add_hpo_details=True, project_guid=project_guid,
         )},
     }
 
