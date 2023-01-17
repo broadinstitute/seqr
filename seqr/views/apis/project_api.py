@@ -6,7 +6,7 @@ import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Max, F, Q
+from django.db.models import Count, Max, Q
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
