@@ -41,12 +41,22 @@ const DetailContent = styled.div`
 `
 
 const FAMILY_SIZE_LABELS = {
-  0: () => 'No individuals',
-  1: () => '1 individual',
-  2: () => '2 individuals',
+  0: 'no',
+  5: '5+',
+}
+
+const FAMILY_STRUCTURE_SIZE_LABELS = {
+  2: plural => ` duo${plural ? 's' : ''}`,
   3: plural => ` trio${plural ? 's' : ''}`,
   4: plural => ` quad${plural ? 's' : ''}`,
-  5: () => '5+ individuals',
+  5: plural => ` trio${plural ? 's' : ''}+`,
+}
+
+const FAMILY_STRUCTURE_HOVER = {
+  2: 'A family with one parent and one child',
+  3: 'A family with two parents and one child',
+  4: 'A family with two parents and two children',
+  5: 'A family with two parents and three or more other family members',
 }
 
 const DetailSection = React.memo(({ title, content, button }) => (
@@ -174,10 +184,19 @@ const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, 
         </span>
       )}
       content={
-        sortBy(Object.keys(familySizeHistogram)).map(size => (
+        sortBy(Object.entries(familySizeHistogram)).map(([size, { total, withParents }]) => (
           <div key={size}>
-            <i>{familySizeHistogram[size].total}</i>
-            {` - ${FAMILY_SIZE_LABELS[size](familySizeHistogram[size].total > 1)}`}
+            {`${total} famil${total === 1 ? 'y' : 'ies'} with ${FAMILY_SIZE_LABELS[size] || size} individual${size === '1' ? '' : 's'}`}
+            {withParents > 0 && (
+              <div>
+                &nbsp;&nbsp;&nbsp;&nbsp;
+                {withParents}
+                <Popup
+                  trigger={<span>{FAMILY_STRUCTURE_SIZE_LABELS[size](total > 1)}</span>}
+                  content={FAMILY_STRUCTURE_HOVER[size]}
+                />
+              </div>
+            )}
           </div>
         ))
       }
