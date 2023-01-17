@@ -222,6 +222,7 @@ class BaseProjectSavedVariants extends React.PureComponent {
           <VariantTagTypeBar
             height={30}
             projectGuid={project.projectGuid}
+            familyGuid={match.params.familyGuid}
             analysisGroupGuid={match.params.analysisGroupGuid}
             tagTypeCounts={tagTypeCounts}
             tagTypes={project.variantTagTypes}

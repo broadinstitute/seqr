@@ -610,9 +610,15 @@ const VEP_SV_CONSEQUENCES = [
     value: 'LOF',
   },
   {
-    description: 'A loss of function effect via intragenic exonic duplication',
-    text: 'Loss of function via Duplication',
-    value: 'DUP_LOF',
+    description: 'An SV which is predicted to result in intragenic exonic duplication without breaking any coding sequences' +
+        ' (previously called "Loss of function via Duplication")',
+    text: 'Intragenic Exon Duplication',
+    value: 'INTRAGENIC_EXON_DUP',
+  },
+  {
+    description: 'The duplication SV has one breakpoint in the coding sequence',
+    text: 'Partial Exon Duplication',
+    value: 'PARTIAL_EXON_DUP',
   },
   {
     description: 'A copy-gain effect',
@@ -625,9 +631,11 @@ const VEP_SV_CONSEQUENCES = [
     value: 'DUP_PARTIAL',
   },
   {
-    description: 'A multiallelic SV predicted to have a Loss of function, Loss of function via Duplication, Copy Gain, or Duplication Partial effect',
+    description: 'A multiallelic SV would be predicted to have a Loss of function, Intragenic Exon Duplication, Copy Gain,' +
+        ' Duplication Partial, Duplication at the Transcription Start Site (TSS_DUP), or Duplication with a breakpoint' +
+        ' in the coding sequence annotation if the SV were biallelic',
     text: 'Multiallelic SV',
-    value: 'MSV_EXON_OVR',
+    value: 'MSV_EXON_OVERLAP',
   },
   {
     description: 'An SV contained entirely within an intron',
@@ -645,14 +653,19 @@ const VEP_SV_CONSEQUENCES = [
     value: 'UTR',
   },
   {
-    description: 'An SV that does not overlap coding sequence',
-    text: 'Intergenic',
-    value: 'INTERGENIC',
-  },
-  {
     description: 'An SV which disrupts a promoter sequence (within 1kb)',
     text: 'Promoter',
     value: 'PROMOTER',
+  },
+  {
+    description: 'An SV which the SV breakend is predicted to fall in an exon',
+    text: 'Breakend Exonic',
+    value: 'BREAKEND_EXONIC',
+  },
+  {
+    description: 'An SV is predicted to duplicate the transcription start site',
+    text: 'Transcription Start Site Duplication',
+    value: 'TSS_DUP',
   },
 ]
 
@@ -956,6 +969,7 @@ export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
 const SORT_BY_IN_OMIM = 'IN_OMIM'
+const SORT_BY_PRIORITIZED_GENE = 'PRIORITIZED_GENE'
 const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
 const SORT_BY_GNOMAD_GENOMES = 'GNOMAD'
 const SORT_BY_GNOMAD_EXOMES = 'GNOMAD_EXOMES'
@@ -991,6 +1005,8 @@ const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
 export const MISSENSE_THRESHHOLD = 3
 export const LOF_THRESHHOLD = 0.35
 
+const PRIORITIZED_GENE_MAX_RANK = 1000
+
 const getGeneConstraintSortScore = ({ constraints }) => {
   if (!constraints || constraints.louef === undefined) {
     return Infinity
@@ -1013,6 +1029,16 @@ const getConsequenceRank = ({ transcripts, svType }) => (
     ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence],
   ).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
 )
+
+const getPrioritizedGeneTopRank = (variant, genesById, individualGeneDataByFamilyGene) => Math.min(...Object.keys(
+  variant.transcripts || {},
+).reduce((acc, geneId) => (
+  genesById[geneId] && individualGeneDataByFamilyGene[variant.familyGuids[0]]?.phenotypeGeneScores ? [
+    ...acc,
+    ...Object.values(individualGeneDataByFamilyGene[variant.familyGuids[0]].phenotypeGeneScores[geneId] || {}).reduce(
+      (acc2, toolScores) => ([...acc2, ...toolScores.map(score => score.rank)]), [],
+    ),
+  ] : acc), [PRIORITIZED_GENE_MAX_RANK]))
 
 const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
@@ -1057,6 +1083,14 @@ const VARIANT_SORT_OPTONS = [
       ) - Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
       )),
+  },
+  {
+    value: SORT_BY_PRIORITIZED_GENE,
+    text: 'Phenotype Prioritized Gene',
+    comparator: (a, b, genesById, _tag, _user, _family, _project, individualGeneDataByFamilyGene) => (
+      getPrioritizedGeneTopRank(a, genesById, individualGeneDataByFamilyGene) -
+        getPrioritizedGeneTopRank(b, genesById, individualGeneDataByFamilyGene)
+    ),
   },
   {
     value: SORT_BY_SIZE,

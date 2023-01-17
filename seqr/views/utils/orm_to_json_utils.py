@@ -429,8 +429,9 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
 
 def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None):
     additional_values = {
-        'familyGuids': ArrayAgg('family__guid'),
+        'familyGuids': ArrayAgg('family__guid', distinct=True),
     }
+
     additional_fields = []
     additional_fields += additional_model_fields or []
     if add_details:
