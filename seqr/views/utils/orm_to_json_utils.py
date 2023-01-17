@@ -265,8 +265,8 @@ def get_json_for_family_note(note):
 
 def _process_individual_result(add_sample_guids_field):
     def _process_result(result, individual):
-        mother = result.pop('mother', None)
-        father = result.pop('father', None)
+        mother = individual.mother
+        father = individual.father
 
         result.update({
             'maternalGuid': mother.guid if mother else None,
@@ -323,12 +323,12 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
 
     parsed_individuals = _get_json_for_models(individuals, user=user, is_analyst=is_analyst, process_result=_process_individual_result(add_sample_guids_field), **kwargs)
     if add_hpo_details:
-        _add_individual_hpo_details(parsed_individuals)
+        add_individual_hpo_details(parsed_individuals)
 
     return parsed_individuals
 
 
-def _add_individual_hpo_details(parsed_individuals):
+def add_individual_hpo_details(parsed_individuals):
     all_hpo_ids = set()
     for i in parsed_individuals:
         all_hpo_ids.update([feature['id'] for feature in i.get('features') or []])
@@ -343,18 +343,6 @@ def _add_individual_hpo_details(parsed_individuals):
             hpo = hpo_terms_by_id.get(feature['id'])
             if hpo:
                 feature.update({'category': hpo.category_id, 'label': hpo.name})
-
-
-def _get_json_for_individual(individual, user=None, **kwargs):
-    """Returns a JSON representation of the given Individual.
-
-    Args:
-        individual (object): Django model for the individual.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-    Returns:
-        dict: json object
-    """
-    return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
 def get_json_for_samples(samples, project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):

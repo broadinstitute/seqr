@@ -592,7 +592,7 @@ class Individual(ModelWithGUID):
         unique_together = ('family', 'individual_id')
 
         json_fields = [
-            'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
+            'guid', 'individual_id', 'sex', 'affected', 'display_name', 'notes',
             'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
             'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
             'affected_relatives', 'expected_inheritance', 'disorders', 'candidate_genes', 'rejected_genes',

@@ -13,8 +13,8 @@ from seqr.models import Individual, Family, Sample, RnaSeqOutlier
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
-from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals,\
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
     _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
@@ -63,10 +63,13 @@ def update_individual_handler(request, individual_guid):
     update_json = request_json if can_edit else {k: v for k, v in request_json.items() if k in {'notes'}}
 
     update_individual_from_json(individual, update_json, user=request.user, allow_unknown_keys=True)
+    individual_json = _get_json_for_model(individual, user=request.user)
+    individual_json['displayName'] = individual_json['displayName'] or individual_json['individualId']
 
     return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user)
+        individual.guid: individual_json
     })
+
 
 
 @login_and_policies_required
@@ -82,14 +85,18 @@ def update_individual_hpo_terms(request, individual_guid):
 
     request_json = json.loads(request.body)
 
+    feature_fields = ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']
     update_json = {
         key: [get_parsed_feature(feature) for feature in request_json[key]] if request_json.get(key) else None
-        for key in ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']
+        for key in feature_fields
     }
     update_model_from_json(individual, update_json, user=request.user)
 
+    individual_json = {k: getattr(individual, _to_snake_case(k)) for k in feature_fields}
+    add_individual_hpo_details([individual_json])
+
     return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user, add_hpo_details=True)
+        individual.guid: individual_json
     })
 
 
