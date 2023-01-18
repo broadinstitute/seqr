@@ -587,7 +587,6 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
         array: json objects
     """
 
-    # TODO
     def _process_result(result, locus_list):
         gene_set = locus_list.locuslistgene_set
         interval_set = locus_list.locuslistinterval_set
