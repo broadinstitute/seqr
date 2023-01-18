@@ -55,10 +55,8 @@ const getGeneSearchProps = af => ({
   ),
 })
 
-export const GeneSearchLink = ({ af, ...props }) => (
-  <ConnectedSearchResultsLink initialSearch={getGeneSearchProps(af || 0.1)} {...props} />
-)
+const INITIAL_GENE_SEARCH = getGeneSearchProps(0.1)
+const RARE_GENE_SEARCH = getGeneSearchProps(0.01)
 
-GeneSearchLink.propTypes = {
-  af: PropTypes.number,
-}
+export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />
+export const RareGeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={RARE_GENE_SEARCH} {...props} />
