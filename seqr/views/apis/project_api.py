@@ -19,7 +19,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
-    has_workspace_perm
+    has_workspace_perm, has_case_review_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
@@ -181,7 +181,8 @@ def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_models = Family.objects.filter(project=project)
     families = _get_json_for_families(
-        family_models, request.user, project_guid=project_guid, add_individual_guids_field=True
+        family_models, request.user, project_guid=project_guid, add_individual_guids_field=True,
+        has_case_review_perm=has_case_review_permissions(project, request.user),
     )
     response = families_discovery_tags(families)
     has_features_families = set(family_models.filter(individual__features__isnull=False).values_list('guid', flat=True))
@@ -241,7 +242,8 @@ def project_collaborators(request, project_guid):
 def project_individuals(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     individuals = _get_json_for_individuals(
-        Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid, add_hpo_details=True)
+        Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid,
+        add_hpo_details=True, has_case_review_perm=has_case_review_permissions(project, request.user))
 
     return create_json_response({
         'individualsByGuid': {i['individualGuid']: i for i in individuals},

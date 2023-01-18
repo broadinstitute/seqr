@@ -210,26 +210,13 @@ def _get_json_for_project(project, user, **kwargs):
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, add_permissions=True, **kwargs)
 
 
-def _get_case_review_fields(model, has_case_review_perm, user, get_project):
-    if has_case_review_perm is None:
-        has_case_review_perm = user and has_case_review_permissions(get_project(model), user)
+def _get_case_review_fields(model_cls, has_case_review_perm):
     if not has_case_review_perm:
         return []
-    return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
+    return [field.name for field in model_cls._meta.fields if field.name.startswith('case_review')]
 
 
-def _get_family_json_func_kwargs(family, user, has_case_review_perm=None, project_guid=None):
-    kwargs = {'additional_model_fields': _get_case_review_fields(
-        family, has_case_review_perm, user, lambda f: f.project)
-    }
-    kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
-    return kwargs
-
-
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=None):
-
-    if not families.exists():
-        return []
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=False):
 
     additional_values = {
         'analysedBy': ArrayAgg(JSONObject(
@@ -248,9 +235,11 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if add_individual_guids_field:
         additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
 
-    kwargs = _get_family_json_func_kwargs(families[0], user, has_case_review_perm, project_guid)
+    additional_model_fields = _get_case_review_fields(families.model, has_case_review_perm)
+    nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
 
-    return get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=additional_values, **kwargs)
+    return get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=additional_values,
+                                 additional_model_fields=additional_model_fields, nested_fields=nested_fields)
 
 
 FAMILY_NOTE_KWARGS = dict(guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
@@ -265,7 +254,7 @@ def get_json_for_family_note(note):
 
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
-                              family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
+                              family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -277,11 +266,8 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     Returns:
         array: array of json objects
     """
-    if not individuals.exists():
-        return []
 
-    additional_model_fields = _get_case_review_fields(
-            individuals[0], has_case_review_perm, user, lambda indiv: indiv.family.project)
+    additional_model_fields = _get_case_review_fields(individuals.model, has_case_review_perm)
     nested_fields = [
         {'fields': ('family', 'guid'), 'value': family_guid},
         {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
