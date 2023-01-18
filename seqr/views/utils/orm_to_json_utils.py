@@ -113,7 +113,7 @@ def _user_expr(field):
     return Coalesce(NullIf(_full_name_expr(field), Value('')), f'{field}__email', output_field=CharField())
 
 
-def _get_json_for_queryset(models, nested_fields=None, user=None, is_analyst=None, additional_values=None, guid_key=None, additional_model_fields=None):
+def get_json_for_queryset(models, nested_fields=None, user=None, is_analyst=None, additional_values=None, guid_key=None, additional_model_fields=None):
     model_class = models.model
     fields = _get_model_json_fields(model_class, user, is_analyst, additional_model_fields)
 
@@ -250,14 +250,14 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
 
     kwargs = _get_family_json_func_kwargs(families[0], user, has_case_review_perm, project_guid)
 
-    return _get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=additional_values, **kwargs)
+    return get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=additional_values, **kwargs)
 
 
 FAMILY_NOTE_KWARGS = dict(guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
 
 
 def get_json_for_family_notes(notes, **kwargs):
-    return _get_json_for_queryset(notes, **FAMILY_NOTE_KWARGS, **kwargs)
+    return get_json_for_queryset(notes, **FAMILY_NOTE_KWARGS, **kwargs)
 
 
 def get_json_for_family_note(note):
@@ -307,7 +307,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
             for field in ['sample', 'igvSample']
         })
 
-    parsed_individuals = _get_json_for_queryset(
+    parsed_individuals = get_json_for_queryset(
         individuals, user=user, is_analyst=is_analyst, additional_values=additional_values,
         additional_model_fields=additional_model_fields, nested_fields=nested_fields,
     )
@@ -415,7 +415,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
     if add_details:
         additional_fields.append('saved_variant_json')
 
-    results = _get_json_for_queryset(
+    results = get_json_for_queryset(
         saved_variants, guid_key='variantGuid', additional_values=additional_values,
         additional_model_fields=additional_fields,
     )
@@ -458,7 +458,7 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
     elif tag_cls == VariantNote:
         guid_key = 'noteGuid'
 
-    tags = _get_json_for_queryset(
+    tags = get_json_for_queryset(
         tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
     if tag_cls == VariantFunctionalData:
         _format_functional_tags(tags)
@@ -787,7 +787,9 @@ def get_json_for_matchmaker_submission(submission):
 
 
 def get_json_for_rna_seq_outliers(models, **kwargs):
-    def _process_result(data, model):
-        data['isSignificant'] = data['pAdjust'] < model.SIGNIFICANCE_THRESHOLD
-
-    return _get_json_for_models(models, process_result=_process_result, **kwargs)
+    additional_values = {
+        'isSignificant': Case(
+            When(p_adjust__lt=models.model.SIGNIFICANCE_THRESHOLD, then=Value(True)), default=Value(False)
+        ),
+    }
+    return get_json_for_queryset(models, additional_values=additional_values, **kwargs)

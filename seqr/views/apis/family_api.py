@@ -16,7 +16,7 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_m
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_for_family_note, get_json_for_samples, \
-    get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_families, _get_json_for_queryset
+    get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_families, get_json_for_queryset
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
@@ -274,7 +274,7 @@ def update_family_analysed_by(request, family_guid):
     create_model_from_json(FamilyAnalysedBy, {'family': family, 'data_type': request_json['dataType']}, request.user)
 
     return create_json_response({
-        family.guid: {'analysedBy': list(_get_json_for_queryset(family.familyanalysedby_set.all()))}
+        family.guid: {'analysedBy': list(get_json_for_queryset(family.familyanalysedby_set.all()))}
     })
 
 
