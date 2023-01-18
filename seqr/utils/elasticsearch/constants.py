@@ -1,5 +1,7 @@
+from django.db.models import Min
+
 from reference_data.models import Omim, GeneConstraint
-from seqr.models import Individual, Sample
+from seqr.models import Individual, Sample, PhenotypePrioritization
 
 MAX_VARIANTS = 10000
 MAX_COMPOUND_HET_GENES = 1000
@@ -174,6 +176,17 @@ CLINVAR_SORT = {
     }
 }
 
+
+def _get_phenotype_priority_ranks_by_gene(families, *args):
+    from seqr.utils.elasticsearch.utils import InvalidSearchException
+    if len(families) > 1:
+        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+
+    family_ranks = PhenotypePrioritization.objects.filter(
+        individual__family=families[0], rank__lte=100).values('gene_id').annotate(min_rank=Min('rank'))
+    return {agg['gene_id']: agg['min_rank'] for agg in family_ranks}
+
+
 SORT_FIELDS = {
     PATHOGENICTY_SORT_KEY: [CLINVAR_SORT],
     PATHOGENICTY_HGMD_SORT_KEY: [CLINVAR_SORT, {
@@ -206,6 +219,25 @@ SORT_FIELDS = {
                         }
                     } 
                     return 1
+                """
+            }
+        }
+    }],
+    'prioritized_gene': [{
+        '_script': {
+            'type': 'number',
+            'script': {
+                'params': {
+                    'prioritized_ranks_by_gene': _get_phenotype_priority_ranks_by_gene,
+                },
+                'source': """
+                    int min_rank = 1000000;
+                    for (int i = 0; i < doc['geneIds'].length; ++i) {
+                        if (params.prioritized_ranks_by_gene.getOrDefault(doc['geneIds'][i], 1000000) < min_rank) {
+                            min_rank = params.prioritized_ranks_by_gene.get(doc['geneIds'][i])
+                        }
+                    }
+                    return min_rank;
                 """
             }
         }

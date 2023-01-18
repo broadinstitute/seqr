@@ -137,6 +137,7 @@ class SavedVariantAPITest(object):
         fields = {'mainTranscriptId', 'mmeSubmissions'}
         fields.update(SAVED_VARIANT_DETAIL_FIELDS)
         self.assertSetEqual(set(variant.keys()), fields)
+        self.assertListEqual(variant['familyGuids'], ['F000001_1'])
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(
             set(variant['tagGuids']), {'VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'},
@@ -280,6 +281,7 @@ class SavedVariantAPITest(object):
             'createdBy': None,
         }]
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
+        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['familyGuids'], ['F000002_2'])
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000012_12'})
 
         # Test discovery tags with family context
@@ -292,6 +294,7 @@ class SavedVariantAPITest(object):
             {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'}
         )
         self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
+        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['familyGuids'], ['F000002_2'])
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2', 'F000012_12'})
 
     def test_create_saved_variant(self):

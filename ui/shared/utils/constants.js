@@ -969,6 +969,7 @@ export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
 const SORT_BY_IN_OMIM = 'IN_OMIM'
+const SORT_BY_PRIORITIZED_GENE = 'PRIORITIZED_GENE'
 const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
 const SORT_BY_GNOMAD_GENOMES = 'GNOMAD'
 const SORT_BY_GNOMAD_EXOMES = 'GNOMAD_EXOMES'
@@ -1004,6 +1005,8 @@ const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
 export const MISSENSE_THRESHHOLD = 3
 export const LOF_THRESHHOLD = 0.35
 
+const PRIORITIZED_GENE_MAX_RANK = 1000
+
 const getGeneConstraintSortScore = ({ constraints }) => {
   if (!constraints || constraints.louef === undefined) {
     return Infinity
@@ -1026,6 +1029,16 @@ const getConsequenceRank = ({ transcripts, svType }) => (
     ({ majorConsequence }) => VEP_CONSEQUENCE_ORDER_LOOKUP[majorConsequence],
   ).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
 )
+
+const getPrioritizedGeneTopRank = (variant, genesById, individualGeneDataByFamilyGene) => Math.min(...Object.keys(
+  variant.transcripts || {},
+).reduce((acc, geneId) => (
+  genesById[geneId] && individualGeneDataByFamilyGene[variant.familyGuids[0]]?.phenotypeGeneScores ? [
+    ...acc,
+    ...Object.values(individualGeneDataByFamilyGene[variant.familyGuids[0]].phenotypeGeneScores[geneId] || {}).reduce(
+      (acc2, toolScores) => ([...acc2, ...toolScores.map(score => score.rank)]), [],
+    ),
+  ] : acc), [PRIORITIZED_GENE_MAX_RANK]))
 
 const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
@@ -1070,6 +1083,14 @@ const VARIANT_SORT_OPTONS = [
       ) - Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
       )),
+  },
+  {
+    value: SORT_BY_PRIORITIZED_GENE,
+    text: 'Phenotype Prioritized Gene',
+    comparator: (a, b, genesById, _tag, _user, _family, _project, individualGeneDataByFamilyGene) => (
+      getPrioritizedGeneTopRank(a, genesById, individualGeneDataByFamilyGene) -
+        getPrioritizedGeneTopRank(b, genesById, individualGeneDataByFamilyGene)
+    ),
   },
   {
     value: SORT_BY_SIZE,
