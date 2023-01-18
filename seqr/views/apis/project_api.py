@@ -6,7 +6,8 @@ import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Max
+from django.db.models import Count, Max, Q
+from django.db.models.functions import JSONObject
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
@@ -185,16 +186,19 @@ def project_families(request, project_guid):
     )
     response = families_discovery_tags(families)
     has_features_families = set(family_models.filter(individual__features__isnull=False).values_list('guid', flat=True))
-    annotated_models = family_models.annotate(
-        case_review_statuses=ArrayAgg('individual__case_review_status', distinct=True),
-        case_review_status_last_modified=Max('individual__case_review_status_last_modified_date')
+    annotated_families = family_models.values(
+        'guid',
+        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
+        caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
+        parents=ArrayAgg(
+            JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
+            filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
+        ),
     )
-    for family in annotated_models:
-        response['familiesByGuid'][family.guid].update({
-            'caseReviewStatuses': family.case_review_statuses,
-            'caseReviewStatusLastModified': family.case_review_status_last_modified,
-            'hasFeatures': family.guid in has_features_families,
-        })
+    for family in annotated_families:
+        family_guid = family.pop('guid')
+        response['familiesByGuid'][family_guid]['hasFeatures'] = family_guid in has_features_families
+        response['familiesByGuid'][family_guid].update(family)
     return create_json_response(response)
 
 
