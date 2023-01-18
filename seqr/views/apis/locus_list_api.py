@@ -10,7 +10,7 @@ from seqr.utils.logging_utils import log_model_update, SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
+from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_detailed_json_for_locus_lists, get_json_for_locus_list
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
     check_user_created_object_permissions, login_and_policies_required, get_project_guids_user_can_view
 
@@ -25,8 +25,7 @@ def locus_lists(request):
         _get_user_list_filter(request.user)
     ).annotate(num_projects=Count('projects'))
 
-    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_project_count=True,
-                                                include_genes=True, include_pagenes=False)
+    locus_lists_json = get_detailed_json_for_locus_lists(locus_list_models, request.user)
 
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},

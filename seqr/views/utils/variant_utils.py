@@ -106,13 +106,13 @@ def _saved_variant_genes_transcripts(variants):
     return genes, transcripts
 
 
-def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
+def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
     locus_lists = LocusList.objects.filter(projects__in=projects)
 
     if add_list_detail:
         locus_lists_by_guid = {
             ll['locusListGuid']: dict(intervals=[], **ll)
-            for ll in get_json_for_locus_lists(locus_lists, user, is_analyst=is_analyst)
+            for ll in get_json_for_locus_lists(locus_lists, user)
         }
     else:
         locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
@@ -211,7 +211,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     genes, transcripts = _saved_variant_genes_transcripts(variants)
     response['transcriptsById'] = transcripts
     response['locusListsByGuid'] = _add_locus_lists(
-        projects, genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
+        projects, genes, add_list_detail=add_locus_list_detail, user=request.user)
 
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)

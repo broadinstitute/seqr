@@ -632,8 +632,32 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False,
-                             is_analyst=False, include_metadata=True):
+def get_json_for_locus_lists(locus_lists, user, include_metadata=True):
+
+    # TODO
+    def _process_result(result, locus_list):
+        if include_metadata:
+            result.update({
+                'numEntries': locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
+                'canEdit': user == locus_list.created_by,
+            })
+
+        if hasattr(locus_list, 'palocuslist'):
+            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user)
+            result.update({
+                'paLocusList': pa_locus_list_json,
+            })
+
+    if include_metadata:
+        prefetch_related_objects(locus_lists, 'created_by')
+        locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
+
+    prefetch_related_objects(locus_lists, 'palocuslist')
+
+    return _get_json_for_models(locus_lists, user=user, process_result=_process_result)
+
+
+def get_detailed_json_for_locus_lists(locus_lists, user, include_pagenes=False, include_project_count=True):
     """Returns a JSON representation of the given LocusLists.
 
     Args:
@@ -642,60 +666,52 @@ def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pag
         array: json objects
     """
 
+    # TODO queryset?
     def _process_result(result, locus_list):
         gene_set = locus_list.locuslistgene_set
         interval_set = locus_list.locuslistinterval_set
-        if include_genes:
-            intervals = _get_json_for_models(interval_set.all())
-            genome_versions = {interval['genomeVersion'] for interval in intervals}
+        intervals = _get_json_for_models(interval_set.all())
+        genome_versions = {interval['genomeVersion'] for interval in intervals}
 
-            if include_pagenes:
-                result.update({
-                    'items': [{
-                        'geneId': gene.gene_id,
-                        'pagene': _get_json_for_model(gene.palocuslistgene, user=user, is_analyst=is_analyst)
-                        if hasattr(gene, 'palocuslistgene') else None
-                    } for gene in gene_set.all()] + intervals,
-                })
-            else:
-                result.update({
-                    'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
-                })
+        if include_pagenes:
             result.update({
-                'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
+                'items': [{
+                    'geneId': gene.gene_id,
+                    'pagene': _get_json_for_model(gene.palocuslistgene, user=user)
+                    if hasattr(gene, 'palocuslistgene') else None
+                } for gene in gene_set.all()] + intervals,
             })
+        else:
+            result.update({
+                'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
+            })
+        result.update({
+            'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
+        })
 
         if include_project_count:
             result['numProjects'] = locus_list.num_projects
 
-        if include_metadata:
-            result.update({
-                'numEntries': gene_set.count() + interval_set.count()
-                if include_genes else locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
-                'canEdit': user == locus_list.created_by,
-            })
+        result.update({
+            'numEntries': gene_set.count() + interval_set.count(),
+            'canEdit': user == locus_list.created_by,
+        })
 
         if hasattr(locus_list, 'palocuslist'):
-            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user, is_analyst=is_analyst)
+            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user)
             result.update({
                 'paLocusList': pa_locus_list_json,
             })
 
-    if include_metadata:
-        prefetch_related_objects(locus_lists, 'created_by')
-
-    if include_genes:
-        prefetch_related_objects(locus_lists, 'locuslistgene_set')
-        prefetch_related_objects(locus_lists, 'locuslistinterval_set')
-    elif include_metadata:
-        locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
-
+    prefetch_related_objects(locus_lists, 'created_by')
+    prefetch_related_objects(locus_lists, 'locuslistgene_set')
+    prefetch_related_objects(locus_lists, 'locuslistinterval_set')
     prefetch_related_objects(locus_lists, 'palocuslist')
 
     if include_pagenes:
         prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
 
-    return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
+    return _get_json_for_models(locus_lists, user=user, process_result=_process_result)
 
 
 def get_json_for_locus_list(locus_list, user):
@@ -706,8 +722,8 @@ def get_json_for_locus_list(locus_list, user):
     Returns:
         dict: json object
     """
-    return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True,
-                               include_pagenes=True)
+    return _get_json_for_model(locus_list, get_json_for_models=get_detailed_json_for_locus_lists, user=user,
+                               include_pagenes=True, include_project_count=False)
 
 
 PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit']
