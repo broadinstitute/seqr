@@ -10,6 +10,7 @@ from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
+from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names
@@ -632,6 +633,19 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
+def _add_pa_locus_lists(locus_lists_json, user):
+    ll_guids = [ll['locusListGuid'] for ll in locus_lists_json]
+    pa_json = _get_json_for_queryset(
+        PaLocusList.objects.filter(seqr_locus_list__guid__in=ll_guids), user=user,
+        nested_fields=[{'fields': ('seqr_locus_list', 'guid'), 'key': 'locusListGuid'}]
+    )
+    pa_json_by_locus_list = {pa.pop('locusListGuid'): pa for pa in pa_json}
+    for ll in locus_lists_json:
+        pa_locus_list_json = pa_json_by_locus_list.get(ll['locusListGuid'])
+        if pa_locus_list_json:
+            ll['paLocusList'] = pa_locus_list_json
+
+
 def get_json_for_locus_lists(locus_lists, user, include_metadata=True):
 
     # TODO
@@ -642,19 +656,13 @@ def get_json_for_locus_lists(locus_lists, user, include_metadata=True):
                 'canEdit': user == locus_list.created_by,
             })
 
-        if hasattr(locus_list, 'palocuslist'):
-            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user)
-            result.update({
-                'paLocusList': pa_locus_list_json,
-            })
-
     if include_metadata:
         prefetch_related_objects(locus_lists, 'created_by')
         locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
 
-    prefetch_related_objects(locus_lists, 'palocuslist')
-
-    return _get_json_for_models(locus_lists, user=user, process_result=_process_result)
+    results = _get_json_for_models(locus_lists, user=user, process_result=_process_result)
+    _add_pa_locus_lists(results, user)
+    return results
 
 
 def get_detailed_json_for_locus_lists(locus_lists, user, include_pagenes=False, include_project_count=True):
@@ -697,21 +705,16 @@ def get_detailed_json_for_locus_lists(locus_lists, user, include_pagenes=False, 
             'canEdit': user == locus_list.created_by,
         })
 
-        if hasattr(locus_list, 'palocuslist'):
-            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user)
-            result.update({
-                'paLocusList': pa_locus_list_json,
-            })
-
     prefetch_related_objects(locus_lists, 'created_by')
     prefetch_related_objects(locus_lists, 'locuslistgene_set')
     prefetch_related_objects(locus_lists, 'locuslistinterval_set')
-    prefetch_related_objects(locus_lists, 'palocuslist')
 
     if include_pagenes:
         prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
 
-    return _get_json_for_models(locus_lists, user=user, process_result=_process_result)
+    results = _get_json_for_models(locus_lists, user=user, process_result=_process_result)
+    _add_pa_locus_lists(results, user)
+    return results
 
 
 def get_json_for_locus_list(locus_list, user):
