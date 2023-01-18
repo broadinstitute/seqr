@@ -820,7 +820,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_saved_search(self):
         super(AnvilVariantSearchAPITest, self).test_saved_search()
-        assert_workspace_calls(self, 6, user=self.no_access_user)
+        assert_workspace_calls(self, 3, user=self.no_access_user)
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_ws_access_level.assert_not_called()
 

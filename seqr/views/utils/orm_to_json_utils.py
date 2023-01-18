@@ -737,20 +737,23 @@ def _set_collaborator_permissions(collaborator_json, include_permissions, can_ed
 
 
 def get_json_for_saved_searches(searches, user):
-    # TODO
-    is_analyst = user_is_analyst(user)
-    def _process_result(result, search):
-        # Do not apply HGMD filters in shared searches for non-analyst users
-        if not search.created_by and not is_analyst and result['search'].get('pathogenicity', {}).get('hgmd'):
-            result['search']['pathogenicity'] = {
-                k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
-            }
-    prefetch_related_objects(searches, 'created_by')
-    return _get_json_for_models(searches, guid_key='savedSearchGuid', process_result=_process_result)
+    additional_model_fields = []
+    not_analyst = not user_is_analyst(user)
+    if not_analyst:
+        additional_model_fields.append('created_by_id')
+    results = get_json_for_queryset(searches, guid_key='savedSearchGuid', additional_model_fields=additional_model_fields)
+    if not_analyst:
+        for result in results:
+            # Do not apply HGMD filters in shared searches for non-analyst users
+            if not result.pop('createdById') and result['search'].get('pathogenicity', {}).get('hgmd'):
+                result['search']['pathogenicity'] = {
+                    k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
+                }
+    return results
 
 
 def get_json_for_saved_search(search, user):
-    return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
+    return _get_json_for_model(search, user=user, guid_key='savedSearchGuid')
 
 
 def get_json_for_matchmaker_submissions(models, individual_guid=None, additional_model_fields=None, all_parent_guids=False):
