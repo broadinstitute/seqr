@@ -4,7 +4,7 @@ Utility functions for converting Django ORM object to JSON
 
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Count, Value, F, CharField
+from django.db.models import prefetch_related_objects, Count, Value, F, Case, When, CharField
 from django.db.models.fields.files import ImageFieldFile
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim
 from django.contrib.auth.models import User
@@ -647,20 +647,14 @@ def _add_pa_locus_lists(locus_lists_json, user):
 
 
 def get_json_for_locus_lists(locus_lists, user, include_metadata=True):
-
-    # TODO
-    def _process_result(result, locus_list):
-        if include_metadata:
-            result.update({
-                'numEntries': locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
-                'canEdit': user == locus_list.created_by,
-            })
-
+    additional_values = {}
     if include_metadata:
-        prefetch_related_objects(locus_lists, 'created_by')
-        locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
+        additional_values.update({
+            'numEntries': Count('locuslistgene') + Count('locuslistinterval'),
+            'canEdit': Case(When(created_by=user, then=Value(True)), default=Value(False)),
+        })
 
-    results = _get_json_for_models(locus_lists, user=user, process_result=_process_result)
+    results = _get_json_for_queryset(locus_lists, user=user, additional_values=additional_values)
     _add_pa_locus_lists(results, user)
     return results
 
