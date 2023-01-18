@@ -64,7 +64,6 @@ const BasePhenotypePriGenes = React.memo((
       icon="search"
       location={(phenotypeGeneScores[individualGuid] || []).map(({ geneId }) => geneId).join(',')}
       familyGuid={familyGuid}
-      af={0.01}
       floated="right"
     />
     <DataTable
