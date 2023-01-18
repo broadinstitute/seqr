@@ -7,6 +7,7 @@ from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Max, Q
+from django.db.models.functions import JSONObject
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
@@ -189,8 +190,10 @@ def project_families(request, project_guid):
         'guid',
         caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
         caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
-        maternalGuids=ArrayAgg('individual__mother__guid', distinct=True, filter=Q(individual__mother__isnull=False)),
-        paternalGuids=ArrayAgg('individual__father__guid', distinct=True, filter=Q(individual__father__isnull=False))
+        parents=ArrayAgg(
+            JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
+            filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
+        ),
     )
     for family in annotated_families:
         family_guid = family.pop('guid')

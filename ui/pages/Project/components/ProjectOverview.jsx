@@ -154,13 +154,13 @@ const MatchmakerSubmissionOverview = connect(
 )(BaseMatchmakerSubmissionOverview)
 
 const FamiliesIndividuals = React.memo(({ canEdit, hasCaseReview, familyCounts, user, title }) => {
-  const familySizeHistogram = familyCounts.reduce((acc, { size, hasMom, hasDad }) => {
+  const familySizeHistogram = familyCounts.reduce((acc, { size, numParents }) => {
     const familySize = Math.min(size, 5)
     const sizeAcc = acc[familySize] || { total: 0, withParents: 0 }
     sizeAcc.total += 1
-    if (familySize === 2 && (hasMom || hasDad)) {
+    if (familySize === 2 && numParents) {
       sizeAcc.withParents += 1
-    } else if (familySize > 2 && hasMom && hasDad) {
+    } else if (familySize > 2 && numParents === 2) {
       sizeAcc.withParents += 1
     }
     return { ...acc, [familySize]: sizeAcc }
