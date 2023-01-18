@@ -216,9 +216,10 @@ def _get_case_review_fields(model_cls, has_case_review_perm):
     return [field.name for field in model_cls._meta.fields if field.name.startswith('case_review')]
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=False):
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
+                           has_case_review_perm=False, additional_values=None):
 
-    additional_values = {
+    family_additional_values = {
         'analysedBy': ArrayAgg(JSONObject(
             createdBy=_user_expr('created_by'),
             dataType='familyanalysedby__data_type',
@@ -232,13 +233,15 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         'displayName': Coalesce(NullIf('display_name', Value('')), 'family_id'),
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
+    if additional_values:
+        family_additional_values.update(additional_values)
     if add_individual_guids_field:
-        additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
+        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
 
     additional_model_fields = _get_case_review_fields(families.model, has_case_review_perm)
     nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
 
-    return get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=additional_values,
+    return get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=family_additional_values,
                                  additional_model_fields=additional_model_fields, nested_fields=nested_fields)
 
 

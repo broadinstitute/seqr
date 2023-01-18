@@ -6,7 +6,7 @@ import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Q, Case, When, Value
 from django.db.models.functions import JSONObject
 from django.utils import timezone
 
@@ -181,25 +181,21 @@ def project_page_data(request, project_guid):
 def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     family_models = Family.objects.filter(project=project)
-    families = _get_json_for_families(
-        family_models, request.user, project_guid=project_guid, add_individual_guids_field=True,
-        has_case_review_perm=has_case_review_permissions(project, request.user),
-    )
-    response = families_discovery_tags(families)
-    has_features_families = set(family_models.filter(individual__features__isnull=False).values_list('guid', flat=True))
-    annotated_families = family_models.values(
-        'guid',
+    family_annotations = dict(
         caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
         caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
+        hasFeatures=Case(When(feature_count__gt=0, then=Value(True)), default=Value(False)),
         parents=ArrayAgg(
             JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
             filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
         ),
     )
-    for family in annotated_families:
-        family_guid = family.pop('guid')
-        response['familiesByGuid'][family_guid]['hasFeatures'] = family_guid in has_features_families
-        response['familiesByGuid'][family_guid].update(family)
+    families = _get_json_for_families(
+        family_models.annotate(feature_count=Count('individual__features')), request.user,
+        project_guid=project_guid, add_individual_guids_field=True, additional_values=family_annotations,
+        has_case_review_perm=has_case_review_permissions(project, request.user),
+    )
+    response = families_discovery_tags(families)
     return create_json_response(response)
 
 
