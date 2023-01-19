@@ -6,8 +6,7 @@ from collections import defaultdict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json, \
-    update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 

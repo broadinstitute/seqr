@@ -12,7 +12,7 @@ from seqr.views.apis.individual_api import edit_individuals_handler, update_indi
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
     get_hpo_terms, get_individual_rna_seq_data
 from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS, INDIVIDUAL_CORE_FIELDS, \
-    CORE_INTERNAL_INDIVIDUAL_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
+    CORE_INTERNAL_INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 PM_REQUIRED_PROJECT_GUID = 'R0003_test'
