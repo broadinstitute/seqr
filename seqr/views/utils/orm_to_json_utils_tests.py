@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 import mock
 from copy import deepcopy
-from seqr.models import Project, Individual, Sample, IgvSample, SavedVariant, VariantNote, LocusList, VariantSearch
+from seqr.models import Project, Sample, IgvSample, SavedVariant, VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, \
     get_json_for_sample, get_json_for_saved_variants, get_json_for_variant_note, get_json_for_locus_list, \
     get_json_for_saved_searches, get_json_for_saved_variants_with_tags, get_json_for_current_user
