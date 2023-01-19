@@ -876,6 +876,7 @@ class VariantFunctionalData(ModelWithGUID):
         'color': json.loads(tag_json)['color'],
         'description': json.loads(tag_json).get('description'),
     } for category, tags in FUNCTIONAL_DATA_CHOICES for name, tag_json in tags]
+    FUNCTIONAL_DATA_TAG_LOOKUP = {tag['name']: tag for tag in FUNCTIONAL_DATA_TAG_TYPES}
 
     saved_variants = models.ManyToManyField('SavedVariant')
     functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
