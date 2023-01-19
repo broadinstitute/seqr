@@ -4,7 +4,7 @@ from copy import deepcopy
 from seqr.models import Project, Family, Individual, Sample, IgvSample, SavedVariant, VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, \
     get_json_for_sample, get_json_for_saved_variants, get_json_for_variant_note, get_json_for_locus_list, \
-    get_json_for_saved_search, get_json_for_saved_variants_with_tags, get_json_for_current_user
+    get_json_for_saved_searches, get_json_for_saved_variants_with_tags, get_json_for_current_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, FAMILY_FIELDS, INTERNAL_FAMILY_FIELDS, \
     INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
@@ -178,15 +178,15 @@ class JSONUtilsTest(object):
         self.assertSetEqual(set(json.keys()), fields)
 
     def test_json_for_saved_search(self):
-        search = VariantSearch.objects.first()
+        searches = VariantSearch.objects.filter(id=1)
         user = User.objects.get(username='test_user')
-        json = get_json_for_saved_search(search, user)
+        json = get_json_for_saved_searches(searches, user)[0]
 
         self.assertSetEqual(set(json.keys()), SAVED_SEARCH_FIELDS)
         self.assertTrue('hgmd' in json['search']['pathogenicity'])
 
         user = User.objects.get(username='test_user_collaborator')
-        json = get_json_for_saved_search(search, user)
+        json = get_json_for_saved_searches(searches, user)[0]
         self.assertSetEqual(set(json.keys()), SAVED_SEARCH_FIELDS)
         self.assertFalse('hgmd' in json['search']['pathogenicity'])
 

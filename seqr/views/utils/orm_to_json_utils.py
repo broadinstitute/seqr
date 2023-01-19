@@ -740,14 +740,11 @@ def _set_collaborator_permissions(collaborator_json, include_permissions, can_ed
 
 def get_json_for_saved_searches(searches, user):
     additional_model_fields = []
-    not_analyst = not user_is_analyst(user)
-    if not_analyst:
-        additional_model_fields.append('created_by_id')
     results = get_json_for_queryset(searches, guid_key='savedSearchGuid', additional_model_fields=additional_model_fields)
-    if not_analyst:
+    if not user_is_analyst(user):
         for result in results:
             # Do not apply HGMD filters in shared searches for non-analyst users
-            if not result.pop('createdById') and result['search'].get('pathogenicity', {}).get('hgmd'):
+            if not result['createdById'] and result['search'].get('pathogenicity', {}).get('hgmd'):
                 result['search']['pathogenicity'] = {
                     k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
                 }
