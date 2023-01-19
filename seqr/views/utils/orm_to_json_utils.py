@@ -677,7 +677,7 @@ def get_detailed_json_for_locus_lists(locus_lists, user, include_project_count=T
 
         result.update({
             'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
-            'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
+            'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,  # TODO not used in lists, only for single list
             # metadata
             'numEntries': gene_set.count() + interval_set.count(),
             'canEdit': user == locus_list.created_by,
