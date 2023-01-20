@@ -37,8 +37,8 @@ def locus_lists(request):
         gene_id: gene_symbol for gene_id, gene_symbol in
         GeneInfo.objects.filter(gene_id__in=all_gene_ids).values_list('gene_id', 'gene_symbol')
     }
-    for list in locus_lists_json:
-        list['geneNames'] = [gene_ids_to_symbols.get(gene_id, '') for gene_id in list.pop('gene_ids')]
+    for locus_list in locus_lists_json:
+        locus_list['geneNames'] = [gene_ids_to_symbols.get(gene_id, '') for gene_id in locus_list.pop('gene_ids')]
 
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},

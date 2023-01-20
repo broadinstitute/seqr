@@ -10,7 +10,7 @@ from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
-from panelapp.models import PaLocusList, PaLocusListGene
+from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names
