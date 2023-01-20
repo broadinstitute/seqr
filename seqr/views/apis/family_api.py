@@ -300,11 +300,13 @@ def update_family_pedigree_image(request, family_guid):
 
     update_model_from_json(family, {'pedigree_image': pedigree_image}, request.user)
 
+    updated_image = family.pedigree_image
     if isinstance(family.pedigree_image, ImageFieldFile):
         try:
             updated_image = family.pedigree_image.url
         except Exception:
             updated_image = None
+
     return create_json_response({
         family.guid: {'pedigreeImage': updated_image}
     })
