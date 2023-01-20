@@ -261,7 +261,7 @@ def _parse_uploaded_pedigree(request_json, user):
 def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None, get_pedigree_json=False):
     # add families and individuals according to the uploaded individual records
     pedigree_json, sample_ids = add_or_update_individuals_and_families(
-        project, individual_records=pedigree_records, user=user, get_update_json=get_pedigree_json, get_updated_individual_ids= True,
+        project, individual_records=pedigree_records, user=user, get_update_json=get_pedigree_json, get_updated_individual_ids=True,
     )
     num_updated_individuals = len(sample_ids)
 

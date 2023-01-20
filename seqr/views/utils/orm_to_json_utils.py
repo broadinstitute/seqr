@@ -130,10 +130,6 @@ def get_json_for_queryset(models, nested_fields=None, user=None, is_analyst=None
     })
     value_fields.update(additional_values or {})
 
-    if 'guid' in value_fields:
-        guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
-        value_fields[guid_key] = value_fields.pop('guid')
-
     for nested_field in (nested_fields or []):
         key = nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))
         value_fields[key] = Value(nested_field['value']) if nested_field.get('value') else F('__'.join(nested_field['fields']))
