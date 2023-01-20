@@ -4,6 +4,7 @@ import time
 import tempfile
 from datetime import datetime
 from functools import wraps
+from collections import defaultdict
 import requests
 
 from google.auth.transport.requests import Request
@@ -127,6 +128,7 @@ def get_anvil_vcf_list(request, namespace, name, workspace_meta):
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
     data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
                       if path.endswith(VCF_FILE_EXTENSIONS)]
+    data_path_list = _merge_sharded_vcf(data_path_list)
 
     return create_json_response({'dataPathList': data_path_list})
 
@@ -451,4 +453,25 @@ def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
     return resp.json()
 
 
+def _get_common_prefix(files):
+    for i in range(len(files[0])):
+        if any([file[i]!=files[0][i] if i < len(file) else True for file in files]):
+            return files[0][:i]
+    return ''
 
+
+def _merge_sharded_vcf(vcf_files):
+    files_by_path = defaultdict(list)
+
+    for vcf_file in vcf_files:
+        path, file = vcf_file.rsplit('/', 1)
+        files_by_path[path].append(file)
+
+    for path, files in files_by_path.items():
+        prefix = _get_common_prefix(files)
+        postfix = files[0].replace(r'[0-9]+', '')
+        if any([file.replace(r'[0-9]+', '')!=postfix for file in files]):
+            continue
+        files = [prefix + '*' + postfix]
+
+    return []
