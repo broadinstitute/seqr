@@ -646,15 +646,17 @@ def _add_pa_locus_lists(locus_lists_json, user):
             ll['paLocusList'] = pa_locus_list_json
 
 
-def get_json_for_locus_lists(locus_lists, user, include_metadata=True):
-    additional_values = {}
+def get_json_for_locus_lists(locus_lists, user, include_metadata=True, additional_values=None):
+    ll_additional_values = {}
+    if additional_values:
+        ll_additional_values.update(additional_values)
     if include_metadata:
-        additional_values.update({
+        ll_additional_values.update({
             'numEntries': Count('locuslistgene') + Count('locuslistinterval'),
             'canEdit': Case(When(created_by=user, then=Value(True)), default=Value(False)),
         })
 
-    results = _get_json_for_queryset(locus_lists, user=user, additional_values=additional_values)
+    results = _get_json_for_queryset(locus_lists, user=user, additional_values=ll_additional_values)
     _add_pa_locus_lists(results, user)
     return results
 

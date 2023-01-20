@@ -1,16 +1,17 @@
 import json
 
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Q, Count
 from django.db.utils import IntegrityError
 
-from reference_data.models import GENOME_VERSION_GRCh37
+from reference_data.models import GeneInfo, GENOME_VERSION_GRCh37
 from seqr.models import LocusList, LocusListGene, LocusListInterval
 from seqr.utils.gene_utils import get_genes, parse_locus_list_items
 from seqr.utils.logging_utils import log_model_update, SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_detailed_json_for_locus_lists, get_json_for_locus_list
+from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
     check_user_created_object_permissions, login_and_policies_required, get_project_guids_user_can_view
 
@@ -23,13 +24,24 @@ INVALID_ITEMS_ERROR = 'This list contains invalid genes/ intervals. Update them,
 def locus_lists(request):
     locus_list_models = LocusList.objects.filter(
         _get_user_list_filter(request.user)
-    ).annotate(num_projects=Count('projects'))
+    )
 
-    locus_lists_json = get_detailed_json_for_locus_lists(locus_list_models, request.user)
+    gene_ids_agg = ArrayAgg('locuslistgene__gene_id', distinct=True)
+    locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, additional_values={
+        'numProjects': Count('projects'),
+        'gene_ids': gene_ids_agg,
+    })
+
+    all_gene_ids = locus_list_models.aggregate(gene_ids=gene_ids_agg)['gene_ids']
+    gene_ids_to_symbols = {
+        gene_id: gene_symbol for gene_id, gene_symbol in
+        GeneInfo.objects.filter(gene_id__in=all_gene_ids).values_list('gene_id', 'gene_symbol')
+    }
+    for list in locus_lists_json:
+        list['geneNames'] = [gene_ids_to_symbols.get(gene_id, '') for gene_id in list.pop('gene_ids')]
 
     return create_json_response({
         'locusListsByGuid': {locus_list['locusListGuid']: locus_list for locus_list in locus_lists_json},
-        'genesById': _get_locus_lists_genes(locus_lists_json),
     })
 
 
