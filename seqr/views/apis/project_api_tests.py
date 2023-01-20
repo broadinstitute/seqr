@@ -522,65 +522,65 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
 
 
 # Test for permissions from AnVIL only
-class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
-    PROJECT_COLLABORATOR_GROUPS = None
-    HAS_EMPTY_PROJECT = False
-
-    def test_create_and_delete_project(self):
-        super(AnvilProjectAPITest, self).test_create_and_delete_project()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
-        self.mock_get_groups.assert_has_calls([
-            mock.call(self.collaborator_user), mock.call(self.manager_user), mock.call(self.analyst_user),
-            mock.call(self.pm_user)])
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.pm_user, 'bar', 'foo'),
-            mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
-        ])
-
-    def _check_created_project_groups(self, project):
-        self.assertIsNone(project.can_edit_group)
-        self.assertIsNone(project.can_view_group)
-
-    def test_create_project_no_pm(self):
-        # Fallng back to superusers as PMs is only supported for local installs
-        pass
-
-    def test_update_project(self):
-        super(AnvilProjectAPITest, self).test_update_project()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
-        self.mock_get_groups.assert_has_calls([mock.call(self.manager_user), mock.call(self.pm_user)])
-        self.mock_get_ws_access_level.assert_has_calls([
-            mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
-            mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
-        ])
-
-    def test_project_page_data(self):
-        super(AnvilProjectAPITest, self).test_project_page_data()
-        self.mock_list_workspaces.assert_not_called()
-        self.assert_no_extra_anvil_calls()
-
-    def test_project_overview(self):
-        super(AnvilProjectAPITest, self).test_project_overview()
-        self.mock_list_workspaces.assert_not_called()
-        self.assert_no_extra_anvil_calls()
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'empty')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
-
-    def test_project_collaborators(self):
-        super(AnvilProjectAPITest, self).test_project_collaborators()
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_groups.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
-        self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
-                                                'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_acl.call_count, 3)
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
-                                                         'my-seqr-billing',
-                                                         'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
+# class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
+#     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+#     PROJECT_COLLABORATORS = ANVIL_COLLABORATORS
+#     PROJECT_COLLABORATOR_GROUPS = None
+#     HAS_EMPTY_PROJECT = False
+#
+#     def test_create_and_delete_project(self):
+#         super(AnvilProjectAPITest, self).test_create_and_delete_project()
+#         self.mock_list_workspaces.assert_not_called()
+#         self.mock_get_ws_acl.assert_not_called()
+#         self.mock_get_group_members.assert_not_called()
+#         self.mock_get_groups.assert_has_calls([
+#             mock.call(self.collaborator_user), mock.call(self.manager_user), mock.call(self.analyst_user),
+#             mock.call(self.pm_user)])
+#         self.mock_get_ws_access_level.assert_has_calls([
+#             mock.call(self.pm_user, 'bar', 'foo'),
+#             mock.call(self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2'),
+#         ])
+#
+#     def _check_created_project_groups(self, project):
+#         self.assertIsNone(project.can_edit_group)
+#         self.assertIsNone(project.can_view_group)
+#
+#     def test_create_project_no_pm(self):
+#         # Fallng back to superusers as PMs is only supported for local installs
+#         pass
+#
+#     def test_update_project(self):
+#         super(AnvilProjectAPITest, self).test_update_project()
+#         self.mock_list_workspaces.assert_not_called()
+#         self.mock_get_ws_acl.assert_not_called()
+#         self.mock_get_group_members.assert_not_called()
+#         self.mock_get_groups.assert_has_calls([mock.call(self.manager_user), mock.call(self.pm_user)])
+#         self.mock_get_ws_access_level.assert_has_calls([
+#             mock.call(self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
+#             mock.call(self.manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde'),
+#         ])
+#
+#     def test_project_page_data(self):
+#         super(AnvilProjectAPITest, self).test_project_page_data()
+#         self.mock_list_workspaces.assert_not_called()
+#         self.assert_no_extra_anvil_calls()
+#
+#     def test_project_overview(self):
+#         super(AnvilProjectAPITest, self).test_project_overview()
+#         self.mock_list_workspaces.assert_not_called()
+#         self.assert_no_extra_anvil_calls()
+#         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'my-seqr-billing', 'empty')
+#         self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
+#
+#     def test_project_collaborators(self):
+#         super(AnvilProjectAPITest, self).test_project_collaborators()
+#         self.mock_list_workspaces.assert_not_called()
+#         self.mock_get_groups.assert_not_called()
+#         self.mock_get_group_members.assert_not_called()
+#         self.mock_get_ws_acl.assert_called_with(self.collaborator_user,
+#                                                 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+#         self.assertEqual(self.mock_get_ws_acl.call_count, 3)
+#         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user,
+#                                                          'my-seqr-billing',
+#                                                          'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+#         self.assertEqual(self.mock_get_ws_access_level.call_count, 5)

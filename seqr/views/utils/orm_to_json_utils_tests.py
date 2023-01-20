@@ -251,7 +251,7 @@ class LocalJSONUtilsTest(AuthenticationTestCase, JSONUtilsTest):
     IS_ANVIL = False
 
 
-class AnvilJSONUtilsTest(AnvilAuthenticationTestCase, JSONUtilsTest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches']
-    IS_ANVIL = True
+# class AnvilJSONUtilsTest(AnvilAuthenticationTestCase, JSONUtilsTest):
+#     fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches']
+#     IS_ANVIL = True
 

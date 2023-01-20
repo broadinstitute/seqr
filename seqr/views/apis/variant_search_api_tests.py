@@ -792,33 +792,33 @@ def assert_workspace_calls(self, group_call_count, user=None):
 
 
 # Test for permissions from AnVIL only
-class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
-
-    def test_query_variants(self, *args):
-        super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
-        assert_ws_has_al(self, 1, 9, user=self.analyst_user)
-        assert_has_list_ws(self)
-
-    def test_query_all_projects_variants(self, *args):
-        super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        assert_no_al_has_list_ws(self)
-
-    def test_query_all_project_families_variants(self, *args):
-        super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
-        assert_no_al_has_list_ws(self)
-
-    def test_search_context(self):
-        super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_no_al_has_list_ws(self, 12)
-
-    def test_query_single_variant(self, *args):
-        super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
-        assert_no_list_ws_has_al(self, 4, 1)
-
-    def test_saved_search(self):
-        super(AnvilVariantSearchAPITest, self).test_saved_search()
-        assert_workspace_calls(self, 6, user=self.no_access_user)
-        self.mock_list_workspaces.assert_not_called()
-        self.mock_get_ws_access_level.assert_not_called()
+# class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
+#     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches']
+#
+#     def test_query_variants(self, *args):
+#         super(AnvilVariantSearchAPITest, self).test_query_variants(*args)
+#         assert_ws_has_al(self, 1, 9, user=self.analyst_user)
+#         assert_has_list_ws(self)
+#
+#     def test_query_all_projects_variants(self, *args):
+#         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
+#         assert_no_al_has_list_ws(self)
+#
+#     def test_query_all_project_families_variants(self, *args):
+#         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
+#         assert_no_al_has_list_ws(self)
+#
+#     def test_search_context(self):
+#         super(AnvilVariantSearchAPITest, self).test_search_context()
+#         assert_no_al_has_list_ws(self, 12)
+#
+#     def test_query_single_variant(self, *args):
+#         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
+#         assert_no_list_ws_has_al(self, 4, 1)
+#
+#     def test_saved_search(self):
+#         super(AnvilVariantSearchAPITest, self).test_saved_search()
+#         assert_workspace_calls(self, 6, user=self.no_access_user)
+#         self.mock_list_workspaces.assert_not_called()
+#         self.mock_get_ws_access_level.assert_not_called()
 

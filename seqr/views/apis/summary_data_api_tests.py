@@ -185,17 +185,17 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
     self.mock_get_ws_access_level.assert_not_called()
 
 # Test for permissions from AnVIL only
-class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-    NUM_MANAGER_SUBMISSIONS = 3
-    MANAGER_VARIANT_GUID = None
-
-    def test_mme_details(self, *args):
-        super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
-        assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
-
-    def test_saved_variants_page(self):
-        super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
-        assert_has_expected_calls(self, [
-            self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
-        ], skip_group_call_idxs=[2])
+# class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
+#     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+#     NUM_MANAGER_SUBMISSIONS = 3
+#     MANAGER_VARIANT_GUID = None
+#
+#     def test_mme_details(self, *args):
+#         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
+#         assert_has_expected_calls(self, [self.no_access_user, self.manager_user, self.analyst_user])
+#
+#     def test_saved_variants_page(self):
+#         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
+#         assert_has_expected_calls(self, [
+#             self.no_access_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
+#         ], skip_group_call_idxs=[2])

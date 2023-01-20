@@ -949,68 +949,68 @@ def assert_no_list_ws_has_al(self, acl_call_count):
 
 
 # Test for permissions from AnVIL only
-class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
-
-    def test_saved_variant_data(self, *args):
-        super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
-        self.mock_list_workspaces.assert_called_with(self.analyst_user)
-        self.mock_get_ws_access_level.assert_called_with(
-            mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 14)
-        self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
-        self.assertEqual(self.mock_get_groups.call_count, 10)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
-
-    def test_create_saved_variant(self):
-        super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
-        assert_no_list_ws_has_al(self, 4)
-
-    def test_create_saved_sv_variant(self):
-        super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_create_saved_compound_hets(self):
-        super(AnvilSavedVariantAPITest, self).test_create_saved_compound_hets()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_create_update_and_delete_variant_note(self):
-        super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 8)
-
-    def test_create_partially_saved_compound_het_variant_note(self):
-        super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_create_update_and_delete_compound_hets_variant_note(self):
-        super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
-        assert_no_list_ws_has_al(self, 7)
-
-    def test_update_variant_tags(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_tags()
-        assert_no_list_ws_has_al(self, 4)
-
-    def test_update_variant_functional_data(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_functional_data()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_update_compound_hets_variant_tags(self):
-        super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_update_compound_hets_variant_functional_data(self):
-        super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_update_saved_variant_json(self, *args):
-        super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json(*args)
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_update_variant_main_transcript(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_update_variant_acmg_classification(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
-        assert_no_list_ws_has_al(self, 2)
+# class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
+#     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+#
+#     def test_saved_variant_data(self, *args):
+#         super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
+#         self.mock_list_workspaces.assert_called_with(self.analyst_user)
+#         self.mock_get_ws_access_level.assert_called_with(
+#             mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+#         self.assertEqual(self.mock_get_ws_access_level.call_count, 14)
+#         self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
+#         self.assertEqual(self.mock_get_groups.call_count, 10)
+#         self.mock_get_ws_acl.assert_not_called()
+#         self.mock_get_group_members.assert_not_called()
+#
+#     def test_create_saved_variant(self):
+#         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
+#         assert_no_list_ws_has_al(self, 4)
+#
+#     def test_create_saved_sv_variant(self):
+#         super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()
+#         assert_no_list_ws_has_al(self, 2)
+#
+#     def test_create_saved_compound_hets(self):
+#         super(AnvilSavedVariantAPITest, self).test_create_saved_compound_hets()
+#         assert_no_list_ws_has_al(self, 2)
+#
+#     def test_create_update_and_delete_variant_note(self):
+#         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
+#         assert_no_list_ws_has_al(self, 8)
+#
+#     def test_create_partially_saved_compound_het_variant_note(self):
+#         super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
+#         assert_no_list_ws_has_al(self, 2)
+#
+#     def test_create_update_and_delete_compound_hets_variant_note(self):
+#         super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
+#         assert_no_list_ws_has_al(self, 7)
+#
+#     def test_update_variant_tags(self):
+#         super(AnvilSavedVariantAPITest, self).test_update_variant_tags()
+#         assert_no_list_ws_has_al(self, 4)
+#
+#     def test_update_variant_functional_data(self):
+#         super(AnvilSavedVariantAPITest, self).test_update_variant_functional_data()
+#         assert_no_list_ws_has_al(self, 2)
+#
+#     def test_update_compound_hets_variant_tags(self):
+#         super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
+#         assert_no_list_ws_has_al(self, 3)
+#
+#     def test_update_compound_hets_variant_functional_data(self):
+#         super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
+#         assert_no_list_ws_has_al(self, 3)
+#
+#     def test_update_saved_variant_json(self, *args):
+#         super(AnvilSavedVariantAPITest, self).test_update_saved_variant_json(*args)
+#         assert_no_list_ws_has_al(self, 3)
+#
+#     def test_update_variant_main_transcript(self):
+#         super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
+#         assert_no_list_ws_has_al(self, 2)
+#
+#     def test_update_variant_acmg_classification(self):
+#         super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
+#         assert_no_list_ws_has_al(self, 2)

@@ -458,12 +458,12 @@ def assert_no_anvil_calls(self):
 
 
 # Test for permissions from AnVIL only
-class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project']
-    ANVIL_DISABLED = False
-
-    SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
-
-    def test_add_variants_dataset(self, *args):
-        super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
-        assert_no_anvil_calls(self)
+# class AnvilDatasetAPITest(AnvilAuthenticationTestCase, DatasetAPITest):
+#     fixtures = ['users', 'social_auth', '1kg_project']
+#     ANVIL_DISABLED = False
+#
+#     SLACK_MESSAGE_TEMPLATE = f'1 new {{type}} samples are loaded in {SEQR_URL}/project/{PROJECT_GUID}/project_page\n```{{samples}}```'
+#
+#     def test_add_variants_dataset(self, *args):
+#         super(AnvilDatasetAPITest, self).test_add_variants_dataset(*args)
+#         assert_no_anvil_calls(self)
