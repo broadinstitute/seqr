@@ -637,11 +637,13 @@ ANALYTE_TABLE_COLUMNS = [
     'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
     'sample_transformation_detail',
 ]
-EXPERIMENT_TABLE_COLUMNS = [
-    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method', 'read_length',
-    'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file', 'date_data_generation',
-    'target_insert_size', 'sequencing_platform',
+EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
+    'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
+    'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
 ]
+EXPERIMENT_TABLE_COLUMNS = [
+    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
+] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
 READ_TABLE_COLUMNS = [
     'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
     'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
@@ -716,13 +718,19 @@ def gregor_export(request, consent_code):
 
     airtable_sample_records, airtable_session = _get_airtable_samples(
         individuals.values_list('individual_id', flat=True)[:100], request.user,
-        fields=['SMID', 'Recontactable'],
+        fields=['SMID', 'CollaboratorSampleID', 'Recontactable'],
     )
+    airtable_metadata = airtable_session.fetch_records(
+        'GREGoR Data Model', fields=['SMID'] + EXPERIMENT_TABLE_AIRTABLE_FIELDS,
+        or_filters={'{SMID}': [r['SMID'] for r in airtable_sample_records.values()]},
+    )
+    airtable_metadata_by_smid = {r['SMID']: r for r in airtable_metadata.values()}
 
     participant_rows = []
     family_map = {}
     phenotype_rows = []
     analyte_rows = []
+    experiment_rows = []
     for individual in individuals:
         # family table
         family = individual.family
@@ -755,8 +763,13 @@ def gregor_export(request, consent_code):
 
         # analyte table
         if airtable_sample:  # TODO add handling for missing airtable records
-            analyte_id = f'Broad_{airtable_sample["SMID"]}'
+            sm_id = airtable_sample['SMID']
+            analyte_id = f'Broad_{sm_id}'
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
+
+            airtable_metadata = airtable_metadata_by_smid.get(sm_id)
+            if airtable_metadata:
+                experiment_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_row(airtable_sample)))
 
     airtable_rows = []  # TODO populate airtable data once new columns are confirmed
 
@@ -765,7 +778,7 @@ def gregor_export(request, consent_code):
         ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
         ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
         ['analyte', ANALYTE_TABLE_COLUMNS, analyte_rows],
-        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows],
+        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, experiment_rows],
         ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
         ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
@@ -825,6 +838,12 @@ def _get_analyte_row(individual):
         'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
     }
 
+
+def _get_experiment_row(airtable_sample):
+    return {
+        'experiment_dna_short_read_id': '',   # TODO
+        'experiment_sample_id': airtable_sample['CollaboratorSampleID'],
+    }
 
 # Discovery Sheet
 
