@@ -558,43 +558,37 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     return discovery_rows
 
 
-MAX_FILTER_IDS = 500
 SAMPLE_ID_FIELDS = ['SeqrCollaboratorSampleID', 'CollaboratorSampleID']
 SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
+def _get_airtable_samples(sample_ids, user, fields, list_fields=None):
+    list_fields = list_fields or []
     session = AirtableSession(user)
-    raw_records = {}
-    # Airtable does handle its own pagination, but the query URI has a max length so the filter formula needs to be truncated
-    for index in range(0, len(sample_ids), MAX_FILTER_IDS):
-        raw_records.update(session.fetch_records(
-            'Samples',
-            fields=SAMPLE_ID_FIELDS + SINGLE_SAMPLE_FIELDS + LIST_SAMPLE_FIELDS,
-            or_filters={
-                '{CollaboratorSampleID}': sample_ids[index:index+MAX_FILTER_IDS],
-                '{SeqrCollaboratorSampleID}': sample_ids[index:index + MAX_FILTER_IDS],
-            },
-        ))
+    raw_records = session.fetch_records(
+        'Samples', fields=SAMPLE_ID_FIELDS + fields + list_fields,
+        or_filters={
+            '{CollaboratorSampleID}': sample_ids,
+            '{SeqrCollaboratorSampleID}': sample_ids,
+        },
+    )
+
     sample_records = {}
-    collaborator_ids = set()
     for record in raw_records.values():
         record_id = next(record[id_field] for id_field in SAMPLE_ID_FIELDS if record.get(id_field))
         if record.get('Collaborator'):
-            collaborator = record['Collaborator'][0]
-            collaborator_ids.add(collaborator)
-            record['Collaborator'] = collaborator
+            record['Collaborator'] = record['Collaborator'][0]
 
         parsed_record = sample_records.get(record_id, {})
-        for field in SINGLE_SAMPLE_FIELDS:
+        for field in fields:
             if field in record:
                 if field in parsed_record and parsed_record[field] != record[field]:
                     error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
                         record_id, field)
                     raise Exception(error)
                 parsed_record[field] = record[field]
-        for field in LIST_SAMPLE_FIELDS:
+        for field in list_fields:
             if field in record:
                 value = parsed_record.get(field, set())
                 value.update(record[field])
@@ -602,9 +596,19 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
         sample_records[record_id] = parsed_record
 
-    if include_collaborator and collaborator_ids:
+    return sample_records, session
+
+
+def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
+    sample_records, session = _get_airtable_samples(
+        sample_ids, user, fields=SINGLE_SAMPLE_FIELDS, list_fields=LIST_SAMPLE_FIELDS,
+    )
+
+    if include_collaborator:
+        collaborator_ids = {record['Collaborator'] for record in sample_records.values()}
         collaborator_map = session.fetch_records(
-            'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids})
+            'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
+        ) if collaborator_ids else {}
 
         for sample in sample_records.values():
             sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
@@ -710,6 +714,11 @@ def gregor_export(request, consent_code):
         sample__elasticsearch_index__isnull=False,
     ).distinct().prefetch_related('family__project', 'mother', 'father')
 
+    airtable_sample_records, airtable_session = _get_airtable_samples(
+        individuals.values_list('individual_id', flat=True)[:100], request.user,
+        fields=['SMID', 'Recontactable'],
+    )
+
     participant_rows = []
     family_map = {}
     phenotype_rows = []
@@ -724,8 +733,9 @@ def gregor_export(request, consent_code):
             family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
 
         # participant table
+        airtable_sample = airtable_sample_records.get(individual.individual_id, {})
         participant_id = f'Broad_{individual.individual_id}'
-        participant = _get_participant_row(individual)
+        participant = _get_participant_row(individual, airtable_sample)
         participant.update(family_map[family])
         participant.update({
             'participant_id': participant_id,
@@ -744,7 +754,9 @@ def gregor_export(request, consent_code):
         ]
 
         # analyte table
-        analyte_rows.append(dict(participant_id=participant_id, **_get_analyte_row(individual)))
+        if airtable_sample:  # TODO add handling for missing airtable records
+            analyte_id = f'Broad_{airtable_sample["SMID"]}'
+            analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
     airtable_rows = []  # TODO populate airtable data once new columns are confirmed
 
@@ -770,7 +782,7 @@ def _get_gregor_family_row(family):
     }
 
 
-def _get_participant_row(individual):
+def _get_participant_row(individual, airtable_sample):
     participant = {
         'gregor_center': 'Broad',
         'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
@@ -782,7 +794,7 @@ def _get_participant_row(individual):
         'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
         'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
         'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
-        'recontactable': None,  # TODO populate airtable data once new columns are confirmed
+        'recontactable': airtable_sample.get('Recontactable') or 'Unknown',
     }
     if individual.birth_year and individual.birth_year > 0:
         participant.update({
@@ -808,7 +820,6 @@ def _get_phenotype_row(feature):
 
 def _get_analyte_row(individual):
     return {
-        'analyte_id': f'Broad_{individual.individual_id}',  # TODO this will change once Sam figures out what to do
         'analyte_type': individual.get_analyte_type_display(),
         'primary_biosample': individual.get_primary_biosample_display(),
         'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
