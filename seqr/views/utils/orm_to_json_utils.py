@@ -716,6 +716,7 @@ def get_json_for_locus_list(locus_list, user):
         gene_id = item.get('geneId')
         if gene_id:
             item['pagene'] = pg_genes_by_id.get(gene_id)
+    _add_pa_locus_lists([result], user)
 
     return result
 
