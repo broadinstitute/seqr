@@ -814,7 +814,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                     }
                 )
 
-                self.assertListEqual(params['get_models_json'](models), params['expected_models_json'])
+                self.assertListEqual(list(params['get_models_json'](models)), params['expected_models_json'])
 
     @classmethod
     def _join_data(cls, data):

@@ -333,8 +333,8 @@ class Family(ModelWithGUID):
         unique_together = ('project', 'family_id')
 
         json_fields = [
-            'guid', 'family_id', 'display_name', 'description', 'analysis_status', 'pedigree_image', 'created_date',
-            'post_discovery_omim_number', 'assigned_analyst', 'pedigree_dataset', 'coded_phenotype',
+            'guid', 'family_id', 'description', 'analysis_status', 'created_date',
+            'post_discovery_omim_number', 'pedigree_dataset', 'coded_phenotype',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',
@@ -592,7 +592,7 @@ class Individual(ModelWithGUID):
         unique_together = ('family', 'individual_id')
 
         json_fields = [
-            'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
+            'guid', 'individual_id', 'sex', 'affected', 'display_name', 'notes',
             'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
             'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
             'affected_relatives', 'expected_inheritance', 'disorders', 'candidate_genes', 'rejected_genes',
