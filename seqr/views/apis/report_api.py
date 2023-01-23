@@ -840,9 +840,10 @@ def _get_analyte_row(individual):
 
 
 def _get_experiment_row(airtable_sample):
+    collaborator_sample_id = airtable_sample['CollaboratorSampleID']
     return {
-        'experiment_dna_short_read_id': '',   # TODO
-        'experiment_sample_id': airtable_sample['CollaboratorSampleID'],
+        'experiment_dna_short_read_id': f'Broad_{collaborator_sample_id}',
+        'experiment_sample_id': collaborator_sample_id,
     }
 
 # Discovery Sheet
