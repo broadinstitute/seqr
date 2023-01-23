@@ -618,6 +618,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
 # GREGoR metadata
 
+SMID_FIELD = 'SMID'
 PARTICIPANT_TABLE_COLUMNS = [
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
@@ -716,15 +717,7 @@ def gregor_export(request, consent_code):
         sample__elasticsearch_index__isnull=False,
     ).distinct().prefetch_related('family__project', 'mother', 'father')
 
-    airtable_sample_records, airtable_session = _get_airtable_samples(
-        individuals.values_list('individual_id', flat=True)[:100], request.user,
-        fields=['SMID', 'CollaboratorSampleID', 'Recontactable'],
-    )
-    airtable_metadata = airtable_session.fetch_records(
-        'GREGoR Data Model', fields=['SMID'] + EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_COLUMNS + CALLED_TABLE_COLUMNS,
-        or_filters={'{SMID}': [r['SMID'] for r in airtable_sample_records.values()]},
-    )
-    airtable_metadata_by_smid = {r['SMID']: r for r in airtable_metadata.values()}
+    airtable_sample_records = _get_gregor_airtable_data(individuals, request.user)
 
     participant_rows = []
     family_map = {}
@@ -763,11 +756,10 @@ def gregor_export(request, consent_code):
 
         # analyte table
         if airtable_sample:  # TODO add handling for missing airtable records
-            sm_id = airtable_sample['SMID']
-            analyte_id = f'Broad_{sm_id}'
+            analyte_id = f'Broad_{airtable_sample[SMID_FIELD]}'
             analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-            airtable_metadata = airtable_metadata_by_smid.get(sm_id)
+            airtable_metadata = airtable_sample.get('metadata')
             if airtable_metadata:
                 airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_ids(airtable_sample)))
 
@@ -781,6 +773,25 @@ def gregor_export(request, consent_code):
         ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
     ], f'GREGoR Reports {consent_code}', file_format='tsv')
+
+
+def _get_gregor_airtable_data(individuals, user):
+    sample_records, session = _get_airtable_samples(
+        individuals.values_list('individual_id', flat=True)[:100], user, # TODO no limit
+        fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
+    )
+
+    airtable_metadata = session.fetch_records(
+        'GREGoR Data Model',
+        fields=[SMID_FIELD] + EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_COLUMNS + CALLED_TABLE_COLUMNS,
+        or_filters={f'{SMID_FIELD}': [r[SMID_FIELD] for r in sample_records.values()]},
+    )
+    airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
+
+    for sample in sample_records.values():
+        sample['metadata'] = airtable_metadata_by_smid.get(sample[SMID_FIELD])
+
+    return sample_records
 
 
 def _get_gregor_family_row(family):
