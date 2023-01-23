@@ -1298,8 +1298,9 @@
         "disease_id": "OMIM:618460",
         "disease_name": "Khan-Khan-Katsanis syndrome",
         "scores": {
-            "post_test_probability": 0,
-            "compositeLR": 0.066
+            "exomiser_score": 0.977923765,
+            "phenotype_score": 0.603998205,
+            "variant_score": 1
         }
     }
 },
@@ -1314,8 +1315,9 @@
         "disease_id": "OMIM:219800",
         "disease_name": "Cystinosis, nephropathic",
         "scores": {
-            "post_test_probability": 0,
-            "compositeLR": 0.003
+            "exomiser_score": 0.969347946,
+            "phenotype_score": 0.443567539,
+            "variant_score": 0.999200702
         }
     }
 },
@@ -1331,6 +1333,22 @@
         "disease_name": "Cystinosis, nephropathic",
         "scores": {
             "post_test_probability": 0,
+            "compositeLR": 0.003
+        }
+    }
+},
+{
+    "model": "seqr.phenotypeprioritization",
+    "pk": 4,
+    "fields": {
+        "individual": 1,
+        "gene_id": "ENSG00000268904",
+        "tool": "lirical",
+        "rank": 11,
+        "disease_id": "OMIM:219801",
+        "disease_name": "Cystinosis, no syndrome",
+        "scores": {
+            "post_test_probability": 0.1,
             "compositeLR": 0.003
         }
     }

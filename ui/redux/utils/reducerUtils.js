@@ -1,10 +1,11 @@
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
+import { toSnakecase } from 'shared/utils/stringUtils'
 
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 export const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
+export const RECEIVE_PROJECT_CHILD_ENTITES = 'RECEIVE_PROJECT_CHILD_ENTITES'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
@@ -37,10 +38,9 @@ export const updateEntity = (
 export const loadProjectChildEntities = (
   projectGuid, entityType, dispatchType, receiveDispatchType,
 ) => (dispatch, getState) => {
-  const { projectsByGuid } = getState()
-  const project = projectsByGuid[projectGuid]
+  const { loadedProjectChildEntities } = getState()
 
-  if (!project[`${toCamelcase(entityType)}Loaded`]) {
+  if (!(loadedProjectChildEntities[projectGuid] || {})[entityType]) {
     dispatch({ type: dispatchType })
     new HttpRequestHelper(`/api/project/${projectGuid}/get_${toSnakecase(entityType)}`,
       (responseJson) => {
@@ -48,6 +48,7 @@ export const loadProjectChildEntities = (
         if (receiveDispatchType) {
           dispatch({ type: receiveDispatchType, updatesById: responseJson })
         }
+        dispatch({ type: RECEIVE_PROJECT_CHILD_ENTITES, updatesById: { [projectGuid]: { [entityType]: true } } })
       },
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })

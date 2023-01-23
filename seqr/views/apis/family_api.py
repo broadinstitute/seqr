@@ -16,9 +16,10 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family,  get_json_for_family_note, get_json_for_samples, \
     get_json_for_matchmaker_submissions, get_json_for_analysis_groups
-from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types
+from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
+    MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization
+    PhenotypePrioritization, Project
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions, service_account_access
 from seqr.views.utils.variant_utils import get_phenotype_prioritization
@@ -72,11 +73,13 @@ def family_variant_tag_summary(request, family_guid):
 
     response = families_discovery_tags([{'familyGuid': family_guid}])
 
-    family_tag_type_counts = VariantTag.objects.filter(saved_variants__family=family).values(
-        'variant_tag_type__name').annotate(count=Count('*'))
+    tags = VariantTag.objects.filter(saved_variants__family=family)
+    family_tag_type_counts = tags.values('variant_tag_type__name').annotate(count=Count('*'))
     response['familyTagTypeCounts'] = {
         family_guid: {c['variant_tag_type__name']: c['count'] for c in family_tag_type_counts},
     }
+    response['familyTagTypeCounts'][family_guid][MME_TAG_NAME] = tags.filter(
+        saved_variants__matchmakersubmissiongenes__isnull=False).values('saved_variants__guid').distinct().count()
 
     response['projectsByGuid'] = {project.guid: {}}
     add_project_tag_types(response['projectsByGuid'])
@@ -438,10 +441,10 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
 
 @login_and_policies_required
 def get_family_phenotype_gene_scores(request, family_guid):
-    family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    project = Project.objects.get(family__guid=family_guid)
+    check_project_permissions(project, request.user)
 
-    phenotype_prioritization = get_phenotype_prioritization([family])
+    phenotype_prioritization = get_phenotype_prioritization([family_guid])
     gene_ids = {gene_id for indiv in phenotype_prioritization.values() for gene_id in indiv.keys()}
     return create_json_response({
         'phenotypeGeneScores': phenotype_prioritization,
