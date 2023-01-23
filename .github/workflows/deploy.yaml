@@ -68,6 +68,7 @@ jobs:
 
             gcloud beta run jobs update \
               "$cloud_run_target" \
+              --region "australia-southeast1" \
               --image="$DOCKER_IMAGE:gcloud-$DEPLOY_TARGET"
           
           done;
@@ -83,7 +84,9 @@ jobs:
       - name: apply schema
         run: |
           gcloud beta run jobs execute --wait \
-            seqr-$DEPLOY_TARGET-schema-migrator
+            --region australia-southeast1 \
+            $DEPLOY_TARGET-schema-migrator
 
           gcloud beta run jobs execute --wait \
-            seqr-$DEPLOY_TARGET-reference-schema-migrator
+            --region australia-southeast1 \
+            $DEPLOY_TARGET-reference-schema-migrator
