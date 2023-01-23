@@ -392,6 +392,10 @@ export const getLocusListTableData = createSelector(
       data = data.filter(locusList => !locusListGuids.includes(locusList.locusListGuid))
     }
 
+    data = data.map(({ items, ...locusList }) => (items ?
+      { geneNames: items.map(({ gene }) => (gene || {}).geneSymbol), ...locusList } :
+      locusList))
+
     return data.reduce((acc, locusList) => {
       if (locusList.canEdit) {
         acc.My.push(locusList)
