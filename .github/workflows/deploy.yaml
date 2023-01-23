@@ -64,11 +64,13 @@ jobs:
         run: |
           # cloud run jobs to update
           run_job_names=("$DEPLOY_TARGET-schema-migrator" "$DEPLOY_TARGET-reference-schema-migrator" "$DEPLOY_TARGET-reference-updater" "$DEPLOY_TARGET-reference-update-hpo-terms" "$DEPLOY_TARGET-reference-import-panels")
-          for cloud_run_target in run_job_names; do
-          
+          for cloud_run_target in "${run_job_names[@]}"; do
+
             gcloud beta run jobs update \
-              $cloud_run_target \
-              --image=$DOCKER_IMAGE:gcloud-$DEPLOY_TARGET
+              "$cloud_run_target" \
+              --image="$DOCKER_IMAGE:gcloud-$DEPLOY_TARGET"
+          
+          done;
 
       - name: restart seqr instances
         run: |
