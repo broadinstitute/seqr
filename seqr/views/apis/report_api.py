@@ -721,7 +721,7 @@ def gregor_export(request, consent_code):
         fields=['SMID', 'CollaboratorSampleID', 'Recontactable'],
     )
     airtable_metadata = airtable_session.fetch_records(
-        'GREGoR Data Model', fields=['SMID'] + EXPERIMENT_TABLE_AIRTABLE_FIELDS,
+        'GREGoR Data Model', fields=['SMID'] + EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_COLUMNS + CALLED_TABLE_COLUMNS,
         or_filters={'{SMID}': [r['SMID'] for r in airtable_sample_records.values()]},
     )
     airtable_metadata_by_smid = {r['SMID']: r for r in airtable_metadata.values()}
@@ -730,7 +730,7 @@ def gregor_export(request, consent_code):
     family_map = {}
     phenotype_rows = []
     analyte_rows = []
-    experiment_rows = []
+    airtable_rows = []
     for individual in individuals:
         # family table
         family = individual.family
@@ -769,16 +769,14 @@ def gregor_export(request, consent_code):
 
             airtable_metadata = airtable_metadata_by_smid.get(sm_id)
             if airtable_metadata:
-                experiment_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_row(airtable_sample)))
-
-    airtable_rows = []  # TODO populate airtable data once new columns are confirmed
+                airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_ids(airtable_sample)))
 
     return export_multiple_files([
         ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
         ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
         ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
         ['analyte', ANALYTE_TABLE_COLUMNS, analyte_rows],
-        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, experiment_rows],
+        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows],
         ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
         ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
@@ -839,7 +837,7 @@ def _get_analyte_row(individual):
     }
 
 
-def _get_experiment_row(airtable_sample):
+def _get_experiment_ids(airtable_sample):
     collaborator_sample_id = airtable_sample['CollaboratorSampleID']
     return {
         'experiment_dna_short_read_id': f'Broad_{collaborator_sample_id}',
