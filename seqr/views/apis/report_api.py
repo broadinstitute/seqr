@@ -754,14 +754,16 @@ def gregor_export(request, consent_code):
             dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
         ]
 
-        # analyte table
-        if airtable_sample:  # TODO add handling for missing airtable records
+        analyte_id = None
+        # airtable data
+        if airtable_sample:
             analyte_id = f'Broad_{airtable_sample[SMID_FIELD]}'
-            analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
-
             airtable_metadata = airtable_sample.get('metadata')
             if airtable_metadata:
                 airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_ids(airtable_sample)))
+
+        # analyte table
+        analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
     return export_multiple_files([
         ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
@@ -777,7 +779,7 @@ def gregor_export(request, consent_code):
 
 def _get_gregor_airtable_data(individuals, user):
     sample_records, session = _get_airtable_samples(
-        individuals.values_list('individual_id', flat=True)[:100], user, # TODO no limit
+        individuals.values_list('individual_id', flat=True), user,
         fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
     )
 
