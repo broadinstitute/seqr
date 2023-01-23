@@ -301,21 +301,13 @@ class ReportAPITest(object):
 
         self.check_no_analyst_no_access(url)
 
-    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     # @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     # @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     # @responses.activate
-    # def test_anvil_export(self, mock_google_authenticated, mock_zip, mock_analyst_group):
+    # def test_anvil_export(self, mock_google_authenticated,  mock_zip):
     #     mock_google_authenticated.return_value = False
     #     url = reverse(anvil_export, args=[PROJECT_GUID])
     #     self.check_analyst_login(url)
-    #
-    #     response = self.client.get(url)
-    #     self.assertEqual(response.status_code, 403)
-    #     self.assertEqual(response.json()['error'], 'Permission Denied')
-    #     mock_analyst_group.__bool__.return_value = True
-    #     mock_analyst_group.resolve_expression.return_value = 'analysts'
     #
     #     unauthorized_project_url = reverse(anvil_export, args=[NO_ANALYST_PROJECT_GUID])
     #     response = self.client.get(unauthorized_project_url)
@@ -327,8 +319,7 @@ class ReportAPITest(object):
     #     self.assertEqual(response.json()['error'], 'Permission Denied')
     #     mock_google_authenticated.return_value = True
     #
-    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS,
-    #                   status=200)
+    #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_SAMPLE_RECORDS, status=200)
     #     response = self.client.get(url)
     #     self.assertEqual(response.status_code, 200)
     #     self.assertEqual(
@@ -359,7 +350,7 @@ class ReportAPITest(object):
     #
     #     self.assertEqual(sample_file[0], [
     #         'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
-    #         '05-sample_source', '06-tissue_affected_status', ])
+    #         '05-sample_source', '06-tissue_affected_status',])
     #     self.assertIn(
     #         ['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-'],
     #         sample_file,
@@ -379,10 +370,10 @@ class ReportAPITest(object):
     #         '10-Ref', '11-Alt', '12-hgvsc', '13-hgvsp', '14-Transcript', '15-sv_name', '16-sv_type',
     #         '17-significance', '18-discovery_notes'])
     #     self.assertIn([
-    #         'HG00731', 'HG00731', 'HG00731', 'RP11-206L10.5', 'Known', 'Autosomal recessive (homozygous)',
+    #         'HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'Autosomal recessive (homozygous)',
     #         'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', '-', '-', '-', '-', '-'], discovery_file)
     #     self.assertIn([
-    #         'NA19675_1', 'NA19675_1', 'NA19675', 'RP11-206L10.5', 'Tier 1 - Candidate', 'de novo',
+    #         'NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Tier 1 - Candidate', 'de novo',
     #         'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436',
     #         '-', '-', '-', '-'], discovery_file)
     #     self.assertIn([
@@ -398,27 +389,22 @@ class ReportAPITest(object):
     #         'p.Ala196Leu): 19-1912633-G-T, 19-1912634-C-T'],
     #         discovery_file)
     #
+    #     self.check_no_analyst_no_access(url)
+    #
     #     # Test non-broad analysts do not have access
     #     self.login_pm_user()
     #     response = self.client.get(url)
     #     self.assertEqual(response.status_code, 403)
     #     self.assertEqual(response.json()['error'], 'Permission Denied')
     #
+    # @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 4)
     # @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
-    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
     # @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     # @responses.activate
-    # def test_sample_metadata_export(self, mock_google_authenticated, mock_analyst_group):
+    # def test_sample_metadata_export(self, mock_google_authenticated):
     #     mock_google_authenticated.return_value = False
     #     url = reverse(sample_metadata_export, args=[COMPOUND_HET_PROJECT_GUID])
     #     self.check_analyst_login(url)
-    #
-    #     response = self.client.get(url)
-    #     self.assertEqual(response.status_code, 403)
-    #     self.assertEqual(response.json()['error'], 'Permission Denied')
-    #     mock_analyst_group.__bool__.return_value = True
-    #     mock_analyst_group.resolve_expression.return_value = 'analysts'
     #
     #     unauthorized_project_url = reverse(sample_metadata_export, args=[NO_ANALYST_PROJECT_GUID])
     #     response = self.client.get(unauthorized_project_url)
@@ -427,7 +413,7 @@ class ReportAPITest(object):
     #
     #     response = self.client.get(url)
     #     self.assertEqual(response.status_code, 403)
-    #     self.assertEqual(response.json()['error'], 'Permission Denied')
+    #     self.assertEqual( response.json()['error'], 'Permission Denied')
     #     mock_google_authenticated.return_value = True
     #
     #     # Test invalid airtable responses
@@ -440,7 +426,7 @@ class ReportAPITest(object):
     #     response = self.client.get(url)
     #     self.assertEqual(response.status_code, 500)
     #     self.assertIn(response.json()['error'], ['Unable to retrieve airtable data: No JSON object could be decoded',
-    #                                              'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
+    #                                     'Unable to retrieve airtable data: Expecting value: line 1 column 1 (char 0)'])
     #
     #     responses.reset()
     #     responses.add(responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL),
@@ -454,10 +440,12 @@ class ReportAPITest(object):
     #     self.assertEqual(
     #         response.json()['error'],
     #         'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
-    #     self.assertEqual(len(responses.calls), 2)
+    #     self.assertEqual(len(responses.calls), 3)
+    #     first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889'," \
+    #                     "{SeqrCollaboratorSampleID}='NA20885')"
     #     expected_params = {
     #         'fields[]': mock.ANY,
-    #         'filterByFormula': "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885',{SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')",
+    #         'filterByFormula': first_formula,
     #     }
     #     expected_fields = [
     #         'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
@@ -465,9 +453,13 @@ class ReportAPITest(object):
     #     ]
     #     self.assertDictEqual(responses.calls[0].request.params, expected_params)
     #     self.assertListEqual(_get_list_param(responses.calls[0].request, 'fields%5B%5D'), expected_fields)
-    #     expected_params['offset'] = 'abc123'
-    #     self.assertDictEqual(responses.calls[1].request.params, expected_params)
+    #     expected_offset_params = {'offset': 'abc123'}
+    #     expected_offset_params.update(expected_params)
+    #     self.assertDictEqual(responses.calls[1].request.params, expected_offset_params)
     #     self.assertListEqual(_get_list_param(responses.calls[1].request, 'fields%5B%5D'), expected_fields)
+    #     expected_params['filterByFormula'] = "OR({SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')"
+    #     self.assertDictEqual(responses.calls[2].request.params, expected_params)
+    #     self.assertListEqual(_get_list_param(responses.calls[2].request, 'fields%5B%5D'), expected_fields)
     #
     #     # Test success
     #     response = self.client.get(url)
@@ -475,8 +467,8 @@ class ReportAPITest(object):
     #     response_json = response.json()
     #     self.assertListEqual(list(response_json.keys()), ['rows'])
     #     self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
-    #     self.assertEqual(len(responses.calls), 4)
-    #     self.assertDictEqual(responses.calls[3].request.params, {
+    #     self.assertEqual(len(responses.calls), 6)
+    #     self.assertDictEqual(responses.calls[-1].request.params, {
     #         'fields[]': 'CollaboratorID',
     #         'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
     #     })
@@ -488,14 +480,14 @@ class ReportAPITest(object):
     #     self.assertEqual(response.status_code, 200)
     #     self.assertDictEqual(response.json(), {'rows': []})
     #
+    #     self.check_no_analyst_no_access(url)
+    #
     #     # Test non-broad analysts do not have access
     #     self.login_pm_user()
     #     response = self.client.get(url)
     #     self.assertEqual(response.status_code, 403)
     #     self.assertEqual(response.json()['error'], 'Permission Denied')
     #
-    # @mock.patch('seqr.views.apis.report_api.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    # @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
     # @mock.patch('seqr.views.apis.report_api.datetime')
     # @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     # @responses.activate
@@ -518,12 +510,11 @@ class ReportAPITest(object):
     #     ])
     #     participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
     #
-    #     self.assertEqual(len(participant_file), 15)
+    #     self.assertEqual(len(participant_file), 14)
     #     self.assertEqual(participant_file[0], [
     #         'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     #         'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
-    #         'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity',
-    #         'ancestry_detail',
+    #         'proband_relationship_detail', 'sex', 'sex_detail', 'reported_race', 'reported_ethnicity', 'ancestry_detail',
     #         'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
     #     ])
     #     self.assertIn([
@@ -532,7 +523,7 @@ class ReportAPITest(object):
     #         'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
     #     ], participant_file)
     #
-    #     self.assertEqual(len(family_file), 11)
+    #     self.assertEqual(len(family_file), 10)
     #     self.assertEqual(family_file[0], [
     #         'family_id', 'consanguinity', 'consanguinity_detail', 'pedigree_file', 'pedigree_file_detail',
     #         'family_history_detail',
@@ -551,7 +542,7 @@ class ReportAPITest(object):
     #         '', 'Broad_NA19675_1', 'HP:0001674', 'Absent', 'HPO', 'originally indicated', '', '',
     #     ], phenotype_file)
     #
-    #     self.assertEqual(len(analyte_file), 15)
+    #     self.assertEqual(len(analyte_file), 14)
     #     self.assertEqual(analyte_file[0], [
     #         'analyte_id', 'participant_id', 'analyte_type', 'analyte_processing_details', 'primary_biosample',
     #         'primary_biosample_id', 'primary_biosample_details', 'tissue_affected_status', 'age_at_collection',
@@ -559,7 +550,8 @@ class ReportAPITest(object):
     #         'time_to_freeze', 'sample_transformation_detail',
     #     ])
     #     self.assertIn(
-    #         ['Broad_NA19675_1', 'Broad_NA19675_1', '', '', '', '', '', '', '', '', '', '', '', '', ''], analyte_file)
+    #         ['Broad_NA19675_1', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
+    #         analyte_file)
     #
     #     self.assertEqual(len(experiment_file), 1)
     #     self.assertEqual(experiment_file[0], [
@@ -583,8 +575,8 @@ class ReportAPITest(object):
     #         'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
     #         'caller_software', 'variant_types', 'analysis_details',
     #     ])
-
-        self.check_no_analyst_no_access(url)
+    #
+    #     self.check_no_analyst_no_access(url)
 
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):

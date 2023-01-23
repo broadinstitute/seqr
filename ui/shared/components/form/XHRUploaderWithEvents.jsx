@@ -4,6 +4,7 @@
 import React from 'react'
 import Cookies from 'js-cookie'
 import PropTypes from 'prop-types'
+import { Message } from 'semantic-ui-react'
 
 // XHRUploader widget: https://github.com/rma-consulting/react-xhr-uploader/blob/master/src/index.js
 import XHRUploader from 'react-xhr-uploader'
@@ -23,6 +24,7 @@ class XHRUploaderWithEvents extends XHRUploader {
     onUploadStarted: PropTypes.func,
     onUploadFinished: PropTypes.func,
     initialState: PropTypes.object,
+    showError: PropTypes.bool,
   }
 
   constructor(props) {
@@ -46,6 +48,10 @@ class XHRUploaderWithEvents extends XHRUploader {
     )
   }
 
+  renderButton() {
+    return this.state.error && <Message error content={this.state.error} />
+  }
+
   /**
    * Override the default implementation to call the onUpload callback with the server's response and add CSRF header
    * Taken from https://github.com/harunhasdal/react-xhr-uploader/blob/master/src/index.js
@@ -67,7 +73,11 @@ class XHRUploaderWithEvents extends XHRUploader {
       xhr.onload = () => {
         progressCallback(100)
         if (this.props.onUploadFinished) {
-          this.props.onUploadFinished(xhr, this.state)
+          if (this.props.showError && xhr.status !== 200) {
+            this.setState({ error: `Error: ${xhr.statusText} (${xhr.status})` })
+          } else {
+            this.props.onUploadFinished(JSON.parse(xhr.response), this.state)
+          }
         }
       }
       xhr.upload.onprogress = (e) => {

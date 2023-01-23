@@ -3,7 +3,7 @@ import uniqBy from 'lodash/uniqBy'
 
 import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { NOTE_TAG_NAME } from 'shared/utils/constants'
+import { NOTE_TAG_NAME, MME_TAG_NAME } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
@@ -236,11 +236,13 @@ export const getVariantTagNotesByFamilyVariants = createSelector(
   },
 )
 
-export const getTagTypesByProject = createSelector(
+export const getSelectableTagTypesByProject = createSelector(
   getProjectsByGuid,
   projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
     ...acc,
-    [project.projectGuid]: (project.variantTagTypes || []).filter(vtt => vtt.name !== NOTE_TAG_NAME),
+    [project.projectGuid]: (project.variantTagTypes || []).filter(
+      vtt => vtt.name !== NOTE_TAG_NAME && vtt.name !== MME_TAG_NAME,
+    ),
   }), {}),
 )
 

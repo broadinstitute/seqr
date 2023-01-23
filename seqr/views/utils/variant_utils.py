@@ -6,7 +6,7 @@ import redis
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
+    RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization, Project
 from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
@@ -129,12 +129,12 @@ def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analy
     return locus_lists_by_guid
 
 
-def _get_rna_seq_outliers(gene_ids, families):
+def _get_rna_seq_outliers(gene_ids, family_guids):
     data_by_individual_gene = defaultdict(lambda: {'outliers': {}})
 
     outlier_data = get_json_for_rna_seq_outliers(
         RnaSeqOutlier.objects.filter(
-            gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, sample__individual__family__in=families),
+            gene_id__in=gene_ids, p_adjust__lt=RnaSeqOutlier.SIGNIFICANCE_THRESHOLD, sample__individual__family__guid__in=family_guids),
         nested_fields=[{'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid'},]
     )
     for data in outlier_data:
@@ -143,12 +143,13 @@ def _get_rna_seq_outliers(gene_ids, families):
     return data_by_individual_gene
 
 
-def get_phenotype_prioritization(families, gene_ids=None):
+def get_phenotype_prioritization(family_guids, gene_ids=None):
     data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     gene_filter = {'gene_id__in': gene_ids} if gene_ids is not None else {}
     data_dicts = _get_json_for_models(
-        PhenotypePrioritization.objects.filter(individual__family__in=families, **gene_filter).order_by('disease_id'),
+        PhenotypePrioritization.objects.filter(
+            individual__family__guid__in=family_guids, rank__lte=10, **gene_filter).order_by('disease_id'),
         nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
     )
 
@@ -160,7 +161,7 @@ def get_phenotype_prioritization(families, gene_ids=None):
 
 def _add_family_has_rna_tpm(families_by_guid):
     tpm_families = RnaSeqTpm.objects.filter(
-        sample__individual__family__guid__in=families_by_guid.keys()
+        sample__individual__family__guid__in=families_by_guid.keys(),
     ).values_list('sample__individual__family__guid', flat=True).distinct()
     for family_guid in tpm_families:
         families_by_guid[family_guid]['hasRnaTpmData'] = True
@@ -198,8 +199,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     loaded_family_guids = set()
     for variant in variants:
         loaded_family_guids.update(variant['familyGuids'])
-    families = Family.objects.filter(guid__in=loaded_family_guids).prefetch_related('project')
-    projects = {family.project for family in families}
+    projects = Project.objects.filter(family__guid__in=loaded_family_guids).distinct()
     project = list(projects)[0] if len(projects) == 1 else None
 
     discovery_tags = None
@@ -218,7 +218,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     response['genesById'] = genes
 
     mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
-        saved_variant__in=saved_variants).values(
+        saved_variant__guid__in=response['savedVariantsByGuid'].keys()).values(
         geneId=F('gene_id'), variantGuid=F('saved_variant__guid'), submissionGuid=F('matchmaker_submission__guid'))
     for s in mme_submission_genes:
         response_variant = response['savedVariantsByGuid'][s['variantGuid']]
@@ -226,8 +226,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             response_variant['mmeSubmissions'] = []
         response_variant['mmeSubmissions'].append(s)
 
-    submissions = get_json_for_matchmaker_submissions(
-        MatchmakerSubmission.objects.filter(matchmakersubmissiongenes__saved_variant__in=saved_variants))
+    submissions = get_json_for_matchmaker_submissions(MatchmakerSubmission.objects.filter(
+        matchmakersubmissiongenes__saved_variant__guid__in=response['savedVariantsByGuid'].keys()))
     response['mmeSubmissionsByGuid'] = {s['submissionGuid']: s for s in submissions}
 
     if add_all_context or request.GET.get(LOAD_PROJECT_TAG_TYPES_CONTEXT_PARAM) == 'true':
@@ -240,17 +240,18 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         add_project_tag_types(response['projectsByGuid'])
 
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
+        families = Family.objects.filter(guid__in=loaded_family_guids)
         add_families_context(
             response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
     if include_individual_gene_scores:
-        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), families)
+        response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), loaded_family_guids)
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
             _add_family_has_rna_tpm(families_by_guid)
 
-        response['phenotypeGeneScores'] = get_phenotype_prioritization(families, gene_ids=genes.keys())
+        response['phenotypeGeneScores'] = get_phenotype_prioritization(loaded_family_guids, gene_ids=genes.keys())
 
     return response
