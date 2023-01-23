@@ -473,7 +473,7 @@ def _check_results_permission(results_model, user, project_perm_check=None):
 
 def _get_search_context(results_model):
     project_families = defaultdict(list)
-    for family_guid, project_guid in results_model.families.values_list('guid', 'project__guid'):
+    for family_guid, project_guid in results_model.families.values_list('guid', 'project__guid').order_by('guid'):
         project_families[project_guid].append(family_guid)
 
     return {
