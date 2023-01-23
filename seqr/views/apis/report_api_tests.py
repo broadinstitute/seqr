@@ -80,7 +80,6 @@ AIRTABLE_SAMPLE_RECORDS = {
         "SequencingProduct": [
           "Mendelian Rare Disease Exome"
         ],
-        'Recontactable': 'Yes',
         "dbgap_submission": [
           "WES",
           "Array"
