@@ -645,11 +645,11 @@ EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
 EXPERIMENT_TABLE_COLUMNS = [
     'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
 ] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
-READ_TABLE_COLUMNS = [
-    'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
-    'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
-    'analysis_details',
+READ_TABLE_AIRTABLE_FIELDS = [
+    'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
+    'alignment_software', 'mean_coverage', 'analysis_details',
 ]
+READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
 CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
@@ -779,13 +779,14 @@ def gregor_export(request, consent_code):
 
 def _get_gregor_airtable_data(individuals, user):
     sample_records, session = _get_airtable_samples(
-        individuals.values_list('individual_id', flat=True), user,
+        individuals.order_by('individual_id').values_list('individual_id', flat=True), user,
         fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
     )
 
+    fields = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + READ_SET_TABLE_COLUMNS + CALLED_TABLE_COLUMNS
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
-        fields=[SMID_FIELD] + EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_COLUMNS + CALLED_TABLE_COLUMNS,
+        fields=[SMID_FIELD] + fields,
         or_filters={f'{SMID_FIELD}': [r[SMID_FIELD] for r in sample_records.values()]},
     )
     airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
