@@ -2,14 +2,14 @@ import json
 import logging
 import redis
 
-from settings import REDIS_SERVICE_HOSTNAME
+from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
 logger = logging.getLogger(__name__)
 
 
 def safe_redis_get_json(cache_key):
     try:
-        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, port=REDIS_SERVICE_PORT, socket_connect_timeout=3)
         value = redis_client.get(cache_key)
         if value:
             logger.info('Loaded {} from redis'.format(cache_key))
@@ -23,7 +23,7 @@ def safe_redis_get_json(cache_key):
 
 def safe_redis_set_json(cache_key, value, expire=None):
     try:
-        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3)
+        redis_client = redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, port=REDIS_SERVICE_PORT, socket_connect_timeout=3)
         redis_client.set(cache_key, json.dumps(value))
         if expire:
             redis_client.expire(cache_key, expire)

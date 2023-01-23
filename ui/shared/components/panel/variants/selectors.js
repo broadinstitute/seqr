@@ -15,21 +15,59 @@ import {
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
   getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual,
+  getPhenotypeGeneScoresByIndividual,
 } from 'redux/selectors'
 
-export const getRnaSeqOutilerDataByFamilyGene = createSelector(
+export const getIndividualGeneDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
-  (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
-    (acc, [individualGuid, rnaSeqData]) => {
-      const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
-        (acc2, [geneId, data]) => (data.isSignificant ?
-          { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
-        ), acc[familyGuid] || {},
-      )
+  getPhenotypeGeneScoresByIndividual,
+  (individualsByGuid, rnaSeqDataByIndividual, phenotypeGeneScoresByIndividual) => (
+    Object.entries(individualsByGuid).reduce((acc, [individualGuid, { familyGuid, displayName }]) => {
+      const rnaSeqData = rnaSeqDataByIndividual[individualGuid]?.outliers
+      const phenotypeGeneScores = phenotypeGeneScoresByIndividual[individualGuid]
+      if (rnaSeqData) {
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
+          (acc2, [geneId, data]) => (data.isSignificant ? {
+            ...acc2,
+            [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
+          } : acc2), acc[familyGuid].rnaSeqData || {},
+        )
+      }
+      if (phenotypeGeneScores) {
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].phenotypeGeneScores = Object.entries(phenotypeGeneScores).reduce(
+          (acc2, [geneId, dataByTool]) => ({
+            ...acc2,
+            [geneId]: Object.entries(dataByTool).reduce((acc3, [tool, data]) => ({
+              ...acc3,
+              [tool]: [...(acc3[tool] || []), ...data.map(d => ({
+                ...d, individualName: displayName, rowId: `${displayName}-${d.diseaseId}`,
+              }))],
+            }), acc2[geneId] || {}),
+          }), acc[familyGuid].phenotypeGeneScores || {},
+        )
+      }
       return acc
-    }, {},
+    }, {})
+  ),
+)
+
+export const getIndividualPhenotypeGeneScores = createSelector(
+  getGenesById,
+  getPhenotypeGeneScoresByIndividual,
+  (genesById, phenotypeGeneScoresByIndividual) => (
+    Object.entries(phenotypeGeneScoresByIndividual || {}).reduce((acc, [individualGuid, dataByGene]) => ({
+      ...acc,
+      [individualGuid]: Object.entries(dataByGene).reduce((acc2, [geneId, dataByTool]) => ([
+        ...acc2,
+        ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
+          ...acc3,
+          ...data.map(d => ({ ...d, tool, gene: genesById[geneId], rowId: `${geneId}${d.diseaseId}` })),
+        ]), []),
+      ]), []),
+    }), {})
   ),
 )
 

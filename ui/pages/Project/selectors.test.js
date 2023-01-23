@@ -95,7 +95,7 @@ test('getIndividualTaggedVariants', () => {
   const individualVariants = getIndividualTaggedVariants(STATE_WITH_2_FAMILIES, { individualGuid: 'I021475_na19675_1' })
   expect(individualVariants.length).toEqual(2)
   expect(individualVariants[0].variantGuid).toEqual('SV0000004_116042722_r0390_1000')
-  expect(individualVariants[0].variantId).toEqual('22-45919065-TTTC-T-ENSG00000228198')
+  expect(individualVariants[0].variantId).toEqual('SV0000004_116042722_r0390_1000-ENSG00000228198')
   expect(individualVariants[0].numAlt).toEqual(2)
   expect(individualVariants[0].gq).toEqual(99)
   expect(individualVariants[0].geneSymbol).toEqual('OR2M3')
@@ -130,6 +130,6 @@ test('getMmeDefaultContactEmail', () => {
     patientId: '12531',
     to: 'crowley@unc.edu,test@test.com,seqr+test@populationgenomics.org.au',
     subject: 'OR2M3 Matchmaker Exchange connection (NA19675_1)',
-    body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous missense variant 1:248367227 TC>T, a copy number deletion 1:248367227-248369100 (CN=0) and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
+    body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
   })
 })

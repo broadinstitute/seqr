@@ -36,6 +36,7 @@ import { getCurrentProject } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
+const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
 
 const Detail = styled.div`
   display: inline-block;
@@ -47,7 +48,7 @@ const Detail = styled.div`
 
 const CaseReviewDropdownContainer = styled.div`
   float: right;
-  width: 220px;
+  width: 100%;
 `
 
 const FLAG_TITLE = {
@@ -116,22 +117,22 @@ CaseReviewStatus.propTypes = {
   individual: PropTypes.object.isRequired,
 }
 
-const ShowRnaSeqOutliers = ({ sample, hasRnaOutlierData, ...props }) => (hasRnaOutlierData ? (
-  <Modal
-    modalName={`OUTRIDER-${sample.sampleId}`}
-    title={`RNA-Seq OUTRIDER: ${sample.sampleId}`}
-    trigger={<ButtonLink padding="1em 0 0 0" content="Show RNA-Seq OUTRIDER" />}
-  >
-    <React.Suspense fallback={<Loader />}>
-      <RnaSeqOutliers sample={sample} {...props} />
-    </React.Suspense>
-  </Modal>
-) : null)
-
-ShowRnaSeqOutliers.propTypes = {
-  hasRnaOutlierData: PropTypes.bool,
-  sample: PropTypes.object,
-}
+const SHOW_DATA_MODAL_CONFIG = [
+  {
+    shouldShowField: 'hasRnaOutlierData',
+    component: RnaSeqOutliers,
+    modalName: ({ sampleId }) => `OUTRIDER-${sampleId}`,
+    title: ({ sampleId }) => `RNA-Seq OUTRIDER: ${sampleId}`,
+    linkText: 'Show RNA-Seq OUTRIDER',
+  },
+  {
+    shouldShowField: 'hasPhenotypeGeneScores',
+    component: PhenotypePrioritizedGenes,
+    modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
+    title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
+    linkText: 'Show Phenotype Prioritized Genes',
+  },
+]
 
 const MmeStatusLabel = React.memo(({ title, dateField, color, individual, mmeSubmission }) => (
   <Link to={`/project/${individual.projectGuid}/family_page/${individual.familyGuid}/matchmaker_exchange`}>
@@ -171,11 +172,25 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
         />
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
-    <ShowRnaSeqOutliers
-      familyGuid={individual.familyGuid}
-      sample={loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)}
-      hasRnaOutlierData={individual.hasRnaOutlierData}
-    />
+    {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
+      ({ modalName, title, linkText, component }) => {
+        const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
+        const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
+        return (
+          <Modal
+            key={modalName(titleIds)}
+            modalName={modalName(titleIds)}
+            title={title(titleIds)}
+            trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
+          >
+            <React.Suspense fallback={<Loader />}>
+              {React.createElement(component,
+                { familyGuid: individual.familyGuid, individualGuid: individual.individualGuid }) }
+            </React.Suspense>
+          </Modal>
+        )
+      },
+    )}
   </div>
 ))
 
@@ -437,6 +452,48 @@ const NON_CASE_REVIEW_FIELDS = [
     individualFields: ({ caseReviewStatus }) => ({
       isVisible: caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
     }),
+  },
+  {
+    field: 'analyteType',
+    fieldName: 'Analyte Type',
+    isEditable: true,
+    isPrivate: true,
+    component: OptionFieldView,
+    tagOptions: [
+      { value: 'D', text: 'DNA' },
+      { value: 'R', text: 'RNA' },
+      { value: 'B', text: 'blood plasma' },
+      { value: 'F', text: 'frozen whole blood' },
+      { value: 'H', text: 'high molecular weight DNA' },
+      { value: 'U', text: 'urine' },
+    ],
+  },
+  {
+    field: 'primaryBiosample',
+    fieldName: 'Primary Biosample',
+    isEditable: true,
+    isPrivate: true,
+    component: OptionFieldView,
+    tagOptions: [
+      { value: 'T', text: 'UBERON:0000479 (tissue)' },
+      { value: 'NT', text: 'UBERON:0003714 (neural tissue)' },
+      { value: 'S', text: 'UBERON:0001836 (saliva)' },
+      { value: 'SE', text: 'UBERON:0001003 (skin epidermis)' },
+      { value: 'MT', text: 'UBERON:0002385 (muscle tissue)' },
+      { value: 'WB', text: 'UBERON:0000178 (whole blood)' },
+      { value: 'BM', text: 'UBERON:0002371 (bone marrow)' },
+      { value: 'CC', text: 'UBERON:0006956 (buccal mucosa)' },
+      { value: 'CF', text: 'UBERON:0001359 (cerebrospinal fluid)' },
+      { value: 'U', text: 'UBERON:0001088 (urine)' },
+      { value: 'NE', text: 'UBERON:0019306 (nose epithelium)' },
+    ],
+  },
+  {
+    field: 'tissueAffectedStatus',
+    fieldName: 'Tissue Affected Status',
+    isEditable: true,
+    isPrivate: true,
+    component: NullableBoolFieldView,
   },
   ...INDIVIDUAL_FIELDS,
 ]

@@ -21,3 +21,4 @@ seqr_settings
 
 django_key
 .coverage
+.vscode/

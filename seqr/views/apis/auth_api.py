@@ -59,6 +59,11 @@ def logout_view(request):
     return redirect('/')
 
 
+def app_login_required_error(request, exception=None):
+    """Redirect to login for unhandled 401 error on non-API request"""
+    return redirect(f'{LOGIN_URL}?next={request.path}')
+
+
 def login_required_error(request):
     """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
 

@@ -50,7 +50,7 @@ class ReloadSavedVariantJsonTest(TestCase):
             mock.call(
                 [family_1, family_2], ['1-1562437-G-C', '1-46859832-G-A', '12-48367227-TC-T', '21-3343353-GAGA-G'], user=None,
             ),
-            mock.call([Family.objects.get(id=11)], ['12-48367227-TC-T', 'prefix_19107_DEL'], user=None),
+            mock.call([Family.objects.get(id=12)], ['12-48367227-TC-T', 'prefix_19107_DEL'], user=None),
             mock.call([Family.objects.get(id=14)], ['12-48367227-TC-T'], user=None)
         ], any_order=True)
 

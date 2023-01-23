@@ -24,35 +24,23 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
-from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families, get_updated_pedigree_json
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
-from seqr.utils.file_utils import does_file_exist, file_iter, mv_file_to_gs, get_gs_file_list
+from seqr.utils.file_utils import does_file_exist, mv_file_to_gs, get_gs_file_list
+from seqr.utils.vcf_utils import validate_vcf_and_get_samples
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.permissions_utils import is_anvil_authenticated, check_workspace_perm, login_and_policies_required
 from settings import BASE_URL, GOOGLE_LOGIN_REQUIRED_URL, POLICY_REQUIRED_URL, API_POLICY_REQUIRED_URL,\
-    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
+    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, AIRFLOW_API_AUDIENCE, AIRFLOW_WEBSERVER_URL, ANVIL_LOADING_DELAY_EMAIL_START_DATE, \
+    SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
 anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
 
-BLOCK_SIZE = 65536
-
-ANVIL_LOADING_EMAIL_DATE = None
-ANVIL_LOADING_DELAY_EMAIL = None
 DAG_VERSION = '0.0.1'
-
-def get_vcf_samples(vcf_filename):
-    byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
-    for line in file_iter(vcf_filename, byte_range=byte_range):
-        if line[0] != '#':
-            break
-        if line.startswith('#CHROM'):
-            header = line.rstrip().split('FORMAT\t', 2)
-            return set(header[1].split('\t')) if len(header) == 2 else {}
-    return {}
 
 
 def save_temp_data(data):
@@ -161,12 +149,10 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = get_vcf_samples(data_path)
-    if not samples:
-        return create_json_response(
-            {'error': 'No samples found in the provided VCF. This may be due to a malformed file'}, status=400)
+    samples = validate_vcf_and_get_samples(data_path)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
+
 
 @anvil_workspace_access_required
 def create_project_from_workspace(request, namespace, name):
@@ -258,7 +244,10 @@ def add_workspace_data(request, project_guid):
 def _parse_uploaded_pedigree(request_json, user):
     # Parse families/individuals in the uploaded pedigree file
     json_records = load_uploaded_file(request_json['uploadedFileId'])
-    pedigree_records, _ = parse_pedigree_table(json_records, 'uploaded pedigree file', user=user, fail_on_warnings=True)
+    pedigree_records, _ = parse_pedigree_table(
+        json_records, 'uploaded pedigree file', user=user, fail_on_warnings=True, required_columns=[
+            JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN,
+        ])
 
     missing_samples = [record['individualId'] for record in pedigree_records
                        if record['individualId'] not in request_json['vcfSamples']]
@@ -291,7 +280,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     # use airflow api to trigger AnVIL dags
     trigger_success = _trigger_data_loading(project, data_path, sample_type, user)
     # Send a slack message to the slack channel
-    _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user)
+    _send_load_data_slack_msg(project, ids_path, data_path, len(updated_individuals), sample_type, user)
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
             'Requester Name': user.get_full_name(),
@@ -302,16 +291,16 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
             'Status': 'Loading' if trigger_success else 'Loading Requested'
         })
 
-    if ANVIL_LOADING_DELAY_EMAIL and ANVIL_LOADING_EMAIL_DATE and \
-            datetime.strptime(ANVIL_LOADING_EMAIL_DATE, '%Y-%m-%d') <= datetime.now():
+    loading_warning_date = ANVIL_LOADING_DELAY_EMAIL_START_DATE and datetime.strptime(ANVIL_LOADING_DELAY_EMAIL_START_DATE, '%Y-%m-%d')
+    if loading_warning_date and loading_warning_date <= datetime.now():
         try:
-            email_body = """Hi {user},
-            {email_content}
+            email_body = f"""Hi {user.get_full_name() or user.email},
+            We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
+            internal retreat or closed for the winter break so we are unable to load data until mid-January 
+            {loading_warning_date.year + 1}. We appreciate your understanding and support of our research team taking 
+            some well-deserved time off and hope you also have a nice break.
             - The seqr team
-            """.format(
-                user=user.get_full_name() or user.email,
-                email_content=ANVIL_LOADING_DELAY_EMAIL,
-            )
+            """
             send_html_email(email_body, subject='Delay in loading AnVIL in seqr', to=[user.email])
         except Exception as e:
             logger.error('AnVIL loading delay email error: {}'.format(e), user)
@@ -336,10 +325,10 @@ def _get_loading_project_path(project, sample_type):
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'
 
-def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
+def _send_load_data_slack_msg(project, ids_path, data_path, sample_count, sample_type, user):
     pipeline_dag = _construct_dag_variables(project, data_path, sample_type)
     message_content = """
-        *{user}* requested to load {sample_type} data ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
+        *{user}* requested to load {sample_count} {sample_type} samples ({genome_version}) from AnVIL workspace *{namespace}/{name}* at 
         {path} to seqr project <{project_url}|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to {ids_path}.  
@@ -355,6 +344,7 @@ def _send_load_data_slack_msg(project, ids_path, data_path, sample_type, user):
         project_url=_get_seqr_project_url(project),
         guid=project.guid,
         project_name=project.name,
+        sample_count=sample_count,
         sample_type=sample_type,
         genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
         dag_name = "seqr_vcf_to_es_AnVIL_{anvil_type}_v{version}".format(anvil_type=sample_type, version=DAG_VERSION),
@@ -406,14 +396,16 @@ def _check_dag_running_state(dag_id):
     if lastest_dag_runs['state'] == 'running':
         raise DagRunningException(f'{dag_id} is running and cannot be triggered again.')
 
+
 def _construct_dag_variables(project, data_path, sample_type):
     dag_variables = {
         "active_projects": [project.guid],
         "vcf_path": data_path,
-        "project_path": '{}v1'.format(_get_loading_project_path(project, sample_type)),
+        "project_path": '{}v{}'.format(_get_loading_project_path(project, sample_type), datetime.now().strftime("%Y%m%d")),
         "projects_to_run": [project.guid],
     }
     return dag_variables
+
 
 def _wait_for_dag_variable_update(dag_id, project):
     updated_project = project.guid

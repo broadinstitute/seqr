@@ -7,7 +7,6 @@ from seqr.models import ProjectCategory, Sample, Family, Project
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
 from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
-from settings import ANALYST_PROJECT_CATEGORY
 
 
 @login_and_policies_required
@@ -85,8 +84,7 @@ def _retrieve_project_categories_by_guid(project_guids):
         return {}
 
     # retrieve all project categories
-    project_categories = ProjectCategory.objects.filter(
-        projects__guid__in=project_guids).exclude(name=ANALYST_PROJECT_CATEGORY).distinct()
+    project_categories = ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct()
 
     project_categories_by_guid = {}
     for project_category in project_categories:

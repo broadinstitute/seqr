@@ -18,7 +18,7 @@ LOAD_SAMPLE_DATA = [
      "Notes", "familyNotes"],
     ["1", "NA19675", "NA19675_1", "NA19678", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", "HG00735", "", "", "", "Female", "Unaffected", "", "a new family"]]
+    ["21", "HG00735", "", "", "", "", "", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
 
@@ -92,7 +92,7 @@ UPDATED_ANVIL_VARIABLES = {
     "value": json.dumps({
         "active_projects": [TEST_GUID],
         "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v1".format(guid=TEST_GUID),
+        "project_path": "gs://seqr-datasets/v02/GRCh38/AnVIL_WES/{guid}/v20210301".format(guid=TEST_GUID),
         "projects_to_run": [TEST_GUID] })
 }
 
@@ -159,7 +159,7 @@ ADD_DATA_UPDATED_ANVIL_VARIABLES = {
     "value": json.dumps({
         "active_projects": [PROJECT1_GUID],
         "vcf_path": "gs://test_bucket/test_path.vcf",
-        "project_path": "gs://seqr-datasets/v02/GRCh37/AnVIL_WES/{guid}/v1".format(guid=PROJECT1_GUID),
+        "project_path": "gs://seqr-datasets/v02/GRCh37/AnVIL_WES/{guid}/v20210301".format(guid=PROJECT1_GUID),
         "projects_to_run": [PROJECT1_GUID] })
 }
 ADD_DATA_UPDATE_DAG_TASKS_RESP = {
@@ -185,6 +185,48 @@ ADD_DATA_UPDATE_DAG_TASKS_RESP = {
                 ],
             "total_entries": 6
         }
+
+BASIC_META = [
+    '##fileformat=VCFv4.3\n'
+    '##source=myImputationProgramV3.1\n',
+    '##FILTER=<ID=q10,Description="Quality below 10">',
+    '##FILTER=<ID=s50,Description="Less than 50% of samples have data">',
+]
+
+BAD_INFO_META = [
+    '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+    '##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">',
+    '##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">',
+    '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+    '##INFO=<ID=AF,Number=A,Type=Integer,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+]
+
+INFO_META = [
+    '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+    '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+    '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+    '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+]
+
+BAD_FORMAT_META = [
+    '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+    '##FORMAT=<ID=DP,Number=1,Type=String,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+]
+
+FORMAT_META = [
+    '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+    '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+    '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+]
+
+BAD_HEADER_LINE = ['#CHROM\tID\tREF\tALT\tQUAL\n']
+NO_SAMPLE_HEADER_LINE = ['#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n']
+HEADER_LINE = ['#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675\tNA19678\n']
+
+DATA_LINES = [
+    'chr1\t10333\t.\tCT\tC\t1895\tPASS\tAC=5;AF=0.045;AN=112;DP=22546\tGT:AD:DP:GQ\t./.:63,0:63\t./.:44,0:44\t./.:44,0:44\n'
+]
 
 
 @mock.patch('seqr.views.utils.permissions_utils.logger')
@@ -313,7 +355,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                          '/login/google-oauth2?next=/api/create_project_from_workspace/my-seqr-billing/anvil-no-project-workspace1/grant_access')
 
     @mock.patch('seqr.views.apis.anvil_workspace_api.does_file_exist')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.file_iter')
+    @mock.patch('seqr.utils.vcf_utils.file_iter')
     def test_validate_anvil_vcf(self, mock_file_iter, mock_file_exist, mock_utils_logger):
         # Requesting to load data from a workspace without an existing project
         url = reverse(validate_anvil_vcf,
@@ -344,19 +386,45 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.json()['error'],
                          'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
 
+        # test no header line
         mock_file_exist.return_value = True
-        mock_file_iter.return_value = ['##fileformat=VCFv4.2\n',
-                                       '#CHROM	POS	ID	REF	ALT	QUAL']  # incomplete header line
+        mock_file_iter.return_value = BASIC_META + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'],
-                         'No samples found in the provided VCF. This may be due to a malformed file')
+        self.assertListEqual(response.json()['errors'], [
+            'No header found in the VCF file.'
+        ])
         mock_file_iter.assert_called_with('gs://test_bucket/test_path.vcf.gz', byte_range=(0, 65536))
         mock_file_exist.assert_called_with('gs://test_bucket/test_path.vcf.gz', user=self.manager_user)
 
+        # test header errors
+        mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.'
+        ])
+
+        # test no samples
+        mock_file_iter.return_value = BASIC_META + NO_SAMPLE_HEADER_LINE + DATA_LINES
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['No samples found in the provided VCF.'])
+
+        # test meta info errors
+        mock_file_iter.return_value = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Missing required INFO field(s) AN',
+            'Incorrect meta Type for INFO.AF - expected "Float", got "Integer"',
+            'Missing required FORMAT field(s) GQ, GT',
+            'Incorrect meta Type for FORMAT.DP - expected "Integer", got "String"'
+        ])
+
         # Test valid operation
         mock_file_exist.return_value = True
-        mock_file_iter.return_value = FILE_DATA
+        mock_file_iter.return_value = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
@@ -598,6 +666,14 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.reason_phrase, f'Field(s) "{field_str}" are required')
         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, workspace_name)
 
+        # test missing columns
+        self.mock_load_file.return_value = [['family', 'individual'], ['1', '2']]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertListEqual(response_json['errors'], [
+            'Error while converting uploaded pedigree file rows to json: Sex, Affected not specified in row #1'])
+
         # test sample data error
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
@@ -683,7 +759,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(responses.calls[call_cnt+1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))
 
         slack_message = """
-        *test_user_manager@test.com* requested to load WES data ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
+        *test_user_manager@test.com* requested to load 3 WES samples ({version}) from AnVIL workspace *my-seqr-billing/{workspace_name}* at 
         gs://test_bucket/test_path.vcf to seqr project <http://testserver/project/{guid}/project_page|*{project_name}*> (guid: {guid})  
   
         The sample IDs to load have been uploaded to gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/base/{guid}_ids.txt.  
@@ -694,7 +770,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         "{guid}"
     ],
     "vcf_path": "gs://test_bucket/test_path.vcf",
-    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v1",
+    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301",
     "projects_to_run": [
         "{guid}"
     ]
@@ -735,7 +811,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         "{guid}"
     ],
     "vcf_path": "gs://test_bucket/test_path.vcf",
-    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v1",
+    "project_path": "gs://seqr-datasets/v02/{version}/AnVIL_WES/{guid}/v20210301",
     "projects_to_run": [
         "{guid}"
     ]
@@ -762,8 +838,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             'Status': 'Loading Requested',
         }}]})
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', 'We are unable to load your data at this time.')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
     @responses.activate
     def test_create_project_from_workspace_loading_delay_email(self):
         url = reverse(create_project_from_workspace, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
@@ -774,6 +849,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
                       '{}/api/v1/dags/seqr_vcf_to_es_AnVIL_WES_v0.0.1/tasks'.format(MOCK_AIRFLOW_URL),
                       headers={'Authorization': 'Bearer {}'.format(MOCK_TOKEN)},
                       json={"tasks": [
+                            {"task_id": "pyspark_compute_project_R0006_anvil_no_project_workspace"},
                             {"task_id": "pyspark_compute_project_R0007_anvil_no_project_workspace"},
                             {"task_id": "pyspark_compute_project_R0008_anvil_no_project_workspace"}],
                             "total_entries": 2},
@@ -788,8 +864,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
 
         self._test_after_email_date(url, REQUEST_BODY)
 
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL', 'We are unable to load your data at this time.')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_EMAIL_DATE', '2021-06-01')
+    @mock.patch('seqr.views.apis.anvil_workspace_api.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2021-06-01')
     @responses.activate
     def test_add_workspace_data_loading_delay_email(self):
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
@@ -822,7 +897,10 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
         self.assertEqual(response.status_code, 200)
         self.mock_send_email.assert_called_with("""Hi Test Manager User,
-            We are unable to load your data at this time.
+            We have received your request to load data to seqr from AnVIL. Currently, the Broad Institute is holding an 
+            internal retreat or closed for the winter break so we are unable to load data until mid-January 
+            2022. We appreciate your understanding and support of our research team taking 
+            some well-deserved time off and hope you also have a nice break.
             - The seqr team
             """, subject='Delay in loading AnVIL in seqr', to=['test_user_manager@test.com'])
         self.mock_api_logger.error.assert_called_with(

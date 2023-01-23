@@ -13,7 +13,6 @@ EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
 class LoadRnaSeqTest(TestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.logger.info')
     @mock.patch('seqr.management.commands.load_rna_seq_outlier.open')
     @mock.patch('seqr.utils.file_utils.gzip.open')

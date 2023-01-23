@@ -54,5 +54,16 @@
         "created": "2020-03-12T23:09:54.180Z",
         "modified": "2020-03-12T23:09:54.180Z"
     }
+}, {
+    "model": "social_django.usersocialauth",
+    "pk": 6,
+    "fields": {
+        "user": 15,
+        "provider": "google-oauth2",
+        "uid": "test_superuser@test.com",
+        "extra_data": "{\"expires\": 3599, \"auth_time\": 1603287741, \"token_type\": \"Bearer\", \"access_token\": \"ya29.EXAMPLE\"}",
+        "created": "2020-03-12T23:09:54.180Z",
+        "modified": "2020-03-12T23:09:54.180Z"
+    }
 }
 ]

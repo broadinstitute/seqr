@@ -97,8 +97,8 @@ class RnaSeqOutliersGraph extends React.PureComponent {
 
 }
 
-const BaseRnaSeqOutliers = React.memo(({ sample, rnaSeqData, genesById, familyGuid, loading, load }) => (
-  <DataLoader content={rnaSeqData} contentId={sample.individualGuid} load={load} loading={loading}>
+const BaseRnaSeqOutliers = React.memo(({ individualGuid, rnaSeqData, genesById, familyGuid, loading, load }) => (
+  <DataLoader content={rnaSeqData} contentId={individualGuid} load={load} loading={loading}>
     <GeneSearchLink
       buttonText="Search for variants in outlier genes"
       icon="search"
@@ -111,7 +111,7 @@ const BaseRnaSeqOutliers = React.memo(({ sample, rnaSeqData, genesById, familyGu
 ))
 
 BaseRnaSeqOutliers.propTypes = {
-  sample: PropTypes.object.isRequired,
+  individualGuid: PropTypes.string.isRequired,
   familyGuid: PropTypes.string.isRequired,
   rnaSeqData: PropTypes.object,
   genesById: PropTypes.object,
@@ -120,7 +120,7 @@ BaseRnaSeqOutliers.propTypes = {
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.sample.individualGuid]?.outliers,
+  rnaSeqData: getRnaSeqDataByIndividual(state)[ownProps.individualGuid]?.outliers,
   genesById: getGenesById(state),
   loading: getRnaSeqDataLoading(state),
 })

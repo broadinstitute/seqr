@@ -8,7 +8,6 @@ from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
 from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
-from settings import ANALYST_PROJECT_CATEGORY
 
 
 MAX_RESULTS_PER_CATEGORY = 8
@@ -18,7 +17,7 @@ FUZZY_MATCH_CHARS = ['-', '_', '.']
 
 
 def _get_matching_objects(query, project_guids, object_cls, core_fields, href_expression, description_content=None,
-                          project_field=None, select_related_project=True, exclude_criteria=None):
+                          project_field=None, select_related_project=True):
     if project_field:
         matching_objects = getattr(object_cls, 'objects')
         matching_objects = matching_objects.filter(Q(**{'{}__guid__in'.format(project_field): project_guids}))
@@ -26,9 +25,6 @@ def _get_matching_objects(query, project_guids, object_cls, core_fields, href_ex
             matching_objects = matching_objects.select_related(project_field)
     else:
         matching_objects = object_cls.objects.filter(guid__in=project_guids)
-
-    if exclude_criteria:
-        matching_objects = matching_objects.exclude(**exclude_criteria)
 
     object_filter = Q()
     for field in core_fields:
@@ -119,7 +115,6 @@ def _get_matching_project_groups(query, project_guids):
         href_expression=F('guid'),
         project_field='projects',
         select_related_project=False,
-        exclude_criteria={'name': ANALYST_PROJECT_CATEGORY}
     )
 
 

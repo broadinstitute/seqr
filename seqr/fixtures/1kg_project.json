@@ -33,6 +33,8 @@
         "name": "Empty Project",
         "description": "",
         "consent_code": "H",
+        "workspace_name": "empty",
+        "workspace_namespace": "my-seqr-billing",
 	"can_edit_group": 2,
 	"can_view_group": 3,
 	"is_mme_enabled": false,
@@ -75,21 +77,7 @@
 	    "last_accessed_date": "2017-09-15T18:15:50.827Z",
         "consent_code": "H",
     "workspace_name": "anvil-non-analyst-project 1000 Genomes Demo",
-    "workspace_namespace": "my-seqr-billing"
-    }
-},
-{
-    "model": "seqr.projectcategory",
-    "pk": 1,
-    "fields": {
-        "guid": "PC000001_analyst_projects",
-        "created_date": "2020-03-12T23:52:36.401Z",
-        "created_by": null,
-        "last_modified_date": "2020-03-12T23:52:36.401Z",
-        "name": "analyst-projects",
-        "projects": [
-            1, 2, 3
-        ]
+    "workspace_namespace": "ext-data"
     }
 },
 {
@@ -446,6 +434,8 @@
         "case_review_status_last_modified_by": null,
         "case_review_discussion": null,
         "proband_relationship": "S",
+        "primary_biosample": "NT",
+        "analyte_type": "D",
         "birth_year": 1999,
         "death_year": null,
         "onset_age": "A",
@@ -816,6 +806,8 @@
         "last_modified_date": "2017-03-13T09:07:50.270Z",
         "family": 12,
         "individual_id": "NA20889",
+        "population": "ASJ",
+        "features": [{"id": "HP:0011675"}, {"id": "HP:0001509"}],
         "mother_id": null,
         "father_id": null,
         "sex": "F",
@@ -1296,6 +1288,54 @@
     }
 },
 {
+    "model": "seqr.phenotypeprioritization",
+    "pk": 1,
+    "fields": {
+        "individual": 1,
+        "gene_id": "ENSG00000268903",
+        "tool": "exomiser",
+        "rank": 1,
+        "disease_id": "OMIM:618460",
+        "disease_name": "Khan-Khan-Katsanis syndrome",
+        "scores": {
+            "post_test_probability": 0,
+            "compositeLR": 0.066
+        }
+    }
+},
+{
+    "model": "seqr.phenotypeprioritization",
+    "pk": 2,
+    "fields": {
+        "individual": 1,
+        "gene_id": "ENSG00000268903",
+        "tool": "exomiser",
+        "rank": 2,
+        "disease_id": "OMIM:219800",
+        "disease_name": "Cystinosis, nephropathic",
+        "scores": {
+            "post_test_probability": 0,
+            "compositeLR": 0.003
+        }
+    }
+},
+{
+    "model": "seqr.phenotypeprioritization",
+    "pk": 3,
+    "fields": {
+        "individual": 2,
+        "gene_id": "ENSG00000268903",
+        "tool": "lirical",
+        "rank": 1,
+        "disease_id": "OMIM:219800",
+        "disease_name": "Cystinosis, nephropathic",
+        "scores": {
+            "post_test_probability": 0,
+            "compositeLR": 0.003
+        }
+    }
+},
+{
     "model": "seqr.igvsample",
     "pk": 145,
     "fields": {
@@ -1698,8 +1738,8 @@
                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
                 ]
             }, "chrom": "1", "genotypes": {
-                "I000015_na20885": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
-        "family": 11
+                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}}},
+        "family": 12
     }
 },
 {
@@ -1723,19 +1763,19 @@
             "predictions": {"strvctvre": 0.374},
             "alt": null,
             "numExon": 2,
-            "genomeVersion": "37", "genotypeFilters": [],
+            "genotypeFilters": [],
             "ref": null,
             "genotypes": {
-                "I000015_na20885": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
+                "I000017_na20889": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
             },
             "liftedOverPos": null,
             "liftedOverChrom": null,
             "svType": "DEL",
             "variantId": "prefix_19107_DEL",
             "chrom": "12",
-            "transcripts": {"ENSG00000240361": [], "ENSG00000135953": []}
+            "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
         },
-        "family": 11
+        "family": 12
     }
 },
 {
@@ -2089,30 +2129,23 @@
                 "id": "HP:0012469",
                 "observed": "yes"
             }
-        ],
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000186092"
-                },
-                "variant": {
-                    "end": 77027548,
-                    "start": 77027549,
-                    "assembly": "GRCh38",
-                    "referenceName": "14",
-                    "alternateBases": "C",
-                    "referenceBases": "CCACT"
-                },
-                "zygosity": 1
-            }
         ]
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 1,
+    "fields": {
+        "matchmaker_submission": 1,
+        "saved_variant": 1,
+        "gene_id": "ENSG00000135953"
     }
 },
 {
     "model": "matchmaker.matchmakersubmission",
     "pk": 2,
     "fields": {
-        "individual": 15,
+        "individual": 17,
         "guid": "MS000015_na20885",
         "created_date": "2019-02-05T06:42:55.397Z",
         "last_modified_date": "2019-02-05T06:42:55.397Z",
@@ -2131,23 +2164,15 @@
                 "label": "Nausea and vomiting",
                 "observed": "yes"
             }
-        ],
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000227232"
-                },
-                "variant": {
-                    "end": 38739601,
-                    "start": 38739601,
-                    "assembly": "GRCh38",
-                    "referenceName": "17",
-                    "alternateBases": "A",
-                    "referenceBases": "G"
-                },
-                "zygosity": 1
-            }
         ]
+    }
+}, {
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 2,
+    "fields": {
+        "matchmaker_submission": 2,
+        "saved_variant": 6,
+        "gene_id": "ENSG00000240361"
     }
 },
     {
@@ -2161,32 +2186,34 @@
         "submission_id": "P0004515",
         "label": "P0004515",
         "contact_name": "Baylor UDN Clinical Site",
-        "contact_href": "mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au",
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000186092"
-                }, "variant": {
-                    "referenceName": "14",
-                    "start": 77027630
-                }
-            },
-            {
-                "gene": {
-                    "id": "ENSG00000233750"
-                }
-            },
-            {
-                "gene": {
-                    "id": "ENSG00000223972"
-                }
-            },
-            {
-                "gene": {
-                    "id": "ABC"
-                }
-            }
-        ]
+        "contact_href": "mailto:seqr+udncc@populationgenomics.org.au,matchmaker+phenomecentral@populationgenomics.org.au"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 3,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000135953"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 4,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000223972"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 5,
+    "fields": {
+        "matchmaker_submission": 3,
+        "saved_variant": 7,
+        "gene_id": "ENSG00000240361"
     }
 },
 {
@@ -2200,14 +2227,16 @@
         "submission_id": "P0004517",
         "label": "P0004517",
         "contact_name": "Sam Baxter",
-        "contact_href": "mailto:matchmaker@populationgenomics.org.au",
-        "genomic_features": [
-            {
-                "gene": {
-                    "id": "ENSG00000186092"
-                }
-            }
-        ]
+        "contact_href": "mailto:matchmaker@populationgenomics.org.au"
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmissiongenes",
+    "pk": 6,
+    "fields": {
+        "matchmaker_submission": 4,
+        "saved_variant": 8,
+        "gene_id": "ENSG00000135953"
     }
 },
 {
@@ -2229,6 +2258,13 @@
                     {
                         "gene": {
                             "id": "OR4F5"
+                        },
+                        "variant": {
+                            "alternateBases":  "A",
+                            "referenceBases": "G",
+                            "referenceName": "2",
+                            "start": 100379086,
+                            "assembly": "GRCh37"
                         }
                     },
                     {

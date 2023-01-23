@@ -19,6 +19,7 @@ class ReferenceDataHandler(object):
     post_process_models = None
     batch_size = None
     keep_existing_records = False
+    gene_key = 'gene'
 
     def __init__(self, **kwargs):
         if GeneInfo.objects.count() == 0:
@@ -96,7 +97,7 @@ def update_records(reference_data_handler, file_path=None):
                         continue
 
                     try:
-                        record['gene'] = reference_data_handler.get_gene_for_record(record)
+                        record[reference_data_handler.gene_key] = reference_data_handler.get_gene_for_record(record)
                     except ValueError as e:
                         skip_counter += 1
                         logger.debug(e)

@@ -1,3 +1,4 @@
+from google.oauth2 import service_account
 import json
 import os
 import random
@@ -314,10 +315,12 @@ API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 API_POLICY_REQUIRED_URL = '/api/policy-required-error'
 POLICY_REQUIRED_URL = '/accept_policies'
 
-ANALYST_PROJECT_CATEGORY = os.environ.get('ANALYST_PROJECT_CATEGORY')
+INTERNAL_NAMESPACES = os.environ.get('INTERNAL_NAMESPACES', '').split(',')
 ANALYST_USER_GROUP = os.environ.get('ANALYST_USER_GROUP')
 PM_USER_GROUP = os.environ.get('PM_USER_GROUP')
 SERVICE_ACCOUNT_ACCESS_GROUP = os.environ.get('SERVICE_ACCOUNT_ACCESS_GROUP', 'service_account_access')
+
+ANVIL_LOADING_DELAY_EMAIL_START_DATE = os.environ.get('ANVIL_LOADING_DELAY_EMAIL_START_DATE')
 
 # External service settings
 ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
@@ -343,6 +346,7 @@ KIBANA_SERVER = '{host}:{port}'.format(
 KIBANA_ELASTICSEARCH_PASSWORD = os.environ.get('KIBANA_ES_PASSWORD')
 
 REDIS_SERVICE_HOSTNAME = os.environ.get('REDIS_SERVICE_HOSTNAME', 'localhost')
+REDIS_SERVICE_PORT = int(os.environ.get('REDIS_SERVICE_PORT', '6379'))
 
 # Matchmaker
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
@@ -411,25 +415,30 @@ TERRA_PERMS_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_PERMS_CACHE_EXPIRE_SECO
 TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS = os.environ.get('TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS', 300)
 
 SERVICE_ACCOUNT_FOR_ANVIL = None
+SERVICE_ACCOUNT_CREDENTIALS = None
 
 AIRFLOW_API_AUDIENCE = os.environ.get('AIRFLOW_API_AUDIENCE')
 AIRFLOW_WEBSERVER_URL = os.environ.get('AIRFLOW_WEBSERVER_URL')
 
 if TERRA_API_ROOT_URL:
-    SERVICE_ACCOUNT_FOR_ANVIL = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
+    service_account_file = '/.config/service-account-key.json'
+    try:
+        SERVICE_ACCOUNT_CREDENTIALS = service_account.Credentials.from_service_account_file(
+            service_account_file, scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE)
+        SERVICE_ACCOUNT_FOR_ANVIL = SERVICE_ACCOUNT_CREDENTIALS.service_account_email
+    except Exception:
+        raise Exception('Error starting seqr - gcloud auth credentials are not properly configured')
+
+    # activate command line account if failed on start up
+    activated_service_account = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
-    if not SERVICE_ACCOUNT_FOR_ANVIL:
-        # attempt to acquire a service account token
-        if os.path.exists('/.config/service-account-key.json'):
-            auth_output = subprocess.run(['gcloud', 'auth', 'activate-service-account', '--key-file', '/.config/service-account-key.json'],  # nosec
-                                         capture_output=True, text=True).stderr
-
-            SERVICE_ACCOUNT_FOR_ANVIL = re.findall(r'\[(.*)\]', auth_output)[0]
-
-            if not SERVICE_ACCOUNT_FOR_ANVIL:
-                raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
-        else:
-            raise Exception('Error starting seqr - gcloud auth is not properly configured')
+    if not activated_service_account:
+        auth_output = subprocess.run([  # nosec
+            'gcloud', 'auth', 'activate-service-account', '--key-file', service_account_file
+        ], capture_output=True, text=True).stderr
+        activated_service_account = re.findall(r'\[(.*)\]', auth_output)[0]
+    if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:
+        raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)

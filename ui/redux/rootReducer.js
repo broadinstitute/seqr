@@ -13,8 +13,18 @@ import {
 } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
 import {
-  RECEIVE_DATA, REQUEST_PROJECTS, RECEIVE_SAVED_SEARCHES, REQUEST_SAVED_SEARCHES, REQUEST_SAVED_VARIANTS,
-  REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS, updateEntity, loadFamilyData, loadProjectChildEntities,
+  RECEIVE_DATA,
+  REQUEST_PROJECTS,
+  RECEIVE_SAVED_SEARCHES,
+  REQUEST_SAVED_SEARCHES,
+  REQUEST_SAVED_VARIANTS,
+  REQUEST_SEARCHED_VARIANTS,
+  RECEIVE_SEARCHED_VARIANTS,
+  REQUEST_PROJECT_DETAILS,
+  REQUEST_ANALYSIS_GROUPS,
+  RECEIVE_ANALYSIS_GROUPS,
+  updateEntity,
+  loadFamilyData,
 } from './utils/reducerUtils'
 
 /**
@@ -35,7 +45,6 @@ const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
-const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
 
 // action creators
 
@@ -73,8 +82,6 @@ export const updateProject = (values) => {
   const actionSuffix = values.projectField ? `_project_${values.projectField}` : '_project'
   return updateEntity(values, RECEIVE_DATA, '/api/project', 'projectGuid', actionSuffix)
 }
-
-export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS)
 
 export const loadFamilyDetails = familyGuid => loadFamilyData(
   familyGuid, 'detailsLoaded', 'details', REQUEST_FAMILY_DETAILS, true,
@@ -307,6 +314,7 @@ const rootReducer = combineReducers({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
+  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
   familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
@@ -314,11 +322,12 @@ const rootReducer = combineReducers({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
-  analysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_DATA),
+  analysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS),
   mmeSubmissionsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeSubmissionsByGuid'),
   mmeResultsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'mmeResultsByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_DATA, 'genesById'),
   rnaSeqDataByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'rnaSeqData'),
+  phenotypeGeneScoresByIndividual: createObjectsByIdReducer(RECEIVE_DATA, 'phenotypeGeneScores'),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_DATA),
   hpoTermsByParent: createObjectsByIdReducer(RECEIVE_HPO_TERMS),
   hpoTermsLoading: loadingReducer(REQUEST_HPO_TERMS, RECEIVE_HPO_TERMS),
@@ -337,6 +346,7 @@ const rootReducer = combineReducers({
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
+  transcriptsById: createObjectsByIdReducer(RECEIVE_DATA, 'transcriptsById'),
   user: createSingleObjectReducer(UPDATE_USER),
   newUser: zeroActionsReducer,
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),

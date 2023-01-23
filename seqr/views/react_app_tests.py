@@ -1,27 +1,31 @@
+from datetime import datetime
 from django.urls.base import reverse
 import mock
 
 from seqr.views.react_app import main_app, no_login_main_app
-from seqr.views.utils.test_utils import AuthenticationTestCase, USER_FIELDS
+from seqr.views.utils.terra_api_utils import TerraRefreshTokenFailedException
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, USER_FIELDS
 
 MOCK_GA_TOKEN = 'mock_ga_token' # nosec
 
 @mock.patch('seqr.views.react_app.DEBUG', False)
-class DashboardPageTest(AuthenticationTestCase):
+class AppPageTest(object):
     databases = '__all__'
     fixtures = ['users']
 
-    def _check_page_html(self, response,  user, google_enabled=False, user_key='user', ga_token_id=None):
+    def _check_page_html(self, response,  user, user_key='user', user_fields=None, ga_token_id=None, anvil_loading_date=None):
+        user_fields = user_fields or USER_FIELDS
         self.assertEqual(response.status_code, 200)
         initial_json = self.get_initial_page_json(response)
         self.assertSetEqual(set(initial_json.keys()), {'meta', user_key})
-        self.assertSetEqual(set(initial_json[user_key].keys()), USER_FIELDS)
+        self.assertSetEqual(set(initial_json[user_key].keys()), user_fields)
         self.assertEqual(initial_json[user_key]['username'], user)
         self.assertDictEqual(initial_json['meta'], {
             'version': mock.ANY,
             'hijakEnabled': False,
-            'googleLoginEnabled': google_enabled,
+            'googleLoginEnabled': self.GOOGLE_ENABLED,
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
+            'anvilLoadingDelayDate': anvil_loading_date,
         })
 
         self.assertEqual(self.get_initial_page_window('gaTrackingId', response), ga_token_id)
@@ -33,19 +37,12 @@ class DashboardPageTest(AuthenticationTestCase):
         self.assertEqual(content.count('<script type="text/javascript" nonce="{}">'.format(nonce)), 5)
 
     @mock.patch('seqr.views.react_app.GA_TOKEN_ID', MOCK_GA_TOKEN)
-    @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
-    def test_react_page(self, mock_oauth_key):
-        mock_oauth_key.__bool__.return_value = False
+    def test_react_page(self):
         url = reverse(main_app)
         self.check_require_login_no_policies(url, login_redirect_url='/login')
 
         response = self.client.get(url)
         self._check_page_html(response, 'test_user_no_policies', ga_token_id=MOCK_GA_TOKEN)
-
-        # test with google auth enabled
-        mock_oauth_key.__bool__.return_value = True
-        response = self.client.get(url)
-        self._check_page_html(response, 'test_user_no_policies', google_enabled=True, ga_token_id=MOCK_GA_TOKEN)
 
     # 2022-06-14 mfranklin: Comment out this test as we use a separate
     #           build process to broadinstitute/seqr
@@ -71,7 +68,10 @@ class DashboardPageTest(AuthenticationTestCase):
         response = self.client.get(
             '/login/set_password/pbkdf2_sha256$30000$y85kZgvhQ539$jrEC343555Itp+14w/T7U6u5XUxtpBZXKv8eh4=')
         self.assertEqual(response.status_code, 200)
-        self._check_page_html(response, 'test_user_manager', user_key='newUser')
+        self._check_page_html(
+            response, 'test_user_manager', user_key='newUser',
+            user_fields={'id', 'firstName', 'lastName', 'username', 'email'},
+        )
 
         response = self.client.get('/login/set_password/invalid_pwd')
         self.assertEqual(response.status_code, 404)
@@ -80,3 +80,43 @@ class DashboardPageTest(AuthenticationTestCase):
         self.login_analyst_user()
         response = self.client.get(url)
         self._check_page_html(response, 'test_user')
+
+    @mock.patch('seqr.views.react_app.ANVIL_LOADING_DELAY_EMAIL_START_DATE', '2022-12-01')
+    @mock.patch('seqr.views.react_app.datetime')
+    def test_react_page_anvil_loading_delay(self, mock_datetime):
+        mock_datetime.strptime.side_effect = datetime.strptime
+        mock_datetime.now.return_value = datetime(2022, 11, 1, 0, 0, 0)
+
+        url = reverse(main_app)
+        self.check_require_login_no_policies(url, login_redirect_url='/login')
+
+        response = self.client.get(url)
+        self._check_page_html(response, 'test_user_no_policies')
+
+        mock_datetime.now.return_value = datetime(2022, 12, 30, 0, 0, 0)
+        response = self.client.get(url)
+        self._check_page_html(response, 'test_user_no_policies', anvil_loading_date='2022-12-01')
+
+
+class LocalAppPageTest(AuthenticationTestCase, AppPageTest):
+    fixtures = ['users']
+    GOOGLE_ENABLED = False
+
+
+class AnvilAppPageTest(AnvilAuthenticationTestCase, AppPageTest):
+    fixtures = ['users']
+    GOOGLE_ENABLED = True
+
+    def test_react_page(self, *args, **kwargs):
+        super(AnvilAppPageTest, self).test_react_page(*args, **kwargs)
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
+
+        self.mock_get_groups.assert_called_with(self.no_policy_user)
+
+        # check behavior if AnVIL API calls fail
+        self.mock_get_groups.side_effect = TerraRefreshTokenFailedException('Refresh Error')
+        response = self.client.get('/dashboard')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/login?next=/dashboard')

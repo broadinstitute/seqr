@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Popup } from 'semantic-ui-react'
+import { Dimmer, Loader, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { getLocusListsByGuid } from 'redux/selectors'
@@ -14,7 +14,8 @@ import DeleteButton from 'shared/components/buttons/DeleteButton'
 import { validators } from 'shared/components/form/FormHelpers'
 import Modal from 'shared/components/modal/Modal'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
-import { updateLocusLists } from '../reducers'
+import { loadProjectLocusLists, updateLocusLists } from '../reducers'
+import { getProjectLocusListsIsLoading } from '../selectors'
 
 const ItemContainer = styled.div`
   padding: 2px 0px;
@@ -81,21 +82,32 @@ const mapItemDispatchToProps = (dispatch, ownProps) => ({
 
 const LocusList = connect(mapStateToProps, mapItemDispatchToProps)(LocusListItem)
 
-export class GeneLists extends React.PureComponent {
+class BaseGeneLists extends React.PureComponent {
 
   static propTypes = {
     project: PropTypes.object.isRequired,
+    loading: PropTypes.bool,
+    load: PropTypes.func,
   }
 
   state = { showAll: false }
+
+  constructor(props) {
+    super(props)
+    props.load()
+  }
 
   show = () => {
     this.setState({ showAll: true })
   }
 
   render() {
-    const { project } = this.props
+    const { project, loading } = this.props
     const { showAll } = this.state
+
+    if (loading) {
+      return <Dimmer inverted active><Loader content="Loading" /></Dimmer>
+    }
 
     const locusListGuids = project.locusListGuids || []
     const locusListsToShow = showAll ? locusListGuids : locusListGuids.slice(0, 20)
@@ -111,6 +123,16 @@ export class GeneLists extends React.PureComponent {
   }
 
 }
+
+const mapGeneListsStateToProps = state => ({
+  loading: getProjectLocusListsIsLoading(state),
+})
+
+const mapGeneListsDispatchToProps = {
+  load: loadProjectLocusLists,
+}
+
+export const GeneLists = connect(mapGeneListsStateToProps, mapGeneListsDispatchToProps)(BaseGeneLists)
 
 const LOCUS_LIST_FIELDS = [{
   name: 'locusListGuids',

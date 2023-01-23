@@ -88,23 +88,23 @@ const BASE_REFERENCE_URL = '/api/igv_genomes'
 const REFERENCE_URLS = [
   {
     key: 'fastaURL',
-    baseUrl: `${BASE_REFERENCE_URL}/broadinstitute.org/genomes/seq`,
+    baseUrl: BASE_REFERENCE_URL,
     path: {
-      37: 'hg19/hg19.fasta',
-      38: 'hg38/hg38.fa',
+      37: 's3/igv.broadinstitute.org/genomes/seq/hg19/hg19.fasta',
+      38: 'gs/gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta',
     },
   },
   {
     key: 'cytobandURL',
-    baseUrl: BASE_REFERENCE_URL,
+    baseUrl: `${BASE_REFERENCE_URL}/s3`,
     path: {
-      37: 'broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
-      38: 'org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
+      37: 'igv.broadinstitute.org/genomes/seq/hg19/cytoBand.txt',
+      38: 'igv.org.genomes/hg38/annotations/cytoBandIdeo.txt.gz',
     },
   },
   {
     key: 'aliasURL',
-    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
+    baseUrl: `${BASE_REFERENCE_URL}/s3/igv.org.genomes`,
     path: {
       37: 'hg19/hg19_alias.tab',
       38: 'hg38/hg38_alias.tab',
@@ -127,7 +127,7 @@ const REFERENCE_TRACKS = [
   {
     name: 'Refseq',
     indexPostfix: 'tbi',
-    baseUrl: `${BASE_REFERENCE_URL}/org.genomes`,
+    baseUrl: `${BASE_REFERENCE_URL}/s3/igv.org.genomes`,
     path: {
       37: 'hg19/refGene.sorted.txt.gz',
       38: 'hg38/refGene.sorted.txt.gz',

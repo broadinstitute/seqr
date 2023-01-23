@@ -4,11 +4,14 @@ import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+export const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
+export const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
+export const RECEIVE_ANALYSIS_GROUPS = 'RECEIVE_ANALYSIS_GROUPS'
 
 // A helper action that handles create, update and delete requests
 export const updateEntity = (
@@ -77,3 +80,21 @@ export const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, d
       }).get()
   }
 }
+
+export const loadProjectDetails = projectGuid => (dispatch, getState) => {
+  const project = getState().projectsByGuid[projectGuid]
+  if (!project || project.canEdit === undefined) {
+    dispatch({ type: REQUEST_PROJECT_DETAILS })
+    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
+
+export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(
+  projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS,
+)
