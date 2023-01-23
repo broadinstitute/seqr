@@ -455,7 +455,7 @@ def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
 
 def _get_common_prefix(files):
     for i in range(len(files[0])):
-        if any([file[i]!=files[0][i] if i < len(file) else True for file in files]):
+        if any([file[i] != files[0][i] if i < len(file) else True for file in files]):
             return files[0][:i]
     return ''
 
@@ -469,9 +469,8 @@ def _merge_sharded_vcf(vcf_files):
 
     for path, files in files_by_path.items():
         prefix = _get_common_prefix(files)
-        postfix = files[0].replace(r'[0-9]+', '')
-        if any([file.replace(r'[0-9]+', '')!=postfix for file in files]):
-            continue
-        files = [prefix + '*' + postfix]
+        postfix = files[0].replace(prefix, '').lstrip('01234556789')
+        if len(files) > 1 and all([file.replace(prefix, '').lstrip('01234556789') == postfix for file in files]):
+            files_by_path[path] = [f'{prefix}*{postfix}']
 
-    return []
+    return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]
