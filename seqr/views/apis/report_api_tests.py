@@ -521,10 +521,8 @@ class ReportAPITest(object):
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
         self.assertEqual(len(responses.calls), 6)
-        self.assertDictEqual(responses.calls[-1].request.params, {
-            'fields[]': 'CollaboratorID',
-            'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
-        })
+        self._assert_expected_airtable_call(
+            -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
         # Test empty project
