@@ -37,7 +37,7 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
               rows.push(...responseJson.rows)
             },
             e => errors.add(e.message),
-          ).get())),
+          ).get({ isAllProject: projectGuid === 'all' }))),
         ), Promise.resolve()).then(() => {
           if (errors.size) {
             dispatch({ type: receiveAction, error: [...errors].join(', '), newValue: [] })

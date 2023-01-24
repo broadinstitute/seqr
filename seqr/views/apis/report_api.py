@@ -189,7 +189,9 @@ def sample_metadata_export(request, project_guid):
         project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
 
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        project, individual_samples, request.user, include_collaborator=True)
+        project, individual_samples, request.user, include_collaborator=True,
+        omit_airtable=request.GET.get('isAllProject') == 'true',
+    )
     family_rows_by_id = {row['family_id']: row for row in family_rows}
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
@@ -224,7 +226,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(project, individual_samples, user, include_collaborator=False):
+def _parse_anvil_metadata(project, individual_samples, user, include_collaborator=False, omit_airtable=False):
     samples_by_family = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
@@ -241,7 +243,8 @@ def _parse_anvil_metadata(project, individual_samples, user, include_collaborato
             {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
         )
 
-    sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), user, include_collaborator=include_collaborator)
+    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
+        list(sample_ids), user, include_collaborator=include_collaborator)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
@@ -307,9 +310,12 @@ def _parse_anvil_metadata(project, individual_samples, user, include_collaborato
         for sample in family_samples:
             individual = sample.individual
 
-            airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
-            dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
-            has_dbgap_submission = sample.sample_type in dbgap_submission
+            airtable_metadata = None
+            has_dbgap_submission = None
+            if sample_airtable_metadata is not None:
+                airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
+                dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
+                has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
@@ -483,10 +489,6 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
 
-    sequencing = airtable_metadata.get('SequencingProduct') or set()
-    multiple_datasets = len(sequencing) > 1 or (
-            len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS)
-
     solve_state = 'Unsolved'
     if parsed_variants:
         all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
@@ -503,17 +505,18 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'hpo_present': '|'.join(features_present),
         'hpo_absent': '|'.join(features_absent),
         'solve_state': solve_state,
-        'multiple_datasets': 'Yes' if multiple_datasets else 'No',
-        'dbgap_submission': 'No',
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': individual_id_map.get(individual.father_id, ''),
         'maternal_id': individual_id_map.get(individual.mother_id, ''),
     }
-    if has_dbgap_submission:
+    if airtable_metadata is not None:
+        sequencing = airtable_metadata.get('SequencingProduct') or set()
         subject_row.update({
-            'dbgap_submission': 'Yes',
-            'dbgap_study_id': airtable_metadata.get('dbgap_study_id', ''),
-            'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', ''),
+            'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
+            'dbgap_study_id': airtable_metadata.get('dbgap_study_id', '') if has_dbgap_submission else '',
+            'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', '') if has_dbgap_submission else '',
+            'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
+            len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
         })
     return subject_row
 
@@ -526,9 +529,10 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
         'sample_id': sample.sample_id,
         'data_type': sample.sample_type,
         'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
-        'sample_provider': airtable_metadata.get('CollaboratorName') or '',
         'sequencing_center': 'Broad',
     }
+    if airtable_metadata is not None:
+        sample_row['sample_provider'] = airtable_metadata.get('CollaboratorName') or ''
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     return sample_row
