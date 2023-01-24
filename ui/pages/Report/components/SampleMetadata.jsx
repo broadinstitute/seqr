@@ -38,10 +38,12 @@ SampleMetadataFilters.propTypes = {
   load: PropTypes.func,
 }
 
+const VIEW_ALL_PAGES = [{ name: 'GREGoR', path: 'gregor' }, { name: 'Broad', path: 'all' }]
+
 const SampleMetadata = React.memo(props => (
   <BaseReport
     page="sample_metadata"
-    viewAllCategory="CMG"
+    viewAllPages={VIEW_ALL_PAGES}
     idField="subject_id"
     defaultSortColumn="family_id"
     getDownloadFilename={getDownloadFilename}

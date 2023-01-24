@@ -308,7 +308,7 @@ api_endpoints = {
     'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
     'report/gregor/(?P<consent_code>[^/]+)': gregor_export,
-    'report/get_cmg_projects': get_cmg_projects,
+    'report/get_category_projects/(?P<category>[^/]+)': get_cmg_projects,
     'report/seqr_stats': seqr_stats,
 
     'data_management/elasticsearch_status': elasticsearch_status,

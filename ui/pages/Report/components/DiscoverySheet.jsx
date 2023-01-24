@@ -9,10 +9,12 @@ import BaseReport from './BaseReport'
 
 const getDownloadFilename = projectGuid => `discovery_sheet_${projectGuid}`
 
+const VIEW_ALL_PAGES = [{ name: 'CMG', path: 'cmg' }]
+
 const DiscoverySheet = React.memo(props => (
   <BaseReport
     page="discovery_sheet"
-    viewAllCategory="CMG"
+    viewAllPages={VIEW_ALL_PAGES}
     idField="row_id"
     defaultSortColumn="family_id"
     columns={DISCOVERY_SHEET_COLUMNS}

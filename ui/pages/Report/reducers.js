@@ -16,12 +16,12 @@ const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 
 // Data actions
 const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => (dispatch) => {
-  if (projectGuid === 'all') {
+  if (projectGuid === 'all' || projectGuid === 'gregor' || projectGuid === 'cmg') {
     dispatch({ type: requestAction })
 
     const errors = new Set()
     const rows = []
-    new HttpRequestHelper('/api/report/get_cmg_projects',
+    new HttpRequestHelper(`/api/report/get_category_projects/${projectGuid}`,
       (projectsResponseJson) => {
         const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
           if (acc[0].length === 5) {
