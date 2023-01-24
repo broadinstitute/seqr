@@ -148,7 +148,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     if not data_path.endswith(VCF_FILE_EXTENSIONS):
         error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
     elif data_path.find('*') != -1:
-        sharded_file_list = does_file_exist(data_path, request.user)
+        sharded_file_list = does_file_exist(data_path, request.user, return_outputs=True)
         if not sharded_file_list:
             error = f'Cannot find the sharded VCF files for {data_path}.'
     elif not does_file_exist(data_path, user=request.user):
