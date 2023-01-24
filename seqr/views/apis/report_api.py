@@ -717,7 +717,7 @@ def gregor_export(request, consent_code):
         sample__elasticsearch_index__isnull=False,
     ).distinct().prefetch_related('family__project', 'mother', 'father')
 
-    airtable_sample_records = _get_gregor_airtable_data(individuals, request.user)
+    airtable_sample_records, airtable_metadata_by_smid = _get_gregor_airtable_data(individuals, request.user)
 
     participant_rows = []
     family_map = {}
@@ -757,8 +757,9 @@ def gregor_export(request, consent_code):
         analyte_id = None
         # airtable data
         if airtable_sample:
-            analyte_id = f'Broad_{airtable_sample[SMID_FIELD]}'
-            airtable_metadata = airtable_sample.get('metadata')
+            sm_id = airtable_sample[SMID_FIELD]
+            analyte_id = f'Broad_{sm_id}'
+            airtable_metadata = airtable_metadata_by_smid.get(sm_id)
             if airtable_metadata:
                 airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_ids(airtable_sample)))
 
@@ -791,10 +792,7 @@ def _get_gregor_airtable_data(individuals, user):
     )
     airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
 
-    for sample in sample_records.values():
-        sample['metadata'] = airtable_metadata_by_smid.get(sample[SMID_FIELD])
-
-    return sample_records
+    return sample_records, airtable_metadata_by_smid
 
 
 def _get_gregor_family_row(family):
