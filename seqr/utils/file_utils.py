@@ -37,10 +37,11 @@ def does_file_exist(file_path, user=None):
     if is_google_bucket_file_path(file_path):
         process = _run_gsutil_command('ls', file_path, user=user)
         success = process.wait() == 0
+        outputs = [line.decode('utf-8').strip() for line in process.stdout]
         if not success:
-            errors = [line.decode('utf-8').strip() for line in process.stdout]
-            logger.info(' '.join(errors), user)
-        return success
+            logger.info(' '.join(outputs), user)
+            return False
+        return outputs
     return os.path.isfile(file_path)
 
 

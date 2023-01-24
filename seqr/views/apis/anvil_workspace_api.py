@@ -143,15 +143,22 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
+    sharded_file_list = None
+    error = None
     if not data_path.endswith(VCF_FILE_EXTENSIONS):
         error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
-        return create_json_response({'error': error}, status=400, reason=error)
-    if not does_file_exist(data_path, user=request.user):
+    elif data_path.find('*') != -1:
+        sharded_file_list = does_file_exist(data_path, request.user)
+        if not sharded_file_list:
+            error = f'Cannot find the sharded VCF files for {data_path}.'
+    elif not does_file_exist(data_path, user=request.user):
         error = 'Data file or path {} is not found.'.format(path)
+
+    if error:
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(data_path)
+    samples = validate_vcf_and_get_samples(data_path, sharded_file_list=sharded_file_list)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 
@@ -462,13 +469,14 @@ def _merge_sharded_vcf(vcf_files):
     files_by_path = defaultdict(list)
 
     for vcf_file in vcf_files:
-        path, file = vcf_file.rsplit('/', 1)
-        files_by_path[path].append(file)
+        subfolder_path, file = vcf_file.rsplit('/', 1)
+        files_by_path[subfolder_path].append(file)
 
-    for path, files in files_by_path.items():
+    # discover the sharded VCF files in each folder, replace the sharded VCF files with a single path with '*'
+    for subfolder_path, files in files_by_path.items():
         prefix = _get_common_prefix(files)
-        postfix = files[0].replace(prefix, '').lstrip('01234556789')
-        if len(files) > 1 and all([file.replace(prefix, '').lstrip('01234556789') == postfix for file in files]):
-            files_by_path[path] = [f'{prefix}*{postfix}']
+        postfix = files[0].replace(prefix, '').lstrip('_0123456789')
+        if len(files) > 1 and all([file.replace(prefix, '').lstrip('_0123456789') == postfix for file in files]):
+            files_by_path[subfolder_path] = [f'{prefix}*{postfix}']
 
     return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]

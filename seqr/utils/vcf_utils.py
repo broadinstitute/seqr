@@ -53,7 +53,10 @@ def _get_vcf_meta_info(line):
     return None
 
 
-def validate_vcf_and_get_samples(vcf_filename):
+def validate_vcf_and_get_samples(vcf_filename, sharded_file_list=None):
+    if sharded_file_list:
+        # simply validate the first sharded VCF file, more validation can be added if needed.
+        vcf_filename = sharded_file_list[0]
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     samples = {}
     header = []
