@@ -34,9 +34,10 @@ class LocusListAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(locus_lists_dict.keys()), {LOCUS_LIST_GUID})
 
         locus_list = locus_lists_dict[LOCUS_LIST_GUID]
-        fields = {'numProjects'}
-        fields.update(PUBLIC_LOCUS_LIST_FIELDS)
+        fields = {'numProjects', 'geneNames'}
+        fields.update(OPTION_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
+        self.assertSetEqual(set(locus_list['geneNames']), {'WASH7P', 'DDX11L1', 'MIR1302-2HG'})
 
         self.login_analyst_user()
         response = self.client.get(url)

@@ -7,7 +7,7 @@ from django.urls.base import reverse
 from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, add_project_locus_lists, \
     delete_project_locus_lists
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_DETAIL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 
@@ -19,7 +19,7 @@ NEW_AU_PA_LOCUS_LIST_GUID = 'LL00006_hereditary_neuropathy_'
 NEW_UK_PA_LOCUS_LIST_GUID = 'LL00007_auditory_neuropathy_sp'
 
 PA_LOCUS_LIST_FIELDS = {'paLocusList'}
-PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_DETAIL_FIELDS)
+PA_LOCUS_LIST_FIELDS.update(LOCUS_LIST_FIELDS)
 
 PA_LOCUS_LIST_DETAIL_FIELDS = {'items', 'intervalGenomeVersion'}
 PA_LOCUS_LIST_DETAIL_FIELDS.update(PA_LOCUS_LIST_FIELDS)
@@ -49,10 +49,9 @@ class PaLocusListAPITest(AuthenticationTestCase):
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()),
                             {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID})
-        self.assertTrue(all('pagene' not in item for k, v in locus_lists_dict.items() for item in v['items']))
 
         locus_list = locus_lists_dict[EXISTING_AU_PA_LOCUS_LIST_GUID]
-        fields = {'numProjects'}
+        fields = {'numProjects', 'geneNames'}
         fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
 
@@ -197,20 +196,29 @@ class PaLocusListAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(locus_lists_dict.keys()),
                             {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID,
                              'LL00005_hereditary_haemorrhagi', NEW_AU_PA_LOCUS_LIST_GUID, NEW_UK_PA_LOCUS_LIST_GUID})
-        self.assertDictEqual(locus_lists_dict[NEW_AU_PA_LOCUS_LIST_GUID], {
+
+        new_au_response = self.client.get(reverse(locus_list_info, args=[NEW_AU_PA_LOCUS_LIST_GUID]))
+        self.assertDictEqual(new_au_response.json()['locusListsByGuid'][NEW_AU_PA_LOCUS_LIST_GUID], {
             'locusListGuid': NEW_AU_PA_LOCUS_LIST_GUID,
             'name': 'Hereditary Neuropathy_CMT - isolated',
             'description': 'PanelApp_3069_0.199_Neurology and neurodevelopmental disorders',
-            'items': [{'geneId': 'ENSG00000090861'}], 'paLocusList': {'url': 'https://test-panelapp.url.au/api/panels/3069/genes', 'panelAppId': 3069},
-            'numEntries': 1, 'numProjects': 0, 'isPublic': True, 'createdBy': None,
+            'items': [{'geneId': 'ENSG00000090861', 'pagene': {
+                'confidenceLevel': '3', 'modeOfInheritance': 'MONOALLELIC, autosomal or pseudoautosomal, imprinted status unknown',
+            }}],
+            'paLocusList': {'url': 'https://test-panelapp.url.au/api/panels/3069/genes', 'panelAppId': 3069},
+            'numEntries': 1, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
-        self.assertDictEqual(locus_lists_dict[NEW_UK_PA_LOCUS_LIST_GUID], {
+        new_uk_response = self.client.get(reverse(locus_list_info, args=[NEW_UK_PA_LOCUS_LIST_GUID]))
+        self.assertDictEqual(new_uk_response.json()['locusListsByGuid'][NEW_UK_PA_LOCUS_LIST_GUID], {
             'locusListGuid': NEW_UK_PA_LOCUS_LIST_GUID,
             'name': 'Auditory Neuropathy Spectrum Disorde',
             'description': 'PanelApp_UK_260_1.8_Hearing and ear disorders;Non-syndromic hearing loss',
-            'items': [{'geneId': 'ENSG00000139734'}], 'paLocusList': {'url': 'https://test-panelapp.url.uk/api/panels/260/genes', 'panelAppId': 260},
-            'numEntries': 1, 'numProjects': 0, 'isPublic': True, 'createdBy': None,
+            'items': [{'geneId': 'ENSG00000139734', 'pagene': {
+                'confidenceLevel': '2', 'modeOfInheritance': 'BOTH monoallelic and biallelic, autosomal or pseudoautosomal',
+            }}],
+            'paLocusList': {'url': 'https://test-panelapp.url.uk/api/panels/260/genes', 'panelAppId': 260},
+            'numEntries': 1, 'isPublic': True, 'createdBy': None,
             'canEdit': False, 'createdDate': mock.ANY, 'lastModifiedDate': mock.ANY, 'intervalGenomeVersion': None,
         })
 
