@@ -558,7 +558,6 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     return discovery_rows
 
 
-SAMPLE_ID_FIELDS = ['CollaboratorSampleID', 'SeqrCollaboratorSampleID']
 SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
@@ -566,7 +565,7 @@ LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
     raw_records = session.fetch_records(
         'Samples', fields=[id_field] + fields,
-        or_filters={f'{id_field}': sample_ids},
+        or_filters={f'{{{id_field}}}': sample_ids},
     )
 
     records_by_id = defaultdict(list)
@@ -798,7 +797,7 @@ def _get_gregor_airtable_data(individuals, user):
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
         fields=[SMID_FIELD] + fields,
-        or_filters={f'{SMID_FIELD}': [r[SMID_FIELD] for r in sample_records.values()]},
+        or_filters={f'{SMID_FIELD}': {r[SMID_FIELD] for r in sample_records.values()}},
     )
     airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
 

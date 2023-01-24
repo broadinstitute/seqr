@@ -71,8 +71,8 @@ AIRTABLE_SAMPLE_RECORDS = {
     {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
-        "SeqrCollaboratorSampleID": "NA19675",
-        "CollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "CollaboratorSampleID": "NA19675",
         "Collaborator": ["recW24C2CJW5lT64K"],
         "dbgap_study_id": "dbgap_stady_id_1",
         "dbgap_subject_id": "dbgap_subject_id_1",
@@ -91,7 +91,7 @@ AIRTABLE_SAMPLE_RECORDS = {
       "id": "rec2Nkg10N1KssPc3",
       "fields": {
         "SeqrCollaboratorSampleID": "HG00731",
-        "CollaboratorSampleID": "VCGS_FAM203_621_D2",
+        "CollaboratorSampleID": "NA20885",
         "Collaborator": ["reca4hcBnbA2cnZf9"],
         "dbgap_study_id": "dbgap_stady_id_2",
         "dbgap_subject_id": "dbgap_subject_id_2",
@@ -111,7 +111,7 @@ AIRTABLE_SAMPLE_RECORDS = {
 PAGINATED_AIRTABLE_SAMPLE_RECORDS = {
     'offset': 'abc123',
     'records': [{
-      'id': 'rec2B6OGmQpfuRW3s',
+      'id': 'rec2B6OGmQpfuRW5z',
       'fields': {
         'CollaboratorSampleID': 'NA19675',
         'Collaborator': ['recW24C2CJW5lT64K'],
@@ -153,8 +153,8 @@ AIRTABLE_GREGOR_SAMPLE_RECORDS = {
     {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
-        "SeqrCollaboratorSampleID": "NA19675_1",
-        "CollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "CollaboratorSampleID": "NA19675_1",
         'SMID': 'SM-AGHT',
         'Recontactable': 'Yes',
       },
@@ -459,7 +459,7 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
-    @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 4)
+    @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
@@ -502,17 +502,18 @@ class ReportAPITest(object):
         self.assertEqual(
             response.json()['error'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
-        self.assertEqual(len(responses.calls), 3)
-        first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889'," \
-                        "{SeqrCollaboratorSampleID}='NA20885')"
+        self.assertEqual(len(responses.calls), 4)
+        first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888')"
         expected_fields = [
-            'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
+            'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
             'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
         ]
         self._assert_expected_airtable_call(0, first_formula, expected_fields)
         self._assert_expected_airtable_call(1, first_formula, expected_fields, additional_params={'offset': 'abc123'})
+        self._assert_expected_airtable_call(2, "OR({CollaboratorSampleID}='NA20889')", expected_fields)
         second_formula = "OR({SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')"
-        self._assert_expected_airtable_call(2, second_formula, expected_fields)
+        expected_fields[0] = 'SeqrCollaboratorSampleID'
+        self._assert_expected_airtable_call(3, second_formula, expected_fields)
 
         # Test success
         response = self.client.get(url)
@@ -520,7 +521,7 @@ class ReportAPITest(object):
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
-        self.assertEqual(len(responses.calls), 6)
+        self.assertEqual(len(responses.calls), 8)
         self._assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
@@ -656,19 +657,21 @@ class ReportAPITest(object):
         ])
 
         # test airtable calls
-        self.assertEqual(len(responses.calls), 2)
+        self.assertEqual(len(responses.calls), 3)
         sample_filter = "OR({CollaboratorSampleID}='HG00731',{CollaboratorSampleID}='HG00732',{CollaboratorSampleID}='HG00733'," \
                         "{CollaboratorSampleID}='NA19675_1',{CollaboratorSampleID}='NA19678',{CollaboratorSampleID}='NA19679'," \
                         "{CollaboratorSampleID}='NA20870',{CollaboratorSampleID}='NA20872',{CollaboratorSampleID}='NA20874'," \
                         "{CollaboratorSampleID}='NA20875',{CollaboratorSampleID}='NA20876',{CollaboratorSampleID}='NA20877'," \
-                        "{CollaboratorSampleID}='NA20881',{SeqrCollaboratorSampleID}='HG00731',{SeqrCollaboratorSampleID}='HG00732'," \
-                        "{SeqrCollaboratorSampleID}='HG00733',{SeqrCollaboratorSampleID}='NA19675_1',{SeqrCollaboratorSampleID}='NA19678'," \
+                        "{CollaboratorSampleID}='NA20881')"
+        sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorSampleID', 'Recontactable']
+        self._assert_expected_airtable_call(0, sample_filter, sample_fields)
+        secondary_sample_filter = "OR({SeqrCollaboratorSampleID}='HG00731',{SeqrCollaboratorSampleID}='HG00732'," \
+                        "{SeqrCollaboratorSampleID}='HG00733',{SeqrCollaboratorSampleID}='NA19678'," \
                         "{SeqrCollaboratorSampleID}='NA19679',{SeqrCollaboratorSampleID}='NA20870',{SeqrCollaboratorSampleID}='NA20872'," \
                         "{SeqrCollaboratorSampleID}='NA20874',{SeqrCollaboratorSampleID}='NA20875',{SeqrCollaboratorSampleID}='NA20876'," \
                         "{SeqrCollaboratorSampleID}='NA20877',{SeqrCollaboratorSampleID}='NA20881')"
-        sample_fields = ['SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'SMID', 'CollaboratorSampleID',
-                         'Recontactable']
-        self._assert_expected_airtable_call(0, sample_filter, sample_fields)
+        sample_fields[0] = 'SeqrCollaboratorSampleID'
+        self._assert_expected_airtable_call(1, secondary_sample_filter, sample_fields)
         metadata_fields = [
             'SMID', 'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
             'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
@@ -677,7 +680,7 @@ class ReportAPITest(object):
             'aligned_dna_short_read_id', 'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id',
             'called_variants_dna_file', 'md5sum', 'caller_software', 'variant_types', 'analysis_details',
         ]
-        self._assert_expected_airtable_call(1, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
+        self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
 
         self.check_no_analyst_no_access(url)
 

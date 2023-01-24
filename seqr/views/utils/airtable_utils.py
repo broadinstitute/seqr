@@ -8,7 +8,7 @@ from settings import AIRTABLE_API_KEY, AIRTABLE_URL
 
 logger = SeqrLogger(__name__)
 
-MAX_OR_FILTERS = 200
+MAX_OR_FILTERS = 270
 
 
 class AirtableSession(object):
