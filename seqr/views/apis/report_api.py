@@ -558,41 +558,51 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     return discovery_rows
 
 
-SAMPLE_ID_FIELDS = ['SeqrCollaboratorSampleID', 'CollaboratorSampleID']
+SAMPLE_ID_FIELDS = ['CollaboratorSampleID', 'SeqrCollaboratorSampleID']
 SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_airtable_samples(sample_ids, user, fields, list_fields=None):
-    list_fields = list_fields or []
-    session = AirtableSession(user)
+def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
     raw_records = session.fetch_records(
-        'Samples', fields=SAMPLE_ID_FIELDS + fields + list_fields,
-        or_filters={
-            '{CollaboratorSampleID}': sample_ids,
-            '{SeqrCollaboratorSampleID}': sample_ids,
-        },
+        'Samples', fields=[id_field] + fields,
+        or_filters={f'{id_field}': sample_ids},
     )
 
-    sample_records = {}
+    records_by_id = defaultdict(list)
     for record in raw_records.values():
-        record_id = next(record[id_field] for id_field in SAMPLE_ID_FIELDS if record.get(id_field))
-        if record.get('Collaborator'):
-            record['Collaborator'] = record['Collaborator'][0]
+        records_by_id[record[id_field]].append(record)
+    return records_by_id
 
-        parsed_record = sample_records.get(record_id, {})
+
+def _get_airtable_samples(sample_ids, user, fields, list_fields=None):
+    list_fields = list_fields or []
+    all_fields = fields + list_fields
+
+    session = AirtableSession(user)
+    records_by_id = _get_airtable_samples_for_id_field(sample_ids, 'CollaboratorSampleID', all_fields, session)
+    missing = set(sample_ids) - set(records_by_id.keys())
+    if missing:
+        records_by_id.update(_get_airtable_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', all_fields, session))
+
+    sample_records = {}
+    for record_id, records in records_by_id.items():
+        parsed_record = {}
         for field in fields:
-            if field in record:
-                if field in parsed_record and parsed_record[field] != record[field]:
-                    error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
-                        record_id, field)
-                    raise Exception(error)
-                parsed_record[field] = record[field]
+            record_field = {
+                record[field][0] if field == 'Collaborator' else record[field] for record in records if field in record
+            }
+            if len(record_field) > 1:
+                error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
+                    record_id, field)
+                raise Exception(error)
+            if record_field:
+                parsed_record[field] = record_field.pop()
         for field in list_fields:
-            if field in record:
-                value = parsed_record.get(field, set())
-                value.update(record[field])
-                parsed_record[field] = value
+            parsed_record[field] = set()
+            for record in records:
+                if field in record:
+                    parsed_record[field].update(record[field])
 
         sample_records[record_id] = parsed_record
 
@@ -605,7 +615,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
     )
 
     if include_collaborator:
-        collaborator_ids = {record['Collaborator'] for record in sample_records.values()}
+        collaborator_ids = {record['Collaborator'] for record in sample_records.values() if 'Collaborator' in record}
         collaborator_map = session.fetch_records(
             'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
         ) if collaborator_ids else {}
