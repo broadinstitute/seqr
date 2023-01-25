@@ -199,17 +199,13 @@ AIRTABLE_GREGOR_RECORDS = {
     },
 ]}
 
-EXPECTED_SAMPLE_METADATA_ROW = {
+EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "project_guid": "R0003_test",
     "num_saved_variants": 2,
-    "dbgap_submission": "No",
-    "dbgap_study_id": "",
-    "dbgap_subject_id": "",
     "solve_state": "Tier 1",
     "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
-    "sample_provider": "",
     "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
     "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
     "hpo_absent": "",
@@ -224,7 +220,6 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Ref-1": "TC",
     "sv_type-2": "Deletion",
     "sv_name-2": "DEL:chr12:49045487-49045898",
-    "multiple_datasets": "No",
     "ancestry_detail": "Ashkenazi Jewish",
     "maternal_id": "",
     "paternal_id": "",
@@ -256,7 +251,15 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "proband_relationship": "",
     "consanguinity": "None suspected",
     "sequencing_center": "Broad",
-  }
+}
+EXPECTED_SAMPLE_METADATA_ROW = {
+    "dbgap_submission": "No",
+    "dbgap_study_id": "",
+    "dbgap_subject_id": "",
+    "sample_provider": "",
+    "multiple_datasets": "No",
+}
+EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 
 def _get_list_param(call, param):
     query_params = call.url.split('?')[1].split('&')
@@ -535,6 +538,16 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
 
+        # Test all projects
+        responses.reset()
+        all_projects_url = reverse(sample_metadata_export, args=['all'])
+        response = self.client.get(all_projects_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), self.NUM_TOTAL_SAMPLES)
+        self.assertIn(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, response_json['rows'])
+
         self.check_no_analyst_no_access(url)
 
         # Test non-broad analysts do not have access
@@ -690,6 +703,7 @@ class ReportAPITest(object):
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    NUM_TOTAL_SAMPLES = 17
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
@@ -706,6 +720,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    NUM_TOTAL_SAMPLES = 16
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
