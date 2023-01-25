@@ -526,7 +526,10 @@ class ReportAPITest(object):
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertEqual(len(response_json['rows']), 3)
-        self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
+        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
         self.assertEqual(len(responses.calls), 8)
         self._assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
@@ -545,8 +548,14 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertEqual(len(response_json['rows']), self.NUM_TOTAL_SAMPLES)
-        self.assertIn(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, response_json['rows'])
+        expected_samples.update({
+            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
+            'NA20872', 'NA20881', 'HG00733',
+        })
+        expected_samples.update(self.ADDITIONAL_SAMPLES)
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
 
         self.check_no_analyst_no_access(url)
 
@@ -703,7 +712,7 @@ class ReportAPITest(object):
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
-    NUM_TOTAL_SAMPLES = 17
+    ADDITIONAL_SAMPLES = ['NA21234']
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
@@ -720,7 +729,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
-    NUM_TOTAL_SAMPLES = 16
+    ADDITIONAL_SAMPLES = []
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
