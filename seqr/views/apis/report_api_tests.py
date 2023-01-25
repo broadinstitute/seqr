@@ -6,7 +6,7 @@ import responses
 from settings import AIRTABLE_URL
 
 from seqr.models import Project
-from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
+from seqr.views.apis.report_api import seqr_stats, get_category_projects, discovery_sheet, anvil_export, \
     sample_metadata_export, gregor_export
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
@@ -305,8 +305,8 @@ class ReportAPITest(object):
 
         self.check_no_analyst_no_access(url)
 
-    def test_get_cmg_projects(self):
-        url = reverse(get_cmg_projects)
+    def test_get_category_projects(self):
+        url = reverse(get_category_projects, args=['CMG'])
         self.check_analyst_login(url)
 
         response = self.client.get(url)

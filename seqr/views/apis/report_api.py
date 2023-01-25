@@ -982,7 +982,7 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
 
 
 @analyst_required
-def get_cmg_projects(request, category):
+def get_category_projects(request, category):
     projects = Project.objects.filter(projectcategory__name__iexact=category)
     return create_json_response({
         'projectGuids': list(projects.values_list('guid', flat=True)),
