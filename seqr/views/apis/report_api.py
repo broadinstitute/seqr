@@ -242,10 +242,15 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False):
             filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
         ),
     )
-    family_data_by_id = {
-        f.pop('id'): dict(project_id=f.pop('project__name'), phenotype_group='|'.join(f.pop('phenotype_groups')), **f)
-        for f in family_data
-    }
+
+    family_data_by_id = {}
+    for f in family_data:
+        family_id = f.pop('id')
+        f.update({
+            'project_id': f.pop('project__name'),
+            'phenotype_group': '|'.join(f.pop('phenotype_groups')),
+        })
+        family_data_by_id[family_id] = f
 
     samples_by_family_id = defaultdict(list)
     individual_id_map = {}
