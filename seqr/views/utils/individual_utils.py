@@ -6,8 +6,7 @@ from collections import defaultdict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json, \
-    update_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
@@ -28,7 +27,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_ids=False):
     """
     Add or update individual and family records in the given project.
 
@@ -42,9 +41,9 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         3-tuple: updated Individual models, updated Family models, and updated FamilyNote models
 
     """
-    updated_families = set()
+    updated_family_ids = set()
     updated_individuals = set()
-    updated_notes = []
+    updated_note_ids = []
     parent_updates = []
 
     family_ids = {_get_record_family_id(record) for record in individual_records}
@@ -54,7 +53,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
     for family_id in missing_family_ids:
         family = create_model_from_json(Family, {'project': project, 'family_id': family_id}, user)
         families_by_id[family_id] = family
-        updated_families.add(family)
+        updated_family_ids.add(family.id)
 
     individual_models = Individual.objects.filter(family__project=project).prefetch_related(
         'family', 'mother', 'father')
@@ -72,7 +71,7 @@ def add_or_update_individuals_and_families(project, individual_records, user):
 
     for record in individual_records:
         _update_from_record(
-            record, user, families_by_id, individual_lookup, updated_families, updated_individuals, parent_updates, updated_notes)
+            record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids)
 
     for update in parent_updates:
         individual = update.pop('individual')
@@ -80,14 +79,22 @@ def add_or_update_individuals_and_families(project, individual_records, user):
         if is_updated:
             updated_individuals.add(individual)
             if individual.family.pedigree_image:
-                updated_families.add(individual.family)
+                updated_family_ids.add(individual.family_id)
 
-    _remove_pedigree_images(updated_families, user)
+    updated_family_models = Family.objects.filter(id__in=updated_family_ids)
+    _remove_pedigree_images(updated_family_models, user)
 
-    return list(updated_individuals), list(updated_families), updated_notes
+    pedigree_json = None
+    if get_update_json:
+        pedigree_json = _get_updated_pedigree_json(updated_individuals, updated_family_models, updated_note_ids, user)
+
+    if get_updated_individual_ids:
+        return pedigree_json, {i.individual_id for i in updated_individuals}
+
+    return pedigree_json
 
 
-def _update_from_record(record, user, families_by_id, individual_lookup, updated_families, updated_individuals, parent_updates, updated_notes):
+def _update_from_record(record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, parent_updates, updated_note_ids):
     family_id = _get_record_family_id(record)
     family = families_by_id.get(family_id)
 
@@ -100,15 +107,15 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         if not individual:
             individual = create_model_from_json(
                 Individual, {'family': family, 'individual_id': individual_id, 'case_review_status': 'I'}, user)
-            updated_families.add(family)
+            updated_family_ids.add(family.id)
             updated_individuals.add(individual)
             individual_lookup[individual_id][family] = individual
 
     record['family'] = family
     record.pop('familyId', None)
     if individual.family != family:
-        updated_families.add(family)
-        updated_families.add(individual.family)
+        updated_family_ids.add(family.id)
+        updated_family_ids.add(individual.family_id)
         family = individual.family
 
     previous_id = record.pop(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN, None)
@@ -128,13 +135,13 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
     family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)
     if family_notes:
         note = create_model_from_json(FamilyNote, {'note': family_notes, 'note_type': 'C', 'family': family}, user)
-        updated_notes.append(note)
+        updated_note_ids.append(note.id)
 
     is_updated = update_individual_from_json(individual, record, user=user, allow_unknown_keys=True)
     if is_updated:
         updated_individuals.add(individual)
         if family.pedigree_image:
-            updated_families.add(family)
+            updated_family_ids.add(family.id)
 
 
 def delete_individuals(project, individual_guids, user):
@@ -163,19 +170,18 @@ def delete_individuals(project, individual_guids, user):
     MatchmakerResult.bulk_delete(user, submission__individual__in=individuals_to_delete, submission__deleted_date__isnull=False)
     MatchmakerSubmission.bulk_delete(user, individual__in=individuals_to_delete, deleted_date__isnull=False)
 
-    families = {individual.family for individual in individuals_to_delete}
-
+    deleted_individual_family_ids = list(Family.objects.filter(individual__in=individuals_to_delete).values_list('id', flat=True))
     Individual.bulk_delete(user, queryset=individuals_to_delete)
 
-    _remove_pedigree_images(families, user)
-    families_with_deleted_individuals = list(families)
+    families_with_deleted_individuals = Family.objects.filter(id__in=deleted_individual_family_ids)
+
+    _remove_pedigree_images(families_with_deleted_individuals, user)
 
     return families_with_deleted_individuals
 
 
 def _remove_pedigree_images(families, user):
-    for family in families:
-        update_model_from_json(family, {'pedigree_image': None}, user)
+    Family.bulk_update(user, {'pedigree_image': None}, queryset=families)
 
 
 def get_parsed_feature(feature):
@@ -189,10 +195,12 @@ def get_parsed_feature(feature):
     return feature_json
 
 
-def get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user):
+def _get_updated_pedigree_json(updated_individuals, updated_families, updated_note_ids, user):
     individuals_by_guid = {
         individual['individualGuid']: individual for individual in
-        _get_json_for_individuals(updated_individuals, user, add_sample_guids_field=True)
+        _get_json_for_individuals(Individual.objects.filter(id__in=[
+            i.id for i in updated_individuals
+        ]), user, add_sample_guids_field=True)
     }
     families_by_guid = {
         family['familyGuid']: family for family in
@@ -203,8 +211,10 @@ def get_updated_pedigree_json(updated_individuals, updated_families, updated_not
         'individualsByGuid': individuals_by_guid,
         'familiesByGuid': families_by_guid,
     }
-    if updated_notes:
-        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(updated_notes)}
+    if updated_note_ids:
+        family_notes_by_guid = {note['noteGuid']: note for note in get_json_for_family_notes(
+            FamilyNote.objects.filter(id__in=updated_note_ids)
+        )}
         response['familyNotesByGuid'] = family_notes_by_guid
 
     return response

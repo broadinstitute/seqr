@@ -8,6 +8,9 @@ from settings import AIRTABLE_API_KEY, AIRTABLE_URL
 
 logger = SeqrLogger(__name__)
 
+MAX_OR_FILTERS = 270
+
+
 class AirtableSession(object):
 
     RDG_BASE = 'RDG'
@@ -40,12 +43,16 @@ class AirtableSession(object):
             logger.error(f'Airtable create "{record_type}" error: {e}', self._user)
 
     def fetch_records(self, record_type, fields, or_filters):
+        self._session.params.update({'fields[]': fields})
         filter_formulas = []
         for key, values in or_filters.items():
             filter_formulas += [f"{key}='{value}'" for value in sorted(values)]
-        self._session.params.update({'fields[]': fields, 'filterByFormula': f'OR({",".join(filter_formulas)})'})
         records = {}
-        self._populate_records(record_type, records)
+        for i in range(0, len(filter_formulas), MAX_OR_FILTERS):
+            filter_formula_group = filter_formulas[i:i + MAX_OR_FILTERS]
+            self._session.params.update({'filterByFormula': f'OR({",".join(filter_formula_group)})'})
+            logger.info(f'Fetching {record_type} records {i}-{i + MAX_OR_FILTERS} from airtable', self._user)
+            self._populate_records(record_type, records)
         logger.info('Fetched {} {} records from airtable'.format(len(records), record_type), self._user)
         return records
 

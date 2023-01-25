@@ -71,8 +71,8 @@ AIRTABLE_SAMPLE_RECORDS = {
     {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
-        "SeqrCollaboratorSampleID": "NA19675",
-        "CollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "CollaboratorSampleID": "NA19675",
         "Collaborator": ["recW24C2CJW5lT64K"],
         "dbgap_study_id": "dbgap_stady_id_1",
         "dbgap_subject_id": "dbgap_subject_id_1",
@@ -91,7 +91,7 @@ AIRTABLE_SAMPLE_RECORDS = {
       "id": "rec2Nkg10N1KssPc3",
       "fields": {
         "SeqrCollaboratorSampleID": "HG00731",
-        "CollaboratorSampleID": "VCGS_FAM203_621_D2",
+        "CollaboratorSampleID": "NA20885",
         "Collaborator": ["reca4hcBnbA2cnZf9"],
         "dbgap_study_id": "dbgap_stady_id_2",
         "dbgap_subject_id": "dbgap_subject_id_2",
@@ -111,7 +111,7 @@ AIRTABLE_SAMPLE_RECORDS = {
 PAGINATED_AIRTABLE_SAMPLE_RECORDS = {
     'offset': 'abc123',
     'records': [{
-      'id': 'rec2B6OGmQpfuRW3s',
+      'id': 'rec2B6OGmQpfuRW5z',
       'fields': {
         'CollaboratorSampleID': 'NA19675',
         'Collaborator': ['recW24C2CJW5lT64K'],
@@ -146,6 +146,58 @@ AIRTABLE_COLLABORATOR_RECORDS = {
         }
     ]
 }
+
+
+AIRTABLE_GREGOR_SAMPLE_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B6OGmQpAkQW3s",
+      "fields": {
+        "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "CollaboratorSampleID": "NA19675_1",
+        'SMID': 'SM-AGHT',
+        'Recontactable': 'Yes',
+      },
+    },
+    {
+      "id": "rec2Nkg10N1KssPc3",
+      "fields": {
+        "SeqrCollaboratorSampleID": "HG00731",
+        "CollaboratorSampleID": "VCGS_FAM203_621_D2",
+        'SMID': 'SM-JDBTM',
+      },
+    }
+]}
+AIRTABLE_GREGOR_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B6OGmQpAkQW3s",
+      "fields": {
+        'SMID': 'SM-JDBTM',
+        'seq_library_prep_kit_method': 'Kapa HyperPrep',
+        'read_length': '151',
+        'experiment_type': 'exome',
+        'targeted_regions_method': 'Twist',
+        'targeted_region_bed_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed',
+        'date_data_generation': '2022-08-15',
+        'target_insert_size': '385',
+        'sequencing_platform': 'NovaSeq',
+        'aligned_dna_short_read_id': 'BCM_H7YG5DSX2-3-IDUDI0014-1',
+        'aligned_dna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+        'aligned_dna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
+        'md5sum': '129c28163df082',
+        'reference_assembly': 'GRCh38',
+        'alignment_software': 'BWA-MEM-2.3',
+        'mean_coverage': '42.4',
+        'analysis_details': 'DOI:10.5281/zenodo.4469317',
+        'called_variants_dna_short_read_id': 'SX2-3',
+        'aligned_dna_short_read_set_id': 'BCM_H7YG5DSX2',
+        'called_variants_dna_file': 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
+        'caller_software': 'gatk4.1.2',
+        'variant_types': 'SNV',
+      },
+    },
+]}
 
 EXPECTED_SAMPLE_METADATA_ROW = {
     "project_guid": "R0003_test",
@@ -221,6 +273,16 @@ class ReportAPITest(object):
             [row.split('\t') for row in mock_write_zip.call_args_list[i][0][1].split('\n') if row]
             for i in range(len(filenames))
         )
+
+    def _assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
+        expected_params = {
+            'fields[]': mock.ANY,
+            'filterByFormula': filter_formula,
+        }
+        if additional_params:
+            expected_params.update(additional_params)
+        self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
+        self.assertListEqual(_get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
 
     def test_seqr_stats(self):
         no_access_project = Project.objects.get(id=2)
@@ -397,6 +459,7 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+    @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
     @mock.patch('seqr.views.utils.airtable_utils.AIRTABLE_API_KEY', 'mock_key')
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @responses.activate
@@ -439,20 +502,18 @@ class ReportAPITest(object):
         self.assertEqual(
             response.json()['error'],
             'Found multiple airtable records for sample NA19675 with mismatched values in field dbgap_study_id')
-        self.assertEqual(len(responses.calls), 2)
-        expected_params = {
-            'fields[]': mock.ANY,
-            'filterByFormula':  "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888',{CollaboratorSampleID}='NA20889',{SeqrCollaboratorSampleID}='NA20885',{SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')",
-        }
-        expected_fields =  [
-            'SeqrCollaboratorSampleID', 'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
+        self.assertEqual(len(responses.calls), 4)
+        first_formula = "OR({CollaboratorSampleID}='NA20885',{CollaboratorSampleID}='NA20888')"
+        expected_fields = [
+            'CollaboratorSampleID', 'Collaborator', 'dbgap_study_id', 'dbgap_subject_id',
             'dbgap_sample_id', 'SequencingProduct', 'dbgap_submission',
         ]
-        self.assertDictEqual(responses.calls[0].request.params, expected_params)
-        self.assertListEqual(_get_list_param(responses.calls[0].request, 'fields%5B%5D'), expected_fields)
-        expected_params['offset'] = 'abc123'
-        self.assertDictEqual(responses.calls[1].request.params, expected_params)
-        self.assertListEqual(_get_list_param(responses.calls[1].request, 'fields%5B%5D'), expected_fields)
+        self._assert_expected_airtable_call(0, first_formula, expected_fields)
+        self._assert_expected_airtable_call(1, first_formula, expected_fields, additional_params={'offset': 'abc123'})
+        self._assert_expected_airtable_call(2, "OR({CollaboratorSampleID}='NA20889')", expected_fields)
+        second_formula = "OR({SeqrCollaboratorSampleID}='NA20888',{SeqrCollaboratorSampleID}='NA20889')"
+        expected_fields[0] = 'SeqrCollaboratorSampleID'
+        self._assert_expected_airtable_call(3, second_formula, expected_fields)
 
         # Test success
         response = self.client.get(url)
@@ -460,11 +521,9 @@ class ReportAPITest(object):
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
-        self.assertEqual(len(responses.calls), 4)
-        self.assertDictEqual(responses.calls[3].request.params, {
-            'fields[]': 'CollaboratorID',
-            'filterByFormula': "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')",
-        })
+        self.assertEqual(len(responses.calls), 8)
+        self._assert_expected_airtable_call(
+            -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
         # Test empty project
@@ -481,15 +540,28 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+    @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
     @responses.activate
-    def test_gregor_export(self, mock_zip, mock_datetime):
+    def test_gregor_export(self, mock_zip, mock_datetime, mock_google_authenticated):
         mock_datetime.now.return_value.year = 2020
+        mock_google_authenticated.return_value = False
+        responses.add(
+            responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_SAMPLE_RECORDS,
+            status=200)
+        responses.add(
+            responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
+            status=200)
 
         url = reverse(gregor_export, args=['HMB'])
         self.check_analyst_login(url)
 
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+
+        mock_google_authenticated.return_value = True
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -511,7 +583,7 @@ class ReportAPITest(object):
             'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
         ])
         self.assertIn([
-            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', '', 'IKBKAP|CCDC102B',
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', 'Yes', 'IKBKAP|CCDC102B',
             '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
             'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
         ], participant_file)
@@ -543,31 +615,72 @@ class ReportAPITest(object):
             'time_to_freeze', 'sample_transformation_detail',
         ])
         self.assertIn(
-            ['Broad_NA19675_1', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
+            ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
             analyte_file)
 
-        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(len(experiment_file), 2)
         self.assertEqual(experiment_file[0], [
             'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
             'date_data_generation', 'target_insert_size', 'sequencing_platform',
         ])
+        self.assertEqual(experiment_file[1], [
+            'Broad_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
+            'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
+        ])
 
-        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(len(read_file), 2)
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
             'analysis_details',
         ])
+        self.assertEqual(read_file[1], [
+            'BCM_H7YG5DSX2-3-IDUDI0014-1', 'Broad_VCGS_FAM203_621_D2',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+            'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
+            'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317',
+        ])
 
-        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(len(read_set_file), 2)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
+        self.assertEqual(read_set_file[1], ['BCM_H7YG5DSX2', 'BCM_H7YG5DSX2-3-IDUDI0014-1'])
 
-        self.assertEqual(len(experiment_file), 1)
+        self.assertEqual(len(called_file), 2)
         self.assertEqual(called_file[0], [
             'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
             'caller_software', 'variant_types', 'analysis_details',
         ])
+        self.assertEqual(called_file[1], [
+            'SX2-3', 'BCM_H7YG5DSX2', 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
+            '129c28163df082', 'gatk4.1.2', 'SNV', 'DOI:10.5281/zenodo.4469317',
+        ])
+
+        # test airtable calls
+        self.assertEqual(len(responses.calls), 3)
+        sample_filter = "OR({CollaboratorSampleID}='HG00731',{CollaboratorSampleID}='HG00732',{CollaboratorSampleID}='HG00733'," \
+                        "{CollaboratorSampleID}='NA19675_1',{CollaboratorSampleID}='NA19678',{CollaboratorSampleID}='NA19679'," \
+                        "{CollaboratorSampleID}='NA20870',{CollaboratorSampleID}='NA20872',{CollaboratorSampleID}='NA20874'," \
+                        "{CollaboratorSampleID}='NA20875',{CollaboratorSampleID}='NA20876',{CollaboratorSampleID}='NA20877'," \
+                        "{CollaboratorSampleID}='NA20881')"
+        sample_fields = ['CollaboratorSampleID', 'SMID', 'CollaboratorSampleID', 'Recontactable']
+        self._assert_expected_airtable_call(0, sample_filter, sample_fields)
+        secondary_sample_filter = "OR({SeqrCollaboratorSampleID}='HG00731',{SeqrCollaboratorSampleID}='HG00732'," \
+                        "{SeqrCollaboratorSampleID}='HG00733',{SeqrCollaboratorSampleID}='NA19678'," \
+                        "{SeqrCollaboratorSampleID}='NA19679',{SeqrCollaboratorSampleID}='NA20870',{SeqrCollaboratorSampleID}='NA20872'," \
+                        "{SeqrCollaboratorSampleID}='NA20874',{SeqrCollaboratorSampleID}='NA20875',{SeqrCollaboratorSampleID}='NA20876'," \
+                        "{SeqrCollaboratorSampleID}='NA20877',{SeqrCollaboratorSampleID}='NA20881')"
+        sample_fields[0] = 'SeqrCollaboratorSampleID'
+        self._assert_expected_airtable_call(1, secondary_sample_filter, sample_fields)
+        metadata_fields = [
+            'SMID', 'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
+            'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
+            'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
+            'alignment_software', 'mean_coverage', 'analysis_details',  'aligned_dna_short_read_set_id',
+            'aligned_dna_short_read_id', 'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id',
+            'called_variants_dna_file', 'md5sum', 'caller_software', 'variant_types', 'analysis_details',
+        ]
+        self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
 
         self.check_no_analyst_no_access(url)
 

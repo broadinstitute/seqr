@@ -558,53 +558,66 @@ def _get_discovery_rows(sample, parsed_variants, male_individual_guids):
     return discovery_rows
 
 
-MAX_FILTER_IDS = 500
-SAMPLE_ID_FIELDS = ['SeqrCollaboratorSampleID', 'CollaboratorSampleID']
 SINGLE_SAMPLE_FIELDS = ['Collaborator', 'dbgap_study_id', 'dbgap_subject_id', 'dbgap_sample_id']
 LIST_SAMPLE_FIELDS = ['SequencingProduct', 'dbgap_submission']
 
 
-def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
-    session = AirtableSession(user)
-    raw_records = {}
-    # Airtable does handle its own pagination, but the query URI has a max length so the filter formula needs to be truncated
-    for index in range(0, len(sample_ids), MAX_FILTER_IDS):
-        raw_records.update(session.fetch_records(
-            'Samples',
-            fields=SAMPLE_ID_FIELDS + SINGLE_SAMPLE_FIELDS + LIST_SAMPLE_FIELDS,
-            or_filters={
-                '{CollaboratorSampleID}': sample_ids[index:index+MAX_FILTER_IDS],
-                '{SeqrCollaboratorSampleID}': sample_ids[index:index + MAX_FILTER_IDS],
-            },
-        ))
-    sample_records = {}
-    collaborator_ids = set()
-    for record in raw_records.values():
-        record_id = next(record[id_field] for id_field in SAMPLE_ID_FIELDS if record.get(id_field))
-        if record.get('Collaborator'):
-            collaborator = record['Collaborator'][0]
-            collaborator_ids.add(collaborator)
-            record['Collaborator'] = collaborator
+def _get_airtable_samples_for_id_field(sample_ids, id_field, fields, session):
+    raw_records = session.fetch_records(
+        'Samples', fields=[id_field] + fields,
+        or_filters={f'{{{id_field}}}': sample_ids},
+    )
 
-        parsed_record = sample_records.get(record_id, {})
-        for field in SINGLE_SAMPLE_FIELDS:
-            if field in record:
-                if field in parsed_record and parsed_record[field] != record[field]:
-                    error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
-                        record_id, field)
-                    raise Exception(error)
-                parsed_record[field] = record[field]
-        for field in LIST_SAMPLE_FIELDS:
-            if field in record:
-                value = parsed_record.get(field, set())
-                value.update(record[field])
-                parsed_record[field] = value
+    records_by_id = defaultdict(list)
+    for record in raw_records.values():
+        records_by_id[record[id_field]].append(record)
+    return records_by_id
+
+
+def _get_airtable_samples(sample_ids, user, fields, list_fields=None):
+    list_fields = list_fields or []
+    all_fields = fields + list_fields
+
+    session = AirtableSession(user)
+    records_by_id = _get_airtable_samples_for_id_field(sample_ids, 'CollaboratorSampleID', all_fields, session)
+    missing = set(sample_ids) - set(records_by_id.keys())
+    if missing:
+        records_by_id.update(_get_airtable_samples_for_id_field(missing, 'SeqrCollaboratorSampleID', all_fields, session))
+
+    sample_records = {}
+    for record_id, records in records_by_id.items():
+        parsed_record = {}
+        for field in fields:
+            record_field = {
+                record[field][0] if field == 'Collaborator' else record[field] for record in records if field in record
+            }
+            if len(record_field) > 1:
+                error = 'Found multiple airtable records for sample {} with mismatched values in field {}'.format(
+                    record_id, field)
+                raise Exception(error)
+            if record_field:
+                parsed_record[field] = record_field.pop()
+        for field in list_fields:
+            parsed_record[field] = set()
+            for record in records:
+                if field in record:
+                    parsed_record[field].update(record[field])
 
         sample_records[record_id] = parsed_record
 
-    if include_collaborator and collaborator_ids:
+    return sample_records, session
+
+
+def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
+    sample_records, session = _get_airtable_samples(
+        sample_ids, user, fields=SINGLE_SAMPLE_FIELDS, list_fields=LIST_SAMPLE_FIELDS,
+    )
+
+    if include_collaborator:
+        collaborator_ids = {record['Collaborator'] for record in sample_records.values() if 'Collaborator' in record}
         collaborator_map = session.fetch_records(
-            'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids})
+            'Collaborator', fields=['CollaboratorID'], or_filters={'RECORD_ID()': collaborator_ids}
+        ) if collaborator_ids else {}
 
         for sample in sample_records.values():
             sample['CollaboratorName'] = collaborator_map.get(sample.get('Collaborator'), {}).get('CollaboratorID')
@@ -614,6 +627,7 @@ def _get_sample_airtable_metadata(sample_ids, user, include_collaborator=False):
 
 # GREGoR metadata
 
+SMID_FIELD = 'SMID'
 PARTICIPANT_TABLE_COLUMNS = [
     'participant_id', 'internal_project_id', 'gregor_center', 'consent_code', 'recontactable', 'prior_testing',
     'pmid_id', 'family_id', 'paternal_id', 'maternal_id', 'twin_id', 'proband_relationship',
@@ -633,16 +647,18 @@ ANALYTE_TABLE_COLUMNS = [
     'participant_drugs_intake', 'participant_special_diet', 'hours_since_last_meal', 'passage_number', 'time_to_freeze',
     'sample_transformation_detail',
 ]
+EXPERIMENT_TABLE_AIRTABLE_FIELDS = [
+    'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
+    'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
+]
 EXPERIMENT_TABLE_COLUMNS = [
-    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method', 'read_length',
-    'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file', 'date_data_generation',
-    'target_insert_size', 'sequencing_platform',
+    'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id',
+] + EXPERIMENT_TABLE_AIRTABLE_FIELDS
+READ_TABLE_AIRTABLE_FIELDS = [
+    'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
+    'alignment_software', 'mean_coverage', 'analysis_details',
 ]
-READ_TABLE_COLUMNS = [
-    'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
-    'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
-    'analysis_details',
-]
+READ_TABLE_COLUMNS = ['aligned_dna_short_read_id', 'experiment_dna_short_read_id'] + READ_TABLE_AIRTABLE_FIELDS
 READ_SET_TABLE_COLUMNS = ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id']
 CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
@@ -710,10 +726,13 @@ def gregor_export(request, consent_code):
         sample__elasticsearch_index__isnull=False,
     ).distinct().prefetch_related('family__project', 'mother', 'father')
 
+    airtable_sample_records, airtable_metadata_by_smid = _get_gregor_airtable_data(individuals, request.user)
+
     participant_rows = []
     family_map = {}
     phenotype_rows = []
     analyte_rows = []
+    airtable_rows = []
     for individual in individuals:
         # family table
         family = individual.family
@@ -724,8 +743,9 @@ def gregor_export(request, consent_code):
             family_map[family]['consanguinity'] = 'Present' if individual.consanguinity else 'None suspected'
 
         # participant table
+        airtable_sample = airtable_sample_records.get(individual.individual_id, {})
         participant_id = f'Broad_{individual.individual_id}'
-        participant = _get_participant_row(individual)
+        participant = _get_participant_row(individual, airtable_sample)
         participant.update(family_map[family])
         participant.update({
             'participant_id': participant_id,
@@ -743,10 +763,17 @@ def gregor_export(request, consent_code):
             dict(**base_phenotype_row, **_get_phenotype_row(feature)) for feature in individual.absent_features or []
         ]
 
-        # analyte table
-        analyte_rows.append(dict(participant_id=participant_id, **_get_analyte_row(individual)))
+        analyte_id = None
+        # airtable data
+        if airtable_sample:
+            sm_id = airtable_sample[SMID_FIELD]
+            analyte_id = f'Broad_{sm_id}'
+            airtable_metadata = airtable_metadata_by_smid.get(sm_id)
+            if airtable_metadata:
+                airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_ids(airtable_sample)))
 
-    airtable_rows = []  # TODO populate airtable data once new columns are confirmed
+        # analyte table
+        analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
     return export_multiple_files([
         ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
@@ -760,6 +787,23 @@ def gregor_export(request, consent_code):
     ], f'GREGoR Reports {consent_code}', file_format='tsv')
 
 
+def _get_gregor_airtable_data(individuals, user):
+    sample_records, session = _get_airtable_samples(
+        individuals.order_by('individual_id').values_list('individual_id', flat=True), user,
+        fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
+    )
+
+    fields = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + READ_SET_TABLE_COLUMNS + CALLED_TABLE_COLUMNS
+    airtable_metadata = session.fetch_records(
+        'GREGoR Data Model',
+        fields=[SMID_FIELD] + fields,
+        or_filters={f'{SMID_FIELD}': {r[SMID_FIELD] for r in sample_records.values()}},
+    )
+    airtable_metadata_by_smid = {r[SMID_FIELD]: r for r in airtable_metadata.values()}
+
+    return sample_records, airtable_metadata_by_smid
+
+
 def _get_gregor_family_row(family):
     return {
         'family_id':  f'Broad_{family.family_id}',
@@ -770,7 +814,7 @@ def _get_gregor_family_row(family):
     }
 
 
-def _get_participant_row(individual):
+def _get_participant_row(individual, airtable_sample):
     participant = {
         'gregor_center': 'Broad',
         'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
@@ -782,7 +826,7 @@ def _get_participant_row(individual):
         'reported_race': GREGOR_ANCESTRY_MAP.get(individual.population, 'Unknown'),
         'ancestry_detail': GREGOR_ANCESTRY_DETAIL_MAP.get(individual.population),
         'reported_ethnicity': ANCESTRY_MAP[HISPANIC] if individual.population == HISPANIC else 'Unknown',
-        'recontactable': None,  # TODO populate airtable data once new columns are confirmed
+        'recontactable': airtable_sample.get('Recontactable') or 'Unknown',
     }
     if individual.birth_year and individual.birth_year > 0:
         participant.update({
@@ -808,12 +852,18 @@ def _get_phenotype_row(feature):
 
 def _get_analyte_row(individual):
     return {
-        'analyte_id': f'Broad_{individual.individual_id}',  # TODO this will change once Sam figures out what to do
         'analyte_type': individual.get_analyte_type_display(),
         'primary_biosample': individual.get_primary_biosample_display(),
         'tissue_affected_status': 'Yes' if individual.tissue_affected_status else 'No',
     }
 
+
+def _get_experiment_ids(airtable_sample):
+    collaborator_sample_id = airtable_sample['CollaboratorSampleID']
+    return {
+        'experiment_dna_short_read_id': f'Broad_{collaborator_sample_id}',
+        'experiment_sample_id': collaborator_sample_id,
+    }
 
 # Discovery Sheet
 
@@ -1311,7 +1361,9 @@ def _set_discovery_details(row, variant_tag_names, variants):
     # Set values
     for variant in variants:
         for f in variant.variantfunctionaldata_set.all():
-            functional_field = FUNCTIONAL_DATA_FIELD_MAP[f.functional_data_tag]
+            functional_field = FUNCTIONAL_DATA_FIELD_MAP.get(f.functional_data_tag)
+            if not functional_field:
+                continue
             if functional_field in METADATA_FUNCTIONAL_DATA_FIELDS:
                 value = f.metadata
                 if functional_field == ADDITIONAL_KINDREDS_FIELD:

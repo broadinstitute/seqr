@@ -679,8 +679,9 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(response_json['errors'],
-                             ['NA19679 is the mother of NA19674 but doesn\'t have a separate record in the table'])
+        self.assertListEqual(response_json['errors'], [
+            'NA19679 is the mother of NA19674 but is not included. Make sure to create an additional record with NA19679 as the Individual ID',
+        ])
 
         # test missing samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA_EXTRA_SAMPLE
@@ -694,7 +695,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         if test_add_data:
             updated_anvil_variables = ADD_DATA_UPDATED_ANVIL_VARIABLES
             genome_version = 'GRCh37'
-            temp_file_data = b's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA19678\nNA20870\nNA20874'
+            temp_file_data = b's\nHG00731\nHG00732\nHG00733\nHG00735\nNA19675\nNA19675_1\nNA19678\nNA20870\nNA20874'
         else:
             updated_anvil_variables = UPDATED_ANVIL_VARIABLES
             genome_version = 'GRCh38'
@@ -753,7 +754,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             'Requester Email': 'test_user_manager@test.com',
             'AnVIL Project URL': f'http://testserver/project/{project.guid}/project_page',
             'Initial Request Date': '2021-03-01',
-            'Number of Samples': 10 if test_add_data else 3,
+            'Number of Samples': 9 if test_add_data else 3,
             'Status': 'Loading',
         }}]})
         self.assertEqual(responses.calls[call_cnt+1].request.headers['Authorization'], 'Bearer {}'.format(MOCK_AIRTABLE_KEY))

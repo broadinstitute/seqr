@@ -2,23 +2,23 @@
 Utility functions for converting Django ORM object to JSON
 """
 
-import json
 from collections import defaultdict
-from django.db.models import prefetch_related_objects, Prefetch, Count
-from django.db.models.fields.files import ImageFieldFile
-from django.db.models.functions import Lower
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When
+from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
+from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, CAN_VIEW, CAN_EDIT, \
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions, has_case_review_permissions, \
+from seqr.views.utils.permissions_utils import has_project_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
     is_internal_anvil_project, get_project_guids_user_can_view, get_anvil_analyst_user_emails
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
-from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL
+from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL, MEDIA_URL
 
 
 def _get_model_json_fields(model_class, user, is_analyst, additional_model_fields):
@@ -106,6 +106,38 @@ def _get_empty_json_for_model(model_class):
     return {_to_camel_case(field): None for field in model_class._meta.json_fields}
 
 
+def _full_name_expr(field):
+    return Trim(Concat(f'{field}__first_name', Value(' '), f'{field}__last_name'))
+
+
+def _user_expr(field):
+    return Coalesce(NullIf(_full_name_expr(field), Value('')), f'{field}__email', output_field=CharField())
+
+
+def get_json_for_queryset(models, nested_fields=None, user=None, is_analyst=None, additional_values=None, guid_key=None, additional_model_fields=None):
+    model_class = models.model
+    fields = _get_model_json_fields(model_class, user, is_analyst, additional_model_fields)
+
+    field_key_map = {_to_camel_case(field): field for field in fields}
+    if 'guid' in field_key_map:
+        guid_key = guid_key or '{}{}Guid'.format(model_class.__name__[0].lower(), model_class.__name__[1:])
+        field_key_map[guid_key] = field_key_map.pop('guid')
+
+    no_modify_fields = [field for key, field in field_key_map.items() if key == field]
+    value_fields = {key: F(field) for key, field in field_key_map.items() if key != field}
+    value_fields.update({
+        key: _user_expr(field) for key, field in field_key_map.items()
+        if field.endswith('last_modified_by') or field == 'created_by'
+    })
+    value_fields.update(additional_values or {})
+
+    for nested_field in (nested_fields or []):
+        key = nested_field.get('key', _to_camel_case('_'.join(nested_field['fields'])))
+        value_fields[key] = Value(nested_field['value']) if nested_field.get('value') else F('__'.join(nested_field['fields']))
+
+    return models.values(*no_modify_fields, **value_fields)
+
+
 MODEL_USER_FIELDS = [
     'username', 'email', 'first_name', 'last_name', 'last_login', 'date_joined', 'id', 'is_superuser', 'is_active',
 ]
@@ -175,106 +207,54 @@ def _get_json_for_project(project, user, **kwargs):
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, add_permissions=True, **kwargs)
 
 
-def _get_case_review_fields(model, has_case_review_perm, user, get_project):
-    if has_case_review_perm is None:
-        has_case_review_perm = user and has_case_review_permissions(get_project(model), user)
+def _get_case_review_fields(model_cls, has_case_review_perm):
     if not has_case_review_perm:
         return []
-    return [field.name for field in type(model)._meta.fields if field.name.startswith('case_review')]
+    return [field.name for field in model_cls._meta.fields if field.name.startswith('case_review')]
 
 
-def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None, has_case_review_perm=None):
-    """Returns a JSON representation of the given Family.
+def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
+                           has_case_review_perm=False, additional_values=None):
 
-    Args:
-        families (array): array of django models representing the family.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-        add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
-        project_guid (boolean): An optional field to use as the projectGuid instead of querying the DB
-    Returns:
-        array: json objects
-    """
-    if not families:
-        return []
-
-    def _get_pedigree_image_url(pedigree_image):
-        if isinstance(pedigree_image, ImageFieldFile):
-            try:
-                pedigree_image = pedigree_image.url
-            except Exception:
-                pedigree_image = None
-        return pedigree_image
-
-    def _process_result(result, family):
-        result['analysedBy'] = _get_json_for_models(family.familyanalysedby_set.all(), user=user, is_analyst=is_analyst)
-        pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
-        result['pedigreeImage'] = pedigree_image
-        if add_individual_guids_field:
-            result['individualGuids'] = [i.guid for i in family.individual_set.all()]
-        if not result['displayName']:
-            result['displayName'] = result['familyId']
-        if result['assignedAnalyst']:
-            result['assignedAnalyst'] = {
-                'fullName': result['assignedAnalyst'].get_full_name(),
-                'email': result['assignedAnalyst'].email,
-            }
-        else:
-            result['assignedAnalyst'] = None
-
-    prefetch_related_objects(families, 'assigned_analyst')
-    prefetch_related_objects(families, 'familyanalysedby_set__created_by')
-    if add_individual_guids_field:
-        prefetch_related_objects(families, 'individual_set')
-
-    kwargs = {'additional_model_fields': _get_case_review_fields(
-        families[0], has_case_review_perm, user, lambda family: family.project)
+    family_additional_values = {
+        'analysedBy': ArrayAgg(JSONObject(
+            createdBy=_user_expr('created_by'),
+            dataType='familyanalysedby__data_type',
+            lastModifiedDate='familyanalysedby__last_modified_date',
+        ), filter=Q(familyanalysedby__isnull=False)),
+        'assignedAnalyst': Case(
+            When(assigned_analyst__isnull=False, then=JSONObject(
+                fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
+            )), default=Value(None),
+        ),
+        'displayName': Coalesce(NullIf('display_name', Value('')), 'family_id'),
+        'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
-    kwargs.update({'nested_fields': [{'fields': ('project', 'guid'), 'value': project_guid}]})
+    if additional_values:
+        family_additional_values.update(additional_values)
+    if add_individual_guids_field:
+        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
 
-    return _get_json_for_models(families, user=user, is_analyst=is_analyst, process_result=_process_result, **kwargs)
+    additional_model_fields = _get_case_review_fields(families.model, has_case_review_perm)
+    nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
+
+    return get_json_for_queryset(families, user=user, is_analyst=is_analyst, additional_values=family_additional_values,
+                                 additional_model_fields=additional_model_fields, nested_fields=nested_fields)
 
 
-def _get_json_for_family(family, user=None, **kwargs):
-    """Returns a JSON representation of the given Family.
-
-    Args:
-        family (object): Django model representing the family.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-        add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
-    Returns:
-        dict: json object
-    """
-
-    return _get_json_for_model(family, get_json_for_models=_get_json_for_families, user=user, **kwargs)
+FAMILY_NOTE_KWARGS = dict(guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}])
 
 
 def get_json_for_family_notes(notes, **kwargs):
-    return _get_json_for_models(notes, guid_key='noteGuid', nested_fields=[{'fields': ('family', 'guid')}], **kwargs)
+    return get_json_for_queryset(notes, **FAMILY_NOTE_KWARGS, **kwargs)
 
 
 def get_json_for_family_note(note):
-    return _get_json_for_model(note, get_json_for_models=get_json_for_family_notes)
+    return _get_json_for_model(note, **FAMILY_NOTE_KWARGS)
 
-def _process_individual_result(add_sample_guids_field):
-    def _process_result(result, individual):
-        mother = result.pop('mother', None)
-        father = result.pop('father', None)
-
-        result.update({
-            'maternalGuid': mother.guid if mother else None,
-            'paternalGuid': father.guid if father else None,
-            'maternalId': mother.individual_id if mother else None,
-            'paternalId': father.individual_id if father else None,
-            'displayName': result['displayName'] or result['individualId'],
-        })
-
-        if add_sample_guids_field:
-            result['sampleGuids'] = [s.guid for s in individual.sample_set.all()]
-            result['igvSampleGuids'] = [s.guid for s in individual.igvsample_set.all()]
-    return _process_result
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
-                              family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=None):
+                              family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
     """Returns a JSON representation for the given list of Individuals.
 
     Args:
@@ -287,13 +267,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         array: array of json objects
     """
 
-    if not individuals:
-        return []
-
-    kwargs = {
-        'additional_model_fields': _get_case_review_fields(
-            individuals[0], has_case_review_perm, user, lambda indiv: indiv.family.project)
-    }
+    additional_model_fields = _get_case_review_fields(individuals.model, has_case_review_perm)
     nested_fields = [
         {'fields': ('family', 'guid'), 'value': family_guid},
         {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
@@ -301,26 +275,36 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
     if family_fields:
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
-    kwargs.update({'nested_fields': nested_fields})
 
     if add_hpo_details:
-        kwargs['additional_model_fields'] += [
+        additional_model_fields += [
             'features', 'absent_features', 'nonstandard_features', 'absent_nonstandard_features']
 
-    prefetch_related_objects(individuals, 'mother')
-    prefetch_related_objects(individuals, 'father')
+    additional_values = {
+        'maternalGuid': F('mother__guid'),
+        'paternalGuid': F('father__guid'),
+        'maternalId': F('mother__individual_id'),
+        'paternalId': F('father__individual_id'),
+        'displayName': Coalesce(NullIf('display_name', Value('')), 'individual_id', output_field=CharField()),
+    }
     if add_sample_guids_field:
-        prefetch_related_objects(individuals, 'sample_set')
-        prefetch_related_objects(individuals, 'igvsample_set')
+        additional_values.update({
+            f'{field}Guids': ArrayAgg(f'{field.lower()}__guid', filter=Q(**{f'{field.lower()}__isnull': False}))
+            for field in ['sample', 'igvSample']
+        })
 
-    parsed_individuals = _get_json_for_models(individuals, user=user, is_analyst=is_analyst, process_result=_process_individual_result(add_sample_guids_field), **kwargs)
+    parsed_individuals = get_json_for_queryset(
+        individuals, user=user, is_analyst=is_analyst, additional_values=additional_values,
+        additional_model_fields=additional_model_fields, nested_fields=nested_fields,
+    )
+
     if add_hpo_details:
-        _add_individual_hpo_details(parsed_individuals)
+        add_individual_hpo_details(parsed_individuals)
 
     return parsed_individuals
 
 
-def _add_individual_hpo_details(parsed_individuals):
+def add_individual_hpo_details(parsed_individuals):
     all_hpo_ids = set()
     for i in parsed_individuals:
         all_hpo_ids.update([feature['id'] for feature in i.get('features') or []])
@@ -335,18 +319,6 @@ def _add_individual_hpo_details(parsed_individuals):
             hpo = hpo_terms_by_id.get(feature['id'])
             if hpo:
                 feature.update({'category': hpo.category_id, 'label': hpo.name})
-
-
-def _get_json_for_individual(individual, user=None, **kwargs):
-    """Returns a JSON representation of the given Individual.
-
-    Args:
-        individual (object): Django model for the individual.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-    Returns:
-        dict: json object
-    """
-    return _get_json_for_model(individual, get_json_for_models=_get_json_for_individuals, user=user, **kwargs)
 
 
 def get_json_for_samples(samples, project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
@@ -419,92 +391,98 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_details=False):
-    """Returns a JSON representation of the given variant.
-    Args:
-        saved_variants (object): Django model for the SavedVariant.
-    Returns:
-        dict: json object
-    """
-    def _process_result(variant_json, saved_variant):
-        if add_details:
-            variant_json.update({k: v for k, v in saved_variant.saved_variant_json.items() if k not in variant_json})
-        variant_json['familyGuids'] = [saved_variant.family.guid]
-        return variant_json
+def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None):
+    additional_values = {
+        'familyGuids': ArrayAgg('family__guid', distinct=True),
+    }
 
-    prefetch_related_objects(saved_variants, 'family')
+    additional_fields = []
+    additional_fields += additional_model_fields or []
+    if add_details:
+        additional_fields.append('saved_variant_json')
 
-    return _get_json_for_models(saved_variants, guid_key='variantGuid', process_result=_process_result)
+    results = get_json_for_queryset(
+        saved_variants, guid_key='variantGuid', additional_values=additional_values,
+        additional_model_fields=additional_fields,
+    )
+
+    if add_details:
+        for result in results:
+            result.update({k: v for k, v in result.pop('savedVariantJson').items() if k not in result})
+
+    return results
 
 
-def get_json_for_saved_variant(saved_variant, **kwargs):
-    """Returns a JSON representation of the given variant.
+def _format_functional_tags(tags):
+    for tag in tags:
+        name = tag.pop('functionalDataTag')
+        display_data = VariantFunctionalData.FUNCTIONAL_DATA_TAG_LOOKUP[name]
+        tag.update({
+            'name': name,
+            'metadataTitle': display_data.get('metadata_title', 'Notes'),
+            'color': display_data['color'],
+        })
+    return tags
 
-    Args:
-        saved_variant (object): Django model for the SavedVariant.
-    Returns:
-        dict: json object
-    """
 
-    return _get_json_for_model(saved_variant, get_json_for_models=get_json_for_saved_variants, **kwargs)
+def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, tag_filter=None):
+    variant_tag_id_map = defaultdict(list)
+    for savedvariant_id, tag_id in tag_cls.saved_variants.through.objects.filter(
+            savedvariant_id__in=saved_variant_id_map.keys()).values_list(
+        'savedvariant_id', f'{tag_cls.__name__.lower()}_id',
+    ):
+        variant_tag_id_map[tag_id].append(savedvariant_id)
+    tag_models = tag_cls.objects.filter(id__in=variant_tag_id_map.keys())
+    if tag_filter:
+        tag_models = tag_models.filter(**tag_filter)
+
+    guid_key = 'tagGuid'
+    nested_fields = None
+    if tag_cls == VariantTag:
+        nested_fields = [
+            {'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
+    elif tag_cls == VariantNote:
+        guid_key = 'noteGuid'
+
+    tags = get_json_for_queryset(
+        tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
+    if tag_cls == VariantFunctionalData:
+        _format_functional_tags(tags)
+
+    variant_tag_map = defaultdict(list)
+    for tag in tags:
+        tag['variantGuids'] = []
+        variant_ids = variant_tag_id_map[tag.pop('id')]
+        for variant_id in variant_ids:
+            variant_guid = saved_variant_id_map[variant_id]
+            variant_tag_map[variant_guid].append(tag[guid_key])
+            tag['variantGuids'].append(variant_guid)
+
+    return tags, variant_tag_map
 
 
 def get_json_for_saved_variants_with_tags(saved_variants, **kwargs):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
-        for variant in get_json_for_saved_variants(saved_variants, **kwargs)
+        for variant in get_json_for_saved_variants(saved_variants, additional_model_fields=['id'], **kwargs)
     }
 
-    saved_variant_id_map = {var.id: var.guid for var in saved_variants}
+    saved_variant_id_map = {}
+    for guid, variant in variants_by_guid.items():
+        saved_variant_id_map[variant.pop('id')] = guid
 
-    variant_tag_id_map = defaultdict(list)
-    for tag_mapping in VariantTag.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
-        variant_tag_id_map[tag_mapping.varianttag_id].append(tag_mapping.savedvariant_id)
-    tag_models = VariantTag.objects.filter(id__in=variant_tag_id_map.keys())
-    tag_id_map = {tag.guid: tag.id for tag in tag_models}
+    tags, variant_tag_map = get_json_for_saved_variants_child_entities(VariantTag, saved_variant_id_map)
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variants_by_guid[variant_guid]['tagGuids'] = tag_guids
 
-    tags = get_json_for_variant_tags(tag_models, add_variant_guids=False)
-    for tag in tags:
-        tag_guid = tag['tagGuid']
-        tag['variantGuids'] = []
-        variant_ids = variant_tag_id_map[tag_id_map[tag_guid]]
-        for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map[variant_id]
-            variants_by_guid[variant_guid]['tagGuids'].append(tag['tagGuid'])
-            tag['variantGuids'].append(variant_guid)
+    functional_data, variant_tag_map = get_json_for_saved_variants_child_entities(
+        VariantFunctionalData, saved_variant_id_map)
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variants_by_guid[variant_guid]['functionalDataGuids'] = tag_guids
 
-    variant_functional_id_map = defaultdict(list)
-    for functional_mapping in VariantFunctionalData.saved_variants.through.objects.filter(
-            savedvariant_id__in=saved_variant_id_map.keys()):
-        variant_functional_id_map[functional_mapping.variantfunctionaldata_id].append(functional_mapping.savedvariant_id)
-    functional_models = VariantFunctionalData.objects.filter(id__in=variant_functional_id_map.keys())
-    functional_id_map = {tag.guid: tag.id for tag in functional_models}
-
-    functional_data = get_json_for_variant_functional_data_tags(functional_models, add_variant_guids=False)
-    for tag in functional_data:
-        tag_guid = tag['tagGuid']
-        tag['variantGuids'] = []
-        variant_ids = variant_functional_id_map[functional_id_map[tag_guid]]
-        for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map[variant_id]
-            variants_by_guid[variant_guid]['functionalDataGuids'].append(tag['tagGuid'])
-            tag['variantGuids'].append(variant_guid)
-
-    variant_note_id_map = defaultdict(list)
-    for note_mapping in VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variant_id_map.keys()):
-        variant_note_id_map[note_mapping.variantnote_id].append(note_mapping.savedvariant_id)
-    note_models = VariantNote.objects.filter(id__in=variant_note_id_map.keys())
-    note_id_map = {note.guid: note.id for note in note_models}
-
-    notes = get_json_for_variant_notes(note_models, add_variant_guids=False)
-    for note in notes:
-        note_guid = note['noteGuid']
-        note['variantGuids'] = []
-        variant_ids = variant_note_id_map[note_id_map[note_guid]]
-        for variant_id in variant_ids:
-            variant_guid = saved_variant_id_map[variant_id]
-            variants_by_guid[variant_guid]['noteGuids'].append(note['noteGuid'])
-            note['variantGuids'].append(variant_guid)
+    notes, variant_tag_map = get_json_for_saved_variants_child_entities(VariantNote, saved_variant_id_map)
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variants_by_guid[variant_guid]['noteGuids'] = tag_guids
 
     response = {
         'variantTagsByGuid': {tag['tagGuid']: tag for tag in tags},
@@ -521,35 +499,26 @@ def get_json_for_discovery_tags(variants, user):
     response = {}
     discovery_tags = defaultdict(list)
 
-    tag_models = VariantTag.objects.filter(
-        variant_tag_type__category='CMG Discovery Tags',
-        saved_variants__variant_id__in={variant['variantId'] for variant in variants},
-        saved_variants__family__project__guid__in=get_project_guids_user_can_view(user),
-    )
-    if tag_models:
-        discovery_tag_json = get_json_for_variant_tags(tag_models, add_variant_guids=False)
+    saved_variants = SavedVariant.objects.filter(
+        variant_id__in={variant['variantId'] for variant in variants},
+        family__project__guid__in=get_project_guids_user_can_view(user),
+    ).only('id', 'guid', 'ref', 'alt', 'xpos', 'family_id').prefetch_related('family', 'family__project')
+    saved_variants_by_guid = {sv.guid: sv for sv in saved_variants}
+    saved_variant_id_map = {sv.id: guid for guid, sv in saved_variants_by_guid.items()}
 
-        tag_id_map = {tag.guid: tag.id for tag in tag_models}
-        variant_tag_id_map = defaultdict(list)
-        variant_ids = set()
-        for tag_mapping in VariantTag.saved_variants.through.objects.filter(
-                varianttag_id__in=tag_id_map.values()):
-            variant_tag_id_map[tag_mapping.varianttag_id].append(tag_mapping.savedvariant_id)
-            variant_ids.add(tag_mapping.savedvariant_id)
-        saved_variants_by_id = {var.id: var for var in SavedVariant.objects.filter(id__in=variant_ids).only(
-            'guid', 'ref', 'alt', 'xpos', 'family_id').prefetch_related('family', 'family__project')
-        }
-
+    discovery_tag_json, _ = get_json_for_saved_variants_child_entities(
+        VariantTag, saved_variant_id_map, tag_filter={'variant_tag_type__category': 'CMG Discovery Tags'})
+    if discovery_tag_json:
         existing_families = set()
         for variant in variants:
             existing_families.update(variant['familyGuids'])
 
-        families = set()
+        family_ids = set()
         for tag in discovery_tag_json:
-            for variant_id in variant_tag_id_map[tag_id_map[tag['tagGuid']]]:
-                variant = saved_variants_by_id[variant_id]
+            for variant_guid in tag.pop('variantGuids'):
+                variant = saved_variants_by_guid[variant_guid]
                 if variant.family.guid not in existing_families:
-                    families.add(variant.family)
+                    family_ids.add(variant.family_id)
                 tag_json = {'savedVariant': {
                     'variantGuid': variant.guid,
                     'familyGuid': variant.family.guid,
@@ -562,73 +531,13 @@ def get_json_for_discovery_tags(variants, user):
                 )
                 discovery_tags[variant_key].append(tag_json)
 
-        response['familiesByGuid'] = {f['familyGuid']: f for f in _get_json_for_families(list(families))}
+        response['familiesByGuid'] = {
+            f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(id__in=family_ids))
+        }
     return discovery_tags, response
 
 
-def get_json_for_variant_tags(tags, add_variant_guids=True):
-    """Returns a JSON representation of the given variant tags.
-
-    Args:
-        tag (object): Django models for the VariantTag.
-    Returns:
-        dict: json objects
-    """
-    def _process_result(tag_json, tag):
-        if add_variant_guids:
-            tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
-
-    if add_variant_guids:
-        prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
-
-    nested_fields = [{'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
-    return _get_json_for_models(tags, nested_fields=nested_fields, guid_key='tagGuid', process_result=_process_result)
-
-
-def get_json_for_variant_functional_data_tags(tags, add_variant_guids=True):
-    """Returns a JSON representation of the given variant tags.
-
-    Args:
-        tags (object): Django models for the VariantFunctionalData.
-    Returns:
-        dict: json objects
-    """
-
-    def _process_result(tag_json, tag):
-        display_data = json.loads(tag.get_functional_data_tag_display())
-        tag_json.update({
-            'name': tag_json.pop('functionalDataTag'),
-            'metadataTitle': display_data.get('metadata_title', 'Notes'),
-            'color': display_data['color'],
-        })
-        if add_variant_guids:
-            tag_json['variantGuids'] = [variant.guid for variant in tag.saved_variants.all()]
-
-    if add_variant_guids:
-        prefetch_related_objects(tags, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
-
-    return _get_json_for_models(tags, guid_key='tagGuid', process_result=_process_result)
-
-
-def get_json_for_variant_notes(notes, add_variant_guids=True):
-    """Returns a JSON representation of the given variant notes.
-
-    Args:
-        notes (object): Django model for the VariantNote.
-    Returns:
-        dict: json objects
-    """
-    def _process_result(note_json, note):
-        if add_variant_guids:
-            note_json['variantGuids'] = [variant.guid for variant in note.saved_variants.all()]
-
-    if add_variant_guids:
-        prefetch_related_objects(notes, Prefetch('saved_variants', queryset=SavedVariant.objects.only('guid')))
-
-    return _get_json_for_models(notes, guid_key='noteGuid', process_result=_process_result)
-
-
-def get_json_for_variant_note(note, **kwargs):
+def get_json_for_variant_note(note):
     """Returns a JSON representation of the given variant note.
 
     Args:
@@ -636,8 +545,7 @@ def get_json_for_variant_note(note, **kwargs):
     Returns:
         dict: json object
     """
-
-    return _get_json_for_model(note, get_json_for_models=get_json_for_variant_notes, **kwargs)
+    return _get_json_for_model(note, guid_key='noteGuid')
 
 
 def get_json_for_gene_notes(notes, user):
@@ -666,70 +574,32 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False,
-                             is_analyst=False, include_metadata=True):
-    """Returns a JSON representation of the given LocusLists.
+def _add_pa_locus_lists(locus_lists_json, user):
+    ll_guids = [ll['locusListGuid'] for ll in locus_lists_json]
+    pa_json = get_json_for_queryset(
+        PaLocusList.objects.filter(seqr_locus_list__guid__in=ll_guids), user=user,
+        nested_fields=[{'fields': ('seqr_locus_list', 'guid'), 'key': 'locusListGuid'}]
+    )
+    pa_json_by_locus_list = {pa.pop('locusListGuid'): pa for pa in pa_json}
+    for ll in locus_lists_json:
+        pa_locus_list_json = pa_json_by_locus_list.get(ll['locusListGuid'])
+        if pa_locus_list_json:
+            ll['paLocusList'] = pa_locus_list_json
 
-    Args:
-        locus_lists (array): array of LocusList django models.
-    Returns:
-        array: json objects
-    """
 
-    def _process_result(result, locus_list):
-        gene_set = locus_list.locuslistgene_set
-        interval_set = locus_list.locuslistinterval_set
-        if include_genes:
-            intervals = _get_json_for_models(interval_set.all())
-            genome_versions = {interval['genomeVersion'] for interval in intervals}
-
-            if include_pagenes:
-                result.update({
-                    'items': [{
-                        'geneId': gene.gene_id,
-                        'pagene': _get_json_for_model(gene.palocuslistgene, user=user, is_analyst=is_analyst)
-                        if hasattr(gene, 'palocuslistgene') else None
-                    } for gene in gene_set.all()] + intervals,
-                })
-            else:
-                result.update({
-                    'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
-                })
-            result.update({
-                'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
-            })
-
-        if include_project_count:
-            result['numProjects'] = locus_list.num_projects
-
-        if include_metadata:
-            result.update({
-                'numEntries': gene_set.count() + interval_set.count()
-                if include_genes else locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
-                'canEdit': user == locus_list.created_by,
-            })
-
-        if hasattr(locus_list, 'palocuslist'):
-            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user, is_analyst=is_analyst)
-            result.update({
-                'paLocusList': pa_locus_list_json,
-            })
-
+def get_json_for_locus_lists(locus_lists, user, include_metadata=True, additional_values=None):
+    ll_additional_values = {}
+    if additional_values:
+        ll_additional_values.update(additional_values)
     if include_metadata:
-        prefetch_related_objects(locus_lists, 'created_by')
+        ll_additional_values.update({
+            'numEntries': Count('locuslistgene') + Count('locuslistinterval'),
+            'canEdit': Case(When(created_by=user, then=Value(True)), default=Value(False)),
+        })
 
-    if include_genes:
-        prefetch_related_objects(locus_lists, 'locuslistgene_set')
-        prefetch_related_objects(locus_lists, 'locuslistinterval_set')
-    elif include_metadata:
-        locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
-
-    prefetch_related_objects(locus_lists, 'palocuslist')
-
-    if include_pagenes:
-        prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
-
-    return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
+    results = get_json_for_queryset(locus_lists, user=user, additional_values=ll_additional_values)
+    _add_pa_locus_lists(results, user)
+    return results
 
 
 def get_json_for_locus_list(locus_list, user):
@@ -740,8 +610,23 @@ def get_json_for_locus_list(locus_list, user):
     Returns:
         dict: json object
     """
-    return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True,
-                               include_pagenes=True)
+    result = _get_json_for_model(locus_list, user=user)
+
+    intervals = _get_json_for_models(locus_list.locuslistinterval_set.all())
+    genome_versions = {interval['genomeVersion'] for interval in intervals}
+    result.update({
+        'items': [{
+            'geneId': gene.gene_id,
+            'pagene': _get_json_for_model(gene.palocuslistgene, user=user)
+            if hasattr(gene, 'palocuslistgene') else None
+        } for gene in locus_list.locuslistgene_set.all()] + intervals,
+        'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
+        'canEdit': user == locus_list.created_by,
+    })
+    result['numEntries'] = len(result['items'])
+    _add_pa_locus_lists([result], user)
+
+    return result
 
 
 PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit']
@@ -828,19 +713,20 @@ def _set_collaborator_permissions(collaborator_json, include_permissions, can_ed
 
 
 def get_json_for_saved_searches(searches, user):
-    is_analyst = user_is_analyst(user)
-    def _process_result(result, search):
-        # Do not apply HGMD filters in shared searches for non-analyst users
-        if not search.created_by and not is_analyst and result['search'].get('pathogenicity', {}).get('hgmd'):
-            result['search']['pathogenicity'] = {
-                k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
-            }
-    prefetch_related_objects(searches, 'created_by')
-    return _get_json_for_models(searches, guid_key='savedSearchGuid', process_result=_process_result)
+    additional_model_fields = []
+    results = get_json_for_queryset(searches, guid_key='savedSearchGuid', additional_model_fields=additional_model_fields)
+    if not user_is_analyst(user):
+        for result in results:
+            # Do not apply HGMD filters in shared searches for non-analyst users
+            if not result['createdById'] and result['search'].get('pathogenicity', {}).get('hgmd'):
+                result['search']['pathogenicity'] = {
+                    k: v for k, v in result['search']['pathogenicity'].items() if k != 'hgmd'
+                }
+    return results
 
 
 def get_json_for_saved_search(search, user):
-    return _get_json_for_model(search, user=user, get_json_for_models=get_json_for_saved_searches)
+    return _get_json_for_model(search, user=user, guid_key='savedSearchGuid')
 
 
 def get_json_for_matchmaker_submissions(models, individual_guid=None, additional_model_fields=None, all_parent_guids=False):
@@ -863,7 +749,9 @@ def get_json_for_matchmaker_submission(submission):
 
 
 def get_json_for_rna_seq_outliers(models, **kwargs):
-    def _process_result(data, model):
-        data['isSignificant'] = data['pAdjust'] < model.SIGNIFICANCE_THRESHOLD
-
-    return _get_json_for_models(models, process_result=_process_result, **kwargs)
+    additional_values = {
+        'isSignificant': Case(
+            When(p_adjust__lt=models.model.SIGNIFICANCE_THRESHOLD, then=Value(True)), default=Value(False)
+        ),
+    }
+    return get_json_for_queryset(models, additional_values=additional_values, **kwargs)

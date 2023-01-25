@@ -42,7 +42,7 @@ botocore==1.24.5
     #   s3transfer
 cachetools==4.2.4
     # via google-auth
-certifi==2021.10.8
+certifi==2022.12.7
     # via
     #   elasticsearch
     #   msrest
@@ -175,7 +175,7 @@ numpy==1.21.5
     #   hail
     #   pandas
     #   scipy
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   social-auth-core

@@ -15,6 +15,7 @@ import modalReducers from './utils/modalReducer'
 import {
   RECEIVE_DATA,
   REQUEST_PROJECTS,
+  RECEIVE_PROJECT_CHILD_ENTITES,
   RECEIVE_SAVED_SEARCHES,
   REQUEST_SAVED_SEARCHES,
   REQUEST_SAVED_VARIANTS,
@@ -315,6 +316,7 @@ const rootReducer = combineReducers({
   projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_DATA),
+  loadedProjectChildEntities: createObjectsByIdReducer(RECEIVE_PROJECT_CHILD_ENTITES),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
   familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
   familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),

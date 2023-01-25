@@ -48,11 +48,15 @@ const ConnectedSearchResultsLink = connect(null, mapDispatchToProps)(SearchResul
 
 export default ConnectedSearchResultsLink
 
-const INITIAL_GENE_SEARCH = {
+const getGeneSearchProps = af => ({
   inheritance: { mode: ANY_AFFECTED },
   freqs: FREQUENCIES.filter(({ name }) => name !== THIS_CALLSET_FREQUENCY && name !== SV_CALLSET_FREQUENCY).reduce(
-    (acc, { name }) => ({ ...acc, [name]: { af: 0.1 } }), {},
+    (acc, { name }) => ({ ...acc, [name]: { af } }), {},
   ),
-}
+})
+
+const INITIAL_GENE_SEARCH = getGeneSearchProps(0.1)
+const RARE_GENE_SEARCH = getGeneSearchProps(0.01)
 
 export const GeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={INITIAL_GENE_SEARCH} {...props} />
+export const RareGeneSearchLink = props => <ConnectedSearchResultsLink initialSearch={RARE_GENE_SEARCH} {...props} />

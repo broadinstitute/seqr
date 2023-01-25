@@ -57,17 +57,20 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
     families = _get_json_for_families(
         family_models, user, project_guid=project_guid, is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
 
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__in=family_models), is_analyst=is_analyst)
+    families_by_guid = {f['familyGuid']: f for f in families}
 
-    individual_models = Individual.objects.filter(family__in=family_models)
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__guid__in=families_by_guid.keys()), is_analyst=is_analyst)
+
+    individual_models = Individual.objects.filter(family__guid__in=families_by_guid.keys())
     individuals = _get_json_for_individuals(
         individual_models, user=user, project_guid=project_guid, add_hpo_details=True,
         is_analyst=is_analyst, has_case_review_perm=has_case_review_perm)
+    individuals_by_guid = {i['individualGuid']: i for i in individuals}
 
     context = {
-        'familiesByGuid': {f['familyGuid']: f for f in families},
+        'familiesByGuid': families_by_guid,
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
-        'individualsByGuid': {i['individualGuid']: i for i in individuals},
+        'individualsByGuid': individuals_by_guid,
     }
     for k, v in context.items():
         if k not in response:
@@ -75,13 +78,11 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
         response[k].update(v)
 
     if include_igv:
-        igv_sample_models = IgvSample.objects.filter(individual__in=individual_models)
+        igv_sample_models = IgvSample.objects.filter(individual__guid__in=individuals_by_guid.keys())
         igv_samples = get_json_for_samples(igv_sample_models, project_guid=project_guid, is_analyst=is_analyst)
         response['igvSamplesByGuid'] = {s['sampleGuid']: s for s in igv_samples}
 
     add_child_ids(response)
-
-    return individual_models
 
 
 def add_child_ids(response):
@@ -126,6 +127,9 @@ def families_discovery_tags(families):
     }
 
 
+MME_TAG_NAME = 'MME Submission'
+
+
 def add_project_tag_types(projects_by_guid):
     variant_tag_types_models = VariantTagType.objects.filter(Q(project__guid__in=projects_by_guid.keys()) | Q(project__isnull=True))
     variant_tag_types = _get_json_for_models(variant_tag_types_models)
@@ -140,6 +144,15 @@ def add_project_tag_types(projects_by_guid):
         for vtt in variant_tag_types_models:
             project_guid = vtt.project.guid if vtt.project else None
             project_tag_types[project_guid].append(variant_tag_types_by_guid[vtt.guid])
+
+    project_tag_types[None].append({
+        'variantTagTypeGuid': 'mmeSubmissionVariants',
+        'name': MME_TAG_NAME,
+        'category': 'Matchmaker',
+        'description': '',
+        'color': '#6435c9',
+        'order': 99,
+    })
 
     for project_guid, project_json in projects_by_guid.items():
         project_json.update({

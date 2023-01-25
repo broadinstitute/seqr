@@ -47,9 +47,10 @@ class Command(BaseCommand):
         )
 
         # Get expected saved variants
-        saved_variant_models_by_guid = {v.guid: v for v in SavedVariant.objects.filter(family__project=project)}
+        saved_variant_models = SavedVariant.objects.filter(family__project=project)
+        saved_variant_models_by_guid = {v.guid: v for v in saved_variant_models}
 
-        expected_families = {sv.family for sv in saved_variant_models_by_guid.values()}
+        expected_families = {sv.family for sv in saved_variant_models}
         missing_families = expected_families - included_families
         if missing_families:
             raise CommandError(
@@ -59,7 +60,7 @@ class Command(BaseCommand):
 
         # Lift-over saved variants
         update_variant_samples(samples, None, elasticsearch_index)
-        saved_variants = get_json_for_saved_variants(list(saved_variant_models_by_guid.values()), add_details=True)
+        saved_variants = get_json_for_saved_variants(saved_variant_models, add_details=True)
         saved_variants_to_lift, hg37_to_hg38_xpos, lift_failed = _get_variants_to_lift(saved_variants)
 
         saved_variants_map = defaultdict(list)

@@ -539,17 +539,20 @@ INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 
 FAMILY_NOTE_FIELDS = {'noteGuid', 'note', 'noteType', 'lastModifiedDate', 'createdBy', 'familyGuid'}
 
-INDIVIDUAL_FIELDS_NO_FEATURES = {
-    'projectGuid', 'familyGuid', 'individualGuid', 'individualId',
-    'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
-    'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
+
+INDIVIDUAL_CORE_FIELDS = {
+    'individualGuid', 'individualId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
+    'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
     'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'consanguinity', 'affectedRelatives', 'expectedInheritance',
     'disorders', 'candidateGenes', 'rejectedGenes', 'arFertilityMeds', 'arIui', 'arIvf', 'arIcsi', 'arSurrogacy',
     'arDonoregg', 'arDonorsperm', 'svFlags',
 }
 
-INDIVIDUAL_FIELDS = {'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures'}
-INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS_NO_FEATURES)
+INDIVIDUAL_FIELDS = {
+    'projectGuid', 'familyGuid', 'paternalId', 'maternalId', 'paternalGuid', 'maternalGuid',
+    'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures',
+}
+INDIVIDUAL_FIELDS.update(INDIVIDUAL_CORE_FIELDS)
 
 CASE_REVIEW_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
@@ -1130,7 +1133,7 @@ PARSED_SV_WGS_VARIANT = {
                    'id': None, 'max_hl': None},
         'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None,
                        'het': None, 'id': None, 'max_hl': None},
-        'gnomad_svs': {'ac': 0, 'af': 0.00679, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0,
+        'gnomad_svs': {'ac': 22, 'af': 0.00679, 'an': 3240, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0,
                        'id': 'gnomAD-SV_v2.1_BND_1_1', 'max_hl': None},
         'gnomad_mito': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                         'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
@@ -1159,6 +1162,20 @@ PARSED_SV_WGS_VARIANT = {
                 'geneId': 'ENSG00000228198'
             },
         ],
+        'ENSG00000228199': [
+            {
+                'geneId': 'ENSG00000228199',
+                'geneSymbol': 'FBXO28',
+                'majorConsequence': 'MSV_EXON_OVERLAP'
+            }
+        ],
+        'ENSG00000228201': [
+            {
+                'geneId': 'ENSG00000228201',
+                'geneSymbol': 'FAM131C',
+                'majorConsequence': 'INTRAGENIC_EXON_DUP'
+            }
+        ]
     },
     'variantId': 'prefix_19107_CPX',
     'xpos': 2049045387,

@@ -53,7 +53,7 @@ cat ~/.pgpass
 pg_retries=0
 until [ "$pg_retries" -ge 10 ]
 do
-    pg_isready -d postgres -h "$POSTGRES_SERVICE_HOSTNAME" -U postgres && break
+    pg_isready -d postgres -h "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" && break
     pg_retries=$((pg_retries+1))
     if [ "$pg_retries" -eq 10 ]; then
         echo "Postgres database wasn't available after 10 connection attempts"
@@ -65,9 +65,9 @@ do
 done
 
 # init and populate seqrdb unless it already exists
-if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -l | grep seqrdb; then
-    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE reference_data_db';
-    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U postgres -c 'CREATE DATABASE seqrdb';
+if ! psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -l | grep seqrdb; then
+    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -c 'CREATE DATABASE reference_data_db';
+    psql --host "$POSTGRES_SERVICE_HOSTNAME" -U "$POSTGRES_USERNAME" -c 'CREATE DATABASE seqrdb';
     python -u manage.py migrate
     python -u manage.py migrate --database=reference_data
     python -u manage.py loaddata variant_tag_types

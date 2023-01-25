@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
 from django.db.utils import IntegrityError
-from django.db.models import Q, prefetch_related_objects
+from django.db.models import Q
 from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
@@ -464,18 +464,18 @@ def delete_saved_search_handler(request, saved_search_guid):
 
 
 def _check_results_permission(results_model, user, project_perm_check=None):
-    families = results_model.families.prefetch_related('project').all()
-    projects = {family.project for family in families}
+    projects = Project.objects.filter(family__variantsearchresults=results_model)
     check_projects_view_permission(projects, user)
-    for project in projects:
-        if project_perm_check and not project_perm_check(project):
-            raise PermissionDenied()
+    if project_perm_check:
+        for project in projects:
+            if not project_perm_check(project):
+                raise PermissionDenied()
 
 
 def _get_search_context(results_model):
     project_families = defaultdict(list)
-    for family in results_model.families.prefetch_related('project').all():
-        project_families[family.project.guid].append(family.guid)
+    for family_guid, project_guid in results_model.families.values_list('guid', 'project__guid').order_by('guid'):
+        project_families[project_guid].append(family_guid)
 
     return {
         'search': results_model.variant_search.search,
@@ -496,14 +496,15 @@ def _get_saved_searches(user):
 
 
 def _get_saved_variant_models(variants, families):
-    prefetch_related_objects(families, 'project')
-    hg37_family_guids = {family.guid for family in families if family.project.genome_version == GENOME_VERSION_GRCh37}
+    hg37_family_guids = families.filter(project__genome_version=GENOME_VERSION_GRCh37).values_list('guid', flat=True)
 
     variant_q = Q()
     variants_by_id = {}
+    variant_ids_by_family = defaultdict(set)
     for variant in variants:
         variants_by_id[get_variant_key(**variant)] = variant
-        variant_q |= Q(variant_id=variant['variantId'], family__guid__in=variant['familyGuids'])
+        for family_guid in variant['familyGuids']:
+            variant_ids_by_family[family_guid].add(variant['variantId'])
         if variant.get('liftedOverGenomeVersion') == GENOME_VERSION_GRCh37 and hg37_family_guids:
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:
@@ -512,6 +513,9 @@ def _get_saved_variant_models(variants, families):
                 variants_by_id[get_variant_key(
                     xpos=lifted_xpos, ref=variant['ref'], alt=variant['alt'], genomeVersion=variant['liftedOverGenomeVersion']
                 )] = variant
+
+    for family_guid, variant_ids in variant_ids_by_family.items():
+        variant_q |= Q(variant_id__in=variant_ids, family__guid=family_guid)
 
     return SavedVariant.objects.filter(variant_q), variants_by_id
 
