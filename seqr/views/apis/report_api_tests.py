@@ -203,6 +203,8 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "project_guid": "R0003_test",
     "num_saved_variants": 2,
     "dbgap_submission": "No",
+    "dbgap_study_id": "",
+    "dbgap_subject_id": "",
     "solve_state": "Tier 1",
     "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
