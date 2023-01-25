@@ -456,7 +456,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'dataPathList': []})
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
+            mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-2, shell=True),
             mock.call().wait(),
         ])
 
@@ -469,13 +469,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz']})
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
             mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-2, shell=True),
             mock.call().wait(),
         ])
         mock_file_logger.info.assert_has_calls([
-            mock.call('==> gsutil ls gs://test_bucket', self.manager_user),
             mock.call('==> gsutil ls gs://test_bucket/**', self.manager_user),
         ])
 
