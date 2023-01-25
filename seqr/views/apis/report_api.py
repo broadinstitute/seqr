@@ -3,7 +3,9 @@ from copy import deepcopy
 
 from datetime import datetime, timedelta
 from dateutil import relativedelta as rdelta
-from django.db.models import Prefetch, Count, Q
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import Prefetch, Count, F, Q, Value, CharField
+from django.db.models.functions import Replace, JSONObject
 from django.utils import timezone
 
 from seqr.utils.gene_utils import get_genes
@@ -166,7 +168,7 @@ def anvil_export(request, project_guid):
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        individual_samples, request.user, project=project, include_collaborator=False)
+        individual_samples, request.user, include_collaborator=False)
 
     # Flatten lists of discovery rows so there is one row per variant
     discovery_rows = [row for row_group in discovery_rows for row in row_group if row]
@@ -190,16 +192,14 @@ def sample_metadata_export(request, project_guid):
         projects = [project]
         omit_airtable = False
 
-    mme_family_guids = {family.guid for family in _get_has_mme_submission_families(projects)}
+    mme_family_guids = _get_has_mme_submission_family_guids(projects)
 
     individual_samples = _get_loaded_before_date_project_individual_samples(
         projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
-
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        individual_samples, request.user, include_collaborator=True, project=project, omit_airtable=omit_airtable,
+        individual_samples, request.user, include_collaborator=True, omit_airtable=omit_airtable,
     )
     family_rows_by_id = {row['family_id']: row for row in family_rows}
-
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
     for row in sample_rows:
         rows_by_subject_id[row['subject_id']].update(row)
@@ -232,18 +232,36 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, omit_airtable=False, project=None):
-    samples_by_family = defaultdict(list)
+def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, omit_airtable=False):
+
+    family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
+        'id', 'family_id', 'post_discovery_omim_number', 'project__name',
+        family_guid=F('guid'),
+        pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
+        phenotype_description=Replace(Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()), Value('\t'), Value(' ')),
+        project_guid=F('project__guid'),
+        genome_version=F('project__genome_version'),
+        phenotype_groups=ArrayAgg(
+            'project__projectcategory__name', distinct=True,
+            filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
+        ),
+    )
+    family_data_by_id = {
+        f.pop('id'): dict(project_id=f.pop('project__name'), phenotype_group='|'.join(f.pop('phenotype_groups')), **f)
+        for f in family_data
+    }
+
+    samples_by_family_id = defaultdict(list)
     individual_id_map = {}
     sample_ids = set()
     for individual, sample in individual_samples.items():
-        samples_by_family[individual.family].append(sample)
+        samples_by_family_id[individual.family_id].append(sample)
         individual_id_map[individual.id] = individual.individual_id
         sample_ids.add(sample.sample_id)
 
     family_individual_affected_guids = {}
-    for family, family_samples in samples_by_family.items():
-        family_individual_affected_guids[family.guid] = (
+    for family_id, family_samples in samples_by_family_id.items():
+        family_individual_affected_guids[family_id] = (
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_AFFECTED},
             {s.individual.guid for s in family_samples if s.individual.affected == Individual.AFFECTED_STATUS_UNAFFECTED},
             {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
@@ -252,15 +270,15 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
     sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
         list(sample_ids), user, include_collaborator=include_collaborator)
 
-    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family.keys()))
+    saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family_id.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
         saved_variants_by_family, family_individual_affected_guids)
     genes_by_id = get_genes(gene_ids)
 
     mim_numbers = set()
-    for family in samples_by_family.keys():
-        if family.post_discovery_omim_number:
-            mim_numbers.update(family.post_discovery_omim_number.split(','))
+    for family in family_data:
+        if family['post_discovery_omim_number']:
+            mim_numbers.update(family['post_discovery_omim_number'].split(','))
     mim_decription_map = {
         str(o.phenotype_mim_number): o.phenotype_description
         for o in Omim.objects.filter(phenotype_mim_number__in=mim_numbers)
@@ -270,36 +288,28 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
     sample_rows = []
     family_rows = []
     discovery_rows = []
-    for family, family_samples in samples_by_family.items():
-        saved_variants = saved_variants_by_family[family.guid]
+    for family_id, family_samples in samples_by_family_id.items():
+        saved_variants = saved_variants_by_family[family_id]
 
-        family_project = project or family.project
-        family_subject_row = {
-            'family_guid': family.guid,
-            'family_id': family.family_id,
-            'pmid_id': family.pubmed_ids[0].replace('PMID:', '').strip() if family.pubmed_ids else '',
-            'phenotype_description': (family.coded_phenotype or '').replace(',', ';').replace('\t', ' '),
-            'num_saved_variants': len(saved_variants),
-            'project_id': family_project.name,
-            'project_guid': family_project.guid,
-            'phenotype_group': '|'.join([
-                category.name for category in family_project.projectcategory_set.filter(name__in=PHENOTYPE_PROJECT_CATEGORIES)
-            ]),
-        }
-        if family.post_discovery_omim_number:
-            mim_numbers = family.post_discovery_omim_number.split(',')
+        family_subject_row = family_data_by_id[family_id]
+        family_subject_row['num_saved_variants'] = len(saved_variants)
+        genome_version = family_subject_row.pop('genome_version')
+
+        post_discovery_omim_number = family_subject_row.pop('post_discovery_omim_number')
+        if post_discovery_omim_number:
+            mim_numbers = post_discovery_omim_number.split(',')
             family_subject_row.update({
                 'disease_id': ';'.join(['OMIM:{}'.format(mim_number) for mim_number in mim_numbers]),
                 'disease_description': ';'.join([
                     mim_decription_map.get(mim_number, '') for mim_number in mim_numbers]).replace(',', ';'),
             })
 
-        affected_individual_guids, _, male_individual_guids = family_individual_affected_guids[family.guid]
+        affected_individual_guids, _, male_individual_guids = family_individual_affected_guids[family_id]
 
         family_consanguinity = any(sample.individual.consanguinity is True for sample in family_samples)
         family_row = {
-            'entity:family_id': family.family_id,
-            'family_id': family.family_id,
+            'entity:family_id': family_subject_row['family_id'],
+            'family_id': family_subject_row['family_id'],
             'consanguinity': 'Present' if family_consanguinity else 'None suspected',
         }
         if len(affected_individual_guids) > 1:
@@ -307,7 +317,8 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
         family_rows.append(family_row)
 
         parsed_variants = [
-            _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_family, genes_by_id)
+            _parse_anvil_family_saved_variant(
+                variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id)
             for variant in saved_variants]
 
         for sample in family_samples:
@@ -365,10 +376,9 @@ def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date
     else:
         max_loaded_date = datetime.now() - timedelta(days=365)
 
-    related_lookup = 'individual__family' if len(projects) == 1 else 'individual__family__project'
     loaded_samples = Sample.objects.filter(
         individual__family__project__in=projects, elasticsearch_index__isnull=False,
-    ).select_related(related_lookup).order_by('-loaded_date')
+    ).select_related('individual').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
     #  Only return the oldest sample for each individual
@@ -378,7 +388,7 @@ def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date
 def _process_saved_variants(saved_variants_by_family, family_individual_affected_guids):
     gene_ids = set()
     compound_het_gene_id_by_family = {}
-    for family_guid, saved_variants in saved_variants_by_family.items():
+    for family_id, saved_variants in saved_variants_by_family.items():
         potential_com_het_gene_variants = defaultdict(list)
         potential_mnvs = defaultdict(list)
         for variant in saved_variants:
@@ -386,7 +396,7 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
             if variant['main_transcript']:
                 gene_ids.add(variant['main_transcript']['geneId'])
 
-            affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_affected_guids[family_guid]
+            affected_individual_guids, unaffected_individual_guids, male_individual_guids = family_individual_affected_guids[family_id]
             inheritance_models, potential_compound_het_gene_ids = _get_inheritance_models(
                 variant, affected_individual_guids, unaffected_individual_guids, male_individual_guids)
             variant['inheritance_models'] = inheritance_models
@@ -397,7 +407,7 @@ def _process_saved_variants(saved_variants_by_family, family_individual_affected
 
         mnv_genes = _process_mnvs(potential_mnvs, saved_variants)
         compound_het_gene_id_by_family.update(
-            _process_comp_hets(family_guid, potential_com_het_gene_variants, gene_ids, mnv_genes)
+            _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv_genes)
         )
 
     return compound_het_gene_id_by_family, gene_ids
@@ -424,7 +434,7 @@ def _process_mnvs(potential_mnvs, saved_variants):
     return mnv_genes
 
 
-def _process_comp_hets(family_guid, potential_com_het_gene_variants, gene_ids, mnv_genes):
+def _process_comp_hets(family_id, potential_com_het_gene_variants, gene_ids, mnv_genes):
     compound_het_gene_id_by_family = {}
     for gene_id, comp_het_variants in potential_com_het_gene_variants.items():
         if gene_id in mnv_genes:
@@ -441,17 +451,17 @@ def _process_comp_hets(family_guid, potential_com_het_gene_variants, gene_ids, m
                 # This occurs in compound hets where some hits have a primary transcripts in different genes
                 for gene_id in sorted(main_gene_ids):
                     if all(gene_id in variant['transcripts'] for variant in comp_het_variants):
-                        compound_het_gene_id_by_family[family_guid] = gene_id
+                        compound_het_gene_id_by_family[family_id] = gene_id
                         gene_ids.add(gene_id)
     return compound_het_gene_id_by_family
 
 
-def _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_family, genes_by_id):
+def _parse_anvil_family_saved_variant(variant, family_id, genome_version, compound_het_gene_id_by_family, genes_by_id):
     if variant['inheritance_models']:
         inheritance_mode = '|'.join([INHERITANCE_MODE_MAP[model] for model in variant['inheritance_models']])
     else:
         inheritance_mode = 'Unknown / Other'
-    variant_genome_version = variant.get('genomeVersion') or family.project.genome_version
+    variant_genome_version = variant.get('genomeVersion') or genome_version
     parsed_variant = {
         'Gene_Class': 'Known',
         'inheritance_description': inheritance_mode,
@@ -475,7 +485,7 @@ def _parse_anvil_family_saved_variant(variant, family, compound_het_gene_id_by_f
             'sv_type': SV_TYPE_MAP.get(variant['svType'], variant['svType']),
         })
     else:
-        gene_id = compound_het_gene_id_by_family.get(family.guid) or variant['main_transcript']['geneId']
+        gene_id = compound_het_gene_id_by_family.get(family_id) or variant['main_transcript']['geneId']
         parsed_variant.update({
             'Gene': genes_by_id[gene_id]['geneSymbol'],
             'Chrom': variant['chrom'],
@@ -988,7 +998,7 @@ def discovery_sheet(request, project_guid):
     loaded_samples_by_family = _get_loaded_samples_by_family(project)
     saved_variants_by_family = _get_project_saved_discovery_variants_by_family(project)
     analysis_notes_by_family = _get_analysis_notes_by_family(project)
-    mme_submission_families = _get_has_mme_submission_families([project])
+    mme_submission_family_guids = _get_has_mme_submission_family_guids([project])
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: {}".format(project))
@@ -1014,9 +1024,9 @@ def discovery_sheet(request, project_guid):
         if not samples:
             errors.append("No data loaded for family: %s. Skipping..." % family)
             continue
-        saved_variants = saved_variants_by_family.get(family.guid)
+        saved_variants = saved_variants_by_family.get(family.id)
         analysis_notes = analysis_notes_by_family.get(family.guid)
-        submitted_to_mme = family in mme_submission_families
+        submitted_to_mme = family.guid in mme_submission_family_guids
 
         rows += _generate_rows(initial_row, family, samples, saved_variants, analysis_notes, submitted_to_mme, now=now)
 
@@ -1054,7 +1064,7 @@ def _get_analysis_notes_by_family(project):
 
 
 def _get_parsed_saved_discovery_variants_by_family(families):
-    return _get_saved_discovery_variants_by_family({'family__in': families}, parse_json=True)
+    return _get_saved_discovery_variants_by_family({'family__id__in': families}, parse_json=True)
 
 
 def _get_project_saved_discovery_variants_by_family(project):
@@ -1064,36 +1074,40 @@ def _get_project_saved_discovery_variants_by_family(project):
 def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
-    project_saved_variants = SavedVariant.objects.select_related('family').prefetch_related(
-        Prefetch('varianttag_set', to_attr='discovery_tags',
-                 queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
-                 )).prefetch_related('variantfunctionaldata_set').filter(
-        varianttag__variant_tag_type__in=tag_types,
-        **variant_filter
-    ).order_by('created_date').distinct()
+    project_saved_variants = SavedVariant.objects.filter(
+        varianttag__variant_tag_type__in=tag_types, **variant_filter).order_by('created_date').distinct()
 
     if parse_json:
-        variant_by_guid = {variant['variantGuid']: variant for variant in
-                           get_json_for_saved_variants(project_saved_variants, add_details=True)}
+        project_saved_variants = get_json_for_saved_variants(
+            project_saved_variants, add_details=True, additional_model_fields=['family_id'], additional_values={
+                'discovery_tags': ArrayAgg(JSONObject(
+                    name='varianttag__variant_tag_type__name',
+                    guid='varianttag__guid',
+                )),
+            })
+    else:
+        project_saved_variants = project_saved_variants.prefetch_related(
+            Prefetch('varianttag_set', to_attr='discovery_tags',
+                 queryset=VariantTag.objects.filter(variant_tag_type__in=tag_types).select_related('variant_tag_type'),
+            )).prefetch_related('variantfunctionaldata_set')
 
     saved_variants_by_family = defaultdict(list)
     for saved_variant in project_saved_variants:
-        parsed_variant = saved_variant
         if parse_json:
-            parsed_variant = variant_by_guid[saved_variant.guid]
-            parsed_variant['discovery_tag_guids_by_name'] = {vt.variant_tag_type.name: vt.guid for vt in
-                                                             saved_variant.discovery_tags}
-        saved_variants_by_family[saved_variant.family.guid].append(parsed_variant)
+            family_id = saved_variant.pop('familyId')
+            saved_variant['discovery_tag_guids_by_name'] = {vt['name']: vt['guid'] for vt in
+                                                             saved_variant.pop('discovery_tags')}
+        else:
+            family_id = saved_variant.family_id
+        saved_variants_by_family[family_id].append(saved_variant)
 
     return saved_variants_by_family
 
 
-def _get_has_mme_submission_families(projects):
-    return {
-        submission.individual.family for submission in MatchmakerSubmission.objects.filter(
-            individual__family__project__in=projects,
-        ).select_related('individual__family')
-    }
+def _get_has_mme_submission_family_guids(projects):
+    return MatchmakerSubmission.objects.filter(
+        individual__family__project__in=projects,
+    ).values_list('individual__family__guid', flat=True).distinct()
 
 
 def _generate_rows(initial_row, family, samples, saved_variants, analysis_notes, submitted_to_mme, now=timezone.now()):

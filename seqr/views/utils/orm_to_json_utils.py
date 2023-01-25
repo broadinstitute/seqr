@@ -391,10 +391,12 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None):
-    additional_values = {
+def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None, additional_values=None):
+    sv_additional_values = {
         'familyGuids': ArrayAgg('family__guid', distinct=True),
     }
+    if additional_values:
+        sv_additional_values.update(additional_values)
 
     additional_fields = []
     additional_fields += additional_model_fields or []
@@ -402,7 +404,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
         additional_fields.append('saved_variant_json')
 
     results = get_json_for_queryset(
-        saved_variants, guid_key='variantGuid', additional_values=additional_values,
+        saved_variants, guid_key='variantGuid', additional_values=sv_additional_values,
         additional_model_fields=additional_fields,
     )
 
