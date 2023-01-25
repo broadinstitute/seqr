@@ -309,7 +309,7 @@ class ReportAPITest(object):
         self.check_no_analyst_no_access(url)
 
     def test_get_category_projects(self):
-        url = reverse(get_category_projects, args=['CMG'])
+        url = reverse(get_category_projects, args=['GREGoR'])
         self.check_analyst_login(url)
 
         response = self.client.get(url)
