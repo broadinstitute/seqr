@@ -3,6 +3,7 @@ import { combineReducers } from 'redux'
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { ALL_PROJECTS_PATH, GREGOR_PROJECT_PATH, CMG_PROJECT_PATH } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
@@ -16,7 +17,7 @@ const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 
 // Data actions
 const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => (dispatch) => {
-  if (projectGuid === 'all' || projectGuid === 'gregor' || projectGuid === 'cmg') {
+  if (projectGuid === ALL_PROJECTS_PATH || projectGuid === GREGOR_PROJECT_PATH || projectGuid === CMG_PROJECT_PATH) {
     dispatch({ type: requestAction })
 
     const errors = new Set()
@@ -37,7 +38,7 @@ const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (project
               rows.push(...responseJson.rows)
             },
             e => errors.add(e.message),
-          ).get({ isAllProject: projectGuid === 'all' }))),
+          ).get({ isAllProject: projectGuid === ALL_PROJECTS_PATH }))),
         ), Promise.resolve()).then(() => {
           if (errors.size) {
             dispatch({ type: receiveAction, error: [...errors].join(', '), newValue: [] })
