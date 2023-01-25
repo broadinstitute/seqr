@@ -233,12 +233,14 @@ def sample_metadata_export(request, project_guid):
 
 
 def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, omit_airtable=False):
-
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
         'id', 'family_id', 'post_discovery_omim_number', 'project__name',
         family_guid=F('guid'),
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
-        phenotype_description=Replace(Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()), Value('\t'), Value(' ')),
+        phenotype_description=Replace(
+            Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
+            Value('\t'), Value(' '),
+        ),
         project_guid=F('project__guid'),
         genome_version=F('project__genome_version'),
         phenotype_groups=ArrayAgg(
@@ -246,10 +248,15 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, 
             filter=Q(project__projectcategory__name__in=PHENOTYPE_PROJECT_CATEGORIES),
         ),
     )
-    family_data_by_id = {
-        f.pop('id'): dict(project_id=f.pop('project__name'), phenotype_group='|'.join(f.pop('phenotype_groups')), **f)
-        for f in family_data
-    }
+
+    family_data_by_id = {}
+    for f in family_data:
+        family_id = f.pop('id')
+        f.update({
+            'project_id': f.pop('project__name'),
+            'phenotype_group': '|'.join(f.pop('phenotype_groups')),
+        })
+        family_data_by_id[family_id] = f
 
     samples_by_family_id = defaultdict(list)
     individual_id_map = {}
@@ -1075,7 +1082,9 @@ def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.filter(
-        varianttag__variant_tag_type__in=tag_types, **variant_filter).order_by('created_date').distinct()
+        varianttag__variant_tag_type__in=tag_types,
+        **variant_filter,
+    ).order_by('created_date').distinct()
 
     if parse_json:
         project_saved_variants = get_json_for_saved_variants(
