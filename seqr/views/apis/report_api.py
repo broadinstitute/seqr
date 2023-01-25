@@ -839,11 +839,12 @@ def _get_gregor_family_row(family):
 
 
 def _get_participant_row(individual, airtable_sample):
+    import json
     participant = {
         'gregor_center': 'Broad',
         'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
         'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else '0',
-        'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
+        'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
         'proband_relationship': individual.get_proband_relationship_display(),
         'sex': individual.get_sex_display(),
         'affected_status': individual.get_affected_display(),

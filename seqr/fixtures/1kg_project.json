@@ -450,7 +450,7 @@
         "absent_nonstandard_features": null,
         "disorders": ["615593"],
         "candidate_genes": [{"gene": "EHBP1L1", "comments": "comments EHBP1L1"}, {"gene": "ACY3", "comments": "comments ACY3"}],
-        "rejected_genes": [{"gene": "IKBKAP", "comments": "comments IKBKAP"}, {"gene": "CCDC102B", "comments": "comments for CCDC102B"}],
+        "rejected_genes": [{"gene": "IKBKAP", "comments": "comments IKBKAP"}, {"gene": "CCDC102B", "comments": "comments for CCDC102B"}, {"comments":  "CMA - normal"}],
         "population": "MDE",
         "ar_fertility_meds": null,
         "ar_iui": null,

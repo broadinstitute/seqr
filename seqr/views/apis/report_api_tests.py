@@ -614,7 +614,7 @@ class ReportAPITest(object):
             'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
         ])
         self.assertIn([
-            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', 'Yes', 'IKBKAP|CCDC102B',
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
             '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
             'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
         ], participant_file)
