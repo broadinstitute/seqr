@@ -227,12 +227,14 @@ def sample_metadata_export(request, project_guid):
 
 
 def _parse_anvil_metadata(individual_samples, user, include_collaborator=False):
-
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
         'id', 'family_id', 'post_discovery_omim_number', 'project__name',
         family_guid=F('guid'),
         pmid_id=Replace('pubmed_ids__0', Value('PMID:'), Value(''), output_field=CharField()),
-        phenotype_description=Replace(Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()), Value('\t'), Value(' ')),
+        phenotype_description=Replace(
+            Replace('coded_phenotype', Value(','), Value(';'), output_field=CharField()),
+            Value('\t'), Value(' '),
+        ),
         project_guid=F('project__guid'),
         genome_version=F('project__genome_version'),
         phenotype_groups=ArrayAgg(
@@ -1066,7 +1068,9 @@ def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
     tag_types = VariantTagType.objects.filter(project__isnull=True, category='CMG Discovery Tags')
 
     project_saved_variants = SavedVariant.objects.filter(
-        varianttag__variant_tag_type__in=tag_types, **variant_filter).order_by('created_date').distinct()
+        varianttag__variant_tag_type__in=tag_types,
+        **variant_filter,
+    ).order_by('created_date').distinct()
 
     if parse_json:
         project_saved_variants = get_json_for_saved_variants(
