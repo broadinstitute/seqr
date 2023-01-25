@@ -183,14 +183,11 @@ def anvil_export(request, project_guid):
 
 @analyst_required
 def sample_metadata_export(request, project_guid):
-    if project_guid == 'all':
+    omit_airtable = project_guid == 'all'
+    if omit_airtable:
         projects = get_internal_projects()
-        project = None
-        omit_airtable = True
     else:
-        project = get_project_and_check_permissions(project_guid, request.user)
-        projects = [project]
-        omit_airtable = False
+        projects = [get_project_and_check_permissions(project_guid, request.user)]
 
     mme_family_guids = _get_has_mme_submission_family_guids(projects)
 
@@ -200,6 +197,7 @@ def sample_metadata_export(request, project_guid):
         individual_samples, request.user, include_collaborator=True, omit_airtable=omit_airtable,
     )
     family_rows_by_id = {row['family_id']: row for row in family_rows}
+
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
     for row in sample_rows:
         rows_by_subject_id[row['subject_id']].update(row)
@@ -983,9 +981,8 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
 
 @analyst_required
 def get_category_projects(request, category):
-    projects = Project.objects.filter(projectcategory__name__iexact=category)
     return create_json_response({
-        'projectGuids': list(projects.values_list('guid', flat=True)),
+        'projectGuids': list(Project.objects.filter(projectcategory__name__iexact=category).values_list('guid', flat=True)),
     })
 
 
