@@ -33,7 +33,7 @@ def get_google_project(gs_path):
     return 'anvil-datastorage' if gs_path.startswith('gs://fc-secure') else None
 
 
-def does_file_exist(file_path, user=None, return_outputs=False):
+def does_file_exist(file_path, user=None):
     if is_google_bucket_file_path(file_path):
         process = _run_gsutil_command('ls', file_path, user=user)
         success = process.wait() == 0
