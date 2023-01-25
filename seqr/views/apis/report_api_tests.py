@@ -522,6 +522,7 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 3)
         self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
         self.assertEqual(len(responses.calls), 8)
         self._assert_expected_airtable_call(
