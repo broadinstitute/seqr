@@ -839,7 +839,6 @@ def _get_gregor_family_row(family):
 
 
 def _get_participant_row(individual, airtable_sample):
-    import json
     participant = {
         'gregor_center': 'Broad',
         'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
