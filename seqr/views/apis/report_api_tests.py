@@ -197,6 +197,12 @@ AIRTABLE_GREGOR_RECORDS = {
         'variant_types': 'SNV',
       },
     },
+    {
+      "id": "rec2B6OGmCVzkQW3s",
+      "fields": {
+        'SMID': 'SM-AGHT',
+      },
+    },
 ]}
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
@@ -643,24 +649,24 @@ class ReportAPITest(object):
             ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
             analyte_file)
 
-        self.assertEqual(len(experiment_file), 2)
+        self.assertEqual(len(experiment_file), 3)
         self.assertEqual(experiment_file[0], [
             'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
             'date_data_generation', 'target_insert_size', 'sequencing_platform',
         ])
-        self.assertEqual(experiment_file[1], [
+        self.assertEqual(experiment_file[2], [
             'Broad_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
             'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
         ])
 
-        self.assertEqual(len(read_file), 2)
+        self.assertEqual(len(read_file), 3)
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
             'analysis_details',
         ])
-        self.assertEqual(read_file[1], [
+        self.assertEqual(read_file[2], [
             'BCM_H7YG5DSX2-3-IDUDI0014-1', 'Broad_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
