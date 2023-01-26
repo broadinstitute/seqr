@@ -953,17 +953,12 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
             af_cutoff = 0.01
         if af_cutoff is not None:
-            logger.info('import high freq ht')
             high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
             mt = mt.annotate_rows(is_AF_gt_10_percent=high_af_ht[mt.row_key].is_gt_10_percent)
             af_prefilter = hl.is_missing(mt.is_AF_gt_10_percent)
             if af_cutoff <= 0.01:
                 af_prefilter |= ~mt.is_AF_gt_10_percent
             mt = mt.filter_rows(af_prefilter)
-            # for filtering for AF > 0.01 we need to keep variants with AF < 0.1
-            # if af_cutoff > 0.01:
-            #     high_af_ht = high_af_ht.filter(high_af_ht.is_gt_10_percent)
-            # mt = mt.anti_join_rows(high_af_ht)
 
         return mt
 
