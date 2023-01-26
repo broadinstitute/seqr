@@ -69,6 +69,7 @@ def write_family_hts(file, project, data_type):
         family_mt = mt.semi_join_cols(family_subset_ht)
         family_ht = family_mt.filter_rows(hl.agg.any(family_mt.GT.is_non_ref())).entries()
         family_ht = family_ht.select('GT', *annotations.keys(), *ENTRY_FIELDS.get(data_type, []))
+        family_ht = family_ht.repartition(1)
 
         count = family_ht.count()
         print(f'{family_guid}: {family_subset_ht.count()} samples, {count} rows')

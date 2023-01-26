@@ -273,6 +273,8 @@ def write_main_ht(file, data_type):
 
     ht = ht.select_globals()
     ht = ht.select(*SELECT_FIELDS[data_type], **{k: v(ht) for k, v in ANNOTATIONS[data_type].items()})
+    if ht.n_partitions() > 25:
+        ht = ht.repartition(25)
     ht.write(f'gs://hail-backend-datasets/{file}.ht')
 
 
