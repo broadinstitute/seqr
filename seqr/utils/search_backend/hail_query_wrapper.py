@@ -1051,14 +1051,11 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
 
     @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, **kwargs):
-        return super(BaseSvHailTableQuery, cls).import_filtered_mt(data_source, samples, sv_intervals=intervals, **kwargs)
-
-    @classmethod
-    def _filter_unannotated_mt(cls, mt, sv_intervals=None, exclude_intervals=False, **kwargs):
-        if sv_intervals:
-            interval_filter = hl.array(sv_intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
-                if exclude_intervals else hl.array(sv_intervals).any(lambda interval: interval.overlaps(mt.interval))
+    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False, **kwargs):
+        mt = super(BaseSvHailTableQuery, cls).import_filtered_mt(data_source, samples, **kwargs)
+        if intervals:
+            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
+                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(mt.interval))
             mt = mt.filter_rows(interval_filter)
         return mt
 
