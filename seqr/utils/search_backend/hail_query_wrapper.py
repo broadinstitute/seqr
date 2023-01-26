@@ -256,6 +256,7 @@ class BaseHailTableQuery(object):
                 families_mt = family_mt
 
         families_mt = cls._filter_unannotated_mt(families_mt, load_table_kwargs=load_table_kwargs, **kwargs)
+        logger.info(f'Prefiltered to {families_mt.rows().count()} rows ({cls.__name__})')
 
         # TODO - use query_table
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
