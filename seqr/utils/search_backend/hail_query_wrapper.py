@@ -955,7 +955,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         if af_cutoff is not None:
             logger.info('import high freq ht')
             high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
-            mt = mt.annotate_rows(is_AF_gt_10_percent=high_af_ht[families_mt.row_key].is_gt_10_percent)
+            mt = mt.annotate_rows(is_AF_gt_10_percent=high_af_ht[mt.row_key].is_gt_10_percent)
             af_prefilter = hl.is_missing(mt.is_AF_gt_10_percent)
             if af_cutoff <= 0.01:
                 af_prefilter |= ~mt.is_AF_gt_10_percent
