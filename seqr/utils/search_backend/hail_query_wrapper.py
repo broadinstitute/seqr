@@ -949,7 +949,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
             af_cutoff = 0.01
         if af_cutoff is not None:
-            high_af_ht = hl.read_table('gs://hail-backend-datasets/high_af_variants.ht', **(load_table_kwargs or {}))
+            high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
             # for filtering for AF > 0.01 we need to keep variants with AF < 0.1
             if af_cutoff > 0.01:
                 high_af_ht = high_af_ht.filter(high_af_ht.is_gt_10_percent)
