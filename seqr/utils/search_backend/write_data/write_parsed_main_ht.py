@@ -18,6 +18,15 @@ def add_interval_ref_data(file):
         screen=hl.struct(region_type=interval_ref_data.flatmap(lambda x: x.screen["region_type"])),
     )
     ht.write(f'gs://hail-backend-datasets/{file}.interval_annotations.ht')
+    return ht
+
+
+def write_af_index_table(ht):
+    ht = ht.select_globals()
+    ht = ht.filter(ht.gnomad_genomes.AF_POPMAX_OR_GLOBAL > 0.01)
+    ht = ht.select(is_gt_10_percent=ht.gnomad_genomes.AF_POPMAX_OR_GLOBAL > 0.1)
+    ht = ht.repartition(1)
+    ht.write(f'gs://hail-backend-datasets/high_af_variants.ht')
 
 
 if __name__ == "__main__":
@@ -25,4 +34,5 @@ if __name__ == "__main__":
     p.add_argument('file')
     args = p.parse_args()
 
-    add_interval_ref_data(args.file)
+    ht = add_interval_ref_data(args.file)
+    write_af_index_table(ht)

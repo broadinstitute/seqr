@@ -24,6 +24,7 @@ STRUCTURAL_ANNOTATION_FIELD = 'structural'
 
 VARIANT_KEY_FIELD = 'variantId'
 GROUPED_VARIANTS_FIELD = 'variants'
+GNOMAD_GENOMES_FIELD = 'gnomad_genomes'
 
 COMP_HET_ALT = 'COMP_HET_ALT'
 INHERITANCE_FILTERS = deepcopy(INHERITANCE_FILTERS)
@@ -205,7 +206,8 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False, **kwargs):
+    def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False,
+                 inheritance_mode=None, inheritance_filter=None, frequencies=None, **kwargs):
         self._genome_version = genome_version
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
@@ -219,21 +221,26 @@ class BaseHailTableQuery(object):
         }
         self._save_samples(samples)
 
-        self._mt = self._load_table(data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals)
+        self._mt = self._load_table(
+            data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals,
+            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies,
+        )
 
-        self._filter_variants(**kwargs)
+        self._filter_variants(  # TODO inheritance needed for filter variants?
+            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies, **kwargs)
 
     def _save_samples(self, samples):
         self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
 
-    def _load_table(self, data_source, samples, intervals=None, exclude_intervals=False):
-        mt = self.import_filtered_mt(data_source, samples, intervals=self._parse_intervals(intervals), exclude_intervals=exclude_intervals)
+    def _load_table(self, data_source, samples, intervals=None, **kwargs):
+        mt = self.import_filtered_mt(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
         return mt
 
     @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, **kwargs):
+    def import_filtered_mt(cls, data_source, samples, intervals=None, inheritance_mode=None, inheritance_filter=None,
+                           **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         families = {s.individual.family for s in samples}
@@ -241,13 +248,16 @@ class BaseHailTableQuery(object):
         for f in families:
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
+            # TODO inheritance_mode, inheritance_filter
 
             if families_mt:
                 families_mt = families_mt.union_cols(family_mt, row_join_type='outer')
             else:
                 families_mt = family_mt
 
-        # TODO - only read in rows present in families_mt
+        families_mt = cls._filter_unannotated_mt(families_mt, load_table_kwargs=load_table_kwargs, **kwargs)
+
+        # TODO - use query_table
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
 
         return families_mt.annotate_rows(**ht[families_mt.row_key])
@@ -256,6 +266,10 @@ class BaseHailTableQuery(object):
     def _family_ht_to_mt(cls, family_ht):
         keys = list(family_ht.key.keys())
         return family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
+
+    @classmethod
+    def _filter_unannotated_mt(cls, mt, **kwargs):
+        return mt
 
     @staticmethod
     def _filter_gene_ids(mt, gene_ids):
@@ -867,11 +881,17 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
 
     @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        mt = super(BaseVariantHailTableQuery, cls).import_filtered_mt(data_source, samples, intervals=None if exclude_intervals else intervals)
-        if intervals and exclude_intervals:
-            mt = hl.filter_intervals(mt, intervals, keep=False)
+    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False, **kwargs):
+        mt = super(BaseVariantHailTableQuery, cls).import_filtered_mt(
+            data_source, samples, intervals=None if exclude_intervals else intervals,
+            excluded_intervals=intervals if exclude_intervals else None, **kwargs)
         mt = mt.key_rows_by(VARIANT_KEY_FIELD)
+        return mt
+
+    @classmethod
+    def _filter_unannotated_mt(cls, mt, excluded_intervals=None, **kwargs):
+        if excluded_intervals:
+            mt = hl.filter_intervals(mt, excluded_intervals, keep=False)
         return mt
 
     @staticmethod
@@ -896,7 +916,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
             'filter_af': 'AF_POPMAX', 'ac': 'AC_Adj', 'an': 'AN_Adj', 'hom': 'AC_Hom', 'hemi': 'AC_Hemi', 'het': None,
         },
         'gnomad_exomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
-        'gnomad_genomes': {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
+        GNOMAD_GENOMES_FIELD: {'filter_af': 'AF_POPMAX_OR_GLOBAL', 'het': None},
     }
     POPULATIONS.update(BaseVariantHailTableQuery.POPULATIONS)
     PREDICTION_FIELDS_CONFIG = {
@@ -919,6 +939,23 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
             hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_id[0]]),
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
+
+    @classmethod
+    def _filter_unannotated_mt(cls, mt, frequencies=None, load_table_kwargs=None, **kwargs):
+        mt = super(VariantHailTableQuery, cls)._filter_unannotated_mt(mt, **kwargs)
+
+        gnomad_genomes_filter = (frequecies or {}).get(GNOMAD_GENOMES_FIELD, {})
+        af_cutoff = gnomad_genomes_filter.get('af')
+        if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
+            af_cutoff = 0.01
+        if af_cutoff is not None:
+            high_af_ht = hl.read_table('gs://hail-backend-datasets/high_af_variants.ht', **(load_table_kwargs or {}))
+            # for filtering for AF > 0.01 we need to keep variants with AF < 0.1
+            if af_cutoff > 0.01:
+                high_af_ht = high_af_ht.filter(high_af_ht.is_gt_10_percent)
+            mt = mt.anti_join_rows(high_af_ht)
+
+        return mt
 
     def _get_invalid_quality_filter_expr(self, mt, quality_filter):
         min_ab = (quality_filter or {}).get('min_ab')
@@ -1009,11 +1046,14 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
 
     @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, exclude_intervals=False):
-        mt = super(BaseSvHailTableQuery, cls).import_filtered_mt(data_source, samples)
-        if intervals:
-            interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
-                if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(mt.interval))
+    def import_filtered_mt(cls, data_source, samples, intervals=None, **kwargs):
+        return super(BaseSvHailTableQuery, cls).import_filtered_mt(data_source, samples, sv_intervals=intervals, **kwargs)
+
+    @classmethod
+    def _filter_unannotated_mt(cls, mt, sv_intervals=None, exclude_intervals=False, **kwargs):
+        if sv_intervals:
+            interval_filter = hl.array(sv_intervals).all(lambda interval: not interval.overlaps(mt.interval)) \
+                if exclude_intervals else hl.array(sv_intervals).any(lambda interval: interval.overlaps(mt.interval))
             mt = mt.filter_rows(interval_filter)
         return mt
 
