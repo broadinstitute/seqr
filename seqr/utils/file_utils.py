@@ -81,11 +81,11 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     _run_gsutil_with_wait(command, gs_path, user)
 
 
-def get_gs_file_list(gs_path, user=None, recursive=True):
+def get_gs_file_list(gs_path, user=None, check_subfolders=True):
     gs_path = gs_path.rstrip('/')
-    command = 'ls'
+    command = '-q ls'
 
-    if recursive:
+    if check_subfolders:
         gs_path = f'{gs_path}/**'
 
     return _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)

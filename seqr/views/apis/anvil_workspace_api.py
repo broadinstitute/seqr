@@ -2,6 +2,8 @@
 import json
 import time
 import tempfile
+import os
+import re
 from datetime import datetime
 from functools import wraps
 from collections import defaultdict
@@ -126,8 +128,13 @@ def grant_workspace_access(request, namespace, name):
 def get_anvil_vcf_list(request, namespace, name, workspace_meta):
     bucket_name = workspace_meta['workspace']['bucketName']
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
-    data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
-                      if path.endswith(VCF_FILE_EXTENSIONS)]
+    try:
+        data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
+                          if path.endswith(VCF_FILE_EXTENSIONS)]
+    except Exception as ee:
+        error = f'Loading VCF file list from {bucket_path} failed with error {str(ee)}'
+        logger.error(error, request.user)
+        return create_json_response({'error': error}, status=400, reason=error)
     data_path_list = _merge_sharded_vcf(data_path_list)
 
     return create_json_response({'dataPathList': data_path_list})
@@ -143,14 +150,17 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
-    sharded_file_list = None
     error = None
+    file_to_check = data_path
     if not data_path.endswith(VCF_FILE_EXTENSIONS):
         error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
-    elif data_path.find('*') != -1:
-        sharded_file_list = get_gs_file_list(data_path, request.user, recursive=False)
-        if not sharded_file_list:
-            error = f'Cannot find the sharded VCF files for {data_path}.'
+    elif '*' in data_path:
+        try:
+            sharded_file_list = get_gs_file_list(data_path, request.user, check_subfolders=False)
+            file_to_check = sharded_file_list[0]
+        except Exception as ee:
+            error = f'Loading VCF file list for {data_path} failed with error {str(ee)}'
+            logger.error(error, request.user)
     elif not does_file_exist(data_path, user=request.user):
         error = 'Data file or path {} is not found.'.format(path)
 
@@ -158,7 +168,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         return create_json_response({'error': error}, status=400, reason=error)
 
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(data_path, sharded_file_list=sharded_file_list)
+    samples = validate_vcf_and_get_samples(file_to_check)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 
@@ -474,9 +484,11 @@ def _merge_sharded_vcf(vcf_files):
 
     # discover the sharded VCF files in each folder, replace the sharded VCF files with a single path with '*'
     for subfolder_path, files in files_by_path.items():
-        prefix = _get_common_prefix(files)
-        postfix = files[0].replace(prefix, '').lstrip('_0123456789')
-        if len(files) > 1 and all([file.replace(prefix, '').lstrip('_0123456789') == postfix for file in files]):
-            files_by_path[subfolder_path] = [f'{prefix}*{postfix}']
+        if len(files) < 2:
+            continue
+        prefix = os.path.commonprefix(files)
+        suffix = re.fullmatch(f'{prefix}\d+(?P<suffix>\D.*)', files[0]).groupdict()['suffix']
+        if all([re.fullmatch(f'{prefix}\d+{suffix}', file) for file in files]):
+            files_by_path[subfolder_path] = [f'{prefix}*{suffix}']
 
     return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]
