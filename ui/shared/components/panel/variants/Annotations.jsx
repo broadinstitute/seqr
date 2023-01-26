@@ -110,10 +110,12 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const getSvRegion = ({ chrom, endChrom, pos, end, liftedOverGenomeVersion, liftedOverPos }, divider) => {
+const getSvRegion = (
+  { chrom, endChrom, pos, end, liftedOverGenomeVersion, liftedOverPos }, divider, useLiftoverVersion,
+) => {
   const endOffset = endChrom ? 0 : end - pos
-  const start = liftedOverGenomeVersion === GENOME_VERSION_37 ? liftedOverPos : pos
-  return `${chrom}${divider || '-'}${start}-${start + endOffset}`
+  const start = (useLiftoverVersion && liftedOverGenomeVersion === useLiftoverVersion) ? liftedOverPos : pos
+  return `${chrom}${divider}${start}-${start + endOffset}`
 }
 
 const getGeneNames = genes => genes.reduce((acc, gene) => [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc], [])
@@ -133,7 +135,7 @@ const VARIANT_LINKS = [
       !!svType && (
         genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
     ),
-    getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant)}?dataset=gnomad_sv_r2_1`,
+    getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant, '-', GENOME_VERSION_37)}?dataset=gnomad_sv_r2_1`,
   },
   {
     name: 'Decipher',
