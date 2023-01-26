@@ -944,7 +944,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     def _filter_unannotated_mt(cls, mt, frequencies=None, load_table_kwargs=None, **kwargs):
         mt = super(VariantHailTableQuery, cls)._filter_unannotated_mt(mt, **kwargs)
 
-        gnomad_genomes_filter = (frequecies or {}).get(GNOMAD_GENOMES_FIELD, {})
+        gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
             af_cutoff = 0.01
