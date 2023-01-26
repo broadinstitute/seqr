@@ -11,8 +11,8 @@ from seqr.views.apis.individual_api import edit_individuals_handler, update_indi
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
     get_hpo_terms, get_individual_rna_seq_data
-from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS_NO_FEATURES, \
-    CORE_INTERNAL_INDIVIDUAL_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS, INDIVIDUAL_CORE_FIELDS, \
+    CORE_INTERNAL_INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 PM_REQUIRED_PROJECT_GUID = 'R0003_test'
@@ -80,7 +80,7 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
-        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), INDIVIDUAL_FIELDS_NO_FEATURES)
+        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), INDIVIDUAL_CORE_FIELDS)
         individual = Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID)
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertEqual(individual.display_name, '')
@@ -94,9 +94,7 @@ class IndividualAPITest(AuthenticationTestCase):
                                     data=json.dumps(INDIVIDUAL_UPDATE_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        response_fields = deepcopy(INDIVIDUAL_FIELDS_NO_FEATURES)
-        response_fields.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
-        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), response_fields)
+        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), INDIVIDUAL_CORE_FIELDS)
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['birthYear'], 2000)
 
         update_json = {'analyteType': 'D', 'tissueAffectedStatus': False}
@@ -107,6 +105,7 @@ class IndividualAPITest(AuthenticationTestCase):
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps(update_json))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
+        response_fields = deepcopy(INDIVIDUAL_CORE_FIELDS)
         response_fields.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), response_fields)
         self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['analyteType'], 'D')
@@ -122,7 +121,6 @@ class IndividualAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
-        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertListEqual(response_json[INDIVIDUAL_UPDATE_GUID]['features'], [
             {
                 'id': 'HP:0002011',

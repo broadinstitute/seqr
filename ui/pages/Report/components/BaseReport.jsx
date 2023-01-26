@@ -20,7 +20,7 @@ const LOADING_PROPS = { inline: true }
 const getResultHref = page => result => `/report/${page}/${result.key}`
 
 const BaseReport = React.memo(({
-  page, viewAllCategory, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load,
+  page, viewAllPages, idField, defaultSortColumn, getDownloadFilename, match, data, columns, loading, load,
   loadingError, filters, rowsPerPage,
 }) => (
   <DataLoader contentId={match.params.projectGuid} load={load} reloadOnIdUpdate content loading={false}>
@@ -31,8 +31,12 @@ const BaseReport = React.memo(({
       inputwidth="350px"
       getResultHref={getResultHref(page)}
     />
-    or
-    <NavLink to={`/report/${page}/all`} activeStyle={ACTIVE_LINK_STYLE}>{`view all ${viewAllCategory} projects`}</NavLink>
+    {viewAllPages.map(({ name, path }) => (
+      <span>
+        &nbsp; or &nbsp;
+        <NavLink to={`/report/${page}/${path}`} activeStyle={ACTIVE_LINK_STYLE}>{`view all ${name} projects`}</NavLink>
+      </span>
+    ))}
     <HorizontalSpacer width={20} />
     {filters}
     <DataTable
@@ -54,7 +58,7 @@ const BaseReport = React.memo(({
 
 BaseReport.propTypes = {
   page: PropTypes.string,
-  viewAllCategory: PropTypes.string,
+  viewAllPages: PropTypes.arrayOf(PropTypes.object),
   idField: PropTypes.string,
   defaultSortColumn: PropTypes.string,
   getDownloadFilename: PropTypes.func,

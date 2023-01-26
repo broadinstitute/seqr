@@ -539,17 +539,20 @@ INTERNAL_FAMILY_FIELDS.update(FAMILY_FIELDS)
 
 FAMILY_NOTE_FIELDS = {'noteGuid', 'note', 'noteType', 'lastModifiedDate', 'createdBy', 'familyGuid'}
 
-INDIVIDUAL_FIELDS_NO_FEATURES = {
-    'projectGuid', 'familyGuid', 'individualGuid', 'individualId',
-    'paternalId', 'maternalId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
-    'paternalGuid', 'maternalGuid', 'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
+
+INDIVIDUAL_CORE_FIELDS = {
+    'individualGuid', 'individualId', 'sex', 'affected', 'displayName', 'notes', 'createdDate', 'lastModifiedDate',
+    'popPlatformFilters', 'filterFlags', 'population', 'birthYear', 'deathYear',
     'onsetAge', 'maternalEthnicity', 'paternalEthnicity', 'consanguinity', 'affectedRelatives', 'expectedInheritance',
     'disorders', 'candidateGenes', 'rejectedGenes', 'arFertilityMeds', 'arIui', 'arIvf', 'arIcsi', 'arSurrogacy',
     'arDonoregg', 'arDonorsperm', 'svFlags',
 }
 
-INDIVIDUAL_FIELDS = {'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures'}
-INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS_NO_FEATURES)
+INDIVIDUAL_FIELDS = {
+    'projectGuid', 'familyGuid', 'paternalId', 'maternalId', 'paternalGuid', 'maternalGuid',
+    'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures',
+}
+INDIVIDUAL_FIELDS.update(INDIVIDUAL_CORE_FIELDS)
 
 CASE_REVIEW_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',

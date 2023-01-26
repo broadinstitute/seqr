@@ -75,8 +75,10 @@ def export_multiple_files(files, zip_filename, file_format='csv', add_header_pre
                     header_display = ['{}-{}'.format(str(header_tuple[0]).zfill(2), header_tuple[1]) for header_tuple in enumerate(header)]
                     header_display[0] = header[0]
                 content = DELIMITERS[file_format].join(header_display) + '\n'
+                content_rows = [[row.get(key) or blank_value for key in header] for row in rows]
                 content += '\n'.join([
-                    DELIMITERS[file_format].join([row.get(key) or blank_value for key in header]) for row in rows
+                    DELIMITERS[file_format].join(row) for row in content_rows
+                    if any(val != blank_value for val in row)
                 ])
                 content = str(content.encode('utf-8'), 'ascii', errors='ignore') # Strip unicode chars in the content
                 zip_file.writestr('{}.{}'.format(filename, file_format), content)

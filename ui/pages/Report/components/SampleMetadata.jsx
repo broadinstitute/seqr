@@ -4,13 +4,19 @@ import { connect } from 'react-redux'
 
 import FormWrapper from 'shared/components/form/FormWrapper'
 import { BaseSemanticInput } from 'shared/components/form/Inputs'
+import { ALL_PROJECTS_PATH, GREGOR_PROJECT_PATH } from '../constants'
 import { loadSampleMetadata } from '../reducers'
 import { getSampleMetadataLoading, getSampleMetadataLoadingError, getSampleMetadataRows, getSampleMetadataColumns } from '../selectors'
 import BaseReport from './BaseReport'
 
+const FILENAME_LOOKUP = {
+  [ALL_PROJECTS_PATH]: 'All_AnVIL_Projects',
+  [GREGOR_PROJECT_PATH]: 'All_GREGoR_Projects',
+}
+
 const getDownloadFilename = (projectGuid, data) => {
-  const projectName = projectGuid && projectGuid !== 'all' && data.length && data[0].project_id.replace(/ /g, '_')
-  return `${projectName || 'All_AnVIL_Projects'}_${new Date().toISOString().slice(0, 10)}_Metadata`
+  const projectName = FILENAME_LOOKUP[projectGuid] || (data.length && data[0].project_id.replace(/ /g, '_'))
+  return `${projectName}_${new Date().toISOString().slice(0, 10)}_Metadata`
 }
 
 const FIELDS = [
@@ -38,10 +44,12 @@ SampleMetadataFilters.propTypes = {
   load: PropTypes.func,
 }
 
+const VIEW_ALL_PAGES = [{ name: 'GREGoR', path: GREGOR_PROJECT_PATH }, { name: 'Broad', path: ALL_PROJECTS_PATH }]
+
 const SampleMetadata = React.memo(props => (
   <BaseReport
     page="sample_metadata"
-    viewAllCategory="CMG"
+    viewAllPages={VIEW_ALL_PAGES}
     idField="subject_id"
     defaultSortColumn="family_id"
     getDownloadFilename={getDownloadFilename}
@@ -55,9 +63,9 @@ SampleMetadata.propTypes = {
   match: PropTypes.object,
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   data: getSampleMetadataRows(state),
-  columns: getSampleMetadataColumns(state),
+  columns: getSampleMetadataColumns(state, ownProps),
   loading: getSampleMetadataLoading(state),
   loadingError: getSampleMetadataLoadingError(state),
 })
