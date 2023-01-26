@@ -3,6 +3,7 @@ import { combineReducers } from 'redux'
 import { loadingReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { GREGOR_PROJECT_PATH, CMG_PROJECT_PATH } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 const REQUEST_DISCOVERY_SHEET = 'REQUEST_DISCOVERY_SHEET'
@@ -16,12 +17,12 @@ const RECEIVE_SEQR_STATS = 'RECEIVE_SEQR_STATS'
 
 // Data actions
 const loadMultiProjectData = (requestAction, receiveAction, urlPath) => (projectGuid, filterValues) => (dispatch) => {
-  if (projectGuid === 'all') {
+  if (projectGuid === GREGOR_PROJECT_PATH || projectGuid === CMG_PROJECT_PATH) {
     dispatch({ type: requestAction })
 
     const errors = new Set()
     const rows = []
-    new HttpRequestHelper('/api/report/get_cmg_projects',
+    new HttpRequestHelper(`/api/report/get_category_projects/${projectGuid}`,
       (projectsResponseJson) => {
         const chunkedProjects = projectsResponseJson.projectGuids.reduce((acc, guid) => {
           if (acc[0].length === 5) {
