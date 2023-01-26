@@ -245,6 +245,7 @@ class BaseHailTableQuery(object):
 
         families = {s.individual.family for s in samples}
         families_mt = None
+        logger.info(f'Loading data for {len(families)} families ({cls.__name__})')
         for f in families:
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
