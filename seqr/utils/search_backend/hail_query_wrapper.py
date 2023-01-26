@@ -248,6 +248,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading data for {len(families)} families ({cls.__name__})')
         for f in families:
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
+            family_ht = family_ht.repartition(1)
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
             # TODO inheritance_mode, inheritance_filter
 
@@ -954,14 +955,15 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         if af_cutoff is not None:
             logger.info('import high freq ht')
             high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
-            # mt = mt.annotate_rows(is_AF_gt_10_percent=high_af_ht[families_mt.row_key].is_gt_10_percent)
-            # af_prefilter = hl.is_missing(mt.is_AF_gt_10_percent)
-            # if af_cutoff <= 0.01:
-            #     af_prefilter |= ~mt.is_AF_gt_10_percent  # TODO
+            mt = mt.annotate_rows(is_AF_gt_10_percent=high_af_ht[families_mt.row_key].is_gt_10_percent)
+            af_prefilter = hl.is_missing(mt.is_AF_gt_10_percent)
+            if af_cutoff <= 0.01:
+                af_prefilter |= ~mt.is_AF_gt_10_percent
+            mt = mt.filter_rows(af_prefilter)
             # for filtering for AF > 0.01 we need to keep variants with AF < 0.1
-            if af_cutoff > 0.01:
-                high_af_ht = high_af_ht.filter(high_af_ht.is_gt_10_percent)
-            mt = mt.anti_join_rows(high_af_ht)
+            # if af_cutoff > 0.01:
+            #     high_af_ht = high_af_ht.filter(high_af_ht.is_gt_10_percent)
+            # mt = mt.anti_join_rows(high_af_ht)
 
         return mt
 
