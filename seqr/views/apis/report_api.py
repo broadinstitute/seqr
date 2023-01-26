@@ -164,7 +164,7 @@ def anvil_export(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     individual_samples = _get_loaded_before_date_project_individual_samples(
-        project, request.GET.get('loadedBefore'),
+        [project], request.GET.get('loadedBefore'),
     )
 
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
@@ -183,15 +183,19 @@ def anvil_export(request, project_guid):
 
 @analyst_required
 def sample_metadata_export(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    omit_airtable = project_guid == 'all'
+    if omit_airtable:
+        projects = get_internal_projects()
+    else:
+        projects = [get_project_and_check_permissions(project_guid, request.user)]
 
-    mme_family_guids = _get_has_mme_submission_family_guids(project)
+    mme_family_guids = _get_has_mme_submission_family_guids(projects)
 
     individual_samples = _get_loaded_before_date_project_individual_samples(
-        project, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
-
+        projects, request.GET.get('loadedBefore') or datetime.now().strftime('%Y-%m-%d'))
     subject_rows, sample_rows, family_rows, discovery_rows = _parse_anvil_metadata(
-        individual_samples, request.user, include_collaborator=True)
+        individual_samples, request.user, include_collaborator=True, omit_airtable=omit_airtable,
+    )
     family_rows_by_id = {row['family_id']: row for row in family_rows}
 
     rows_by_subject_id = {row['subject_id']: row for row in subject_rows}
@@ -226,7 +230,7 @@ def sample_metadata_export(request, project_guid):
     return create_json_response({'rows': rows})
 
 
-def _parse_anvil_metadata(individual_samples, user, include_collaborator=False):
+def _parse_anvil_metadata(individual_samples, user, include_collaborator=False, omit_airtable=False):
     family_data = Family.objects.filter(individual__in=individual_samples).distinct().values(
         'id', 'family_id', 'post_discovery_omim_number', 'project__name',
         family_guid=F('guid'),
@@ -268,7 +272,8 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False):
             {s.individual.guid for s in family_samples if s.individual.sex == Individual.SEX_MALE},
         )
 
-    sample_airtable_metadata = _get_sample_airtable_metadata(list(sample_ids), user, include_collaborator=include_collaborator)
+    sample_airtable_metadata = None if omit_airtable else _get_sample_airtable_metadata(
+        list(sample_ids), user, include_collaborator=include_collaborator)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(list(samples_by_family_id.keys()))
     compound_het_gene_id_by_family, gene_ids = _process_saved_variants(
@@ -324,9 +329,12 @@ def _parse_anvil_metadata(individual_samples, user, include_collaborator=False):
         for sample in family_samples:
             individual = sample.individual
 
-            airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
-            dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
-            has_dbgap_submission = sample.sample_type in dbgap_submission
+            airtable_metadata = None
+            has_dbgap_submission = None
+            if sample_airtable_metadata is not None:
+                airtable_metadata = sample_airtable_metadata.get(sample.sample_id, {})
+                dbgap_submission = airtable_metadata.get('dbgap_submission') or set()
+                has_dbgap_submission = sample.sample_type in dbgap_submission
 
             subject_row = _get_subject_row(
                 individual, has_dbgap_submission, airtable_metadata, parsed_variants, individual_id_map)
@@ -367,14 +375,14 @@ def _get_nested_variant_name(variant):
     return _get_sv_name(variant) if variant.get('svType') else variant['variantId']
 
 
-def _get_loaded_before_date_project_individual_samples(project, max_loaded_date):
+def _get_loaded_before_date_project_individual_samples(projects, max_loaded_date):
     if max_loaded_date:
         max_loaded_date = datetime.strptime(max_loaded_date, '%Y-%m-%d')
     else:
         max_loaded_date = datetime.now() - timedelta(days=365)
 
     loaded_samples = Sample.objects.filter(
-        individual__family__project=project, elasticsearch_index__isnull=False,
+        individual__family__project__in=projects, elasticsearch_index__isnull=False,
     ).select_related('individual').order_by('-loaded_date')
     if max_loaded_date:
         loaded_samples = loaded_samples.filter(loaded_date__lte=max_loaded_date)
@@ -500,10 +508,6 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
     features_absent = [feature['id'] for feature in individual.absent_features or []]
     onset = individual.onset_age
 
-    sequencing = airtable_metadata.get('SequencingProduct') or set()
-    multiple_datasets = len(sequencing) > 1 or (
-            len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS)
-
     solve_state = 'Unsolved'
     if parsed_variants:
         all_tier_2 = all(variant[1]['Gene_Class'] == 'Tier 2 - Candidate' for variant in parsed_variants)
@@ -520,17 +524,18 @@ def _get_subject_row(individual, has_dbgap_submission, airtable_metadata, parsed
         'hpo_present': '|'.join(features_present),
         'hpo_absent': '|'.join(features_absent),
         'solve_state': solve_state,
-        'multiple_datasets': 'Yes' if multiple_datasets else 'No',
-        'dbgap_submission': 'No',
         'proband_relationship': Individual.RELATIONSHIP_LOOKUP.get(individual.proband_relationship, ''),
         'paternal_id': individual_id_map.get(individual.father_id, ''),
         'maternal_id': individual_id_map.get(individual.mother_id, ''),
     }
-    if has_dbgap_submission:
+    if airtable_metadata is not None:
+        sequencing = airtable_metadata.get('SequencingProduct') or set()
         subject_row.update({
-            'dbgap_submission': 'Yes',
-            'dbgap_study_id': airtable_metadata.get('dbgap_study_id', ''),
-            'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', ''),
+            'dbgap_submission': 'Yes' if has_dbgap_submission else 'No',
+            'dbgap_study_id': airtable_metadata.get('dbgap_study_id', '') if has_dbgap_submission else '',
+            'dbgap_subject_id': airtable_metadata.get('dbgap_subject_id', '') if has_dbgap_submission else '',
+            'multiple_datasets': 'Yes' if len(sequencing) > 1 or (
+            len(sequencing) == 1 and list(sequencing)[0] in MULTIPLE_DATASET_PRODUCTS) else 'No',
         })
     return subject_row
 
@@ -543,9 +548,10 @@ def _get_sample_row(sample, has_dbgap_submission, airtable_metadata):
         'sample_id': sample.sample_id,
         'data_type': sample.sample_type,
         'date_data_generation': sample.loaded_date.strftime('%Y-%m-%d'),
-        'sample_provider': airtable_metadata.get('CollaboratorName') or '',
         'sequencing_center': 'Broad',
     }
+    if airtable_metadata is not None:
+        sample_row['sample_provider'] = airtable_metadata.get('CollaboratorName') or ''
     if has_dbgap_submission:
         sample_row['dbgap_sample_id'] = airtable_metadata.get('dbgap_sample_id', '')
     return sample_row
@@ -974,9 +980,9 @@ METADATA_FUNCTIONAL_DATA_FIELDS = {
 
 
 @analyst_required
-def get_cmg_projects(request):
+def get_category_projects(request, category):
     return create_json_response({
-        'projectGuids': [p.guid for p in Project.objects.filter(projectcategory__name='CMG').only('guid')],
+        'projectGuids': list(Project.objects.filter(projectcategory__name__iexact=category).values_list('guid', flat=True)),
     })
 
 
@@ -996,7 +1002,7 @@ def discovery_sheet(request, project_guid):
     loaded_samples_by_family = _get_loaded_samples_by_family(project)
     saved_variants_by_family = _get_project_saved_discovery_variants_by_family(project)
     analysis_notes_by_family = _get_analysis_notes_by_family(project)
-    mme_submission_family_guids = _get_has_mme_submission_family_guids(project)
+    mme_submission_family_guids = _get_has_mme_submission_family_guids([project])
 
     if not loaded_samples_by_family:
         errors.append("No data loaded for project: {}".format(project))
@@ -1104,9 +1110,9 @@ def _get_saved_discovery_variants_by_family(variant_filter, parse_json=False):
     return saved_variants_by_family
 
 
-def _get_has_mme_submission_family_guids(project):
+def _get_has_mme_submission_family_guids(projects):
     return MatchmakerSubmission.objects.filter(
-        individual__family__project=project,
+        individual__family__project__in=projects,
     ).values_list('individual__family__guid', flat=True).distinct()
 
 
