@@ -746,6 +746,7 @@ def gregor_export(request, consent_code):
     individuals = Individual.objects.filter(
         family__project__consent_code=consent_code[0],
         family__project__in=projects,
+        family__project__projectcategory__name='GREGoR',
         sample__elasticsearch_index__isnull=False,
     ).distinct().prefetch_related('family__project', 'mother', 'father')
 
@@ -842,7 +843,7 @@ def _get_participant_row(individual, airtable_sample):
         'gregor_center': 'Broad',
         'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
         'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else '0',
-        'prior_testing': '|'.join([gene.get('gene', '') for gene in individual.rejected_genes or []]),
+        'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
         'proband_relationship': individual.get_proband_relationship_display(),
         'sex': individual.get_sex_display(),
         'affected_status': individual.get_affected_display(),
