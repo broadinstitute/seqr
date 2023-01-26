@@ -114,7 +114,7 @@ const getSvRegion = (
   { chrom, endChrom, pos, end, liftedOverGenomeVersion, liftedOverPos }, divider, useLiftoverVersion,
 ) => {
   const endOffset = endChrom ? 0 : end - pos
-  const start = liftedOverGenomeVersion === useLiftoverVersion ? liftedOverPos : pos
+  const start = (useLiftoverVersion && liftedOverGenomeVersion === useLiftoverVersion) ? liftedOverPos : pos
   return `${chrom}${divider}${start}-${start + endOffset}`
 }
 
