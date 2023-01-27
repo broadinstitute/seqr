@@ -310,7 +310,7 @@ class BaseHailTableQuery(object):
             family_mt = family_mt.filter_rows(cls.get_x_chrom_filter(family_mt, x_chrom_interval))
 
         if inheritance_mode == ANY_AFFECTED:
-            genotype_filter = cls._get_any_sample_has_gt(affected_status_samples, HAS_ALT)
+            genotype_filter = cls._get_any_sample_has_gt(family_mt, affected_status_samples, HAS_ALT)
         else:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
             genotype_filter_exprs = cls._get_sample_genotype_filters(
@@ -324,7 +324,7 @@ class BaseHailTableQuery(object):
             # remove variants where all unaffected individuals are het
             unaffected_samples = {s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED}
             if len(unaffected_samples) > 1:
-                genotype_filter &= cls._get_any_sample_has_gt(unaffected_samples, REF_REF)
+                genotype_filter &= cls._get_any_sample_has_gt(family_mt, unaffected_samples, REF_REF)
 
         family_mt = family_mt.filter_rows(genotype_filter)
 
@@ -334,9 +334,9 @@ class BaseHailTableQuery(object):
         return family_mt.select_rows()
 
     @staticmethod
-    def _get_any_sample_has_gt(sample_ids, genotype):
+    def _get_any_sample_has_gt(mt, sample_ids, genotype):
         genotype_filter_exprs = [
-            (hl.is_defined(family_mt[f'{sample_id}__GT'])) & cls.GENOTYPE_QUERY_MAP[genotype](family_mt[f'{sample_id}__GT'])
+            (hl.is_defined(mt[f'{sample_id}__GT'])) & cls.GENOTYPE_QUERY_MAP[genotype](mt[f'{sample_id}__GT'])
             for sample_id in sample_ids
         ]
         genotype_filter = genotype_filter_exprs[0]
