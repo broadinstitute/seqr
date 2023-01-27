@@ -333,8 +333,8 @@ class BaseHailTableQuery(object):
         # TODO SV override newCall
         return family_mt.select_rows()
 
-    @staticmethod
-    def _get_any_sample_has_gt(mt, sample_ids, genotype):
+    @classmethod
+    def _get_any_sample_has_gt(cls, mt, sample_ids, genotype):
         genotype_filter_exprs = [
             (hl.is_defined(mt[f'{sample_id}__GT'])) & cls.GENOTYPE_QUERY_MAP[genotype](mt[f'{sample_id}__GT'])
             for sample_id in sample_ids
