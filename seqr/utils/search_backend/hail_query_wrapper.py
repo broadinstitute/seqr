@@ -233,14 +233,16 @@ class BaseHailTableQuery(object):
         self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
-        mt = self.import_filtered_mt(data_source, samples, intervals=self._parse_intervals(intervals), **kwargs)
+        mt = self.import_filtered_mt(
+            data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version, **kwargs,
+        )
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
         return mt
 
     @classmethod
     def import_filtered_mt(cls, data_source, samples, intervals=None, inheritance_mode=None, inheritance_filter=None,
-                           **kwargs):
+                           genome_version=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         family_samples = defaultdict(list)
@@ -254,7 +256,8 @@ class BaseHailTableQuery(object):
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
             if inheritance_filter or inheritance_mode:
                 logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
-                family_mt = cls._filter_family_inheritance(f_samples, family_mt, inheritance_mode, inheritance_filter)
+                family_mt = cls._filter_family_inheritance(
+                    f_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
             if family_mt is None:
                 continue
 
@@ -286,7 +289,7 @@ class BaseHailTableQuery(object):
         return mt
 
     @classmethod
-    def _filter_family_inheritance(cls, family_samples, family_mt, inheritance_mode, inheritance_filter):
+    def _filter_family_inheritance(cls, family_samples, family_mt, inheritance_mode, inheritance_filter, genome_version):
         individual_affected_status = inheritance_filter.get('affected') or {}
         sample_affected_statuses = {
             s: individual_affected_status.get(s.individual.guid) or s.individual.affected
@@ -300,6 +303,11 @@ class BaseHailTableQuery(object):
         family_mt = family_mt.annotate_rows(
             gts=hl.agg.collect(hl.struct(sample_id=family_mt.s, GT=family_mt.GT)).group_by(lambda x: x.sample_id))
         family_mt = family_mt.transmute_rows(**{f'{s.sample_id}__GT': family_mt.gts[s.sample_id].GT[0] for s in family_samples})
+
+        if inheritance_mode == X_LINKED_RECESSIVE:
+            x_chrom_interval = hl.parse_locus_interval(
+                hl.get_reference(genome_version).x_contigs[0], reference_genome=genome_version)
+            family_mt = family_mt.filter_rows(cls.get_x_chrom_filter(family_mt, x_chrom_interval))
 
         if inheritance_mode == ANY_AFFECTED:
             genotype_filter_exprs = [
@@ -318,7 +326,6 @@ class BaseHailTableQuery(object):
 
         family_mt = family_mt.filter_rows(genotype_filter)
 
-        # TODO X_LINKED_RECESSIVE filter to X chrom interval
         # TODO comp het
         # TODO prefilter quality?
         # TODO SV override newCall
@@ -594,9 +601,7 @@ class BaseHailTableQuery(object):
 
         mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(mt, quality_filter))
 
-        if inheritance_mode == X_LINKED_RECESSIVE:
-            mt = mt.filter_rows(self.get_x_chrom_filter(mt, self._get_x_chrom_interval()))
-        elif inheritance_mode == COMPOUND_HET:
+        if inheritance_mode == COMPOUND_HET:
             # remove variants where all unaffected individuals are het
             mt = mt.annotate_rows(familyGuids=hl.bind(
                 lambda fam_unaffected_het_counts: mt.familyGuids.filter(lambda f: fam_unaffected_het_counts[f] < 2),
@@ -648,10 +653,6 @@ class BaseHailTableQuery(object):
     @classmethod
     def _format_quality_filter(cls, quality_filter):
         return quality_filter
-
-    def _get_x_chrom_interval(self):
-        return hl.parse_locus_interval(
-            hl.get_reference(self._genome_version).x_contigs[0], reference_genome=self._genome_version)
 
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):
