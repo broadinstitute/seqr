@@ -292,7 +292,7 @@ class BaseHailTableQuery(object):
             s: individual_affected_status.get(s.individual.guid) or s.individual.affected
             for s in family_samples
         }
-        affected_status_samples = {s.sample_id for s, status in sample_affected_statuses if status == AFFECTED}
+        affected_status_samples = {s.sample_id for s, status in sample_affected_statuses.items() if status == AFFECTED}
         if not affected_status_samples:
             return None
 
