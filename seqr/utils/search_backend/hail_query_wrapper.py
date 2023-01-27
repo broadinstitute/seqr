@@ -243,19 +243,34 @@ class BaseHailTableQuery(object):
                            **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
-        families = {s.individual.family for s in samples}
+        if inheritance_mode == ANY_AFFECTED:
+            inheritance_filter = None
+        elif inheritance_mode:
+            inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
+
+        family_samples = defaultdict(list)
+        for s in saples:
+            family_samples[s.individual.family].append(s)
         families_mt = None
-        logger.info(f'Loading data for {len(families)} families ({cls.__name__})')
-        for f in families:
+        logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
+        for f, f_samples in family_samples.items():
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
             family_ht = family_ht.repartition(1)  # TODO at loading time
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
-            # TODO inheritance_mode, inheritance_filter
+            if inheritance_filter or inheritance_mode:
+                logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
+                family_mt = cls._filter_family_inheritance(f_samples, family_mt, inheritance_mode, inheritance_filter)
+            if family_mt is None:
+                continue
 
             if families_mt:
                 families_mt = families_mt.union_cols(family_mt, row_join_type='outer')
             else:
                 families_mt = family_mt
+
+        if families_mt is None:
+            raise InvalidSearchException(
+                'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         logger.info(f'Read in {families_mt.rows().count()} rows ({cls.__name__})')
         families_mt = cls._filter_unannotated_mt(families_mt, load_table_kwargs=load_table_kwargs, **kwargs)
@@ -274,6 +289,50 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_unannotated_mt(cls, mt, **kwargs):
         return mt
+
+    @classmethod
+    def _filter_family_inheritance(cls, family_samples, family_mt, inheritance_mode, inheritance_filter):
+        individual_affected_status = inheritance_filter.get('affected') or {}
+        sample_affected_statuses = {
+            s: individual_affected_status.get(s.individual.guid) or s.individual.affected
+            for s in family_samples
+        }
+        affected_status_samples = {s.sample_id for s, status in sample_affected_statuses if status == AFFECTED}
+        if not affected_status_samples:
+            return None
+
+        if inheritance_filter:
+            genotype_filter_exprs = cls._get_sample_genotype_filters(family_mt, sample_affected_statuses, inheritance_filter)
+            genotype_filter = genotype_filter_exprs[0]
+            for f in genotype_filter_exprs:
+                genotype_filter &= f
+            family_mt = family_mt.filter_rows(genotype_filter)
+        elif inheritance_mode == ANY_AFFECTED:
+            family_mt = family_mt.filter_rows(
+                hl.agg.any(family_mt.GT.is_non_ref()) & hl.set(affected_status_samples).contains(mt.s)
+            )
+
+        # TODO X_LINKED_RECESSIVE filter to X chrom interval
+        # TODO comp het
+        # TODO prefilter quality?
+        # TODO SV override newCall
+        return family_mt
+
+    @classmethod
+    def _get_sample_genotype_filters(cls, family_mt, sample_affected_statuses, inheritance_filter):
+        individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
+        sample_genotypes = {}
+        for s, status in sample_affected_statuses.items():
+            genotype = individual_genotype_filter.get(s.individual.guid) or inheritance_filter.get(status)
+            if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s.individual.sex == Individual.SEX_MALE:
+                genotype = REF_REF
+            if genotype:
+                sample_genotypes[s.sample_id] = genotype
+
+        return [
+            (family_mt.s == sample_id) & (cls.GENOTYPE_QUERY_MAP[genotype](family_mt.GT))
+            for sample_id, genotype in sample_genotypes.items()
+        ]
 
     @staticmethod
     def _filter_gene_ids(mt, gene_ids):
@@ -607,17 +666,17 @@ class BaseHailTableQuery(object):
             if clinvar_path_override_expr is not None:
                 invalid_sample_q = invalid_sample_q & ~clinvar_path_override_expr
 
-        if not inheritance_filter:
-            if inheritance_mode == ANY_AFFECTED:
-                searchable_samples = searchable_samples.intersection(hl.set(self._affected_status_samples[AFFECTED]))
-                valid_sample_q &= mt.GT.is_non_ref()
-        else:
-            invalid_inheritance_q = self._get_invalid_inheritance_samples(
-                mt, inheritance_mode, inheritance_filter, inheritance_override_q)
-            if invalid_sample_q is not None:
-                invalid_sample_q |= invalid_inheritance_q
-            else:
-                invalid_sample_q = invalid_inheritance_q
+        # if not inheritance_filter:
+        #     if inheritance_mode == ANY_AFFECTED:
+        #         searchable_samples = searchable_samples.intersection(hl.set(self._affected_status_samples[AFFECTED]))
+        #         valid_sample_q &= mt.GT.is_non_ref()
+        # else:
+        #     invalid_inheritance_q = self._get_invalid_inheritance_samples(
+        #         mt, inheritance_mode, inheritance_filter, inheritance_override_q)
+        #     if invalid_sample_q is not None:
+        #         invalid_sample_q |= invalid_inheritance_q
+        #     else:
+        #         invalid_sample_q = invalid_inheritance_q
 
         valid_family_expr = hl.agg.filter(
             valid_sample_q & searchable_samples.contains(mt.s), hl.agg.collect_as_set(mt.familyGuid))
