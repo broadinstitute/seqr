@@ -243,11 +243,6 @@ class BaseHailTableQuery(object):
                            **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
-        if inheritance_mode == ANY_AFFECTED:
-            inheritance_filter = None
-        elif inheritance_mode:
-            inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
-
         family_samples = defaultdict(list)
         for s in samples:
             family_samples[s.individual.family].append(s)
@@ -301,16 +296,17 @@ class BaseHailTableQuery(object):
         if not affected_status_samples:
             return None
 
-        if inheritance_filter:
+        if inheritance_mode == ANY_AFFECTED:
+            family_mt = family_mt.filter_rows(
+                hl.agg.any(family_mt.GT.is_non_ref()) & hl.set(affected_status_samples).contains(mt.s)
+            )
+        else:
+            inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
             genotype_filter_exprs = cls._get_sample_genotype_filters(family_mt, sample_affected_statuses, inheritance_filter)
             genotype_filter = genotype_filter_exprs[0]
             for f in genotype_filter_exprs:
                 genotype_filter &= f
             family_mt = family_mt.filter_rows(genotype_filter)
-        elif inheritance_mode == ANY_AFFECTED:
-            family_mt = family_mt.filter_rows(
-                hl.agg.any(family_mt.GT.is_non_ref()) & hl.set(affected_status_samples).contains(mt.s)
-            )
 
         # TODO X_LINKED_RECESSIVE filter to X chrom interval
         # TODO comp het
