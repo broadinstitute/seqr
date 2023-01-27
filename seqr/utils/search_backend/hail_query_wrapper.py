@@ -296,39 +296,54 @@ class BaseHailTableQuery(object):
         if not affected_status_samples:
             return None
 
+        # TODO should be done at loading time
+        family_mt = family_mt.annotate_rows(
+            gts=hl.agg.collect(hl.struct(sample_id=family_mt.s, GT=family_mt.GT)).group_by(lambda x: x.sample_id))
+        family_mt = family_mt.transmute_rows(**{f'{s.sample_id}__GT': mt.gts[s.sample_id].GT[0] for s in family_samples})
+
         if inheritance_mode == ANY_AFFECTED:
-            family_mt = family_mt.filter_rows(
-                hl.agg.any(family_mt.GT.is_non_ref()) & hl.set(affected_status_samples).contains(family_mt.s)
-            )
+            genotype_filter_exprs = [
+                (hl.is_defined(family_mt[f'{sample_id}__GT']) & family_mt[f'{sample_id}__GT'].is_non_ref())
+                for sample_id in affected_status_samples]
+            genotype_filter = genotype_filter_exprs[0]
+            for f in genotype_filter_exprs:
+                genotype_filter |= f
         else:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
             genotype_filter_exprs = cls._get_sample_genotype_filters(family_mt, sample_affected_statuses, inheritance_filter)
             genotype_filter = genotype_filter_exprs[0]
             for f in genotype_filter_exprs:
                 genotype_filter &= f
-            family_mt = family_mt.filter_rows(genotype_filter)
+
+        family_mt = family_mt.filter_rows(genotype_filter)
 
         # TODO X_LINKED_RECESSIVE filter to X chrom interval
         # TODO comp het
         # TODO prefilter quality?
         # TODO SV override newCall
-        return family_mt
+        return family_mt.select_rows()
 
     @classmethod
     def _get_sample_genotype_filters(cls, family_mt, sample_affected_statuses, inheritance_filter):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
-        sample_genotypes = {}
+        # sample_genotypes = {}
+        genotype_filter_exprs = []
         for s, status in sample_affected_statuses.items():
             genotype = individual_genotype_filter.get(s.individual.guid) or inheritance_filter.get(status)
             if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s.individual.sex == Individual.SEX_MALE:
                 genotype = REF_REF
             if genotype:
-                sample_genotypes[s.sample_id] = genotype
+                gt_field = f'{s.sample_id}__GT'
+                genotype_filter_exprs.append(
+                    (hl.is_defined(family_mt[gt_field])) & cls.GENOTYPE_QUERY_MAP[genotype](family_mt[gt_field])
+                )
+                # sample_genotypes[s.sample_id] = genotype
 
-        return [
-            (family_mt.s == sample_id) & (cls.GENOTYPE_QUERY_MAP[genotype](family_mt.GT))
-            for sample_id, genotype in sample_genotypes.items()
-        ]
+        return genotype_filter_exprs
+        # return [
+        #     (family_mt.s == sample_id) & (cls.GENOTYPE_QUERY_MAP[genotype](family_mt.GT))
+        #     for sample_id, genotype in sample_genotypes.items()
+        # ]
 
     @staticmethod
     def _filter_gene_ids(mt, gene_ids):
