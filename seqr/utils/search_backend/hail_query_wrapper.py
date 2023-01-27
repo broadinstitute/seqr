@@ -299,7 +299,7 @@ class BaseHailTableQuery(object):
         # TODO should be done at loading time
         family_mt = family_mt.annotate_rows(
             gts=hl.agg.collect(hl.struct(sample_id=family_mt.s, GT=family_mt.GT)).group_by(lambda x: x.sample_id))
-        family_mt = family_mt.transmute_rows(**{f'{s.sample_id}__GT': mt.gts[s.sample_id].GT[0] for s in family_samples})
+        family_mt = family_mt.transmute_rows(**{f'{s.sample_id}__GT': family_mt.gts[s.sample_id].GT[0] for s in family_samples})
 
         if inheritance_mode == ANY_AFFECTED:
             genotype_filter_exprs = [
