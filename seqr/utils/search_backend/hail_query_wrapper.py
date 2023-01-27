@@ -249,7 +249,7 @@ class BaseHailTableQuery(object):
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
 
         family_samples = defaultdict(list)
-        for s in saples:
+        for s in samples:
             family_samples[s.individual.family].append(s)
         families_mt = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
