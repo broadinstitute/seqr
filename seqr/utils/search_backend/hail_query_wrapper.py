@@ -310,7 +310,8 @@ class BaseHailTableQuery(object):
                 genotype_filter |= f
         else:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
-            genotype_filter_exprs = cls._get_sample_genotype_filters(family_mt, sample_affected_statuses, inheritance_filter)
+            genotype_filter_exprs = cls._get_sample_genotype_filters(
+                family_mt, sample_affected_statuses, inheritance_mode, inheritance_filter)
             genotype_filter = genotype_filter_exprs[0]
             for f in genotype_filter_exprs:
                 genotype_filter &= f
@@ -324,7 +325,7 @@ class BaseHailTableQuery(object):
         return family_mt.select_rows()
 
     @classmethod
-    def _get_sample_genotype_filters(cls, family_mt, sample_affected_statuses, inheritance_filter):
+    def _get_sample_genotype_filters(cls, family_mt, sample_affected_statuses, inheritance_mode, inheritance_filter):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
         # sample_genotypes = {}
         genotype_filter_exprs = []
