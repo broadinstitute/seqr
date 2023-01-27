@@ -128,13 +128,8 @@ def grant_workspace_access(request, namespace, name):
 def get_anvil_vcf_list(request, namespace, name, workspace_meta):
     bucket_name = workspace_meta['workspace']['bucketName']
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
-    try:
-        data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
-                          if path.endswith(VCF_FILE_EXTENSIONS)]
-    except Exception as ee:
-        error = f'Loading VCF file list from {bucket_path} failed with error {str(ee)}'
-        logger.error(error, request.user)
-        return create_json_response({'error': error}, status=400, reason=error)
+    data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
+                      if path.endswith(VCF_FILE_EXTENSIONS)]
     data_path_list = _merge_sharded_vcf(data_path_list)
 
     return create_json_response({'dataPathList': data_path_list})
