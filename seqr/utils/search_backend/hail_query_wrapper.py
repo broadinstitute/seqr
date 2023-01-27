@@ -298,7 +298,7 @@ class BaseHailTableQuery(object):
 
         if inheritance_mode == ANY_AFFECTED:
             family_mt = family_mt.filter_rows(
-                hl.agg.any(family_mt.GT.is_non_ref()) & hl.set(affected_status_samples).contains(mt.s)
+                hl.agg.any(family_mt.GT.is_non_ref()) & hl.set(affected_status_samples).contains(family_mt.s)
             )
         else:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
@@ -662,6 +662,7 @@ class BaseHailTableQuery(object):
             if clinvar_path_override_expr is not None:
                 invalid_sample_q = invalid_sample_q & ~clinvar_path_override_expr
 
+        # TODO cleanup
         # if not inheritance_filter:
         #     if inheritance_mode == ANY_AFFECTED:
         #         searchable_samples = searchable_samples.intersection(hl.set(self._affected_status_samples[AFFECTED]))
