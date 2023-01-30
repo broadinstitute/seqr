@@ -251,7 +251,7 @@ class BaseHailTableQuery(object):
                            genome_version=None, quality_filter=None, consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
-        # Todo AB/HL - _get_invalid_quality_filter_expr
+        # Todo AB - _get_invalid_quality_filter_expr
         quality_filter = cls._format_quality_filter(quality_filter or {})
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides) if quality_filter else None
 
@@ -1307,8 +1307,9 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
 
     @classmethod
     def _format_quality_filter(cls, quality_filter):
-        quality_filter = VariantHailTableQuery._format_quality_filter(quality_filter)
-        return MitoHailTableQuery._format_quality_filter(quality_filter)
+        parsed_quality_filter = VariantHailTableQuery._format_quality_filter(quality_filter)
+        parsed_quality_filter.update(MitoHailTableQuery._format_quality_filter(quality_filter))
+        return parsed_quality_filter
 
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
