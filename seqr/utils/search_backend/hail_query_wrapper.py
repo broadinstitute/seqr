@@ -267,12 +267,12 @@ class BaseHailTableQuery(object):
 
             # TODO should be done at loading time
             sample_fields = ['GT'] + list(quality_filter.keys())
+            # TODO array of structs
             family_mt = family_mt.annotate_rows(
                 gts=hl.agg.collect(hl.struct(
                     sample_id=family_mt.s, **{field: family_mt[field] for field in sample_fields}
                 )).group_by(lambda x: x.sample_id))
             row_exprs = {}
-            # TODO would this work with top-level structs instead of flattening?
             for field in sample_fields:
                 row_exprs.update({f'{s.sample_id}__{field}': family_mt.gts[s.sample_id][field][0] for s in family_samples})
             family_mt = family_mt.transmute_rows(**row_exprs)
