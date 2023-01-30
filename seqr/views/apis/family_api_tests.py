@@ -53,6 +53,9 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(family.keys()), family_fields)
         self.assertEqual(family['projectGuid'], PROJECT_GUID)
         self.assertSetEqual(set(family['individualGuids']), set(response_json['individualsByGuid'].keys()))
+        self.assertListEqual(family['analysedBy'], [
+            {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
+        ])
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]

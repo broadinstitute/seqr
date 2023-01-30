@@ -218,7 +218,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
 
     family_additional_values = {
         'analysedBy': ArrayAgg(JSONObject(
-            createdBy=_user_expr('created_by'),
+            createdBy=_user_expr('familyanalysedby__created_by'),
             dataType='familyanalysedby__data_type',
             lastModifiedDate='familyanalysedby__last_modified_date',
         ), filter=Q(familyanalysedby__isnull=False)),
