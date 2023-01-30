@@ -370,7 +370,8 @@
         "guid": "FAB000001_1",
         "created_date": "2021-07-22T19:27:08.563Z",
         "created_by": 13,
-        "last_modified_date": null,
+        "last_modified_date": "2022-07-22T19:27:08.563Z",
+        "data_type": "SNP",
         "family": 1
     }
 },

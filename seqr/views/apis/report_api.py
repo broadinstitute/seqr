@@ -817,7 +817,7 @@ def _get_gregor_airtable_data(individuals, user):
         fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
     )
 
-    fields = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + READ_SET_TABLE_COLUMNS + CALLED_TABLE_COLUMNS
+    fields = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
         fields=[SMID_FIELD] + fields,
@@ -840,7 +840,7 @@ def _get_gregor_family_row(family):
 
 def _get_participant_row(individual, airtable_sample):
     participant = {
-        'gregor_center': 'Broad',
+        'gregor_center': 'BROAD',
         'paternal_id': f'Broad_{individual.father.individual_id}' if individual.father else '0',
         'maternal_id': f'Broad_{individual.mother.individual_id}' if individual.mother else '0',
         'prior_testing': '|'.join([gene.get('gene', gene['comments']) for gene in individual.rejected_genes or []]),
@@ -884,9 +884,11 @@ def _get_analyte_row(individual):
 
 def _get_experiment_ids(airtable_sample):
     collaborator_sample_id = airtable_sample['CollaboratorSampleID']
+    experiment_dna_short_read_id = f'Broad_{collaborator_sample_id}'
     return {
-        'experiment_dna_short_read_id': f'Broad_{collaborator_sample_id}',
+        'experiment_dna_short_read_id': experiment_dna_short_read_id,
         'experiment_sample_id': collaborator_sample_id,
+        'aligned_dna_short_read_id': f'{experiment_dna_short_read_id}_1'
     }
 
 # Discovery Sheet
