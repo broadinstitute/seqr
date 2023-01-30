@@ -207,7 +207,8 @@ class BaseHailTableQuery(object):
         raise NotImplementedError
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False,
-                 inheritance_mode=None, inheritance_filter=None, frequencies=None, **kwargs):
+                 inheritance_mode=None, inheritance_filter=None, frequencies=None, quality_filter=None,
+                 pathogenicity=None, annotations=annotations, **kwargs):
         self._genome_version = genome_version
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
@@ -215,26 +216,31 @@ class BaseHailTableQuery(object):
         self._has_location_filter = bool(intervals)
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
+        self._save_samples(samples)
+
         self._consequence_overrides = {
             CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: None, SPLICE_AI_FIELD: None,
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
         }
-        self._save_samples(samples)
+        self._parse_pathogenicity_overrides(pathogenicity)
+        self._parse_annotations_overrides(annotations)
 
         self._mt = self._load_table(
-            data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals,
-            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies,
+            data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals, frequencies=frequencies,
+            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, quality_filter=quality_filter,
         )
 
         self._filter_variants(  # TODO inheritance needed for filter variants?
-            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies, **kwargs)
+            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies,
+            quality_filter=quality_filter, **kwargs)
 
     def _save_samples(self, samples):
         self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         mt = self.import_filtered_mt(
-            data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version, **kwargs,
+            data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
+            consequence_overrides=self._consequence_overrides, **kwargs,
         )
         if self._filtered_genes:
             mt = self._filter_gene_ids(mt, self._filtered_genes)
@@ -242,8 +248,12 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def import_filtered_mt(cls, data_source, samples, intervals=None, inheritance_mode=None, inheritance_filter=None,
-                           genome_version=None, **kwargs):
+                           genome_version=None, quality_filter=None, consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
+
+        # Todo AB/HL - _get_invalid_quality_filter_expr
+        quality_filter = cls._format_quality_filter(quality_filter or {})
+        clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides) if quality_filter else None
 
         family_samples = defaultdict(list)
         for s in samples:
@@ -256,17 +266,30 @@ class BaseHailTableQuery(object):
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
 
             # TODO should be done at loading time
+            sample_fields = ['GT'] + list(quality_filter.keys())
             family_mt = family_mt.annotate_rows(
-                gts=hl.agg.collect(hl.struct(sample_id=family_mt.s, GT=family_mt.GT)).group_by(lambda x: x.sample_id))
-            family_mt = family_mt.transmute_rows(
-                **{f'{s.sample_id}__GT': family_mt.gts[s.sample_id].GT[0] for s in family_samples})
+                gts=hl.agg.collect(hl.struct(
+                    sample_id=family_mt.s, **{field: family_mt[field] for field in sample_fields}
+                )).group_by(lambda x: x.sample_id))
+            row_exprs = {}
+            # TODO would this work with top-level structs instead of flattening?
+            for field in sample_fields:
+                row_exprs.update({f'{s.sample_id}__{field}': family_mt.gts[s.sample_id][field][0] for s in family_samples})
+            family_mt = family_mt.transmute_rows(**row_exprs)
 
+            logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
             if inheritance_filter or inheritance_mode:
-                logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
                 family_mt = cls._filter_family_inheritance(
                     f_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
             if family_mt is None:
                 continue
+
+            if quality_filter:
+                family_mt = cls._filter_family_quality(f_samples, family_mt, quality_filter)
+                if clinvar_path_terms:
+                    family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
+                else:
+                    family_mt = family_mt.filter_rows(quality_filter_expr)
 
             family_mt = family_mt.select_rows()
             if families_mt:
@@ -284,8 +307,13 @@ class BaseHailTableQuery(object):
 
         # TODO - use query_table
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
+        mt = families_mt.annotate_rows(**ht[families_mt.row_key])
 
-        return families_mt.annotate_rows(**ht[families_mt.row_key])
+        # TODO move path filtering into class method for variants only?
+        if clinvar_path_terms:
+            mt = mt.filter_entries(mt.passQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
+
+        return mt
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
@@ -364,6 +392,18 @@ class BaseHailTableQuery(object):
         return genotype_filter_exprs
 
     @staticmethod
+    def _filter_family_quality(f_samples, family_mt, quality_filter):
+        quality_filter_expr = None
+        for field, value in quality_filter.items():
+            for s in f_samples:
+                field_filter =family_mt[f'{s.sample_id}__{field}'] >= value
+                if quality_filter_expr is None:
+                    quality_filter_expr = field_filter
+                else:
+                    quality_filter_expr &= field_filter
+        return quality_filter_expr
+
+    @staticmethod
     def _filter_gene_ids(mt, gene_ids):
         return mt.filter_rows(mt.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
 
@@ -389,13 +429,10 @@ class BaseHailTableQuery(object):
         return intervals
 
     def _filter_variants(self, inheritance_mode=None, inheritance_filter=None, variant_ids=None,
-                         annotations=None, annotations_secondary=None, quality_filter=None, rs_ids=None,
-                         frequencies=None, pathogenicity=None, in_silico=None, custom_query=None):
+                         annotations_secondary=None, quality_filter=None, rs_ids=None,
+                         frequencies=None, in_silico=None, custom_query=None):
 
         self._filter_by_variant_ids(variant_ids)
-
-        self._parse_pathogenicity_overrides(pathogenicity)
-        self._parse_annotations_overrides(annotations)
 
         if rs_ids:
             self._filter_rsids(rs_ids)
@@ -586,13 +623,21 @@ class BaseHailTableQuery(object):
 
         return annotation_filters
 
-    def _get_clinvar_path_override_expr(self):
-        clinvar_path_terms = [
-            CLINVAR_SIG_MAP[f] for f in self._consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
+    @staticmethod
+    def _get_clinvar_path_terms(consequence_overrides):
+        return [
+            CLINVAR_SIG_MAP[f] for f in consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
         ]
+
+    @staticmethod
+    def _has_clivar_terms_expr(mt, clinvar_terms):
+        return hl.set(clinvar_terms).contains(mt.clinvar.clinical_significance_id)
+
+    def _get_clinvar_path_override_expr(self):
+        clinvar_path_terms = self._get_clinvar_path_terms(self._consequence_overrides)
         if not clinvar_path_terms:
             return None
-        return hl.set(clinvar_path_terms).contains(self._mt.clinvar.clinical_significance_id)
+        return self._has_clivar_terms_expr(self._mt, clinvar_path_terms)
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequences):
@@ -636,23 +681,14 @@ class BaseHailTableQuery(object):
         if max_families and len(affected_families) > max_families[0]:
             raise InvalidSearchException(max_families[1])
 
-    def _get_invalid_quality_filter_expr(self, mt, quality_filter):
-        quality_filter = self._format_quality_filter(quality_filter or {})
-        quality_filter_expr = None
-        for filter_k, value in quality_filter.items():
-            field = self.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
-            if field:
-                field_filter = mt[field] < value
-                if quality_filter_expr is None:
-                    quality_filter_expr = field_filter
-                else:
-                    quality_filter_expr |= field_filter
-
-        return quality_filter_expr
-
     @classmethod
     def _format_quality_filter(cls, quality_filter):
-        return quality_filter
+        parsed_quality_filter = {}
+        for filter_k, value in quality_filter.items():
+            field = cls.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
+            if field:
+                parsed_quality_filter[field] = value
+        return parsed_quality_filter
 
     @staticmethod
     def get_x_chrom_filter(mt, x_interval):
@@ -663,22 +699,8 @@ class BaseHailTableQuery(object):
         searchable_samples = self._get_searchable_samples(mt)
         valid_sample_q = hl.is_defined(mt.familyGuid)
 
-        invalid_sample_q = self._get_invalid_quality_filter_expr(mt, quality_filter)
-        if invalid_sample_q is not None:
-            clinvar_path_override_expr = self._get_clinvar_path_override_expr()
-            if clinvar_path_override_expr is not None:
-                invalid_sample_q = invalid_sample_q & ~clinvar_path_override_expr
-
-        valid_family_expr = hl.agg.filter(
+        return hl.agg.filter(
             valid_sample_q & searchable_samples.contains(mt.s), hl.agg.collect_as_set(mt.familyGuid))
-        if invalid_sample_q is None:
-            return valid_family_expr
-
-        return hl.bind(
-            lambda valid, invalid: valid.difference(invalid),
-            valid_family_expr,
-            hl.agg.filter(invalid_sample_q, hl.agg.collect_as_set(mt.familyGuid)),
-        )
 
     def _get_searchable_samples(self, mt):
         return hl.set(set(self._individuals_by_sample_id.keys()))
@@ -982,7 +1004,9 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     @classmethod
     def _format_quality_filter(cls, quality_filter):
-        return {k: v for k, v in quality_filter.items() if k != 'min_ab'}
+        return super(VariantHailTableQuery, cls)._format_quality_filter(
+            {k: v for k, v in quality_filter.items() if k != 'min_ab'}
+        )
 
 
 class MitoHailTableQuery(BaseVariantHailTableQuery):
@@ -1017,7 +1041,9 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
 
     @classmethod
     def _format_quality_filter(cls, quality_filter):
-        return {k: v / 100 if k == 'min_hl' else v for k, v in (quality_filter or {}).items()}
+        return super(MitoHailTableQuery, cls)._format_quality_filter(
+            {k: v / 100 if k == 'min_hl' else v for k, v in (quality_filter or {}).items()}
+        )
 
 
 def _no_genotype_override(genotypes, field):
