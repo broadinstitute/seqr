@@ -145,22 +145,14 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     # Validate the data path
     bucket_name = workspace_meta['workspace']['bucketName']
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
-    error = None
-    file_to_check = data_path
     if not data_path.endswith(VCF_FILE_EXTENSIONS):
         error = 'Invalid VCF file format - file path must end with {}'.format(' or '.join(VCF_FILE_EXTENSIONS))
-    elif '*' in data_path:
-        try:
-            sharded_file_list = get_gs_file_list(data_path, request.user, check_subfolders=False)
-            file_to_check = sharded_file_list[0]
-        except Exception as ee:
-            error = f'Loading VCF file list for {data_path} failed with error {str(ee)}'
-            logger.error(error, request.user)
-    elif not does_file_exist(data_path, user=request.user):
-        error = 'Data file or path {} is not found.'.format(path)
-
-    if error:
         return create_json_response({'error': error}, status=400, reason=error)
+    if not does_file_exist(data_path, user=request.user):
+        error = 'Data file or path {} is not found.'.format(path)
+        return create_json_response({'error': error}, status=400, reason=error)
+
+    file_to_check = get_gs_file_list(data_path, request.user, check_subfolders=False)[0] if '*' in data_path else data_path
 
     # Validate the VCF to see if it contains all the required samples
     samples = validate_vcf_and_get_samples(file_to_check)
@@ -463,13 +455,6 @@ def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
     return resp.json()
 
 
-def _get_common_prefix(files):
-    for i in range(len(files[0])):
-        if any([file[i] != files[0][i] if i < len(file) else True for file in files]):
-            return files[0][:i]
-    return ''
-
-
 def _merge_sharded_vcf(vcf_files):
     files_by_path = defaultdict(list)
 
@@ -484,6 +469,6 @@ def _merge_sharded_vcf(vcf_files):
         prefix = os.path.commonprefix(files)
         suffix = re.fullmatch(r'{}\d*(?P<suffix>\D.*)'.format(prefix), files[0]).groupdict()['suffix']
         if all([re.fullmatch(r'{}\d+{}'.format(prefix, suffix), file) for file in files]):
-            files_by_path[subfolder_path] = [f'/{prefix}*{suffix}']
+            files_by_path[subfolder_path] = [f'{prefix}*{suffix}']
 
     return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]

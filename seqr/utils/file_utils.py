@@ -83,7 +83,7 @@ def mv_file_to_gs(local_path, gs_path, user=None):
 
 def get_gs_file_list(gs_path, user=None, check_subfolders=True):
     gs_path = gs_path.rstrip('/')
-    command = '-q ls'
+    command = 'ls'
 
     # If a bucket is empty gsutil throws an error when running ls with ** instead of returning an empty list
     subfolders = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
@@ -93,7 +93,9 @@ def get_gs_file_list(gs_path, user=None, check_subfolders=True):
     if check_subfolders:
         gs_path = f'{gs_path}/**'
 
-    return _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+    all_lines = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+    path_prefix = gs_path.rsplit('/', 1)[0]
+    return [line for line in all_lines if line.startswith(path_prefix)]
 
 
 def _run_gsutil_with_wait(command, gs_path, user=None, get_stdout=False):
