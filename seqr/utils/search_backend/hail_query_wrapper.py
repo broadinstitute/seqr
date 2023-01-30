@@ -430,6 +430,7 @@ class BaseHailTableQuery(object):
                          annotations_secondary=None, quality_filter=None, rs_ids=None,
                          frequencies=None, in_silico=None, custom_query=None):
 
+        # TODO move to familty table
         self._filter_by_variant_ids(variant_ids)
 
         if rs_ids:
@@ -725,6 +726,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(gene_ids=ch_ht.transcripts.key_set())
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
+        # TODO of prefilter one of these to stricter annotation criteria, can remove _filter_valid_comp_het_annotation_pairs
         ch_ht = ch_ht.annotate(v2=ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
@@ -971,8 +973,10 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     @classmethod
     def _filter_unannotated_mt(cls, mt, frequencies=None, load_table_kwargs=None, **kwargs):
+        # TODO move to single family table
         mt = super(VariantHailTableQuery, cls)._filter_unannotated_mt(mt, **kwargs)
 
+        # TODO clinvar override
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
