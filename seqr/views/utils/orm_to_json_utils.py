@@ -9,6 +9,7 @@ from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JS
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 
+from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names
@@ -390,10 +391,12 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None):
-    additional_values = {
+def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None, additional_values=None):
+    sv_additional_values = {
         'familyGuids': ArrayAgg('family__guid', distinct=True),
     }
+    if additional_values:
+        sv_additional_values.update(additional_values)
 
     additional_fields = []
     additional_fields += additional_model_fields or []
@@ -401,7 +404,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
         additional_fields.append('saved_variant_json')
 
     results = get_json_for_queryset(
-        saved_variants, guid_key='variantGuid', additional_values=additional_values,
+        saved_variants, guid_key='variantGuid', additional_values=sv_additional_values,
         additional_model_fields=additional_fields,
     )
 
@@ -573,70 +576,32 @@ def get_json_for_gene_notes_by_gene_id(gene_ids, user):
     return notes_by_gene_id
 
 
-def get_json_for_locus_lists(locus_lists, user, include_genes=False, include_pagenes=False, include_project_count=False,
-                             is_analyst=False, include_metadata=True):
-    """Returns a JSON representation of the given LocusLists.
+def _add_pa_locus_lists(locus_lists_json, user):
+    ll_guids = [ll['locusListGuid'] for ll in locus_lists_json]
+    pa_json = get_json_for_queryset(
+        PaLocusList.objects.filter(seqr_locus_list__guid__in=ll_guids), user=user,
+        nested_fields=[{'fields': ('seqr_locus_list', 'guid'), 'key': 'locusListGuid'}]
+    )
+    pa_json_by_locus_list = {pa.pop('locusListGuid'): pa for pa in pa_json}
+    for ll in locus_lists_json:
+        pa_locus_list_json = pa_json_by_locus_list.get(ll['locusListGuid'])
+        if pa_locus_list_json:
+            ll['paLocusList'] = pa_locus_list_json
 
-    Args:
-        locus_lists (array): array of LocusList django models.
-    Returns:
-        array: json objects
-    """
 
-    def _process_result(result, locus_list):
-        gene_set = locus_list.locuslistgene_set
-        interval_set = locus_list.locuslistinterval_set
-        if include_genes:
-            intervals = _get_json_for_models(interval_set.all())
-            genome_versions = {interval['genomeVersion'] for interval in intervals}
-
-            if include_pagenes:
-                result.update({
-                    'items': [{
-                        'geneId': gene.gene_id,
-                        'pagene': _get_json_for_model(gene.palocuslistgene, user=user, is_analyst=is_analyst)
-                        if hasattr(gene, 'palocuslistgene') else None
-                    } for gene in gene_set.all()] + intervals,
-                })
-            else:
-                result.update({
-                    'items': [{'geneId': gene.gene_id} for gene in gene_set.all()] + intervals,
-                })
-            result.update({
-                'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
-            })
-
-        if include_project_count:
-            result['numProjects'] = locus_list.num_projects
-
-        if include_metadata:
-            result.update({
-                'numEntries': gene_set.count() + interval_set.count()
-                if include_genes else locus_list.locuslistgene__count + locus_list.locuslistinterval__count,
-                'canEdit': user == locus_list.created_by,
-            })
-
-        if hasattr(locus_list, 'palocuslist'):
-            pa_locus_list_json = _get_json_for_model(locus_list.palocuslist, user=user, is_analyst=is_analyst)
-            result.update({
-                'paLocusList': pa_locus_list_json,
-            })
-
+def get_json_for_locus_lists(locus_lists, user, include_metadata=True, additional_values=None):
+    ll_additional_values = {}
+    if additional_values:
+        ll_additional_values.update(additional_values)
     if include_metadata:
-        prefetch_related_objects(locus_lists, 'created_by')
+        ll_additional_values.update({
+            'numEntries': Count('locuslistgene') + Count('locuslistinterval'),
+            'canEdit': Case(When(created_by=user, then=Value(True)), default=Value(False)),
+        })
 
-    if include_genes:
-        prefetch_related_objects(locus_lists, 'locuslistgene_set')
-        prefetch_related_objects(locus_lists, 'locuslistinterval_set')
-    elif include_metadata:
-        locus_lists = locus_lists.annotate(Count('locuslistgene')).annotate(Count('locuslistinterval'))
-
-    prefetch_related_objects(locus_lists, 'palocuslist')
-
-    if include_pagenes:
-        prefetch_related_objects(locus_lists, 'locuslistgene_set__palocuslistgene')
-
-    return _get_json_for_models(locus_lists, user=user, is_analyst=is_analyst, process_result=_process_result)
+    results = get_json_for_queryset(locus_lists, user=user, additional_values=ll_additional_values)
+    _add_pa_locus_lists(results, user)
+    return results
 
 
 def get_json_for_locus_list(locus_list, user):
@@ -647,8 +612,23 @@ def get_json_for_locus_list(locus_list, user):
     Returns:
         dict: json object
     """
-    return _get_json_for_model(locus_list, get_json_for_models=get_json_for_locus_lists, user=user, include_genes=True,
-                               include_pagenes=True)
+    result = _get_json_for_model(locus_list, user=user)
+
+    intervals = _get_json_for_models(locus_list.locuslistinterval_set.all())
+    genome_versions = {interval['genomeVersion'] for interval in intervals}
+    result.update({
+        'items': [{
+            'geneId': gene.gene_id,
+            'pagene': _get_json_for_model(gene.palocuslistgene, user=user)
+            if hasattr(gene, 'palocuslistgene') else None
+        } for gene in locus_list.locuslistgene_set.all()] + intervals,
+        'intervalGenomeVersion': genome_versions.pop() if len(genome_versions) == 1 else None,
+        'canEdit': user == locus_list.created_by,
+    })
+    result['numEntries'] = len(result['items'])
+    _add_pa_locus_lists([result], user)
+
+    return result
 
 
 PROJECT_ACCESS_GROUP_NAMES = ['_owners', '_can_view', '_can_edit']
