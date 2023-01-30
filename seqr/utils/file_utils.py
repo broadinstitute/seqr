@@ -94,8 +94,7 @@ def get_gs_file_list(gs_path, user=None, check_subfolders=True):
         gs_path = f'{gs_path}/**'
 
     all_lines = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
-    path_prefix = gs_path.rsplit('/', 1)[0]
-    return [line for line in all_lines if line.startswith(path_prefix)]
+    return [line for line in all_lines if is_google_bucket_file_path(line)]
 
 
 def _run_gsutil_with_wait(command, gs_path, user=None, get_stdout=False):
