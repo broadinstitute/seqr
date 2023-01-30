@@ -309,7 +309,6 @@ class BaseHailTableQuery(object):
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         mt = families_mt.annotate_rows(**ht[families_mt.row_key])
 
-        # TODO move path filtering into class method for variants only?
         if clinvar_path_terms:
             mt = mt.filter_entries(mt.passQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
 
@@ -360,7 +359,6 @@ class BaseHailTableQuery(object):
         family_mt = family_mt.filter_rows(genotype_filter)
 
         # TODO comp het
-        # TODO prefilter quality?
         # TODO SV override newCall
         return family_mt
 
