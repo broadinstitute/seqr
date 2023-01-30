@@ -182,7 +182,6 @@ AIRTABLE_GREGOR_RECORDS = {
         'date_data_generation': '2022-08-15',
         'target_insert_size': '385',
         'sequencing_platform': 'NovaSeq',
-        'aligned_dna_short_read_id': 'BCM_H7YG5DSX2-3-IDUDI0014-1',
         'aligned_dna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
         'aligned_dna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
         'md5sum': '129c28163df082',
@@ -614,7 +613,7 @@ class ReportAPITest(object):
             'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
         ])
         self.assertIn([
-            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
             '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
             'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
         ], participant_file)
@@ -655,10 +654,10 @@ class ReportAPITest(object):
             'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
             'date_data_generation', 'target_insert_size', 'sequencing_platform',
         ])
-        self.assertEqual(experiment_file[2], [
+        self.assertIn([
             'Broad_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
             'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
-        ])
+        ], experiment_file)
 
         self.assertEqual(len(read_file), 3)
         self.assertEqual(read_file[0], [
@@ -666,16 +665,16 @@ class ReportAPITest(object):
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
             'analysis_details',
         ])
-        self.assertEqual(read_file[2], [
-            'BCM_H7YG5DSX2-3-IDUDI0014-1', 'Broad_VCGS_FAM203_621_D2',
+        self.assertIn([
+            'Broad_VCGS_FAM203_621_D2_1', 'Broad_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
             'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317',
-        ])
+        ], read_file)
 
-        self.assertEqual(len(read_set_file), 2)
+        self.assertEqual(len(read_set_file), 3)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
-        self.assertEqual(read_set_file[1], ['BCM_H7YG5DSX2', 'BCM_H7YG5DSX2-3-IDUDI0014-1'])
+        self.assertIn(['BCM_H7YG5DSX2', 'Broad_VCGS_FAM203_621_D2_1'], read_set_file)
 
         self.assertEqual(len(called_file), 2)
         self.assertEqual(called_file[0], [
@@ -707,8 +706,8 @@ class ReportAPITest(object):
             'SMID', 'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
             'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
             'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
-            'alignment_software', 'mean_coverage', 'analysis_details',  'aligned_dna_short_read_set_id',
-            'aligned_dna_short_read_id', 'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id',
+            'alignment_software', 'mean_coverage', 'analysis_details',
+            'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id',
             'called_variants_dna_file', 'md5sum', 'caller_software', 'variant_types', 'analysis_details',
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
