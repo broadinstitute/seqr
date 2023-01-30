@@ -189,45 +189,45 @@ ADD_DATA_UPDATE_DAG_TASKS_RESP = {
         }
 
 BASIC_META = [
-    '##fileformat=VCFv4.3\n'
-    '##source=myImputationProgramV3.1\n',
-    '##FILTER=<ID=q10,Description="Quality below 10">',
-    '##FILTER=<ID=s50,Description="Less than 50% of samples have data">',
+    b'##fileformat=VCFv4.3\n',
+    b'##source=myImputationProgramV3.1\n',
+    b'##FILTER=<ID=q10,Description="Quality below 10">',
+    b'##FILTER=<ID=s50,Description="Less than 50% of samples have data">',
 ]
 
 BAD_INFO_META = [
-    '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
-    '##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">',
-    '##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">',
-    '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
-    '##INFO=<ID=AF,Number=A,Type=Integer,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+    b'##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+    b'##INFO=<ID=DB,Number=0,Type=Flag,Description="dbSNP membership, build 129">',
+    b'##INFO=<ID=H2,Number=0,Type=Flag,Description="HapMap2 membership">',
+    b'##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+    b'##INFO=<ID=AF,Number=A,Type=Integer,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
 ]
 
 INFO_META = [
-    '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
-    '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
-    '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
-    '##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
+    b'##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
+    b'##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
+    b'##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
+    b'##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">\n',
 ]
 
 BAD_FORMAT_META = [
-    '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
-    '##FORMAT=<ID=DP,Number=1,Type=String,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+    b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+    b'##FORMAT=<ID=DP,Number=1,Type=String,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
 ]
 
 FORMAT_META = [
-    '##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
-    '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
-    '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
-    '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+    b'##FORMAT=<ID=AD,Number=.,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">\n',
+    b'##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
+    b'##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+    b'##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
 ]
 
-BAD_HEADER_LINE = ['#CHROM\tID\tREF\tALT\tQUAL\n']
-NO_SAMPLE_HEADER_LINE = ['#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n']
-HEADER_LINE = ['#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675\tNA19678\n']
+BAD_HEADER_LINE = [b'#CHROM\tID\tREF\tALT\tQUAL\n']
+NO_SAMPLE_HEADER_LINE = [b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n']
+HEADER_LINE = [b'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675\tNA19678\n']
 
 DATA_LINES = [
-    'chr1\t10333\t.\tCT\tC\t1895\tPASS\tAC=5;AF=0.045;AN=112;DP=22546\tGT:AD:DP:GQ\t./.:63,0:63\t./.:44,0:44\t./.:44,0:44\n'
+    b'chr1\t10333\t.\tCT\tC\t1895\tPASS\tAC=5;AF=0.045;AN=112;DP=22546\tGT:AD:DP:GQ\t./.:63,0:63\t./.:44,0:44\t./.:44,0:44\n'
 ]
 
 
@@ -410,7 +410,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # test no header line
         mock_subprocess.reset_mock()
         mock_subprocess.return_value.wait.return_value = 0
-        mock_subprocess.return_value.stdout = [s.encode('utf-8') for s in BASIC_META + DATA_LINES]
+        mock_subprocess.return_value.stdout = BASIC_META + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['No header found in the VCF file.'])
@@ -426,8 +426,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
         # test header errors
-        mock_subprocess.return_value.stdout = [s.encode('utf-8') for s in
-                                               BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES]
+        mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
@@ -435,15 +434,13 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
         # test no samples
-        mock_subprocess.return_value.stdout = [s.encode('utf-8') for s in
-                                               BASIC_META + NO_SAMPLE_HEADER_LINE + DATA_LINES]
+        mock_subprocess.return_value.stdout = BASIC_META + NO_SAMPLE_HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['No samples found in the provided VCF.'])
 
         # test meta info errors
-        mock_subprocess.return_value.stdout = [s.encode('utf-8') for s in
-                                               BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES]
+        mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
@@ -456,8 +453,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         # Test valid operation
         mock_subprocess.reset_mock()
         mock_file_logger.reset_mock()
-        mock_subprocess.return_value.stdout = [s.encode('utf-8') for s in
-                                               BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES]
+        mock_subprocess.return_value.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
@@ -479,8 +475,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_get_file_list_subproc.wait.return_value = 0
         mock_get_header_subproc.wait.return_value = 0
         mock_get_file_list_subproc.stdout = [b'gs://test_bucket/test_path-001.vcf.gz', b'gs://test_bucket/test_path-102.vcf.gz']
-        mock_get_header_subproc.stdout = [s.encode('utf-8') for s in
-                                          BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES]
+        mock_get_header_subproc.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'fullDataPath': 'gs://test_bucket/test_path-*.vcf.gz', 'vcfSamples': ['HG00735', 'NA19675', 'NA19678']})
@@ -525,11 +520,16 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_file_logger.reset_mock()
         mock_subprocess.return_value.stdout = [
             b'Warning: some packages are out of date',
-            b'gs://test_bucket/test.vcf', b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/test.tsv',
+            b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.tsv',
+            b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/data/test-101.vcf.gz',
+            b'gs://test_bucket/data/test-102.vcf.gz',
+            b'gs://test_bucket/sharded/test-101.vcf.gz', b'gs://test_bucket/sharded/test-102.vcf.gz',
+            b'gs://test_bucket/sharded/test-2345.vcf.gz'
         ]
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz']})
+        self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.g',
+                                                                'data/test-102.vcf.gz', '/sharded/test-*.vcf.gz']})
         mock_subprocess.assert_has_calls([
             mock.call('gsutil -q ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
             mock.call().wait(),
@@ -540,15 +540,6 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
             mock.call('==> gsutil -q ls gs://test_bucket', self.manager_user),
             mock.call('==> gsutil -q ls gs://test_bucket/**', self.manager_user),
         ])
-
-        # Test merging sharded VCF files
-        mock_subprocess.return_value.stdout = [
-            b'gs://test_bucket/test.vcf', b'gs://test_bucket/data/test-101.vcf.gz', b'gs://test_bucket/data/test-102.vcf.gz',
-            b'gs://test_bucket/data/test-2345.vcf.gz'
-        ]
-        response = self.client.get(url, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test-*.vcf.gz']})
 
 
 class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):

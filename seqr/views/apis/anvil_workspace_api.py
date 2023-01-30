@@ -482,8 +482,8 @@ def _merge_sharded_vcf(vcf_files):
         if len(files) < 2:
             continue
         prefix = os.path.commonprefix(files)
-        suffix = re.fullmatch(r'{}\d+(?P<suffix>\D.*)'.format(prefix), files[0]).groupdict()['suffix']
+        suffix = re.fullmatch(r'{}\d*(?P<suffix>\D.*)'.format(prefix), files[0]).groupdict()['suffix']
         if all([re.fullmatch(r'{}\d+{}'.format(prefix, suffix), file) for file in files]):
-            files_by_path[subfolder_path] = [f'{prefix}*{suffix}']
+            files_by_path[subfolder_path] = [f'/{prefix}*{suffix}']
 
     return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]
