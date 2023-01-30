@@ -254,6 +254,13 @@ class BaseHailTableQuery(object):
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
             family_ht = family_ht.repartition(1)  # TODO at loading time
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
+
+            # TODO should be done at loading time
+            family_mt = family_mt.annotate_rows(
+                gts=hl.agg.collect(hl.struct(sample_id=family_mt.s, GT=family_mt.GT)).group_by(lambda x: x.sample_id))
+            family_mt = family_mt.transmute_rows(
+                **{f'{s.sample_id}__GT': family_mt.gts[s.sample_id].GT[0] for s in family_samples})
+
             if inheritance_filter or inheritance_mode:
                 logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
                 family_mt = cls._filter_family_inheritance(
@@ -261,6 +268,7 @@ class BaseHailTableQuery(object):
             if family_mt is None:
                 continue
 
+            family_mt = family_mt.select_rows()
             if families_mt:
                 families_mt = families_mt.union_cols(family_mt, row_join_type='outer')
             else:
@@ -299,11 +307,6 @@ class BaseHailTableQuery(object):
         if not affected_status_samples:
             return None
 
-        # TODO should be done at loading time
-        family_mt = family_mt.annotate_rows(
-            gts=hl.agg.collect(hl.struct(sample_id=family_mt.s, GT=family_mt.GT)).group_by(lambda x: x.sample_id))
-        family_mt = family_mt.transmute_rows(**{f'{s.sample_id}__GT': family_mt.gts[s.sample_id].GT[0] for s in family_samples})
-
         if inheritance_mode == X_LINKED_RECESSIVE:
             x_chrom_interval = hl.parse_locus_interval(
                 hl.get_reference(genome_version).x_contigs[0], reference_genome=genome_version)
@@ -331,7 +334,7 @@ class BaseHailTableQuery(object):
         # TODO comp het
         # TODO prefilter quality?
         # TODO SV override newCall
-        return family_mt.select_rows()
+        return family_mt
 
     @classmethod
     def _get_any_sample_has_gt(cls, mt, sample_ids, genotype):
@@ -347,7 +350,6 @@ class BaseHailTableQuery(object):
     @classmethod
     def _get_sample_genotype_filters(cls, family_mt, sample_affected_statuses, inheritance_mode, inheritance_filter):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
-        # sample_genotypes = {}
         genotype_filter_exprs = []
         for s, status in sample_affected_statuses.items():
             genotype = individual_genotype_filter.get(s.individual.guid) or inheritance_filter.get(status)
@@ -358,13 +360,8 @@ class BaseHailTableQuery(object):
                 genotype_filter_exprs.append(
                     (hl.is_defined(family_mt[gt_field])) & cls.GENOTYPE_QUERY_MAP[genotype](family_mt[gt_field])
                 )
-                # sample_genotypes[s.sample_id] = genotype
 
         return genotype_filter_exprs
-        # return [
-        #     (family_mt.s == sample_id) & (cls.GENOTYPE_QUERY_MAP[genotype](family_mt.GT))
-        #     for sample_id, genotype in sample_genotypes.items()
-        # ]
 
     @staticmethod
     def _filter_gene_ids(mt, gene_ids):
