@@ -285,7 +285,7 @@ class BaseHailTableQuery(object):
                 continue
 
             if quality_filter:
-                family_mt = cls._filter_family_quality(f_samples, family_mt, quality_filter)
+                quality_filter_expr = cls._filter_family_quality(f_samples, family_mt, quality_filter)
                 if clinvar_path_terms:
                     family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
                 else:
