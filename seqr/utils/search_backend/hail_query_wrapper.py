@@ -251,7 +251,6 @@ class BaseHailTableQuery(object):
                            genome_version=None, quality_filter=None, consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
-        # Todo AB - _get_invalid_quality_filter_expr
         quality_filter = cls._format_quality_filter(quality_filter or {})
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides) if quality_filter else None
 
@@ -991,24 +990,20 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
         return mt
 
-    def _get_invalid_quality_filter_expr(self, mt, quality_filter):
-        min_ab = (quality_filter or {}).get('min_ab')
-        quality_filter_expr = super(VariantHailTableQuery, self)._get_invalid_quality_filter_expr(mt, quality_filter)
-        if min_ab:
-            #  AB only relevant for hets
-            ab_expr = mt.GT.is_het() & (mt.AB < (min_ab / 100))
-            if quality_filter_expr is None:
-                quality_filter_expr = ab_expr
-            else:
-                quality_filter_expr |= ab_expr
+    @classmethod
+    def _filter_family_quality(cls, f_samples, family_mt, quality_filter):
+        quality_filter_expr = super(VariantHailTableQuery, cls)._filter_family_quality(
+            {k: v for k, v in quality_filter.items() if k != 'AB'}
+        )
+        if 'AB' in quality_filter:
+            for s in f_samples:
+                field_filter = family_mt[f'{s.sample_id}__AB'] >= value / 100 | ~family_mt[f'{s.sample_id}__GT'].is_het()
+                if quality_filter_expr is None:
+                    quality_filter_expr = field_filter
+                else:
+                    quality_filter_expr &= field_filter
 
         return quality_filter_expr
-
-    @classmethod
-    def _format_quality_filter(cls, quality_filter):
-        return super(VariantHailTableQuery, cls)._format_quality_filter(
-            {k: v for k, v in quality_filter.items() if k != 'min_ab'}
-        )
 
 
 class MitoHailTableQuery(BaseVariantHailTableQuery):
