@@ -310,7 +310,7 @@ class BaseHailTableQuery(object):
         mt = families_mt.annotate_rows(**ht[families_mt.row_key])
 
         if clinvar_path_terms:
-            mt = mt.filter_entries(mt.passQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
+            mt = mt.filter_entries(mt.passesQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
 
         return mt
 
@@ -389,12 +389,12 @@ class BaseHailTableQuery(object):
 
         return genotype_filter_exprs
 
-    @staticmethod
-    def _filter_family_quality(f_samples, family_mt, quality_filter):
+    @classmethod
+    def _filter_family_quality(cls, f_samples, family_mt, quality_filter):
         quality_filter_expr = None
         for field, value in quality_filter.items():
             for s in f_samples:
-                field_filter =family_mt[f'{s.sample_id}__{field}'] >= value
+                field_filter = family_mt[f'{s.sample_id}__{field}'] >= value
                 if quality_filter_expr is None:
                     quality_filter_expr = field_filter
                 else:
