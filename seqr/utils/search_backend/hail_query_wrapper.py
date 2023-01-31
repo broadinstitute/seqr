@@ -208,7 +208,7 @@ class BaseHailTableQuery(object):
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False,
                  inheritance_mode=None, inheritance_filter=None, frequencies=None, quality_filter=None,
-                 pathogenicity=None, annotations=annotations, **kwargs):
+                 pathogenicity=None, annotations=None, **kwargs):
         self._genome_version = genome_version
         self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
