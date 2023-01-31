@@ -993,7 +993,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     @classmethod
     def _filter_family_quality(cls, f_samples, family_mt, quality_filter):
         quality_filter_expr = super(VariantHailTableQuery, cls)._filter_family_quality(
-            {k: v for k, v in quality_filter.items() if k != 'AB'}
+            f_samples, family_mt, {k: v for k, v in quality_filter.items() if k != 'AB'}
         )
         if 'AB' in quality_filter:
             for s in f_samples:
