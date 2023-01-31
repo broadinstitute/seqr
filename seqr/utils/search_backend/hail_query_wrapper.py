@@ -996,11 +996,12 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         quality_filter_expr = super(VariantHailTableQuery, cls)._get_family_quality_filter(
             f_samples, family_mt, no_ab_quality_filter,
         )
-        if 'AB' in quality_filter:
+        ab_value = quality_filter.get('AB')
+        if ab_value:
             for s in f_samples:
                 # AB only relevant for hets
                 non_het_filter = ~family_mt[f'{s.sample_id}__GT'].is_het()
-                field_filter = family_mt[f'{s.sample_id}__AB'] >= quality_filter['AB'] / 100 | non_het_filter
+                field_filter = family_mt[f'{s.sample_id}__AB'] >= ab_value / 100 | non_het_filter
                 if quality_filter_expr is None:
                     quality_filter_expr = field_filter
                 else:
