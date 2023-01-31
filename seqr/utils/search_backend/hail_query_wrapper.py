@@ -266,15 +266,9 @@ class BaseHailTableQuery(object):
 
             # TODO should be done at loading time
             sample_fields = ['GT'] + list(quality_filter.keys())
-            # TODO array of structs
-            family_mt = family_mt.annotate_rows(
-                gts=hl.agg.collect(hl.struct(
-                    sample_id=family_mt.s, **{field: family_mt[field] for field in sample_fields}
-                )).group_by(lambda x: x.sample_id))
-            row_exprs = {}
-            for field in sample_fields:
-                row_exprs.update({f'{s.sample_id}__{field}': family_mt.gts[s.sample_id][field][0] for s in f_samples})
-            family_mt = family_mt.transmute_rows(**row_exprs)
+            family_mt = family_mt.annotate_rows(genotypes=hl.sorted(
+                hl.agg.collect(hl.struct(sampleId=family_mt.s, **{field: family_mt[field] for field in sample_fields})),
+                lambda o: o.sampleId))
 
             logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
             if inheritance_filter or inheritance_mode:
@@ -284,7 +278,7 @@ class BaseHailTableQuery(object):
                 continue
 
             if quality_filter:
-                quality_filter_expr = cls._get_family_quality_filter(f_samples, family_mt, quality_filter)
+                quality_filter_expr = family_mt.genotypes.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
                 if clinvar_path_terms:
                     family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
                 else:
@@ -328,13 +322,17 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_family_inheritance(cls, family_samples, family_mt, inheritance_mode, inheritance_filter, genome_version):
+        sample_id_index_map = {sample_id: i for i, sample_id in enumerate(sorted([s.sample_id for s in family_samples]))}
+
         individual_affected_status = inheritance_filter.get('affected') or {}
         sample_affected_statuses = {
             s: individual_affected_status.get(s.individual.guid) or s.individual.affected
             for s in family_samples
         }
-        affected_status_samples = {s.sample_id for s, status in sample_affected_statuses.items() if status == AFFECTED}
-        if not affected_status_samples:
+        affected_status_sample_indices = {
+            sample_id_index_map[s.sample_id] for s, status in sample_affected_statuses.items() if status == AFFECTED
+        }
+        if not affected_status_sample_indices:
             return None
 
         if inheritance_mode == X_LINKED_RECESSIVE:
@@ -343,11 +341,11 @@ class BaseHailTableQuery(object):
             family_mt = family_mt.filter_rows(cls.get_x_chrom_filter(family_mt, x_chrom_interval))
 
         if inheritance_mode == ANY_AFFECTED:
-            genotype_filter = cls._get_any_sample_has_gt(family_mt, affected_status_samples, HAS_ALT)
+            genotype_filter = cls._get_any_sample_has_gt(family_mt, affected_status_sample_indices, HAS_ALT)
         else:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
             genotype_filter_exprs = cls._get_sample_genotype_filters(
-                family_mt, sample_affected_statuses, inheritance_mode, inheritance_filter)
+                family_mt, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter)
             genotype_filter = genotype_filter_exprs[0]
             for f in genotype_filter_exprs:
                 genotype_filter &= f
@@ -355,9 +353,11 @@ class BaseHailTableQuery(object):
         if inheritance_mode == COMPOUND_HET:
             # TODO handle all recessive case including comp het
             # remove variants where all unaffected individuals are het
-            unaffected_samples = {s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED}
-            if len(unaffected_samples) > 1:
-                genotype_filter &= cls._get_any_sample_has_gt(family_mt, unaffected_samples, REF_REF)
+            unaffected_sample_indices = {
+                sample_id_index_map[s.sample_id] for s, status in sample_affected_statuses.items() if status == UNAFFECTED
+            }
+            if len(unaffected_sample_indices) > 1:
+                genotype_filter &= cls._get_any_sample_has_gt(family_mt, unaffected_sample_indices, REF_REF)
 
         family_mt = family_mt.filter_rows(genotype_filter)
 
@@ -366,18 +366,13 @@ class BaseHailTableQuery(object):
         return family_mt
 
     @classmethod
-    def _get_any_sample_has_gt(cls, mt, sample_ids, genotype):
-        genotype_filter_exprs = [
-            (hl.is_defined(mt[f'{sample_id}__GT'])) & cls.GENOTYPE_QUERY_MAP[genotype](mt[f'{sample_id}__GT'])
-            for sample_id in sample_ids
-        ]
-        genotype_filter = genotype_filter_exprs[0]
-        for f in genotype_filter_exprs:
-            genotype_filter |= f
-        return genotype_filter
+    def _get_any_sample_has_gt(cls, mt, allowed_sample_indices, genotype):
+        return hl.enumerate(mt.genotypes).any(
+            lambda en: hl.set(allowed_sample_indices).contains(en[0]) & cls.GENOTYPE_QUERY_MAP[genotype](en[1].GT)
+        )
 
     @classmethod
-    def _get_sample_genotype_filters(cls, family_mt, sample_affected_statuses, inheritance_mode, inheritance_filter):
+    def _get_sample_genotype_filters(cls, family_mt, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
         genotype_filter_exprs = []
         for s, status in sample_affected_statuses.items():
@@ -385,23 +380,21 @@ class BaseHailTableQuery(object):
             if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s.individual.sex == Individual.SEX_MALE:
                 genotype = REF_REF
             if genotype:
-                gt_field = f'{s.sample_id}__GT'
                 genotype_filter_exprs.append(
-                    (hl.is_defined(family_mt[gt_field])) & cls.GENOTYPE_QUERY_MAP[genotype](family_mt[gt_field])
+                    cls.GENOTYPE_QUERY_MAP[genotype](family_mt.genotypes[sample_id_index_map[s.sample_id]].GT)
                 )
 
         return genotype_filter_exprs
 
     @classmethod
-    def _get_family_quality_filter(cls, f_samples, family_mt, quality_filter):
+    def _genotype_passes_quality(cls, gt, quality_filter):
         quality_filter_expr = None
         for field, value in quality_filter.items():
-            for s in f_samples:
-                field_filter = family_mt[f'{s.sample_id}__{field}'] >= value
-                if quality_filter_expr is None:
-                    quality_filter_expr = field_filter
-                else:
-                    quality_filter_expr &= field_filter
+            field_filter = gt[field] >= value
+            if quality_filter_expr is None:
+                quality_filter_expr = field_filter
+            else:
+                quality_filter_expr &= field_filter
         return quality_filter_expr
 
     @staticmethod
@@ -985,21 +978,17 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         return mt
 
     @classmethod
-    def _get_family_quality_filter(cls, f_samples, family_mt, quality_filter):
+    def _genotype_passes_quality(cls, gt, quality_filter):
         no_ab_quality_filter = {k: v for k, v in quality_filter.items() if k != 'AB'}
-        quality_filter_expr = super(VariantHailTableQuery, cls)._get_family_quality_filter(
-            f_samples, family_mt, no_ab_quality_filter,
-        )
+        quality_filter_expr = super(VariantHailTableQuery, cls)._genotype_passes_quality(gt, no_ab_quality_filter)
         ab_value = quality_filter.get('AB')
         if ab_value:
-            for s in f_samples:
-                # AB only relevant for hets
-                non_het_filter = ~family_mt[f'{s.sample_id}__GT'].is_het()
-                field_filter = (family_mt[f'{s.sample_id}__AB'] >= ab_value/100) | non_het_filter
-                if quality_filter_expr is None:
-                    quality_filter_expr = field_filter
-                else:
-                    quality_filter_expr &= field_filter
+            # AB only relevant for hets
+            field_filter = (gt.AB >= ab_value / 100) | ~gt.GT.is_het()
+            if quality_filter_expr is None:
+                quality_filter_expr = field_filter
+            else:
+                quality_filter_expr &= field_filter
 
         return quality_filter_expr
 
