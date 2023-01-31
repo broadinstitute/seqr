@@ -274,7 +274,7 @@ class BaseHailTableQuery(object):
                 )).group_by(lambda x: x.sample_id))
             row_exprs = {}
             for field in sample_fields:
-                row_exprs.update({f'{s.sample_id}__{field}': family_mt.gts[s.sample_id][field][0] for s in family_samples})
+                row_exprs.update({f'{s.sample_id}__{field}': family_mt.gts[s.sample_id][field][0] for s in f_samples})
             family_mt = family_mt.transmute_rows(**row_exprs)
 
             logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
