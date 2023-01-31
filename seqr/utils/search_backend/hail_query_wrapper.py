@@ -304,6 +304,10 @@ class BaseHailTableQuery(object):
         families_mt = cls._filter_unannotated_mt(families_mt, load_table_kwargs=load_table_kwargs, **kwargs)
         logger.info(f'Prefiltered to {families_mt.rows().count()} rows ({cls.__name__})')
 
+        families_mt = families_mt.annotate_rows(familyGuids=hl.agg.filter(
+            hl.is_defined(families_mt.familyGuid), hl.agg.collect_as_set(families_mt.familyGuid),
+        ))
+
         # TODO - use query_table
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         mt = families_mt.annotate_rows(**ht[families_mt.row_key])
@@ -358,7 +362,7 @@ class BaseHailTableQuery(object):
         family_mt = family_mt.filter_rows(genotype_filter)
 
         # TODO comp het
-        # TODO SV override newCall
+        # TODO SV override newCall - _get_matched_families_expr
         return family_mt
 
     @classmethod
@@ -454,7 +458,7 @@ class BaseHailTableQuery(object):
                 return
 
         self._filter_main_annotations()
-        self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter, quality_filter)
+        self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter)
 
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
@@ -647,15 +651,13 @@ class BaseHailTableQuery(object):
     def _annotate_filtered_genotypes(self, *args):
         self._mt = self._filter_by_genotype(self._mt, *args)
 
-    def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, quality_filter, max_families=None):
+    def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, max_families=None):
         individual_affected_status = inheritance_filter.get('affected') or {}
         if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
             self._set_validated_affected_status(individual_affected_status, max_families)
 
-        mt = mt.annotate_rows(familyGuids=self._get_matched_families_expr(mt, quality_filter))
-        mt = mt.filter_rows(mt.familyGuids.size() > 0)
-
         sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
+        # TODO move to initial families table
         return mt.annotate_rows(genotypes=hl.agg.filter(
             mt.familyGuids.contains(mt.familyGuid) & self._get_searchable_samples(mt).contains(mt.s),
             hl.agg.collect(hl.struct(
@@ -692,14 +694,6 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(mt, x_interval):
         return x_interval.contains(mt.locus)
 
-    def _get_matched_families_expr(self, mt, quality_filter, inheritance_override_q=None):
-        # TODO move into family table read?
-        searchable_samples = self._get_searchable_samples(mt)
-        valid_sample_q = hl.is_defined(mt.familyGuid)
-
-        return hl.agg.filter(
-            valid_sample_q & searchable_samples.contains(mt.s), hl.agg.collect_as_set(mt.familyGuid))
-
     def _get_searchable_samples(self, mt):
         return hl.set(set(self._individuals_by_sample_id.keys()))
 
@@ -716,7 +710,7 @@ class BaseHailTableQuery(object):
 
         ch_mt = self._filter_by_annotations(comp_het_consequences)
         ch_mt = self._filter_by_genotype(
-            ch_mt, COMPOUND_HET, inheritance_filter, quality_filter,
+            ch_mt, COMPOUND_HET, inheritance_filter, #quality_filter,
             max_families=None if self._has_location_filter else (MAX_NO_LOCATION_COMP_HET_FAMILIES, 'Location must be specified to search for compound heterozygous variants across many families')
         )
         ch_ht = self._format_results(ch_mt)
@@ -1103,6 +1097,7 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
 
     def _get_matched_families_expr(self, mt, quality_filter, **kwargs):
+        # TODO update family table prefilter
         inheritance_override_q = None
         if self._consequence_overrides[NEW_SV_FIELD]:
             inheritance_override_q = mt.newCall
