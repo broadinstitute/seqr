@@ -284,7 +284,7 @@ class BaseHailTableQuery(object):
                 continue
 
             if quality_filter:
-                quality_filter_expr = cls._filter_family_quality(f_samples, family_mt, quality_filter)
+                quality_filter_expr = cls._get_family_quality_filter(f_samples, family_mt, quality_filter)
                 if clinvar_path_terms:
                     family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
                 else:
@@ -389,7 +389,7 @@ class BaseHailTableQuery(object):
         return genotype_filter_exprs
 
     @classmethod
-    def _filter_family_quality(cls, f_samples, family_mt, quality_filter):
+    def _get_family_quality_filter(cls, f_samples, family_mt, quality_filter):
         quality_filter_expr = None
         for field, value in quality_filter.items():
             for s in f_samples:
@@ -991,14 +991,16 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         return mt
 
     @classmethod
-    def _filter_family_quality(cls, f_samples, family_mt, quality_filter):
+    def _get_family_quality_filter(cls, f_samples, family_mt, quality_filter):
         no_ab_quality_filter = {k: v for k, v in quality_filter.items() if k != 'AB'}
-        quality_filter_expr = super(VariantHailTableQuery, cls)._filter_family_quality(
+        quality_filter_expr = super(VariantHailTableQuery, cls)._get_family_quality_filter(
             f_samples, family_mt, no_ab_quality_filter,
         )
         if 'AB' in quality_filter:
             for s in f_samples:
-                field_filter = family_mt[f'{s.sample_id}__AB'] >= value / 100 | ~family_mt[f'{s.sample_id}__GT'].is_het()
+                # AB only relevant for hets
+                non_het_filter = ~family_mt[f'{s.sample_id}__GT'].is_het()
+                field_filter = family_mt[f'{s.sample_id}__AB'] >= quality_filter['AB'] / 100 | non_het_filter
                 if quality_filter_expr is None:
                     quality_filter_expr = field_filter
                 else:
