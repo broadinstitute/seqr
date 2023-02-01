@@ -229,7 +229,6 @@ class BaseHailTableQuery(object):
             data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals, frequencies=frequencies,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, quality_filter=quality_filter,
         )
-        logger.info(self._mt)
 
         self._filter_variants(  # TODO inheritance needed for filter variants?
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies,
@@ -332,6 +331,7 @@ class BaseHailTableQuery(object):
         if quality_filter:
             quality_filter_expr = family_mt.genotypes.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
             if clinvar_path_terms:
+                family_mt = family_mt.annotate_rows(genotypes=family_mt.genotypes)
                 family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
             else:
                 family_mt = family_mt.filter_rows(quality_filter_expr)
@@ -796,10 +796,12 @@ class BaseHailTableQuery(object):
 
     def search(self, page, num_results, sort):
         if self._mt:
+            logger.info('has mt')
             ht = self._format_results(self._mt)
             if self._comp_het_ht:
                 ht = ht.join(self._comp_het_ht, 'outer')
         else:
+            logger.info('no mt')
             ht = self._comp_het_ht
 
         if not ht:
