@@ -247,14 +247,13 @@ class BaseHailTableQuery(object):
         return mt
 
     @classmethod
-    def import_filtered_mt(cls, data_source, samples, intervals=None, inheritance_mode=None, inheritance_filter=None,
-                           genome_version=None, quality_filter=None, consequence_overrides=None, **kwargs):
+    def import_filtered_mt(cls, data_source, samples, intervals=None, quality_filter=None, consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         quality_filter = cls._format_quality_filter(quality_filter or {})
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides) if quality_filter else None
 
-        family_table_filter = cls._family_table_filter(load_table_kwargs=load_table_kwargs, **kwargs)
+        family_filter_kwargs = cls._get_family_table_filter_kwargs(load_table_kwargs=load_table_kwargs, **kwargs)
 
         family_samples = defaultdict(list)
         for s in samples:
@@ -273,22 +272,9 @@ class BaseHailTableQuery(object):
                 lambda o: o.sampleId))
 
             logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
-            if family_table_filter is not None:
-                family_mt = family_mt.filter_rows(family_table_filter(family_mt))
-
-            if inheritance_filter or inheritance_mode:
-                family_mt = cls._filter_family_inheritance(
-                    f_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
-            if family_mt is None:
-                continue
-
-            if quality_filter:
-                quality_filter_expr = family_mt.genotypes.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
-                if clinvar_path_terms:
-                    family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
-                else:
-                    family_mt = family_mt.filter_rows(quality_filter_expr)
-
+            family_mt = cls._filter_family_table(
+                family_mt, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
+                **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_mt.rows().count()} rows')
             family_mt = family_mt.select_rows()
             if families_mt:
@@ -321,8 +307,25 @@ class BaseHailTableQuery(object):
         return family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
 
     @classmethod
-    def _family_table_filter(cls, **kwargs):
-        return None
+    def _get_family_table_filter_kwargs(cls, **kwargs):
+        return {}
+
+    @classmethod
+    def _filter_family_table(cls, family_mt, inheritance_mode=None, inheritance_filter=None, genome_version=None, quality_filter=None, **kwargs):
+        if inheritance_filter or inheritance_mode:
+            family_mt = cls._filter_family_inheritance(
+                f_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
+        if family_mt is None:
+            return None
+
+        if quality_filter:
+            quality_filter_expr = family_mt.genotypes.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
+            if clinvar_path_terms:
+                family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
+            else:
+                family_mt = family_mt.filter_rows(quality_filter_expr)
+
+        return family_mt
 
     @classmethod
     def _filter_family_inheritance(cls, family_samples, family_mt, inheritance_mode, inheritance_filter, genome_version):
@@ -911,10 +914,10 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         return mt
 
     @classmethod
-    def _family_table_filter(cls, excluded_intervals=None, **kwargs):
-        if not excluded_intervals:
-            return None
-        return lambda mt: hl.filter_intervals(mt, excluded_intervals, keep=False)
+    def _filter_family_table(cls, family_mt, excluded_intervals=None, **kwargs):
+        if excluded_intervals:
+            family_mt = hl.filter_intervals(family_mt, excluded_intervals, keep=False)
+        return super(BaseVariantHailTableQuery, self)._filter_family_table(family_mt, **kwargs)
 
     @staticmethod
     def get_major_consequence(transcript):
@@ -963,28 +966,27 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     @classmethod
-    def _family_table_filter(cls, frequencies=None, load_table_kwargs=None, **kwargs):
-        super_filter = super(VariantHailTableQuery, cls)._family_table_filter(**kwargs)
-
+    def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, **kwargs):
         # TODO clinvar override
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
             af_cutoff = 0.01
         if af_cutoff is None:
-            return super_filter
+            return {}
 
         high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
         if af_cutoff > 0.01:
             high_af_ht = high_af_ht.filter(high_af_ht.is_gt_10_percent)
+        return {'high_af_ht': high_af_ht}
 
-        def _family_table_filter_af(mt):
-            if super_filter is not None:
-                mt = super_filter(mt)
-            mt = mt.annotate_rows(is_high_AF=high_af_ht[mt.row_key].is_gt_10_percent)
-            return mt.filter_rows(hl.is_missing(mt.is_high_AF))
+    @classmethod
+    def _filter_family_table(cls, family_mt, high_af_ht=None, **kwargs):
+        # TODO clinvar override
+        if high_af_ht is not None:
+            family_mt = family_mt.filter_rows(hl.is_missing(high_af_ht[family_mt.row_key]))
 
-        return _family_table_filter_af
+        return super(VariantHailTableQuery, cls)._filter_family_table(family_mt, **kwargs)
 
     @classmethod
     def _genotype_passes_quality(cls, gt, quality_filter):
