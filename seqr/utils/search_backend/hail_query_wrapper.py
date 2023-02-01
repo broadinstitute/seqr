@@ -917,7 +917,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     def _filter_family_table(cls, family_mt, excluded_intervals=None, **kwargs):
         if excluded_intervals:
             family_mt = hl.filter_intervals(family_mt, excluded_intervals, keep=False)
-        return super(BaseVariantHailTableQuery, self)._filter_family_table(family_mt, **kwargs)
+        return super(BaseVariantHailTableQuery, cls)._filter_family_table(family_mt, **kwargs)
 
     @staticmethod
     def get_major_consequence(transcript):
