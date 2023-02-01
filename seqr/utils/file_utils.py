@@ -85,12 +85,11 @@ def get_gs_file_list(gs_path, user=None, check_subfolders=True):
     gs_path = gs_path.rstrip('/')
     command = 'ls'
 
-    # If a bucket is empty gsutil throws an error when running ls with ** instead of returning an empty list
-    subfolders = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
-    if not subfolders:
-        return []
-
     if check_subfolders:
+        # If a bucket is empty gsutil throws an error when running ls with ** instead of returning an empty list
+        subfolders = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
+        if not subfolders:
+            return []
         gs_path = f'{gs_path}/**'
 
     all_lines = _run_gsutil_with_wait(command, gs_path, user, get_stdout=True)
