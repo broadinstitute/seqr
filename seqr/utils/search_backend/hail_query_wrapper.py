@@ -254,6 +254,8 @@ class BaseHailTableQuery(object):
         quality_filter = cls._format_quality_filter(quality_filter or {})
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides) if quality_filter else None
 
+        family_table_filter = cls._family_table_filter(load_table_kwargs=load_table_kwargs, **kwargs)
+
         family_samples = defaultdict(list)
         for s in samples:
             family_samples[s.individual.family].append(s)
@@ -271,6 +273,9 @@ class BaseHailTableQuery(object):
                 lambda o: o.sampleId))
 
             logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
+            if family_table_filter is not None:
+                family_mt = family_mt.filter_rows(family_table_filter(family_mt))
+
             if inheritance_filter or inheritance_mode:
                 family_mt = cls._filter_family_inheritance(
                     f_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
@@ -284,6 +289,7 @@ class BaseHailTableQuery(object):
                 else:
                     family_mt = family_mt.filter_rows(quality_filter_expr)
 
+            logger.info(f'Prefiltered {f.guid} to {family_mt.rows().count()} rows')
             family_mt = family_mt.select_rows()
             if families_mt:
                 families_mt = families_mt.union_cols(family_mt, row_join_type='outer')
@@ -294,8 +300,6 @@ class BaseHailTableQuery(object):
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
-        logger.info(f'Read in {families_mt.rows().count()} rows ({cls.__name__})')
-        families_mt = cls._filter_unannotated_mt(families_mt, load_table_kwargs=load_table_kwargs, **kwargs)
         logger.info(f'Prefiltered to {families_mt.rows().count()} rows ({cls.__name__})')
 
         families_mt = families_mt.annotate_rows(familyGuids=hl.agg.filter(
@@ -317,11 +321,12 @@ class BaseHailTableQuery(object):
         return family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
 
     @classmethod
-    def _filter_unannotated_mt(cls, mt, **kwargs):
-        return mt
+    def _family_table_filter(cls, **kwargs):
+        return None
 
     @classmethod
     def _filter_family_inheritance(cls, family_samples, family_mt, inheritance_mode, inheritance_filter, genome_version):
+        # TODO should come from table global at load time
         sample_id_index_map = {sample_id: i for i, sample_id in enumerate(sorted([s.sample_id for s in family_samples]))}
 
         individual_affected_status = inheritance_filter.get('affected') or {}
@@ -906,10 +911,10 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         return mt
 
     @classmethod
-    def _filter_unannotated_mt(cls, mt, excluded_intervals=None, **kwargs):
-        if excluded_intervals:
-            mt = hl.filter_intervals(mt, excluded_intervals, keep=False)
-        return mt
+    def _family_table_filter(cls, excluded_intervals=None, **kwargs):
+        if not excluded_intervals:
+            return None
+        return lambda mt: hl.filter_intervals(mt, excluded_intervals, keep=False)
 
     @staticmethod
     def get_major_consequence(transcript):
@@ -958,24 +963,28 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     @classmethod
-    def _filter_unannotated_mt(cls, mt, frequencies=None, load_table_kwargs=None, **kwargs):
-        # TODO move to single family table
-        mt = super(VariantHailTableQuery, cls)._filter_unannotated_mt(mt, **kwargs)
+    def _family_table_filter(cls, frequencies=None, load_table_kwargs=None, **kwargs):
+        super_filter = super(VariantHailTableQuery, cls)._family_table_filter(**kwargs)
 
         # TODO clinvar override
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
             af_cutoff = 0.01
-        if af_cutoff is not None:
-            high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
-            mt = mt.annotate_rows(is_AF_gt_10_percent=high_af_ht[mt.row_key].is_gt_10_percent)
-            af_prefilter = hl.is_missing(mt.is_AF_gt_10_percent)
-            if af_cutoff > 0.01:
-                af_prefilter |= ~mt.is_AF_gt_10_percent
-            mt = mt.filter_rows(af_prefilter)
+        if af_cutoff is None:
+            return super_filter
 
-        return mt
+        high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
+        if af_cutoff > 0.01:
+            high_af_ht = high_af_ht.filter(high_af_ht.is_gt_10_percent)
+
+        def _family_table_filter_af(mt):
+            if super_filter is not None:
+                mt = super_filter(mt)
+            mt = mt.annotate_rows(is_high_AF=high_af_ht[mt.row_key].is_gt_10_percent)
+            return mt.filter_rows(hl.is_missing(mt.is_high_AF))
+
+        return _family_table_filter_af
 
     @classmethod
     def _genotype_passes_quality(cls, gt, quality_filter):
