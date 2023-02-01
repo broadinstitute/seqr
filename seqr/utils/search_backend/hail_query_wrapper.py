@@ -311,7 +311,8 @@ class BaseHailTableQuery(object):
         return {}
 
     @classmethod
-    def _filter_family_table(cls, family_mt, family_samples=None, inheritance_mode=None, inheritance_filter=None, genome_version=None, quality_filter=None, **kwargs):
+    def _filter_family_table(cls, family_mt, family_samples=None, inheritance_mode=None, inheritance_filter=None,
+                             genome_version=None, quality_filter=None, clinvar_path_terms=None, **kwargs):
         if inheritance_filter or inheritance_mode:
             family_mt = cls._filter_family_inheritance(
                 family_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
