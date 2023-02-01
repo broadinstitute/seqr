@@ -522,8 +522,8 @@ class BaseHailTableQuery(object):
         if not frequencies:
             return
 
-        clinvar_path_override_expr = self._get_clinvar_path_override_expr()
-        has_path_override = clinvar_path_override_expr is not None and any(
+        clinvar_path_terms = self._get_clinvar_path_terms(self._consequence_overrides)
+        has_path_override = clinvar_path_terms and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
 
         for pop, freqs in sorted(frequencies.items()):
@@ -533,7 +533,8 @@ class BaseHailTableQuery(object):
                 pop_filter = self._mt[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
-                            clinvar_path_override_expr & (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                        self._has_clivar_terms_expr(self._mt, clinvar_path_terms) &
+                        (self._mt[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
                 ac_field = self.populations_configs[pop]['ac']
@@ -645,12 +646,6 @@ class BaseHailTableQuery(object):
     @staticmethod
     def _has_clivar_terms_expr(mt, clinvar_terms):
         return hl.set(clinvar_terms).contains(mt.clinvar.clinical_significance_id)
-
-    def _get_clinvar_path_override_expr(self):
-        clinvar_path_terms = self._get_clinvar_path_terms(self._consequence_overrides)
-        if not clinvar_path_terms:
-            return None
-        return self._has_clivar_terms_expr(self._mt, clinvar_path_terms)
 
     @staticmethod
     def _is_allowed_consequence_filter(tc, allowed_consequences):
