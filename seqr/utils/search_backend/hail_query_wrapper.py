@@ -284,7 +284,7 @@ class BaseHailTableQuery(object):
                     # TODO sampleId should come from array index not annotation
                     'sampleId', individualGuid=sample_individual_map[gt.sampleId], familyGuid=f.guid,
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
-                    **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt.get(field) for k, field in cls.GENOTYPE_FIELDS.items()}
+                    **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]))
 
             if families_mt:
