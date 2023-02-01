@@ -210,13 +210,11 @@ class BaseHailTableQuery(object):
                  inheritance_mode=None, inheritance_filter=None, frequencies=None, quality_filter=None,
                  pathogenicity=None, annotations=None, **kwargs):
         self._genome_version = genome_version
-        self._affected_status_samples = defaultdict(set)
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._has_location_filter = bool(intervals)
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
-        self._save_samples(samples)
 
         self._consequence_overrides = {
             CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: None, SPLICE_AI_FIELD: None,
@@ -233,9 +231,6 @@ class BaseHailTableQuery(object):
         self._filter_variants(  # TODO inheritance needed for filter variants?
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies,
             quality_filter=quality_filter, **kwargs)
-
-    def _save_samples(self, samples):
-        self._individuals_by_sample_id = {s.sample_id: s.individual for s in samples}
 
     def _load_table(self, data_source, samples, intervals=None, **kwargs):
         mt = self.import_filtered_mt(
@@ -259,6 +254,8 @@ class BaseHailTableQuery(object):
         family_samples = defaultdict(list)
         for s in samples:
             family_samples[s.individual.family].append(s)
+        cls._validate_search_criteria(num_families=len(family_samples), has_location_search=bool(intervals), **kwargs)
+
         families_mt = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
         for f, f_samples in family_samples.items():
@@ -318,6 +315,10 @@ class BaseHailTableQuery(object):
     def _family_ht_to_mt(cls, family_ht):
         keys = list(family_ht.key.keys())
         return family_ht.to_matrix_table(row_key=keys[:-1], col_key=keys[-1:])
+
+    @classmethod
+    def _validate_search_criteria(cls, **kwargs):
+        return
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, **kwargs):
@@ -658,26 +659,6 @@ class BaseHailTableQuery(object):
         })
         return hl.set(allowed_consequence_ids).contains(tc.major_consequence_id)
 
-    def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, max_families=None):
-        # TODO deprecate
-        individual_affected_status = inheritance_filter.get('affected') or {}
-        if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
-            self._set_validated_affected_status(individual_affected_status, max_families)
-
-    def _set_validated_affected_status(self, individual_affected_status, max_families):
-        for sample_id, individual in self._individuals_by_sample_id.items():
-            affected = individual_affected_status.get(individual.guid) or individual.affected
-            self._affected_status_samples[affected].add(sample_id)
-
-        affected_families = {
-            self._individuals_by_sample_id[sample_id].family for sample_id in self._affected_status_samples[AFFECTED]
-        }
-        self._individuals_by_sample_id = {
-            sample_id: i for sample_id, i in self._individuals_by_sample_id.items() if i.family in affected_families
-        }
-        if max_families and len(affected_families) > max_families[0]:
-            raise InvalidSearchException(max_families[1])
-
     @classmethod
     def _format_quality_filter(cls, quality_filter):
         parsed_quality_filter = {}
@@ -691,9 +672,6 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(mt, x_interval):
         return x_interval.contains(mt.locus)
 
-    def _get_searchable_samples(self, mt):
-        return hl.set(set(self._individuals_by_sample_id.keys()))
-
     def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=True):
         if not self._allowed_consequences:
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
@@ -706,10 +684,6 @@ class BaseHailTableQuery(object):
             comp_het_consequences.update(self._allowed_consequences_secondary)
 
         ch_mt = self._filter_by_annotations(comp_het_consequences)
-        ch_mt = self._filter_by_genotype(
-            ch_mt, COMPOUND_HET, inheritance_filter, #quality_filter,
-            max_families=None if self._has_location_filter else (MAX_NO_LOCATION_COMP_HET_FAMILIES, 'Location must be specified to search for compound heterozygous variants across many families')
-        )
         ch_ht = self._format_results(ch_mt)
 
         # Get possible pairs of variants within the same gene
@@ -772,6 +746,7 @@ class BaseHailTableQuery(object):
         return ch_ht.filter(has_annotation_filter)
 
     def _valid_comp_het_families_expr(self, ch_ht):
+        # TODO comp het needs to add annotations at inheritance filter time
         unaffected_family_individuals = defaultdict(set)
         for sample_id in self._affected_status_samples[UNAFFECTED]:
             individual = self._individuals_by_sample_id[sample_id]
@@ -960,6 +935,11 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
             hl.array(SCREEN_CONSEQUENCES)[r.screen.region_type_id[0]]),
     }
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
+
+    @classmethod
+    def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET} and num_families > MAX_NO_LOCATION_COMP_HET_FAMILIES and not has_location_search:
+            raise InvalidSearchException('Location must be specified to search for compound heterozygous variants across many families')
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, clinvar_path_terms=None, **kwargs):
@@ -1210,22 +1190,6 @@ class MultiDataTypeHailTableQuery(object):
             super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
-    def _save_samples(self, samples):
-        self._individuals_by_sample_id = {}
-        for data_type_samples in samples.values():
-            for s in data_type_samples:
-                self._individuals_by_sample_id[s.sample_id] = s.individual
-
-        self._sample_ids_by_dataset_type = {k: {s.sample_id for s in v} for k, v in samples.items()}
-        sample_sets = list(self._sample_ids_by_dataset_type.values())
-        if all(sample_set == sample_sets[0] for sample_set in sample_sets[1:]):
-            self._sample_ids_by_dataset_type = None
-
-    def _get_searchable_samples(self, mt):
-        if self._sample_ids_by_dataset_type:
-            return hl.dict(self._sample_ids_by_dataset_type)[mt.dataType]
-        return super(MultiDataTypeHailTableQuery, self)._get_searchable_samples(mt)
-
     @staticmethod
     def join_mts(mt1, mt2):
         mt = hl.experimental.full_outer_join_mt(mt1, mt2)
@@ -1335,6 +1299,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         )
 
     def _valid_comp_het_families_expr(self, ch_ht):
+        # TODO comp het needs to add annotations at inheritance filter time
         valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
 
         individual_family_map = hl.dict({i.guid: i.family.guid for i in self._individuals_by_sample_id.values()})
