@@ -267,7 +267,7 @@ class BaseHailTableQuery(object):
             family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
 
             # TODO should be done at loading time
-            sample_fields = ['GT'] + list(quality_filter.keys())
+            sample_fields = ['GT'] + list(cls.GENOTYPE_FIELDS.values())
             family_mt = family_mt.annotate_rows(genotypes=hl.sorted(
                 hl.agg.collect(hl.struct(sampleId=family_mt.s, **{field: family_mt[field] for field in sample_fields})),
                 lambda o: o.sampleId))
