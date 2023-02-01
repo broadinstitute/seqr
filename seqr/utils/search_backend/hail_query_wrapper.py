@@ -251,9 +251,10 @@ class BaseHailTableQuery(object):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         quality_filter = cls._format_quality_filter(quality_filter or {})
-        clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides) if quality_filter else None
+        clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides)
 
-        family_filter_kwargs = cls._get_family_table_filter_kwargs(load_table_kwargs=load_table_kwargs, **kwargs)
+        family_filter_kwargs = cls._get_family_table_filter_kwargs(
+            load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs)
 
         family_samples = defaultdict(list)
         for s in samples:
@@ -296,7 +297,7 @@ class BaseHailTableQuery(object):
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         mt = families_mt.annotate_rows(**ht[families_mt.row_key])
 
-        if clinvar_path_terms:
+        if clinvar_path_terms and quality_filter:
             mt = mt.filter_entries(mt.passesQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
 
         return mt
@@ -967,14 +968,15 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     BASE_ANNOTATION_FIELDS.update(BaseVariantHailTableQuery.BASE_ANNOTATION_FIELDS)
 
     @classmethod
-    def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, **kwargs):
-        # TODO clinvar override
+    def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, clinvar_path_terms=None, **kwargs):
         gnomad_genomes_filter = (frequencies or {}).get(GNOMAD_GENOMES_FIELD, {})
         af_cutoff = gnomad_genomes_filter.get('af')
         if af_cutoff is None and gnomad_genomes_filter.get('ac') is not None:
             af_cutoff = 0.01
         if af_cutoff is None:
             return {}
+        if clinvar_path_terms:
+            af_cutoff = max(af_cutoff, PATH_FREQ_OVERRIDE_CUTOFF)
 
         high_af_ht = hl.read_table('/hail_datasets/high_af_variants.ht', **(load_table_kwargs or {}))
         if af_cutoff > 0.01:
@@ -983,7 +985,6 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
 
     @classmethod
     def _filter_family_table(cls, family_mt, high_af_ht=None, **kwargs):
-        # TODO clinvar override
         if high_af_ht is not None:
             family_mt = family_mt.filter_rows(hl.is_missing(high_af_ht[family_mt.row_key]))
 
