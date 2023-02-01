@@ -277,8 +277,18 @@ class BaseHailTableQuery(object):
                 family_mt, family_samples=f_samples, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
                 **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_mt.rows().count()} rows')
-            family_mt = family_mt.select_rows()
+
+            sample_individual_map = hl.dict({s.sample_id: s.individual.guid for s in f_samples})
+            family_mt = family_mt.annotate_rows(
+                genotypes=family_mt.genotypes.map(lambda gt: gt.select(
+                    # TODO sampleId should come from array index not annotation
+                    'sampleId', individualGuid=sample_individual_map[gt.sampleId], familyGuid=f.guid,
+                    numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
+                    **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
+                )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]))
+
             if families_mt:
+                # TODO does not include row data from second table
                 families_mt = families_mt.union_cols(family_mt, row_join_type='outer')
             else:
                 families_mt = family_mt
@@ -289,17 +299,15 @@ class BaseHailTableQuery(object):
 
         logger.info(f'Prefiltered to {families_mt.rows().count()} rows ({cls.__name__})')
 
-        families_mt = families_mt.annotate_rows(familyGuids=hl.agg.filter(
-            hl.is_defined(families_mt.familyGuid), hl.agg.collect_as_set(families_mt.familyGuid),
-        ))
-
         # TODO - use query_table
         ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         mt = families_mt.annotate_rows(**ht[families_mt.row_key])
 
         if clinvar_path_terms and quality_filter:
+            # TODO use genotypes not entries for passesQuality, filter genotypes
             mt = mt.filter_entries(mt.passesQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
 
+        mt = mt.annotate_rows(familyGuids=mt.genotypes.group_by(lambda x: x.familyGuid).key_set())
         return mt
 
     @classmethod
@@ -655,20 +663,10 @@ class BaseHailTableQuery(object):
         self._mt = self._filter_by_genotype(self._mt, *args)
 
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, max_families=None):
+        # TODO deprecate
         individual_affected_status = inheritance_filter.get('affected') or {}
         if (inheritance_filter or inheritance_mode) and not self._affected_status_samples:
             self._set_validated_affected_status(individual_affected_status, max_families)
-
-        sample_individual_map = hl.dict({sample_id: i.guid for sample_id, i in self._individuals_by_sample_id.items()})
-        # TODO move to initial families table
-        return mt.annotate_rows(genotypes=hl.agg.filter(
-            mt.familyGuids.contains(mt.familyGuid) & self._get_searchable_samples(mt).contains(mt.s),
-            hl.agg.collect(hl.struct(
-                individualGuid=sample_individual_map[mt.s],
-                sampleId=mt.s,
-                numAlt=hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1),
-                **{self.GENOTYPE_RESPONSE_KEYS.get(k, k): mt[f] for k, f in self.GENOTYPE_FIELDS.items()}
-            )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0])))
 
     def _set_validated_affected_status(self, individual_affected_status, max_families):
         for sample_id, individual in self._individuals_by_sample_id.items():
