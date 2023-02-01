@@ -2,8 +2,11 @@
 import json
 import time
 import tempfile
+import os
+import re
 from datetime import datetime
 from functools import wraps
+from collections import defaultdict
 import requests
 
 from google.auth.transport.requests import Request
@@ -127,6 +130,7 @@ def get_anvil_vcf_list(request, namespace, name, workspace_meta):
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
     data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
                       if path.endswith(VCF_FILE_EXTENSIONS)]
+    data_path_list = _merge_sharded_vcf(data_path_list)
 
     return create_json_response({'dataPathList': data_path_list})
 
@@ -148,8 +152,10 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         error = 'Data file or path {} is not found.'.format(path)
         return create_json_response({'error': error}, status=400, reason=error)
 
+    file_to_check = get_gs_file_list(data_path, request.user, check_subfolders=False)[0] if '*' in data_path else data_path
+
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(data_path)
+    samples = validate_vcf_and_get_samples(file_to_check)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 
@@ -449,4 +455,20 @@ def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
     return resp.json()
 
 
+def _merge_sharded_vcf(vcf_files):
+    files_by_path = defaultdict(list)
 
+    for vcf_file in vcf_files:
+        subfolder_path, file = vcf_file.rsplit('/', 1)
+        files_by_path[subfolder_path].append(file)
+
+    # discover the sharded VCF files in each folder, replace the sharded VCF files with a single path with '*'
+    for subfolder_path, files in files_by_path.items():
+        if len(files) < 2:
+            continue
+        prefix = os.path.commonprefix(files)
+        suffix = re.fullmatch(r'{}\d*(?P<suffix>\D.*)'.format(prefix), files[0]).groupdict()['suffix']
+        if all([re.fullmatch(r'{}\d+{}'.format(prefix, suffix), file) for file in files]):
+            files_by_path[subfolder_path] = [f'{prefix}*{suffix}']
+
+    return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]
