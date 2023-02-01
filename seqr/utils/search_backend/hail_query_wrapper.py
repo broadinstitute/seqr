@@ -273,7 +273,7 @@ class BaseHailTableQuery(object):
 
             logger.info(f'Initial count for {f.guid}: {family_mt.rows().count()}')
             family_mt = cls._filter_family_table(
-                family_mt, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
+                family_mt, family_samples=f_samples, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
                 **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_mt.rows().count()} rows')
             family_mt = family_mt.select_rows()
@@ -311,10 +311,10 @@ class BaseHailTableQuery(object):
         return {}
 
     @classmethod
-    def _filter_family_table(cls, family_mt, inheritance_mode=None, inheritance_filter=None, genome_version=None, quality_filter=None, **kwargs):
+    def _filter_family_table(cls, family_mt, family_samples=None, inheritance_mode=None, inheritance_filter=None, genome_version=None, quality_filter=None, **kwargs):
         if inheritance_filter or inheritance_mode:
             family_mt = cls._filter_family_inheritance(
-                f_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
+                family_samples, family_mt, inheritance_mode, inheritance_filter, genome_version)
         if family_mt is None:
             return None
 
