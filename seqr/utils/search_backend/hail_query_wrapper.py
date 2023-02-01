@@ -307,7 +307,7 @@ class BaseHailTableQuery(object):
             # TODO use genotypes not entries for passesQuality, filter genotypes
             mt = mt.filter_entries(mt.passesQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
 
-        mt = mt.annotate_rows(familyGuids=mt.genotypes.group_by(lambda x: x.familyGuid).key_set())
+        mt = mt.annotate_rows(familyGuids=mt.genotypes.values().group_by(lambda x: x.familyGuid).key_set())
         return mt
 
     @classmethod
