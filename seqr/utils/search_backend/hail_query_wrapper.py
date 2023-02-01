@@ -263,7 +263,7 @@ class BaseHailTableQuery(object):
 
             # TODO should be done at loading time
             family_ht = family_ht.repartition(1)
-            family_mt = cls._family_ht_to_mt(family_ht).annotate_entries(familyGuid=f.guid)
+            family_mt = cls._family_ht_to_mt(family_ht)
             sample_fields = ['GT'] + list(cls.GENOTYPE_FIELDS.values())
             family_mt = family_mt.annotate_rows(genotypes=hl.sorted(
                 hl.agg.collect(hl.struct(sampleId=family_mt.s, **{field: family_mt[field] for field in sample_fields})),
