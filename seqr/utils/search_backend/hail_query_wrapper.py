@@ -229,6 +229,7 @@ class BaseHailTableQuery(object):
             data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals, frequencies=frequencies,
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, quality_filter=quality_filter,
         )
+        logger.info(self._mt)
 
         self._filter_variants(  # TODO inheritance needed for filter variants?
             inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies,
