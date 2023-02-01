@@ -474,7 +474,6 @@ class BaseHailTableQuery(object):
                 return
 
         self._filter_main_annotations()
-        self._annotate_filtered_genotypes(inheritance_mode, inheritance_filter)
 
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
@@ -658,9 +657,6 @@ class BaseHailTableQuery(object):
             SV_CONSEQUENCE_RANK_MAP[c] for c in allowed_consequences if SV_CONSEQUENCE_RANK_MAP.get(c)
         })
         return hl.set(allowed_consequence_ids).contains(tc.major_consequence_id)
-
-    def _annotate_filtered_genotypes(self, *args):
-        self._mt = self._filter_by_genotype(self._mt, *args)
 
     def _filter_by_genotype(self, mt, inheritance_mode, inheritance_filter, max_families=None):
         # TODO deprecate
