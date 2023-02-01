@@ -285,7 +285,7 @@ class BaseHailTableQuery(object):
                     'sampleId', individualGuid=sample_individual_map[gt.sampleId], familyGuid=f.guid,
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
-                )).group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]))
+                )))
 
             if families_mt:
                 # TODO does not include row data from second table
@@ -304,11 +304,15 @@ class BaseHailTableQuery(object):
         mt = families_mt.annotate_rows(**ht[families_mt.row_key])
 
         if clinvar_path_terms and quality_filter:
-            # TODO use genotypes not entries for passesQuality, filter genotypes
-            mt = mt.filter_entries(mt.passesQuality | cls._has_clivar_terms_expr(mt, clinvar_path_terms))
+            mt = mt.annotate_rows(genotypes=hl.if_else(
+                cls._has_clivar_terms_expr(mt, clinvar_path_terms), mt.genotypes, mt.genotypes.filter(lambda x: x.passesQuality)
+            ).map(lambda x: x.drop('passesQuality')))
+            mt = mt.filter_rows(mt.genotypes)
 
-        mt = mt.annotate_rows(familyGuids=mt.genotypes.values().group_by(lambda x: x.familyGuid).key_set())
-        return mt
+        return mt.annotate_rows(
+            familyGuids=mt.genotypes.group_by(lambda x: x.familyGuid).key_set(),
+            genotypes=mt.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
+        )
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
@@ -331,8 +335,8 @@ class BaseHailTableQuery(object):
         if quality_filter:
             quality_filter_expr = family_mt.genotypes.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
             if clinvar_path_terms:
-                family_mt = family_mt.annotate_rows(genotypes=family_mt.genotypes)
-                family_mt = family_mt.annotate_entries(passesQuality=quality_filter_expr)
+                family_mt = family_mt.annotate_rows(genotypes=family_mt.genotypes.map(
+                    lambda gt: gt.annotate(passesQuality=quality_filter_expr)))
             else:
                 family_mt = family_mt.filter_rows(quality_filter_expr)
 
@@ -796,12 +800,10 @@ class BaseHailTableQuery(object):
 
     def search(self, page, num_results, sort):
         if self._mt:
-            logger.info('has mt')
             ht = self._format_results(self._mt)
             if self._comp_het_ht:
                 ht = ht.join(self._comp_het_ht, 'outer')
         else:
-            logger.info('no mt')
             ht = self._comp_het_ht
 
         if not ht:
