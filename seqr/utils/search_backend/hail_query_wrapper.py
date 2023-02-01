@@ -303,7 +303,7 @@ class BaseHailTableQuery(object):
 
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
-                cls._has_clivar_terms_expr(ht, clinvar_path_terms), ht.genotypes, ht.genotypes.filter(lambda x: x.passesQuality)
+                cls._has_clivar_terms_expr(ht, clinvar_path_terms), ht.genotypes, ht.genotypes.filter(lambda x: x['passesQuality'])
             ).map(lambda x: x.drop('passesQuality')))
             ht = ht.filter(ht.genotypes)
 
@@ -1073,7 +1073,7 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
 
     def _get_matched_families_expr(self, ht, quality_filter, **kwargs):
-        # TODO update family table prefilter
+        # TODO Sv newCall - update family table prefilter
         inheritance_override_q = None
         if self._consequence_overrides[NEW_SV_FIELD]:
             inheritance_override_q = ht.newCall
@@ -1108,7 +1108,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
-        # TODO move logic to pipeline?
+        # TODO gCNV ref calls - move logic to pipeline?
         mt = super(GcnvHailTableQuery, cls)._family_ht_to_mt(family_ht)
         #  gCNV data has no ref/ref calls so add them back in
         mt = mt.unfilter_entries()
