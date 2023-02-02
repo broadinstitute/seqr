@@ -235,7 +235,9 @@ class BaseHailTableQuery(object):
     def import_filtered_table(cls, data_source, samples, intervals=None, quality_filter=None, consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
-        quality_filter = cls._format_quality_filter(quality_filter or {})
+        quality_filter = quality_filter or {}
+        vcf_quality_filter = quality_filter.get('vcf_filter')
+        quality_filter = cls._format_quality_filter(quality_filter)
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides)
 
         family_filter_kwargs = cls._get_family_table_filter_kwargs(
@@ -306,7 +308,8 @@ class BaseHailTableQuery(object):
             genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         )
         return cls._filter_annotated_table(
-            ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms, **kwargs)
+            ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
+            vcf_quality_filter=vcf_quality_filter, **kwargs)
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
@@ -418,7 +421,8 @@ class BaseHailTableQuery(object):
         return quality_filter_expr
 
     @classmethod
-    def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, in_silico=None, clinvar_path_terms=None, **kwargs):
+    def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, in_silico=None, clinvar_path_terms=None,
+                                vcf_quality_filter=None, **kwargs):
         if custom_query:
             # In production: should either remove the "custom search" functionality,
             # or should come up with a simple json -> hail query parsing here
@@ -426,6 +430,8 @@ class BaseHailTableQuery(object):
 
         ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
         ht = cls._filter_by_in_silico(ht, in_silico)
+        if vcf_quality_filter is not None:
+            ht = cls._filter_vcf_filters(ht)
 
         return ht
 
@@ -459,9 +465,6 @@ class BaseHailTableQuery(object):
                          annotations_secondary=None, quality_filter=None, **kwargs):
         # TODO - move as much filtering as possible into initial import before join data types
         quality_filter = quality_filter or {}
-        if quality_filter.get('vcf_filter') is not None:
-            self._filter_vcf_filters()
-
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             comp_het_only = inheritance_mode == COMPOUND_HET
             self._filter_compound_hets(
@@ -488,8 +491,9 @@ class BaseHailTableQuery(object):
         for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
             self._consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
-    def _filter_vcf_filters(self):
-        self._ht = self._ht.filter(hl.is_missing(self._ht.filters) | (self._ht.filters.length() < 1))
+    @classmethod
+    def _filter_vcf_filters(cls, ht):
+        return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
 
     def _filter_main_annotations(self):
         self._ht = self._filter_by_annotations(self._allowed_consequences)
@@ -1111,7 +1115,8 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         mt = mt.unfilter_entries()
         return mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
 
-    def _filter_vcf_filters(self):
+    @classmethod
+    def _filter_vcf_filters(cls, ht):
         pass
 
 
