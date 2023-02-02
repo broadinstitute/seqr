@@ -552,7 +552,7 @@ class BaseHailTableQuery(object):
         }
         require_score = in_silico_filters.pop('requireScore', False)
         if not in_silico_filters:
-            return
+            return ht
 
         in_silico_q = None
         missing_in_silico_q = None
