@@ -162,13 +162,13 @@ class BaseHailTableQuery(object):
     }
     COMPUTED_ANNOTATION_FIELDS = {}
 
-    @property
-    def populations_configs(self):
+    @classmethod
+    def populations_configs(cls):
         populations = {
             pop: {field.lower(): field for field in ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']}
-            for pop in self.POPULATIONS.keys()
+            for pop in cls.POPULATIONS.keys()
         }
-        for pop, pop_config in self.POPULATIONS.items():
+        for pop, pop_config in cls.POPULATIONS.items():
             populations[pop].update(pop_config)
         return populations
 
@@ -177,7 +177,7 @@ class BaseHailTableQuery(object):
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population, pop_config)
-                for population, pop_config in self.populations_configs.items()
+                for population, pop_config in self.populations_configs().items()
             }),
             'predictions': lambda r: hl.struct(**{
                 prediction: hl.array(PREDICTION_FIELD_ID_LOOKUP[prediction])[r[path[0]][path[1]]]
@@ -305,7 +305,8 @@ class BaseHailTableQuery(object):
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
             genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         )
-        return cls._filter_annotated_table(ht, consequence_overrides=consequence_overrides, **kwargs)
+        return cls._filter_annotated_table(
+            ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms, **kwargs)
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
@@ -417,11 +418,14 @@ class BaseHailTableQuery(object):
         return quality_filter_expr
 
     @classmethod
-    def _filter_annotated_table(cls, ht, custom_query=None, **kwargs):
+    def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, clinvar_path_terms=None, **kwargs):
         if custom_query:
             # In production: should either remove the "custom search" functionality,
             # or should come up with a simple json -> hail query parsing here
             raise NotImplementedError
+
+        ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
+
         return ht
 
     @staticmethod
@@ -451,11 +455,8 @@ class BaseHailTableQuery(object):
         return intervals
 
     def _filter_annotated_variants(self, inheritance_mode=None, inheritance_filter=None,
-                         annotations_secondary=None, quality_filter=None,
-                         frequencies=None, in_silico=None, **kwargs):
+                         annotations_secondary=None, quality_filter=None, in_silico=None, **kwargs):
         # TODO - move as much filtering as possible into initial import before join data types
-        self._filter_by_frequency(frequencies)
-
         self._filter_by_in_silico(in_silico)
 
         quality_filter = quality_filter or {}
@@ -494,48 +495,51 @@ class BaseHailTableQuery(object):
     def _filter_main_annotations(self):
         self._ht = self._filter_by_annotations(self._allowed_consequences)
 
-    def _filter_by_frequency(self, frequencies):
-        frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.populations_configs}
+    @classmethod
+    def _filter_by_frequency(cls, ht, frequencies, clinvar_path_terms):
+        frequencies = {k: v for k, v in (frequencies or {}).items() if k in cls.POPULATIONS}
         if not frequencies:
-            return
+            return ht
 
-        clinvar_path_terms = self._get_clinvar_path_terms(self._consequence_overrides)
         has_path_override = clinvar_path_terms and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
+        populations_configs = cls.populations_configs()
 
         for pop, freqs in sorted(frequencies.items()):
             pop_filter = None
             if freqs.get('af') is not None:
-                af_field = self.populations_configs[pop].get('filter_af') or self.populations_configs[pop]['af']
-                pop_filter = self._ht[pop][af_field] <= freqs['af']
+                af_field = populations_configs[pop].get('filter_af') or populations_configs[pop]['af']
+                pop_filter = ht[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
-                        self._has_clivar_terms_expr(self._ht, clinvar_path_terms) &
-                        (self._ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
+                        cls._has_clivar_terms_expr(ht, clinvar_path_terms) &
+                        (ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
-                ac_field = self.populations_configs[pop]['ac']
+                ac_field = populations_configs[pop]['ac']
                 if ac_field:
-                    pop_filter = self._ht[pop][ac_field] <= freqs['ac']
+                    pop_filter = ht[pop][ac_field] <= freqs['ac']
 
             if freqs.get('hh') is not None:
-                hom_field = self.populations_configs[pop]['hom']
-                hemi_field = self.populations_configs[pop]['hemi']
+                hom_field = populations_configs[pop]['hom']
+                hemi_field = populations_configs[pop]['hemi']
                 if hom_field:
-                    hh_filter = self._ht[pop][hom_field] <= freqs['hh']
+                    hh_filter = ht[pop][hom_field] <= freqs['hh']
                     if pop_filter is None:
                         pop_filter = hh_filter
                     else:
                         pop_filter &= hh_filter
                 if hemi_field:
-                    hh_filter = self._ht[pop][hemi_field] <= freqs['hh']
+                    hh_filter = ht[pop][hemi_field] <= freqs['hh']
                     if pop_filter is None:
                         pop_filter = hh_filter
                     else:
                         pop_filter &= hh_filter
 
             if pop_filter is not None:
-                self._ht = self._ht.filter(hl.is_missing(self._ht[pop]) | pop_filter)
+                ht = ht.filter(hl.is_missing(ht[pop]) | pop_filter)
+
+        return ht
 
     def _filter_by_in_silico(self, in_silico_filters):
         in_silico_filters = {
