@@ -239,6 +239,7 @@ export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
 export const FAMILY_FIELD_CREATED_DATE = 'createdDate'
 export const FAMILY_FIELD_ANALYSIS_GROUPS = 'analysisGroups'
+export const FAMILY_FIELD_SAVED_VARIANTS = 'savedVariants'
 
 export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_DESCRIPTION]: 'Family Description',
@@ -257,6 +258,7 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
   [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
   [FAMILY_FIELD_INTERNAL_SUMMARY]: 'Internal Summary',
+  [FAMILY_FIELD_SAVED_VARIANTS]: 'Saved Variants',
 }
 
 export const FAMILY_NOTES_FIELDS = [
@@ -608,9 +610,15 @@ const VEP_SV_CONSEQUENCES = [
     value: 'LOF',
   },
   {
-    description: 'A loss of function effect via intragenic exonic duplication',
-    text: 'Loss of function via Duplication',
-    value: 'DUP_LOF',
+    description: 'An SV which is predicted to result in intragenic exonic duplication without breaking any coding sequences' +
+        ' (previously called "Loss of function via Duplication")',
+    text: 'Intragenic Exon Duplication',
+    value: 'INTRAGENIC_EXON_DUP',
+  },
+  {
+    description: 'The duplication SV has one breakpoint in the coding sequence',
+    text: 'Partial Exon Duplication',
+    value: 'PARTIAL_EXON_DUP',
   },
   {
     description: 'A copy-gain effect',
@@ -623,9 +631,11 @@ const VEP_SV_CONSEQUENCES = [
     value: 'DUP_PARTIAL',
   },
   {
-    description: 'A multiallelic SV predicted to have a Loss of function, Loss of function via Duplication, Copy Gain, or Duplication Partial effect',
+    description: 'A multiallelic SV would be predicted to have a Loss of function, Intragenic Exon Duplication, Copy Gain,' +
+        ' Duplication Partial, Duplication at the Transcription Start Site (TSS_DUP), or Duplication with a breakpoint' +
+        ' in the coding sequence annotation if the SV were biallelic',
     text: 'Multiallelic SV',
-    value: 'MSV_EXON_OVR',
+    value: 'MSV_EXON_OVERLAP',
   },
   {
     description: 'An SV contained entirely within an intron',
@@ -643,14 +653,19 @@ const VEP_SV_CONSEQUENCES = [
     value: 'UTR',
   },
   {
-    description: 'An SV that does not overlap coding sequence',
-    text: 'Intergenic',
-    value: 'INTERGENIC',
-  },
-  {
     description: 'An SV which disrupts a promoter sequence (within 1kb)',
     text: 'Promoter',
     value: 'PROMOTER',
+  },
+  {
+    description: 'An SV which the SV breakend is predicted to fall in an exon',
+    text: 'Breakend Exonic',
+    value: 'BREAKEND_EXONIC',
+  },
+  {
+    description: 'An SV is predicted to duplicate the transcription start site',
+    text: 'Transcription Start Site Duplication',
+    value: 'TSS_DUP',
   },
 ]
 
@@ -936,22 +951,29 @@ export const SVTYPE_DETAILS = {
   },
 }
 
+export const SCREEN_LABELS = {
+  PLS: 'Promotor-like signatures',
+  pELS: 'proximal Enhancer-like signatures',
+  dELS: 'distal Enhancer-like signatures',
+}
+
 export const SHOW_ALL = 'ALL'
 export const NOTE_TAG_NAME = 'Has Notes'
 export const EXCLUDED_TAG_NAME = 'Excluded'
 export const REVIEW_TAG_NAME = 'Review'
 export const KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME = 'Known gene for phenotype'
 export const DISCOVERY_CATEGORY_NAME = 'CMG Discovery Tags'
+export const MME_TAG_NAME = 'MME Submission'
 
 export const SORT_BY_FAMILY_GUID = 'FAMILY_GUID'
 export const SORT_BY_XPOS = 'XPOS'
 const SORT_BY_PATHOGENICITY = 'PATHOGENICITY'
 const SORT_BY_IN_OMIM = 'IN_OMIM'
+const SORT_BY_PRIORITIZED_GENE = 'PRIORITIZED_GENE'
 const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
 const SORT_BY_GNOMAD_GENOMES = 'GNOMAD'
 const SORT_BY_GNOMAD_EXOMES = 'GNOMAD_EXOMES'
 const SORT_BY_CALLSET_AF = 'CALLSET_AF'
-const SORT_BY_1KG = '1KG'
 const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 const SORT_BY_CADD = 'CADD'
 const SORT_BY_REVEL = 'REVEL'
@@ -983,6 +1005,8 @@ const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
 export const MISSENSE_THRESHHOLD = 3
 export const LOF_THRESHHOLD = 0.35
 
+const PRIORITIZED_GENE_MAX_RANK = 1000
+
 const getGeneConstraintSortScore = ({ constraints }) => {
   if (!constraints || constraints.louef === undefined) {
     return Infinity
@@ -1006,6 +1030,16 @@ const getConsequenceRank = ({ transcripts, svType }) => (
   ).filter(val => val)) : VEP_CONSEQUENCE_ORDER_LOOKUP[svType]
 )
 
+const getPrioritizedGeneTopRank = (variant, genesById, individualGeneDataByFamilyGene) => Math.min(...Object.keys(
+  variant.transcripts || {},
+).reduce((acc, geneId) => (
+  genesById[geneId] && individualGeneDataByFamilyGene[variant.familyGuids[0]]?.phenotypeGeneScores ? [
+    ...acc,
+    ...Object.values(individualGeneDataByFamilyGene[variant.familyGuids[0]].phenotypeGeneScores[geneId] || {}).reduce(
+      (acc2, toolScores) => ([...acc2, ...toolScores.map(score => score.rank)]), [],
+    ),
+  ] : acc), [PRIORITIZED_GENE_MAX_RANK]))
+
 const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_FAMILY_GUID, text: 'Family', comparator: (a, b) => a.familyGuids[0].localeCompare(b.familyGuids[0]) },
   { value: SORT_BY_XPOS, text: 'Position', comparator: (a, b) => a.xpos - b.xpos },
@@ -1017,7 +1051,6 @@ const VARIANT_SORT_OPTONS = [
   { value: SORT_BY_GNOMAD_GENOMES, text: 'gnomAD Genomes Frequency', comparator: populationComparator('gnomad_genomes') },
   { value: SORT_BY_GNOMAD_EXOMES, text: 'gnomAD Exomes Frequency', comparator: populationComparator('gnomad_exomes') },
   { value: SORT_BY_CALLSET_AF, text: 'Callset AF', comparator: populationComparator('callset') },
-  { value: SORT_BY_1KG, text: '1kg  Frequency', comparator: populationComparator('g1k') },
   { value: SORT_BY_CADD, text: 'Cadd', comparator: predictionComparator('cadd') },
   { value: SORT_BY_REVEL, text: 'Revel', comparator: predictionComparator('revel') },
   { value: SORT_BY_EIGEN, text: 'Eigen', comparator: predictionComparator('eigen') },
@@ -1050,6 +1083,14 @@ const VARIANT_SORT_OPTONS = [
       ) - Object.keys(a.transcripts || {}).reduce(
         (acc, geneId) => (genesById[geneId] ? acc + genesById[geneId].omimPhenotypes.length : acc), 0,
       )),
+  },
+  {
+    value: SORT_BY_PRIORITIZED_GENE,
+    text: 'Phenotype Prioritized Gene',
+    comparator: (a, b, genesById, _tag, _user, _family, _project, individualGeneDataByFamilyGene) => (
+      getPrioritizedGeneTopRank(a, genesById, individualGeneDataByFamilyGene) -
+        getPrioritizedGeneTopRank(b, genesById, individualGeneDataByFamilyGene)
+    ),
   },
   {
     value: SORT_BY_SIZE,
@@ -1183,10 +1224,8 @@ export const PREDICTOR_FIELDS = [
   { field: 'sift', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
   { field: 'mut_taster', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: MUTTASTER_MAP },
   { field: 'fathmm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
-  { field: 'metasvm', group: MISSENSE_IN_SILICO_GROUP, indicatorMap: INDICATOR_MAP },
-  { field: 'gerp_rs', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true, min: -13, max: 7 },
-  { field: 'phastcons_100_vert', group: MISSENSE_IN_SILICO_GROUP, noSeverity: true },
   { field: 'apogee', warningThreshold: 0.5, dangerThreshold: 0.5 },
+  { field: 'gnomad_noncoding', fieldTitle: 'gnomAD Constraint', displayOnly: true, warningThreshold: 2.18, dangerThreshold: 4 },
   { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP },
   { field: 'hmtvar', warningThreshold: 0.35, dangerThreshold: 0.35 },
@@ -1221,7 +1260,6 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'alt' },
   { header: 'gene', getVal: variant => getVariantMainTranscript(variant).geneSymbol },
   { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
-  { header: '1kg_freq', getVal: getPopAf('g1k') },
   { header: 'exac_freq', getVal: getPopAf('exac') },
   { header: 'gnomad_genomes_freq', getVal: getPopAf('gnomad_genomes') },
   { header: 'gnomad_exomes_freq', getVal: getPopAf('gnomad_exomes') },

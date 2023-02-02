@@ -3,9 +3,10 @@ import uniqBy from 'lodash/uniqBy'
 
 import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
-import { NOTE_TAG_NAME } from 'shared/utils/constants'
+import { NOTE_TAG_NAME, MME_TAG_NAME } from 'shared/utils/constants'
 
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
+export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid
@@ -24,12 +25,14 @@ export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById
 export const getGenesIsLoading = state => state.genesLoading.isLoading
+export const getTranscriptsById = state => state.transcriptsById
 export const getHpoTermsByParent = state => state.hpoTermsByParent
 export const getHpoTermsIsLoading = state => state.hpoTermsLoading.isLoading
 export const getLocusListsByGuid = state => state.locusListsByGuid
 export const getLocusListsIsLoading = state => state.locusListsLoading.isLoading
 export const getLocusListIsLoading = state => state.locusListLoading.isLoading
 export const getRnaSeqDataByIndividual = state => state.rnaSeqDataByIndividual
+export const getPhenotypeGeneScoresByIndividual = state => state.phenotypeGeneScoresByIndividual
 export const getUser = state => state.user
 export const getUserOptionsByUsername = state => state.userOptionsByUsername
 export const getUserOptionsIsLoading = state => state.userOptionsLoading.isLoading
@@ -37,6 +40,7 @@ export const getVersion = state => state.meta.version
 export const getGoogleLoginEnabled = state => state.meta.googleLoginEnabled
 export const getHijakEnabled = state => state.meta.hijakEnabled
 export const getWarningMessages = state => state.meta.warningMessages
+export const getAnvilLoadingDelayDate = state => state.meta.anvilLoadingDelayDate
 export const getSavedVariantsIsLoading = state => state.savedVariantsLoading.isLoading
 export const getSavedVariantsLoadingError = state => state.savedVariantsLoading.errorMessage
 export const getSearchesByHash = state => state.searchesByHash
@@ -232,11 +236,13 @@ export const getVariantTagNotesByFamilyVariants = createSelector(
   },
 )
 
-export const getTagTypesByProject = createSelector(
+export const getSelectableTagTypesByProject = createSelector(
   getProjectsByGuid,
   projectsByGuid => Object.values(projectsByGuid).reduce((acc, project) => ({
     ...acc,
-    [project.projectGuid]: (project.variantTagTypes || []).filter(vtt => vtt.name !== NOTE_TAG_NAME),
+    [project.projectGuid]: (project.variantTagTypes || []).filter(
+      vtt => vtt.name !== NOTE_TAG_NAME && vtt.name !== MME_TAG_NAME,
+    ),
   }), {}),
 )
 

@@ -1,6 +1,7 @@
 import json
 
-from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, BASE_URL, \
+    SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
 from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file, \
@@ -8,7 +9,7 @@ from seqr.views.utils.dataset_utils import match_and_update_samples, load_mappin
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, data_manager_required, \
-    project_has_analyst_access, project_has_anvil, service_account_access
+    is_internal_anvil_project, project_has_anvil, service_account_access
 
 
 @data_manager_required
@@ -76,7 +77,9 @@ def add_variants_dataset_handler_base(request, project_guid):
 
     updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
 
-    if project_has_analyst_access(project):
+    is_internal = is_internal_anvil_project(project)
+    has_anvil = project_has_anvil(project)
+    if has_anvil:
         updated_individuals = {sample.individual_id for sample in updated_samples}
         previous_loaded_individuals = {
             sample.individual_id for sample in Sample.objects.filter(
@@ -85,19 +88,17 @@ def add_variants_dataset_handler_base(request, project_guid):
         previous_loaded_individuals.update(matched_individual_ids)
         new_sample_ids = [
             sample.sample_id for sample in updated_samples if sample.individual_id not in previous_loaded_individuals]
+
+        dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
+        url = f'{BASE_URL}project/{project.guid}/project_page'
+        message = f'{len(new_sample_ids)} new {sample_type}{dataset_type} samples are loaded in {url}'
+        if is_internal:
+            message = f'{message}\n```{", ".join(new_sample_ids)}```'
         safe_post_to_slack(
-            SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
-            """{num_sample} new {sample_type}{dataset_type} samples are loaded in {base_url}project/{guid}/project_page
-            ```{samples}```
-            """.format(
-                num_sample=len(new_sample_ids),
-                sample_type=sample_type,
-                dataset_type='' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else ' {}'.format(dataset_type),
-                base_url=BASE_URL,
-                guid=project.guid,
-                samples=', '.join(new_sample_ids)
-            ))
-    elif project_has_anvil(project):
+            SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL if is_internal else SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
+            message)
+
+    if has_anvil and not is_internal:
         user = project.created_by
         send_html_email("""Hi {user},
 We are following up on your request to load data from AnVIL on {date}.
@@ -145,4 +146,3 @@ def _get_samples_json(updated_samples, inactivated_sample_guids, project_guid):
 @service_account_access
 def sa_add_variants_dataset(request, project_guid):
     return add_variants_dataset_handler_base(request, project_guid)
-    

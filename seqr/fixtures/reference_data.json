@@ -944,7 +944,7 @@
     "pk": 48,
     "fields": {
         "gene_id": "ENSG00000135953",
-        "gene_symbol": "RP11-206L10.5",
+        "gene_symbol": "RP11",
         "chrom_grch37": "1",
         "start_grch37": 694412,
         "end_grch37": 700305,
@@ -977,6 +977,49 @@
         "coding_region_size_grch38": 0,
         "gencode_gene_type": "antisense_RNA",
         "gencode_release": 27
+    }
+}, {
+    "model": "reference_data.transcriptinfo",
+    "pk": 1,
+    "fields": {
+        "gene_id": 48,
+        "transcript_id": "ENST00000258436",
+        "is_mane_select": true,
+        "chrom_grch37": "1",
+        "start_grch37": 696291,
+        "end_grch37": 697369,
+        "strand_grch37": "+",
+        "coding_region_size_grch37": 0,
+        "chrom_grch38": "1",
+        "start_grch38": 760911,
+        "end_grch38": 761989,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0
+    }
+}, {
+    "model": "reference_data.transcriptinfo",
+    "pk": 2,
+    "fields": {
+        "gene_id": 2,
+        "transcript_id": "ENST00000624735",
+        "is_mane_select": false,
+        "chrom_grch37": "1",
+        "start_grch37": 696291,
+        "end_grch37": 697369,
+        "strand_grch37": "+",
+        "coding_region_size_grch37": 0,
+        "chrom_grch38": "1",
+        "start_grch38": 760911,
+        "end_grch38": 761989,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0
+    }
+}, {
+    "model": "reference_data.refseqtranscript",
+    "pk": 1,
+    "fields": {
+        "transcript_id": 1,
+        "refseq_id": "NM_017900.2"
     }
 },
 {

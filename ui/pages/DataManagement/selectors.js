@@ -4,3 +4,4 @@ export const getQcUploadStats = state => state.qcUploadStats
 export const getRnaSeqUploadStats = state => state.rnaSeqUploadStats
 export const getAllUsersLoading = state => state.allUsersLoading.isLoading
 export const getAllUsers = state => state.allUsers
+export const getPhePriUploadStats = state => state.phePriUploadStats

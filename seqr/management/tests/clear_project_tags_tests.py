@@ -3,6 +3,7 @@ from django.core.management.base import CommandError
 from django.test import TestCase
 import mock
 
+from matchmaker.models import MatchmakerSubmissionGenes
 from seqr.models import SavedVariant, VariantTag, Project
 
 
@@ -30,18 +31,17 @@ class TransferFamiliesTest(TestCase):
         mock_input.assert_called_with(
             'Are you sure you want to clear the tags for the following 1 projects (y/n): Test Reprocessed Project\n')
         mock_logger.assert_has_calls([
-            mock.call('Deleted 5 entities:'),
+            mock.call('Deleted 3 entities:'),
             mock.call('    VariantTag_saved_variants: 2'),
             mock.call('    VariantTag: 1'),
-            mock.call('    SavedVariant: 2'),
         ], any_order=True)
 
-        self.assertEqual(SavedVariant.objects.filter(family__project__guid='R0003_test').count(), 0)
         self.assertEqual(VariantTag.objects.filter(saved_variants__family__project__guid='R0003_test').count(), 0)
 
     @mock.patch('seqr.management.commands.clear_project_tags.logger.info')
     def test_cron_command(self, mock_logger):
         Project.objects.update(all_user_demo=True)
+        MatchmakerSubmissionGenes.objects.all().delete()
         call_command('clear_project_tags', 'ALL_USER_DEMO', '--skip-confirm')
 
         mock_logger.assert_has_calls([

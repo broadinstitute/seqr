@@ -1,4 +1,6 @@
 # Utilities used for unit and integration tests.
+from collections import defaultdict
+from copy import deepcopy
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
@@ -41,6 +43,13 @@ class AuthenticationTestCase(TestCase):
         patcher = mock.patch('seqr.views.utils.permissions_utils.SEQR_TOS_VERSION', 1.3)
         patcher.start()
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
+        self.mock_analyst_group = patcher.start()
+        self.mock_analyst_group.__str__.return_value = 'Analysts'
+        self.mock_analyst_group.__eq__.side_effect = lambda s: str(self.mock_analyst_group) == s
+        self.mock_analyst_group.__bool__.side_effect = lambda: bool(str(self.mock_analyst_group))
+        self.mock_analyst_group.resolve_expression.return_value = 'analysts'
+        self.addCleanup(patcher.stop)
 
     @classmethod
     def setUpTestData(cls):
@@ -61,6 +70,18 @@ class AuthenticationTestCase(TestCase):
         assign_perm(user_or_group=edit_group, perm=CAN_EDIT, obj=Project.objects.filter(can_edit_group=edit_group))
         assign_perm(user_or_group=edit_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=edit_group))
         assign_perm(user_or_group=view_group, perm=CAN_VIEW, obj=Project.objects.filter(can_view_group=view_group))
+
+        cls.add_additional_user_groups()
+
+    @classmethod
+    def add_additional_user_groups(cls):
+        analyst_group = Group.objects.get(pk=4)
+        analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
+        assign_perm(user_or_group=analyst_group, perm=CAN_EDIT, obj=Project.objects.filter(id__in=[1, 2, 3]))
+        assign_perm(user_or_group=analyst_group, perm=CAN_VIEW, obj=Project.objects.filter(id__in=[1, 2, 3]))
+
+        pm_group = Group.objects.get(pk=5)
+        pm_group.user_set.add(cls.pm_user)
 
     def check_require_login(self, url, **request_kwargs):
         self._check_login(url, self.AUTHENTICATED_USER, **request_kwargs)
@@ -195,9 +216,17 @@ class AuthenticationTestCase(TestCase):
     def get_initial_page_json(self, response):
         return self.get_initial_page_window('initialJSON', response)
 
+    def check_no_analyst_no_access(self, url, get_response=None):
+        self.mock_analyst_group.__str__.return_value = ''
+
+        response = get_response() if get_response else self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()['error'], 'Permission Denied')
+
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
 TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
+TEST_EMPTY_PROJECT_WORKSPACE = 'empty'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
 
@@ -232,6 +261,12 @@ ANVIL_WORKSPACES = [{
             "canShare": False,
             "canCompute": True
         },
+        'Analysts@firecloud.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
         'test_user_pure_anvil@test.com': {
             "accessLevel": "READER",
             "pending": False,
@@ -258,7 +293,13 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": False,
             "canCompute": False
-        }
+        },
+        'Analysts@firecloud.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
     'workspace': {
         'bucketName': 'test_bucket'
@@ -279,11 +320,23 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": False,
             "canCompute": True
-        }
+        },
     },
     'workspace': {
         'authorizationDomain': [],
         'bucketName': 'test_bucket'
+    },
+}, {
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_EMPTY_PROJECT_WORKSPACE,
+    'public': False,
+    'acl': {
+        'Analysts@firecloud.org': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
     },
 }, {
     'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
@@ -311,6 +364,16 @@ ANVIL_WORKSPACES = [{
 ]
 
 
+ANVIL_GROUPS = {
+    'project-managers': ['test_pm_user@test.com'],
+    'Analysts': ['test_pm_user@test.com', 'test_user@broadinstitute.org'],
+}
+ANVIL_GROUP_LOOKUP = defaultdict(list)
+for group, users in ANVIL_GROUPS.items():
+    for user in users:
+        ANVIL_GROUP_LOOKUP[user].append(group)
+
+
 TEST_TERRA_API_ROOT_URL =  'https://terra.api/'
 TEST_OAUTH2_KEY = 'abc123'
 
@@ -329,7 +392,11 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
     wss = filter(lambda x: x['workspace_namespace'] == workspace_namespace and x['workspace_name'] == workspace_name, ANVIL_WORKSPACES)
     wss = list(wss)
     acl = wss[0]['acl'] if wss else {}
-    user_acl = next((v for k, v in acl.items() if user.email.lower() == k.lower()), None)
+    email = user.email.lower()
+    user_acl = next((v for k, v in acl.items() if email == k.lower()), None)
+    for user_group in ANVIL_GROUP_LOOKUP[email]:
+        if not user_acl:
+            user_acl = acl.get(f'{user_group}@firecloud.org')
     access_level = {
         'accessLevel': user_acl['accessLevel'],
         'canShare': user_acl['canShare'],
@@ -344,6 +411,7 @@ def get_ws_al_side_effect(user, workspace_namespace, workspace_name, meta_fields
 
 
 def get_workspaces_side_effect(user):
+    email = user.email.lower()
     return [
         {
             'public': ws['public'],
@@ -351,8 +419,22 @@ def get_workspaces_side_effect(user):
                 'namespace': ws['workspace_namespace'],
                 'name': ws['workspace_name']
             }
-        } for ws in ANVIL_WORKSPACES if any(user.email.lower() == k.lower() for k in ws['acl'].keys())
+        } for ws in ANVIL_WORKSPACES if any(
+            email == k.lower() or k.replace('@firecloud.org', '') in ANVIL_GROUP_LOOKUP[email]
+            for k in ws['acl'].keys())
     ]
+
+
+
+def get_groups_side_effect(user):
+    return [group for group, users in ANVIL_GROUPS.items() if user.email in users]
+
+
+def get_group_members_side_effect(user, group, use_sa_credentials=False):
+    members = ANVIL_GROUPS[str(group)]
+    if user.email in members or use_sa_credentials:
+        return members
+    return {}
 
 
 class AnvilAuthenticationTestCase(AuthenticationTestCase):
@@ -366,6 +448,9 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.orm_to_json_utils.SERVICE_ACCOUNT_FOR_ANVIL', TEST_SERVICE_ACCOUNT)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing'])
         patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.terra_api_utils.time')
@@ -383,7 +468,25 @@ class AnvilAuthenticationTestCase(AuthenticationTestCase):
         self.mock_get_ws_access_level = patcher.start()
         self.mock_get_ws_access_level.side_effect = get_ws_al_side_effect
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.user_get_anvil_groups')
+        self.mock_get_groups = patcher.start()
+        self.mock_get_groups.side_effect = get_groups_side_effect
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.views.utils.permissions_utils.get_anvil_group_members')
+        self.mock_get_group_members = patcher.start()
+        self.mock_get_group_members.side_effect = get_group_members_side_effect
+        self.addCleanup(patcher.stop)
         super(AnvilAuthenticationTestCase, self).setUp()
+
+    @classmethod
+    def add_additional_user_groups(cls):
+        analyst_group = Group.objects.get(pk=4)
+        analyst_group.user_set.add(cls.analyst_user, cls.pm_user)
+
+    def assert_no_extra_anvil_calls(self):
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
 
 
 # The responses library for mocking requests does not work with urllib3 (which is used by elasticsearch)
@@ -448,11 +551,18 @@ INDIVIDUAL_FIELDS_NO_FEATURES = {
 INDIVIDUAL_FIELDS = {'features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures'}
 INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS_NO_FEATURES)
 
-INTERNAL_INDIVIDUAL_FIELDS = {
+CASE_REVIEW_INDIVIDUAL_FIELDS = {
     'caseReviewStatus', 'caseReviewDiscussion', 'caseReviewStatusLastModifiedDate', 'caseReviewStatusLastModifiedBy',
-    'probandRelationship',
 }
-INTERNAL_INDIVIDUAL_FIELDS.update(INDIVIDUAL_FIELDS)
+CORE_INTERNAL_INDIVIDUAL_FIELDS = {
+    'probandRelationship', 'analyteType', 'primaryBiosample', 'tissueAffectedStatus',
+}
+
+NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS = deepcopy(INDIVIDUAL_FIELDS)
+NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
+
+INTERNAL_INDIVIDUAL_FIELDS = deepcopy(NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS)
+INTERNAL_INDIVIDUAL_FIELDS.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
 
 SAMPLE_FIELDS = {
     'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
@@ -464,6 +574,12 @@ IGV_SAMPLE_FIELDS = {
 }
 
 SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
+SAVED_VARIANT_DETAIL_FIELDS = {
+    'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
+    'functionalDataGuids', 'noteGuids', 'originalAltAlleles', 'genotypes', 'hgmd',
+    'transcripts', 'populations', 'predictions', 'rsid', 'genotypeFilters', 'clinvar', 'acmgClassification'
+}
+SAVED_VARIANT_DETAIL_FIELDS.update(SAVED_VARIANT_FIELDS)
 
 TAG_FIELDS = {
     'tagGuid', 'name', 'category', 'color', 'searchHash', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
@@ -750,26 +866,39 @@ PARSED_VARIANTS = [
         'selectedMainTranscriptId': None,
         'originalAltAlleles': ['T'],
         'populations': {
-            'callset': {'an': 32, 'ac': 2, 'hom': None, 'af': 0.063, 'hemi': None, 'filter_af': None, 'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0, 'filter_af': 0.0004590314436538903, 'het': 0, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661, 'het': 0, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0, 'filter_af': 0.0009151523074911753, 'het': 0, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None, 'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None, 'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'gnomad_mito': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-            'helix': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
-                            'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+            'callset': {'an': 32, 'ac': 2, 'hom': 3, 'af': 0.063, 'hemi': None, 'filter_af': None, 'het': None,
+                        'id': None, 'max_hl': None},
+            'gnomad_genomes': {'an': 30946, 'ac': 4, 'hom': 0, 'af': 0.00012925741614425127, 'hemi': 0,
+                               'filter_af': 0.0004590314436538903, 'het': 0, 'id': None, 'max_hl': None},
+            'exac': {'an': 121308, 'ac': 8, 'hom': 0, 'af': 0.00006589, 'hemi': 0, 'filter_af': 0.0006726888333653661,
+                     'het': 0, 'id': None, 'max_hl': None},
+            'gnomad_exomes': {'an': 245930, 'ac': 16, 'hom': 0, 'af': 0.00006505916317651364, 'hemi': 0,
+                              'filter_af': 0.0009151523074911753, 'het': 0, 'id': None, 'max_hl': None},
+            'topmed': {'an': 125568, 'ac': 21, 'hom': 0, 'af': 0.00016724, 'hemi': 0, 'filter_af': None, 'het': None,
+                       'id': None, 'max_hl': None},
+            'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None,
+                           'het': None, 'id': None, 'max_hl': None},
+            'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None,
+                           'het': None, 'id': None, 'max_hl': None},
+            'gnomad_mito': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                            'hom': None, 'id': None, 'max_hl': None},
+            'helix': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None, 'hom': None,
+                      'id': None, 'max_hl': None},
+            'callset_heteroplasmy': {'ac': None, 'af': None, 'an': 32, 'filter_af': None, 'hemi': None, 'het': None,
+                                     'hom': None, 'id': None, 'max_hl': None},
+            'gnomad_mito_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None,
+                                         'het': None, 'hom': None, 'id': None, 'max_hl': None},
+            'helix_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                   'hom': None, 'id': None, 'max_hl': None},
         },
         'pos': 248367227,
         'predictions': {'splice_ai': 0.75, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                         'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
-                        'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'metasvm': None, 'primate_ai': None,
-                        'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
-                        'splice_ai_consequence': None},
+                        'polyphen': None, 'dann': None, 'sift': None, 'cadd': '25.9', 'primate_ai': None,
+                        'mpc': None, 'strvctvre': None, 'splice_ai_consequence': None, 'gnomad_noncoding': 1.01272,},
         'ref': 'TC',
         'rsid': None,
+        'screenRegionType': 'dELS',
         'transcripts': {
             'ENSG00000135953': [TRANSCRIPT_3],
             'ENSG00000228198': [TRANSCRIPT_2],
@@ -820,36 +949,40 @@ PARSED_VARIANTS = [
         'originalAltAlleles': ['G'],
         'populations': {
             'callset': {'an': 32, 'ac': 1, 'hom': None, 'af': 0.031, 'hemi': None, 'filter_af': None, 'het': None,
-                        'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'g1k': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0, 'id': None,
-                    'ac_het': None, 'af_het': None, 'max_hl': None},
+                        'id': None, 'max_hl': None},
             'gnomad_genomes': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': 0,
-                               'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                               'id': None, 'max_hl': None},
             'exac': {'an': 121336, 'ac': 6, 'hom': 0, 'af': 0.00004942, 'hemi': 0, 'filter_af': 0.000242306760358614,
-                     'het': 0, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                     'het': 0, 'id': None, 'max_hl': None},
             'gnomad_exomes': {'an': 245714, 'ac': 6, 'hom': 0, 'af': 0.000024418633044922146, 'hemi': 0,
-                              'filter_af': 0.00016269686320447742, 'het': 0, 'id': None, 'ac_het': None, 'af_het': None,
-                              'max_hl': None},
+                              'filter_af': 0.00016269686320447742, 'het': 0, 'id': None, 'max_hl': None},
             'topmed': {'an': 0, 'ac': 0, 'hom': 0, 'af': 0.0, 'hemi': 0, 'filter_af': None, 'het': None, 'id': None,
-                       'ac_het': None, 'af_het': None, 'max_hl': None},
+                       'max_hl': None},
             'sv_callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None,
-                           'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                           'het': None, 'id': None, 'max_hl': None},
             'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'hom': None,
-                           'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-            'gnomad_mito': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+                           'het': None, 'id': None, 'max_hl': None},
+            'gnomad_mito': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                             'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-            'helix': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+            'helix': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                       'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+            'callset_heteroplasmy': {'ac': None, 'af': None, 'an': 32, 'filter_af': None, 'hemi': None, 'het': None,
+                                     'hom': None, 'id': None, 'max_hl': None},
+            'gnomad_mito_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None,
+                                         'het': None, 'hom': None, 'id': None, 'max_hl': None},
+            'helix_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                   'hom': None, 'id': None, 'max_hl': None},
         },
         'pos': 103343353,
         'predictions': {
-            'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
+            'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None, 'gnomad_noncoding': None,
             'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None, 'polyphen': None,
-            'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': 1, 'gerp_rs': None,
-            'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None, 'splice_ai_consequence': None,
+            'dann': None, 'sift': None, 'cadd': None, 'primate_ai': 1,
+            'mpc': None, 'strvctvre': None, 'splice_ai_consequence': None,
         },
         'ref': 'GAGA',
         'rsid': None,
+        'screenRegionType': None,
         'transcripts': {
             'ENSG00000135953': [TRANSCRIPT_1],
             'ENSG00000228198': [TRANSCRIPT_2],
@@ -901,34 +1034,38 @@ PARSED_SV_VARIANT = {
     'originalAltAlleles': [],
     'populations': {
         'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                    'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                    'id': None, 'max_hl': None},
         'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None,
-                           'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                           'het': None, 'id': None, 'max_hl': None},
         'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                 'id': None, 'max_hl': None},
         'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                          'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                          'id': None, 'max_hl': None},
         'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                   'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                   'id': None, 'max_hl': None},
         'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None,
-                       'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-        'gnomad_svs': {'ac': 0, 'af': 0, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': None,
-                       'ac_het': None, 'af_het': None, 'max_hl': None},
-        'gnomad_mito': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+                       'het': None, 'id': None, 'max_hl': None},
+        'gnomad_svs': {'ac': 0, 'af': 0.0, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0, 'id': None,
+                       'max_hl': None},
+        'gnomad_mito': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                         'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-        'helix': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+        'helix': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                   'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+        'callset_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                 'hom': None, 'id': None, 'max_hl': None},
+        'gnomad_mito_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                 'hom': None, 'id': None, 'max_hl': None},
+        'helix_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                     'hom': None, 'id': None, 'max_hl': None},
     },
     'pos': 49045487,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
-                    'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
-                    'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
-                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': 0.374,
-                    'splice_ai_consequence': None},
+                    'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None, 'gnomad_noncoding': None,
+                    'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'primate_ai': None,
+                    'mpc': None, 'strvctvre': 0.374, 'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
+    'screenRegionType': None,
     'transcripts': {
         'ENSG00000228198': [
             {
@@ -982,34 +1119,38 @@ PARSED_SV_WGS_VARIANT = {
     'originalAltAlleles': [],
     'populations': {
         'callset': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                    'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-        'g1k': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                    'id': None, 'max_hl': None},
         'gnomad_genomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None,
-                           'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                           'het': None, 'id': None, 'max_hl': None},
         'exac': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                 'id': None, 'max_hl': None},
         'gnomad_exomes': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                          'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                          'id': None, 'max_hl': None},
         'topmed': {'an': None, 'ac': None, 'hom': None, 'af': None, 'hemi': None, 'filter_af': None, 'het': None,
-                   'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
+                   'id': None, 'max_hl': None},
         'sv_callset': {'an': 10088, 'ac': 7, 'hom': None, 'af': 0.000693825, 'hemi': None, 'filter_af': None,
-                       'het': None, 'id': None, 'ac_het': None, 'af_het': None, 'max_hl': None},
-        'gnomad_svs': {'ac': 0, 'af': 0.00679, 'an': 0, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0,
-                       'id': 'gnomAD-SV_v2.1_BND_1_1', 'ac_het': None, 'af_het': None, 'max_hl': None},
-        'gnomad_mito': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+                       'het': None, 'id': None, 'max_hl': None},
+        'gnomad_svs': {'ac': 22, 'af': 0.00679, 'an': 3240, 'filter_af': None, 'hemi': 0, 'hom': 0, 'het': 0,
+                       'id': 'gnomAD-SV_v2.1_BND_1_1', 'max_hl': None},
+        'gnomad_mito': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                         'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-        'helix': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+        'helix': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                   'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
+        'callset_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                 'hom': None, 'id': None, 'max_hl': None},
+        'gnomad_mito_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                     'hom': None, 'id': None, 'max_hl': None},
+        'helix_heteroplasmy': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                               'hom': None, 'id': None, 'max_hl': None},
     },
     'pos': 49045387,
     'predictions': {'splice_ai': None, 'eigen': None, 'revel': None, 'mut_taster': None, 'fathmm': None,
                     'hmtvar': None, 'apogee': None, 'haplogroup_defining': None, 'mitotip': None,
-                    'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'metasvm': None, 'primate_ai': None,
-                    'gerp_rs': None, 'mpc': None, 'phastcons_100_vert': None, 'strvctvre': None,
-                    'splice_ai_consequence': None},
+                    'polyphen': None, 'dann': None, 'sift': None, 'cadd': None, 'primate_ai': None,
+                    'mpc': None, 'strvctvre': None, 'gnomad_noncoding': None, 'splice_ai_consequence': None},
     'ref': None,
     'rsid': None,
+    'screenRegionType': None,
     'transcripts': {
         'ENSG00000228198': [
             {
@@ -1018,6 +1159,20 @@ PARSED_SV_WGS_VARIANT = {
                 'geneId': 'ENSG00000228198'
             },
         ],
+        'ENSG00000228199': [
+            {
+                'geneId': 'ENSG00000228199',
+                'geneSymbol': 'FBXO28',
+                'majorConsequence': 'MSV_EXON_OVERLAP'
+            }
+        ],
+        'ENSG00000228201': [
+            {
+                'geneId': 'ENSG00000228201',
+                'geneSymbol': 'FAM131C',
+                'majorConsequence': 'INTRAGENIC_EXON_DUP'
+            }
+        ]
     },
     'variantId': 'prefix_19107_CPX',
     'xpos': 2049045387,
@@ -1036,7 +1191,7 @@ PARSED_MITO_VARIANT = {
     'alt': 'A',
     'bothsidesSupport': None,
     'chrom': 'M',
-    'clinvar': {'alleleId': None, 'clinicalSignificance': ['Likely_pathogenic'], 'goldStars': None, 'variationId': None},
+    'clinvar': {'alleleId': None, 'clinicalSignificance': 'Likely_pathogenic', 'goldStars': None, 'variationId': None},
     'commonLowHeteroplasmy': False,
     'cpxIntervals': None,
     'end': 10195,
@@ -1054,35 +1209,40 @@ PARSED_MITO_VARIANT = {
     'numExon': None,
     'originalAltAlleles': [],
     'populations':
-        {'callset': {'ac': 0, 'ac_het': 1, 'af': 0.0, 'af_het': 0.0003968253968253968, 'an': 2520, 'filter_af': None, 'hemi': None,
+        {'callset': {'ac': 0, 'af': 0.0, 'an': 2520, 'filter_af': None, 'hemi': None,
               'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'exac': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None, 'hemi': None,
+         'exac': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None,
               'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'g1k': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None, 'hemi': None,
-                 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'gnomad_exomes': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+         'gnomad_exomes': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                            'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'gnomad_genomes': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+         'gnomad_genomes': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                             'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'gnomad_mito': {'ac': 1368, 'ac_het': 3, 'af': 0.024246292, 'af_het': 5.317169e-05, 'an': 56421, 'filter_af': None, 'hemi': None,
-                         'het': None, 'hom': None, 'id': None,'max_hl': 1.0},
-         'gnomad_svs': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+         'gnomad_mito': {'ac': 1368, 'af': 0.024246292, 'an': 56421, 'filter_af': None, 'hemi': None,
+                         'het': None, 'hom': None, 'id': None,'max_hl': None},
+         'gnomad_svs': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                         'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'helix': {'ac': 1312, 'ac_het': 5, 'af': 0.0033268193, 'af_het': 4.081987e-05, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
-                   'hom': None, 'id': None, 'max_hl': 0.90441},
-         'sv_callset': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None,
+         'helix': {'ac': 1312, 'af': 0.0033268193, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                   'hom': None, 'id': None, 'max_hl': None},
+         'sv_callset': {'ac': None, 'af': None, 'an': None, 'filter_af': None,
                         'hemi': None, 'het': None, 'hom': None, 'id': None, 'max_hl': None},
-         'topmed': {'ac': None, 'ac_het': None, 'af': None, 'af_het': None, 'an': None, 'filter_af': None, 'hemi': None,
-                    'het': None, 'hom': None, 'id': None, 'max_hl': None}},
+         'topmed': {'ac': None, 'af': None, 'an': None, 'filter_af': None, 'hemi': None,
+                    'het': None, 'hom': None, 'id': None, 'max_hl': None},
+         'callset_heteroplasmy': {'ac': 1, 'af': 0.0003968253968253968, 'an': 2520, 'filter_af': None, 'hemi': None, 'het': None,
+                                  'hom': None, 'id': None, 'max_hl': None},
+         'gnomad_mito_heteroplasmy': {'ac': 3, 'af': 5.317169e-05, 'an': 56421, 'filter_af': None, 'hemi': None, 'het': None,
+                                      'hom': None, 'id': None, 'max_hl': 1.0},
+         'helix_heteroplasmy': {'ac': 5, 'af': 4.081987e-05, 'an': None, 'filter_af': None, 'hemi': None, 'het': None,
+                                'hom': None, 'id': None, 'max_hl': 0.90441},
+        },
     'pos': 10195,
     'predictions': {'hmtvar': 0.71, 'apogee': 0.42, 'cadd': None, 'dann': None, 'eigen': None, 'fathmm': 'T',
-                    'gerp_rs': '5.07', 'haplogroup_defining': None, 'metasvm': None, 'mitotip': None,
-                    'mpc': None, 'mut_taster': 'N', 'phastcons_100_vert': '0.958000', 'polyphen': None,
+                    'haplogroup_defining': None, 'mitotip': None, 'mpc': None, 'mut_taster': 'N', 'polyphen': None,
                     'primate_ai': None, 'revel': None, 'sift': 'D', 'splice_ai': None, 'splice_ai_consequence': None,
-                    'strvctvre': None},
+                    'strvctvre': None, 'gnomad_noncoding': None,},
     'ref': 'C',
     'rg37LocusEnd': None,
     'rsid': None,
+    'screenRegionType': None,
     'selectedMainTranscriptId': None,
     'svType': None,
     'svTypeDetail': None,

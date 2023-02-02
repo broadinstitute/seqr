@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
+import { getProjectDetailsIsLoading } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
 import { SectionHeader } from 'shared/components/StyledComponents'
@@ -14,15 +15,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_DETAIL_FIELDS,
 } from 'shared/utils/constants'
-import {
-  getCurrentProject,
-  getProjectDetailsIsLoading,
-  getAnalysisStatusCounts,
-  getProjectOverviewIsLoading,
-  getFamiliesLoading,
-  getTagTypeCounts,
-  getAnalysisGroupTagTypeCounts,
-} from '../selectors'
+import { getCurrentProject, getProjectOverviewIsLoading, getFamiliesLoading } from '../selectors'
 import { loadProjectOverview } from '../reducers'
 import ProjectOverview from './ProjectOverview'
 import AnalysisGroups from './AnalysisGroups'
@@ -31,7 +24,6 @@ import ProjectCollaborators from './ProjectCollaborators'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
 import VariantTags from './VariantTags'
-import VariantTagTypeBar from './VariantTagTypeBar'
 
 const ProjectSectionComponent = React.memo((
   { loading, label, children, editButton, linkPath, linkText, project, collaboratorEdit },
@@ -66,9 +58,9 @@ ProjectSectionComponent.propTypes = {
   collaboratorEdit: PropTypes.bool,
 }
 
-const mapSectionStateToProps = state => ({
+const mapSectionStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
-  loading: getProjectDetailsIsLoading(state),
+  loading: ownProps.loading || getProjectDetailsIsLoading(state),
 })
 
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
@@ -76,48 +68,36 @@ const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 const NO_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_ANALYSIS_STATUS, colWidth: 2 },
   { id: FAMILY_FIELD_ANALYSED_BY, colWidth: 2 },
-  { id: FAMILY_FIELD_FIRST_SAMPLE },
-  { id: FAMILY_FIELD_DESCRIPTION, colWidth: 6 },
+  { id: FAMILY_FIELD_FIRST_SAMPLE, colWidth: 2 },
+  { id: FAMILY_FIELD_DESCRIPTION, colWidth: 5 },
 ]
 
-const ProjectPageUI = React.memo(props => (
+const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLoading }) => (
   <Grid stackable>
-    <DataLoader load={props.load} loading={props.loading} content>
+    <DataLoader load={load} loading={false} content>
       <Grid.Row>
         <Grid.Column width={4}>
-          {props.match.params.analysisGroupGuid ? null : (
+          {analysisGroupGuid ? null : (
             <ProjectSection label="Analysis Groups" editButton={<UpdateAnalysisGroupButton />}>
               <AnalysisGroups />
             </ProjectSection>
           )}
           <VerticalSpacer height={10} />
-          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton project={props.project} />} collaboratorEdit>
-            <GeneLists project={props.project} />
+          <ProjectSection label="Gene Lists" editButton={<AddGeneListsButton />} collaboratorEdit>
+            <GeneLists />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={8}>
           <ProjectSection label="Overview">
             <ProjectOverview
-              project={props.project}
-              analysisGroupGuid={props.match.params.analysisGroupGuid}
-              familiesLoading={props.familiesLoading}
+              analysisGroupGuid={analysisGroupGuid}
+              familiesLoading={familiesLoading}
+              overviewLoading={loading}
             />
           </ProjectSection>
           <VerticalSpacer height={10} />
-          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
-            <VariantTagTypeBar
-              project={props.project}
-              analysisGroupGuid={props.match.params.analysisGroupGuid}
-              tagTypeCounts={props.tagTypeCounts}
-              height={20}
-              showAllPopupCategories
-            />
-            <VerticalSpacer height={10} />
-            <VariantTags
-              project={props.project}
-              analysisGroupGuid={props.match.params.analysisGroupGuid}
-              tagTypeCounts={props.tagTypeCounts}
-            />
+          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All" loading={loading}>
+            <VariantTags analysisGroupGuid={analysisGroupGuid} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
@@ -131,6 +111,7 @@ const ProjectPageUI = React.memo(props => (
       <Grid.Column width={16}>
         <SectionHeader>Families</SectionHeader>
         <FamilyTable
+          analysisGroupGuid={analysisGroupGuid}
           showVariantDetails
           detailFields={FAMILY_DETAIL_FIELDS}
           noDetailFields={NO_DETAIL_FIELDS}
@@ -141,21 +122,15 @@ const ProjectPageUI = React.memo(props => (
 ))
 
 ProjectPageUI.propTypes = {
-  project: PropTypes.object.isRequired,
-  match: PropTypes.object,
+  analysisGroupGuid: PropTypes.string,
   load: PropTypes.func,
   loading: PropTypes.bool,
   familiesLoading: PropTypes.bool,
-  tagTypeCounts: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  project: getCurrentProject(state),
-  analysisStatusCounts: getAnalysisStatusCounts(state, ownProps),
+const mapStateToProps = state => ({
   loading: getProjectOverviewIsLoading(state),
   familiesLoading: getFamiliesLoading(state),
-  tagTypeCounts: ownProps.match.params.analysisGroupGuid ?
-    getAnalysisGroupTagTypeCounts(state, ownProps) : getTagTypeCounts(state),
 })
 
 const mapDispatchToProps = {
@@ -164,4 +139,6 @@ const mapDispatchToProps = {
 
 export { ProjectPageUI as ProjectPageUIComponent }
 
-export default connect(mapStateToProps, mapDispatchToProps)(ProjectPageUI)
+export default connect(mapStateToProps, mapDispatchToProps)(
+  ({ match, ...props }) => <ProjectPageUI analysisGroupGuid={match.params.analysisGroupGuid} {...props} />,
+)

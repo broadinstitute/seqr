@@ -14,6 +14,8 @@ import {
   FILE_FORMATS,
   INDIVIDUAL_CORE_EXPORT_DATA,
   INDIVIDUAL_ID_EXPORT_DATA,
+  INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
   SAMPLE_TYPE_OPTIONS,
 } from 'shared/utils/constants'
 import { validateUploadedFile } from 'shared/components/form/XHRUploaderField'
@@ -21,13 +23,14 @@ import BulkUploadForm from 'shared/components/form/BulkUploadForm'
 import FormWizard from 'shared/components/form/FormWizard'
 import { validators } from 'shared/components/form/FormHelpers'
 import { BooleanCheckbox, RadioGroup } from 'shared/components/form/Inputs'
+import PhiWarningUploadField from 'shared/components/form/PhiWarningUploadField'
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
+import { getAnvilLoadingDelayDate } from 'redux/selectors'
 import AnvilFileSelector from 'shared/components/form/AnvilFileSelector'
 
 const VCF_DOCUMENTATION_URL = 'https://storage.googleapis.com/seqr-reference-data/seqr-vcf-info.pdf'
 
-const WARNING_HEADER = 'Planned Data Loading Delay'
-const WARNING_BANNER = null
+const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
@@ -35,6 +38,9 @@ const FIELD_DESCRIPTIONS = {
 }
 const REQUIRED_FIELDS = INDIVIDUAL_ID_EXPORT_DATA.map(config => (
   { ...config, description: FIELD_DESCRIPTIONS[config.field] }))
+REQUIRED_FIELDS.push(...INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => NON_ID_REQUIRED_FIELDS.includes(field)))
+
+const OPTIONAL_FIELDS = INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => !NON_ID_REQUIRED_FIELDS.includes(field))
 
 const BLANK_EXPORT = {
   filename: 'individuals_template',
@@ -43,19 +49,38 @@ const BLANK_EXPORT = {
   processRow: val => val,
 }
 
+const DEMO_EXPORT = {
+  ...BLANK_EXPORT,
+  filename: 'demo_individuals',
+  rawData: [
+    ['FAM1', 'FAM1_1', 'FAM1_2', 'FAM1_3', 'Male', 'Affected', ''],
+    ['FAM1', 'FAM1_4', 'FAM1_2', 'FAM1_3', '', 'Affected', 'an affected sibling'],
+    ['FAM1', 'FAM1_2', '', '', 'Male', 'Unaffected', ''],
+    ['FAM1', 'FAM1_3', '', '', 'Female', '', 'affected status of mother unknown'],
+    ['FAM2', 'FAM2_1', '', '', 'Female', 'Affected', 'a proband-only family'],
+  ],
+}
+
+const PHI_DISCALIMER = `including in any of the IDs or in the notes. PHI includes names, contact information, 
+birth dates, and any other identifying information`
+
 const UploadPedigreeField = React.memo(({ name, error }) => (
   <div className={`${error ? 'error' : ''} field`}>
     <label key="uploadLabel">Upload Pedigree Data</label>
     <Segment key="uploadForm" color={error ? 'red' : null}>
-      <BulkUploadForm
-        name={name}
-        blankExportConfig={BLANK_EXPORT}
-        requiredFields={REQUIRED_FIELDS}
-        optionalFields={INDIVIDUAL_CORE_EXPORT_DATA}
-        uploadFormats={FILE_FORMATS}
-        actionDescription="load individual data from an AnVIL workspace to a new seqr project"
-        url="/api/upload_temp_file"
-      />
+      <PhiWarningUploadField fileDescriptor="pedigree file" disclaimerDetail={PHI_DISCALIMER}>
+        <BulkUploadForm
+          name={name}
+          blankExportConfig={BLANK_EXPORT}
+          exportConfig={DEMO_EXPORT}
+          templateLinkContent="an example pedigree"
+          requiredFields={REQUIRED_FIELDS}
+          optionalFields={OPTIONAL_FIELDS}
+          uploadFormats={FILE_FORMATS}
+          actionDescription="load individual data from an AnVIL workspace to a new seqr project"
+          url="/api/upload_temp_file"
+        />
+      </PhiWarningUploadField>
     </Segment>
   </div>
 ))
@@ -137,7 +162,7 @@ const ADD_DATA_WIZARD_PAGES = [
   { fields: [UPLOAD_PEDIGREE_FIELD] },
 ]
 
-const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
+const LoadWorkspaceDataForm = React.memo(({ params, onAddData, createProject, anvilLoadingDelayDate, ...props }) => (
   <div>
     <Header size="large" textAlign="center">
       {`Load data to seqr from AnVIL Workspace "${params.workspaceNamespace}/${params.workspaceName}"`}
@@ -149,11 +174,33 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
         see &nbsp;
         <b><a href={VCF_DOCUMENTATION_URL} target="_blank" rel="noreferrer">this documentation</a></b>
       </Message>
-      {WARNING_BANNER ? <Message error compact header={WARNING_HEADER} content={WARNING_BANNER} /> : null}
+      {anvilLoadingDelayDate ? (
+        <Message
+          error
+          compact
+          header="Planned Data Loading Delay"
+          content={
+            <span>
+              The Broad Institute is currently having an internal retreat or is closed for winter break.
+              <br />
+              As a result, any requests for data to be loaded as of &nbsp;
+              <b>{new Date(`${anvilLoadingDelayDate}T00:00`).toDateString()}</b>
+              &nbsp; will be delayed until the &nbsp;
+              <b>
+                2nd week of January &nbsp;
+                {new Date(`${anvilLoadingDelayDate}T00:00`).getFullYear() + 1}
+              </b>
+              <br />
+              We appreciate your understanding and support of our research team taking some well-deserved time off
+              and hope you also have a nice break.
+            </span>
+          }
+        />
+      ) : null}
     </Segment>
     <FormWizard
       {...props}
-      onSubmit={onAddData || createProjectFromWorkspace}
+      onSubmit={createProject ? createProjectFromWorkspace : onAddData}
       pages={params.projectGuid ? ADD_DATA_WIZARD_PAGES : NEW_PROJECT_WIZARD_PAGES}
       initialValues={params}
       size="small"
@@ -172,13 +219,17 @@ const LoadWorkspaceDataForm = React.memo(({ params, onAddData, ...props }) => (
 
 LoadWorkspaceDataForm.propTypes = {
   params: PropTypes.object.isRequired,
+  anvilLoadingDelayDate: PropTypes.string,
+  createProject: PropTypes.bool,
   onAddData: PropTypes.func,
 }
+
+const mapStateToProps = state => ({
+  anvilLoadingDelayDate: getAnvilLoadingDelayDate(state),
+})
 
 const mapDispatchToProps = {
   onAddData: addDataFromWorkspace,
 }
 
-export const AddWorkspaceDataForm = connect(null, mapDispatchToProps)(LoadWorkspaceDataForm)
-
-export default LoadWorkspaceDataForm
+export default connect(mapStateToProps, mapDispatchToProps)(LoadWorkspaceDataForm)

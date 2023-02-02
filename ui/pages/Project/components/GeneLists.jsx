@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Popup } from 'semantic-ui-react'
+import { Dimmer, Loader, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { getLocusListsByGuid } from 'redux/selectors'
@@ -14,7 +14,8 @@ import DeleteButton from 'shared/components/buttons/DeleteButton'
 import { validators } from 'shared/components/form/FormHelpers'
 import Modal from 'shared/components/modal/Modal'
 import { HelpIcon, ButtonLink } from 'shared/components/StyledComponents'
-import { updateLocusLists } from '../reducers'
+import { loadProjectLocusLists, updateLocusLists } from '../reducers'
+import { getCurrentProject, getProjectLocusListsIsLoading } from '../selectors'
 
 const ItemContainer = styled.div`
   padding: 2px 0px;
@@ -27,11 +28,11 @@ const ItemContainer = styled.div`
   }
 `
 
-const LocusListItem = React.memo(({ project, locusList, onSubmit }) => (
+const LocusListItem = React.memo(({ projectGuid, canEdit, locusList, onSubmit }) => (
   <ItemContainer key={locusList.locusListGuid}>
     <Modal
       title={`${locusList.name} Gene List`}
-      modalName={`${project.projectGuid}-${locusList.name}-genes`}
+      modalName={`${projectGuid}-${locusList.name}-genes`}
       trigger={<ButtonLink>{locusList.name}</ButtonLink>}
       size="large"
     >
@@ -49,7 +50,7 @@ const LocusListItem = React.memo(({ project, locusList, onSubmit }) => (
       }
       size="small"
     />
-    {project.canEdit && (
+    {canEdit && (
       <DeleteButton
         onSubmit={onSubmit}
         size="tiny"
@@ -66,8 +67,9 @@ const LocusListItem = React.memo(({ project, locusList, onSubmit }) => (
 ))
 
 LocusListItem.propTypes = {
-  project: PropTypes.object.isRequired,
+  projectGuid: PropTypes.string.isRequired,
   locusList: PropTypes.object.isRequired,
+  canEdit: PropTypes.bool,
   onSubmit: PropTypes.func.isRequired,
 }
 
@@ -81,29 +83,41 @@ const mapItemDispatchToProps = (dispatch, ownProps) => ({
 
 const LocusList = connect(mapStateToProps, mapItemDispatchToProps)(LocusListItem)
 
-export class GeneLists extends React.PureComponent {
+class BaseGeneLists extends React.PureComponent {
 
   static propTypes = {
-    project: PropTypes.object.isRequired,
+    projectGuid: PropTypes.string.isRequired,
+    canEdit: PropTypes.bool,
+    locusListGuids: PropTypes.arrayOf(PropTypes.string),
+    loading: PropTypes.bool,
+    load: PropTypes.func,
   }
 
   state = { showAll: false }
+
+  constructor(props) {
+    super(props)
+    props.load()
+  }
 
   show = () => {
     this.setState({ showAll: true })
   }
 
   render() {
-    const { project } = this.props
+    const { projectGuid, canEdit, locusListGuids = [], loading } = this.props
     const { showAll } = this.state
 
-    const locusListGuids = project.locusListGuids || []
+    if (loading) {
+      return <Dimmer inverted active><Loader content="Loading" /></Dimmer>
+    }
+
     const locusListsToShow = showAll ? locusListGuids : locusListGuids.slice(0, 20)
 
     return [
-      ...locusListsToShow.map(
-        locusListGuid => <LocusList key={locusListGuid} project={project} locusListGuid={locusListGuid} />,
-      ),
+      ...locusListsToShow.map(locusListGuid => (
+        <LocusList key={locusListGuid} projectGuid={projectGuid} canEdit={canEdit} locusListGuid={locusListGuid} />
+      )),
       locusListsToShow.length < locusListGuids.length ?
         <ButtonLink key="show" padding="15px 0 0 0" color="grey" onClick={this.show}>Show More...</ButtonLink> :
         null,
@@ -111,6 +125,17 @@ export class GeneLists extends React.PureComponent {
   }
 
 }
+
+const mapGeneListsStateToProps = (state) => {
+  const { projectGuid, canEdit, locusListGuids } = getCurrentProject(state)
+  return { projectGuid, canEdit, locusListGuids, loading: getProjectLocusListsIsLoading(state) }
+}
+
+const mapGeneListsDispatchToProps = {
+  load: loadProjectLocusLists,
+}
+
+export const GeneLists = connect(mapGeneListsStateToProps, mapGeneListsDispatchToProps)(BaseGeneLists)
 
 const LOCUS_LIST_FIELDS = [{
   name: 'locusListGuids',
@@ -122,28 +147,28 @@ const LOCUS_LIST_FIELDS = [{
   format: value => (value || []).reduce((acc, locusListGuid) => ({ ...acc, [locusListGuid]: true }), {}),
 }]
 
-const LocustListsContainer = ({ project, children }) => (
+const LocustListsContainer = ({ projectName, children }) => (
   <LocusListsLoader>
-    {`Add an existing Gene List to ${project.name} or `}
+    {`Add an existing Gene List to ${projectName} or `}
     <CreateLocusListButton />
     {children}
   </LocusListsLoader>
 )
 
 LocustListsContainer.propTypes = {
-  project: PropTypes.object,
+  projectName: PropTypes.string,
   children: PropTypes.node,
 }
 
-const AddGeneLists = React.memo(({ project, onSubmit }) => (
+const AddGeneLists = React.memo(({ projectGuid, projectName, onSubmit }) => (
   <UpdateButton
     modalTitle="Add Gene Lists"
-    modalId={`add-gene-list-${project.projectGuid}`}
-    formMetaId={project.projectGuid}
+    modalId={`add-gene-list-${projectGuid}`}
+    formMetaId={projectGuid}
     modalSize="large"
     buttonText="Add Gene List"
     editIconName="plus"
-    formContainer={<LocustListsContainer project={project} />}
+    formContainer={<LocustListsContainer projectName={projectName} />}
     onSubmit={onSubmit}
     formFields={LOCUS_LIST_FIELDS}
     showErrorPanel
@@ -151,10 +176,16 @@ const AddGeneLists = React.memo(({ project, onSubmit }) => (
 ))
 
 AddGeneLists.propTypes = {
-  project: PropTypes.object,
+  projectGuid: PropTypes.string,
+  projectName: PropTypes.string,
   onSubmit: PropTypes.func,
+}
+
+const mapButtonStateToProps = (state) => {
+  const { projectGuid, name } = getCurrentProject(state)
+  return { projectGuid, projectName: name }
 }
 
 const mapDispatchToProps = { onSubmit: updateLocusLists }
 
-export const AddGeneListsButton = connect(null, mapDispatchToProps)(AddGeneLists)
+export const AddGeneListsButton = connect(mapButtonStateToProps, mapDispatchToProps)(AddGeneLists)

@@ -2,6 +2,7 @@ import json
 import logging
 
 from settings import DEPLOYMENT_TYPE
+from typing import Optional
 
 class JsonLogFormatter(logging.Formatter):
 
@@ -41,7 +42,7 @@ class JsonLogFormatter(logging.Formatter):
 
 class SeqrLogger(object):
 
-    def __init__(self, name=None):
+    def __init__(self, name: Optional[str] = None) -> None:
         """Custom logger which requires user metadata to be included in the log."""
         self._logger = logging.getLogger(name)
 

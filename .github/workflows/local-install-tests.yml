@@ -5,7 +5,7 @@ on:
   push:
     branches:
     - main
-    - dev
+    - staging
       
 jobs:
   local_install_test:

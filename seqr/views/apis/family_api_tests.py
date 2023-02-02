@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import mock
+from copy import deepcopy
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
@@ -9,10 +10,10 @@ from matchmaker.models import MatchmakerSubmission
 from seqr.views.apis.family_api import update_family_pedigree_image, update_family_assigned_analyst, \
     update_family_fields_handler, update_family_analysed_by, edit_families_handler, delete_families_handler, \
     receive_families_table_handler, create_family_note, update_family_note, delete_family_note, family_page_data, \
-    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data
+    family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores
 from seqr.views.utils.test_utils import AuthenticationTestCase, FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
-    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS
+    MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
 from seqr.models import FamilyAnalysedBy, AnalysisGroup
 
 FAMILY_GUID = 'F000001_1'
@@ -26,14 +27,12 @@ FAMILY_ID_FIELD = 'familyId'
 PREVIOUS_FAMILY_ID_FIELD = 'previousFamilyId'
 
 INDIVIDUAL_GUID = 'I000001_na19675'
+INDIVIDUAL2_GUID = 'I000002_na19678'
 
 class FamilyAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_family_page_data(self, mock_analyst_group):
+    def test_family_page_data(self):
         url = reverse(family_page_data, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
 
@@ -42,7 +41,7 @@ class FamilyAPITest(AuthenticationTestCase):
 
         response_json = response.json()
         response_keys = {
-            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid',  'igvSamplesByGuid',
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid', 'igvSamplesByGuid',
             'mmeSubmissionsByGuid',
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
@@ -57,9 +56,12 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData'}
+        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'hasRnaOutlierData',
+                             'hasPhenotypeGeneScores'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
+        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL_GUID]['hasPhenotypeGeneScores'])
+        self.assertTrue(response_json['individualsByGuid'][INDIVIDUAL2_GUID]['hasPhenotypeGeneScores'])
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
@@ -90,17 +92,22 @@ class FamilyAPITest(AuthenticationTestCase):
         # Test analyst users have internal fields returned
         self.login_analyst_user()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
+        internal_family_fields = deepcopy(family_fields)
+        internal_family_fields.update(INTERNAL_FAMILY_FIELDS)
+        individual_fields.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
+        internal_individual_fields = deepcopy(individual_fields)
+        internal_individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
+        self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), internal_family_fields)
+        self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), internal_individual_fields)
 
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
+        self.mock_analyst_group.__str__.return_value = ''
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        family_fields.update(INTERNAL_FAMILY_FIELDS)
-        family_fields.update(CASE_REVIEW_FAMILY_FIELDS)
-        individual_fields.update(INTERNAL_INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid'][FAMILY_GUID].keys()), family_fields)
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)
 
@@ -126,7 +133,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertSetEqual(set(project['variantTagTypes'][0].keys()), TAG_TYPE_FIELDS)
 
         self.assertDictEqual(response_json['familyTagTypeCounts'], {
-            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1},
+            FAMILY_GUID: {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953'})
 
@@ -313,9 +320,7 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertIsNone(response_json[FAMILY_GUID]['assignedAnalyst'])
 
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-    @mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP')
-    def test_update_success_story_types(self, mock_analyst_group):
+    def test_update_success_story_types(self):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
 
@@ -324,17 +329,14 @@ class FamilyAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 403)
 
         self.login_analyst_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-        mock_analyst_group.__bool__.return_value = True
-        mock_analyst_group.resolve_expression.return_value = 'analysts'
-
-        # send valid request
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json[FAMILY_GUID]['successStoryTypes'], ['O', 'D'])
+
+        self.check_no_analyst_no_access(url, get_response=lambda: self.client.post(
+            url, content_type='application/json', data=json.dumps({'successStoryTypes': []})))
 
     @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_family_fields(self):
@@ -484,5 +486,47 @@ class FamilyAPITest(AuthenticationTestCase):
             'M': {
                 'individualData': {'NA19675_1': 8.38},
                 'rdgData': [1.01, 8.38],
+            }
+        })
+
+    def test_get_family_phenotype_gene_scores(self):
+        url = reverse(get_family_phenotype_gene_scores, args=[FAMILY_GUID])
+        self.check_collaborator_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'genesById': {
+                'ENSG00000268903': {
+                    'chromGrch37': '1', 'chromGrch38': '1', 'clinGen': None, 'cnSensitivity': {},
+                    'codingRegionSizeGrch37': 0, 'codingRegionSizeGrch38': 0, 'constraints': {},
+                    'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {},
+                    'gencodeGeneType': 'processed_pseudogene', 'geneId': 'ENSG00000268903',
+                    'geneSymbol': 'AL627309.7', 'mimNumber': None, 'omimPhenotypes': [],
+                    'startGrch37': 135141, 'startGrch38': 135141
+                }
+            },
+            'phenotypeGeneScores': {
+                'I000001_na19675': {
+                    'ENSG00000268903': {
+                        'exomiser': [
+                            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 2,
+                             'scores': {'exomiser_score': 0.969347946, 'phenotype_score': 0.443567539,
+                                        'variant_score': 0.999200702}},
+                            {'diseaseId': 'OMIM:618460', 'diseaseName': 'Khan-Khan-Katsanis syndrome', 'rank': 1,
+                             'scores': {'exomiser_score': 0.977923765, 'phenotype_score': 0.603998205,
+                                        'variant_score': 1}}
+                        ]
+                    }
+                },
+                'I000002_na19678': {
+                    'ENSG00000268903': {
+                        'lirical': [
+                            {'diseaseId': 'OMIM:219800', 'diseaseName': 'Cystinosis, nephropathic', 'rank': 1,
+                             'scores': {'compositeLR': 0.003, 'post_test_probability': 0}
+                            }
+                        ]
+                    }
+                }
             }
         })

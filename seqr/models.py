@@ -7,7 +7,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import PermissionDenied
 from django.db import models
-from django.db.models import base, options, ForeignKey, JSONField
+from django.db.models import base, options, ForeignKey, JSONField, prefetch_related_objects
 from django.utils import timezone
 from django.utils.text import slugify as __slugify
 
@@ -485,6 +485,29 @@ class Individual(ModelWithGUID):
         ('U', 'Unknown'),
     ]
 
+    BIOSAMPLE_CHOICES = [
+        ('T', 'UBERON:0000479'),  # tissue
+        ('NT', 'UBERON:0003714'),  # neural tissue
+        ('S', 'UBERON:0001836'),  # saliva
+        ('SE', 'UBERON:0001003'),  # skin epidermis
+        ('MT', 'UBERON:0002385'),  # muscle tissue
+        ('WB', 'UBERON:0000178'),  # whole blood
+        ('BM', 'UBERON:0002371'),  # bone marrow
+        ('CC', 'UBERON:0006956'),  # buccal mucosa
+        ('CF', 'UBERON:0001359'),  # cerebrospinal fluid
+        ('U', 'UBERON:0001088'),  # urine
+        ('NE', 'UBERON:0019306'),  # nose epithelium
+    ]
+
+    ANALYTE_CHOICES = [
+        ('D', 'DNA'),
+        ('R', 'RNA'),
+        ('B', 'blood plasma'),
+        ('F', 'frozen whole blood'),
+        ('H', 'high molecular weight DNA'),
+        ('U', 'urine'),
+    ]
+
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
@@ -494,6 +517,7 @@ class Individual(ModelWithGUID):
     INHERITANCE_LOOKUP = dict(INHERITANCE_CHOICES)
     INHERITANCE_REVERSE_LOOKUP = {name: key for key, name in INHERITANCE_CHOICES}
     RELATIONSHIP_LOOKUP = dict(RELATIONSHIP_CHOICES)
+    ANALYTE_REVERSE_LOOKUP = {name: key for key, name in ANALYTE_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -515,6 +539,10 @@ class Individual(ModelWithGUID):
     case_review_discussion = models.TextField(null=True, blank=True)
 
     proband_relationship = models.CharField(max_length=1, choices=RELATIONSHIP_CHOICES, null=True)
+
+    primary_biosample = models.CharField(max_length=2, choices=BIOSAMPLE_CHOICES, null=True, blank=True)
+    analyte_type = models.CharField(max_length=1, choices=ANALYTE_CHOICES, null=True, blank=True)
+    tissue_affected_status = models.BooleanField(null=True)
 
     birth_year = YearField()
     death_year = YearField()
@@ -571,7 +599,7 @@ class Individual(ModelWithGUID):
             'ar_iui', 'ar_ivf', 'ar_icsi', 'ar_surrogacy', 'ar_donoregg', 'ar_donorsperm', 'ar_fertility_meds',
         ]
         internal_json_fields = [
-            'proband_relationship'
+            'proband_relationship', 'primary_biosample', 'tissue_affected_status', 'analyte_type',
         ]
         audit_fields = {'case_review_status'}
 
@@ -848,6 +876,7 @@ class VariantFunctionalData(ModelWithGUID):
         'color': json.loads(tag_json)['color'],
         'description': json.loads(tag_json).get('description'),
     } for category, tags in FUNCTIONAL_DATA_CHOICES for name, tag_json in tags]
+    FUNCTIONAL_DATA_TAG_LOOKUP = {tag['name']: tag for tag in FUNCTIONAL_DATA_TAG_TYPES}
 
     saved_variants = models.ManyToManyField('SavedVariant')
     functional_data_tag = models.TextField(choices=FUNCTIONAL_DATA_CHOICES)
@@ -983,18 +1012,48 @@ class VariantSearchResults(ModelWithGUID):
     def _compute_guid(self):
         return 'VSR%07d_%s' % (self.id, _slugify(str(self)))
 
-class DeletableSampleMetadataModel(models.Model):
 
-    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
-    gene_id = models.CharField(max_length=20)  # ensembl ID
+class BulkOperationBase(models.Model):
+
+    @classmethod
+    def log_model_no_guid_bulk_update(cls, models, user, update_type):
+        if not models:
+            return
+        db_entity = cls.__name__
+        prefetch_related_objects(models, cls.PARENT_FIELD)
+        parent_ids = {getattr(model, cls.PARENT_FIELD).guid for model in models}
+        db_update = {
+            'dbEntity': db_entity, 'numEntities': len(models), 'parentEntityIds': parent_ids,
+            'updateType': 'bulk_{}'.format(update_type),
+        }
+        logger.info(f'{update_type} {db_entity}s', user, db_update=db_update)
+
+    @classmethod
+    def bulk_create(cls, user, new_models):
+        """Helper bulk create method that logs the creation"""
+        for model in new_models:
+            model.created_by = user
+        models = cls.objects.bulk_create(new_models)
+        cls.log_model_no_guid_bulk_update(models, user, 'create')
+        return models
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
         """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
-        log_model_bulk_update(logger, queryset, user, 'delete')
+        cls.log_model_no_guid_bulk_update(queryset, user, 'delete')
         return queryset.delete()
+
+    class Meta:
+        abstract = True
+
+
+class DeletableSampleMetadataModel(BulkOperationBase):
+    PARENT_FIELD = 'sample'
+
+    sample = models.ForeignKey('Sample', on_delete=models.CASCADE, db_index=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
 
     def __unicode__(self):
         return "%s:%s" % (self.sample.sample_id, self.gene_id)
@@ -1025,3 +1084,22 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
         unique_together = ('sample', 'gene_id')
 
         json_fields = ['gene_id', 'tpm']
+
+
+class PhenotypePrioritization(BulkOperationBase):
+    PARENT_FIELD = 'individual'
+
+    individual = models.ForeignKey('Individual', on_delete=models.CASCADE, db_index=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
+
+    tool = models.CharField(max_length=20)
+    rank = models.IntegerField()
+    disease_id = models.CharField(max_length=32)
+    disease_name = models.TextField()
+    scores = models.JSONField()
+
+    def __unicode__(self):
+        return "%s:%s:%s" % (self.individual.individual_id, self.gene_id, self.disease_id)
+
+    class Meta:
+        json_fields = ['gene_id', 'tool', 'rank', 'disease_id', 'disease_name', 'scores']

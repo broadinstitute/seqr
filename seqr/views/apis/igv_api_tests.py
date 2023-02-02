@@ -25,8 +25,6 @@ def Any(cls=object):
     return Any()
 
 
-@mock.patch('seqr.views.utils.permissions_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
-@mock.patch('seqr.views.utils.permissions_utils.ANALYST_USER_GROUP', 'analysts')
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class IgvAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
@@ -226,27 +224,28 @@ class IgvAPITest(AuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
 
     @responses.activate
-    def test_igv_genomes_proxyy(self):
-        url_path = 'org.genomes/foo?query=true'
-        url = reverse(igv_genomes_proxy, args=[url_path])
+    def test_igv_genomes_proxy(self):
+        url_path = 'igv.org.genomes/foo?query=true'
+        s3_url = reverse(igv_genomes_proxy, args=['s3', url_path])
 
         expected_body = {'genes': ['GENE1', 'GENE2']}
         responses.add(
             responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
             content_type='application/json', body=json.dumps(expected_body))
 
-        response = self.client.get(url)
+        response = self.client.get(s3_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(json.loads(response.content), expected_body)
         self.assertIsNone(responses.calls[0].request.headers.get('Range'))
 
         # test with range header proxy
+        gs_url = reverse(igv_genomes_proxy, args=['gs', 'test-bucket/foo.fasta'])
         expected_content = 'test file content'
-        responses.replace(
-            responses.GET, 'https://s3.amazonaws.com/igv.org.genomes/foo?query=true', match_querystring=True,
+        responses.add(
+            responses.GET, 'https://storage.googleapis.com/test-bucket/foo.fasta', match_querystring=True,
             body=expected_content)
 
-        response = self.client.get(url, HTTP_RANGE='bytes=100-200')
+        response = self.client.get(gs_url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), expected_content)
         self.assertEqual(responses.calls[1].request.headers.get('Range'), 'bytes=100-200')

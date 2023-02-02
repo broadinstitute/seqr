@@ -20,10 +20,10 @@ const PredictionValue = styled.span`
 const NUM_TO_SHOW_ABOVE_THE_FOLD = 6 // how many predictors to show immediately
 
 const predictionFieldValue = (
-  predictions, { field, dangerThreshold, warningThreshold, indicatorMap, noSeverity, infoField, infoTitle },
+  predictions, { field, dangerThreshold, warningThreshold, indicatorMap, infoField, infoTitle },
 ) => {
   let value = predictions[field]
-  if (noSeverity || value === null || value === undefined) {
+  if (value === null || value === undefined) {
     return { value }
   }
 

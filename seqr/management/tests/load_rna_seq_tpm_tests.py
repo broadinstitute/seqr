@@ -15,7 +15,6 @@ EXPECTED_MISMATCHED_TISSUE_WARNING = 'Skipped data loading for the following 1 s
 class LoadRnaSeqTest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
 
-    @mock.patch('seqr.views.utils.dataset_utils.ANALYST_PROJECT_CATEGORY', 'analyst-projects')
     @mock.patch('seqr.utils.file_utils.gzip.open')
     @mock.patch('seqr.views.utils.dataset_utils.logger')
     @mock.patch('seqr.management.commands.load_rna_seq_tpm.logger')

@@ -4,7 +4,7 @@ import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 const FamilyGrid = styled(({ annotation, offset, ...props }) => <Table {...props} />)`
-  margin-left: ${props => ((props.annotation || props.offset) ? '25px !important' : 'inherit')};
+  padding-left: ${props => ((props.annotation || props.offset) ? '35px !important' : 'inherit')};
   margin-top: ${props => (props.annotation ? '-33px !important' : 'inherit')};
   background: inherit !important;
   border: none !important;

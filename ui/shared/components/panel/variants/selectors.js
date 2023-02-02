@@ -3,6 +3,7 @@ import { createSelector } from 'reselect'
 import { toSnakecase } from 'shared/utils/stringUtils'
 import {
   NOTE_TAG_NAME,
+  MME_TAG_NAME,
   EXCLUDED_TAG_NAME,
   REVIEW_TAG_NAME,
   KNOWN_GENE_FOR_PHENOTYPE_TAG_NAME,
@@ -15,21 +16,59 @@ import {
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
   getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual,
+  getPhenotypeGeneScoresByIndividual,
 } from 'redux/selectors'
 
-export const getRnaSeqOutilerDataByFamilyGene = createSelector(
+export const getIndividualGeneDataByFamilyGene = createSelector(
   getIndividualsByGuid,
   getRnaSeqDataByIndividual,
-  (individualsByGuid, rnaSeqDataByIndividual) => Object.entries(rnaSeqDataByIndividual).reduce(
-    (acc, [individualGuid, rnaSeqData]) => {
-      const { familyGuid, displayName } = individualsByGuid[individualGuid]
-      acc[familyGuid] = Object.entries(rnaSeqData.outliers || {}).reduce(
-        (acc2, [geneId, data]) => (data.isSignificant ?
-          { ...acc2, [geneId]: { ...(acc2[geneId] || {}), [displayName]: data } } : acc2
-        ), acc[familyGuid] || {},
-      )
+  getPhenotypeGeneScoresByIndividual,
+  (individualsByGuid, rnaSeqDataByIndividual = {}, phenotypeGeneScoresByIndividual = {}) => (
+    Object.entries(individualsByGuid).reduce((acc, [individualGuid, { familyGuid, displayName }]) => {
+      const rnaSeqData = rnaSeqDataByIndividual[individualGuid]?.outliers
+      const phenotypeGeneScores = phenotypeGeneScoresByIndividual[individualGuid]
+      if (rnaSeqData) {
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].rnaSeqData = Object.entries(rnaSeqData).reduce(
+          (acc2, [geneId, data]) => (data.isSignificant ? {
+            ...acc2,
+            [geneId]: [...(acc2[geneId] || []), { ...data, individualName: displayName }],
+          } : acc2), acc[familyGuid].rnaSeqData || {},
+        )
+      }
+      if (phenotypeGeneScores) {
+        acc[familyGuid] = acc[familyGuid] || {}
+        acc[familyGuid].phenotypeGeneScores = Object.entries(phenotypeGeneScores).reduce(
+          (acc2, [geneId, dataByTool]) => ({
+            ...acc2,
+            [geneId]: Object.entries(dataByTool).reduce((acc3, [tool, data]) => ({
+              ...acc3,
+              [tool]: [...(acc3[tool] || []), ...data.map(d => ({
+                ...d, individualName: displayName, rowId: `${displayName}-${d.diseaseId}`,
+              }))],
+            }), acc2[geneId] || {}),
+          }), acc[familyGuid].phenotypeGeneScores || {},
+        )
+      }
       return acc
-    }, {},
+    }, {})
+  ),
+)
+
+export const getIndividualPhenotypeGeneScores = createSelector(
+  getGenesById,
+  getPhenotypeGeneScoresByIndividual,
+  (genesById, phenotypeGeneScoresByIndividual) => (
+    Object.entries(phenotypeGeneScoresByIndividual || {}).reduce((acc, [individualGuid, dataByGene]) => ({
+      ...acc,
+      [individualGuid]: Object.entries(dataByGene).reduce((acc2, [geneId, dataByTool]) => ([
+        ...acc2,
+        ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
+          ...acc3,
+          ...data.map(d => ({ ...d, tool, gene: genesById[geneId], rowId: `${geneId}${d.diseaseId}` })),
+        ]), []),
+      ]), []),
+    }), {})
   ),
 )
 
@@ -110,6 +149,8 @@ export const getPairedSelectedSavedVariants = createSelector(
 
     if (tag === NOTE_TAG_NAME) {
       pairedVariants = matchingVariants(pairedVariants, ({ noteGuids }) => noteGuids.length)
+    } else if (tag === MME_TAG_NAME) {
+      pairedVariants = matchingVariants(pairedVariants, ({ mmeSubmissions = [] }) => mmeSubmissions.length)
     } else if (tag && tag !== SHOW_ALL) {
       pairedVariants = matchingVariants(
         pairedVariants, ({ tagGuids }) => tagGuids.some(tagGuid => tagsByGuid[tagGuid].name === tag),
@@ -193,12 +234,13 @@ export const getVisibleSortedSavedVariants = createSelector(
   getVariantTagsByGuid,
   getFamiliesByGuid,
   getProjectsByGuid,
+  getIndividualGeneDataByFamilyGene,
   (pairedFilteredSavedVariants, { sort = SORT_BY_FAMILY_GUID }, visibleIndices, genesById, user, variantTagsByGuid,
-    familiesByGuid, projectsByGuid) => {
+    familiesByGuid, projectsByGuid, individualGeneDataByFamilyGene) => {
     // Always secondary sort on xpos
     pairedFilteredSavedVariants.sort((a, b) => VARIANT_SORT_LOOKUP[sort](
       Array.isArray(a) ? a[0] : a, Array.isArray(b) ? b[0] : b,
-      genesById, variantTagsByGuid, user, familiesByGuid, projectsByGuid,
+      genesById, variantTagsByGuid, user, familiesByGuid, projectsByGuid, individualGeneDataByFamilyGene,
     ) || (Array.isArray(a) ? a[0] : a).xpos - (Array.isArray(b) ? b[0] : b).xpos)
     return pairedFilteredSavedVariants.slice(...visibleIndices)
   },

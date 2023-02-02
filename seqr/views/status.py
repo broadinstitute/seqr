@@ -3,7 +3,7 @@ import logging
 import redis
 from urllib3.connectionpool import connection_from_url
 
-from settings import SEQR_VERSION, KIBANA_SERVER, REDIS_SERVICE_HOSTNAME, DATABASES
+from settings import SEQR_VERSION, KIBANA_SERVER, REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT, DATABASES
 from seqr.utils.elasticsearch.utils import get_es_client
 from seqr.views.utils.json_utils import create_json_response
 
@@ -25,7 +25,7 @@ def status_view(request):
 
     # Test redis connection
     try:
-        redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, socket_connect_timeout=3).ping()
+        redis.StrictRedis(host=REDIS_SERVICE_HOSTNAME, port=REDIS_SERVICE_PORT, socket_connect_timeout=3).ping()
     except Exception as e:
         secondary_services_ok = False
         logger.error('Redis connection error: {}'.format(str(e)))

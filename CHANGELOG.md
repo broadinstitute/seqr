@@ -2,6 +2,23 @@
 
 ## dev
 
+## 1/11/23
+* Require PHI disclaimer when uploading AnVIL pedigree
+
+## 11/9/22
+* Add PhenotypePrioritization model (REQUIRES DB MIGRATION)
+
+* Add Refseq and MANE transcript info (REQUIRES DB MIGRATION)
+  * To add new data, run the `update_gencode_transcripts` and `update_refseq` commands
+
+## 10/13/22
+* Link MME submissions to saved variants (REQUIRES DB MIGRATION)
+
+## 9/28/22
+* Add Gregor fields to sample manifest (REQUIRES DB MIGRATION)
+* Deprecate auto-granting project access for analysts (removes ANALYST_PROJECT_CATEGORY env variable)
+* Add support for adding user groups for project access
+
 ## 9/6/22
 * Disable mixed authorization for local and AnVIL permissions (REQUIRES DB MIGRATION)
 

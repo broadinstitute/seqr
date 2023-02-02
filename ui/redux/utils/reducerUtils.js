@@ -1,14 +1,18 @@
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { toCamelcase, toSnakecase } from 'shared/utils/stringUtils'
+import { toSnakecase } from 'shared/utils/stringUtils'
 
 // actions
 export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+export const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
+export const RECEIVE_PROJECT_CHILD_ENTITES = 'RECEIVE_PROJECT_CHILD_ENTITES'
 export const RECEIVE_SAVED_SEARCHES = 'RECEIVE_SAVED_SEARCHES'
 export const REQUEST_SAVED_SEARCHES = 'REQUEST_SAVED_SEARCHES'
 export const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 export const REQUEST_SEARCHED_VARIANTS = 'REQUEST_SEARCHED_VARIANTS'
 export const RECEIVE_SEARCHED_VARIANTS = 'RECEIVE_SEARCHED_VARIANTS'
+export const REQUEST_ANALYSIS_GROUPS = 'REQUEST_ANALYSIS_GROUPS'
+export const RECEIVE_ANALYSIS_GROUPS = 'RECEIVE_ANALYSIS_GROUPS'
 
 // A helper action that handles create, update and delete requests
 export const updateEntity = (
@@ -34,10 +38,9 @@ export const updateEntity = (
 export const loadProjectChildEntities = (
   projectGuid, entityType, dispatchType, receiveDispatchType,
 ) => (dispatch, getState) => {
-  const { projectsByGuid } = getState()
-  const project = projectsByGuid[projectGuid]
+  const { loadedProjectChildEntities } = getState()
 
-  if (!project[`${toCamelcase(entityType)}Loaded`]) {
+  if (!(loadedProjectChildEntities[projectGuid] || {})[entityType]) {
     dispatch({ type: dispatchType })
     new HttpRequestHelper(`/api/project/${projectGuid}/get_${toSnakecase(entityType)}`,
       (responseJson) => {
@@ -45,6 +48,7 @@ export const loadProjectChildEntities = (
         if (receiveDispatchType) {
           dispatch({ type: receiveDispatchType, updatesById: responseJson })
         }
+        dispatch({ type: RECEIVE_PROJECT_CHILD_ENTITES, updatesById: { [projectGuid]: { [entityType]: true } } })
       },
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
@@ -77,3 +81,21 @@ export const loadFamilyData = (familyGuid, detailField, urlPath, dispatchType, d
       }).get()
   }
 }
+
+export const loadProjectDetails = projectGuid => (dispatch, getState) => {
+  const project = getState().projectsByGuid[projectGuid]
+  if (!project || project.canEdit === undefined) {
+    dispatch({ type: REQUEST_PROJECT_DETAILS })
+    new HttpRequestHelper(`/api/project/${projectGuid}/details`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
+
+export const loadProjectAnalysisGroups = projectGuid => loadProjectChildEntities(
+  projectGuid, 'analysis groups', REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS,
+)

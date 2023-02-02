@@ -8,7 +8,7 @@ import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import StateChangeForm from 'shared/components/form/StateChangeForm'
 import { Dropdown, BaseSemanticInput } from 'shared/components/form/Inputs'
 
-import { FAMILY_FIELD_NAME_LOOKUP } from 'shared/utils/constants'
+import { FAMILY_FIELD_NAME_LOOKUP, FAMILY_FIELD_SAVED_VARIANTS } from 'shared/utils/constants'
 
 import {
   getProjectAnalysisGroupFamiliesByGuid, getVisibleFamilies, getFamiliesTableState, getFamiliesTableFilters,
@@ -194,7 +194,7 @@ const TableHeaderRow = React.memo(({
             offset
             fields={fields}
             fieldDisplay={familyFieldDisplay}
-            rightContent={showVariantDetails ? 'Saved Variants' : null}
+            rightContent={showVariantDetails ? <FamilyTableFilter category={FAMILY_FIELD_SAVED_VARIANTS} /> : null}
           />
         </OverflowHeaderCell>
       </Table.Row>

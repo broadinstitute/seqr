@@ -4,7 +4,8 @@ import { connect } from 'react-redux'
 import { Popup, Icon } from 'semantic-ui-react'
 import styled from 'styled-components'
 
-import { loadUserOptions, loadProjectAnalysisGroups, updateFamily } from 'redux/rootReducer'
+import { loadUserOptions, updateFamily } from 'redux/rootReducer'
+import { loadProjectAnalysisGroups } from 'redux/utils/reducerUtils'
 import {
   getSamplesByFamily,
   getUserOptionsIsLoading,
