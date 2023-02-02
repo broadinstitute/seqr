@@ -5,8 +5,8 @@ name: Dockerfile Linting
 on:
   push:
     branches:
-      - dev
-      - master
+      - staging
+      - main
     paths:
       - deploy/docker/seqr/Dockerfile
       - .hadolint.yaml
@@ -14,8 +14,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
-      - dev
-      - master
+      - staging
+      - main
     paths:
       - deploy/docker/seqr/Dockerfile
       - .hadolint.yaml
