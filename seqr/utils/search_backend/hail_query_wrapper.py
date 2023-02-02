@@ -225,7 +225,7 @@ class BaseHailTableQuery(object):
     def _load_filtered_table(self, data_source, samples, intervals=None, **kwargs):
         self._ht = self.import_filtered_table(
             data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
-            consequence_overrides=self._consequence_overrides, **kwargs,
+            consequence_overrides=self._consequence_overrides, allowed_consequences=self._allowed_consequences, **kwargs,
         )
         if self._filtered_genes:
             self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)
@@ -422,7 +422,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, in_silico=None, clinvar_path_terms=None,
-                                vcf_quality_filter=None, **kwargs):
+                                vcf_quality_filter=None, consequence_overrides=None, allowed_consequences=None, annotations_secondary=None, **kwargs):
         if custom_query:
             # In production: should either remove the "custom search" functionality,
             # or should come up with a simple json -> hail query parsing here
@@ -430,6 +430,7 @@ class BaseHailTableQuery(object):
 
         ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
         ht = cls._filter_by_in_silico(ht, in_silico)
+        ht = cls._filter_by_annotations(ht, allowed_consequences, annotations_secondary, consequence_overrides)
         if vcf_quality_filter is not None:
             ht = cls._filter_vcf_filters(ht)
 
@@ -473,8 +474,6 @@ class BaseHailTableQuery(object):
             if comp_het_only:
                 return
 
-        self._filter_main_annotations()
-
     def _parse_annotations_overrides(self, annotations):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
@@ -494,9 +493,6 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_vcf_filters(cls, ht):
         return ht.filter(hl.is_missing(ht.filters) | (ht.filters.length() < 1))
-
-    def _filter_main_annotations(self):
-        self._ht = self._filter_by_annotations(self._allowed_consequences)
 
     @classmethod
     def _filter_by_frequency(cls, ht, frequencies, clinvar_path_terms):
@@ -581,46 +577,65 @@ class BaseHailTableQuery(object):
 
         return ht.filter(in_silico_q)
 
-    def _filter_by_annotations(self, allowed_consequences):
-        annotation_filters = self._get_annotation_override_filters(self._ht)
+    @classmethod
+    def _filter_by_annotations(cls, ht, allowed_consequences, annotations_secondary, consequence_overrides):
+        consequence_filters = []
+        annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
+        if annotation_override_filter is not None:
+            ht = ht.annotate(override_consequences=annotation_override_filter)
+            consequence_filters.append(ht.override_consequences)
+
         if allowed_consequences:
-            annotation_filters.append(self._ht.sortedTranscriptConsequences.any(
-                lambda tc: self._is_allowed_consequence_filter(tc, allowed_consequences)))
+            ht = ht.annotate(has_allowed_consequence=ht.sortedTranscriptConsequences.any(
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences)))
+            consequence_filters.append(ht.has_allowed_consequence)
+
+        if annotations_secondary:
+            allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
+            consequence_filters.append(ht.sortedTranscriptConsequences.any(
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences_secondary)))
+            # TODO in RECESSIVE search properly filter recessive variants to main consequences
+
+        if not consequence_filters:
+            return ht
+
+        consequence_filter = consequence_filters[0]
+        for cf in consequence_filters[1:]:
+            consequence_filter |= cf
+        return ht.filter(consequence_filter)
+
+    @classmethod
+    def _get_annotation_override_filter(cls, ht, consequence_overrides, use_parsed_fields=False):
+        annotation_filters = []
+
+        if consequence_overrides[CLINVAR_KEY]:
+            if use_parsed_fields:
+                allowed_significances = hl.set(consequence_overrides[CLINVAR_KEY])
+                clinvar_key = 'clinicalSignificance'
+            else:
+                allowed_significances = hl.set({CLINVAR_SIG_MAP[s] for s in consequence_overrides[CLINVAR_KEY]})
+                clinvar_key = 'clinical_significance_id'
+            annotation_filters.append(allowed_significances.contains(ht.clinvar[clinvar_key]))
+        if consequence_overrides[HGMD_KEY]:
+            allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in consequence_overrides[HGMD_KEY]})
+            annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
+        if consequence_overrides[SCREEN_KEY]:
+            allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in consequence_overrides[SCREEN_KEY]})
+            annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_id)).size() > 0)
+        if consequence_overrides[SPLICE_AI_FIELD]:
+            splice_ai = float(consequence_overrides[SPLICE_AI_FIELD])
+            score_path = ('predictions', 'splice_ai') if use_parsed_fields else cls.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
+            annotation_filters.append(ht[score_path[0]][score_path[1]] >= splice_ai)
+        if consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
+            allowed_sv_types = hl.set({SV_TYPE_MAP[t] for t in consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]})
+            annotation_filters.append(allowed_sv_types.contains(ht.svType_id))
 
         if not annotation_filters:
-            return self._ht
+            return None
         annotation_filter = annotation_filters[0]
         for af in annotation_filters[1:]:
             annotation_filter |= af
-
-        return self._ht.filter(annotation_filter)
-
-    def _get_annotation_override_filters(self, ht, use_parsed_fields=False):
-        annotation_filters = []
-
-        if self._consequence_overrides[CLINVAR_KEY]:
-            if use_parsed_fields:
-                allowed_significances = hl.set(self._consequence_overrides[CLINVAR_KEY])
-                clinvar_key = 'clinicalSignificance'
-            else:
-                allowed_significances = hl.set({CLINVAR_SIG_MAP[s] for s in self._consequence_overrides[CLINVAR_KEY]})
-                clinvar_key = 'clinical_significance_id'
-            annotation_filters.append(allowed_significances.contains(ht.clinvar[clinvar_key]))
-        if self._consequence_overrides[HGMD_KEY]:
-            allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in self._consequence_overrides[HGMD_KEY]})
-            annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
-        if self._consequence_overrides[SCREEN_KEY]:
-            allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in self._consequence_overrides[SCREEN_KEY]})
-            annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_id)).size() > 0)
-        if self._consequence_overrides[SPLICE_AI_FIELD]:
-            splice_ai = float(self._consequence_overrides[SPLICE_AI_FIELD])
-            score_path = ('predictions', 'splice_ai') if use_parsed_fields else self.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
-            annotation_filters.append(ht[score_path[0]][score_path[1]] >= splice_ai)
-        if self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
-            allowed_sv_types = hl.set({SV_TYPE_MAP[t] for t in self._consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]})
-            annotation_filters.append(allowed_sv_types.contains(ht.svType_id))
-
-        return annotation_filters
+        return annotation_filter
 
     @staticmethod
     def _get_clinvar_path_terms(consequence_overrides):
@@ -663,7 +678,7 @@ class BaseHailTableQuery(object):
                 {ann for anns in annotations_secondary.values() for ann in anns})
             comp_het_consequences.update(self._allowed_consequences_secondary)
 
-        ch_ht = self._filter_by_annotations(comp_het_consequences)
+        # ch_ht = self._filter_by_annotations(comp_het_consequences)
         ch_ht = self._format_results(ch_ht)
 
         # Get possible pairs of variants within the same gene
@@ -718,10 +733,10 @@ class BaseHailTableQuery(object):
             lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(
             lambda c: primary_cs.contains(c)))
 
-        for af in self._get_annotation_override_filters(ch_ht.v1, use_parsed_fields=True):
-            has_annotation_filter |= af
-        for af in self._get_annotation_override_filters(ch_ht.v2, use_parsed_fields=True):
-            has_annotation_filter |= af
+        # for af in self._get_annotation_override_filters(ch_ht.v1, self._consequence_overrides, use_parsed_fields=True):
+        #     has_annotation_filter |= af
+        # for af in self._get_annotation_override_filters(ch_ht.v2, self._consequence_overrides, use_parsed_fields=True):
+        #     has_annotation_filter |= af
 
         return ch_ht.filter(has_annotation_filter)
 
