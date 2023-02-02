@@ -420,7 +420,7 @@ class BaseHailTableQuery(object):
     def _filter_gene_ids(ht, gene_ids):
         return ht.filter(ht.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
 
-    @staticethod
+    @staticmethod
     def _should_add_chr_prefix(self, genome_version):
         reference_genome = hl.get_reference(genome_version)
         return any(c.startswith('chr') for c in reference_genome.contigs)
