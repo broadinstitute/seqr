@@ -208,6 +208,7 @@ class BaseHailTableQuery(object):
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, pathogenicity=None, annotations=None, **kwargs):
         self._genome_version = genome_version
+        logger.info(genome_version)
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None
@@ -229,7 +230,6 @@ class BaseHailTableQuery(object):
         )
         if self._filtered_genes:
             self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)
-        # TODO - move as much filtering as possible into initial import before join data types
         self._filter_annotated_variants(**kwargs)
 
     @classmethod
@@ -302,10 +302,11 @@ class BaseHailTableQuery(object):
             )).drop('passesQualityFamilies')
             ht = ht.filter(ht.genotypes.size() > 0)
 
-        return ht.annotate(
+        ht = ht.annotate(
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
             genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         )
+        return cls._filter_annotated_table(consequence_overrides=consequence_overrides, **kwargs)
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
@@ -416,6 +417,14 @@ class BaseHailTableQuery(object):
                 quality_filter_expr &= field_filter
         return quality_filter_expr
 
+    @classmethod
+    def _filter_annotated_table(cls, ht, custom_query=None, **kwargs):
+        if custom_query:
+            # In production: should either remove the "custom search" functionality,
+            # or should come up with a simple json -> hail query parsing here
+            raise NotImplementedError
+        return ht
+
     @staticmethod
     def _filter_gene_ids(ht, gene_ids):
         return ht.filter(ht.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
@@ -443,13 +452,9 @@ class BaseHailTableQuery(object):
         return intervals
 
     def _filter_annotated_variants(self, inheritance_mode=None, inheritance_filter=None,
-                         annotations_secondary=None, quality_filter=None, rs_ids=None,
-                         frequencies=None, in_silico=None, custom_query=None, **kwargs):
-        if rs_ids:
-            self._filter_rsids(rs_ids)
-
-        self._filter_custom(custom_query)
-
+                         annotations_secondary=None, quality_filter=None,
+                         frequencies=None, in_silico=None, **kwargs):
+        # TODO - move as much filtering as possible into initial import before join data types
         self._filter_by_frequency(frequencies)
 
         self._filter_by_in_silico(in_silico)
@@ -484,20 +489,11 @@ class BaseHailTableQuery(object):
         for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
             self._consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
-    def _filter_rsids(self, rs_ids):
-        self._ht = self._ht.filter(hl.set(rs_ids).contains(self._ht.rsid))
-
     def _filter_vcf_filters(self):
         self._ht = self._ht.filter(hl.is_missing(self._ht.filters) | (self._ht.filters.length() < 1))
 
     def _filter_main_annotations(self):
         self._ht = self._filter_by_annotations(self._allowed_consequences)
-
-    def _filter_custom(self, custom_query):
-        if custom_query:
-            # In production: should either remove the "custom search" functionality,
-            # or should come up with a simple json -> hail query parsing here
-            raise NotImplementedError
 
     def _filter_by_frequency(self, frequencies):
         frequencies = {k: v for k, v in (frequencies or {}).items() if k in self.populations_configs}
@@ -882,6 +878,12 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
             family_ht = family_ht.filter(variant_id_q)
 
         return super(BaseVariantHailTableQuery, cls)._filter_family_table(family_ht, genome_version=genome_version, **kwargs)
+
+    @classmethod
+    def _filter_annotated_table(cls, ht, rs_ids=None, **kwargs):
+        if rs_ids:
+            ht = ht.filter(hl.set(rs_ids).contains(ht.rsid))
+        return super(BaseVariantHailTableQuery, cls)._filter_annotated_table(ht, **kwargs)
 
     @staticmethod
     def get_major_consequence(transcript):
