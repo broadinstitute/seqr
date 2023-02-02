@@ -864,8 +864,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
                 variant_id_q = family_ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
             else:
                 if cls._should_add_chr_prefix(genome_version):
-                    for v_id in variant_ids:
-                        v_id[0] = f'chr{v_id[0]}'
+                    variant_ids = [(f'chr{chr}', *v_id) for chr, *v_id in variant_ids]
                 variant_id_qs = [
                     (family_ht.locus == hl.locus(chrom, pos, reference_genome=genome_version)) &
                     (family_ht.alleles == [ref, alt])
