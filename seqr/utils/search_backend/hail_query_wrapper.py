@@ -420,8 +420,9 @@ class BaseHailTableQuery(object):
     def _filter_gene_ids(ht, gene_ids):
         return ht.filter(ht.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
 
-    def _should_add_chr_prefix(self):
-        reference_genome = hl.get_reference(self._genome_version)
+    @staticethod
+    def _should_add_chr_prefix(self, genome_version):
+        reference_genome = hl.get_reference(genome_version)
         return any(c.startswith('chr') for c in reference_genome.contigs)
 
     @staticmethod
@@ -430,7 +431,7 @@ class BaseHailTableQuery(object):
 
     def _parse_intervals(self, intervals):
         if intervals:
-            add_chr_prefix = self._should_add_chr_prefix()
+            add_chr_prefix = self._should_add_chr_prefix(self._genome_version)
             raw_intervals = intervals
             intervals = [hl.eval(hl.parse_locus_interval(
                 self._formatted_chr_interval(interval) if add_chr_prefix else interval,
@@ -441,13 +442,9 @@ class BaseHailTableQuery(object):
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
-    def _filter_annotated_variants(self, inheritance_mode=None, inheritance_filter=None, variant_ids=None,
+    def _filter_annotated_variants(self, inheritance_mode=None, inheritance_filter=None,
                          annotations_secondary=None, quality_filter=None, rs_ids=None,
                          frequencies=None, in_silico=None, custom_query=None, **kwargs):
-
-        # TODO move to familty table
-        self._filter_by_variant_ids(variant_ids)
-
         if rs_ids:
             self._filter_rsids(rs_ids)
 
@@ -495,21 +492,6 @@ class BaseHailTableQuery(object):
 
     def _filter_main_annotations(self):
         self._ht = self._filter_by_annotations(self._allowed_consequences)
-
-    def _filter_by_variant_ids(self, variant_ids):
-        if not variant_ids:
-            return
-        elif len(variant_ids) == 1:
-            self._ht = self._ht.filter(self._ht.alleles == [variant_ids[0][2], variant_ids[0][3]])
-        else:
-            add_chr_prefix = self._should_add_chr_prefix()
-            id_q = self._variant_id_q(*variant_ids[0], add_chr_prefix=add_chr_prefix)
-            for variant_id in variant_ids[1:]:
-                id_q |= self._variant_id_q(*variant_id, add_chr_prefix=add_chr_prefix)
-
-    def _variant_id_q(self, chrom, pos, ref, alt, add_chr_prefix=False):
-        locus = hl.locus(f'chr{chrom}' if add_chr_prefix else chrom, pos, reference_genome=self._genome_version)
-        return (self._ht.locus == locus) & (self._ht.alleles == [ref, alt])
 
     def _filter_custom(self, custom_query):
         if custom_query:
@@ -879,10 +861,27 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         return ht
 
     @classmethod
-    def _filter_family_table(cls, family_ht, excluded_intervals=None, **kwargs):
+    def _filter_family_table(cls, family_ht, excluded_intervals=None, variant_ids=None, genome_version=None, **kwargs):
         if excluded_intervals:
             family_ht = hl.filter_intervals(family_ht, excluded_intervals, keep=False)
-        return super(BaseVariantHailTableQuery, cls)._filter_family_table(family_ht, **kwargs)
+        if variant_ids:
+            if len(variant_ids) == 1:
+                variant_id_q = family_ht.alleles == [variant_ids[0][2], variant_ids[0][3]]
+            else:
+                if cls._should_add_chr_prefix(genome_version):
+                    for v_id in variant_ids:
+                        v_id[0] = f'chr{v_id[0]}'
+                variant_id_qs = [
+                    (family_ht.locus == hl.locus(chrom, pos, reference_genome=genome_version)) &
+                    (family_ht.alleles == [ref, alt])
+                    for chrom, pos, ref, alt in variant_ids
+                ]
+                variant_id_q = variant_id_qs[0]
+                for q in variant_id_qs[1:]:
+                    variant_id_q |= q
+            family_ht = family_ht.filter(variant_id_q)
+
+        return super(BaseVariantHailTableQuery, cls)._filter_family_table(family_ht, genome_version=genome_version, **kwargs)
 
     @staticmethod
     def get_major_consequence(transcript):
