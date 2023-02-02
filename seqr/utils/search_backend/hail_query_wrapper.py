@@ -206,9 +206,9 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None, exclude_intervals=False,
-                 inheritance_mode=None, inheritance_filter=None, frequencies=None, quality_filter=None,
+    def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None,
                  pathogenicity=None, annotations=None, **kwargs):
+        # TODO clean up unneeded properties
         self._genome_version = genome_version
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
@@ -223,23 +223,16 @@ class BaseHailTableQuery(object):
         self._parse_pathogenicity_overrides(pathogenicity)
         self._parse_annotations_overrides(annotations)
 
-        self._ht = self._load_table(
-            data_source, samples, intervals=intervals, exclude_intervals=exclude_intervals, frequencies=frequencies,
-            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, quality_filter=quality_filter,
-        )
+        self._load_filtered_table(data_source, samples, intervals=intervals, **kwargs)
 
-        self._filter_variants(  # TODO inheritance needed for filter variants?
-            inheritance_mode=inheritance_mode, inheritance_filter=inheritance_filter, frequencies=frequencies,
-            quality_filter=quality_filter, **kwargs)
-
-    def _load_table(self, data_source, samples, intervals=None, **kwargs):
-        ht = self.import_filtered_table(
+    def _load_filtered_table(self, data_source, samples, intervals=None, **kwargs):
+        self._ht = self.import_filtered_table(
             data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
             consequence_overrides=self._consequence_overrides, **kwargs,
         )
         if self._filtered_genes:
-            ht = self._filter_gene_ids(ht, self._filtered_genes)
-        return ht
+            self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)
+        self._filter_annotated_variants(**kwargs)
 
     @classmethod
     def import_filtered_table(cls, data_source, samples, intervals=None, quality_filter=None, consequence_overrides=None, **kwargs):
@@ -450,9 +443,9 @@ class BaseHailTableQuery(object):
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
-    def _filter_variants(self, inheritance_mode=None, inheritance_filter=None, variant_ids=None,
+    def _filter_annotated_variants(self, inheritance_mode=None, inheritance_filter=None, variant_ids=None,
                          annotations_secondary=None, quality_filter=None, rs_ids=None,
-                         frequencies=None, in_silico=None, custom_query=None):
+                         frequencies=None, in_silico=None, custom_query=None, **kwargs):
 
         # TODO move to familty table
         self._filter_by_variant_ids(variant_ids)
