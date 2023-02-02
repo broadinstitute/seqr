@@ -208,7 +208,6 @@ class BaseHailTableQuery(object):
 
     def __init__(self, data_source, samples, genome_version, gene_ids=None, pathogenicity=None, annotations=None, **kwargs):
         self._genome_version = genome_version
-        logger.info(genome_version)
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None
@@ -430,7 +429,7 @@ class BaseHailTableQuery(object):
         return ht.filter(ht.sortedTranscriptConsequences.any(lambda t: hl.set(gene_ids).contains(t.gene_id)))
 
     @staticmethod
-    def _should_add_chr_prefix(self, genome_version):
+    def _should_add_chr_prefix(genome_version):
         reference_genome = hl.get_reference(genome_version)
         return any(c.startswith('chr') for c in reference_genome.contigs)
 
