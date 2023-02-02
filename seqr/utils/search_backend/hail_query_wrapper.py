@@ -418,13 +418,14 @@ class BaseHailTableQuery(object):
         return quality_filter_expr
 
     @classmethod
-    def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, clinvar_path_terms=None, **kwargs):
+    def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, in_silico=None, clinvar_path_terms=None, **kwargs):
         if custom_query:
             # In production: should either remove the "custom search" functionality,
             # or should come up with a simple json -> hail query parsing here
             raise NotImplementedError
 
         ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
+        ht = cls._filter_by_in_silico(ht, in_silico)
 
         return ht
 
@@ -455,10 +456,8 @@ class BaseHailTableQuery(object):
         return intervals
 
     def _filter_annotated_variants(self, inheritance_mode=None, inheritance_filter=None,
-                         annotations_secondary=None, quality_filter=None, in_silico=None, **kwargs):
+                         annotations_secondary=None, quality_filter=None, **kwargs):
         # TODO - move as much filtering as possible into initial import before join data types
-        self._filter_by_in_silico(in_silico)
-
         quality_filter = quality_filter or {}
         if quality_filter.get('vcf_filter') is not None:
             self._filter_vcf_filters()
@@ -541,10 +540,11 @@ class BaseHailTableQuery(object):
 
         return ht
 
-    def _filter_by_in_silico(self, in_silico_filters):
+    @classmethod
+    def _filter_by_in_silico(cls, ht, in_silico_filters):
         in_silico_filters = {
             k: v for k, v in (in_silico_filters or {}).items()
-            if k == 'requireScore' or (k in self.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0)
+            if k == 'requireScore' or (k in cls.PREDICTION_FIELDS_CONFIG and v is not None and len(v) != 0)
         }
         require_score = in_silico_filters.pop('requireScore', False)
         if not in_silico_filters:
@@ -553,8 +553,8 @@ class BaseHailTableQuery(object):
         in_silico_q = None
         missing_in_silico_q = None
         for in_silico, value in in_silico_filters.items():
-            score_path = self.PREDICTION_FIELDS_CONFIG[in_silico]
-            ht_value = self._ht[score_path[0]][score_path[1]]
+            score_path = cls.PREDICTION_FIELDS_CONFIG[in_silico]
+            ht_value = ht[score_path[0]][score_path[1]]
             if in_silico in PREDICTION_FIELD_ID_LOOKUP:
                 score_filter = ht_value == PREDICTION_FIELD_ID_LOOKUP[in_silico].index(value)
             else:
@@ -575,7 +575,7 @@ class BaseHailTableQuery(object):
         if missing_in_silico_q is not None:
             in_silico_q |= missing_in_silico_q
 
-        self._ht = self._ht.filter(in_silico_q)
+        return ht.filter(in_silico_q)
 
     def _filter_by_annotations(self, allowed_consequences):
         annotation_filters = self._get_annotation_override_filters(self._ht)
