@@ -206,13 +206,10 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_source, samples, genome_version, gene_ids=None, intervals=None,
-                 pathogenicity=None, annotations=None, **kwargs):
-        # TODO clean up unneeded properties
+    def __init__(self, data_source, samples, genome_version, gene_ids=None, pathogenicity=None, annotations=None, **kwargs):
         self._genome_version = genome_version
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
-        self._has_location_filter = bool(intervals)
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
 
@@ -223,7 +220,7 @@ class BaseHailTableQuery(object):
         self._parse_pathogenicity_overrides(pathogenicity)
         self._parse_annotations_overrides(annotations)
 
-        self._load_filtered_table(data_source, samples, intervals=intervals, **kwargs)
+        self._load_filtered_table(data_source, samples, **kwargs)
 
     def _load_filtered_table(self, data_source, samples, intervals=None, **kwargs):
         self._ht = self.import_filtered_table(
@@ -232,6 +229,7 @@ class BaseHailTableQuery(object):
         )
         if self._filtered_genes:
             self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)
+        # TODO - move as much filtering as possible into initial import before join data types
         self._filter_annotated_variants(**kwargs)
 
     @classmethod
