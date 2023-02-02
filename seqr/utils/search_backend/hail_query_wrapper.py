@@ -1102,7 +1102,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
-        # TODO gCNV ref calls - move logic to pipeline?
+        # TODO gCNV ref calls - add logic to initial table import
         mt = super(GcnvHailTableQuery, cls)._family_ht_to_mt(family_ht)
         #  gCNV data has no ref/ref calls so add them back in
         mt = mt.unfilter_entries()
