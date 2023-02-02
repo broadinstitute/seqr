@@ -302,9 +302,11 @@ class BaseHailTableQuery(object):
         ht = families_ht.annotate(**annotation_ht[families_ht.key])
 
         if clinvar_path_terms and quality_filter:
-            ht = ht.annotate(genotypes=hl.if_else(
-                cls._has_clivar_terms_expr(ht, clinvar_path_terms), ht.genotypes, ht.genotypes.filter(lambda x: x['passesQuality'])
-            ).map(lambda x: x.drop('passesQuality')))
+            ht = ht.annotate(genotypes=hl.bind(
+                lambda genotypes: genotypes.map(lambda x: x.drop('passesQuality')),
+                hl.if_else(cls._has_clivar_terms_expr(ht, clinvar_path_terms),
+                           ht.genotypes, ht.genotypes.filter(lambda x: x['passesQuality']))
+            ))
             ht = ht.filter(ht.genotypes)
 
         return ht.annotate(
