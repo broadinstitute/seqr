@@ -305,7 +305,7 @@ class BaseHailTableQuery(object):
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
             genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         )
-        return cls._filter_annotated_table(consequence_overrides=consequence_overrides, **kwargs)
+        return cls._filter_annotated_table(ht, consequence_overrides=consequence_overrides, **kwargs)
 
     @classmethod
     def _family_ht_to_mt(cls, family_ht):
