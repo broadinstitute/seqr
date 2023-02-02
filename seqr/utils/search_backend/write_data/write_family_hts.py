@@ -65,11 +65,14 @@ def write_family_hts(file, project, data_type):
     for family_guid in family_guids:
         print(family_guid)
         family_subset_ht = families_ht.filter(families_ht.familyGuid == family_guid)
+        sample_ids = sorted(family_subset_ht.aggregate(hl.agg.collect(family_subset_ht.s)))
 
         family_mt = mt.semi_join_cols(family_subset_ht)
-        family_ht = family_mt.filter_rows(hl.agg.any(family_mt.GT.is_non_ref())).entries()
+        family_mt = family_mt.filter_rows(hl.agg.any(family_mt.GT.is_non_ref()))
+        family_mt = family_mt.repartition(1)
+
+        # TODO family_ht.annotate_rows(entries=...)
         family_ht = family_ht.select('GT', *annotations.keys(), *ENTRY_FIELDS.get(data_type, []))
-        family_ht = family_ht.repartition(1)
 
         count = family_ht.count()
         print(f'{family_guid}: {family_subset_ht.count()} samples, {count} rows')

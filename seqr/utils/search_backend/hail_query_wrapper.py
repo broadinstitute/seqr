@@ -284,6 +284,9 @@ class BaseHailTableQuery(object):
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )))
+            if clinvar_path_terms and quality_filter:
+                family_ht = family_ht.annotate(passesQualityFamilies=hl.if_else(
+                    family_ht.passesQuality, {f.guid}, hl.empty_set(hl.tstr)))
 
             if families_ht:
                 # TODO does not work
@@ -302,12 +305,11 @@ class BaseHailTableQuery(object):
         ht = families_ht.annotate(**annotation_ht[families_ht.key])
 
         if clinvar_path_terms and quality_filter:
-            ht = ht.annotate(genotypes=hl.bind(
-                lambda genotypes: genotypes.map(lambda x: x.drop('passesQuality')),
-                hl.if_else(cls._has_clivar_terms_expr(ht, clinvar_path_terms),
-                           ht.genotypes, ht.genotypes.filter(lambda x: x['passesQuality']))
+            ht = ht.transmute(genotypes=hl.if_else(
+                cls._has_clivar_terms_expr(ht, clinvar_path_terms),
+                ht.genotypes, ht.genotypes.filter(lambda x: ht.passesQualityFamilies.contains(x.familyGuid))
             ))
-            ht = ht.filter(ht.genotypes)
+            ht = ht.filter(ht.genotypes.size() > 0)
 
         return ht.annotate(
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
@@ -339,8 +341,7 @@ class BaseHailTableQuery(object):
         if quality_filter:
             quality_filter_expr = family_ht.genotypes.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
             if clinvar_path_terms:
-                family_ht = family_ht.annotate(genotypes=family_ht.genotypes.map(
-                    lambda gt: gt.annotate(passesQuality=quality_filter_expr)))
+                family_ht = family_ht.annotate(passesQuality=quality_filter_expr)
             else:
                 family_ht = family_ht.filter(quality_filter_expr)
 
