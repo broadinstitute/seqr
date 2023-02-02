@@ -794,7 +794,8 @@ def gregor_export(request, consent_code):
             analyte_id = f'Broad_{sm_id}'
             airtable_metadata = airtable_metadata_by_smid.get(sm_id)
             if airtable_metadata:
-                airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **_get_experiment_ids(airtable_sample)))
+                experiment_ids = _get_experiment_ids(airtable_sample, airtable_metadata)
+                airtable_rows.append(dict(analyte_id=analyte_id, **airtable_metadata, **experiment_ids))
 
         # analyte table
         analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
@@ -882,9 +883,9 @@ def _get_analyte_row(individual):
     }
 
 
-def _get_experiment_ids(airtable_sample):
+def _get_experiment_ids(airtable_sample, airtable_metadata):
     collaborator_sample_id = airtable_sample['CollaboratorSampleID']
-    experiment_dna_short_read_id = f'Broad_{collaborator_sample_id}'
+    experiment_dna_short_read_id = f'Broad_{airtable_metadata.get("experiment_type", "NA")}_{collaborator_sample_id}'
     return {
         'experiment_dna_short_read_id': experiment_dna_short_read_id,
         'experiment_sample_id': collaborator_sample_id,
