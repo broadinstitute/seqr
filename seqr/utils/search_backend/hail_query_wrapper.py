@@ -592,30 +592,28 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_by_annotations(cls, ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides):
-        consequence_filters = []
+        annotation_exprs = {}
+
         annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
-        if annotation_override_filter is None:
-            ht = ht.annotate(override_consequences=False)
-        else:
-            ht = ht.annotate(override_consequences=annotation_override_filter)
-            consequence_filters.append(ht.override_consequences)
+        annotation_exprs['override_consequences'] = False if annotation_override_filter is None else annotation_override_filter
 
         if allowed_consequences:
-            ht = ht.annotate(has_allowed_consequence=ht.sortedTranscriptConsequences.any(
-                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences)))
-            consequence_filters.append(ht.has_allowed_consequence)
+            annotation_exprs['has_allowed_consequence'] = ht.sortedTranscriptConsequences.any(
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences))
 
         if allowed_consequences_secondary:
-            ht = ht.annotate(has_allowed_secondary_consequence=ht.sortedTranscriptConsequences.any(
-                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences_secondary)))
-            consequence_filters.append(ht.has_allowed_secondary_consequence)
+            annotation_exprs['has_allowed_secondary_consequence'] = ht.sortedTranscriptConsequences.any(
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences_secondary))
 
-        if not consequence_filters:
+        ht = ht.annotate(**annotation_exprs)
+        filter_fields = [k for k, v in annotation_exprs.items() if v is not False]
+
+        if not filter_fields:
             return ht
 
-        consequence_filter = consequence_filters[0]
-        for cf in consequence_filters[1:]:
-            consequence_filter |= cf
+        consequence_filter = ht[filter_fields[0]]
+        for field in filter_fields[1:]:
+            consequence_filter |= ht[field]
         return ht.filter(consequence_filter)
 
     @classmethod
