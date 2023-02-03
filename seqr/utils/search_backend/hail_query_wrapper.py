@@ -206,7 +206,7 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_source, samples, genome_version, gene_ids=None, pathogenicity=None, annotations=None, **kwargs):
+    def __init__(self, data_source, samples, genome_version, gene_ids=None, pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
         self._genome_version = genome_version
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
@@ -218,18 +218,23 @@ class BaseHailTableQuery(object):
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
         }
         self._parse_pathogenicity_overrides(pathogenicity)
-        self._parse_annotations_overrides(annotations)
+        self._parse_annotations_overrides(annotations, annotations_secondary)
 
         self._load_filtered_table(data_source, samples, **kwargs)
 
-    def _load_filtered_table(self, data_source, samples, intervals=None, **kwargs):
+    def _load_filtered_table(self, data_source, samples, intervals=None, inheritance_mode=None, **kwargs):
         self._ht = self.import_filtered_table(
             data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
-            consequence_overrides=self._consequence_overrides, allowed_consequences=self._allowed_consequences, **kwargs,
+            consequence_overrides=self._consequence_overrides, allowed_consequences=self._allowed_consequences,
+            allowed_consequences_secondary=self._allowed_consequences_secondary, inheritance_mode=inheritance_mode, **kwargs,
         )
         if self._filtered_genes:
             self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)
-        self._filter_annotated_variants(**kwargs)
+
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+            self._filter_compound_hets()
+            if inheritance_mode == COMPOUND_HET:
+                self._ht = None
 
     @classmethod
     def import_filtered_table(cls, data_source, samples, intervals=None, quality_filter=None, consequence_overrides=None, **kwargs):
@@ -302,8 +307,9 @@ class BaseHailTableQuery(object):
             vcf_quality_filter=vcf_quality_filter, **kwargs)
 
     @classmethod
-    def _validate_search_criteria(cls, **kwargs):
-        return
+    def _validate_search_criteria(cls, inheritance_mode=None, allowed_consequences=None, **kwargs):
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not allowed_consequences:
+            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, **kwargs):
@@ -414,7 +420,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, in_silico=None, clinvar_path_terms=None,
                                 vcf_quality_filter=None, consequence_overrides=None,
-                                allowed_consequences=None, annotations_secondary=None, **kwargs):
+                                allowed_consequences=None, allowed_consequences_secondary=None, **kwargs):
         if custom_query:
             # In production: should either remove the "custom search" functionality,
             # or should come up with a simple json -> hail query parsing here
@@ -422,7 +428,7 @@ class BaseHailTableQuery(object):
 
         ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
         ht = cls._filter_by_in_silico(ht, in_silico)
-        ht = cls._filter_by_annotations(ht, allowed_consequences, annotations_secondary, consequence_overrides)
+        ht = cls._filter_by_annotations(ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides)
         if vcf_quality_filter is not None:
             ht = cls._filter_vcf_filters(ht)
 
@@ -454,19 +460,7 @@ class BaseHailTableQuery(object):
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
-    def _filter_annotated_variants(self, inheritance_mode=None, inheritance_filter=None,
-                         annotations_secondary=None, quality_filter=None, **kwargs):
-        # TODO - rename and clarify this
-        quality_filter = quality_filter or {}
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            comp_het_only = inheritance_mode == COMPOUND_HET
-            self._filter_compound_hets(
-                inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=not comp_het_only,
-            )
-            if comp_het_only:
-                return
-
-    def _parse_annotations_overrides(self, annotations):
+    def _parse_annotations_overrides(self, annotations, annotations_secondary):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
         annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
         for field in annotation_override_fields:
@@ -475,6 +469,9 @@ class BaseHailTableQuery(object):
                 self._consequence_overrides[field] = value
 
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
+        if annotations_secondary:
+            self._allowed_consequences_secondary = sorted(
+                {ann for anns in annotations_secondary.values() for ann in anns})
 
     def _parse_pathogenicity_overrides(self, pathogenicity):
         for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
@@ -570,10 +567,12 @@ class BaseHailTableQuery(object):
         return ht.filter(in_silico_q)
 
     @classmethod
-    def _filter_by_annotations(cls, ht, allowed_consequences, annotations_secondary, consequence_overrides):
+    def _filter_by_annotations(cls, ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides):
         consequence_filters = []
         annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
-        if annotation_override_filter is not None:
+        if annotation_override_filter is None:
+            ht = ht.annotate(override_consequences=False)
+        else:
             ht = ht.annotate(override_consequences=annotation_override_filter)
             consequence_filters.append(ht.override_consequences)
 
@@ -582,10 +581,10 @@ class BaseHailTableQuery(object):
                 lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences)))
             consequence_filters.append(ht.has_allowed_consequence)
 
-        if annotations_secondary:
-            allowed_consequences_secondary = sorted({ann for anns in annotations_secondary.values() for ann in anns})
-            consequence_filters.append(ht.sortedTranscriptConsequences.any(
+        if allowed_consequences_secondary:
+            ht = ht.annotate(has_allowed_secondary_consequence=ht.sortedTranscriptConsequences.any(
                 lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences_secondary)))
+            consequence_filters.append(ht.has_allowed_secondary_consequence)
             # TODO in RECESSIVE search properly filter recessive variants to main consequences
 
         if not consequence_filters:
@@ -598,6 +597,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _get_annotation_override_filter(cls, ht, consequence_overrides, use_parsed_fields=False):
+        # TODO remove use_parsed_fields from override filter
         annotation_filters = []
 
         if consequence_overrides[CLINVAR_KEY]:
@@ -659,37 +659,32 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
 
-    def _filter_compound_hets(self, inheritance_filter, annotations_secondary, quality_filter, keep_main_ht=True):
-        if not self._allowed_consequences:
-            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
-
-        # Filter and format variants
-        comp_het_consequences = set(self._allowed_consequences)
-        if annotations_secondary:
-            self._allowed_consequences_secondary = sorted(
-                {ann for anns in annotations_secondary.values() for ann in anns})
-            comp_het_consequences.update(self._allowed_consequences_secondary)
-
-        # ch_ht = self._filter_by_annotations(comp_het_consequences)
-        ch_ht = self._format_results(ch_ht)
+    def _filter_compound_hets(self):
+        # TODO for all recessive filer out recessive variants
+        ch_ht = self._ht.annotate(gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)))
 
         # Get possible pairs of variants within the same gene
-        ch_ht = ch_ht.annotate(gene_ids=ch_ht.transcripts.key_set())
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
-        ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=hl.agg.collect(ch_ht.row).map(lambda v: v.drop('gene_ids')))
-        # TODO of prefilter one of these to stricter annotation criteria, can remove _filter_valid_comp_het_annotation_pairs
-        ch_ht = ch_ht.annotate(v2=ch_ht.v1)
+        formatted_rows_expr = hl.agg.collect(ch_ht.row).map(self._format_results)
+        if self._allowed_consequences_secondary:
+            v1_expr = hl.agg.filter(
+                (ch_ht.override_consequences | ch_ht.has_allowed_consequence), formatted_rows_expr,
+            )
+            v2_expr = hl.agg.filter(
+                (ch_ht.override_consequences | ch_ht.has_allowed_secondary_consequence), formatted_rows_expr,
+            )
+        else:
+            v1_expr = formatted_rows_expr
+            v2_expr = formatted_rows_expr
+
+        ch_ht = ch_ht.group_by('gene_ids').aggregate(v1=v1_expr, v2=v2_expr)
         ch_ht = ch_ht.explode(ch_ht.v1)
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
 
-        # Filter variant pairs for primary/secondary consequences
-        if self._allowed_consequences and self._allowed_consequences_secondary:
-            ch_ht = self._filter_valid_comp_het_annotation_pairs(ch_ht)
-
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
-        ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
+        ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))  # TODO comp het family filtering
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.transmute(
             v1=ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids)),
@@ -705,32 +700,9 @@ class BaseHailTableQuery(object):
 
         self._comp_het_ht = ch_ht.distinct()
 
-        if not keep_main_ht:
-            self._ht = None
-
     @staticmethod
     def _non_alt_genotype(genotypes, i_guid):
         return ~genotypes.contains(i_guid) | (genotypes[i_guid].numAlt < 1)
-
-    def _filter_valid_comp_het_annotation_pairs(self, ch_ht):
-        primary_cs = hl.literal(set(self._allowed_consequences))
-        secondary_cs = hl.literal(set(self._allowed_consequences_secondary))
-        ch_ht = ch_ht.annotate(
-            v1_csqs=ch_ht.v1.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence),
-            v2_csqs=ch_ht.v2.transcripts.values().flatmap(lambda x: x).map(lambda t: t.majorConsequence)
-        )
-        has_annotation_filter = (ch_ht.v1_csqs.any(
-            lambda c: primary_cs.contains(c)) & ch_ht.v2_csqs.any(
-            lambda c: secondary_cs.contains(c))) | (ch_ht.v1_csqs.any(
-            lambda c: secondary_cs.contains(c)) & ch_ht.v2_csqs.any(
-            lambda c: primary_cs.contains(c)))
-
-        # for af in self._get_annotation_override_filters(ch_ht.v1, self._consequence_overrides, use_parsed_fields=True):
-        #     has_annotation_filter |= af
-        # for af in self._get_annotation_override_filters(ch_ht.v2, self._consequence_overrides, use_parsed_fields=True):
-        #     has_annotation_filter |= af
-
-        return ch_ht.filter(has_annotation_filter)
 
     def _valid_comp_het_families_expr(self, ch_ht):
         # TODO comp het needs to add annotations at inheritance filter time
@@ -948,6 +920,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and num_families > MAX_NO_LOCATION_COMP_HET_FAMILIES and not has_location_search:
             raise InvalidSearchException('Location must be specified to search for compound heterozygous variants across many families')
+        super(VariantHailTableQuery, cls)._validate_search_criteria(inheritance_mode=inheritance_mode, **kwargs)
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, clinvar_path_terms=None, **kwargs):
