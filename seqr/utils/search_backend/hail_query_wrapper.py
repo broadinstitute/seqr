@@ -232,12 +232,19 @@ class BaseHailTableQuery(object):
             self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            self._filter_compound_hets()
-            if inheritance_mode == COMPOUND_HET:
+            is_all_recessive_search = inheritance_mode == RECESSIVE
+            self._filter_compound_hets(is_all_recessive_search)
+            if is_all_recessive_search:
+                self._ht = self._ht.transmute(familyGuids=self._ht.recessiveFamilies)
+                self._ht = self._ht.filter(self._ht.familyGuids.size() > 0)
+                if self._allowed_consequences_secondary:
+                    self._ht = self._ht.filter(self._ht.has_allowed_consequence | self._ht.override_consequences)
+            else:
                 self._ht = None
 
     @classmethod
-    def import_filtered_table(cls, data_source, samples, intervals=None, quality_filter=None, consequence_overrides=None, **kwargs):
+    def import_filtered_table(cls, data_source, samples, intervals=None, inheritance_mode=None, quality_filter=None,
+                              consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         quality_filter = quality_filter or {}
@@ -251,7 +258,9 @@ class BaseHailTableQuery(object):
         family_samples = defaultdict(list)
         for s in samples:
             family_samples[s.individual.family].append(s)
-        cls._validate_search_criteria(num_families=len(family_samples), has_location_search=bool(intervals), **kwargs)
+        cls._validate_search_criteria(
+            num_families=len(family_samples), has_location_search=bool(intervals), inheritance_mode=inheritance_mode,
+            **kwargs)
 
         families_ht = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
@@ -261,7 +270,7 @@ class BaseHailTableQuery(object):
             logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
             family_ht = cls._filter_family_table(
                 family_ht, family_samples=f_samples, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
-                **kwargs, **family_filter_kwargs)
+                inheritance_mode=inheritance_mode, **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
             sample_individual_map = hl.dict({s.sample_id: s.individual.guid for s in f_samples})
@@ -274,6 +283,11 @@ class BaseHailTableQuery(object):
             if clinvar_path_terms and quality_filter:
                 family_ht = family_ht.annotate(passesQualityFamilies=hl.if_else(
                     family_ht.passesQuality, {f.guid}, hl.empty_set(hl.tstr)))
+            if inheritance_mode == RECESSIVE:
+                family_ht = family_ht.annotate(compHetFamilies=hl.if_else(
+                    family_ht.isCompHetFamily, {f.guid}, hl.empty_set(hl.tstr)))
+                family_ht = family_ht.annotate(recessiveFamilies=hl.if_else(
+                    family_ht.isRecessiveFamily, {f.guid}, hl.empty_set(hl.tstr)))
 
             if families_ht:
                 # TODO does not work
@@ -364,24 +378,31 @@ class BaseHailTableQuery(object):
             genotype_filter = cls._get_any_sample_has_gt(family_ht, affected_status_samples, HAS_ALT)
         else:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
-            genotype_filter_exprs = cls._get_sample_genotype_filters(
+            genotype_filter = cls._get_sample_genotype_filter(
                 family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter)
-            genotype_filter = genotype_filter_exprs[0]
-            for f in genotype_filter_exprs:
-                genotype_filter &= f
 
-        if inheritance_mode == COMPOUND_HET:
-            # TODO handle all recessive case including comp het
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             # remove variants where all unaffected individuals are het
             unaffected_samples = {
                 s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
             }
-            if len(unaffected_samples) > 1:
-                genotype_filter &= cls._get_any_sample_has_gt(family_ht, unaffected_samples, REF_REF)
+            has_unaffected_ref_filter = None if len(unaffected_samples) < 2 else cls._get_any_sample_has_gt(
+                family_ht, unaffected_samples, REF_REF)
+
+            if inheritance_mode == RECESSIVE:
+                inheritance_filter.update(INHERITANCE_FILTERS[COMPOUND_HET])
+                comp_het_gt_filter = cls._get_sample_genotype_filter(
+                    family_ht, sample_id_index_map, sample_affected_statuses, COMPOUND_HET, inheritance_filter)
+                if has_unaffected_ref_filter is not None:
+                    comp_het_gt_filter &= has_unaffected_ref_filter
+                family_ht = family_ht.annotate(isCompHetFamily=comp_het_gt_filter, isRecessiveFamily=genotype_filter)
+                genotype_filter |= family_ht.isCompHetFamily
+
+            elif has_unaffected_ref_filter is not None:
+                genotype_filter &= has_unaffected_ref_filter
 
         family_ht = family_ht.filter(genotype_filter)
 
-        # TODO comp het
         # TODO SV override newCall - _get_matched_families_expr
         return family_ht
 
@@ -392,7 +413,7 @@ class BaseHailTableQuery(object):
         )
 
     @classmethod
-    def _get_sample_genotype_filters(cls, family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
+    def _get_sample_genotype_filter(cls, family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
         individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
         genotype_filter_exprs = []
         for s, status in sample_affected_statuses.items():
@@ -404,7 +425,10 @@ class BaseHailTableQuery(object):
                     cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[sample_id_index_map[s.sample_id]].GT)
                 )
 
-        return genotype_filter_exprs
+        genotype_filter = genotype_filter_exprs[0]
+        for f in genotype_filter_exprs:
+            genotype_filter &= f
+        return genotype_filter
 
     @classmethod
     def _genotype_passes_quality(cls, gt, quality_filter):
@@ -585,7 +609,6 @@ class BaseHailTableQuery(object):
             ht = ht.annotate(has_allowed_secondary_consequence=ht.sortedTranscriptConsequences.any(
                 lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences_secondary)))
             consequence_filters.append(ht.has_allowed_secondary_consequence)
-            # TODO in RECESSIVE search properly filter recessive variants to main consequences
 
         if not consequence_filters:
             return ht
@@ -654,9 +677,12 @@ class BaseHailTableQuery(object):
     def get_x_chrom_filter(ht, x_interval):
         return x_interval.contains(ht.locus)
 
-    def _filter_compound_hets(self):
-        # TODO for all recessive filer out recessive variants
+    def _filter_compound_hets(self, is_all_recessive_search):
         ch_ht = self._ht.annotate(gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)))
+
+        if is_all_recessive_search:
+            ch_ht = ch_ht.transmute(familyGuids=self._ht.compHetFamilies)
+            ch_ht = ch_ht.filter(ch_ht.familyGuids.size() > 0)
 
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
