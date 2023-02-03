@@ -348,6 +348,7 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_family_inheritance(cls, family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version):
+        logger.info(family_ht.globals)
         sample_index_id_map = dict(enumerate(hl.eval(family_ht.sample_ids)))
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
 
