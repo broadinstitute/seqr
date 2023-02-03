@@ -74,8 +74,8 @@ def write_family_hts(file, project, data_type):
         ))).rows()
         family_ht = family_ht.annotate_globals(
             sample_ids=sorted(family_subset_ht.aggregate(hl.agg.collect(family_subset_ht.s))))
-        family_ht = family_ht.transmute(entries=family_ht.sample_ids.map(
-            lambda sample_id: family_ht.entry_agg.find(lambda et: et.s == sample_id).drop('s')))
+        family_ht = family_ht.annotate(entries=family_ht.sample_ids.map(
+            lambda sample_id: family_ht.entry_agg.find(lambda et: et.s == sample_id).drop('s'))).drop('entry_agg')
         family_ht = family_ht.repartition(1)
 
         count = family_ht.count()
