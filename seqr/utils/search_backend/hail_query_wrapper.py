@@ -596,18 +596,13 @@ class BaseHailTableQuery(object):
         return ht.filter(consequence_filter)
 
     @classmethod
-    def _get_annotation_override_filter(cls, ht, consequence_overrides, use_parsed_fields=False):
-        # TODO remove use_parsed_fields from override filter
+    def _get_annotation_override_filter(cls, ht, consequence_overrides):
         annotation_filters = []
 
         if consequence_overrides[CLINVAR_KEY]:
-            if use_parsed_fields:
-                allowed_significances = hl.set(consequence_overrides[CLINVAR_KEY])
-                clinvar_key = 'clinicalSignificance'
-            else:
-                allowed_significances = hl.set({CLINVAR_SIG_MAP[s] for s in consequence_overrides[CLINVAR_KEY]})
-                clinvar_key = 'clinical_significance_id'
-            annotation_filters.append(allowed_significances.contains(ht.clinvar[clinvar_key]))
+            annotation_filters.append(hl.set({
+                CLINVAR_SIG_MAP[s] for s in consequence_overrides[CLINVAR_KEY]
+            }).contains(ht.clinvar.clinical_significance_id))
         if consequence_overrides[HGMD_KEY]:
             allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in consequence_overrides[HGMD_KEY]})
             annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
@@ -616,7 +611,7 @@ class BaseHailTableQuery(object):
             annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_id)).size() > 0)
         if consequence_overrides[SPLICE_AI_FIELD]:
             splice_ai = float(consequence_overrides[SPLICE_AI_FIELD])
-            score_path = ('predictions', 'splice_ai') if use_parsed_fields else cls.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
+            score_path = cls.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
             annotation_filters.append(ht[score_path[0]][score_path[1]] >= splice_ai)
         if consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
             allowed_sv_types = hl.set({SV_TYPE_MAP[t] for t in consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]})
@@ -1134,6 +1129,7 @@ class MultiDataTypeHailTableQuery(object):
     DATA_TYPE_ANNOTATION_FIELDS = []
 
     def __init__(self, data_source, *args, **kwargs):
+        # TODO clean up unused multi data type properties
         self._data_types = list(data_source.keys())
         self.POPULATIONS = {}
         self.PREDICTION_FIELDS_CONFIG = {}
