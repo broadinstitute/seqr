@@ -728,16 +728,12 @@ class BaseHailTableQuery(object):
         )
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.select(
-            **{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])})  # TODO #2496: sort with self._sort
+        ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])})  # TODO #2496: sort with self._sort
+        logger.info(ch_ht[GROUPED_VARIANTS_FIELD].dtype.element_type)
         ch_ht = ch_ht.annotate(
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
 
         self._comp_het_ht = ch_ht.distinct()
-
-    @staticmethod
-    def _non_alt_genotype(genotypes, i_guid):
-        return ~genotypes.contains(i_guid) | (genotypes[i_guid].numAlt < 1)
 
     def _valid_comp_het_families_expr(self, ch_ht):
         both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
