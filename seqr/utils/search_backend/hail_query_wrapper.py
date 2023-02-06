@@ -288,7 +288,7 @@ class BaseHailTableQuery(object):
                 family_ht = family_ht.transmute(
                     compHetFamilyCarriers=hl.or_missing(family_ht.isCompHetFamily, {f.guid: family_ht.unaffectedCarriers}),
                     recessiveFamilies=hl.or_missing(family_ht.isRecessiveFamily, {f.guid}))
-            else:
+            elif inheritance_mode == COMPOUND_HET:
                 family_ht = family_ht.transmute(compHetFamilyCarriers={f.guid: family_ht.unaffectedCarriers})
 
             if families_ht:
