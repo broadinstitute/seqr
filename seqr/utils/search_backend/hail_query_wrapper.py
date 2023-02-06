@@ -310,7 +310,7 @@ class BaseHailTableQuery(object):
             else:
                 families_ht = family_ht.transmute(
                     **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
-                    **{k: hl.or_missing(family_ht[field], [(f.guid, family_ht[field])])
+                    **{k: hl.or_missing(hl.is_defined(family_ht[field]), [(f.guid, family_ht[field])])
                        for k, field in family_dict_fields.items()},
                 )
 
