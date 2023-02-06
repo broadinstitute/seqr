@@ -723,13 +723,16 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
-            v1=self._format_results(ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids))),
-            v2=self._format_results(ch_ht.v2.annotate(familyGuids=hl.array(ch_ht.family_guids))),
+            v1=self._format_results(ch_ht.v1).annotate(**{
+                'familyGuids': hl.array(ch_ht.family_guids), VARIANT_KEY_FIELD: ch_ht.v1[VARIANT_KEY_FIELD]
+            }),
+            v2=self._format_results(ch_ht.v2).annotate(**{
+                'familyGuids': hl.array(ch_ht.family_guids), VARIANT_KEY_FIELD: ch_ht.v2[VARIANT_KEY_FIELD]
+            }),
         )
 
         # Format pairs as lists and de-duplicate
         ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])})  # TODO #2496: sort with self._sort
-        logger.info(ch_ht[GROUPED_VARIANTS_FIELD].dtype.element_type)
         ch_ht = ch_ht.annotate(
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
 
