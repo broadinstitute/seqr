@@ -294,7 +294,7 @@ class BaseHailTableQuery(object):
             family_ht = family_ht.select_globals()
             if families_ht is not None:
                 families_ht = families_ht.join(family_ht, how='outer')
-                logger.info(logger.info(hl.agg.collect(hl.struct(
+                logger.info(families_ht.aggregate(hl.agg.collect(hl.struct(
                     locus=families_ht.locus, passesQualityFamilies=families_ht.passesQualityFamilies, passesQuality=families_ht.passesQuality,
                 )).take(5)))
                 families_ht = families_ht.select(
