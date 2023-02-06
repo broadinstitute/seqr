@@ -310,7 +310,7 @@ class BaseHailTableQuery(object):
                     ),
                     **{k: hl.bind(
                         lambda family_set: hl.if_else(families_ht[field], family_set.add(f.guid), family_set),
-                        hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
+                        hl.or_else(hl.is_defined(families_ht[field]) & families_ht[k], hl.empty_set(hl.tstr)),
                     ) for k, field in family_set_fields.items()},
                     **{k: hl.bind(
                         lambda family_arr: hl.if_else(
