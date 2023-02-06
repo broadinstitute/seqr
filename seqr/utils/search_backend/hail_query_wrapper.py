@@ -206,27 +206,27 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_source, samples, genome_version, gene_ids=None, pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
+    def __init__(self, data_source, samples, genome_version, gene_ids=None, **kwargs):
         self._genome_version = genome_version
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
 
-        # TODO clean up properties
-        self._consequence_overrides = {
+        self._load_filtered_table(data_source, samples, **kwargs)
+
+    def _load_filtered_table(self, data_source, samples, intervals=None, inheritance_mode=None, pathogenicity=None,
+                             annotations=None, annotations_secondary=None, **kwargs):
+        consequence_overrides = {
             CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: None, SPLICE_AI_FIELD: None,
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
         }
-        self._parse_pathogenicity_overrides(pathogenicity)
-        self._parse_annotations_overrides(annotations, annotations_secondary)
+        self._parse_pathogenicity_overrides(pathogenicity, consequence_overrides)
+        self._parse_annotations_overrides(annotations, annotations_secondary, consequence_overrides)
 
-        self._load_filtered_table(data_source, samples, **kwargs)
-
-    def _load_filtered_table(self, data_source, samples, intervals=None, inheritance_mode=None, **kwargs):
         self._ht = self.import_filtered_table(
             data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
-            consequence_overrides=self._consequence_overrides, allowed_consequences=self._allowed_consequences,
+            consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, inheritance_mode=inheritance_mode, **kwargs,
         )
         if self._filtered_genes:
@@ -504,24 +504,24 @@ class BaseHailTableQuery(object):
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
-    def _parse_annotations_overrides(self, annotations, annotations_secondary):
+    def _parse_annotations_overrides(self, annotations, annotations_secondary, consequence_overrides):
         annotations = {k: v for k, v in (annotations or {}).items() if v}
-        annotation_override_fields = {k for k, v in self._consequence_overrides.items() if v is None}
+        annotation_override_fields = {k for k, v in consequence_overrides.items() if v is None}
         for field in annotation_override_fields:
             value = annotations.pop(field, None)
             if field in self.ANNOTATION_OVERRIDE_FIELDS:
-                self._consequence_overrides[field] = value
+                consequence_overrides[field] = value
 
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
         if annotations_secondary:
             self._allowed_consequences_secondary = sorted(
                 {ann for anns in annotations_secondary.values() for ann in anns})
 
-    def _parse_pathogenicity_overrides(self, pathogenicity):
+    def _parse_pathogenicity_overrides(self, pathogenicity, consequence_overrides):
         for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
-            self._consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
+            consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
         for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
-            self._consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
+            consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
 
     @classmethod
     def _filter_vcf_filters(cls, ht):
@@ -1073,7 +1073,7 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
             ht = ht.filter(interval_filter)
         return ht
 
-    def _parse_pathogenicity_overrides(self, pathogenicity):
+    def _parse_pathogenicity_overrides(self, pathogenicity, consequence_overrides):
         pass
 
     @staticmethod
