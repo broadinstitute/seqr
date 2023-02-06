@@ -412,7 +412,7 @@ class BaseHailTableQuery(object):
 
         # remove variants where all unaffected individuals are het
         has_unaffected_ref_filter = None if len(unaffected_samples) < 2 else family_ht.entries.any(
-            hl.set(unaffected_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
+            lambda x: hl.set(unaffected_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
         )
 
         if inheritance_mode == RECESSIVE:
