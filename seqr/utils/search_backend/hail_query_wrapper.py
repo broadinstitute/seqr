@@ -740,6 +740,8 @@ class BaseHailTableQuery(object):
 
     def _valid_comp_het_families_expr(self, ch_ht):
         both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
+        logger.info('show')
+        ch_ht.transmute(chV1=ch_ht.v1.compHetFamilyCarriers, chV2=ch_ht.v2.compHetFamilyCarriers).show()
         return both_var_families
         # filter variants that are non-ref for any unaffected individual in both variants
         return both_var_families.filter(
