@@ -213,6 +213,7 @@ class BaseHailTableQuery(object):
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
 
+        # TODO clean up properties
         self._consequence_overrides = {
             CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: None, SPLICE_AI_FIELD: None,
             NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
@@ -236,7 +237,7 @@ class BaseHailTableQuery(object):
             self._filter_compound_hets(is_all_recessive_search)
             if is_all_recessive_search:
                 self._ht = self._ht.transmute(familyGuids=self._ht.recessiveFamilies)
-                self._ht = self._ht.filter(self._ht.familyGuids.size() > 0)
+                self._ht = self._ht.filter(self._ht.is_defined(self._ht.familyGuids) & self._ht.familyGuids.size() > 0)
                 if self._allowed_consequences_secondary:
                     self._ht = self._ht.filter(self._ht.has_allowed_consequence | self._ht.override_consequences)
             else:
@@ -284,10 +285,11 @@ class BaseHailTableQuery(object):
                 family_ht = family_ht.annotate(passesQualityFamilies=hl.if_else(
                     family_ht.passesQuality, {f.guid}, hl.empty_set(hl.tstr)))
             if inheritance_mode == RECESSIVE:
-                family_ht = family_ht.annotate(compHetFamilies=hl.if_else(
-                    family_ht.isCompHetFamily, {f.guid}, hl.empty_set(hl.tstr)))
-                family_ht = family_ht.annotate(recessiveFamilies=hl.if_else(
-                    family_ht.isRecessiveFamily, {f.guid}, hl.empty_set(hl.tstr)))
+                family_ht = family_ht.transmute(
+                    compHetFamilyCarriers=hl.or_missing(family_ht.isCompHetFamily, {f.guid: family_ht.unaffectedCarriers}),
+                    recessiveFamilies=hl.or_missing(family_ht.isRecessiveFamily, {f.guid}))
+            else:
+                family_ht = family_ht.transmute(compHetFamilyCarriers={f.guid: family_ht.unaffectedCarriers})
 
             if families_ht:
                 # TODO does not work
@@ -375,31 +377,16 @@ class BaseHailTableQuery(object):
             family_ht = family_ht.filter(cls.get_x_chrom_filter(family_ht, x_chrom_interval))
 
         if inheritance_mode == ANY_AFFECTED:
-            genotype_filter = cls._get_any_sample_has_gt(family_ht, affected_status_samples, HAS_ALT)
+            genotype_filter = family_ht.entries.any(
+                lambda x: hl.set(affected_status_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
+            )
         else:
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
             genotype_filter = cls._get_sample_genotype_filter(
                 family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter)
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            # remove variants where all unaffected individuals are het
-            unaffected_samples = {
-                s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
-            }
-            has_unaffected_ref_filter = None if len(unaffected_samples) < 2 else cls._get_any_sample_has_gt(
-                family_ht, unaffected_samples, REF_REF)
-
-            if inheritance_mode == RECESSIVE:
-                inheritance_filter.update(INHERITANCE_FILTERS[COMPOUND_HET])
-                comp_het_gt_filter = cls._get_sample_genotype_filter(
-                    family_ht, sample_id_index_map, sample_affected_statuses, COMPOUND_HET, inheritance_filter)
-                if has_unaffected_ref_filter is not None:
-                    comp_het_gt_filter &= has_unaffected_ref_filter
-                family_ht = family_ht.annotate(isCompHetFamily=comp_het_gt_filter, isRecessiveFamily=genotype_filter)
-                genotype_filter |= family_ht.isCompHetFamily
-
-            elif has_unaffected_ref_filter is not None:
-                genotype_filter &= has_unaffected_ref_filter
+            genotype_filter = cls._get_comp_het_genotype_filter(family_ht, genotype_filter, sample_affected_statuses)
 
         family_ht = family_ht.filter(genotype_filter)
 
@@ -407,10 +394,34 @@ class BaseHailTableQuery(object):
         return family_ht
 
     @classmethod
-    def _get_any_sample_has_gt(cls, ht, allowed_samples, genotype):
-        return ht.entries.any(
-            lambda x: hl.set(allowed_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[genotype](x.GT)
-        )
+    def _get_comp_het_genotype_filter(cls, family_ht, genotype_filter, sample_affected_statuses):
+        # remove variants where all unaffected individuals are het
+        unaffected_samples = {
+            s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
+        }
+        is_unaffected_hom_ref = lambda x: hl.set(unaffected_samples).contains(x.sampleId) & \
+                                          cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
+        has_unaffected_ref_filter = None if len(unaffected_samples) < 2 else family_ht.entries.any(is_unaffected_hom_ref)
+
+        if inheritance_mode == RECESSIVE:
+            inheritance_filter.update(INHERITANCE_FILTERS[COMPOUND_HET])
+            comp_het_gt_filter = cls._get_sample_genotype_filter(
+                family_ht, sample_id_index_map, sample_affected_statuses, COMPOUND_HET, inheritance_filter)
+            if has_unaffected_ref_filter is not None:
+                comp_het_gt_filter &= has_unaffected_ref_filter
+            family_ht = family_ht.annotate(
+                isRecessiveFamily=genotype_filter,
+                isCompHetFamily=comp_het_gt_filter,
+                unaffectedCarriers=hl.set(
+                    ht.entries.filter(lambda x: ~is_unaffected_hom_ref(x)).map(lambda x: x.sampleId)
+                ),
+            )
+            genotype_filter |= family_ht.isCompHetFamily
+
+        elif has_unaffected_ref_filter is not None:
+            genotype_filter &= has_unaffected_ref_filter
+
+        return genotype_filter
 
     @classmethod
     def _get_sample_genotype_filter(cls, family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
@@ -679,12 +690,12 @@ class BaseHailTableQuery(object):
         ch_ht = self._ht.annotate(gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)))
 
         if is_all_recessive_search:
-            ch_ht = ch_ht.transmute(familyGuids=self._ht.compHetFamilies)
-            ch_ht = ch_ht.filter(ch_ht.familyGuids.size() > 0)
+            ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilyCarriers) & ch_ht.compHetFamilyCarriers.size() > 0)
+            ch_ht = ch_ht.annotate(familyGuids=ch_ht.compHetFamilyCarriers.key_set())
 
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
-        formatted_rows_expr = hl.agg.collect(ch_ht.row).map(self._format_results)
+        formatted_rows_expr = hl.agg.collect(ch_ht.row)
         if self._allowed_consequences_secondary:
             v1_expr = hl.agg.filter(
                 (ch_ht.override_consequences | ch_ht.has_allowed_consequence), formatted_rows_expr,
@@ -702,8 +713,7 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
 
         # Filter variant pairs for family and genotype
-        ch_ht = ch_ht.annotate(family_guids=hl.set(ch_ht.v1.familyGuids).intersection(hl.set(ch_ht.v2.familyGuids)))
-        ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))  # TODO comp het family filtering
+        ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.transmute(
             v1=ch_ht.v1.annotate(familyGuids=hl.array(ch_ht.family_guids)),
@@ -711,11 +721,10 @@ class BaseHailTableQuery(object):
         )
 
         # Format pairs as lists and de-duplicate
-        ch_ht = ch_ht.annotate(
-            **{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])})  # TODO #2496: sort with self._sort
+        ch_ht = ch_ht.select(
+            **{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2].map(self._format_results))})  # TODO #2496: sort with self._sort
         ch_ht = ch_ht.annotate(
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
-        ch_ht = ch_ht.select(GROUPED_VARIANTS_FIELD)
 
         self._comp_het_ht = ch_ht.distinct()
 
@@ -724,16 +733,11 @@ class BaseHailTableQuery(object):
         return ~genotypes.contains(i_guid) | (genotypes[i_guid].numAlt < 1)
 
     def _valid_comp_het_families_expr(self, ch_ht):
-        # TODO comp het needs to add annotations at inheritance filter time
-        unaffected_family_individuals = defaultdict(set)
-        for sample_id in self._affected_status_samples[UNAFFECTED]:
-            individual = self._individuals_by_sample_id[sample_id]
-            unaffected_family_individuals[individual.family.guid].add(individual.guid)
-        unaffected_family_individuals = hl.dict(unaffected_family_individuals)
-
-        return ch_ht.family_guids.filter(lambda family_guid: unaffected_family_individuals[family_guid].all(
-            lambda i_guid: self._non_alt_genotype(ch_ht.v1.genotypes, i_guid) | self._non_alt_genotype(ch_ht.v2.genotypes, i_guid)
-        ))
+        both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
+        # filter variants that are non-ref for any unaffected individual in both variants
+        return both_var_families.filter(
+            lambda family_guid: ch_ht.v1.compHetFamilyCarriers[family_guid].intersection(
+                ch_ht.v2.compHetFamilyCarriers[family_guid]).size() == 0)
 
     def _format_results(self, ht):
         results = ht.annotate(
@@ -1304,23 +1308,20 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         )
 
     def _valid_comp_het_families_expr(self, ch_ht):
-        # TODO comp het needs to add annotations at inheritance filter time
         valid_families = super(AllDataTypeHailTableQuery, self)._valid_comp_het_families_expr(ch_ht)
-
-        individual_family_map = hl.dict({i.guid: i.family.guid for i in self._individuals_by_sample_id.values()})
-        invalid_families = self._invalid_hom_alt_individuals(ch_ht.v1, ch_ht.v2).union(
-            self._invalid_hom_alt_individuals(ch_ht.v2, ch_ht.v1)
-        ).map(lambda i: individual_family_map[i])
+        invalid_families = self._invalid_hom_alt_individual_families(ch_ht.v1, ch_ht.v2).union(
+            self._invalid_hom_alt_individual_families(ch_ht.v2, ch_ht.v1)
+        )
         return valid_families.difference(invalid_families)
 
     @staticmethod
-    def _invalid_hom_alt_individuals(v1, v2):
+    def _invalid_hom_alt_individual_families(v1, v2):
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
         return hl.if_else(
             hl.is_defined(v1.svType) | ((v2.svType == 'DEL') & (v2.pos <= v1.pos) & (v1.pos <= v2.end)),
             hl.empty_set(hl.tstr),
-            v1.genotypes.key_set().filter(lambda i: v1.genotypes[i].numAlt == 2)
+            hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid))
         )
 
 
