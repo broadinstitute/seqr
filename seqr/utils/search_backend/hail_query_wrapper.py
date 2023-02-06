@@ -721,7 +721,7 @@ class BaseHailTableQuery(object):
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
-        ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
+        # ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
             v1=self._format_results(ch_ht.v1).annotate(**{
                 'familyGuids': hl.array(ch_ht.family_guids), VARIANT_KEY_FIELD: ch_ht.v1[VARIANT_KEY_FIELD]
