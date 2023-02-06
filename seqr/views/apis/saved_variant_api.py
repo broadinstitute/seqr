@@ -1,5 +1,6 @@
 import logging
 import json
+import requests
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
@@ -332,3 +333,22 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
     update_model_from_json(saved_variant, {'selected_main_transcript_id': transcript_id}, request.user)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
+
+
+@login_and_policies_required
+def get_clingen_allele_id(request, hgvsc):
+    if not hgvsc:
+        create_json_response({'clinGenAlleleIdByHgvsc': {}})
+
+    url = f'http://reg.genome.network/allele?hgvs={hgvsc}'
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        error = 'Error: called ClinGen Allele Registry API: GET {} got status: {} with a reason: {}'.format(
+            url, response.status_code, response.reason)
+        logger.warning(error)
+        create_json_response({'error': error}, status=400, reason=error)
+
+    logger.info(f'Called ClinGen Allele Registry API: GET {url} {response.status_code} {len(response.text)}')
+
+    return create_json_response({'clinGenAlleleIdByHgvsc': {hgvsc: {'@id': response.json()['@id'].split('/')[-1]}}})

@@ -46,6 +46,7 @@ const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_HPO_TERMS = 'REQUEST_HPO_TERMS'
 const RECEIVE_HPO_TERMS = 'RECEIVE_HPO_TERMS'
 const REQUEST_FAMILY_DETAILS = 'REQUEST_FAMILY_DETAILS'
+const REQUEST_CLINGEN_ALLELE_ID = 'REQUEST_CLINGEN_ALLELE_ID'
 
 // action creators
 
@@ -310,6 +311,23 @@ export const updateLocusList = values => (dispatch) => {
     }).post(values)
 }
 
+export const loadClinGeneAlleleId = hgvsc => (dispatch, getState) => {
+  if (!hgvsc) {
+    return
+  }
+  const alleleId = getState().clinGenAlleleIdByHgvsc[hgvsc]
+  if (!alleleId) {
+    dispatch({ type: REQUEST_CLINGEN_ALLELE_ID })
+    new HttpRequestHelper(`/api/clingen/get_allele_id/${hgvsc}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+      }).get()
+  }
+}
+
 // root reducer
 const rootReducer = combineReducers({
   projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
@@ -349,6 +367,8 @@ const rootReducer = combineReducers({
   savedSearchesByGuid: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'savedSearchesByGuid'),
   savedSearchesLoading: loadingReducer(REQUEST_SAVED_SEARCHES, RECEIVE_SAVED_SEARCHES),
   transcriptsById: createObjectsByIdReducer(RECEIVE_DATA, 'transcriptsById'),
+  clinGenAlleleIdByHgvsc: createObjectsByIdReducer(RECEIVE_DATA, 'clinGenAlleleIdByHgvsc'),
+  clinGenAlleleIdLoading: loadingReducer(REQUEST_CLINGEN_ALLELE_ID, RECEIVE_DATA),
   user: createSingleObjectReducer(UPDATE_USER),
   newUser: zeroActionsReducer,
   userOptionsByUsername: createSingleValueReducer(RECEIVE_USER_OPTIONS, {}),
