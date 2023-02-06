@@ -293,7 +293,7 @@ class BaseHailTableQuery(object):
 
             family_ht = family_ht.select_globals()
             if families_ht is not None:
-                families_ht = families_ht.join(family_ht)
+                families_ht = families_ht.join(family_ht, how='outer')
                 families_ht = families_ht.select(
                     genotypes=hl.or_else(families_ht.genotypes.extend(families_ht.genotypes_1), families_ht.genotypes_1),
                     **{k: hl.bind(
