@@ -386,7 +386,7 @@ class BaseHailTableQuery(object):
                 family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter)
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            genotype_filter = cls._get_comp_het_genotype_filter(
+            family_ht, genotype_filter = cls._filter_comp_hets(
                 family_ht, genotype_filter, inheritance_mode, sample_affected_statuses)
 
         family_ht = family_ht.filter(genotype_filter)
@@ -395,7 +395,7 @@ class BaseHailTableQuery(object):
         return family_ht
 
     @classmethod
-    def _get_comp_het_genotype_filter(cls, family_ht, genotype_filter, inheritance_mode, sample_affected_statuses):
+    def _filter_comp_hets(cls, family_ht, genotype_filter, inheritance_mode, sample_affected_statuses):
         # remove variants where all unaffected individuals are het
         unaffected_samples = {
             s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
@@ -422,7 +422,7 @@ class BaseHailTableQuery(object):
         elif has_unaffected_ref_filter is not None:
             genotype_filter &= has_unaffected_ref_filter
 
-        return genotype_filter
+        return family_ht, genotype_filter
 
     @classmethod
     def _get_sample_genotype_filter(cls, family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
