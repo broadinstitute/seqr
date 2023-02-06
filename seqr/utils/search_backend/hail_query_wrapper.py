@@ -399,6 +399,7 @@ class BaseHailTableQuery(object):
         unaffected_samples = {
             s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
+        logger.info('unaffected_samples')
         is_unaffected_hom_ref = lambda x: hl.set(unaffected_samples).contains(x.sampleId) & \
                                           cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
 
@@ -745,8 +746,7 @@ class BaseHailTableQuery(object):
             chV2=ch_ht.v2.compHetFamilyCarriers,
             v1Id=ch_ht.v1[VARIANT_KEY_FIELD],
             v2Id=ch_ht.v2[VARIANT_KEY_FIELD],
-        ))))
-        return both_var_families
+        ))))  # TODO remove
         # filter variants that are non-ref for any unaffected individual in both variants
         return both_var_families.filter(
             lambda family_guid: ch_ht.v1.compHetFamilyCarriers[family_guid].intersection(
