@@ -400,6 +400,7 @@ class BaseHailTableQuery(object):
             s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
         logger.info('unaffected_samples')
+        logger.info(unaffected_samples)
         is_unaffected_hom_ref = lambda x: hl.set(unaffected_samples).contains(x.sampleId) & \
                                           cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
 
