@@ -294,9 +294,10 @@ class BaseHailTableQuery(object):
             family_ht = family_ht.select_globals()
             if families_ht is not None:
                 families_ht = families_ht.join(family_ht, how='outer')
-                logger.info(families_ht.aggregate(hl.agg.collect(hl.struct(
-                    locus=families_ht.locus, passesQualityFamilies=families_ht.passesQualityFamilies, passesQuality=families_ht.passesQuality,
-                )).take(5)))
+                subht = families_ht.head(10)
+                logger.info(subht.aggregate(hl.agg.collect(hl.struct(
+                    locus=subht.locus, passesQualityFamilies=subht.passesQualityFamilies, passesQuality=subht.passesQuality,
+                ))))
                 families_ht = families_ht.select(
                     genotypes=hl.bind(
                         lambda g1, g2: g1.extend(g2),
