@@ -237,7 +237,7 @@ class BaseHailTableQuery(object):
             self._filter_compound_hets(is_all_recessive_search)
             if is_all_recessive_search:
                 self._ht = self._ht.transmute(familyGuids=self._ht.recessiveFamilies)
-                self._ht = self._ht.filter(self._ht.is_defined(self._ht.familyGuids) & self._ht.familyGuids.size() > 0)
+                self._ht = self._ht.filter(hl.is_defined(self._ht.familyGuids) & self._ht.familyGuids.size() > 0)
                 if self._allowed_consequences_secondary:
                     self._ht = self._ht.filter(self._ht.has_allowed_consequence | self._ht.override_consequences)
             else:
