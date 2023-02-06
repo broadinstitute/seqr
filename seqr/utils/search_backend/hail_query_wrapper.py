@@ -396,20 +396,21 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_comp_hets(cls, family_ht, genotype_filter, sample_id_index_map, inheritance_mode, inheritance_filter, sample_affected_statuses):
-        family_ht = family_ht.annotate(
-            passesGtFilter=genotype_filter,
-            unaffectedCarriers=hl.set(
-                ht.entries.filter(lambda x: ~is_unaffected_hom_ref(x)).map(lambda x: x.sampleId)
-            ),
-        )
-        genotype_filter = family_ht.passesGtFilter
-
-        # remove variants where all unaffected individuals are het
         unaffected_samples = {
             s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
         is_unaffected_hom_ref = lambda x: hl.set(unaffected_samples).contains(x.sampleId) & \
                                           cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
+
+        family_ht = family_ht.annotate(
+            passesGtFilter=genotype_filter,
+            unaffectedCarriers=hl.set(
+                family_ht.entries.filter(lambda x: ~is_unaffected_hom_ref(x)).map(lambda x: x.sampleId)
+            ),
+        )
+        genotype_filter = family_ht.passesGtFilter
+
+        # remove variants where all unaffected individuals are het
         has_unaffected_ref_filter = None if len(unaffected_samples) < 2 else family_ht.entries.any(is_unaffected_hom_ref)
 
         if inheritance_mode == RECESSIVE:
