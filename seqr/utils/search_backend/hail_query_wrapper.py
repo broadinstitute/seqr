@@ -711,7 +711,7 @@ class BaseHailTableQuery(object):
         parsed_quality_filter = {}
         for filter_k, value in quality_filter.items():
             field = cls.GENOTYPE_FIELDS.get(filter_k.replace('min_', ''))
-            if field:
+            if field and value:
                 parsed_quality_filter[field] = value
         return parsed_quality_filter
 
