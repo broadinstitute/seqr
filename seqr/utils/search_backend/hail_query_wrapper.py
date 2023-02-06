@@ -699,7 +699,7 @@ class BaseHailTableQuery(object):
         ch_ht = self._ht.annotate(gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)))
 
         if is_all_recessive_search:
-            ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilyCarriers) & ch_ht.compHetFamilyCarriers.size() > 0)
+            ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilyCarriers) & (ch_ht.compHetFamilyCarriers.size() > 0))
             ch_ht = ch_ht.annotate(familyGuids=ch_ht.compHetFamilyCarriers.key_set())
 
         # Get possible pairs of variants within the same gene
