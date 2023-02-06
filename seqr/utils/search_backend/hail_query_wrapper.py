@@ -743,7 +743,8 @@ class BaseHailTableQuery(object):
         logger.info(ch_ht.aggregate(hl.agg.collect(hl.struct(
             chV1=ch_ht.v1.compHetFamilyCarriers,
             chV2=ch_ht.v2.compHetFamilyCarriers,
-            variantId=ch_ht[VARIANT_KEY_FIELD],
+            v1Id=ch_ht.v1[VARIANT_KEY_FIELD],
+            v2Id=ch_ht.v2[VARIANT_KEY_FIELD],
         ))))
         return both_var_families
         # filter variants that are non-ref for any unaffected individual in both variants
