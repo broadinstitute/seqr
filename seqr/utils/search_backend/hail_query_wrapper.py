@@ -263,6 +263,15 @@ class BaseHailTableQuery(object):
             num_families=len(family_samples), has_location_search=bool(intervals), inheritance_mode=inheritance_mode,
             **kwargs)
 
+        family_set_fields = {}
+        family_dict_fields = {}
+        if clinvar_path_terms and quality_filter:
+            family_set_fields['passesQualityFamilies'] = 'passesQuality'
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+            family_dict_fields['compHetFamilyCarriers'] = 'unaffectedCompHetCarriers'
+            if inheritance_mode == RECESSIVE:
+                family_set_fields['recessiveFamilies'] = 'isRecessiveFamily'
+
         families_ht = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
         for f, f_samples in family_samples.items():
@@ -281,25 +290,36 @@ class BaseHailTableQuery(object):
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )))
-            if clinvar_path_terms and quality_filter:
-                family_ht = family_ht.annotate(passesQualityFamilies=hl.if_else(
-                    family_ht.passesQuality, {f.guid}, hl.empty_set(hl.tstr)))
-            if inheritance_mode == RECESSIVE:
-                family_ht = family_ht.transmute(
-                    compHetFamilyCarriers=hl.or_missing(family_ht.isCompHetFamily, {f.guid: family_ht.unaffectedCarriers}),
-                    recessiveFamilies=hl.or_missing(family_ht.isRecessiveFamily, {f.guid}))
-            elif inheritance_mode == COMPOUND_HET:
-                family_ht = family_ht.transmute(compHetFamilyCarriers={f.guid: family_ht.unaffectedCarriers})
 
-            if families_ht:
-                # TODO does not work
-                families_ht = family_ht.union_cols(family_ht, row_join_type='outer')
+            family_ht = family_ht.select_globals()
+            if families_ht is not None:
+                families_ht = families_ht.join(family_ht)
+                families_ht = families_ht.select(
+                    genotypes=hl.or_else(families_ht.genotypes.extend(families_ht.genotypes_1), families_ht.genotypes_1),
+                    **{k: hl.bind(
+                        lambda family_set: hl.if_else(families_ht[field], family_set.add(f.guid), family_set),
+                        hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
+                    ) for k, field in family_set_fields.items()},
+                    **{k: hl.bind(
+                        lambda family_arr: hl.if_else(
+                            hl.is_defined(families_ht[field]), family_arr.append((f.guid, families_ht[field])), family_arr,
+                        ),
+                        hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
+                    ) for k, field in family_dict_fields.items()},
+                )
             else:
-                families_ht = family_ht
+                families_ht = family_ht.transmute(
+                    **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
+                    **{k: hl.or_missing(family_ht[field], [(f.guid, family_ht[field])])
+                       for k, field in family_dict_fields.items()},
+                )
 
         if families_ht is None:
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
+
+        if family_dict_fields:
+            families_ht = families_ht.annotate(**{k: hl.dict(families_ht[k]) for k in family_dict_fields.keys()})
 
         logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
@@ -402,7 +422,7 @@ class BaseHailTableQuery(object):
 
         family_ht = family_ht.annotate(
             passesGtFilter=genotype_filter,
-            unaffectedCarriers=hl.set(
+            unaffectedCompHetCarriers=hl.set(
                 family_ht.entries.filter(
                     lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
                 ).map(lambda x: x.sampleId)
@@ -423,9 +443,9 @@ class BaseHailTableQuery(object):
                 comp_het_gt_filter &= has_unaffected_ref_filter
             family_ht = family_ht.annotate(
                 isRecessiveFamily=family_ht.passesGtFilter,
-                isCompHetFamily=comp_het_gt_filter,
+                unaffectedCompHetCarriers=hl.or_missing(comp_het_gt_filter, family_ht.unaffectedCompHetCarriers),
             )
-            genotype_filter = family_ht.isRecessiveFamily | family_ht.isCompHetFamily
+            genotype_filter = family_ht.isRecessiveFamily | hl.is_defined(family_ht.unaffectedCompHetCarriers)
 
         elif has_unaffected_ref_filter is not None:
             genotype_filter &= has_unaffected_ref_filter
