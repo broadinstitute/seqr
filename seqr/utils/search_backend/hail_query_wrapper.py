@@ -296,10 +296,9 @@ class BaseHailTableQuery(object):
                 families_ht = families_ht.join(family_ht, how='outer')
                 families_ht = families_ht.select(
                     genotypes=hl.bind(
-                        # lambda g1, g2: g1.extend(g2),
-                        lambda g: g,
+                        lambda g1, g2: g1.extend(g2),
                         hl.or_else(families_ht.genotypes, hl.empty_array(families_ht.genotypes.dtype.element_type)),
-                        # hl.or_else(families_ht.genotypes_1, hl.empty_array(families_ht.genotypes.dtype.element_type)),
+                        hl.or_else(families_ht.genotypes_1, hl.empty_array(families_ht.genotypes.dtype.element_type)),
                     ),
                     **{k: hl.bind(
                         lambda family_set: hl.if_else(families_ht[field], family_set.add(f.guid), family_set),
