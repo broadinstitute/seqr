@@ -343,19 +343,9 @@ class BaseHailTableQuery(object):
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
             genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         )
-
-        ht = cls._filter_annotated_table(
+        return cls._filter_annotated_table(
             ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
             vcf_quality_filter=vcf_quality_filter, **kwargs)
-        sht = ht.filter(
-            (ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
-            (ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
-        )  # TODO remove debug
-        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            variantId=sht.variantId, familyGuids=sht.familyGuids,
-            compHetFamilyCarriers=sht.compHetFamilyCarriers,
-        ))))
-        return ht
 
     @classmethod
     def _validate_search_criteria(cls, inheritance_mode=None, allowed_consequences=None, **kwargs):
@@ -737,6 +727,15 @@ class BaseHailTableQuery(object):
             ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilyCarriers) & (ch_ht.compHetFamilyCarriers.size() > 0))
             ch_ht = ch_ht.annotate(familyGuids=ch_ht.compHetFamilyCarriers.key_set())
 
+        sht = ch_ht.filter(
+            (ch_ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
+            (ch_ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
+        )  # TODO remove debug
+        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+            variantId=sht.variantId, familyGuids=sht.familyGuids,
+            compHetFamilyCarriers=sht.compHetFamilyCarriers,
+        ))))
+
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
@@ -756,9 +755,30 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
 
+        sht = ch_ht.filter(
+            (ch_ht.v1.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) &
+            (ch_ht.v2.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
+        )  # TODO remove debug
+        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids,
+            compHetFamilyCarriers1=sht.v1.compHetFamilyCarriers,
+            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids,
+            compHetFamilyCarriers2=sht.v2.compHetFamilyCarriers,
+        ))))
+
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
+        sht = ch_ht.filter(
+            (ch_ht.v1.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) &
+            (ch_ht.v2.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
+        )  # TODO remove debug
+        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids,
+            compHetFamilyCarriers1=sht.v1.compHetFamilyCarriers,
+            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids,
+            compHetFamilyCarriers2=sht.v2.compHetFamilyCarriers,
+        ))))
         ch_ht = ch_ht.annotate(
             v1=self._format_results(ch_ht.v1).annotate(**{
                 'familyGuids': hl.array(ch_ht.family_guids), VARIANT_KEY_FIELD: ch_ht.v1[VARIANT_KEY_FIELD]
