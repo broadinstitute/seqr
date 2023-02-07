@@ -81,7 +81,7 @@ SV_CONSEQUENCE_RANKS = {c: i for i, c in enumerate([
     'COPY_GAIN', 'LOF', 'DUP_LOF', 'DUP_PARTIAL', 'INTRONIC', 'INV_SPAN', 'NEAREST_TSS', 'PROMOTER', 'UTR',
 ])}
 SV_TYPE_MAP = {c: i for i, c in enumerate([
-    'gCNV_DEL', 'gCNV_DUP', 'BND', 'CPX', 'CTX', 'DEL', 'DUP', 'INS', 'INV',
+    'gCNV_DEL', 'gCNV_DUP', 'BND', 'CPX', 'CTX', 'DEL', 'DUP', 'INS', 'INV', 'CNV',
 ])}
 SV_TYPE_DETAIL_MAP = {c: i for i, c in enumerate([
     'INS_iDEL', 'INVdel', 'INVdup', 'ME', 'ME:ALU', 'ME:LINE1', 'ME:SVA', 'dDUP', 'dDUP_iDEL', 'delINV', 'delINVdel',

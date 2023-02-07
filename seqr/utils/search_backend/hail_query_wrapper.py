@@ -796,6 +796,7 @@ class BaseHailTableQuery(object):
 
         total_results = ht.count()
         logger.info(f'Total hits: {total_results}')
+        logger.info(ht.aggregate(hl.agg.collect(ht.genotypes)))
 
         # TODO #2496: page, sort
         collected = ht.take(num_results)
