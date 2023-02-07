@@ -760,7 +760,7 @@ class BaseHailTableQuery(object):
 
         # Format pairs as lists and de-duplicate
         ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])})  # TODO #2496: sort with self._sort
-        ch_ht = ch_ht.annotate(
+        ch_ht = ch_ht.key_by(
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
 
         # sht = ch_ht  # TODO remove debug
