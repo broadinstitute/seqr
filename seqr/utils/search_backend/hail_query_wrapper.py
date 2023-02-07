@@ -770,8 +770,10 @@ class BaseHailTableQuery(object):
         #     variantId2=sht[GROUPED_VARIANTS_FIELD][1].variantId, familyGuids2=sht[GROUPED_VARIANTS_FIELD][1].familyGuids,
         # ))))
         logger.info(f'count: {ch_ht.count()}')
+        logger.info(sorted(ch_ht.aggregate(hl.agg.collect(ch_ht[VARIANT_KEY_FIELD]))))
         self._comp_het_ht = ch_ht.distinct()
         logger.info(f'distinct count: {self._comp_het_ht.count()}')
+        logger.info(sorted(self._comp_het_ht.aggregate(hl.agg.collect(self._comp_het_ht[VARIANT_KEY_FIELD]))))
 
     def _valid_comp_het_families_expr(self, ch_ht):
         both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
