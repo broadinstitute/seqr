@@ -727,15 +727,6 @@ class BaseHailTableQuery(object):
             ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilyCarriers) & (ch_ht.compHetFamilyCarriers.size() > 0))
             ch_ht = ch_ht.annotate(familyGuids=ch_ht.compHetFamilyCarriers.key_set())
 
-        sht = ch_ht.filter(
-            (ch_ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
-            (ch_ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
-        )  # TODO remove debug
-        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            variantId=sht.variantId, familyGuids=sht.familyGuids,
-            compHetFamilyCarriers=sht.compHetFamilyCarriers,
-        ))))
-
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
@@ -755,17 +746,6 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.explode(ch_ht.v2)
         ch_ht = ch_ht.filter(ch_ht.v1[VARIANT_KEY_FIELD] != ch_ht.v2[VARIANT_KEY_FIELD])
 
-        sht = ch_ht.filter(
-            (ch_ht.v1.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) &
-            (ch_ht.v2.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
-        )  # TODO remove debug
-        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids,
-            compHetFamilyCarriers1=sht.v1.compHetFamilyCarriers,
-            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids,
-            compHetFamilyCarriers2=sht.v2.compHetFamilyCarriers,
-        ))))
-
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
@@ -774,9 +754,9 @@ class BaseHailTableQuery(object):
             (ch_ht.v2.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
         )  # TODO remove debug
         logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids,
+            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids, family_guids1=sht.v1.family_guids,
             compHetFamilyCarriers1=sht.v1.compHetFamilyCarriers,
-            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids,
+            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids, family_guids2=sht.v2.family_guids,
             compHetFamilyCarriers2=sht.v2.compHetFamilyCarriers,
         ))))
         ch_ht = ch_ht.annotate(
@@ -792,6 +772,13 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.select(**{GROUPED_VARIANTS_FIELD: hl.sorted([ch_ht.v1, ch_ht.v2])})  # TODO #2496: sort with self._sort
         ch_ht = ch_ht.annotate(
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
+
+        sht = ch_ht  # TODO remove debug
+        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+            vId=sht[VARIANT_KEY_FIELD],
+            variantId1=sht[GROUPED_VARIANTS_FIELD][0].variantId, familyGuids1=sht[GROUPED_VARIANTS_FIELD][0].familyGuids,
+            variantId2=sht[GROUPED_VARIANTS_FIELD][1].variantId, familyGuids2=sht[GROUPED_VARIANTS_FIELD][1].familyGuids,
+        ))))
 
         self._comp_het_ht = ch_ht.distinct()
 
