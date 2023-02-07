@@ -283,10 +283,9 @@ class BaseHailTableQuery(object):
                 inheritance_mode=inheritance_mode, **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
-            sample_individual_map = hl.dict({s.sample_id: s.individual.guid for s in f_samples})
             family_ht = family_ht.transmute(
                 genotypes=family_ht.entries.map(lambda gt: gt.select(
-                    'sampleId', individualGuid=sample_individual_map[gt.sampleId], familyGuid=f.guid,
+                    'sampleId', 'individualGuid', familyGuid=f.guid,
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )))
@@ -377,9 +376,23 @@ class BaseHailTableQuery(object):
     def _filter_family_inheritance(cls, family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version):
         sample_index_id_map = dict(enumerate(hl.eval(family_ht.sample_ids)))
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
+        sample_individual_map = {s.sample_id: s.individual.guid for s in family_samples}
+        missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
+        if missing_samples:
+            raise InvalidSearchException(
+                f'The following samples are available in seqr but missing the loaded data: {", ".join(missing_samples)}'
+            )
+        sample_index_individual_map = {
+            sample_id_index_map[sample_id]: i_guid for sample_id, i_guid in sample_individual_map.items()
+        }
 
-        family_ht = family_ht.annotate(entries=hl.enumerate(family_ht.entries).map(
-            lambda x: x[1].annotate(sampleId=hl.dict(sample_index_id_map)[x[0]])))
+        family_ht = family_ht.annotate(entries=hl.enumerate(family_ht.entries).filter(
+            lambda x: hl.set(sample_index_individual_map.keys()).contains(x[0])
+        ).map(
+            lambda x: x[1].annotate(
+                sampleId=hl.dict(sample_index_id_map)[x[0]],
+                individualGuid=hl.dict(sample_index_individual_map)[x[0]],
+            )))
         # TODO gCNV add ref/ref calls
 
         if not (inheritance_filter or inheritance_mode):
@@ -796,7 +809,6 @@ class BaseHailTableQuery(object):
 
         total_results = ht.count()
         logger.info(f'Total hits: {total_results}')
-        logger.info(ht.aggregate(hl.agg.collect(ht.genotypes)))
 
         # TODO #2496: page, sort
         collected = ht.take(num_results)
