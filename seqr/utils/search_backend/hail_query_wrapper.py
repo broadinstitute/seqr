@@ -314,10 +314,10 @@ class BaseHailTableQuery(object):
                 )
                 sht = families_ht.filter(
                     (families_ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
-                    (family_ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38')) |
-                    (family_ht.locus == hl.locus('chr10', 133423662, reference_genome='GRCh38')) |
-                    (family_ht.locus == hl.locus('chr1', 152776481, reference_genome='GRCh38')) |
-                    (family_ht.locus == hl.locus('chr1', 152776419, reference_genome='GRCh38'))
+                    (families_ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38')) |
+                    (families_ht.locus == hl.locus('chr10', 133423662, reference_genome='GRCh38')) |
+                    (families_ht.locus == hl.locus('chr1', 152776481, reference_genome='GRCh38')) |
+                    (families_ht.locus == hl.locus('chr1', 152776419, reference_genome='GRCh38'))
                 )  # TODO remove debug
                 logger.info(sht.aggregate(hl.agg.collect(hl.struct(
                     locus=sht.locus, alleles=sht.alleles,
