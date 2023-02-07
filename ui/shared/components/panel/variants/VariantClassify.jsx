@@ -1,11 +1,14 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Icon } from 'semantic-ui-react'
+import { Button, Icon, Label } from 'semantic-ui-react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import { getClinGeneAlleleIdIsLoading, getClinGenAlleleIdByHgvsc } from 'redux/selectors'
 import { loadClinGeneAlleleId } from 'redux/rootReducer'
+import AcmgModal from '../acmg/AcmgModal'
 import DataLoader from '../../DataLoader'
+import { VerticalSpacer } from '../../Spacers'
+import PopupWithModal from '../../PopupWithModal'
 import { getVariantMainTranscript } from '../../../utils/constants'
 
 class BaseClinGenAlleleId extends React.PureComponent {
@@ -28,21 +31,23 @@ class BaseClinGenAlleleId extends React.PureComponent {
   render() {
     const { clinGenAlleleIdByHgvsc, variant, load, loading } = this.props
     const { hgvsc } = getVariantMainTranscript(variant)
-    const clinGenAlleleId = clinGenAlleleIdByHgvsc[hgvsc]
+    const { alleleId } = clinGenAlleleIdByHgvsc[hgvsc] || {}
     const { copied } = this.state
     return (
-      <DataLoader contentId={hgvsc} load={load} loading={loading} content={clinGenAlleleId}>
-        <span>
-          {(clinGenAlleleId || {})['@id']}
-          &nbsp;
-        </span>
+      <DataLoader contentId={hgvsc} load={load} loading={loading} content={alleleId}>
         <CopyToClipboard
-          text={(clinGenAlleleId || {})['@id']}
+          text={alleleId}
           onCopy={this.onCopy}
         >
-          <Icon name="copy" />
+          <div>
+            <span>
+              {alleleId}
+              &nbsp;
+            </span>
+            <Icon name="copy" link />
+          </div>
         </CopyToClipboard>
-        {copied ? <span>&nbsp;Copied.</span> : null}
+        {copied ? <Label floating>Copied.</Label> : null}
       </DataLoader>
     )
   }
@@ -60,22 +65,32 @@ const mapDispatchToProps = {
 
 const ClinGenAlleleId = connect(mapStateToProps, mapDispatchToProps)(BaseClinGenAlleleId)
 
-const ClinGenVciLink = (props) => {
-  const { variant } = props
+const VariantClassify = (props) => {
+  const { variant, familyGuid } = props
+  const { classify } = variant.acmgClassification || {}
 
   return (
-    <div>
-      <a href="https://curation.clinicalgenome.org/select-variant" target="_blank" rel="noreferrer">
-        In ClinGen VCI
-      </a>
-      <br />
-      <ClinGenAlleleId variant={variant} />
-    </div>
+    <PopupWithModal
+      content={
+        <div>
+          <a href="https://curation.clinicalgenome.org/select-variant" target="_blank" rel="noreferrer">
+            - In ClinGen VCI
+          </a>
+          <br />
+          <ClinGenAlleleId variant={variant} />
+          <VerticalSpacer height={10} />
+          <AcmgModal variant={variant} familyGuid={familyGuid} />
+        </div>
+      }
+      trigger={<Button as={Label} content={`Classify ${classify || ''}`} horizontal basic={!classify} size="small" />}
+      hoverable
+    />
   )
 }
 
-ClinGenVciLink.propTypes = {
+VariantClassify.propTypes = {
   variant: PropTypes.object.isRequired,
+  familyGuid: PropTypes.string,
 }
 
-export default ClinGenVciLink
+export default VariantClassify

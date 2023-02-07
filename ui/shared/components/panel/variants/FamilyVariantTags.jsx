@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
-import { Icon, Popup, Table, Label, Button } from 'semantic-ui-react'
+import { Icon, Popup, Table, Label } from 'semantic-ui-react'
 import styled from 'styled-components'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
@@ -16,8 +16,7 @@ import {
   getGenesById,
 } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME, MME_TAG_NAME } from 'shared/utils/constants'
-import AcmgModal from '../acmg/AcmgModal'
-import ClinGenVciLink from '../clingen/ClinGenVciLink'
+import VariantClassify from './VariantClassify'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
@@ -281,14 +280,7 @@ const FamilyVariantTags = React.memo(({
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
             {variant.variantGuid && !Array.isArray(variant) &&
-              <AcmgModal variant={variant} familyGuid={family.familyGuid} /> }
-            {variant.variantGuid && !Array.isArray(variant) && (
-              <Popup
-                content={<ClinGenVciLink variant={variant} />}
-                trigger={<Button as={Label} content="ClinGen VCI" horizontal size="small" />}
-                hoverable
-              />
-            ) }
+              <VariantClassify variant={variant} familyGuid={family.familyGuid} />}
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
             {(!Array.isArray(variant) || variantTagNotes) &&

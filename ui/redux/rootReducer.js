@@ -318,13 +318,16 @@ export const loadClinGeneAlleleId = hgvsc => (dispatch, getState) => {
   const alleleId = getState().clinGenAlleleIdByHgvsc[hgvsc]
   if (!alleleId) {
     dispatch({ type: REQUEST_CLINGEN_ALLELE_ID })
-    new HttpRequestHelper(`/api/clingen/get_allele_id/${hgvsc}`,
+    new HttpRequestHelper('http://reg.genome.network/allele',
       (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({
+          type: RECEIVE_DATA,
+          updatesById: { clinGenAlleleIdByHgvsc: { [hgvsc]: { alleleId: responseJson['@id'].split('/').pop() } } },
+        })
       },
       (e) => {
         dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
-      }).get()
+      }).get({ hgvs: hgvsc }, 'omit')
   }
 }
 

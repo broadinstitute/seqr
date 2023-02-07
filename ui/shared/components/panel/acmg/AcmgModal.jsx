@@ -1,7 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Button, Label, Loader } from 'semantic-ui-react'
+import { Loader } from 'semantic-ui-react'
 import Modal from '../../modal/Modal'
+import { ButtonLink } from '../../StyledComponents'
 
 const AcmgCriteria = React.lazy(() => import('./AcmgCriteria'))
 
@@ -30,7 +31,7 @@ const AcmgModal = (props) => {
       size="fullscreen"
       modalName={modalName}
       trigger={
-        <Button as={Label} color={buttonBackgroundColor} content={`Classify ${classify || ''}`} horizontal basic={!classify} size="small" />
+        <ButtonLink color={buttonBackgroundColor} content={`- In seqr ${classify || ''}`} />
       }
     >
       <React.Suspense fallback={<Loader />}>

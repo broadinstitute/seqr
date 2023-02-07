@@ -58,8 +58,7 @@ from seqr.views.apis.saved_variant_api import \
     update_variant_note_handler, \
     delete_variant_note_handler, \
     update_variant_main_transcript, \
-    update_saved_variant_json, \
-    get_clingen_allele_id
+    update_saved_variant_json
 
 from seqr.views.apis.dashboard_api import dashboard_page_data
 
@@ -285,8 +284,6 @@ api_endpoints = {
     'matchmaker/send_email/(?P<matchmaker_result_guid>[\w.|-]+)': send_mme_contact_email,
     'matchmaker/contact_notes/(?P<institution>[^/]+)/update': update_mme_contact_note,
     'matchmaker/update_project_contact/(?P<project_guid>[^/]+)': update_mme_project_contact,
-
-    'clingen/get_allele_id/(?P<hgvsc>[^/]+)': get_clingen_allele_id,
 
     'login': login_view,
     'users/forgot_password': forgot_password,
