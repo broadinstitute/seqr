@@ -790,9 +790,11 @@ class BaseHailTableQuery(object):
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
         )
+        logger.info(ht.aggregate(hl.agg.collect(ht.transcripts)))
         results = results.annotate(
             **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
+        logger.info(ht.aggregate(hl.agg.collect(ht.transcripts)))
         return results.select(
             'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
