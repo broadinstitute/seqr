@@ -294,17 +294,6 @@ class BaseHailTableQuery(object):
             family_ht = family_ht.select_globals()
             if families_ht is not None:
                 families_ht = families_ht.join(family_ht, how='outer')
-                sht = families_ht.head(10)  # TODO remove debug log
-                logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-                    compHetFamilyCarriers=sht.compHetFamilyCarriers, unaffectedCompHetCarriers=sht.unaffectedCompHetCarriers,
-                    computed=hl.bind(
-                        lambda family_arr: hl.if_else(
-                            hl.is_defined(sht.unaffectedCompHetCarriers), family_arr.append((f.guid, sht.unaffectedCompHetCarriers)), family_arr,
-                        ),
-                        hl.or_else(sht.compHetFamilyCarriers, hl.empty_array(sht.compHetFamilyCarriers.dtype.element_type)),
-                    )
-
-                ))))
                 families_ht = families_ht.select(
                     genotypes=hl.bind(
                         lambda g1, g2: g1.extend(g2),
@@ -323,6 +312,18 @@ class BaseHailTableQuery(object):
                         hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
                     ) for k, field in family_dict_fields.items()},
                 )
+                sht = families_ht.filter(
+                    (families_ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
+                    (family_ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38')) |
+                    (family_ht.locus == hl.locus('chr10', 133423662, reference_genome='GRCh38')) |
+                    (family_ht.locus == hl.locus('chr1', 152776481, reference_genome='GRCh38')) |
+                    (family_ht.locus == hl.locus('chr1', 152776419, reference_genome='GRCh38'))
+                )  # TODO remove debug
+                logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+                    locus=sht.locus, alleles=sht.alleles,
+                    compHetFamilyCarriers=sht.compHetFamilyCarriers,
+                    recessiveFamilies=sht.recessiveFamilies,
+                ))))
             else:
                 families_ht = family_ht.transmute(
                     **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
