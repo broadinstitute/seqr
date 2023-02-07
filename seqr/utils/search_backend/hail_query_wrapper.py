@@ -754,9 +754,10 @@ class BaseHailTableQuery(object):
             (ch_ht.v2.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
         )  # TODO remove debug
         logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids, family_guids1=sht.v1.family_guids,
+            family_guids=sht.family_guids,
+            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids,
             compHetFamilyCarriers1=sht.v1.compHetFamilyCarriers,
-            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids, family_guids2=sht.v2.family_guids,
+            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids,
             compHetFamilyCarriers2=sht.v2.compHetFamilyCarriers,
         ))))
         ch_ht = ch_ht.annotate(
