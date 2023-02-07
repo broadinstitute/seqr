@@ -326,7 +326,10 @@ export const loadClinGeneAlleleId = hgvsc => (dispatch, getState) => {
         })
       },
       (e) => {
-        dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
+        dispatch({
+          type: RECEIVE_DATA,
+          updatesById: { clinGenAlleleIdByHgvsc: { [hgvsc]: { alleleId: e.message } } },
+        })
       }).get({ hgvs: hgvsc }, 'omit')
   }
 }
