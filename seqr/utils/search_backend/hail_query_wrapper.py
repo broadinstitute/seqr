@@ -312,18 +312,6 @@ class BaseHailTableQuery(object):
                         hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
                     ) for k, field in family_dict_fields.items()},
                 )
-                sht = families_ht.filter(
-                    (families_ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
-                    (families_ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38')) |
-                    (families_ht.locus == hl.locus('chr10', 133423662, reference_genome='GRCh38')) |
-                    (families_ht.locus == hl.locus('chr1', 152776481, reference_genome='GRCh38')) |
-                    (families_ht.locus == hl.locus('chr1', 152776419, reference_genome='GRCh38'))
-                )  # TODO remove debug
-                logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-                    locus=sht.locus, alleles=sht.alleles,
-                    compHetFamilyCarriers=sht.compHetFamilyCarriers,
-                    recessiveFamilies=sht.recessiveFamilies,
-                ))))
             else:
                 families_ht = family_ht.transmute(
                     **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
@@ -344,6 +332,16 @@ class BaseHailTableQuery(object):
         annotation_ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         ht = families_ht.annotate(**annotation_ht[families_ht.key])
 
+        sht = ht.filter(
+            (ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
+            (ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
+        )  # TODO remove debug
+        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+            variantId=sht.variantId,
+            compHetFamilyCarriers=sht.compHetFamilyCarriers,
+            recessiveFamilies=sht.recessiveFamilies,
+        ))))
+
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
                 cls._has_clivar_terms_expr(ht, clinvar_path_terms),
@@ -355,6 +353,15 @@ class BaseHailTableQuery(object):
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
             genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         )
+        sht = ht.filter(
+            (ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
+            (ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
+        )  # TODO remove debug
+        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+            variantId=sht.variantId, familyGuids=sht.familyGuids,
+            compHetFamilyCarriers=sht.compHetFamilyCarriers,
+            recessiveFamilies=sht.recessiveFamilies,
+        ))))
         return cls._filter_annotated_table(
             ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
             vcf_quality_filter=vcf_quality_filter, **kwargs)
