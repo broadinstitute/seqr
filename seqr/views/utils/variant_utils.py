@@ -87,7 +87,7 @@ def _saved_variant_genes_transcripts(variants):
         if not isinstance(variant, list):
             variant = [variant]
         for var in variant:
-            for gene_id, transcripts in var.get('transcripts', {}).items():
+            for gene_id, transcripts in (var or {}).get('transcripts', {}).items():
                 gene_ids.add(gene_id)
                 transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
 
