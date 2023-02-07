@@ -769,6 +769,7 @@ class BaseHailTableQuery(object):
         #     variantId1=sht[GROUPED_VARIANTS_FIELD][0].variantId, familyGuids1=sht[GROUPED_VARIANTS_FIELD][0].familyGuids,
         #     variantId2=sht[GROUPED_VARIANTS_FIELD][1].variantId, familyGuids2=sht[GROUPED_VARIANTS_FIELD][1].familyGuids,
         # ))))
+        logger.info(ch_ht.key)
         logger.info(f'count: {ch_ht.count()}')
         logger.info(sorted(ch_ht.aggregate(hl.agg.collect(ch_ht[VARIANT_KEY_FIELD]))))
         self._comp_het_ht = ch_ht.distinct()
