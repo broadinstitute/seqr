@@ -294,6 +294,17 @@ class BaseHailTableQuery(object):
             family_ht = family_ht.select_globals()
             if families_ht is not None:
                 families_ht = families_ht.join(family_ht, how='outer')
+                sht = families_ht.head(10)  # TODO remove debug log
+                logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+                    compHetFamilyCarriers=sht.compHetFamilyCarriers, unaffectedCompHetCarriers=sht.unaffectedCompHetCarriers,
+                    computed=hl.bind(
+                        lambda family_arr: hl.if_else(
+                            hl.is_defined(sht.unaffectedCompHetCarriers), family_arr.append((f.guid, sht.unaffectedCompHetCarriers)), family_arr,
+                        ),
+                        hl.or_else(sht.compHetFamilyCarriers, hl.empty_array(sht.compHetFamilyCarriers.dtype.element_type)),
+                    )
+
+                ))))
                 families_ht = families_ht.select(
                     genotypes=hl.bind(
                         lambda g1, g2: g1.extend(g2),
