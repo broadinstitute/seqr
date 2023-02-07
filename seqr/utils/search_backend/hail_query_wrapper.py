@@ -283,7 +283,6 @@ class BaseHailTableQuery(object):
                 inheritance_mode=inheritance_mode, **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
-            logger.info(cls.GENOTYPE_FIELDS)
             family_ht = family_ht.transmute(
                 genotypes=family_ht.entries.map(lambda gt: gt.select(
                     'sampleId', 'individualGuid', familyGuid=f.guid,
@@ -791,9 +790,13 @@ class BaseHailTableQuery(object):
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
         )
+        # TODO remove debug
+        logger.info(results.aggregate(hl.agg.collect(hl.struct(variantId=results.variantId, transcripts=results.transcripts, genotype=results.genotypes))))
         results = results.annotate(
             **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
+        # TODO remove debug
+        logger.info(results.aggregate(hl.agg.collect(hl.struct(variantId=results.variantId, transcripts=results.transcripts, genotype=results.genotypes))))
         return results.select(
             'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
