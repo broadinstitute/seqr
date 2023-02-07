@@ -749,17 +749,6 @@ class BaseHailTableQuery(object):
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
-        sht = ch_ht.filter(
-            (ch_ht.v1.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) &
-            (ch_ht.v2.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
-        )  # TODO remove debug
-        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            family_guids=sht.family_guids,
-            variantId1=sht.v1.variantId, familyGuids1=sht.v1.familyGuids,
-            compHetFamilyCarriers1=sht.v1.compHetFamilyCarriers,
-            variantId2=sht.v2.variantId, familyGuids2=sht.v2.familyGuids,
-            compHetFamilyCarriers2=sht.v2.compHetFamilyCarriers,
-        ))))
         ch_ht = ch_ht.annotate(
             v1=self._format_results(ch_ht.v1).annotate(**{
                 'familyGuids': hl.array(ch_ht.family_guids), VARIANT_KEY_FIELD: ch_ht.v1[VARIANT_KEY_FIELD]
@@ -774,14 +763,15 @@ class BaseHailTableQuery(object):
         ch_ht = ch_ht.annotate(
             **{VARIANT_KEY_FIELD: hl.str(':').join(ch_ht[GROUPED_VARIANTS_FIELD].map(lambda v: v[VARIANT_KEY_FIELD]))})
 
-        sht = ch_ht  # TODO remove debug
-        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            vId=sht[VARIANT_KEY_FIELD],
-            variantId1=sht[GROUPED_VARIANTS_FIELD][0].variantId, familyGuids1=sht[GROUPED_VARIANTS_FIELD][0].familyGuids,
-            variantId2=sht[GROUPED_VARIANTS_FIELD][1].variantId, familyGuids2=sht[GROUPED_VARIANTS_FIELD][1].familyGuids,
-        ))))
-
+        # sht = ch_ht  # TODO remove debug
+        # logger.info(sht.aggregate(hl.agg.collect(hl.struct(
+        #     vId=sht[VARIANT_KEY_FIELD],
+        #     variantId1=sht[GROUPED_VARIANTS_FIELD][0].variantId, familyGuids1=sht[GROUPED_VARIANTS_FIELD][0].familyGuids,
+        #     variantId2=sht[GROUPED_VARIANTS_FIELD][1].variantId, familyGuids2=sht[GROUPED_VARIANTS_FIELD][1].familyGuids,
+        # ))))
+        logger.info(f'count: {ch_ht.count()}')
         self._comp_het_ht = ch_ht.distinct()
+        logger.info(f'distinct count: {self._comp_het_ht.count()}')
 
     def _valid_comp_het_families_expr(self, ch_ht):
         both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
