@@ -332,16 +332,6 @@ class BaseHailTableQuery(object):
         annotation_ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
         ht = families_ht.annotate(**annotation_ht[families_ht.key])
 
-        sht = ht.filter(
-            (ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
-            (ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
-        )  # TODO remove debug
-        logger.info(sht.aggregate(hl.agg.collect(hl.struct(
-            variantId=sht.variantId,
-            compHetFamilyCarriers=sht.compHetFamilyCarriers,
-            recessiveFamilies=sht.recessiveFamilies,
-        ))))
-
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
                 cls._has_clivar_terms_expr(ht, clinvar_path_terms),
@@ -353,6 +343,10 @@ class BaseHailTableQuery(object):
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
             genotypes=ht.genotypes.group_by(lambda x: x.individualGuid).map_values(lambda x: x[0]),
         )
+
+        ht = cls._filter_annotated_table(
+            ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
+            vcf_quality_filter=vcf_quality_filter, **kwargs)
         sht = ht.filter(
             (ht.alleles == ['T', 'TGCTGTGGCTCCAGCTCTGGGGGAA']) |
             (ht.locus == hl.locus('chr1', 152776615, reference_genome='GRCh38'))
@@ -360,11 +354,8 @@ class BaseHailTableQuery(object):
         logger.info(sht.aggregate(hl.agg.collect(hl.struct(
             variantId=sht.variantId, familyGuids=sht.familyGuids,
             compHetFamilyCarriers=sht.compHetFamilyCarriers,
-            recessiveFamilies=sht.recessiveFamilies,
         ))))
-        return cls._filter_annotated_table(
-            ht, consequence_overrides=consequence_overrides, clinvar_path_terms=clinvar_path_terms,
-            vcf_quality_filter=vcf_quality_filter, **kwargs)
+        return ht
 
     @classmethod
     def _validate_search_criteria(cls, inheritance_mode=None, allowed_consequences=None, **kwargs):
