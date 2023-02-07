@@ -387,7 +387,7 @@ class BaseHailTableQuery(object):
         }
 
         family_ht = family_ht.annotate(entries=hl.enumerate(family_ht.entries).filter(
-            lambda x: hl.set(sample_index_individual_map.keys()).contains(x[0])
+            lambda x: hl.set(set(sample_index_individual_map.keys())).contains(x[0])
         ).map(
             lambda x: x[1].annotate(
                 sampleId=hl.dict(sample_index_id_map)[x[0]],
