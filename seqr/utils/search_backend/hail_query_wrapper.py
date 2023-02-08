@@ -654,13 +654,15 @@ class BaseHailTableQuery(object):
         annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
         annotation_exprs['override_consequences'] = False if annotation_override_filter is None else annotation_override_filter
 
-        if allowed_consequences:
+        allowed_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences)
+        if allowed_consequence_ids:
             annotation_exprs['has_allowed_consequence'] = ht.sortedTranscriptConsequences.any(
-                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences))
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequence_ids))
 
+        allowed_secondary_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences_secondary)
         if allowed_consequences_secondary:
             annotation_exprs['has_allowed_secondary_consequence'] = ht.sortedTranscriptConsequences.any(
-                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequences_secondary))
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_secondary_consequence_ids))
 
         ht = ht.annotate(**annotation_exprs)
         filter_fields = [k for k, v in annotation_exprs.items() if v is not False]
@@ -715,10 +717,13 @@ class BaseHailTableQuery(object):
         return hl.set(clinvar_terms).contains(ht.clinvar.clinical_significance_id)
 
     @staticmethod
-    def _is_allowed_consequence_filter(tc, allowed_consequences):
-        allowed_consequence_ids = hl.set({
+    def _get_allowed_consequence_ids(allowed_consequences):
+        return {
             SV_CONSEQUENCE_RANK_MAP[c] for c in allowed_consequences if SV_CONSEQUENCE_RANK_MAP.get(c)
-        })
+        }
+
+    @staticmethod
+    def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
         return hl.set(allowed_consequence_ids).contains(tc.major_consequence_id)
 
     @classmethod
@@ -946,11 +951,14 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         return hl.array(CONSEQUENCE_RANKS)[transcript.sorted_consequence_ids[0]]
 
     @staticmethod
-    def _is_allowed_consequence_filter(tc, allowed_consequences):
-        allowed_consequence_ids = hl.set({
+    def _get_allowed_consequence_ids(allowed_consequences):
+        return {
             CONSEQUENCE_RANK_MAP[c] for c in allowed_consequences if CONSEQUENCE_RANK_MAP.get(c)
-        })
-        return allowed_consequence_ids.intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
+        }
+
+    @staticmethod
+    def _is_allowed_consequence_filter(tc, allowed_consequence_ids):
+        return hl.set(allowed_consequence_ids).intersection(hl.set(tc.sorted_consequence_ids)).size() > 0
 
 
 class VariantHailTableQuery(BaseVariantHailTableQuery):
@@ -1371,14 +1379,6 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
             hl.is_defined(ht.svType_id),
             BaseSvHailTableQuery.get_x_chrom_filter(ht, x_interval),
             VariantHailTableQuery.get_x_chrom_filter(ht, x_interval),
-        )
-
-    @staticmethod
-    def _is_allowed_consequence_filter(tc, allowed_consequences):
-        return hl.if_else(
-            hl.is_defined(tc.sorted_consequence_ids),
-            BaseVariantHailTableQuery._is_allowed_consequence_filter(tc, allowed_consequences),
-            BaseSvHailTableQuery._is_allowed_consequence_filter(tc, allowed_consequences),
         )
 
     @staticmethod
