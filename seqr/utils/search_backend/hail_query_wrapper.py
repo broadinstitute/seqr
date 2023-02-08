@@ -174,6 +174,7 @@ class BaseHailTableQuery(object):
 
     @property
     def annotation_fields(self):
+        logger.info(self.populations_configs())
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population, pop_config)
