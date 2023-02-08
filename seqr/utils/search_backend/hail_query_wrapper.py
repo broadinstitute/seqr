@@ -163,17 +163,21 @@ class BaseHailTableQuery(object):
     COMPUTED_ANNOTATION_FIELDS = {}
 
     @classmethod
-    def _get_population_config(cls, population):
-        pop_config = {field.lower(): field for field in ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']}
-        pop_config.update(cls.POPULATIONS[population])
-        return pop_config
+    def populations_configs(cls):
+        return {pop: cls._format_population_config(pop_config) for pop, pop_config in cls.POPULATIONS.items()}
+
+    @staticmethod
+    def _format_population_config(pop_config):
+        base_pop_config = {field.lower(): field for field in ['AF', 'AC', 'AN', 'Hom', 'Hemi', 'Het']}
+        base_pop_config.update(pop_config)
+        return base_pop_config
 
     @property
     def annotation_fields(self):
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
-                population: self.population_expression(r, population)
-                for population in self.POPULATIONS.keys()
+                population: self.population_expression(r, population, self._format_population_config(pop_config))
+                for population, pop_config in self.POPULATIONS.items()
             }),
             'predictions': lambda r: hl.struct(**{
                 prediction: hl.array(PREDICTION_FIELD_ID_LOOKUP[prediction])[r[path[0]][path[1]]]
@@ -192,8 +196,7 @@ class BaseHailTableQuery(object):
             annotation_fields.update(self.LIFTOVER_ANNOTATION_FIELDS)
         return annotation_fields
 
-    def population_expression(self, r, population):
-        pop_config = self._get_population_config(population)
+    def population_expression(self, r, population, pop_config):
         return hl.struct(**{
             response_key: hl.or_else(r[population][field], '' if response_key == 'id' else 0)
             for response_key, field in pop_config.items() if field is not None
@@ -569,12 +572,12 @@ class BaseHailTableQuery(object):
 
         has_path_override = clinvar_path_terms and any(
             freqs.get('af') or 1 < PATH_FREQ_OVERRIDE_CUTOFF for freqs in frequencies.values())
+        populations_configs = cls.populations_configs()
 
         for pop, freqs in sorted(frequencies.items()):
-            pop_config = cls._get_population_config(population)
             pop_filter = None
             if freqs.get('af') is not None:
-                af_field = pop_config.get('filter_af') or pop_config['af']
+                af_field = populations_configs[pop].get('filter_af') or populations_configs[pop]['af']
                 pop_filter = ht[pop][af_field] <= freqs['af']
                 if has_path_override and freqs['af'] < PATH_FREQ_OVERRIDE_CUTOFF:
                     pop_filter |= (
@@ -582,13 +585,13 @@ class BaseHailTableQuery(object):
                         (ht[pop][af_field] <= PATH_FREQ_OVERRIDE_CUTOFF)
                     )
             elif freqs.get('ac') is not None:
-                ac_field = pop_config['ac']
+                ac_field = populations_configs[pop]['ac']
                 if ac_field:
                     pop_filter = ht[pop][ac_field] <= freqs['ac']
 
             if freqs.get('hh') is not None:
-                hom_field = pop_config['hom']
-                hemi_field = pop_config['hemi']
+                hom_field = populations_configs[pop]['hom']
+                hemi_field = populations_configs[pop]['hemi']
                 if hom_field:
                     hh_filter = ht[pop][hom_field] <= freqs['hh']
                     if pop_filter is None:
@@ -1242,10 +1245,10 @@ class MultiDataTypeHailTableQuery(object):
             return case.or_missing()
         return field_annotation
 
-    def population_expression(self, r, population):
+    def population_expression(self, r, population, pop_config):
         return hl.or_missing(
             hl.dict(DATA_TYPE_POPULATIONS_MAP)[r.dataType].contains(population),
-            super(MultiDataTypeHailTableQuery, self).population_expression(r, population),
+            super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
     @classmethod
