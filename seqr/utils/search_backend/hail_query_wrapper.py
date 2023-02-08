@@ -1359,12 +1359,8 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
-
-    @classmethod
-    def _format_quality_filter(cls, quality_filter):
-        parsed_quality_filter = VariantHailTableQuery._format_quality_filter(quality_filter)
-        parsed_quality_filter.update(MitoHailTableQuery._format_quality_filter(quality_filter))
-        return parsed_quality_filter
+    # TODO do we need a special Mito/Variant class or can use generic merged class?
+    pass
 
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
