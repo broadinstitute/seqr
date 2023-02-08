@@ -278,13 +278,15 @@ class BaseHailTableQuery(object):
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
 
             logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
+            ht = family_ht.head(10)
+            logger.info(ht.aggregate(hl.agg.collect(hl.struct(entries=ht.entries))))  # TODO remove debug
             family_ht = cls._filter_family_table(
                 family_ht, family_samples=f_samples, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
                 inheritance_mode=inheritance_mode, **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
             ht = family_ht.head(10)
-            logger.info(ht.aggregate(hl.agg.collect(hl.struct(entries=ht.entries))))
+            logger.info(ht.aggregate(hl.agg.collect(hl.struct(entries=ht.entries))))  # TODO remove debug
             family_ht = family_ht.transmute(
                 genotypes=family_ht.entries.map(lambda gt: gt.select(
                     'sampleId', 'individualGuid', familyGuid=f.guid,
@@ -292,7 +294,7 @@ class BaseHailTableQuery(object):
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )))
             ht = family_ht.head(10)
-            logger.info(ht.aggregate(hl.agg.collect(hl.struct(genotypes=ht.genotypes))))
+            logger.info(ht.aggregate(hl.agg.collect(hl.struct(genotypes=ht.genotypes))))  # TODO remove debug
 
             family_ht = family_ht.select_globals()
             if families_ht is not None:
