@@ -280,7 +280,8 @@ class BaseHailTableQuery(object):
             logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
             family_ht = cls._filter_family_table(
                 family_ht, family_samples=f_samples, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
-                inheritance_mode=inheritance_mode, **kwargs, **family_filter_kwargs)
+                inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
+                **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
             family_ht = family_ht.transmute(
@@ -1135,6 +1136,13 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
             ht, quality_filter,
             inheritance_override_q=inheritance_override_q,
         )
+
+    @classmethod
+    def _filter_family_table(cls, family_ht, consequence_overrides=None, **kwargs):
+        if consequence_overrides[NEW_SV_FIELD]:
+            family_ht = family_ht.filter(family_ht.entries.any(lambda x: x.newCall))
+
+        return super(BaseSvHailTableQuery, cls)._filter_family_table(family_ht, **kwargs)
 
 
 class GcnvHailTableQuery(BaseSvHailTableQuery):
