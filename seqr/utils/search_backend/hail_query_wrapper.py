@@ -283,12 +283,16 @@ class BaseHailTableQuery(object):
                 inheritance_mode=inheritance_mode, **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
+            ht = family_ht.head(10)
+            logger.info(ht.aggregate(hl.agg.collect(hl.struct(entries=ht.entries))))
             family_ht = family_ht.transmute(
                 genotypes=family_ht.entries.map(lambda gt: gt.select(
                     'sampleId', 'individualGuid', familyGuid=f.guid,
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )))
+            ht = family_ht.head(10)
+            logger.info(ht.aggregate(hl.agg.collect(hl.struct(genotypes=ht.genotypes))))
 
             family_ht = family_ht.select_globals()
             if families_ht is not None:
