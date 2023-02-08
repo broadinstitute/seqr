@@ -796,11 +796,9 @@ class BaseHailTableQuery(object):
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
         )
-        logger.info(results.aggregate(hl.agg.collect(results.transcripts)))  # TODO debug
         results = results.annotate(
             **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
-        logger.info(results.aggregate(hl.agg.collect(results.transcripts)))  # TODO debug
         return results.select(
             'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
@@ -1153,14 +1151,14 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.num_exon, 'numExon', hl.max),
     })
-    # COMPUTED_ANNOTATION_FIELDS = {
-    #     'transcripts': lambda self, r: hl.if_else(
-    #         _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
-    #             lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-    #             r.genotypes.values().flatmap(lambda g: g.geneIds)
-    #         ),
-    #     )
-    # }  # TODO debug
+    COMPUTED_ANNOTATION_FIELDS = {
+        'transcripts': lambda self, r: hl.if_else(
+            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
+                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
+                r.genotypes.values().flatmap(lambda g: g.geneIds)
+            ),
+        )
+    }
 
     @classmethod
     def _missing_entry(cls, entry):
@@ -1341,7 +1339,7 @@ class MultiDataTypeHailTableQuery(object):
 
                 transmute_expressions['genotypes'] = hl.or_else(
                     ht.genotypes.map_values(format_gt),
-                    ht.genotypes.map_values(format_gt))
+                    ht.genotypes_1.map_values(format_gt))
 
             ht = ht.transmute(**transmute_expressions)
 
