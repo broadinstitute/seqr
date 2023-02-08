@@ -174,7 +174,6 @@ class BaseHailTableQuery(object):
 
     @property
     def annotation_fields(self):
-        logger.info(self.populations_configs())
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population, pop_config)
@@ -1233,6 +1232,8 @@ class MultiDataTypeHailTableQuery(object):
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
         self.CORE_FIELDS = list(self.CORE_FIELDS - set(self.BASE_ANNOTATION_FIELDS.keys()))
+
+        logger.info(self.POPULATIONS)
 
         super(MultiDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
 
