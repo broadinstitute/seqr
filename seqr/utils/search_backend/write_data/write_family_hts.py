@@ -14,6 +14,15 @@ FORMAT_MT_IMPORT = {
     MITO_TYPE: lambda mt: mt.transmute_cols(c_mito_cn=mt.mito_cn, c_contamination=mt.contamination),
 }
 
+
+def _get_samples_field(field):
+    return lambda mt: mt.samples[field]
+
+
+def _get_samples_override_field(field):
+    return lambda mt: hl.if_else(mt[field] == mt.samples[field], hl.missing(hl.tint32), mt.samples[field])
+
+
 ANNOTATIONS = {
     VARIANT_TYPE: {
         'AB': lambda mt: hl.if_else(
@@ -26,10 +35,8 @@ ANNOTATIONS = {
     },
     GCNV_TYPE: dict(
         geneIds=lambda mt: hl.if_else(mt.geneIds == hl.set(mt.samples.geneIds), hl.missing(hl.tarray(hl.tstr)), mt.samples.geneIds),
-        **{field: lambda mt: hl.if_else(mt[field] == mt.samples[field], hl.missing(hl.tint32), mt.samples[field])
-           for field in ['start', 'end', 'numExon']},
-        **{field: lambda mt: hl.int(mt.samples[field]) for field in ['CN', 'QS']},
-        **{field: lambda mt: mt.samples[field] for field in ['defragged', 'prevCall', 'prevOverlap', 'newCall']},
+        **{field: _get_samples_override_field(field) for field in ['start', 'end', 'numExon']},
+        **{field: _get_samples_field(field) for field in ['CN', 'QS', 'defragged', 'prevCall', 'prevOverlap', 'newCall']},
     ),
     MITO_TYPE: {
         'GQ': lambda mt: hl.int(mt.MQ),
