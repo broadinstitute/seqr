@@ -1211,23 +1211,18 @@ class MultiDataTypeHailTableQuery(object):
     }
 
     def __init__(self, data_source, *args, **kwargs):
-        # TODO clean up unused multi data type properties
         self._data_types = list(data_source.keys())
         self.POPULATIONS = {}
         self.PREDICTION_FIELDS_CONFIG = {}
-        self.GENOTYPE_FIELDS = {}
         self.BASE_ANNOTATION_FIELDS = {}
         self.COMPUTED_ANNOTATION_FIELDS = {}
         self.CORE_FIELDS = set()
-        self.ANNOTATION_OVERRIDE_FIELDS = []
         for cls in [QUERY_CLASS_MAP[data_type] for data_type in self._data_types]:
             self.POPULATIONS.update(cls.POPULATIONS)
             self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
-            self.GENOTYPE_FIELDS.update(cls.GENOTYPE_FIELDS)
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
             self.COMPUTED_ANNOTATION_FIELDS.update(cls.COMPUTED_ANNOTATION_FIELDS)
             self.CORE_FIELDS.update(cls.CORE_FIELDS)
-            self.ANNOTATION_OVERRIDE_FIELDS += cls.ANNOTATION_OVERRIDE_FIELDS
         self.BASE_ANNOTATION_FIELDS.update({
             k: self._annotation_for_data_type(k) for k in self.DATA_TYPE_ANNOTATION_FIELDS
         })
@@ -1327,8 +1322,6 @@ class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuer
 
 
 class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
-
-    GENOTYPE_QUERY_MAP = AllSvHailTableQuery.GENOTYPE_QUERY_MAP
 
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
