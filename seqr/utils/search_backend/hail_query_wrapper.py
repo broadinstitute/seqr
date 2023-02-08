@@ -395,7 +395,7 @@ class BaseHailTableQuery(object):
         family_ht = family_ht.annotate(entries=hl.enumerate(family_ht.entries).filter(
             lambda x: hl.set(set(sample_index_individual_map.keys())).contains(x[0])
         ).map(
-            lambda x: hl.or_else(x[1], hl.struct()).annotate(
+            lambda x: hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
                 sampleId=hl.dict(sample_index_id_map)[x[0]],
                 individualGuid=hl.dict(sample_index_individual_map)[x[0]],
             )))
@@ -437,6 +437,11 @@ class BaseHailTableQuery(object):
 
         # TODO SV override newCall - _get_matched_families_expr
         return family_ht
+
+    @classmethoed
+    def _missing_entry(self, entry):
+        entry_type = dict(**entry.dtype)
+        return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
     @classmethod
     def _filter_comp_hets(cls, family_ht, genotype_filter, sample_id_index_map, inheritance_mode, inheritance_filter, sample_affected_statuses):
