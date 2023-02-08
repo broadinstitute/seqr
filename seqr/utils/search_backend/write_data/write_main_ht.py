@@ -156,14 +156,16 @@ ANNOTATIONS = {
             Het=hl.missing(hl.dtype('int32')),
         ),
         'strvctvre': lambda ht: hl.struct(score=ht.strvctvre),
-        'sortedTranscriptConsequences': lambda ht: hl.array(ht.geneIds.map(lambda gene: hl.Struct(
-            gene_id=gene,
-            major_consequence_id=hl.if_else(
-                ht.cg_genes.contains(gene),
-                SV_CONSEQUENCE_RANKS['COPY_GAIN'],
-                hl.if_else(ht.lof_genes.contains(gene), SV_CONSEQUENCE_RANKS['LOF'],  hl.missing(hl.tint)),
-            )
-        ))),
+        'sortedTranscriptConsequences': lambda ht: hl.array(
+            ht.geneIds.filter(lambda gene: gene != 'null').map(lambda gene: hl.Struct(
+                gene_id=gene,
+                major_consequence_id=hl.if_else(
+                    ht.cg_genes.contains(gene),
+                    SV_CONSEQUENCE_RANKS['COPY_GAIN'],
+                    hl.if_else(ht.lof_genes.contains(gene), SV_CONSEQUENCE_RANKS['LOF'],  hl.missing(hl.tint)),
+                )
+            )),
+        ),
         'svType_id': lambda ht: hl.dict(SV_TYPE_MAP)[ht.svType],
     },
     SV_TYPE: {
