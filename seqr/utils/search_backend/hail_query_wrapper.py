@@ -792,7 +792,6 @@ class BaseHailTableQuery(object):
                 ch_ht.v2.compHetFamilyCarriers[family_guid]).size() == 0)
 
     def _format_results(self, ht):
-        logger.info(ht.aggregate(hl.agg.collect(ht.sortedTranscriptConsequences)))  # TODO debug
         results = ht.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
@@ -1154,14 +1153,14 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
         'end': lambda r: _get_genotype_override_field(r.genotypes, r.interval.end.position, 'end', hl.max),
         'numExon': lambda r: _get_genotype_override_field(r.genotypes, r.num_exon, 'numExon', hl.max),
     })
-    COMPUTED_ANNOTATION_FIELDS = {
-        'transcripts': lambda self, r: hl.if_else(
-            _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
-                lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
-                r.genotypes.values().flatmap(lambda g: g.geneIds)
-            ),
-        )
-    }
+    # COMPUTED_ANNOTATION_FIELDS = {
+    #     'transcripts': lambda self, r: hl.if_else(
+    #         _no_genotype_override(r.genotypes, 'geneIds'), r.transcripts, hl.bind(
+    #             lambda gene_ids: hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0]))),
+    #             r.genotypes.values().flatmap(lambda g: g.geneIds)
+    #         ),
+    #     )
+    # }  # TODO debug
 
     @classmethod
     def _missing_entry(cls, entry):
@@ -1362,7 +1361,6 @@ class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
 
 
 class AllVariantHailTableQuery(MultiDataTypeHailTableQuery, VariantHailTableQuery):
-    # TODO do we need a special Mito/Variant class or can use generic merged class?
     pass
 
 
