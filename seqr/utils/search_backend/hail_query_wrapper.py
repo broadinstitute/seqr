@@ -278,23 +278,17 @@ class BaseHailTableQuery(object):
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
 
             logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
-            ht = family_ht.filter(family_ht.variantId == 'suffix_217702_DUP_2')
-            logger.info(ht.aggregate(hl.agg.collect(hl.struct(entries=ht.entries))))  # TODO remove debug
             family_ht = cls._filter_family_table(
                 family_ht, family_samples=f_samples, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
                 inheritance_mode=inheritance_mode, **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
-            ht = family_ht.filter(family_ht.variantId == 'suffix_217702_DUP_2')
-            logger.info(ht.aggregate(hl.agg.collect(hl.struct(entries=ht.entries))))  # TODO remove debug
             family_ht = family_ht.transmute(
                 genotypes=family_ht.entries.map(lambda gt: gt.select(
                     'sampleId', 'individualGuid', familyGuid=f.guid,
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )))
-            ht = family_ht.filter(family_ht.variantId == 'suffix_217702_DUP_2')
-            logger.info(ht.aggregate(hl.agg.collect(hl.struct(genotypes=ht.genotypes))))  # TODO remove debug
 
             family_ht = family_ht.select_globals()
             if families_ht is not None:
@@ -399,7 +393,6 @@ class BaseHailTableQuery(object):
                 sampleId=hl.dict(sample_index_id_map)[x[0]],
                 individualGuid=hl.dict(sample_index_individual_map)[x[0]],
             )))
-        # TODO gCNV add ref/ref calls
 
         if not (inheritance_filter or inheritance_mode):
             return family_ht
@@ -439,7 +432,7 @@ class BaseHailTableQuery(object):
         return family_ht
 
     @classmethod
-    def _missing_entry(self, entry):
+    def _missing_entry(cls, entry):
         entry_type = dict(**entry.dtype)
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
 
@@ -1168,12 +1161,9 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
     }
 
     @classmethod
-    def _family_ht_to_mt(cls, family_ht):
-        # TODO gCNV ref calls - add logic to initial table import
-        mt = super(GcnvHailTableQuery, cls)._family_ht_to_mt(family_ht)
-        #  gCNV data has no ref/ref calls so add them back in
-        mt = mt.unfilter_entries()
-        return mt.annotate_entries(GT=hl.or_else(mt.GT, hl.Call([0, 0])))
+    def _missing_entry(cls, entry):
+        #  gCNV data has no ref/ref calls so a missing entry indicates that call
+        return super(GcnvHailTableQuery, cls)._missing_entry(entry).annotate(GT=hl.Call([0, 0]))
 
     @classmethod
     def _filter_vcf_filters(cls, ht):
