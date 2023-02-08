@@ -217,12 +217,8 @@ class BaseHailTableQuery(object):
 
     def _load_filtered_table(self, data_source, samples, intervals=None, inheritance_mode=None, pathogenicity=None,
                              annotations=None, annotations_secondary=None, **kwargs):
-        consequence_overrides = {
-            CLINVAR_KEY: set(), HGMD_KEY: set(), SCREEN_KEY: None, SPLICE_AI_FIELD: None,
-            NEW_SV_FIELD: None, STRUCTURAL_ANNOTATION_FIELD: None,
-        }
-        self._parse_pathogenicity_overrides(pathogenicity, consequence_overrides)
-        self._parse_annotations_overrides(annotations, annotations_secondary, consequence_overrides)
+
+        consequence_overrides = self._parse_overrides(pathogenicity, annotations, annotations_secondary)
 
         self._ht = self.import_filtered_table(
             data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
@@ -544,24 +540,25 @@ class BaseHailTableQuery(object):
                 raise InvalidSearchException(f'Invalid intervals: {", ".join(invalid_intervals)}')
         return intervals
 
-    def _parse_annotations_overrides(self, annotations, annotations_secondary, consequence_overrides):
+    def _parse_overrides(self, pathogenicity, annotations, annotations_secondary):
+        consequence_overrides = {CLINVAR_KEY: set(), HGMD_KEY: set()}
+        for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
+            consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
+        for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
+            consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
+
         annotations = {k: v for k, v in (annotations or {}).items() if v}
-        annotation_override_fields = {k for k, v in consequence_overrides.items() if v is None}
-        for field in annotation_override_fields:
-            value = annotations.pop(field, None)
-            if field in self.ANNOTATION_OVERRIDE_FIELDS:
-                consequence_overrides[field] = value
+        consequence_overrides.update({
+            field: annotations.pop(field, None) for field in
+            [SCREEN_KEY, SPLICE_AI_FIELD, NEW_SV_FIELD, STRUCTURAL_ANNOTATION_FIELD]
+        })
 
         self._allowed_consequences = sorted({ann for anns in annotations.values() for ann in anns})
         if annotations_secondary:
             self._allowed_consequences_secondary = sorted(
                 {ann for anns in annotations_secondary.values() for ann in anns})
 
-    def _parse_pathogenicity_overrides(self, pathogenicity, consequence_overrides):
-        for clinvar_filter in (pathogenicity or {}).get('clinvar', []):
-            consequence_overrides[CLINVAR_KEY].update(CLINVAR_SIGNFICANCE_MAP.get(clinvar_filter, []))
-        for hgmd_filter in (pathogenicity or {}).get('hgmd', []):
-            consequence_overrides[HGMD_KEY].update(HGMD_CLASS_MAP.get(hgmd_filter, []))
+        return consequence_overrides
 
     @classmethod
     def _filter_vcf_filters(cls, ht):
@@ -680,21 +677,23 @@ class BaseHailTableQuery(object):
     def _get_annotation_override_filter(cls, ht, consequence_overrides):
         annotation_filters = []
 
-        if consequence_overrides[CLINVAR_KEY]:
+        consequence_overrides = {k: v for k, v in consequence_overrides.items() if k in cls.ANNOTATION_OVERRIDE_FIELDS}
+
+        if consequence_overrides.get(CLINVAR_KEY):
             annotation_filters.append(hl.set({
                 CLINVAR_SIG_MAP[s] for s in consequence_overrides[CLINVAR_KEY]
             }).contains(ht.clinvar.clinical_significance_id))
-        if consequence_overrides[HGMD_KEY]:
+        if consequence_overrides.get(HGMD_KEY):
             allowed_classes = hl.set({HGMD_SIG_MAP[s] for s in consequence_overrides[HGMD_KEY]})
             annotation_filters.append(allowed_classes.contains(ht.hgmd.class_id))
-        if consequence_overrides[SCREEN_KEY]:
+        if consequence_overrides.get(SCREEN_KEY):
             allowed_consequences = hl.set({SCREEN_CONSEQUENCE_RANK_MAP[c] for c in consequence_overrides[SCREEN_KEY]})
             annotation_filters.append(allowed_consequences.intersection(hl.set(ht.screen.region_type_id)).size() > 0)
-        if consequence_overrides[SPLICE_AI_FIELD]:
+        if consequence_overrides.get(SPLICE_AI_FIELD):
             splice_ai = float(consequence_overrides[SPLICE_AI_FIELD])
             score_path = cls.PREDICTION_FIELDS_CONFIG[SPLICE_AI_FIELD]
             annotation_filters.append(ht[score_path[0]][score_path[1]] >= splice_ai)
-        if consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]:
+        if consequence_overrides.get(STRUCTURAL_ANNOTATION_FIELD):
             allowed_sv_types = hl.set({SV_TYPE_MAP[t] for t in consequence_overrides[STRUCTURAL_ANNOTATION_FIELD]})
             annotation_filters.append(allowed_sv_types.contains(ht.svType_id))
 
@@ -705,11 +704,11 @@ class BaseHailTableQuery(object):
             annotation_filter |= af
         return annotation_filter
 
-    @staticmethod
-    def _get_clinvar_path_terms(consequence_overrides):
+    @classemthod
+    def _get_clinvar_path_terms(cls, consequence_overrides):
         return [
             CLINVAR_SIG_MAP[f] for f in consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
-        ]
+        ] if CLINVAR_KEY in cls.ANNOTATION_OVERRIDE_FIELDS else []
 
     @staticmethod
     def _has_clivar_terms_expr(ht, clinvar_terms):
@@ -851,6 +850,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
         'amino_acids', 'biotype', 'canonical', 'codons', 'hgvsc', 'hgvsp', 'lof', 'lof_filter', 'lof_flags', 'lof_info',
         'transcript_id', 'transcript_rank',
     ]
+    ANNOTATION_OVERRIDE_FIELDS = [CLINVAR_KEY]
 
     CORE_FIELDS = BaseHailTableQuery.CORE_FIELDS + ['rsid', 'xpos']
     BASE_ANNOTATION_FIELDS = {
@@ -976,7 +976,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
         'splice_ai_consequence': ('splice_ai', 'splice_consequence'),
     }
     PREDICTION_FIELDS_CONFIG.update(BaseVariantHailTableQuery.PREDICTION_FIELDS_CONFIG)
-    ANNOTATION_OVERRIDE_FIELDS = [SPLICE_AI_FIELD, SCREEN_KEY]
+    ANNOTATION_OVERRIDE_FIELDS = [HGMD_KEY, SPLICE_AI_FIELD, SCREEN_KEY] + BaseVariantHailTableQuery.ANNOTATION_OVERRIDE_FIELDS
 
     BASE_ANNOTATION_FIELDS = {
         'hgmd': lambda r: r.hgmd.select('accession', **{'class': hl.array(HGMD_SIGNIFICANCES)[r.hgmd.class_id]}),
@@ -1112,9 +1112,6 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
             ht = ht.filter(interval_filter)
         return ht
-
-    def _parse_pathogenicity_overrides(self, pathogenicity, consequence_overrides):
-        pass
 
     @staticmethod
     def get_x_chrom_filter(ht, x_interval):
