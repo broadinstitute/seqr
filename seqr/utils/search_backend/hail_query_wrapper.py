@@ -1374,14 +1374,6 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
     DATA_TYPE_ANNOTATION_FIELDS = ['chrom', 'pos', 'end']
 
     @staticmethod
-    def get_x_chrom_filter(ht, x_interval):
-        return hl.if_else(
-            hl.is_defined(ht.svType_id),
-            BaseSvHailTableQuery.get_x_chrom_filter(ht, x_interval),
-            VariantHailTableQuery.get_x_chrom_filter(ht, x_interval),
-        )
-
-    @staticmethod
     def get_major_consequence(transcript):
         return hl.if_else(
             hl.is_defined(transcript.sorted_consequence_ids),
