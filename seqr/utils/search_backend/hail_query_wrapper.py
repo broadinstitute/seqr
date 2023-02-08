@@ -704,7 +704,7 @@ class BaseHailTableQuery(object):
             annotation_filter |= af
         return annotation_filter
 
-    @classemthod
+    @classmethod
     def _get_clinvar_path_terms(cls, consequence_overrides):
         return [
             CLINVAR_SIG_MAP[f] for f in consequence_overrides[CLINVAR_KEY] if f in CLINVAR_PATH_SIGNIFICANCES
