@@ -1198,6 +1198,13 @@ class MultiDataTypeHailTableQuery(object):
 
     DATA_TYPE_ANNOTATION_FIELDS = []
 
+    SV_MERGE_FIELDS = {'interval', 'svType_id', 'rg37_locus_end', 'strvctvre', 'sv_callset'}
+    VARIANT_MERGE_FIELDS = {'alleles', 'callset', 'clinvar', 'dbnsfp', 'filters', 'locus', 'rsid', 'xpos'}
+    MERGE_FIELDS = {
+        GCNV_KEY: SV_MERGE_FIELDS, SV_KEY: SV_MERGE_FIELDS,
+        VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS,
+    }
+
     def __init__(self, data_source, *args, **kwargs):
         # TODO clean up unused multi data type properties
         self._data_types = list(data_source.keys())
@@ -1288,12 +1295,48 @@ class MultiDataTypeHailTableQuery(object):
         ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_source[data_type_0], samples[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
+        all_type_merge_fields = {'familyGuids', 'rg37_locus'}  # TODO compHetFamilyCarriers/recessiveFamilies
+        merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
             sub_ht = data_type_cls.import_filtered_table(data_source[data_type], samples[data_type], **kwargs)
             sub_ht = sub_ht.annotate(dataType=data_type)
-            # TODO implement flat table join
-            ht = MultiDataTypeHailTableQuery.join_mts(ht, sub_ht)
+            # ht = MultiDataTypeHailTableQuery.join_hts(ht, sub_ht)  TODO helper method?
+
+            ht = ht.join(sub_ht, how='outer')
+
+            new_merge_fields = cls.MERGE_FIELDS[data_type]
+            to_merge = merge_fields.intersection(new_merge_fields)
+            to_merge.update(all_type_merge_fields)
+            merge_fields.update(new_merge_fields)
+
+            transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
+
+            transcripts_type = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
+            new_transcripts_type = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
+            if transcripts_type != new_transcripts_type:
+                transcripts_type.update(new_transcripts_type)
+
+                def format_transcript(t):
+                    return t.select(**{k: t.get(k, hl.missing(v)) for k, v in transcripts_type.items()})
+
+                transmute_expressions['sortedTranscriptConsequences'] = hl.or_else(
+                    ht.sortedTranscriptConsequences.map(format_transcript),
+                    ht.sortedTranscriptConsequences_1.map(format_transcript))
+
+            genotypes_type = dict(**ht.genotypes.dtype.value_type)
+            new_genotypes_type = dict(**ht.genotypes_1.dtype.value_type)
+            if genotypes_type != new_genotypes_type:
+                genotypes_type.update(new_genotypes_type)
+
+                def format_gt(t):
+                    return t.select(**{k: t.get(k, hl.missing(v)) for k, v in genotypes_type.items()})
+
+                transmute_expressions['genotypes'] = hl.or_else(
+                    ht.genotypes.map_values(format_gt),
+                    ht.genotypes.map_values(format_gt))
+
+            ht = ht.transmute(**transmute_expressions)
 
         return ht
 
