@@ -787,7 +787,7 @@ class BaseHailTableQuery(object):
 
     def _format_results(self, ht):
         # TODO remove debug
-        logger.info(results.aggregate(hl.agg.collect(hl.struct(variantId=results.variantId, genotypes=results.genotypes))))
+        logger.info(ht.aggregate(hl.agg.collect(hl.struct(variantId=ht.variantId, genotypes=ht.genotypes))))
         results = ht.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
