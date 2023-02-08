@@ -438,7 +438,7 @@ class BaseHailTableQuery(object):
         # TODO SV override newCall - _get_matched_families_expr
         return family_ht
 
-    @classmethoed
+    @classmethod
     def _missing_entry(self, entry):
         entry_type = dict(**entry.dtype)
         return hl.struct(**{k: hl.missing(v) for k, v in entry_type.items()})
