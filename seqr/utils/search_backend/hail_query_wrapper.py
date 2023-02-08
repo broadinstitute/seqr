@@ -1251,47 +1251,6 @@ class MultiDataTypeHailTableQuery(object):
             super(MultiDataTypeHailTableQuery, self).population_expression(r, population, pop_config),
         )
 
-    @staticmethod
-    def join_mts(mt1, mt2):
-        # TODO fix joining for flat tables
-        mt = hl.experimental.full_outer_join_mt(mt1, mt2)
-
-        mt = mt.select_cols()
-
-        left_e_fields = set(mt.left_entry.dtype)
-        right_e_fields = set(mt.right_entry.dtype)
-        mt = mt.select_entries(
-            **{k: hl.or_else(mt.left_entry[k], mt.right_entry[k]) for k in left_e_fields.intersection(right_e_fields)},
-            **{k: mt.left_entry[k] for k in left_e_fields.difference(right_e_fields)},
-            **{k: mt.right_entry[k] for k in right_e_fields.difference(left_e_fields)},
-        )
-
-        left_r_fields = set(mt.left_row.dtype)
-        right_r_fields = set(mt.right_row.dtype)
-        left_transcripts_type = dict(**mt.left_row.sortedTranscriptConsequences.dtype.element_type)
-        right_transcripts_type = dict(**mt.right_row.sortedTranscriptConsequences.dtype.element_type)
-        row_expressions = {k: mt.left_row[k] for k in left_r_fields.difference(right_r_fields)}
-        row_expressions.update({k: mt.right_row[k] for k in right_r_fields.difference(left_r_fields)})
-
-        if left_transcripts_type != right_transcripts_type:
-            left_r_fields.remove('sortedTranscriptConsequences')
-            right_r_fields.remove('sortedTranscriptConsequences')
-            struct_types = left_transcripts_type
-            struct_types.update(right_transcripts_type)
-
-            def format_transcript(t):
-                return t.select(**{k: t.get(k, hl.missing(v)) for k, v in struct_types.items()})
-
-            row_expressions['sortedTranscriptConsequences'] = hl.or_else(
-                mt.left_row.sortedTranscriptConsequences.map(format_transcript),
-                mt.right_row.sortedTranscriptConsequences.map(format_transcript))
-
-        row_expressions.update({
-            k: hl.or_else(mt.left_row[k], mt.right_row[k])
-            for k in left_r_fields.intersection(right_r_fields) if k != VARIANT_KEY_FIELD
-        })
-        return mt.select_rows(**row_expressions)
-
     @classmethod
     def import_filtered_table(cls, data_source, samples, **kwargs):
         data_types = list(data_source.keys())
