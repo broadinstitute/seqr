@@ -719,7 +719,7 @@ class BaseHailTableQuery(object):
     @staticmethod
     def _get_allowed_consequence_ids(allowed_consequences):
         return {
-            SV_CONSEQUENCE_RANK_MAP[c] for c in allowed_consequences if SV_CONSEQUENCE_RANK_MAP.get(c)
+            SV_CONSEQUENCE_RANK_MAP[c] for c in (allowed_consequences or []) if SV_CONSEQUENCE_RANK_MAP.get(c)
         }
 
     @staticmethod
@@ -953,7 +953,7 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     @staticmethod
     def _get_allowed_consequence_ids(allowed_consequences):
         return {
-            CONSEQUENCE_RANK_MAP[c] for c in allowed_consequences if CONSEQUENCE_RANK_MAP.get(c)
+            CONSEQUENCE_RANK_MAP[c] for c in (allowed_consequences or []) if CONSEQUENCE_RANK_MAP.get(c)
         }
 
     @staticmethod
