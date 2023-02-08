@@ -427,10 +427,7 @@ class BaseHailTableQuery(object):
             family_ht, genotype_filter = cls._filter_comp_hets(
                 family_ht, genotype_filter, sample_id_index_map, inheritance_mode, inheritance_filter, sample_affected_statuses)
 
-        family_ht = family_ht.filter(genotype_filter)
-
-        # TODO SV override newCall - _get_matched_families_expr
-        return family_ht
+        return family_ht.filter(genotype_filter)
 
     @classmethod
     def _missing_entry(cls, entry):
@@ -1126,16 +1123,6 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     @staticmethod
     def get_major_consequence(transcript):
         return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
-
-    def _get_matched_families_expr(self, ht, quality_filter, **kwargs):
-        # TODO Sv newCall - update family table prefilter
-        inheritance_override_q = None
-        if self._consequence_overrides[NEW_SV_FIELD]:
-            inheritance_override_q = ht.newCall
-        return super(BaseSvHailTableQuery, self)._get_matched_families_expr(
-            ht, quality_filter,
-            inheritance_override_q=inheritance_override_q,
-        )
 
     @classmethod
     def _filter_family_table(cls, family_ht, consequence_overrides=None, **kwargs):
