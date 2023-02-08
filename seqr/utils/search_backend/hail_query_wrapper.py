@@ -788,7 +788,7 @@ class BaseHailTableQuery(object):
                 ch_ht.v2.compHetFamilyCarriers[family_guid]).size() == 0)
 
     def _format_results(self, ht):
-        # logger.info(ht.aggregate(hl.agg.collect(ht.sortedTranscriptConsequences)))  # TODO debug
+        logger.info(ht.aggregate(hl.agg.collect(ht.sortedTranscriptConsequences)))  # TODO debug
         results = ht.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
@@ -797,7 +797,6 @@ class BaseHailTableQuery(object):
         results = results.annotate(
             **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
-        logger.info(results.aggregate(hl.agg.collect(results.transcripts)))  # TODO debug
         return results.select(
             'genomeVersion', *self.CORE_FIELDS, *set(list(self.COMPUTED_ANNOTATION_FIELDS.keys()) + list(self.annotation_fields.keys())))
 
