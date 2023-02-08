@@ -170,12 +170,12 @@ class BaseHailTableQuery(object):
         }
         for pop, pop_config in cls.POPULATIONS.items():
             populations[pop].update(pop_config)
+        logger.info(cls)
+        logge.info(sorted(populations.keys()))
         return populations
 
     @property
     def annotation_fields(self):
-        logger.info(self.populations_configs())
-        logger.info(self.POPULATIONS)
         annotation_fields = {
             'populations': lambda r: hl.struct(**{
                 population: self.population_expression(r, population, pop_config)
