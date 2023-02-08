@@ -395,7 +395,7 @@ class BaseHailTableQuery(object):
         family_ht = family_ht.annotate(entries=hl.enumerate(family_ht.entries).filter(
             lambda x: hl.set(set(sample_index_individual_map.keys())).contains(x[0])
         ).map(
-            lambda x: x[1].annotate(
+            lambda x: hl.or_else(x[1], hl.struct()).annotate(
                 sampleId=hl.dict(sample_index_id_map)[x[0]],
                 individualGuid=hl.dict(sample_index_individual_map)[x[0]],
             )))
@@ -792,14 +792,10 @@ class BaseHailTableQuery(object):
                 ch_ht.v2.compHetFamilyCarriers[family_guid]).size() == 0)
 
     def _format_results(self, ht):
-        # TODO remove debug
-        logger.info(ht.aggregate(hl.agg.collect(hl.struct(variantId=ht.variantId, genotypes=ht.genotypes))))
         results = ht.annotate(
             genomeVersion=self._genome_version.replace('GRCh', ''),
             **{k: v(ht) for k, v in self.annotation_fields.items()},
         )
-        # TODO remove debug
-        logger.info(results.aggregate(hl.agg.collect(hl.struct(variantId=results.variantId, genotypes=results.genotypes))))
         results = results.annotate(
             **{k: v(self, results) for k, v in self.COMPUTED_ANNOTATION_FIELDS.items()},
         )
