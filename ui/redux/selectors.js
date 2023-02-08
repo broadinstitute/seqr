@@ -51,8 +51,6 @@ export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
 export const getSearchGeneBreakdownLoading = state => state.searchGeneBreakdownLoading.isLoading
 export const getSearchGeneBreakdownErrorMessage = state => state.searchGeneBreakdownLoading.errorMessage
 export const getVariantSearchDisplay = state => state.variantSearchDisplay
-export const getClinGenAlleleIdByHgvsc = state => state.clinGenAlleleIdByHgvsc
-export const getClinGeneAlleleIdIsLoading = state => state.clinGenAlleleIdLoading.isLoading
 
 const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((acc, [entityGuid, entity]) => {
   if (!(entity.projectGuid in acc)) {

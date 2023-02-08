@@ -1,96 +1,116 @@
 import React from 'react'
-import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Button, Icon, Label } from 'semantic-ui-react'
+import { Button, Label } from 'semantic-ui-react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
-import { getClinGeneAlleleIdIsLoading, getClinGenAlleleIdByHgvsc } from 'redux/selectors'
-import { loadClinGeneAlleleId } from 'redux/rootReducer'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { ColoredIcon } from 'shared/components/StyledComponents'
 import AcmgModal from '../acmg/AcmgModal'
-import DataLoader from '../../DataLoader'
 import { VerticalSpacer } from '../../Spacers'
 import PopupWithModal from '../../PopupWithModal'
 import { getVariantMainTranscript } from '../../../utils/constants'
 
-class BaseClinGenAlleleId extends React.PureComponent {
+const CLINGEN_ALLELE_REGISTRY_URL = 'http://reg.genome.network/allele'
+const CLINGEN_VCI_URL = 'https://curation.clinicalgenome.org/select-variant'
+
+const ClinGenAlleleId = ({ alleleId, copied, onCopy }) => (
+  <CopyToClipboard
+    text={alleleId}
+    onCopy={onCopy}
+  >
+    <div>
+      <span>
+        {alleleId}
+        &nbsp;
+      </span>
+      {copied ? <ColoredIcon name="check circle" color="#00C000" /> : <ColoredIcon name="copy" link />}
+    </div>
+  </CopyToClipboard>
+)
+
+ClinGenAlleleId.propTypes = {
+  alleleId: PropTypes.string,
+  copied: PropTypes.bool,
+  onCopy: PropTypes.func,
+}
+
+const getButtonBackgroundColor = (classification) => {
+  const categoryColors = {
+    Unknown: 'grey',
+    Benign: 'blue',
+    'Likely Benign': 'blue',
+    Pathogenic: 'orange',
+    'Likely Pathogenic': 'orange',
+    Uncertain: 'yellow',
+  }
+  return categoryColors[classification] || 'grey'
+}
+
+class VariantClassify extends React.PureComponent {
 
   static propTypes = {
-    clinGenAlleleIdByHgvsc: PropTypes.object,
-    variant: PropTypes.object,
-    load: PropTypes.func,
-    loading: PropTypes.bool,
+    variant: PropTypes.object.isRequired,
+    familyGuid: PropTypes.string,
   }
 
   state = {
     copied: false,
+    alleleId: null,
   };
+
+  onOpenPopup = hgvsc => () => {
+    const { alleleId } = this.state
+    this.setState({ copied: false })
+    if (!alleleId) {
+      new HttpRequestHelper(CLINGEN_ALLELE_REGISTRY_URL,
+        (responseJson) => {
+          this.setState({ alleleId: responseJson['@id'].split('/').pop() })
+        },
+        (e) => {
+          this.setState({ alleleId: e.message })
+        }).get({ hgvs: hgvsc }, 'omit')
+    }
+  }
 
   onCopy = () => {
     this.setState({ copied: true })
   }
 
   render() {
-    const { clinGenAlleleIdByHgvsc, variant, load, loading } = this.props
+    const { variant, familyGuid } = this.props
+    const { copied, alleleId } = this.state
     const { hgvsc } = getVariantMainTranscript(variant)
-    const { alleleId } = clinGenAlleleIdByHgvsc[hgvsc] || {}
-    const { copied } = this.state
+    const { classify } = variant.acmgClassification || {}
+    const buttonBackgroundColor = getButtonBackgroundColor(classify)
+
     return (
-      <DataLoader contentId={hgvsc} load={load} loading={loading} content={alleleId}>
-        <CopyToClipboard
-          text={alleleId}
-          onCopy={this.onCopy}
-        >
+      <PopupWithModal
+        onOpen={this.onOpenPopup(hgvsc)}
+        header={classify}
+        content={
           <div>
-            <span>
-              {alleleId}
-              &nbsp;
-            </span>
-            <Icon name="copy" link />
+            {alleleId && (
+              <div>
+                <a href={CLINGEN_VCI_URL} target="_blank" rel="noreferrer">
+                  In ClinGen VCI
+                </a>
+                <br />
+                <ClinGenAlleleId alleleId={alleleId} onCopy={this.onCopy} copied={copied} />
+                <VerticalSpacer height={10} />
+              </div>
+            )}
+            <AcmgModal variant={variant} familyGuid={familyGuid} />
           </div>
-        </CopyToClipboard>
-        {copied ? <Label floating>Copied.</Label> : null}
-      </DataLoader>
+        }
+        trigger={
+          <Button as={Label} color={buttonBackgroundColor} horizontal basic={!classify} size="small">
+            {`Classify ${classify || ''}`}
+          </Button>
+        }
+        hoverable
+      />
     )
   }
 
-}
-
-const mapStateToProps = state => ({
-  loading: getClinGeneAlleleIdIsLoading(state),
-  clinGenAlleleIdByHgvsc: getClinGenAlleleIdByHgvsc(state),
-})
-
-const mapDispatchToProps = {
-  load: loadClinGeneAlleleId,
-}
-
-const ClinGenAlleleId = connect(mapStateToProps, mapDispatchToProps)(BaseClinGenAlleleId)
-
-const VariantClassify = (props) => {
-  const { variant, familyGuid } = props
-  const { classify } = variant.acmgClassification || {}
-
-  return (
-    <PopupWithModal
-      content={
-        <div>
-          <a href="https://curation.clinicalgenome.org/select-variant" target="_blank" rel="noreferrer">
-            - In ClinGen VCI
-          </a>
-          <br />
-          <ClinGenAlleleId variant={variant} />
-          <VerticalSpacer height={10} />
-          <AcmgModal variant={variant} familyGuid={familyGuid} />
-        </div>
-      }
-      trigger={<Button as={Label} content={`Classify ${classify || ''}`} horizontal basic={!classify} size="small" />}
-      hoverable
-    />
-  )
-}
-
-VariantClassify.propTypes = {
-  variant: PropTypes.object.isRequired,
-  familyGuid: PropTypes.string,
 }
 
 export default VariantClassify

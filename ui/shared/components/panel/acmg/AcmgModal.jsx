@@ -6,24 +6,9 @@ import { ButtonLink } from '../../StyledComponents'
 
 const AcmgCriteria = React.lazy(() => import('./AcmgCriteria'))
 
-const getButtonBackgroundColor = (classification) => {
-  const categoryColors = {
-    Unknown: 'grey',
-    Benign: 'blue',
-    'Likely Benign': 'blue',
-    Pathogenic: 'orange',
-    'Likely Pathogenic': 'orange',
-    Uncertain: 'yellow',
-  }
-  return categoryColors[classification] || 'grey'
-}
-
 const AcmgModal = (props) => {
   const { variant, familyGuid } = props
   const modalName = `acmg-${variant.variantGuid}-${familyGuid}`
-
-  const { classify } = variant.acmgClassification || {}
-  const buttonBackgroundColor = getButtonBackgroundColor(classify)
 
   return (
     <Modal
@@ -31,7 +16,7 @@ const AcmgModal = (props) => {
       size="fullscreen"
       modalName={modalName}
       trigger={
-        <ButtonLink color={buttonBackgroundColor} content={`- In seqr ${classify || ''}`} />
+        <ButtonLink content="In seqr" />
       }
     >
       <React.Suspense fallback={<Loader />}>
