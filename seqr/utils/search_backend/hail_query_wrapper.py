@@ -171,7 +171,7 @@ class BaseHailTableQuery(object):
         for pop, pop_config in cls.POPULATIONS.items():
             populations[pop].update(pop_config)
         logger.info(cls)
-        logge.info(sorted(populations.keys()))
+        logger.info(sorted(populations.keys()))
         return populations
 
     @property
