@@ -130,6 +130,7 @@ const SHOW_DATA_MODAL_CONFIG = [
     component: PhenotypePrioritizedGenes,
     modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
     title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
+    modalSize: 'large',
     linkText: 'Show Phenotype Prioritized Genes',
   },
 ]
@@ -173,7 +174,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
-      ({ modalName, title, linkText, component }) => {
+      ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
         return (
@@ -181,6 +182,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
             key={modalName(titleIds)}
             modalName={modalName(titleIds)}
             title={title(titleIds)}
+            size={modalSize}
             trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
           >
             <React.Suspense fallback={<Loader />}>
