@@ -1255,8 +1255,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {
-            'dataType', 'override_consequences', 'rg37_locus', 'sortedTranscriptConsequences',
-            'familyGuids', 'genotypes',
+            'dataType', 'familyGuids', 'override_consequences', 'rg37_locus',  'sortedTranscriptConsequences',
         }  # TODO compHetFamilyCarriers/recessiveFamilies
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for data_type in data_types[1:]:
@@ -1307,13 +1306,15 @@ class MultiDataTypeHailTableQuery(object):
     def _merge_nested_structs(field, sub_type, map_func='map'):
         struct_type = dict(**ht[field].dtype[sub_type])
         new_struct_type = dict(**ht[f'{field}_1'].dtype[sub_type])
-        if struct_type == new_struct_type:
-            return {}
 
+        is_same_type = struct_type == new_struct_type
         struct_type.update(new_struct_type)
 
         def format_merged(merge_field):
-            getattr(ht[merge_field], map_func)(
+            table_field = ht[merge_field]
+            if is_same_type:
+                return table_field
+            return getattr(table_field, map_func)(
                 lambda x: x.select(**{k: x.get(k, hl.missing(v)) for k, v in struct_type.items()})
             )
 
