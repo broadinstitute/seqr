@@ -259,14 +259,9 @@ class BaseHailTableQuery(object):
             num_families=len(family_samples), has_location_search=bool(intervals), inheritance_mode=inheritance_mode,
             **kwargs)
 
-        family_set_fields = {}
-        family_dict_fields = {}
+        family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
         if clinvar_path_terms and quality_filter:
             family_set_fields['passesQualityFamilies'] = 'passesQuality'
-        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            family_dict_fields['compHetFamilyCarriers'] = 'unaffectedCompHetCarriers'
-            if inheritance_mode == RECESSIVE:
-                family_set_fields['recessiveFamilies'] = 'isRecessiveFamily'
 
         families_ht = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
@@ -351,6 +346,16 @@ class BaseHailTableQuery(object):
     @classmethod
     def _get_family_table_filter_kwargs(cls, **kwargs):
         return {}
+
+    @staticmethod
+    def _get_families_annotation_fields(inheritance_mode):
+        family_dict_fields = {}
+        family_set_fields = {}
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+            family_dict_fields['compHetFamilyCarriers'] = 'unaffectedCompHetCarriers'
+            if inheritance_mode == RECESSIVE:
+                family_set_fields['recessiveFamilies'] = 'isRecessiveFamily'
+        return family_set_fields, family_dict_fields
 
     @classmethod
     def _filter_family_table(cls, family_ht, family_samples=None, inheritance_mode=None, inheritance_filter=None,
@@ -1254,9 +1259,11 @@ class MultiDataTypeHailTableQuery(object):
         ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_source[data_type_0], samples[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
-        all_type_merge_fields = {
-            'dataType', 'familyGuids', 'override_consequences', 'rg37_locus',
-        }  # TODO compHetFamilyCarriers/recessiveFamilies
+        all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus'}
+        family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
+        all_type_merge_fields.update(family_set_fields.keys())
+        all_type_merge_fields.update(family_dict_fields.keys())
+
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
