@@ -84,6 +84,7 @@ SV_CONSEQUENCE_RANKS = [
 SV_CONSEQUENCE_RANK_MAP = {c: i for i, c in enumerate(SV_CONSEQUENCE_RANKS)}
 SV_TYPES = ['gCNV_DEL', 'gCNV_DUP', 'BND', 'CPX', 'CTX', 'DEL', 'DUP', 'INS', 'INV', 'CNV']
 SV_TYPE_DISPLAYS = [t.replace('gCNV_', '') for t in SV_TYPES]
+SV_DEL_INDICES = {i for i, sv_type in enumerate(SV_TYPES) if 'DEL' in SV_TYPES}
 SV_TYPE_MAP = {c: i for i, c in enumerate(SV_TYPES)}
 SV_TYPE_DETAILS = [
     'INS_iDEL', 'INVdel', 'INVdup', 'ME', 'ME:ALU', 'ME:LINE1', 'ME:SVA', 'dDUP', 'dDUP_iDEL', 'delINV', 'delINVdel',
@@ -1341,7 +1342,7 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         # SNPs overlapped by trans deletions may be incorrectly called as hom alt, and should be
         # considered comp hets with said deletions. Any other hom alt variants are not valid comp hets
         return hl.if_else(
-            hl.is_defined(v1.svType) | ((v2.svType == 'DEL') & (v2.pos <= v1.pos) & (v1.pos <= v2.end)),
+            hl.is_defined(v1.svType_id) | (hl.set(SV_DEL_INDICES).contains(v2.svType_id) & (v2.pos <= v1.pos) & (v1.pos <= v2.end)),
             hl.empty_set(hl.tstr),
             hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid))
         )
