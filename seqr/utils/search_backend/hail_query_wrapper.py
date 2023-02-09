@@ -1167,7 +1167,7 @@ class GcnvHailTableQuery(BaseSvHailTableQuery):
 
     @classmethod
     def _filter_vcf_filters(cls, ht):
-        pass
+        return ht
 
 
 class SvHailTableQuery(BaseSvHailTableQuery):
