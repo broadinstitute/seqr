@@ -1277,7 +1277,8 @@ class MultiDataTypeHailTableQuery(object):
             merge_fields.update(new_merge_fields)
 
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
-            transmute_expressions.update(cls._merge_nested_structs('sortedTranscriptConsequences', 'element_type'))
+            transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
+            # transmute_expressions.update(cls._merge_nested_structs('genotypes', 'value_type'))
 
             # transcripts_type = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
             # new_transcripts_type = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
@@ -1308,7 +1309,7 @@ class MultiDataTypeHailTableQuery(object):
         return ht
 
     @staticmethod
-    def _merge_nested_structs(field, sub_type, map_func='map'):
+    def _merge_nested_structs(ht, field, sub_type, map_func='map'):
         struct_type = dict(**ht[field].dtype[sub_type])
         new_struct_type = dict(**ht[f'{field}_1'].dtype[sub_type])
 
