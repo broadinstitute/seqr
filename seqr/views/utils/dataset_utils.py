@@ -6,12 +6,14 @@ from tqdm import tqdm
 import random
 
 from seqr.models import Sample, Individual, Family, RnaSeqOutlier, RnaSeqTpm
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -418,6 +420,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     # Delete old data
     individual_db_ids = {s.individual_id for s in samples}
     to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
+    prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
 
@@ -427,11 +430,15 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     }
 
     prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
-    projects = {sample.individual.family.project.name for sample in samples_to_load}
-    project_names = ', '.join(sorted(projects))
-    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
+    project_samples = defaultdict(list)
+    for sample in samples_to_load:
+        project_samples[sample.individual.family.project].append(sample)
+    project_names = ', '.join(sorted([project.name for project in project_samples.keys()]))
+    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(project_samples)} projects: {project_names}'
     info.append(message)
     logger.info(message, user)
+
+    _notify_rna_loading(model_cls, project_samples, prev_loaded_individual_ids)
 
     if remaining_sample_ids:
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
@@ -445,6 +452,17 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         logger.warning(warning, user)
 
     return samples_to_load, info, warnings
+
+
+def _notify_rna_loading(model_cls, project_samples, prev_loaded_individual_ids):
+    data_type = 'Outlier' if model_cls == RnaSeqOutlier else 'Expression'
+    for project, samples in project_samples.items():
+        new_ids = sorted({s.sample_id for s in samples if s.individual_id not in prev_loaded_individual_ids})
+        project_link = f'<{BASE_URL}project/{project.guid}/project_page|{project.name}>'
+        safe_post_to_slack(
+            SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
+            f'{len(new_ids)} new RNA {data_type} samples are loaded in {project_link}\n```{", ".join(new_ids)}```'
+        )
 
 
 PHENOTYPE_PRIORITIZATION_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName']

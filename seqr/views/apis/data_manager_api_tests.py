@@ -607,6 +607,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {
             'model_cls': RnaSeqOutlier,
+            'message_data_type': 'Outlier',
             'header': ['sampleID', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
             'loaded_data_row': ['NA19675_D2', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
@@ -628,6 +629,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
+            'message_data_type': 'Expression',
             'header': ['sample_id', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
             'loaded_data_row': ['NA19675_D2', 'NA19675_D3', 'ENSG00000135953', 'muscle', 1.34],
@@ -650,6 +652,9 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
+    @mock.patch('seqr.views.utils.dataset_utils.BASE_URL', 'https://test-seqr.org/')
+    @mock.patch('seqr.views.utils.dataset_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.views.utils.dataset_utils.safe_post_to_slack')
     @mock.patch('seqr.views.apis.data_manager_api.datetime')
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.load_uploaded_file')
@@ -658,7 +663,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     @mock.patch('seqr.views.utils.dataset_utils.logger')
     @mock.patch('seqr.models.logger')
     def test_update_rna_seq(self, mock_model_logger, mock_logger, mock_open, mock_subprocess, mock_load_uploaded_file,
-                            mock_os, mock_datetime):
+                            mock_os, mock_datetime, mock_send_slack):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
 
@@ -715,6 +720,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertDictEqual(response.json(), {'error': 'Must contain 2 columns: a'})
 
                 # Test already loaded data
+                mock_send_slack.reset_mock()
                 _set_file_iter_stdout([header, loaded_data_row])
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
@@ -727,6 +733,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_logger.info.assert_has_calls([mock.call(info_log, self.data_manager_user) for info_log in info])
                 mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
+                mock_send_slack.assert_not_called()
 
                 # Test loading new data
                 mock_open.reset_mock()
@@ -758,6 +765,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                                'parentEntityIds': {RNA_SAMPLE_GUID}, 'updateType': 'bulk_delete'}
                 )
                 mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
+                self.assertEqual(mock_send_slack.call_count, 1)
+                mock_send_slack.assert_has_calls([
+                    mock.call(
+                        'seqr-data-loading',
+                        f'0 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/R0001_1kg/project_page|1kg project nåme with uniçøde>\n``````',
+                    ),
+                ])
 
                 # test database models are correct
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
