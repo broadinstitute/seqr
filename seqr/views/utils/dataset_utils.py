@@ -105,6 +105,7 @@ def match_sample_ids_to_sample_records(
         loaded_date=None,
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
+        allow_partial_families=False,
 ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
@@ -183,7 +184,10 @@ def match_sample_ids_to_sample_records(
         samples += list(Sample.bulk_create(user, new_samples))
         log_model_bulk_update(logger, new_samples, user, 'create')
 
-    included_families = _validate_samples_families(samples, sample_type, dataset_type)
+    prefetch_related_objects(samples, 'individual__family')
+    included_families = {sample.individual.family for sample in samples}
+    if not allow_partial_families:
+        _validate_samples_families(samples, included_families, sample_type, dataset_type)
 
     return samples, included_families, matched_individual_ids, remaining_sample_ids
 
@@ -212,10 +216,7 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
     ))
 
 
-def _validate_samples_families(samples, sample_type, dataset_type):
-    prefetch_related_objects(samples, 'individual__family')
-    included_families = {sample.individual.family for sample in samples}
-
+def _validate_samples_families(samples, included_families, sample_type, dataset_type):
     missing_individuals = Individual.objects.filter(
         family__in=included_families,
         sample__is_active=True,
@@ -233,7 +234,6 @@ def _validate_samples_families(samples, sample_type, dataset_type):
                     ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
                      for family, missing_indivs in missing_family_individuals.items()]
                 ))))
-    return included_families
 
 
 def update_variant_samples(samples, user, elasticsearch_index, data_source=None, loaded_date=None,
@@ -266,7 +266,7 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
 def match_and_update_samples(
         projects, user, sample_ids, sample_type, elasticsearch_index=None, data_source=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
-        raise_unmatched_error_template=None,
+        raise_unmatched_error_template=None, allow_partial_families=False,
 ):
     loaded_date = timezone.now()
     samples, included_families, matched_individual_ids, remaining_sample_ids = match_sample_ids_to_sample_records(
@@ -281,6 +281,7 @@ def match_and_update_samples(
         loaded_date=loaded_date,
         raise_no_match_error=raise_no_match_error,
         raise_unmatched_error_template=raise_unmatched_error_template,
+        allow_partial_families=allow_partial_families,
     )
 
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
@@ -409,6 +410,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample_ids=samples_by_id.keys(),
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
+        allow_partial_families=True,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
     )
