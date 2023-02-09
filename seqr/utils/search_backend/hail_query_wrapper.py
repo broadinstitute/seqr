@@ -1260,7 +1260,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {
-            'dataType', 'familyGuids', #'override_consequences',
+            'dataType', 'familyGuids', #'override_consequences',  # TODO debug
             'rg37_locus',
         }  # TODO compHetFamilyCarriers/recessiveFamilies
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
