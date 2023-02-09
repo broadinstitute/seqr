@@ -1271,6 +1271,7 @@ class MultiDataTypeHailTableQuery(object):
             to_merge.update(all_type_merge_fields)
             merge_fields.update(new_merge_fields)
 
+            logger.info(f'Merging fields {", ".join(to_merge)}')
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs('sortedTranscriptConsequences', 'element_type'))
 
