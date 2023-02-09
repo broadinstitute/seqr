@@ -1278,7 +1278,7 @@ class MultiDataTypeHailTableQuery(object):
 
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
-            # transmute_expressions.update(cls._merge_nested_structs('genotypes', 'value_type'))
+            transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'value_type', map_func='map_values'))
 
             # transcripts_type = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
             # new_transcripts_type = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
@@ -1292,17 +1292,17 @@ class MultiDataTypeHailTableQuery(object):
             #         ht.sortedTranscriptConsequences.map(format_transcript),
             #         ht.sortedTranscriptConsequences_1.map(format_transcript))
 
-            genotypes_type = dict(**ht.genotypes.dtype.value_type)
-            new_genotypes_type = dict(**ht.genotypes_1.dtype.value_type)
-            if genotypes_type != new_genotypes_type:
-                genotypes_type.update(new_genotypes_type)
-
-                def format_gt(t):
-                    return t.select(**{k: t.get(k, hl.missing(v)) for k, v in genotypes_type.items()})
-
-                transmute_expressions['genotypes'] = hl.or_else(
-                    ht.genotypes.map_values(format_gt),
-                    ht.genotypes_1.map_values(format_gt))
+            # genotypes_type = dict(**ht.genotypes.dtype.value_type)
+            # new_genotypes_type = dict(**ht.genotypes_1.dtype.value_type)
+            # if genotypes_type != new_genotypes_type:
+            #     genotypes_type.update(new_genotypes_type)
+            #
+            #     def format_gt(t):
+            #         return t.select(**{k: t.get(k, hl.missing(v)) for k, v in genotypes_type.items()})
+            #
+            #     transmute_expressions['genotypes'] = hl.or_else(
+            #         ht.genotypes.map_values(format_gt),
+            #         ht.genotypes_1.map_values(format_gt))
 
             ht = ht.transmute(**transmute_expressions)
 
@@ -1310,9 +1310,8 @@ class MultiDataTypeHailTableQuery(object):
 
     @staticmethod
     def _merge_nested_structs(ht, field, sub_type, map_func='map'):
-        struct_type = dict(**ht[field].dtype[sub_type])
-        new_struct_type = dict(**ht[f'{field}_1'].dtype[sub_type])
-
+        struct_type = dict(**getattr(ht[field].dtype, sub_type))
+        new_struct_type = dict(**getattr(ht[f'{field}_1'].dtype, sub_type))
         is_same_type = struct_type == new_struct_type
         struct_type.update(new_struct_type)
 
