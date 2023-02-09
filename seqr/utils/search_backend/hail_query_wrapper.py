@@ -1254,7 +1254,10 @@ class MultiDataTypeHailTableQuery(object):
         ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_source[data_type_0], samples[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
-        all_type_merge_fields = {'dataType', 'override_consequences', 'familyGuids', 'rg37_locus'}  # TODO compHetFamilyCarriers/recessiveFamilies
+        all_type_merge_fields = {
+            'dataType', 'override_consequences', 'rg37_locus', 'sortedTranscriptConsequences',
+            'familyGuids', 'genotypes',
+        }  # TODO compHetFamilyCarriers/recessiveFamilies
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for data_type in data_types[1:]:
             data_type_cls = QUERY_CLASS_MAP[data_type]
@@ -1270,18 +1273,19 @@ class MultiDataTypeHailTableQuery(object):
             merge_fields.update(new_merge_fields)
 
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
+            transmute_expressions.update(cls._merge_nested_structs('sortedTranscriptConsequences', 'element_type'))
 
-            transcripts_type = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
-            new_transcripts_type = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
-            if transcripts_type != new_transcripts_type:
-                transcripts_type.update(new_transcripts_type)
-
-                def format_transcript(t):
-                    return t.select(**{k: t.get(k, hl.missing(v)) for k, v in transcripts_type.items()})
-
-                transmute_expressions['sortedTranscriptConsequences'] = hl.or_else(
-                    ht.sortedTranscriptConsequences.map(format_transcript),
-                    ht.sortedTranscriptConsequences_1.map(format_transcript))
+            # transcripts_type = dict(**ht.sortedTranscriptConsequences.dtype.element_type)
+            # new_transcripts_type = dict(**ht.sortedTranscriptConsequences_1.dtype.element_type)
+            # if transcripts_type != new_transcripts_type:
+            #     transcripts_type.update(new_transcripts_type)
+            #
+            #     def format_transcript(t):
+            #         return t.select(**{k: t.get(k, hl.missing(v)) for k, v in transcripts_type.items()})
+            #
+            #     transmute_expressions['sortedTranscriptConsequences'] = hl.or_else(
+            #         ht.sortedTranscriptConsequences.map(format_transcript),
+            #         ht.sortedTranscriptConsequences_1.map(format_transcript))
 
             genotypes_type = dict(**ht.genotypes.dtype.value_type)
             new_genotypes_type = dict(**ht.genotypes_1.dtype.value_type)
@@ -1300,9 +1304,20 @@ class MultiDataTypeHailTableQuery(object):
         return ht
 
     @staticmethod
-    def _merge_ht_list_field_expression():
-        # TODO helper method
-        pass
+    def _merge_nested_structs(field, sub_type, map_func='map'):
+        struct_type = dict(**ht[field].dtype[sub_type])
+        new_struct_type = dict(**ht[f'{field}_1'].dtype[sub_type])
+        if struct_type == new_struct_type:
+            return {}
+
+        struct_type.update(new_struct_type)
+
+        def format_merged(merge_field):
+            getattr(ht[merge_field], map_func)(
+                lambda x: x.select(**{k: x.get(k, hl.missing(v)) for k, v in struct_type.items()})
+            )
+
+        return {field: hl.or_else(format_merged(field), format_merged(f'{field}_1'))}
 
 
 class AllSvHailTableQuery(MultiDataTypeHailTableQuery, BaseSvHailTableQuery):
