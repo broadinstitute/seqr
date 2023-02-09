@@ -1344,8 +1344,8 @@ class AllDataTypeHailTableQuery(AllVariantHailTableQuery):
         return hl.if_else(
             hl.is_defined(v1.locus) & hl.set(SV_DEL_INDICES).contains(v2.svType_id) &
             (v2.interval.start.position <= v1.locus.position) & (v1.locus.position <= v2.interval.end.position),
-            hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
             hl.empty_set(hl.tstr),
+            hl.set(v1.genotypes.values().filter(lambda g: g.numAlt == 2).map(lambda g: g.familyGuid)),
         )
 
 
