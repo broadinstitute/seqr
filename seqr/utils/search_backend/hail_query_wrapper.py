@@ -489,9 +489,8 @@ class BaseHailTableQuery(object):
     @classmethod
     def _genotype_passes_quality(cls, gt, quality_filter):
         quality_filter_expr = None
-        logger.info(quality_filter)
         for field, value in quality_filter.items():
-            field_filter = gt[field] >= value
+            field_filter = (gt[field] >= value) | hl.is_missing(gt[field])
             if quality_filter_expr is None:
                 quality_filter_expr = field_filter
             else:
