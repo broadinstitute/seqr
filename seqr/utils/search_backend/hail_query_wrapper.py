@@ -1110,6 +1110,11 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
             **{k: ht[k] for k in annotation_exprs.keys()}
         ))))
         # TODO debug mito
+        ht = ht.filter(consequence_filter)
+        logger.info(ht.aggregate(hl.agg.collect(hl.struct(
+            sortedTranscriptConsequences=ht.sortedTranscriptConsequences,
+            **{k: ht[k] for k in annotation_exprs.keys()}
+        ))))
         return ht
 
 
