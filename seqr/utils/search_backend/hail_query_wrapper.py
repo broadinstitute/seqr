@@ -1076,6 +1076,11 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
             {k: v / 100 if k == 'min_hl' else v for k, v in (quality_filter or {}).items()}
         )
 
+    @classmethod
+    def _filter_annotated_table(cls, ht, **kwargs):
+        # TODO debug mito
+        return ht
+
 
 def _no_genotype_override(genotypes, field):
     return genotypes.values().any(lambda g: (g.numAlt > 0) & hl.is_missing(g[field]))
@@ -1255,7 +1260,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {
-            'dataType', 'familyGuids', 'override_consequences', 'rg37_locus',  'sortedTranscriptConsequences',
+            'dataType', 'familyGuids', 'override_consequences', 'rg37_locus',
         }  # TODO compHetFamilyCarriers/recessiveFamilies
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for data_type in data_types[1:]:
@@ -1271,7 +1276,6 @@ class MultiDataTypeHailTableQuery(object):
             to_merge.update(all_type_merge_fields)
             merge_fields.update(new_merge_fields)
 
-            logger.info(f'Merging fields {", ".join(to_merge)}')
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs('sortedTranscriptConsequences', 'element_type'))
 
