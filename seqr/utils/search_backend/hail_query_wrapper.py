@@ -1260,7 +1260,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus'}
-        family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
+        family_set_fields, family_dict_fields = cls._get_families_annotation_fields(kwargs['inheritance_mode'])
         all_type_merge_fields.update(family_set_fields.keys())
         all_type_merge_fields.update(family_dict_fields.keys())
 
