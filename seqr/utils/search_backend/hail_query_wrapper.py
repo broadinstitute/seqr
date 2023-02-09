@@ -1078,6 +1078,37 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
 
     @classmethod
     def _filter_by_annotations(cls, ht, *args):
+        annotation_exprs = {}
+
+        annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
+        annotation_exprs[
+            'override_consequences'] = False if annotation_override_filter is None else annotation_override_filter
+
+        allowed_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences)
+        if allowed_consequence_ids:
+            annotation_exprs['has_allowed_consequence'] = ht.sortedTranscriptConsequences.any(
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_consequence_ids))
+
+        allowed_secondary_consequence_ids = cls._get_allowed_consequence_ids(allowed_consequences_secondary)
+        if allowed_consequences_secondary:
+            annotation_exprs['has_allowed_secondary_consequence'] = ht.sortedTranscriptConsequences.any(
+                lambda tc: cls._is_allowed_consequence_filter(tc, allowed_secondary_consequence_ids))
+
+        ht = ht.annotate(**annotation_exprs)
+        filter_fields = [k for k, v in annotation_exprs.items() if v is not False]
+
+        if not filter_fields:
+            return ht
+
+        consequence_filter = ht[filter_fields[0]]
+        for field in filter_fields[1:]:
+            consequence_filter |= ht[field]
+
+        logger.info(sorted(annotation_exprs.keys()))
+        logger.info(ht.aggregate(hl.agg.collect(hl.struct(
+            sortedTranscriptConsequences=ht.sortedTranscriptConsequences,
+            **{k: ht[k] for k in annotation_exprs.keys()}
+        ))))
         # TODO debug mito
         return ht
 
@@ -1260,8 +1291,7 @@ class MultiDataTypeHailTableQuery(object):
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {
-            'dataType', 'familyGuids', #'override_consequences',  # TODO debug
-            'rg37_locus',
+            'dataType', 'familyGuids', 'override_consequences', 'rg37_locus',
         }  # TODO compHetFamilyCarriers/recessiveFamilies
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for data_type in data_types[1:]:
