@@ -1077,24 +1077,9 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         )
 
     @classmethod
-    def _filter_by_frequency(cls, ht, *args):
-        # TODO debug mito
-        return ht
-
-    @classmethod
-    def _filter_by_in_silico(cls, ht, *args):
-        # TODO debug mito
-        return ht
-
-    @classmethod
     def _filter_by_annotations(cls, ht, *args):
         # TODO debug mito
         return ht
-
-    # @classmethod
-    # def _filter_vcf_filters(cls, ht):
-    #     # TODO debug mito
-    #     return ht
 
 
 def _no_genotype_override(genotypes, field):
