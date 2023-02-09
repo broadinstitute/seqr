@@ -1077,7 +1077,7 @@ class MitoHailTableQuery(BaseVariantHailTableQuery):
         )
 
     @classmethod
-    def _filter_by_annotations(cls, ht, *args):
+    def _filter_by_annotations(cls, ht, allowed_consequences, allowed_consequences_secondary, consequence_overrides):
         annotation_exprs = {}
 
         annotation_override_filter = cls._get_annotation_override_filter(ht, consequence_overrides)
