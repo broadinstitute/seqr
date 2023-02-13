@@ -1,11 +1,12 @@
 import elasticsearch_dsl
 from collections import defaultdict
-from django.db.models import prefetch_related_objects
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import prefetch_related_objects, Q
 from django.utils import timezone
 from tqdm import tqdm
 import random
 
-from seqr.models import Sample, Individual, Family, RnaSeqOutlier, RnaSeqTpm
+from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
@@ -431,16 +432,17 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
 
-    prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
-    project_samples = defaultdict(list)
-    for sample in samples_to_load:
-        project_samples[sample.individual.family.project].append(sample)
-    project_names = ', '.join(sorted([project.name for project in project_samples.keys()]))
-    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(project_samples)} projects: {project_names}'
+    sample_projects = Project.objects.filter(family__individual__sample__in=samples_to_load.keys()).values(
+        'guid', 'name', new_sample_ids=ArrayAgg(
+            'family__individual__sample__sample_id', distinct=True, ordering='family__individual__sample__sample_id',
+            filter=~Q(family__individual__id__in=prev_loaded_individual_ids)
+        ))
+    project_names = ', '.join(sorted([project['name'] for project in sample_projects]))
+    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
     info.append(message)
     logger.info(message, user)
 
-    _notify_rna_loading(model_cls, project_samples, prev_loaded_individual_ids)
+    _notify_rna_loading(model_cls, sample_projects)
 
     if remaining_sample_ids:
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
@@ -456,11 +458,11 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     return samples_to_load, info, warnings
 
 
-def _notify_rna_loading(model_cls, project_samples, prev_loaded_individual_ids):
+def _notify_rna_loading(model_cls, sample_projects):
     data_type = 'Outlier' if model_cls == RnaSeqOutlier else 'Expression'
-    for project, samples in project_samples.items():
-        new_ids = sorted({s.sample_id for s in samples if s.individual_id not in prev_loaded_individual_ids})
-        project_link = f'<{BASE_URL}project/{project.guid}/project_page|{project.name}>'
+    for project_agg in sample_projects:
+        new_ids = project_agg["new_sample_ids"]
+        project_link = f'<{BASE_URL}project/{project_agg["guid"]}/project_page|{project_agg["name"]}>'
         safe_post_to_slack(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             f'{len(new_ids)} new RNA {data_type} samples are loaded in {project_link}\n```{", ".join(new_ids)}```'
