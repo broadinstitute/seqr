@@ -655,9 +655,10 @@ class ReportAPITest(object):
             'date_data_generation', 'target_insert_size', 'sequencing_platform',
         ])
         self.assertIn([
-            'Broad_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
+            'Broad_exome_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
             'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
         ], experiment_file)
+        self.assertIn(['Broad_NA_NA19675_1', 'Broad_SM-AGHT', 'NA19675_1', '', '', '', '', '', '', '', ''], experiment_file)
 
         self.assertEqual(len(read_file), 3)
         self.assertEqual(read_file[0], [
@@ -666,7 +667,7 @@ class ReportAPITest(object):
             'analysis_details',
         ])
         self.assertIn([
-            'Broad_VCGS_FAM203_621_D2_1', 'Broad_VCGS_FAM203_621_D2',
+            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
             'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317',
@@ -674,7 +675,7 @@ class ReportAPITest(object):
 
         self.assertEqual(len(read_set_file), 3)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
-        self.assertIn(['BCM_H7YG5DSX2', 'Broad_VCGS_FAM203_621_D2_1'], read_set_file)
+        self.assertIn(['BCM_H7YG5DSX2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
 
         self.assertEqual(len(called_file), 2)
         self.assertEqual(called_file[0], [
