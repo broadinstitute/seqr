@@ -1,74 +1,16 @@
 import React from 'react'
+import styled from 'styled-components'
 import PropTypes from 'prop-types'
-import { Button, Label } from 'semantic-ui-react'
-import { CopyToClipboard } from 'react-copy-to-clipboard'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { ColoredIcon } from 'shared/components/StyledComponents'
-import DataLoader from 'shared/components/DataLoader'
+import { Button, Label, Loader } from 'semantic-ui-react'
 import AcmgModal from '../acmg/AcmgModal'
-import { VerticalSpacer } from '../../Spacers'
 import PopupWithModal from '../../PopupWithModal'
 import { getVariantMainTranscript } from '../../../utils/constants'
 
-const CLINGEN_ALLELE_REGISTRY_URL = 'http://reg.genome.network/allele'
-const CLINGEN_VCI_URL = 'https://curation.clinicalgenome.org/select-variant'
+const ClinGenVciLink = React.lazy(() => import('./ClinGenVciLink'))
 
-class ClinGenAlleleId extends React.PureComponent {
-
-  static propTypes = {
-    hgvsc: PropTypes.string.isRequired,
-  }
-
-  state = {
-    copied: false,
-    loading: false,
-    alleleId: null,
-  };
-
-  load = (hgvsc) => {
-    this.setState({ loading: true })
-    new HttpRequestHelper(CLINGEN_ALLELE_REGISTRY_URL,
-      (responseJson) => {
-        this.setState({ alleleId: responseJson['@id'].split('/').pop(), loading: false })
-      },
-      (e) => {
-        this.setState({ alleleId: e.message, loading: false })
-      }).get({ hgvs: hgvsc }, { credentials: 'omit' })
-  }
-
-  onCopy = () => {
-    this.setState({ copied: true })
-  }
-
-  render() {
-    const { hgvsc } = this.props
-    const { alleleId, copied, loading } = this.state
-
-    return (
-      <div>
-        <DataLoader contentId={hgvsc} content={alleleId} loading={loading} load={this.load}>
-          <a href={CLINGEN_VCI_URL} target="_blank" rel="noreferrer">In ClinGen VCI</a>
-          <br />
-          <CopyToClipboard
-            text={alleleId}
-            onCopy={this.onCopy}
-          >
-            <div>
-              <span>
-                {alleleId}
-                &nbsp;
-              </span>
-              <ColoredIcon name="copy" link />
-              {copied && <ColoredIcon name="check circle" color="#00C000" />}
-              <VerticalSpacer height={10} />
-            </div>
-          </CopyToClipboard>
-        </DataLoader>
-      </div>
-    )
-  }
-
-}
+const LoaderContainer = styled.div`
+  min-height: 3em;
+`
 
 const getButtonBackgroundColor = (classification) => {
   const categoryColors = {
@@ -91,7 +33,13 @@ const VariantClassify = React.memo(({ variant, familyGuid }) => {
     <PopupWithModal
       content={
         <div>
-          {hgvsc && <ClinGenAlleleId hgvsc={hgvsc} />}
+          {hgvsc && (
+            <LoaderContainer>
+              <React.Suspense fallback={<Loader />}>
+                <ClinGenVciLink hgvsc={hgvsc} />
+              </React.Suspense>
+            </LoaderContainer>
+          )}
           <AcmgModal variant={variant} familyGuid={familyGuid} />
         </div>
       }
@@ -101,7 +49,6 @@ const VariantClassify = React.memo(({ variant, familyGuid }) => {
         </Button>
       }
       on="click"
-      position="bottom left"
       hoverable
     />
   )
