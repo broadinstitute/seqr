@@ -5,7 +5,7 @@ from django.utils import timezone
 from tqdm import tqdm
 import random
 
-from seqr.models import Sample, Individual, Family, RnaSeqOutlier, RnaSeqTpm
+from seqr.models import Sample, Individual, Family, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
@@ -300,6 +300,17 @@ def _parse_tsv_row(row):
 
 RNA_OUTLIER_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
 
+RNA_SPLICE_OUTLIER_COLUMNS = {
+                                 'geneID': 'gene_id',
+                                 'pValue': 'p_value',
+                                 'zScore': 'z_score',
+                                 'chrom': 'chrom',
+                                 'start': 'start',
+                                 'end': 'end',
+                                 'strand': 'strand',
+                                 'reads': 'read_count'
+}
+
 SAMPLE_ID_COL = 'sample_id'
 GENE_ID_COL = 'gene_id'
 TPM_COL = 'TPM'
@@ -318,6 +329,9 @@ REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
 
 def _parse_outlier_row(row, **kwargs):
     yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_OUTLIER_COLUMNS.items()}
+
+def _parse_splice_outlier_row(row, **kwargs):
+    yield row['individualID'], {mapped_key: row[key] for key, mapped_key in RNA_SPLICE_OUTLIER_COLUMNS.items()}
 
 def _parse_tpm_row(row, sample_id_to_tissue_type=None):
     sample_id = row[SAMPLE_ID_COL]
@@ -366,6 +380,13 @@ def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_sampl
     return _load_rna_seq(
         RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
         sample_id_to_tissue_type=sample_id_to_tissue_type, validate_samples=_check_invalid_tissues,
+    )
+
+def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
+    expected_columns = ['individualID'] + list(RNA_SPLICE_OUTLIER_COLUMNS.keys())
+    return _load_rna_seq(
+        RnaSeqSpliceOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_splice_outlier_row,
+        expected_columns,
     )
 
 def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,

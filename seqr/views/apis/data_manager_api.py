@@ -18,12 +18,13 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_rna_seq_splice_outlier,\
+    load_phenotype_prioritization_data_file
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
+from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -337,6 +338,7 @@ EXCLUDE_PROJECTS = [
 RNA_DATA_TYPE_CONFIGS = {
     'outlier': {'load_func': load_rna_seq_outlier, 'model_class': RnaSeqOutlier},
     'tpm': {'load_func': load_rna_seq_tpm, 'model_class': RnaSeqTpm},
+    'splice_outlier': {'load_func': load_rna_seq_splice_outlier, 'model_class': RnaSeqSpliceOutlier}
 }
 
 @data_manager_required

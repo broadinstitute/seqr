@@ -2,6 +2,9 @@
 
 ## dev
 
+## 2/14/23
+* Add RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
+
 ## 1/11/23
 * Require PHI disclaimer when uploading AnVIL pedigree
 
