@@ -16,7 +16,7 @@ import {
   getGenesById,
 } from 'redux/selectors'
 import { DISCOVERY_CATEGORY_NAME, MME_TAG_NAME } from 'shared/utils/constants'
-import AcmgModal from '../acmg/AcmgModal'
+import VariantClassify from './VariantClassify'
 import PopupWithModal from '../../PopupWithModal'
 import { HorizontalSpacer } from '../../Spacers'
 import { NoBorderTable, InlineHeader } from '../../StyledComponents'
@@ -280,7 +280,7 @@ const FamilyVariantTags = React.memo(({
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
             {variant.variantGuid && !Array.isArray(variant) &&
-              <AcmgModal variant={variant} familyGuid={family.familyGuid} /> }
+              <VariantClassify variant={variant} familyGuid={family.familyGuid} />}
           </Table.Cell>
           <Table.Cell collapsing textAlign="right">
             {(!Array.isArray(variant) || variantTagNotes) &&
