@@ -34,6 +34,7 @@ import {
 import { getCurrentProject } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
+import CollapsableLayout from './CollapsableLayout'
 
 const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
 const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
@@ -49,6 +50,10 @@ const Detail = styled.div`
 const CaseReviewDropdownContainer = styled.div`
   float: right;
   width: 100%;
+`
+
+const IndividualContainer = styled.div`
+ display: inline-block;
 `
 
 const FLAG_TITLE = {
@@ -499,6 +504,7 @@ const NON_CASE_REVIEW_FIELDS = [
   },
   ...INDIVIDUAL_FIELDS,
 ]
+const EMPTY_FIELDS = [{ id: 'blank', colWidth: 10, component: () => null }]
 
 class IndividualRow extends React.PureComponent {
 
@@ -539,7 +545,7 @@ class IndividualRow extends React.PureComponent {
     loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
     const leftContent = (
-      <div>
+      <IndividualContainer>
         <div>
           <PedigreeIcon sex={sex} affected={affected} />
           {displayName}
@@ -549,7 +555,7 @@ class IndividualRow extends React.PureComponent {
             {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
           </Detail>
         </div>
-      </div>
+      </IndividualContainer>
     )
 
     const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
@@ -557,11 +563,11 @@ class IndividualRow extends React.PureComponent {
       <CaseReviewStatus individual={individual} /> :
       <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
 
-    const fields = editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS
-
     return (
-      <FamilyLayout
-        fields={fields}
+      <CollapsableLayout
+        layoutComponent={FamilyLayout}
+        detailFields={editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS}
+        noDetailFields={editCaseReview ? EMPTY_FIELDS : null}
         fieldDisplay={this.individualFieldDisplay}
         leftContent={leftContent}
         rightContent={rightContent}

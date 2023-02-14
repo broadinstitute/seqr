@@ -13,6 +13,7 @@ const FamilyGrid = styled(({ annotation, offset, ...props }) => <Table {...props
 const ToggleIconContainer = styled.span`
   z-index: 1;
   margin-right: 5px;
+  vertical-align: top;
 `
 
 const getContentWidth = (useFullWidth, leftContent, rightContent) => {
