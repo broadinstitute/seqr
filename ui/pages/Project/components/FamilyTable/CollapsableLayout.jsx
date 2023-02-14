@@ -4,7 +4,9 @@ import PropTypes from 'prop-types'
 class CollapsableLayout extends React.PureComponent {
 
   static propTypes = {
-    children: PropTypes.node,
+    layoutComponent: PropTypes.elementType.isRequired,
+    detailFields: PropTypes.arrayOf(PropTypes.object).isRequired,
+    noDetailFields: PropTypes.arrayOf(PropTypes.object),
   }
 
   state = { showDetails: false }
@@ -14,9 +16,18 @@ class CollapsableLayout extends React.PureComponent {
   }
 
   render() {
-    const { children } = this.props
+    const { layoutComponent, detailFields, noDetailFields, ...props } = this.props
     const { showDetails } = this.state
-    return React.cloneElement(children, { showDetails, toggleDetails: this.toggle })
+    const allowToggle = !!noDetailFields
+    const compact = allowToggle && !showDetails
+
+    return React.createElement(layoutComponent, {
+      fields: compact ? noDetailFields : detailFields,
+      compact,
+      disableEdit: compact,
+      toggleDetails: allowToggle ? this.toggle : null,
+      ...props,
+    })
   }
 
 }

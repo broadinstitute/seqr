@@ -39,22 +39,6 @@ const OverflowCell = styled(Table.Cell)`
   }
 `
 
-const FamilyRowDetail = ({ showDetails, detailFields, noDetailFields, ...props }) => (
-  <FamilyDetail
-    {...props}
-    showFamilyPageLink
-    fields={showDetails ? detailFields : noDetailFields}
-    compact={!showDetails}
-    disableEdit={!showDetails}
-  />
-)
-
-FamilyRowDetail.propTypes = {
-  showDetails: PropTypes.bool,
-  detailFields: PropTypes.arrayOf(PropTypes.object),
-  noDetailFields: PropTypes.arrayOf(PropTypes.object),
-}
-
 class FamilyTableRow extends React.PureComponent {
 
   static propTypes = {
@@ -63,7 +47,6 @@ class FamilyTableRow extends React.PureComponent {
     detailFields: PropTypes.arrayOf(PropTypes.object),
     noDetailFields: PropTypes.arrayOf(PropTypes.object),
     showVariantDetails: PropTypes.bool,
-    showDetails: PropTypes.bool,
   }
 
   state = { isVisible: false }
@@ -73,17 +56,13 @@ class FamilyTableRow extends React.PureComponent {
   }
 
   render() {
-    const { noDetailFields } = this.props
     const { isVisible } = this.state
-
-    const rowDetail = <FamilyRowDetail {...this.props} />
-    const rowContent = noDetailFields ? <CollapsableLayout>{rowDetail}</CollapsableLayout> : rowDetail
 
     return (
       <Table.Row>
         <OverflowCell width={16}>
           <Visibility fireOnMount onOnScreen={this.handleOnScreen}>
-            {isVisible && rowContent}
+            {isVisible && <CollapsableLayout layoutComponent={FamilyDetail} showFamilyPageLink {...this.props} />}
           </Visibility>
         </OverflowCell>
       </Table.Row>
