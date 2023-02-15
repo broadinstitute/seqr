@@ -287,6 +287,7 @@ class ReportAPITest(object):
     def _assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
         expected_params = {
             'fields[]': mock.ANY,
+            'pageSize': '100',
             'filterByFormula': filter_formula,
         }
         if additional_params:
