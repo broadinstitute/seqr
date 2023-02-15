@@ -262,8 +262,11 @@ class BaseSearchLinks extends React.PureComponent {
     const { showAll } = this.state
 
     const links = variantSearchLinks(variant, mainTranscript, genesById)
-    if (links.length < 5 || showAll) {
+    if (links.length < 5) {
       return links
+    }
+    if (showAll) {
+      return [...links.slice(0, 5), <br key="break" />, ...links.slice(5)]
     }
 
     return [
