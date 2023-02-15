@@ -1,8 +1,6 @@
 # _seqr_ Changes
 
 ## dev
-
-## 2/14/23
 * Add RnaSeqSpliceOutlier model (REQUIRES DB MIGRATION)
 
 ## 1/11/23
