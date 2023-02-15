@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Table, Icon, Popup, Visibility } from 'semantic-ui-react'
+import { Table, Popup, Visibility } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import DataLoader from 'shared/components/DataLoader'
@@ -16,16 +16,12 @@ import {
 } from '../../selectors'
 import { loadFamilies, loadProjectExportData } from '../../reducers'
 import { FamilyDetail } from '../FamilyPage'
+import CollapsableLayout from './CollapsableLayout'
 import TableHeaderRow from './header/TableHeaderRow'
 
 const ExportContainer = styled.span`
   float: right;
   padding-bottom: 15px;
-`
-
-const ToggleIcon = styled(Icon).attrs({ size: 'large', link: true, name: 'dropdown' })`
-  position: relative;
-  z-index: 1;
 `
 
 const EmptyCell = styled(Table.Cell)`
@@ -51,48 +47,22 @@ class FamilyTableRow extends React.PureComponent {
     detailFields: PropTypes.arrayOf(PropTypes.object),
     noDetailFields: PropTypes.arrayOf(PropTypes.object),
     showVariantDetails: PropTypes.bool,
-    showDetails: PropTypes.bool,
   }
 
-  state = { showDetails: null, isVisible: false }
-
-  toggle = () => {
-    const { showDetails } = this.props
-    this.setState(prevState => (
-      { showDetails: !(prevState.showDetails === null ? showDetails : prevState.showDetails) }
-    ))
-  }
+  state = { isVisible: false }
 
   handleOnScreen = () => {
     this.setState({ isVisible: true })
   }
 
   render() {
-    const {
-      familyGuid, showVariantDetails, detailFields, noDetailFields, tableName, showDetails: initialShowDetails,
-    } = this.props
-    const { showDetails, isVisible } = this.state
-    const showFamilyDetails = showDetails === null ? initialShowDetails : showDetails
+    const { isVisible } = this.state
+
     return (
       <Table.Row>
-        <Table.Cell collapsing verticalAlign="top">
-          {detailFields && noDetailFields &&
-            <ToggleIcon rotated={showFamilyDetails ? undefined : 'counterclockwise'} onClick={this.toggle} />}
-        </Table.Cell>
-        <OverflowCell>
+        <OverflowCell width={16}>
           <Visibility fireOnMount onOnScreen={this.handleOnScreen}>
-            {isVisible && (
-              <FamilyDetail
-                key={familyGuid}
-                familyGuid={familyGuid}
-                showFamilyPageLink
-                showVariantDetails={showVariantDetails}
-                tableName={tableName}
-                fields={showFamilyDetails ? detailFields : noDetailFields}
-                compact={!showFamilyDetails}
-                disableEdit={!showFamilyDetails}
-              />
-            )}
+            {isVisible && <CollapsableLayout layoutComponent={FamilyDetail} showFamilyPageLink {...this.props} />}
           </Visibility>
         </OverflowCell>
       </Table.Row>
@@ -163,7 +133,7 @@ const FamilyTable = React.memo(({
         analysisGroupGuid={props.analysisGroupGuid}
       />
     </Table>
-    <Table striped compact attached="bottom">
+    <Table striped compact fixed attached="bottom">
       <Table.Body>
         {loading && <TableLoading />}
         {!loading && (
