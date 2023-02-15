@@ -136,6 +136,7 @@ class Family extends React.PureComponent {
     annotation: PropTypes.node,
     disableEdit: PropTypes.bool,
     disableInternalEdit: PropTypes.bool,
+    toggleDetails: PropTypes.func,
   }
 
   familyField = (field) => {
@@ -163,7 +164,7 @@ class Family extends React.PureComponent {
   render() {
     const {
       project, family, fields, rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
-      showFamilyPageLink, annotation, hidePedigree,
+      showFamilyPageLink, annotation, hidePedigree, toggleDetails,
     } = this.props
 
     if (!family) {
@@ -189,7 +190,7 @@ class Family extends React.PureComponent {
               {`(${family.individualGuids.length})`}
             </span>
           ) : (
-            <div key="header">
+            <span key="header">
               {familyHeader}
               <PedigreeImagePanel
                 key="pedigree"
@@ -197,7 +198,7 @@ class Family extends React.PureComponent {
                 disablePedigreeZoom={disablePedigreeZoom}
                 isEditable={!disableEdit && project.canEdit}
               />
-            </div>
+            </span>
           )}
         </span>
       )
@@ -212,6 +213,7 @@ class Family extends React.PureComponent {
         fieldDisplay={this.familyField}
         leftContent={leftContent}
         rightContent={rightContent}
+        toggleDetails={toggleDetails}
       />
     )
   }
