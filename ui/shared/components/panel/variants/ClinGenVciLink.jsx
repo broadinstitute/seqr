@@ -5,7 +5,7 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { ColoredIcon } from 'shared/components/StyledComponents'
 import DataLoader from 'shared/components/DataLoader'
 
-const CLINGEN_ALLELE_REGISTRY_URL = 'http://reg.genome.network/allele'
+const CLINGEN_ALLELE_REGISTRY_URL = 'https://reg.genome.network/allele'
 const CLINGEN_VCI_URL = 'https://curation.clinicalgenome.org/select-variant'
 
 class ClinGenVciLink extends React.PureComponent {
