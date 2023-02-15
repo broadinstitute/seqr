@@ -155,16 +155,6 @@ const VARIANT_LINKS = [
     getHref: ({ pos, ref, alt }) => `https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}`,
   },
   {
-    name: 'Geno2MP',
-    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
-    getHref: ({ chrom, pos }) => `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
-  },
-  {
-    name: 'Iranome',
-    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
-    getHref: ({ chrom, pos, ref, alt }) => `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}`,
-  },
-  {
     name: 'google',
     shouldShow: ({ genes, variations }) => genes.length && variations.length,
     getHref: ({ genes, variations }) => `https://www.google.com/search?q=(${getGeneNames(genes).join('|')})+(${variations.join('|')}`,
@@ -174,6 +164,26 @@ const VARIANT_LINKS = [
     shouldShow: ({ genes }) => genes.length,
     getHref: ({ genes, variations }) => `https://www.ncbi.nlm.nih.gov/pubmed?term=${getPubmedSearch(genes, variations)}`,
   },
+  {
+    name: 'AoU',
+    shouldShow: ({ svType }) => !svType,
+    getHref: ({ chrom, pos, ref, alt }) => `https://databrowser.researchallofus.org/genomic-variants/${chrom}-${pos}-${ref}-${alt}`,
+  },
+  {
+    name: 'Iranome',
+    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
+    getHref: ({ chrom, pos, ref, alt }) => `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}`,
+  },
+  {
+    name: 'Geno2MP',
+    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
+    getHref: ({ chrom, pos }) => `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
+  },
+  {
+    name: 'Mastermind',
+    shouldShow: ({ svType, hgvsc }) => !svType && hgvsc,
+    getHref: ({ genes, hgvsc }) => `https://mastermind.genomenon.com/detail?gene=${genes[0].geneSymbol}&mutation=${genes[0].geneSymbol}:${hgvsc}`,
+  },
 ]
 
 const variantSearchLinks = (variant, mainTranscript, genesById) => {
@@ -181,6 +191,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
 
   const mainGene = genesById[mainTranscript.geneId]
   let genes
+  let hgvsc
   const variations = []
 
   if (mainGene) {
@@ -196,7 +207,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
     }
 
     if (mainTranscript.hgvsc) {
-      const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
+      hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
         `c.${hgvsc}`, // c.1282C>T
         hgvsc, // 1282C>T
@@ -208,7 +219,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
     genes = Object.keys(transcripts || {}).map(geneId => genesById[geneId]).filter(gene => gene)
   }
 
-  const linkVariant = { genes, variations, ...variant }
+  const linkVariant = { genes, variations, hgvsc, ...variant }
 
   return [
     <Popup
