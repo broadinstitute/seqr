@@ -121,11 +121,11 @@ const getSvRegion = (
 const getGeneNames = genes => genes.reduce((acc, gene) => [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc], [])
 
 const getLitSearch = (genes, variations) => {
-  let pubmedSearch = `(${getGeneNames(genes).join(' OR ')})`
+  let search = `(${getGeneNames(genes).join(' OR ')})`
   if (variations.length) {
-    pubmedSearch = `${pubmedSearch} AND (${variations.join(' OR ')})`
+    search = `${search} AND (${variations.join(' OR ')})`
   }
-  return pubmedSearch
+  return search
 }
 
 const VARIANT_LINKS = [
