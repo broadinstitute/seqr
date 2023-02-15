@@ -34,6 +34,7 @@ import {
 import { getCurrentProject } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
+import CollapsableLayout from './CollapsableLayout'
 
 const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
 const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
@@ -49,6 +50,10 @@ const Detail = styled.div`
 const CaseReviewDropdownContainer = styled.div`
   float: right;
   width: 100%;
+`
+
+const IndividualContainer = styled.div`
+ display: inline-block;
 `
 
 const FLAG_TITLE = {
@@ -130,6 +135,7 @@ const SHOW_DATA_MODAL_CONFIG = [
     component: PhenotypePrioritizedGenes,
     modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
     title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
+    modalSize: 'large',
     linkText: 'Show Phenotype Prioritized Genes',
   },
 ]
@@ -173,7 +179,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
-      ({ modalName, title, linkText, component }) => {
+      ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
         return (
@@ -181,6 +187,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
             key={modalName(titleIds)}
             modalName={modalName(titleIds)}
             title={title(titleIds)}
+            size={modalSize}
             trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
           >
             <React.Suspense fallback={<Loader />}>
@@ -497,6 +504,7 @@ const NON_CASE_REVIEW_FIELDS = [
   },
   ...INDIVIDUAL_FIELDS,
 ]
+const EMPTY_FIELDS = [{ id: 'blank', colWidth: 10, component: () => null }]
 
 class IndividualRow extends React.PureComponent {
 
@@ -537,7 +545,7 @@ class IndividualRow extends React.PureComponent {
     loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
     const leftContent = (
-      <div>
+      <IndividualContainer>
         <div>
           <PedigreeIcon sex={sex} affected={affected} />
           {displayName}
@@ -547,7 +555,7 @@ class IndividualRow extends React.PureComponent {
             {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
           </Detail>
         </div>
-      </div>
+      </IndividualContainer>
     )
 
     const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
@@ -555,11 +563,11 @@ class IndividualRow extends React.PureComponent {
       <CaseReviewStatus individual={individual} /> :
       <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
 
-    const fields = editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS
-
     return (
-      <FamilyLayout
-        fields={fields}
+      <CollapsableLayout
+        layoutComponent={FamilyLayout}
+        detailFields={editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS}
+        noDetailFields={editCaseReview ? EMPTY_FIELDS : null}
         fieldDisplay={this.individualFieldDisplay}
         leftContent={leftContent}
         rightContent={rightContent}
