@@ -120,10 +120,10 @@ const getSvRegion = (
 
 const getGeneNames = genes => genes.reduce((acc, gene) => [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc], [])
 
-const getPubmedSearch = (genes, variations) => {
+const getLitSearch = (genes, variations) => {
   let pubmedSearch = `(${getGeneNames(genes).join(' OR ')})`
   if (variations.length) {
-    pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
+    pubmedSearch = `${pubmedSearch} AND (${variations.join(' OR ')})`
   }
   return pubmedSearch
 }
@@ -157,12 +157,12 @@ const VARIANT_LINKS = [
   {
     name: 'google',
     shouldShow: ({ genes, variations }) => genes.length && variations.length,
-    getHref: ({ genes, variations }) => `https://www.google.com/search?q=(${getGeneNames(genes).join('|')})+(${variations.join('|')}`,
+    getHref: ({ genes, variations }) => `https://scholar.google.com/scholar?q=${getLitSearch(genes, variations).replaceAll('=', '')}`,
   },
   {
     name: 'pubmed',
     shouldShow: ({ genes }) => genes.length,
-    getHref: ({ genes, variations }) => `https://www.ncbi.nlm.nih.gov/pubmed?term=${getPubmedSearch(genes, variations)}`,
+    getHref: ({ genes, variations }) => `https://www.ncbi.nlm.nih.gov/pubmed?term=${getLitSearch(genes, variations)}`,
   },
   {
     name: 'AoU',
