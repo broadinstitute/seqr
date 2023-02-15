@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import FormWrapper from 'shared/components/form/FormWrapper'
-import { BaseSemanticInput } from 'shared/components/form/Inputs'
+import { BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { ALL_PROJECTS_PATH, GREGOR_PROJECT_PATH } from '../constants'
 import { loadSampleMetadata } from '../reducers'
 import { getSampleMetadataLoading, getSampleMetadataLoadingError, getSampleMetadataRows, getSampleMetadataColumns } from '../selectors'
@@ -27,6 +27,12 @@ const FIELDS = [
     component: BaseSemanticInput,
     inputType: 'Input',
     type: 'date',
+  },
+  {
+    name: 'omitAirtable',
+    label: 'Skip Airtable Columns',
+    inline: true,
+    component: BooleanCheckbox,
   },
 ]
 
