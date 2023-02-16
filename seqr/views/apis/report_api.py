@@ -183,8 +183,9 @@ def anvil_export(request, project_guid):
 
 @analyst_required
 def sample_metadata_export(request, project_guid):
-    omit_airtable = project_guid == 'all'
-    if omit_airtable:
+    is_all_projects = project_guid == 'all'
+    omit_airtable = is_all_projects or 'true' in request.GET.get('omitAirtable', '')
+    if is_all_projects:
         projects = get_internal_projects()
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
