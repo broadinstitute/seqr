@@ -236,7 +236,7 @@ def validate_fam_file_records(records, fail_on_warnings=False, required_columns=
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
         family_id = r.get(JsonConstants.FAMILY_ID_COLUMN) or r['family']['familyId']
 
-        # check proband relationship has valid gender TODO sample manifest proband relationship
+        # check proband relationship has valid gender
         if r.get(JsonConstants.PROBAND_RELATIONSHIP) and r.get(JsonConstants.SEX_COLUMN):
             invalid_choices = {}
             if r[JsonConstants.SEX_COLUMN] == Individual.SEX_MALE:
