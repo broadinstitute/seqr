@@ -99,9 +99,9 @@ class PedigreeInfoUtilsTest(object):
             parse_pedigree_table(no_error_data, FILENAME, self.collaborator_user, fail_on_warnings=True)
         self.assertListEqual(ec.exception.errors, no_error_warnings)
 
-    def _assert_errors_warnings_exception(self, ec, error):
+    def _assert_errors_warnings_exception(self, ec, error, warning=None):
         self.assertListEqual(ec.exception.errors, [error])
-        self.assertListEqual(ec.exception.warnings, [])
+        self.assertListEqual(ec.exception.warnings, [warning] if warning else [])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
@@ -161,7 +161,7 @@ class PedigreeInfoUtilsTest(object):
         original_data = [
             header_1, header_2, header_3,
             ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
-             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', 'No', 'Unknown', '20', '94.8', 'probably dad', '',
+             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', '94.8', 'probably dad', '',
              '', 'GMB', '1234'],
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
              'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
@@ -180,18 +180,28 @@ class PedigreeInfoUtilsTest(object):
 
         original_data[3][-2] = ''
         original_data[4][-2] = 'HMB'
+        with self.assertRaises(ErrorsWarningsException) as ec:
+            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
+        expected_warning = 'SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. ' \
+                           'Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID'
+        self._assert_errors_warnings_exception(
+            ec, 'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status',
+            warning=expected_warning
+        )
+
+        original_data[3][12] = 'No'
+        original_data[3][17] = 'microcephaly'
+        original_data[3][18] = 'MONDO:0001149'
         records, warnings = parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
-             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': None, 'mondoId': None,
-             'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,},
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': 'microcephaly',
+              'mondoId': 'MONDO:0001149', 'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,},
             {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': None, 'individualId': 'SCO_PED073C_GA0340_1',
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
              'mondoId': 'MONDO:0100086', 'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
              }])
-        self.assertListEqual(warnings, [
-            "SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. "
-            "Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID"])
+        self.assertListEqual(warnings, [expected_warning])
 
         mock_email.assert_called_with(
             subject='SK-3QVD Merged Sample Pedigree File',

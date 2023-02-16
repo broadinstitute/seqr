@@ -102,7 +102,11 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings)
+    validation_required_columns = {
+        MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP[k]: k
+        for k in MergedPedigreeSampleManifestConstants.REQUIRED_COLUMNS
+    } if is_merged_pedigree_sample_manifest else None
+    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, required_columns=validation_required_columns)
 
     if is_merged_pedigree_sample_manifest:
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
@@ -208,7 +212,7 @@ def _parse_row_dict(row_dict, i):
     return json_record
 
 
-def validate_fam_file_records(records, fail_on_warnings=False):
+def validate_fam_file_records(records, fail_on_warnings=False, required_columns=None):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -278,6 +282,10 @@ def validate_fam_file_records(records, fail_on_warnings=False):
             parent_family_id = parent.get(JsonConstants.FAMILY_ID_COLUMN) or parent['family']['familyId']
             if parent_family_id != family_id:
                 errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
+
+        missing_required_cols = {col_name for col, col_name in (required_columns or {}).items() if r.get(col) is None or r.get(col) == ''}
+        if missing_required_cols:
+            errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_required_cols))}')
 
     if fail_on_warnings:
         errors += warnings
@@ -777,6 +785,17 @@ class MergedPedigreeSampleManifestConstants:
         ANALYTE_TYPE_COLUMN: JsonConstants.ANALYTE_TYPE,
         TISSUE_AFFECTED_COLUMN: JsonConstants.TISSUE_AFFECTED_STATUS,
     }
+
+    REQUIRED_COLUMNS = [
+        COLLABORATOR_SAMPLE_ID_COLUMN,
+        SEX_COLUMN,
+        AFFECTED_COLUMN,
+        BIOSAMPLE_COLUMN,
+        ANALYTE_TYPE_COLUMN,
+        TISSUE_AFFECTED_COLUMN,
+        CODED_PHENOTYPE_COLUMN,
+        MONDO_ID_COLUMN,
+    ]
 
     SAMPLE_MANIFEST_COLUMN_NAMES = [
         WELL_POSITION_COLUMN,
