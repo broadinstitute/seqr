@@ -304,16 +304,8 @@ def _parse_tsv_row(row):
 
 RNA_OUTLIER_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
 
-RNA_SPLICE_OUTLIER_COLUMNS = {
-                                 'geneID': 'gene_id',
-                                 'pValue': 'p_value',
-                                 'zScore': 'z_score',
-                                 'chrom': 'chrom',
-                                 'start': 'start',
-                                 'end': 'end',
-                                 'strand': 'strand',
-                                 'reads': 'read_count'
-}
+INDIVIDUAL_COL = 'individual'
+RNA_SPLICE_OUTLIER_COLS = ['geneId', 'tissue', 'pValue', 'zScore', 'chrom', 'start', 'end', 'strand', 'readCounts']
 
 SAMPLE_ID_COL = 'sample_id'
 GENE_ID_COL = 'gene_id'
@@ -335,7 +327,7 @@ def _parse_outlier_row(row, **kwargs):
     yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_OUTLIER_COLUMNS.items()}
 
 def _parse_splice_outlier_row(row, **kwargs):
-    yield row['individualID'], {mapped_key: row[key] for key, mapped_key in RNA_SPLICE_OUTLIER_COLUMNS.items()}
+    yield row[INDIVIDUAL_COL], {_to_snake_case(key): row[key] for key in RNA_SPLICE_OUTLIER_COLS}
 
 def _parse_tpm_row(row, sample_id_to_tissue_type=None):
     sample_id = row[SAMPLE_ID_COL]
@@ -387,7 +379,7 @@ def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_sampl
     )
 
 def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    expected_columns = ['individualID'] + list(RNA_SPLICE_OUTLIER_COLUMNS.keys())
+    expected_columns = [INDIVIDUAL_COL] + RNA_SPLICE_OUTLIER_COLS
     return _load_rna_seq(
         RnaSeqSpliceOutlier, file_path, user, mapping_file, ignore_extra_samples, _parse_splice_outlier_row,
         expected_columns,

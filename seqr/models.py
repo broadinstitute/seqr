@@ -1093,12 +1093,12 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     start = models.IntegerField()
     end = models.IntegerField()
     strand = models.CharField(max_length=1)  # "+" or "-"
-    reads = models.IntegerField()  # RNA-seq reads that span the splice junction
+    read_counts = models.IntegerField()  # RNA-seq reads that span the splice junction
 
     class Meta:
-        unique_together = ('sample', 'gene_id')
+        unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end')
 
-        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'reads']
+        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_counts']
 
 
 class PhenotypePrioritization(BulkOperationBase):
