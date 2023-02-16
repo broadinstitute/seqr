@@ -541,6 +541,18 @@ class ReportAPITest(object):
             -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
 
+        # Test omit airtable columns
+        responses.reset()
+        response = self.client.get(f'{url}?omitAirtable=true')
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 3)
+        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
+
         # Test empty project
         empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])
         response = self.client.get(empty_project_url)
@@ -548,7 +560,6 @@ class ReportAPITest(object):
         self.assertDictEqual(response.json(), {'rows': []})
 
         # Test all projects
-        responses.reset()
         all_projects_url = reverse(sample_metadata_export, args=['all'])
         response = self.client.get(all_projects_url)
         self.assertEqual(response.status_code, 200)
