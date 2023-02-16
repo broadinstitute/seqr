@@ -120,12 +120,12 @@ const getSvRegion = (
 
 const getGeneNames = genes => genes.reduce((acc, gene) => [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc], [])
 
-const getPubmedSearch = (genes, variations) => {
-  let pubmedSearch = `(${getGeneNames(genes).join(' OR ')})`
+const getLitSearch = (genes, variations) => {
+  let search = `(${getGeneNames(genes).join(' OR ')})`
   if (variations.length) {
-    pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
+    search = `${search} AND (${variations.join(' OR ')})`
   }
-  return pubmedSearch
+  return search
 }
 
 const VARIANT_LINKS = [
@@ -155,9 +155,19 @@ const VARIANT_LINKS = [
     getHref: ({ pos, ref, alt }) => `https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}`,
   },
   {
-    name: 'Geno2MP',
-    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
-    getHref: ({ chrom, pos }) => `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
+    name: 'google',
+    shouldShow: ({ genes, variations }) => genes.length && variations.length,
+    getHref: ({ genes, variations }) => `https://scholar.google.com/scholar?q=${getLitSearch(genes, variations).replaceAll('=', '')}`,
+  },
+  {
+    name: 'pubmed',
+    shouldShow: ({ genes }) => genes.length,
+    getHref: ({ genes, variations }) => `https://www.ncbi.nlm.nih.gov/pubmed?term=${getLitSearch(genes, variations)}`,
+  },
+  {
+    name: 'AoU',
+    shouldShow: ({ svType }) => !svType,
+    getHref: ({ chrom, pos, ref, alt }) => `https://databrowser.researchallofus.org/genomic-variants/${chrom}-${pos}-${ref}-${alt}`,
   },
   {
     name: 'Iranome',
@@ -165,14 +175,14 @@ const VARIANT_LINKS = [
     getHref: ({ chrom, pos, ref, alt }) => `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}`,
   },
   {
-    name: 'google',
-    shouldShow: ({ genes, variations }) => genes.length && variations.length,
-    getHref: ({ genes, variations }) => `https://www.google.com/search?q=(${getGeneNames(genes).join('|')})+(${variations.join('|')}`,
+    name: 'Geno2MP',
+    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
+    getHref: ({ chrom, pos }) => `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
   },
   {
-    name: 'pubmed',
-    shouldShow: ({ genes }) => genes.length,
-    getHref: ({ genes, variations }) => `https://www.ncbi.nlm.nih.gov/pubmed?term=${getPubmedSearch(genes, variations)}`,
+    name: 'Mastermind',
+    shouldShow: ({ svType, hgvsc }) => !svType && hgvsc,
+    getHref: ({ genes, hgvsc }) => `https://mastermind.genomenon.com/detail?gene=${genes[0].geneSymbol}&mutation=${genes[0].geneSymbol}:${hgvsc}`,
   },
 ]
 
@@ -181,6 +191,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
 
   const mainGene = genesById[mainTranscript.geneId]
   let genes
+  let hgvsc
   const variations = []
 
   if (mainGene) {
@@ -196,7 +207,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
     }
 
     if (mainTranscript.hgvsc) {
-      const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
+      hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
         `c.${hgvsc}`, // c.1282C>T
         hgvsc, // 1282C>T
@@ -208,7 +219,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
     genes = Object.keys(transcripts || {}).map(geneId => genesById[geneId]).filter(gene => gene)
   }
 
-  const linkVariant = { genes, variations, ...variant }
+  const linkVariant = { genes, variations, hgvsc, ...variant }
 
   return [
     <Popup
@@ -251,8 +262,11 @@ class BaseSearchLinks extends React.PureComponent {
     const { showAll } = this.state
 
     const links = variantSearchLinks(variant, mainTranscript, genesById)
-    if (links.length < 5 || showAll) {
+    if (links.length < 5) {
       return links
+    }
+    if (showAll) {
+      return [...links.slice(0, 5), <br key="break" />, ...links.slice(5)]
     }
 
     return [
