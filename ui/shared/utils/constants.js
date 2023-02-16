@@ -254,7 +254,7 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_CASE_NOTES]: 'Case Notes',
   [FAMILY_FIELD_ANALYSIS_NOTES]: 'Analysis Notes',
   [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
-  [FAMILY_FIELD_CODED_PHENOTYPE]: 'High-level Phenotype',
+  [FAMILY_FIELD_CODED_PHENOTYPE]: 'Phenotype Description',
   [FAMILY_FIELD_MONDO_ID]: 'MONDO ID',
   [FAMILY_FIELD_OMIM_NUMBER]: 'Post-discovery OMIM #',
   [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',

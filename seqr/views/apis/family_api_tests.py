@@ -387,7 +387,7 @@ class FamilyAPITest(AuthenticationTestCase):
             'errors': ['Could not find families with the following previous IDs: 1_old'], 'warnings': []})
 
         # send valid request
-        data = b'Family ID	Previous Family ID	Display Name	Description	High-level Phenotype	MONDO ID\n\
+        data = b'Family ID	Previous Family ID	Display Name	Description	Phenotype Description	MONDO ID\n\
 "1_renamed"	"1"	"1"	"family one description"	"dystrophy"	"MONDO:12345"\n\
 "2"	""	"2"	"family two description"	""	""'
 

@@ -318,8 +318,8 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy).join(',') },
-  [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'High-level Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
-  [FAMILY_FIELD_MONDO_ID]: { label: 'MONDO ID', width: 3, description: 'MONDO Disease Ontology ID' },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { width: 4, description: "High level summary of the family's phenotype/disease" },
+  [FAMILY_FIELD_MONDO_ID]: { width: 3, description: 'MONDO Disease Ontology ID' },
   ...FAMILY_NOTES_FIELDS.reduce((acc, { id }) => ({ ...acc, [id]: { format: formatNotes } }), {}),
 }).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})
 
