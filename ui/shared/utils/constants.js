@@ -254,7 +254,8 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_CASE_NOTES]: 'Case Notes',
   [FAMILY_FIELD_ANALYSIS_NOTES]: 'Analysis Notes',
   [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
-  [FAMILY_FIELD_CODED_PHENOTYPE]: 'Coded Phenotype',
+  [FAMILY_FIELD_CODED_PHENOTYPE]: 'High-level Phenotype',
+  [FAMILY_FIELD_MONDO_ID]: 'MONDO ID',
   [FAMILY_FIELD_OMIM_NUMBER]: 'Post-discovery OMIM #',
   [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
   [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
@@ -282,6 +283,7 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_SUCCESS_STORY },
   ...FAMILY_NOTES_FIELDS,
   { id: FAMILY_FIELD_CODED_PHENOTYPE },
+  { id: FAMILY_FIELD_MONDO_ID },
   { id: FAMILY_FIELD_OMIM_NUMBER },
   { id: FAMILY_FIELD_PMIDS },
 ]
