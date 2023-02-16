@@ -362,6 +362,8 @@ def receive_families_table_handler(request, project_guid):
                 column_map['description'] = i
             elif 'phenotype' in key:
                 column_map['codedPhenotype'] = i
+            elif 'mondo' in key and 'id' in key:
+                column_map['mondoId'] = i
         if FAMILY_ID_FIELD not in column_map:
             raise ValueError('Invalid header, missing family id column')
 
