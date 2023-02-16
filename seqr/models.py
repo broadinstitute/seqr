@@ -311,6 +311,7 @@ class Family(ModelWithGUID):
     success_story = models.TextField(null=True, blank=True)
 
     coded_phenotype = models.TextField(null=True, blank=True)
+    mondo_id = models.CharField(null=True, blank=True, max_length=30)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
     pubmed_ids = ArrayField(models.TextField(), default=list)
 
