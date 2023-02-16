@@ -109,15 +109,15 @@ class PedigreeInfoUtilsTest(object):
         mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
 
         header_1 = [
-            'Do not modify - Broad use', '', '', 'Please fill in columns D - O', '', '', '', '', '', '', '', '', '',
-            '', '', '', '', '', '', '']
+            'Do not modify - Broad use', '', '', 'Please fill in columns D - T', '', '', '', '', '', '', '', '', '',
+            '', '', '', '', '', '', '', '']
         header_2 = [
             'Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Alias', 'Paternal Sample ID', 'Maternal Sample ID',
             'Gender', 'Affected Status', 'Primary Biosample', 'Analyte Type', 'Tissue Affected Status', 'Recontactable',
-            'Volume', 'Concentration', 'Notes', 'Coded Phenotype', 'Consent Code', 'Data Use Restrictions']
+            'Volume', 'Concentration', 'Notes', 'MONDO Label', 'MONDO ID', 'Consent Code', 'Data Use Restrictions']
         header_3 = [
             '', 'Position', '', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', '', '', '', '', '',
-            '(i.e yes, no)', '(i.e yes, no, unknown)', 'ul', 'ng/ul', '', '', '', 'indicate study/protocol number']
+            '(i.e yes, no)', '(i.e yes, no, unknown)', 'ul', 'ng/ul', '', '', '(i.e. "MONDO:0031632")', '', 'indicate study/protocol number']
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([header_1], FILENAME, user=self.analyst_user)
@@ -148,7 +148,8 @@ class PedigreeInfoUtilsTest(object):
         self._assert_errors_warnings_exception(
             ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: | '
                 f'Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|'
-                f'-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes')
+                f'-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes|'
+                f'-MONDO Label|-MONDO ID|+Coded Phenotype| Consent Code| Data Use Restrictions')
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
@@ -161,10 +162,10 @@ class PedigreeInfoUtilsTest(object):
             header_1, header_2, header_3,
             ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
              'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', 'No', 'Unknown', '20', '94.8', 'probably dad', '',
-             'GMB', '1234'],
+             '', 'GMB', '1234'],
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
              'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
-             'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'HMB', '',
+             'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'MONDO:0100086', 'HMB', '',
              ]]
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
@@ -182,11 +183,11 @@ class PedigreeInfoUtilsTest(object):
         records, warnings = parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
-             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': None,
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': None, 'mondoId': None,
              'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,},
             {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': None, 'individualId': 'SCO_PED073C_GA0340_1',
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
-             'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
+             'mondoId': 'MONDO:0100086', 'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
              }])
         self.assertListEqual(warnings, [
             "SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. "

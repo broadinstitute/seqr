@@ -666,6 +666,7 @@ class JsonConstants:
     NOTES_COLUMN = 'notes'
     FAMILY_NOTES_COLUMN = 'familyNotes'
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
+    MONDO_ID_COLUMN = 'mondoId'
     PROBAND_RELATIONSHIP = 'probandRelationship'
     MATERNAL_ETHNICITY = 'maternalEthnicity'
     PATERNAL_ETHNICITY = 'paternalEthnicity'
@@ -707,6 +708,7 @@ class JsonConstants:
         (ANALYTE_TYPE, ['analyte', 'type']),
         (AFFECTED_COLUMN, ['affected']),
         (CODED_PHENOTYPE_COLUMN, ['coded', 'phenotype']),
+        (MONDO_ID_COLUMN, ['mondo', 'id']),
         (PROBAND_RELATIONSHIP, ['proband', 'relation']),
     ]
 
@@ -731,7 +733,8 @@ class MergedPedigreeSampleManifestConstants:
     VOLUME_COLUMN = "Volume"
     CONCENTRATION_COLUMN = "Concentration"
     NOTES_COLUMN = "Notes"
-    CODED_PHENOTYPE_COLUMN = "Coded Phenotype"
+    CODED_PHENOTYPE_COLUMN = 'MONDO Label'
+    MONDO_ID_COLUMN = 'MONDO ID'
     CONSENT_CODE_COLUMN = 'Consent Code'
     DATA_USE_RESTRICTIONS_COLUMN = "Data Use Restrictions"
 
@@ -755,6 +758,7 @@ class MergedPedigreeSampleManifestConstants:
         CONCENTRATION_COLUMN,
         NOTES_COLUMN,
         CODED_PHENOTYPE_COLUMN,
+        MONDO_ID_COLUMN,
         CONSENT_CODE_COLUMN,
         DATA_USE_RESTRICTIONS_COLUMN,
     ]
@@ -768,6 +772,7 @@ class MergedPedigreeSampleManifestConstants:
         AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
         NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
         CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
+        MONDO_ID_COLUMN: JsonConstants.MONDO_ID_COLUMN,
         BIOSAMPLE_COLUMN: JsonConstants.PRIMARY_BIOSAMPLE,
         ANALYTE_TYPE_COLUMN: JsonConstants.ANALYTE_TYPE,
         TISSUE_AFFECTED_COLUMN: JsonConstants.TISSUE_AFFECTED_STATUS,
