@@ -327,15 +327,15 @@ class ProjectAPITest(object):
 
         family_1 = response_json['familiesByGuid']['F000001_1']
         family_fields = {
-            'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasFeatures',
+            'individualGuids', 'discoveryTags', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
             'parents',
         }
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
 
         self.assertListEqual(family_1['caseReviewStatuses'], ['A', 'I', 'U'])
-        self.assertTrue(family_1['hasFeatures'])
-        self.assertFalse(response_json['familiesByGuid']['F000003_3']['hasFeatures'])
+        self.assertTrue(family_1['hasRequiredMetadata'])
+        self.assertFalse(response_json['familiesByGuid']['F000003_3']['hasRequiredMetadata'])
         self.assertListEqual(family_1['parents'], [{'maternalGuid': 'I000003_na19679', 'paternalGuid': 'I000002_na19678'}])
         self.assertListEqual(response_json['familiesByGuid']['F000003_3']['parents'], [])
 

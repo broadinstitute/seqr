@@ -277,7 +277,7 @@ const familyHasRequiredMetadata = (family, individualsByGuid) => {
   ).filter(individual => individual)
   return individuals.length ? individuals.some(individual => REQUIRED_METADATA_FIELDS.every(
     field => individual[field] || individual[field] === false,
-  ) && individual.features.length > 0) : family.hasFeatures
+  ) && individual.features.length > 0) : family.hasRequiredMetadata
 }
 
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
