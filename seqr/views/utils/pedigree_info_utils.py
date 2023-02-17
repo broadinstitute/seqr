@@ -88,10 +88,11 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
     # convert to json and validate
+    errors = None
     try:
         if is_merged_pedigree_sample_manifest:
             logger.info("Parsing merged pedigree-sample-manifest file", user)
-            rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows, project)
+            rows, sample_manifest_rows, kit_id, errors = _parse_merged_pedigree_sample_manifest_format(rows, project)
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
@@ -102,11 +103,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    validation_required_columns = {
-        MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP[k]: k
-        for k in MergedPedigreeSampleManifestConstants.REQUIRED_COLUMNS
-    } if is_merged_pedigree_sample_manifest else None
-    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, required_columns=validation_required_columns)
+    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
@@ -212,7 +209,7 @@ def _parse_row_dict(row_dict, i):
     return json_record
 
 
-def validate_fam_file_records(records, fail_on_warnings=False, required_columns=None):
+def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -230,7 +227,7 @@ def validate_fam_file_records(records, fail_on_warnings=False, required_columns=
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
-    errors = []
+    errors = errors or []
     warnings = []
     for r in records:
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
@@ -283,10 +280,6 @@ def validate_fam_file_records(records, fail_on_warnings=False, required_columns=
             if parent_family_id != family_id:
                 errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
 
-        missing_required_cols = {col_name for col, col_name in (required_columns or {}).items() if r.get(col) is None or r.get(col) == ''}
-        if missing_required_cols:
-            errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_required_cols))}')
-
     if fail_on_warnings:
         errors += warnings
         warnings = []
@@ -329,6 +322,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
 
     pedigree_rows = []
     sample_manifest_rows = []
+    errors = []
     consent_codes = set()
     for row in rows:
         sample_manifest_rows.append({
@@ -338,6 +332,11 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
         pedigree_rows.append({
             key: row[column_name] for column_name, key in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.items()
         })
+
+        missing_cols = {col for col in MergedPedigreeSampleManifestConstants.REQUIRED_COLUMNS if not row[col]}
+        if missing_cols:
+            errors.append(
+                f'{row[MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN]} is missing the following required columns: {", ".join(sorted(missing_cols))}')
 
         consent_code = row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN]
         if consent_code:
@@ -352,7 +351,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
             raise ValueError(
                 f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
 
-    return pedigree_rows, sample_manifest_rows, kit_id
+    return pedigree_rows, sample_manifest_rows, kit_id, errors
 
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
