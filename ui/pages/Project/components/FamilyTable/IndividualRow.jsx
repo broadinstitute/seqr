@@ -294,6 +294,7 @@ const GENES_FIELD = {
 
 const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   probandRelationship: {
+    isRequiredInternal: true,
     component: OptionFieldView,
     tagOptions: PROBAND_RELATIONSHIP_OPTIONS,
     formFieldProps: {
@@ -301,6 +302,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     },
   },
   age: {
+    isRequiredInternal: true,
     subFieldProps: YEAR_SELECTOR_PROPS,
     subFieldsLookup: {
       deathYear: {
@@ -328,6 +330,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     component: TextFieldView,
   },
   consanguinity: {
+    isRequiredInternal: true,
     component: NullableBoolFieldView,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
@@ -365,7 +368,8 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   maternalEthnicity: ETHNICITY_FIELD,
   paternalEthnicity: ETHNICITY_FIELD,
   population: {
-    fieldDisplay: population => POPULATION_MAP[population] || population,
+    isRequiredInternal: true,
+    fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
   },
   filterFlags: {
     fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
@@ -400,7 +404,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       />
     )),
   },
-  features: HPO_FIELD_RENDER,
+  features: { isRequiredInternal: true, ...HPO_FIELD_RENDER },
   disorders: {
     component: ListFieldView,
     formFieldProps: {
@@ -517,13 +521,14 @@ class IndividualRow extends React.PureComponent {
     tableName: PropTypes.string,
   }
 
-  individualFieldDisplay = (
-    { component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field },
-  ) => {
+  individualFieldDisplay = ({
+    component, isEditable, isCollaboratorEditable, isRequiredInternal, onSubmit, individualFields = () => {}, ...field
+  }) => {
     const { project, individual, dispatchUpdateIndividual } = this.props
     return React.createElement(component || BaseFieldView, {
       key: field.field,
       isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
+      isRequired: isRequiredInternal && individual.affected === AFFECTED, // && project.isAnalystProject,
       onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
       modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${individual.displayName}`,
       initialValues: individual,
