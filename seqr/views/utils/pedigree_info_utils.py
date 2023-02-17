@@ -336,8 +336,8 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
 
         missing_cols = {col for col in MergedPedigreeSampleManifestConstants.REQUIRED_COLUMNS if not row[col]}
         if missing_cols:
-            errors.append(
-                f'{row[MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN]} is missing the following required columns: {", ".join(sorted(missing_cols))}')
+            individual_id = row[MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN]
+            errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_cols))}')
 
         consent_code = row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN]
         if consent_code:
