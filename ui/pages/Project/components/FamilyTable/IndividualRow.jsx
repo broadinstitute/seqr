@@ -294,7 +294,6 @@ const GENES_FIELD = {
 
 const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   probandRelationship: {
-    isRequiredInternal: true,
     component: OptionFieldView,
     tagOptions: PROBAND_RELATIONSHIP_OPTIONS,
     formFieldProps: {
@@ -302,7 +301,6 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     },
   },
   age: {
-    isRequiredInternal: true,
     subFieldProps: YEAR_SELECTOR_PROPS,
     subFieldsLookup: {
       deathYear: {
@@ -330,7 +328,6 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
     component: TextFieldView,
   },
   consanguinity: {
-    isRequiredInternal: true,
     component: NullableBoolFieldView,
     individualFields: ({ affected }) => ({
       isVisible: affected === AFFECTED,
@@ -368,7 +365,6 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   maternalEthnicity: ETHNICITY_FIELD,
   paternalEthnicity: ETHNICITY_FIELD,
   population: {
-    isRequiredInternal: true,
     fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
   },
   filterFlags: {
@@ -404,7 +400,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
       />
     )),
   },
-  features: { isRequiredInternal: true, ...HPO_FIELD_RENDER },
+  features: HPO_FIELD_RENDER,
   disorders: {
     component: ListFieldView,
     formFieldProps: {
@@ -422,9 +418,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 }
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
-  ({ field, header, subFields, isEditable, isCollaboratorEditable, isPrivate }) => {
+  ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
     const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-    const formattedField = { field, fieldName: header, isEditable, isCollaboratorEditable, isPrivate, ...fieldProps }
+    const formattedField = {
+      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, ...fieldProps,
+    }
     if (subFields) {
       formattedField.formFields = subFields.map(subField => (
         { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }
@@ -528,7 +526,7 @@ class IndividualRow extends React.PureComponent {
     return React.createElement(component || BaseFieldView, {
       key: field.field,
       isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
-      isRequired: isRequiredInternal && individual.affected === AFFECTED, // && project.isAnalystProject,
+      isRequired: isRequiredInternal && individual.affected === AFFECTED && project.isAnalystProject,
       onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
       modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${individual.displayName}`,
       initialValues: individual,

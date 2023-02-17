@@ -71,6 +71,171 @@ export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
   }), {},
 )
 
+export const ONSET_AGE_OPTIONS = [
+  { value: 'G', text: 'Congenital onset' },
+  { value: 'E', text: 'Embryonal onset' },
+  { value: 'F', text: 'Fetal onset' },
+  { value: 'N', text: 'Neonatal onset' },
+  { value: 'I', text: 'Infantile onset' },
+  { value: 'C', text: 'Childhood onset' },
+  { value: 'J', text: 'Juvenile onset' },
+  { value: 'A', text: 'Adult onset' },
+  { value: 'Y', text: 'Young adult onset' },
+  { value: 'M', text: 'Middle age onset' },
+  { value: 'L', text: 'Late onset' },
+]
+
+const ONSET_AGE_LOOKUP = ONSET_AGE_OPTIONS.reduce((acc, option) => ({ ...acc, [option.value]: option.text }), {})
+
+export const INHERITANCE_MODE_OPTIONS = [
+  { value: 'S', text: 'Sporadic' },
+  { value: 'D', text: 'Autosomal dominant inheritance' },
+  { value: 'L', text: 'Sex-limited autosomal dominant' },
+  { value: 'A', text: 'Male-limited autosomal dominant' },
+  { value: 'C', text: 'Autosomal dominant contiguous gene syndrome' },
+  { value: 'R', text: 'Autosomal recessive inheritance' },
+  { value: 'G', text: 'Gonosomal inheritance' },
+  { value: 'X', text: 'X-linked inheritance' },
+  { value: 'Z', text: 'X-linked recessive inheritance' },
+  { value: 'Y', text: 'Y-linked inheritance' },
+  { value: 'W', text: 'X-linked dominant inheritance' },
+  { value: 'F', text: 'Multifactorial inheritance' },
+  { value: 'M', text: 'Mitochondrial inheritance' },
+]
+export const INHERITANCE_MODE_LOOKUP = INHERITANCE_MODE_OPTIONS.reduce(
+  (acc, { text, value }) => ({ ...acc, [value]: text }), {},
+)
+
+export const AR_FIELDS = {
+  arFertilityMeds: 'Fertility medications',
+  arIui: 'Intrauterine insemination',
+  arIvf: 'In vitro fertilization',
+  arIcsi: 'Intra-cytoplasmic sperm injection',
+  arSurrogacy: 'Gestational surrogacy',
+  arDonoregg: 'Donor egg',
+  arDonorsperm: 'Donor sperm',
+}
+
+const NULLABLE_BOOL_FIELD = { description: 'true, false, or blank if unknown' }
+
+export const INDIVIDUAL_DETAIL_FIELDS = [
+  {
+    field: 'probandRelationship',
+    header: 'Relationship to Proband',
+    isEditable: true,
+    isPrivate: true,
+    isRequiredInternal: true,
+  },
+  {
+    field: 'age',
+    header: 'Age',
+    isEditable: true,
+    isRequiredInternal: true,
+    subFields: [
+      { field: 'birthYear', header: 'Birth Year', format: year => year || '' },
+      { field: 'deathYear', header: 'Death Year', format: year => year || '' },
+    ],
+  },
+  {
+    field: 'onsetAge',
+    header: 'Age of Onset',
+    isEditable: true,
+    description: `One of the following: ${ONSET_AGE_OPTIONS.map(({ text }) => text).join(', ')}`,
+    format: val => ONSET_AGE_LOOKUP[val],
+  },
+  {
+    isEditable: true,
+    isCollaboratorEditable: true,
+    header: 'Individual Notes',
+    field: 'notes',
+    format: stripMarkdown,
+  },
+  {
+    field: 'consanguinity',
+    header: 'Consanguinity',
+    isEditable: true,
+    isRequiredInternal: true,
+    ...NULLABLE_BOOL_FIELD,
+  },
+  {
+    field: 'affectedRelatives',
+    header: 'Other Affected Relatives',
+    isEditable: true,
+    ...NULLABLE_BOOL_FIELD,
+  },
+  {
+    field: 'expectedInheritance',
+    header: 'Expected Mode of Inheritance',
+    isEditable: true,
+    description: `comma-separated list of the following: ${INHERITANCE_MODE_OPTIONS.map(({ text }) => text).join(', ')}`,
+    format: modes => (modes || []).map(inheritance => INHERITANCE_MODE_LOOKUP[inheritance]).join(', '),
+  },
+  {
+    field: 'ar',
+    header: 'Assisted Reproduction',
+    isEditable: true,
+    subFields: Object.entries(AR_FIELDS).map(([field, header]) => ({ field, header, ...NULLABLE_BOOL_FIELD })),
+  },
+  {
+    field: 'maternalEthnicity',
+    header: 'Maternal Ancestry',
+    isEditable: true,
+    description: 'comma-separated list of ethnicities',
+    format: vals => (vals || []).join(', '),
+  },
+  {
+    field: 'paternalEthnicity',
+    header: 'Paternal Ancestry',
+    isEditable: true,
+    description: 'comma-separated list of ethnicities',
+    format: vals => (vals || []).join(', '),
+  },
+  {
+    header: 'Imputed Population',
+    field: 'population',
+    isRequiredInternal: true,
+  },
+  {
+    header: 'Sample QC Flags',
+    field: 'filterFlags',
+  },
+  {
+    header: 'Population/Platform Specific Sample QC Flags',
+    field: 'popPlatformFilters',
+  },
+  {
+    header: 'SV QC Flags',
+    field: 'svFlags',
+  },
+  {
+    field: 'features',
+    header: 'Features',
+    isEditable: true,
+    isRequiredInternal: true,
+  },
+  {
+    field: 'disorders',
+    header: 'Pre-discovery OMIM disorders',
+    isEditable: true,
+    description: 'comma-separated list of valid OMIM numbers',
+    format: vals => (vals || []).join(', '),
+  },
+  {
+    field: 'rejectedGenes',
+    header: 'Previously Tested Genes',
+    isEditable: true,
+    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` -- (${gene.comments})` : ''}`).join(', '),
+    description: 'comma-separated list of genes',
+  },
+  {
+    field: 'candidateGenes',
+    header: 'Candidate Genes',
+    isEditable: true,
+    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` -- (${gene.comments})` : ''}`).join(', '),
+    description: 'comma-separated list of genes',
+  },
+]
+
 export const SHOW_IN_REVIEW = 'IN_REVIEW'
 const SHOW_ACCEPTED = 'ACCEPTED'
 
@@ -102,11 +267,17 @@ const familyIsInReview = (family, individualsByGuid) => getFamilyCaseReviewStatu
 const familyIsAssignedToMe = (family, user) => (
   family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
 
-const familyHasFeatures = (family, individualsByGuid) => {
+const REQUIRED_METADATA_FIELDS = INDIVIDUAL_DETAIL_FIELDS.filter(
+  ({ isRequiredInternal }) => isRequiredInternal,
+).map(({ field, subFields }) => (subFields ? subFields[0].field : field))
+
+const familyHasRequiredMetadata = (family, individualsByGuid) => {
   const individuals = family.individualGuids.map(
     individualGuid => individualsByGuid[individualGuid],
   ).filter(individual => individual)
-  return individuals.length ? individuals.some(({ features }) => (features || []).length > 0) : family.hasFeatures
+  return individuals.length ? individuals.some(individual => REQUIRED_METADATA_FIELDS.every(
+    field => individual[field] || individual[field] === false,
+  ) && individual.features.length > 0) : family.hasFeatures
 }
 
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
@@ -178,13 +349,13 @@ export const CATEGORY_FAMILY_FILTERS = {
     },
     {
       value: SHOW_PHENOTYPES_ENTERED,
-      name: 'Phenotypes Entered',
-      createFilter: individualsByGuid => family => familyHasFeatures(family, individualsByGuid),
+      name: 'Required Metadata Entered',
+      createFilter: individualsByGuid => family => familyHasRequiredMetadata(family, individualsByGuid),
     },
     {
       value: SHOW_NO_PHENOTYPES_ENTERED,
-      name: 'No Phenotypes Entered',
-      createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
+      name: 'Required Metadata Missing',
+      createFilter: individualsByGuid => family => !familyHasRequiredMetadata(family, individualsByGuid),
     },
   ],
   [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, ANALYST_HIGH_PRIORITY_TAG].map(tagName => ({
@@ -354,166 +525,6 @@ export const INDIVIDUAL_FIELDS = [
   INDIVIDUAL_FIELD_AFFECTED,
   INDIVIDUAL_FIELD_PROBAND_RELATIONSHIP,
 ].map(tableConfigForField(INDIVIDUAL_FIELD_CONFIGS))
-
-export const ONSET_AGE_OPTIONS = [
-  { value: 'G', text: 'Congenital onset' },
-  { value: 'E', text: 'Embryonal onset' },
-  { value: 'F', text: 'Fetal onset' },
-  { value: 'N', text: 'Neonatal onset' },
-  { value: 'I', text: 'Infantile onset' },
-  { value: 'C', text: 'Childhood onset' },
-  { value: 'J', text: 'Juvenile onset' },
-  { value: 'A', text: 'Adult onset' },
-  { value: 'Y', text: 'Young adult onset' },
-  { value: 'M', text: 'Middle age onset' },
-  { value: 'L', text: 'Late onset' },
-]
-
-const ONSET_AGE_LOOKUP = ONSET_AGE_OPTIONS.reduce((acc, option) => ({ ...acc, [option.value]: option.text }), {})
-
-export const INHERITANCE_MODE_OPTIONS = [
-  { value: 'S', text: 'Sporadic' },
-  { value: 'D', text: 'Autosomal dominant inheritance' },
-  { value: 'L', text: 'Sex-limited autosomal dominant' },
-  { value: 'A', text: 'Male-limited autosomal dominant' },
-  { value: 'C', text: 'Autosomal dominant contiguous gene syndrome' },
-  { value: 'R', text: 'Autosomal recessive inheritance' },
-  { value: 'G', text: 'Gonosomal inheritance' },
-  { value: 'X', text: 'X-linked inheritance' },
-  { value: 'Z', text: 'X-linked recessive inheritance' },
-  { value: 'Y', text: 'Y-linked inheritance' },
-  { value: 'W', text: 'X-linked dominant inheritance' },
-  { value: 'F', text: 'Multifactorial inheritance' },
-  { value: 'M', text: 'Mitochondrial inheritance' },
-]
-export const INHERITANCE_MODE_LOOKUP = INHERITANCE_MODE_OPTIONS.reduce(
-  (acc, { text, value }) => ({ ...acc, [value]: text }), {},
-)
-
-export const AR_FIELDS = {
-  arFertilityMeds: 'Fertility medications',
-  arIui: 'Intrauterine insemination',
-  arIvf: 'In vitro fertilization',
-  arIcsi: 'Intra-cytoplasmic sperm injection',
-  arSurrogacy: 'Gestational surrogacy',
-  arDonoregg: 'Donor egg',
-  arDonorsperm: 'Donor sperm',
-}
-
-const NULLABLE_BOOL_FIELD = { description: 'true, false, or blank if unknown' }
-
-export const INDIVIDUAL_DETAIL_FIELDS = [
-  {
-    field: 'probandRelationship',
-    header: 'Relationship to Proband',
-    isEditable: true,
-    isPrivate: true,
-  },
-  {
-    field: 'age',
-    header: 'Age',
-    isEditable: true,
-    subFields: [
-      { field: 'birthYear', header: 'Birth Year', format: year => year || '' },
-      { field: 'deathYear', header: 'Death Year', format: year => year || '' },
-    ],
-  },
-  {
-    field: 'onsetAge',
-    header: 'Age of Onset',
-    isEditable: true,
-    description: `One of the following: ${ONSET_AGE_OPTIONS.map(({ text }) => text).join(', ')}`,
-    format: val => ONSET_AGE_LOOKUP[val],
-  },
-  {
-    isEditable: true,
-    isCollaboratorEditable: true,
-    header: 'Individual Notes',
-    field: 'notes',
-    format: stripMarkdown,
-  },
-  {
-    field: 'consanguinity',
-    header: 'Consanguinity',
-    isEditable: true,
-    ...NULLABLE_BOOL_FIELD,
-  },
-  {
-    field: 'affectedRelatives',
-    header: 'Other Affected Relatives',
-    isEditable: true,
-    ...NULLABLE_BOOL_FIELD,
-  },
-  {
-    field: 'expectedInheritance',
-    header: 'Expected Mode of Inheritance',
-    isEditable: true,
-    description: `comma-separated list of the following: ${INHERITANCE_MODE_OPTIONS.map(({ text }) => text).join(', ')}`,
-    format: modes => (modes || []).map(inheritance => INHERITANCE_MODE_LOOKUP[inheritance]).join(', '),
-  },
-  {
-    field: 'ar',
-    header: 'Assisted Reproduction',
-    isEditable: true,
-    subFields: Object.entries(AR_FIELDS).map(([field, header]) => ({ field, header, ...NULLABLE_BOOL_FIELD })),
-  },
-  {
-    field: 'maternalEthnicity',
-    header: 'Maternal Ancestry',
-    isEditable: true,
-    description: 'comma-separated list of ethnicities',
-    format: vals => (vals || []).join(', '),
-  },
-  {
-    field: 'paternalEthnicity',
-    header: 'Paternal Ancestry',
-    isEditable: true,
-    description: 'comma-separated list of ethnicities',
-    format: vals => (vals || []).join(', '),
-  },
-  {
-    header: 'Imputed Population',
-    field: 'population',
-  },
-  {
-    header: 'Sample QC Flags',
-    field: 'filterFlags',
-  },
-  {
-    header: 'Population/Platform Specific Sample QC Flags',
-    field: 'popPlatformFilters',
-  },
-  {
-    header: 'SV QC Flags',
-    field: 'svFlags',
-  },
-  {
-    field: 'features',
-    header: 'Features',
-    isEditable: true,
-  },
-  {
-    field: 'disorders',
-    header: 'Pre-discovery OMIM disorders',
-    isEditable: true,
-    description: 'comma-separated list of valid OMIM numbers',
-    format: vals => (vals || []).join(', '),
-  },
-  {
-    field: 'rejectedGenes',
-    header: 'Previously Tested Genes',
-    isEditable: true,
-    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` -- (${gene.comments})` : ''}`).join(', '),
-    description: 'comma-separated list of genes',
-  },
-  {
-    field: 'candidateGenes',
-    header: 'Candidate Genes',
-    isEditable: true,
-    format: genes => (genes || []).map(gene => `${gene.gene}${gene.comments ? ` -- (${gene.comments})` : ''}`).join(', '),
-    description: 'comma-separated list of genes',
-  },
-]
 
 export const INDIVIDUAL_DETAIL_EXPORT_DATA = [
   ...INDIVIDUAL_HPO_EXPORT_DATA,
