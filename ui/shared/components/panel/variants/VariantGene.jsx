@@ -13,6 +13,7 @@ import {
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
+import { BehindModalPopup } from '../../PopupWithModal'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
@@ -24,8 +25,6 @@ import { getIndividualGeneDataByFamilyGene } from './selectors'
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
-
-const BEHIND_MODAL_STYLE = { zIndex: 900 }
 
 const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, dispatch, ...props }) => {
   const labelProps = {
@@ -613,13 +612,12 @@ export const BaseVariantGene = React.memo(({
   )
 
   return compactDetails ? (
-    <Popup
+    <BehindModalPopup
       header="Gene Details"
       size="tiny"
       position="bottom left"
       wide
       hoverable
-      style={BEHIND_MODAL_STYLE}
       trigger={geneSummary}
       content={geneDetails}
     />
