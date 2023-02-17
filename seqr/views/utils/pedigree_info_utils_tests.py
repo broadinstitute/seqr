@@ -166,6 +166,10 @@ class PedigreeInfoUtilsTest(object):
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
              'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
              'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'MONDO:0100086', 'HMB', '',
+             ],
+            ['SK-3QVD', 'A04', 'SM-IRW61', 'PED073', 'SCO_PED073C_GA0341', 'SCO_PED073C_GA0341_1',
+             'SCO_PED073B_GA0339_1', '', 'male', 'affected', 'UBERON:0002371 (bone marrow)',
+             'RNA', 'No', 'No', '17', '83', 'half sib', 'Perinatal death', 'MONDO:0100086', '', '',
              ]]
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
@@ -198,6 +202,10 @@ class PedigreeInfoUtilsTest(object):
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
              'mondoId': 'MONDO:0100086', 'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
              'probandRelationship': 'S',
+             }, {'affected': 'A', 'maternalId': '', 'notes': 'half sib', 'individualId': 'SCO_PED073C_GA0341_1',
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
+             'mondoId': 'MONDO:0100086', 'primaryBiosample': 'BM', 'analyteType': 'R', 'tissueAffectedStatus': False,
+             'probandRelationship': 'J',
              }])
         self.assertListEqual(warnings, [expected_warning])
 
@@ -236,7 +244,8 @@ class PedigreeInfoUtilsTest(object):
             [['Well', 'Sample ID', 'Alias', 'Alias', 'Gender', 'Volume', 'Concentration'],
              ['Position', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', 'ul', 'ng/ul'],
              ['A02', 'SM-IRW6C', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', 'male', '20', '94.8'],
-             ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98']])
+             ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98'],
+             ['A04', 'SM-IRW61', 'SCO_PED073C_GA0341', 'SCO_PED073C_GA0341_1', 'male', '17', '83']])
 
         # Test original file copy is correct
         original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))
