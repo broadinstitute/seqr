@@ -192,10 +192,12 @@ class PedigreeInfoUtilsTest(object):
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
              'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': 'microcephaly',
-              'mondoId': 'MONDO:0001149', 'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,},
+              'mondoId': 'MONDO:0001149', 'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,
+              'probandRelationship': 'F',},
             {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': None, 'individualId': 'SCO_PED073C_GA0340_1',
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
              'mondoId': 'MONDO:0100086', 'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
+             'probandRelationship': 'S',
              }])
         self.assertListEqual(warnings, [expected_warning])
 

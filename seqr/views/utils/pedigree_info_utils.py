@@ -4,6 +4,7 @@ import os
 import json
 import tempfile
 import openpyxl as xl
+from collections import defaultdict
 from datetime import date
 
 from seqr.utils.communication_utils import send_html_email
@@ -373,6 +374,7 @@ def _set_proband_relationship(json_records):
                 affected = affected_children
         if not affected:
             continue
+        affected = affected[0]
 
         relationships = {
             affected[JsonConstants.MATERNAL_ID_COLUMN]: Individual.MOTHER_RELATIONSHIP,
@@ -381,11 +383,11 @@ def _set_proband_relationship(json_records):
 
         maternal_siblings = {
             r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
-            if affected[JsonConstants.MATERNAL_ID_COLUMN] == r[affected[JsonConstants.MATERNAL_ID_COLUMN]]
+            if affected[JsonConstants.MATERNAL_ID_COLUMN] == r[JsonConstants.MATERNAL_ID_COLUMN]
         }
         paternal_siblings = {
             r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
-            if affected[JsonConstants.PATERNAL_ID_COLUMN] == r[affected[JsonConstants.PATERNAL_ID_COLUMN]]
+            if affected[JsonConstants.PATERNAL_ID_COLUMN] == r[JsonConstants.PATERNAL_ID_COLUMN]
         }
         relationships.update({r_id: Individual.MATERNAL_SIBLING_RELATIONSHIP for r_id in maternal_siblings})
         relationships.update({r_id: Individual.PATERNAL_SIBLING_RELATIONSHIP for r_id in paternal_siblings})
