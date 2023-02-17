@@ -169,29 +169,25 @@ class PedigreeInfoUtilsTest(object):
              ]]
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
-        self._assert_errors_warnings_exception(
-            ec, f'Error while converting {FILENAME} rows to json: Multiple consent codes specified in manifest: GMB, HMB')
-
-        original_data[4][-2] = 'GMB'
-        with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
-        self._assert_errors_warnings_exception(
-            ec, f'Error while converting {FILENAME} rows to json: Consent code in manifest "GMB" does not match project consent code "HMB"')
-
-        original_data[3][-2] = ''
-        original_data[4][-2] = 'HMB'
-        with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
+        self.assertListEqual(ec.exception.errors, [
+            'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status',
+            'Multiple consent codes specified in manifest: GMB, HMB',
+        ])
         expected_warning = 'SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. ' \
                            'Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID'
-        self._assert_errors_warnings_exception(
-            ec, 'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status',
-            warning=expected_warning
-        )
+        self.assertListEqual(ec.exception.warnings, [expected_warning])
 
         original_data[3][12] = 'No'
         original_data[3][17] = 'microcephaly'
         original_data[3][18] = 'MONDO:0001149'
+        original_data[4][-2] = 'GMB'
+        with self.assertRaises(ErrorsWarningsException) as ec:
+            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
+        self._assert_errors_warnings_exception(
+            ec, 'Consent code in manifest "GMB" does not match project consent code "HMB"', warning=expected_warning)
+
+        original_data[3][-2] = ''
+        original_data[4][-2] = 'HMB'
         records, warnings = parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
