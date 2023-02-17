@@ -25,6 +25,8 @@ const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
+const BEHIND_MODAL_STYLE = { zIndex: 900 }
+
 const BaseGeneLabelContent = styled(({ color, customColor, label, maxWidth, dispatch, ...props }) => {
   const labelProps = {
     ...props,
@@ -617,6 +619,7 @@ export const BaseVariantGene = React.memo(({
       position="bottom left"
       wide
       hoverable
+      style={BEHIND_MODAL_STYLE}
       trigger={geneSummary}
       content={geneDetails}
     />
