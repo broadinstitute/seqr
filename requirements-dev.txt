@@ -22,7 +22,7 @@ click==8.0.4
     # via pip-tools
 coverage==5.1
     # via -r requirements-dev.in
-django==3.2.16
+django==3.2.18
     # via
     #   -c requirements.txt
     #   django-appconf

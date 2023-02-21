@@ -55,7 +55,7 @@ charset-normalizer==2.0.12
     # via aiohttp
 commonmark==0.9.1
     # via rich
-cryptography==36.0.1
+cryptography==38.0.4
     # via
     #   azure-identity
     #   azure-storage-blob
@@ -165,7 +165,7 @@ multidict==6.0.2
     #   yarl
 nest-asyncio==1.5.4
     # via hail
-numpy==1.21.5
+numpy==1.22.4
     # via
     #   bokeh
     #   hail
