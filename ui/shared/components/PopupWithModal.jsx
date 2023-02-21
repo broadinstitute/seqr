@@ -6,7 +6,7 @@ import { Popup } from 'semantic-ui-react'
 
 import { getOpenModals } from 'redux/utils/modalReducer'
 
-const BehindModalPopup = styled(Popup)`
+export const BehindModalPopup = styled(Popup)`
   z-index: 500 !important;
 `
 

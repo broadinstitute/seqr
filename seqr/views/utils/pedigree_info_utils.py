@@ -346,7 +346,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
 
     if len(consent_codes) > 1:
         errors.append(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
-    if len(consent_codes) == 1:
+    elif len(consent_codes) == 1:
         consent_code = consent_codes.pop()
         project_consent_code = project.get_consent_code_display()
         if consent_code != project_consent_code:
