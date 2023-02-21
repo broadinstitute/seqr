@@ -36,8 +36,7 @@ COPY ./requirements.txt .
 
 # install seqr python dependencies
 RUN pip install --no-cache-dir wheel && \
-    pip install --no-cache-dir -r requirements.txt && \
-    ln -s python3 /opt/venv/bin/python3.9
+    pip install --no-cache-dir -r requirements.txt
 
 # install seqr nodejs dependencies
 WORKDIR /build/ui
