@@ -10,7 +10,7 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 const FIELDS = [
 
   {
-    name: 'uploadPath',
+    name: 'deliveryPath',
     label: 'AnVIL Delivery Bucket Path',
     placeholder: 'gs:// path',
     validate: validators.required,

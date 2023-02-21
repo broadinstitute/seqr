@@ -7,13 +7,16 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Prefetch, Count, F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.utils import timezone
+import json
 
+from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist, mv_file_to_gs
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.views.utils.export_utils import export_multiple_files
+from seqr.views.utils.export_utils import export_multiple_files, write_multiple_temp_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -742,7 +745,19 @@ HPO_QUALIFIERS = {
 
 
 @analyst_required
-def gregor_export(request, consent_code):
+def gregor_export(request):
+    request_json = json.loads(request.body)
+    missing_required_fields = [field for field in ['deliveryPath', 'consentCode'] if not request_json.get(field)]
+    if missing_required_fields:
+        raise ErrorsWarningsException([f'Missing required field(s): {", ".join(missing_required_fields)}'])
+
+    consent_code = request_json['consentCode']
+    file_path = request_json['deliveryPath']
+    if not is_google_bucket_file_path(file_path):
+        raise ErrorsWarningsException(['Delivery Path must be a valid google bucket path (starts with gs://)'])
+    if not does_file_exist(file_path, user=request.user):
+        raise ErrorsWarningsException(['Invalid Delivery Path: folder not found'])
+
     projects = get_internal_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
     individuals = Individual.objects.filter(
         family__project__consent_code=consent_code[0],
@@ -801,7 +816,7 @@ def gregor_export(request, consent_code):
         # analyte table
         analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-    return export_multiple_files([
+    files = [
         ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
         ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
         ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
@@ -810,7 +825,13 @@ def gregor_export(request, consent_code):
         ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
         ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
         ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
-    ], f'GREGoR Reports {consent_code}', file_format='tsv')
+    ]
+    with write_multiple_temp_files(files, file_format='tsv') as temp_dir_name:
+        mv_file_to_gs(f'{temp_dir_name}/*', file_path, request.user)
+
+    return create_json_response({
+        'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families']
+    })
 
 
 def _get_gregor_airtable_data(individuals, user):
