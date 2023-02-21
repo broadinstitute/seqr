@@ -366,7 +366,7 @@ def _set_proband_relationship(json_records):
         affected = [r for r in records if r[JsonConstants.AFFECTED_COLUMN] == 'A']
         if len(affected) > 1:
             affected_children = sorted(
-                [r for r in affected if r[JsonConstants.PATERNAL_ID_COLUMN] and r[JsonConstants.MATERNAL_ID_COLUMN]],
+                [r for r in affected if r[JsonConstants.PATERNAL_ID_COLUMN] or r[JsonConstants.MATERNAL_ID_COLUMN]],
                 key=lambda r: bool(r[JsonConstants.PATERNAL_ID_COLUMN]) and bool(r[JsonConstants.MATERNAL_ID_COLUMN]),
                 reverse=True
             )
