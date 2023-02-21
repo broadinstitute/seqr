@@ -188,7 +188,7 @@ def project_families(request, project_guid):
         ))
     )
     family_annotations = dict(
-        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
+        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True, filter=~Q(individual__case_review_status='')),
         caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
         hasRequiredMetadata=Case(When(metadata_individual_count__gt=0, then=Value(True)), default=Value(False)),
         parents=ArrayAgg(
