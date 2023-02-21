@@ -365,7 +365,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   maternalEthnicity: ETHNICITY_FIELD,
   paternalEthnicity: ETHNICITY_FIELD,
   population: {
-    fieldDisplay: population => POPULATION_MAP[population] || population,
+    fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
   },
   filterFlags: {
     fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
@@ -418,9 +418,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 }
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
-  ({ field, header, subFields, isEditable, isCollaboratorEditable, isPrivate }) => {
+  ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
     const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-    const formattedField = { field, fieldName: header, isEditable, isCollaboratorEditable, isPrivate, ...fieldProps }
+    const formattedField = {
+      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, ...fieldProps,
+    }
     if (subFields) {
       formattedField.formFields = subFields.map(subField => (
         { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }
@@ -517,13 +519,14 @@ class IndividualRow extends React.PureComponent {
     tableName: PropTypes.string,
   }
 
-  individualFieldDisplay = (
-    { component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field },
-  ) => {
+  individualFieldDisplay = ({
+    component, isEditable, isCollaboratorEditable, isRequiredInternal, onSubmit, individualFields = () => {}, ...field
+  }) => {
     const { project, individual, dispatchUpdateIndividual } = this.props
     return React.createElement(component || BaseFieldView, {
       key: field.field,
       isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
+      isRequired: isRequiredInternal && individual.affected === AFFECTED && project.isAnalystProject,
       onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
       modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${individual.displayName}`,
       initialValues: individual,
