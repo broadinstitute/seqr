@@ -165,7 +165,7 @@ multidict==6.0.2
     #   yarl
 nest-asyncio==1.5.4
     # via hail
-numpy==1.22.4
+numpy==1.21.5
     # via
     #   bokeh
     #   hail
