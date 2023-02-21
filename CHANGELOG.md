@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Updated Gregor sample manifest (REQUIRES DB MIGRATION)
 
 ## 2/15/23
 * Support sharded VCFs in AnVIL loading

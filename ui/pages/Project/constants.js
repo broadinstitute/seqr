@@ -16,6 +16,7 @@ import {
   FAMILY_FIELD_FIRST_SAMPLE,
   FAMILY_FIELD_CREATED_DATE,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_MONDO_ID,
   FAMILY_FIELD_SAVED_VARIANTS,
   FAMILY_FIELD_NAME_LOOKUP,
   INDIVIDUAL_FIELD_ID,
@@ -471,18 +472,19 @@ const FAMILY_FIELD_CONFIGS = Object.entries({
   [FAMILY_DISPLAY_NAME]: { label: 'Display Name', width: 3, description: 'The human-readable family name to show in place of the family ID' },
   [FAMILY_FIELD_CREATED_DATE]: { label: 'Created Date' },
   [FAMILY_FIELD_FIRST_SAMPLE]: { label: 'First Data Loaded Date', format: firstSample => (firstSample || {}).loadedDate },
-  [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 10, description: 'A short description of the family' },
+  [FAMILY_FIELD_DESCRIPTION]: { label: 'Description', format: stripMarkdown, width: 8, description: 'A short description of the family' },
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     format: status => (FAMILY_ANALYSIS_STATUS_LOOKUP[status] || {}).name,
   },
   [FAMILY_FIELD_ASSIGNED_ANALYST]: { format: analyst => (analyst ? analyst.email : '') },
   [FAMILY_FIELD_ANALYSED_BY]: { format: analysedBy => analysedBy.map(o => o.createdBy).join(',') },
-  [FAMILY_FIELD_CODED_PHENOTYPE]: { label: 'Coded Phenotype', width: 4, description: "High level summary of the family's phenotype/disease" },
+  [FAMILY_FIELD_CODED_PHENOTYPE]: { width: 4, description: "High level summary of the family's phenotype/disease" },
+  [FAMILY_FIELD_MONDO_ID]: { width: 3, description: 'MONDO Disease Ontology ID' },
   ...FAMILY_NOTES_FIELDS.reduce((acc, { id }) => ({ ...acc, [id]: { format: formatNotes } }), {}),
 }).reduce((acc, [field, config]) => ({ ...acc, [field]: { label: FAMILY_FIELD_NAME_LOOKUP[field], ...config } }), {})
 
 export const FAMILY_FIELDS = [
-  FAMILY_FIELD_ID, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_ID, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_MONDO_ID,
 ].map(tableConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const FAMILY_EXPORT_DATA = [
@@ -503,6 +505,7 @@ export const FAMILY_BULK_EDIT_EXPORT_DATA = [
   FAMILY_DISPLAY_NAME,
   FAMILY_FIELD_DESCRIPTION,
   FAMILY_FIELD_CODED_PHENOTYPE,
+  FAMILY_FIELD_MONDO_ID,
 ].map(exportConfigForField(FAMILY_FIELD_CONFIGS))
 
 export const INDIVIDUAL_FIELDS = [
