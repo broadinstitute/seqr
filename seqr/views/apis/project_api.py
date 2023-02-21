@@ -180,16 +180,17 @@ def project_page_data(request, project_guid):
 @login_and_policies_required
 def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    family_models = Family.objects.filter(project=project)
-    family_annotations = dict(
-        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
-        caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
-        hasRequiredMetadata=Case(When(
+    family_models = Family.objects.filter(project=project).annotate(
+        metadata_individual_count=Count('individual', filter=Q(
             individual__features__0__isnull=False, individual__birth_year__isnull=False,
             individual__population__isnull=False, individual__consanguinity__isnull=False,
             individual__proband_relationship__isnull=False,
-            then=Value(True),
-        ), default=Value(False)),
+        ))
+    )
+    family_annotations = dict(
+        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
+        caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
+        hasRequiredMetadata=Case(When(metadata_individual_count__gt=0, then=Value(True)), default=Value(False)),
         parents=ArrayAgg(
             JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
             filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
