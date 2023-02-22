@@ -952,7 +952,6 @@ def _get_validated_gregor_files(file_data):
     files = []
     for file_name, data in file_data:
         columns = TABLE_COLUMNS[file_name]
-        warn_missing_columns = WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
         files.append([file_name, columns, data])
 
         table_validator = validators.get(file_name)
@@ -974,40 +973,10 @@ def _get_validated_gregor_files(file_data):
             )
 
         for column in columns:
-            column_validator = table_validator.get(column, {})
-            enum = column_validator.get('enumerations')
-            required = column_validator.get('required')
-            recommended = column in warn_missing_columns
-            if not (required or enum or recommended):
-                continue
-            missing = []
-            warn_missing = []
-            invalid = []
-            for row in data:
-                value = row.get(column)
-                if not value:
-                    if required:
-                        missing.append(_get_row_id(row))
-                    elif recommended:
-                        warn_missing.append(_get_row_id(row))
-                elif enum and value not in enum:
-                    invalid.append(f'{_get_row_id(row)} ({value})')
-            if missing or warn_missing or invalid:
-                airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
-                error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
-                if missing:
-                    errors.append(
-                        f'{error_template.format(issue="are missing required")}: {", ".join(sorted(missing))}'
-                    )
-                if invalid:
-                    invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
-                    errors.append(
-                        f'{error_template.format(issue="have invalid values for")}. Allowed values: {", ".join(enum)}. {invalid_values}'
-                    )
-                if warn_missing:
-                    warnings.append(
-                        f'{error_template.format(issue="are missing recommended")}: {", ".join(sorted(warn_missing))}'
-                    )
+            _validate_column_data(
+                column, file_name, data, column_validator=table_validator.get(column, {}),
+                warnings=warnings, errors=errors,
+            )
 
     if errors:
         raise ErrorsWarningsException(errors, warnings)
@@ -1025,6 +994,43 @@ def _load_data_model_validators():
     }
     required_tables = {t['table'] for t in table_models if t.get('required')}
     return validators, required_tables
+
+
+def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
+    enum = column_validator.get('enumerations')
+    required = column_validator.get('required')
+    recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
+    if not (required or enum or recommended):
+        return
+
+    missing = []
+    warn_missing = []
+    invalid = []
+    for row in data:
+        value = row.get(column)
+        if not value:
+            if required:
+                missing.append(_get_row_id(row))
+            elif recommended:
+                warn_missing.append(_get_row_id(row))
+        elif enum and value not in enum:
+            invalid.append(f'{_get_row_id(row)} ({value})')
+    if missing or warn_missing or invalid:
+        airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
+        error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
+        if missing:
+            errors.append(
+                f'{error_template.format(issue="are missing required")}: {", ".join(sorted(missing))}'
+            )
+        if invalid:
+            invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
+            errors.append(
+                f'{error_template.format(issue="have invalid values for")}. Allowed values: {", ".join(enum)}. {invalid_values}'
+            )
+        if warn_missing:
+            warnings.append(
+                f'{error_template.format(issue="are missing recommended")}: {", ".join(sorted(warn_missing))}'
+            )
 
 
 def _get_row_id(row):
