@@ -692,6 +692,17 @@ CALLED_TABLE_COLUMNS = [
     'caller_software', 'variant_types', 'analysis_details',
 ]
 
+TABLE_COLUMNS = {
+    'participant': PARTICIPANT_TABLE_COLUMNS,
+    'family': GREGOR_FAMILY_TABLE_COLUMNS,
+    'phenotype': PHENOTYPE_TABLE_COLUMNS,
+    'analyte': ANALYTE_TABLE_COLUMNS,
+    'experiment_dna_short_read': EXPERIMENT_TABLE_COLUMNS,
+    'aligned_dna_short_read': READ_TABLE_COLUMNS,
+    'aligned_dna_short_read_set': READ_SET_TABLE_COLUMNS,
+    'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
+}
+
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
 GREGOR_ANCESTRY_MAP = deepcopy(ANCESTRY_MAP)
@@ -816,16 +827,16 @@ def gregor_export(request):
         # analyte table
         analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-    files = [
-        ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
-        ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
-        ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
-        ['analyte', ANALYTE_TABLE_COLUMNS, analyte_rows],
-        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows],
-        ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
-        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
-        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
-    ]
+    files, warnings = _get_validated_gregor_files([
+        ('participant', participant_rows),
+        ('family', list(family_map.values())),
+        ('phenotype', phenotype_rows),
+        ('analyte', analyte_rows),
+        ('experiment_dna_short_read', airtable_rows),
+        ('aligned_dna_short_read', airtable_rows),
+        ('aligned_dna_short_read_set', airtable_rows),
+        ('called_variants_dna_short_read', airtable_rows),
+    ])
     with write_multiple_temp_files(files, file_format='tsv') as temp_dir_name:
         mv_file_to_gs(f'{temp_dir_name}/*', file_path, request.user)
 
@@ -913,6 +924,16 @@ def _get_experiment_ids(airtable_sample, airtable_metadata):
         'experiment_sample_id': collaborator_sample_id,
         'aligned_dna_short_read_id': f'{experiment_dna_short_read_id}_1'
     }
+
+
+def _get_validated_gregor_files(file_data):
+    files = []
+    warnings = []
+    for file_name, data in file_data:
+        files.append([file_name, TABLE_COLUMNS[file_name], data])
+
+    return files, warnings
+
 
 # Discovery Sheet
 
