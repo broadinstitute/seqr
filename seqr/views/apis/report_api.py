@@ -747,7 +747,7 @@ HPO_QUALIFIERS = {
 @analyst_required
 def gregor_export(request):
     request_json = json.loads(request.body)
-    missing_required_fields = [field for field in ['deliveryPath', 'consentCode'] if not request_json.get(field)]
+    missing_required_fields = [field for field in ['consentCode', 'deliveryPath'] if not request_json.get(field)]
     if missing_required_fields:
         raise ErrorsWarningsException([f'Missing required field(s): {", ".join(missing_required_fields)}'])
 

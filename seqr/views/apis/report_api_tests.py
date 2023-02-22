@@ -1,5 +1,6 @@
 from django.urls.base import reverse
 from django.utils.dateparse import parse_datetime
+import json
 import mock
 import pytz
 import responses
@@ -584,11 +585,16 @@ class ReportAPITest(object):
 
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @mock.patch('seqr.views.apis.report_api.datetime')
-    @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
+    @mock.patch('seqr.views.utils.export_utils.open')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @responses.activate
-    def test_gregor_export(self, mock_zip, mock_datetime, mock_google_authenticated):
+    def test_gregor_export(self, mock_subprocess, mock_temp_dir, mock_open, mock_datetime, mock_google_authenticated):
         mock_datetime.now.return_value.year = 2020
         mock_google_authenticated.return_value = False
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        mock_subprocess.return_value.wait.return_value = 1
+
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_SAMPLE_RECORDS,
             status=200)
@@ -596,25 +602,42 @@ class ReportAPITest(object):
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
 
-        url = reverse(gregor_export, args=['HMB'])
+        url = reverse(gregor_export)
         self.check_analyst_login(url)
 
-        response = self.client.get(url)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Missing required field(s): consentCode, deliveryPath'])
+
+        body = {'consentCode': 'HMB', 'deliveryPath': '/test/file'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Delivery Path must be a valid google bucket path (starts with gs://)'])
+
+        body['deliveryPath'] = 'gs://anvil-upload'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Invalid Delivery Path: folder not found'])
+
+        mock_subprocess.return_value.wait.return_value = 0
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+        mock_subprocess.reset_mock()
         mock_google_authenticated.return_value = True
-        response = self.client.get(url)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.get('content-disposition'),
-            'attachment; filename="GREGoR Reports HMB.zip"'
-        )
+        self.assertDictEqual(response.json(), {'info': ['Successfully validated and uploaded Gregor Report for 9 families']})
 
-        files = self._get_zip_files(mock_zip, [
+        self.assertListEqual(mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}', 'w') for file in [
             'participant.tsv', 'family.tsv', 'phenotype.tsv', 'analyte.tsv', 'experiment_dna_short_read.tsv',
             'aligned_dna_short_read.tsv', 'aligned_dna_short_read_set.tsv', 'called_variants_dna_short_read.tsv',
-        ])
+        ]])
+        files = [
+            [row.split('\t') for row in write_call.args[0].split('\n')]
+            for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
+        ]
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
 
         self.assertEqual(len(participant_file), 14)
@@ -724,6 +747,14 @@ class ReportAPITest(object):
             'called_variants_dna_file', 'md5sum', 'caller_software', 'variant_types', 'analysis_details',
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
+
+        # test gsutil commands
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
 
         self.check_no_analyst_no_access(url)
 
