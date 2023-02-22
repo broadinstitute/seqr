@@ -31,6 +31,11 @@ class Gregor extends React.PureComponent {
   onSubmit = values => new HttpRequestHelper('/api/report/gregor',
     (uploadStats) => {
       this.setState({ uploadStats })
+    }, (error) => {
+      if (error?.body) {
+        this.setState({ uploadStats: error.body })
+      }
+      return Promise.reject(error)
     }).post(values)
 
   render() {
