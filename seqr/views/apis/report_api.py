@@ -27,6 +27,7 @@ from seqr.views.utils.terra_api_utils import anvil_enabled
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
+from settings import GREGOR_DATA_MODEL_URL
 
 
 logger = SeqrLogger(__name__)
@@ -930,9 +931,6 @@ def _get_experiment_ids(airtable_sample, airtable_metadata):
         'experiment_sample_id': collaborator_sample_id,
         'aligned_dna_short_read_id': f'{experiment_dna_short_read_id}_1'
     }
-
-
-GREGOR_DATA_MODEL_URL = 'https://raw.githubusercontent.com/UW-GAC/gregor_data_models/main/GREGoR_data_model.json'  # TODO constant from settings
 
 
 def _get_validated_gregor_files(file_data):
