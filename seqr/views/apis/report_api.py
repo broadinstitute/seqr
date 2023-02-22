@@ -704,6 +704,9 @@ TABLE_COLUMNS = {
     'aligned_dna_short_read_set': READ_SET_TABLE_COLUMNS,
     'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
 }
+WARN_MISSING_TABLE_COLUMNS = {
+    'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
+}
 
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
@@ -951,6 +954,7 @@ def _get_validated_gregor_files(file_data):
     files = []
     for file_name, data in file_data:
         columns = TABLE_COLUMNS[file_name]
+        warn_missing_columns = WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
         files.append([file_name, columns, data])
 
         table_validator = validators.get(file_name)
@@ -976,15 +980,18 @@ def _get_validated_gregor_files(file_data):
             if not (required or enum):
                 continue
             missing = []
+            warn_missing = []
             invalid = []
             for row in data:
                 value = row.get(column)
                 if not value:
                     if required:
                         missing.append(_get_row_id(row))
+                    elif column in warn_missing_columns:
+                        warn_missing.append(_get_row_id(row))
                 elif enum and value not in enum:
                     invalid.append(f'{_get_row_id(row)} ({value})')
-            if missing or invalid:
+            if missing or warn_missing or invalid:
                 airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
                 error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
                 if missing:
@@ -995,6 +1002,10 @@ def _get_validated_gregor_files(file_data):
                     invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
                     errors.append(
                         f'{error_template.format(issue="have invalid values for")}. Allowed values: {", ".join(enum)}. {invalid_values}'
+                    )
+                if warn_missing:
+                    warnings.append(
+                        f'{error_template.format(issue="are missing recommended")}: {", ".join(sorted(warn_missing))}'
                     )
 
     if errors:
