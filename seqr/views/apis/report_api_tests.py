@@ -628,7 +628,10 @@ class ReportAPITest(object):
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'info': ['Successfully validated and uploaded Gregor Report for 9 families']})
+        self.assertDictEqual(response.json(), {
+            'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
+            'warnings': [],
+        })
 
         self.assertListEqual(mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}', 'w') for file in [
             'participant.tsv', 'family.tsv', 'phenotype.tsv', 'analyte.tsv', 'experiment_dna_short_read.tsv',
@@ -723,7 +726,7 @@ class ReportAPITest(object):
         ])
 
         # test airtable calls
-        self.assertEqual(len(responses.calls), 3)
+        self.assertEqual(len(responses.calls), 4)
         sample_filter = "OR({CollaboratorSampleID}='HG00731',{CollaboratorSampleID}='HG00732',{CollaboratorSampleID}='HG00733'," \
                         "{CollaboratorSampleID}='NA19675_1',{CollaboratorSampleID}='NA19678',{CollaboratorSampleID}='NA19679'," \
                         "{CollaboratorSampleID}='NA20870',{CollaboratorSampleID}='NA20872',{CollaboratorSampleID}='NA20874'," \
@@ -747,6 +750,8 @@ class ReportAPITest(object):
             'called_variants_dna_file', 'md5sum', 'caller_software', 'variant_types', 'analysis_details',
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
+
+        # TODO test data model
 
         # test gsutil commands
         mock_subprocess.assert_has_calls([

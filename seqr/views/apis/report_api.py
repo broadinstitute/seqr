@@ -8,6 +8,7 @@ from django.db.models import Prefetch, Count, F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.utils import timezone
 import json
+import requests
 
 from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist, mv_file_to_gs
 from seqr.utils.gene_utils import get_genes
@@ -691,6 +692,7 @@ CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 ]
+ALL_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
 
 TABLE_COLUMNS = {
     'participant': PARTICIPANT_TABLE_COLUMNS,
@@ -841,7 +843,8 @@ def gregor_export(request):
         mv_file_to_gs(f'{temp_dir_name}/*', file_path, request.user)
 
     return create_json_response({
-        'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families']
+        'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
+        'warnings': warnings,
     })
 
 
@@ -851,7 +854,7 @@ def _get_gregor_airtable_data(individuals, user):
         fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
     )
 
-    fields = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
+    fields = ALL_AIRTABLE_COLUMNS
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
         fields=[SMID_FIELD] + fields,
@@ -926,13 +929,95 @@ def _get_experiment_ids(airtable_sample, airtable_metadata):
     }
 
 
+GREGOR_DATA_MODEL_URL = 'https://raw.githubusercontent.com/UW-GAC/gregor_data_models/main/GREGoR_data_model.json'  # TODO constant from settings
+
+
 def _get_validated_gregor_files(file_data):
-    files = []
+    errors = []
     warnings = []
+    try:
+        validators, required_tables = _load_data_model_validators()
+    except Exception as e:
+        warnings.append(f'Unable to load data model for validation: {e}')
+        validators = {}
+        required_tables = set()
+
+    missing_tables = required_tables.difference({f[0] for f in file_data})
+    if missing_tables:
+        warnings.append(
+            f'The following tables are required in the data model but absent from the reports: {", ".join(missing_tables)}'
+        )
+
+    files = []
     for file_name, data in file_data:
-        files.append([file_name, TABLE_COLUMNS[file_name], data])
+        columns = TABLE_COLUMNS[file_name]
+        files.append([file_name, columns, data])
+
+        table_validator = validators.get(file_name)
+        if not table_validator:
+            warnings.append(f'No data model found for "{file_name}" table so no validation was performed')
+            continue
+
+        extra_columns = set(columns).difference(table_validator.keys())
+        if extra_columns:
+            warnings.append(
+                f'The following columns are included in the "{file_name}" table but are missing from the data model: {", ".join(extra_columns)}'
+            )
+        missing_columns = set(table_validator.keys()).difference(columns)
+        if missing_columns:
+            warnings.append(
+                f'The following columns are included in the "{file_name}" data model but are missing in the report: {", ".join(missing_columns)}'
+            )
+
+        for column in columns:
+            column_validator = table_validator.get(column, {})
+            enum = column_validator.get('enumerations')
+            required = column_validator.get('required')
+            if not (required or enum):
+                continue
+            missing = []
+            invalid = []
+            for row in data:
+                value = row.get(column)
+                if not value:
+                    if required:
+                        missing.append(_get_row_id(row))
+                elif enum and value not in enum:
+                    invalid.append(f'{_get_row_id(row)} ({value})')
+            if missing or invalid:
+                airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
+                error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
+                if missing:
+                    errors.append(
+                        f'{error_template.format(issue="are missing required")}: {", ".join(sorted(missing))}'
+                    )
+                if invalid:
+                    invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
+                    errors.append(
+                        f'{error_template.format(issue="have invalid values for")}. Allowed values: {", ".join(enum)}. {invalid_values}'
+                    )
+
+    if errors:
+        raise ErrorsWarningsException(errors, warnings)
 
     return files, warnings
+
+
+def _load_data_model_validators():
+    response = requests.get(GREGOR_DATA_MODEL_URL)
+    response.raise_for_status()
+    table_models = response.json()['tables']
+    validators = {
+        t['table']: {c['column']: c for c in t['columns']}
+        for t in table_models
+    }
+    required_tables = {t['table'] for t in table_models if t.get('required')}
+    return validators, required_tables
+
+
+def _get_row_id(row):
+    id_col = next(col for col in ['participant_id', 'experiment_sample_id', 'family_id'] if col in row)
+    return row[id_col]
 
 
 # Discovery Sheet
