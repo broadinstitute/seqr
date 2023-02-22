@@ -36,6 +36,7 @@ COPY ./requirements.txt .
 
 # install seqr python dependencies
 RUN pip install --no-cache-dir wheel && \
+    pip install --no-cache-dir -U setuptools && \
     pip install --no-cache-dir -r requirements.txt
 
 # install seqr nodejs dependencies
