@@ -267,6 +267,53 @@ EXPECTED_SAMPLE_METADATA_ROW = {
 }
 EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
 
+MOCK_DATA_MODEL_URL = 'http://raw.githubusercontent.com/gregor_data_model.json'
+MOCK_DATA_MODEL = {
+    'name': 'test data model',
+    'tables': [
+        {
+            'table': 'subject',
+            'required': True,
+            'columns': [{'column': 'subject_id', 'required': True}],
+        },
+        {
+            'table': 'participant',
+            'required': True,
+            'columns': [
+                {'column': 'participant_id', 'required': True},
+                {'column': 'internal_project_id'},
+                {'column': 'gregor_center', 'required': True, 'enumerations': ['BCM', 'BROAD', 'UW']},
+                {'column': 'consent_code', 'required': True, 'enumerations': ['GRU', 'HMB']},
+                {'column': 'recontactable', 'enumerations': ['Yes', 'No', 'Unknown']},
+                {'column': 'prior_testing'},
+                {'column': 'family_id', 'required': True},
+                {'column': 'paternal_id'},
+                {'column': 'maternal_id'},
+                {'column': 'proband_relationship', 'required': True},
+                {'column': 'sex', 'required': True, 'enumerations': ['Male', 'Female', 'Unknown']},
+                {'column': 'reported_race', 'enumerations': ['Asian', 'White', 'Black', 'Unknown']},
+                {'column': 'reported_ethnicity', 'enumerations': ['Hispanic', 'Not Hispanic', 'Unknown']},
+                {'column': 'ancestry_metadata'},
+                {'column': 'affected_status', 'required': True, 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
+                {'column': 'phenotype_description'},
+                {'column': 'age_at_enrollment'},
+            ],
+        },
+        {
+            'table': 'aligned_dna_short_read_set',
+            'columns': [
+                {'column': 'aligned_dna_short_read_set_id', 'required': True},
+                {'column': 'aligned_dna_short_read_id', 'required': True},
+            ],
+        },
+        {
+            'table': 'dna_read_data',
+            'columns': [{'column': 'analyte_id', 'required': True}],
+        },
+    ]
+}
+
+
 def _get_list_param(call, param):
     query_params = call.url.split('?')[1].split('&')
     param_str = f'{param}='
@@ -583,6 +630,7 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+    @mock.patch('seqr.views.apis.report_api.GREGOR_DATA_MODEL_URL', MOCK_DATA_MODEL_URL)
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @mock.patch('seqr.views.apis.report_api.datetime')
     @mock.patch('seqr.views.utils.export_utils.open')
@@ -601,6 +649,7 @@ class ReportAPITest(object):
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
 
         url = reverse(gregor_export)
         self.check_analyst_login(url)
@@ -624,19 +673,44 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+        mock_google_authenticated.return_value = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        expected_files = [
+            'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
+            'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
+        ]
+        skipped_file_validation_warnings = [
+            f'No data model found for "{file}" table so no validation was performed' for file in expected_files
+        ]
+        self.assertListEqual(response.json()['warnings'], [
+            'The following tables are required in the data model but absent from the reports: subject',
+            'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
+            'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
+            'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+        ] + skipped_file_validation_warnings[1:6] + skipped_file_validation_warnings[7:])
+        self.assertListEqual(response.json()['errors'], [
+            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black, Unknown. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
+            'The following entries are missing required "aligned_dna_short_read_set_id" (from Airtable) in the "aligned_dna_short_read_set" table: NA19675_1',
+        ])
+
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
+        responses.calls.reset()
         mock_subprocess.reset_mock()
         mock_google_authenticated.return_value = True
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
-            'warnings': [],
+            'warnings': [
+                'Unable to load data model for validation: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
+            ] + skipped_file_validation_warnings,
         })
 
-        self.assertListEqual(mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}', 'w') for file in [
-            'participant.tsv', 'family.tsv', 'phenotype.tsv', 'analyte.tsv', 'experiment_dna_short_read.tsv',
-            'aligned_dna_short_read.tsv', 'aligned_dna_short_read_set.tsv', 'called_variants_dna_short_read.tsv',
-        ]])
+        self.assertListEqual(
+            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in expected_files])
         files = [
             [row.split('\t') for row in write_call.args[0].split('\n')]
             for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
@@ -751,7 +825,7 @@ class ReportAPITest(object):
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
 
-        # TODO test data model
+        self.assertEqual(responses.calls[3].request.url, MOCK_DATA_MODEL_URL)
 
         # test gsutil commands
         mock_subprocess.assert_has_calls([

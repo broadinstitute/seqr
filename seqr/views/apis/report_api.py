@@ -964,20 +964,23 @@ def _get_validated_gregor_files(file_data):
 
         extra_columns = set(columns).difference(table_validator.keys())
         if extra_columns:
+            col_summary = ', '.join(sorted(extra_columns))
             warnings.append(
-                f'The following columns are included in the "{file_name}" table but are missing from the data model: {", ".join(extra_columns)}'
+                f'The following columns are included in the "{file_name}" table but are missing from the data model: {col_summary}'
             )
         missing_columns = set(table_validator.keys()).difference(columns)
         if missing_columns:
+            col_summary = ', '.join(sorted(missing_columns))
             warnings.append(
-                f'The following columns are included in the "{file_name}" data model but are missing in the report: {", ".join(missing_columns)}'
+                f'The following columns are included in the "{file_name}" data model but are missing in the report: {col_summary}'
             )
 
         for column in columns:
             column_validator = table_validator.get(column, {})
             enum = column_validator.get('enumerations')
             required = column_validator.get('required')
-            if not (required or enum):
+            recommended = column in warn_missing_columns
+            if not (required or enum or recommended):
                 continue
             missing = []
             warn_missing = []
@@ -987,7 +990,7 @@ def _get_validated_gregor_files(file_data):
                 if not value:
                     if required:
                         missing.append(_get_row_id(row))
-                    elif column in warn_missing_columns:
+                    elif recommended:
                         warn_missing.append(_get_row_id(row))
                 elif enum and value not in enum:
                     invalid.append(f'{_get_row_id(row)} ({value})')
