@@ -4,6 +4,7 @@ import os
 import json
 import tempfile
 import openpyxl as xl
+from collections import defaultdict
 from datetime import date
 
 from seqr.utils.communication_utils import send_html_email
@@ -106,6 +107,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
+        _set_proband_relationship(json_records)
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
     return json_records, warnings
@@ -352,6 +354,56 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
                 f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
 
     return pedigree_rows, sample_manifest_rows, kit_id, errors
+
+
+def _set_proband_relationship(json_records):
+    records_by_family = defaultdict(list)
+    for r in json_records:
+        records_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(r)
+
+    family_relationships = {}
+    for family_id, records in records_by_family.items():
+        affected = [r for r in records if r[JsonConstants.AFFECTED_COLUMN] == 'A']
+        if len(affected) > 1:
+            affected_children = sorted(
+                [r for r in affected if r[JsonConstants.PATERNAL_ID_COLUMN] or r[JsonConstants.MATERNAL_ID_COLUMN]],
+                key=lambda r: bool(r[JsonConstants.PATERNAL_ID_COLUMN]) and bool(r[JsonConstants.MATERNAL_ID_COLUMN]),
+                reverse=True
+            )
+            if affected_children:
+                affected = affected_children
+        if not affected:
+            continue
+        affected = affected[0]
+
+        relationships = {
+            affected[JsonConstants.MATERNAL_ID_COLUMN]: Individual.MOTHER_RELATIONSHIP,
+            affected[JsonConstants.PATERNAL_ID_COLUMN]: Individual.FATHER_RELATIONSHIP,
+        }
+
+        maternal_siblings = {
+            r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
+            if affected[JsonConstants.MATERNAL_ID_COLUMN] == r[JsonConstants.MATERNAL_ID_COLUMN]
+        }
+        paternal_siblings = {
+            r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
+            if affected[JsonConstants.PATERNAL_ID_COLUMN] == r[JsonConstants.PATERNAL_ID_COLUMN]
+        }
+        relationships.update({r_id: Individual.MATERNAL_SIBLING_RELATIONSHIP for r_id in maternal_siblings})
+        relationships.update({r_id: Individual.PATERNAL_SIBLING_RELATIONSHIP for r_id in paternal_siblings})
+        relationships.update({r_id: Individual.SIBLING_RELATIONSHIP for r_id in paternal_siblings.intersection(maternal_siblings)})
+
+        relationships.update({
+            r[JsonConstants.INDIVIDUAL_ID_COLUMN]: Individual.CHILD_RELATIONSHIP for r in records
+            if affected[JsonConstants.INDIVIDUAL_ID_COLUMN] in {r[JsonConstants.MATERNAL_ID_COLUMN], r[JsonConstants.PATERNAL_ID_COLUMN]}
+        })
+
+        relationships[affected[JsonConstants.INDIVIDUAL_ID_COLUMN]] = Individual.SELF_RELATIONSHIP
+        family_relationships[family_id] = relationships
+
+    for r in json_records:
+        r[JsonConstants.PROBAND_RELATIONSHIP] = family_relationships.get(
+            r[JsonConstants.FAMILY_ID_COLUMN], {}).get(r[JsonConstants.INDIVIDUAL_ID_COLUMN])
 
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):

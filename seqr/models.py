@@ -456,30 +456,35 @@ class Individual(ModelWithGUID):
         ('M', 'Mitochondrial inheritance'),
     ]
 
+    MOTHER_RELATIONSHIP = 'M'
+    FATHER_RELATIONSHIP = 'F'
+    SELF_RELATIONSHIP = 'S'
+    SIBLING_RELATIONSHIP = 'B'
+    CHILD_RELATIONSHIP = 'C'
+    MATERNAL_SIBLING_RELATIONSHIP = 'H'
+    PATERNAL_SIBLING_RELATIONSHIP = 'J'
     FEMALE_RELATIONSHIP_CHOICES = {
-        'M': 'Mother',
+        MOTHER_RELATIONSHIP: 'Mother',
         'G': 'Maternal Grandmother',
         'X': 'Paternal Grandmother',
         'A': 'Maternal Aunt',
         'E': 'Paternal Aunt',
         'N': 'Niece',
     }
-
     MALE_RELATIONSHIP_CHOICES = {
-        'F': 'Father',
+        FATHER_RELATIONSHIP: 'Father',
         'W': 'Maternal Grandfather',
         'Y': 'Paternal Grandfather',
         'L': 'Maternal Uncle',
         'D': 'Paternal Uncle',
         'P': 'Nephew',
     }
-
     RELATIONSHIP_CHOICES = list(FEMALE_RELATIONSHIP_CHOICES.items()) + list(MALE_RELATIONSHIP_CHOICES.items()) + [
-        ('S', 'Self'),
-        ('B', 'Sibling'),
-        ('C', 'Child'),
-        ('H', 'Maternal Half Sibling'),
-        ('J', 'Paternal Half Sibling'),
+        (SELF_RELATIONSHIP, 'Self'),
+        (SIBLING_RELATIONSHIP, 'Sibling'),
+        (CHILD_RELATIONSHIP, 'Child'),
+        (MATERNAL_SIBLING_RELATIONSHIP, 'Maternal Half Sibling'),
+        (PATERNAL_SIBLING_RELATIONSHIP, 'Paternal Half Sibling'),
         ('Z', 'Maternal 1st Cousin'),
         ('K', 'Paternal 1st Cousin'),
         ('O', 'Other'),

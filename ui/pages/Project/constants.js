@@ -125,11 +125,13 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     header: 'Relationship to Proband',
     isEditable: true,
     isPrivate: true,
+    isRequiredInternal: true,
   },
   {
     field: 'age',
     header: 'Age',
     isEditable: true,
+    isRequiredInternal: true,
     subFields: [
       { field: 'birthYear', header: 'Birth Year', format: year => year || '' },
       { field: 'deathYear', header: 'Death Year', format: year => year || '' },
@@ -153,6 +155,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     field: 'consanguinity',
     header: 'Consanguinity',
     isEditable: true,
+    isRequiredInternal: true,
     ...NULLABLE_BOOL_FIELD,
   },
   {
@@ -191,6 +194,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
   {
     header: 'Imputed Population',
     field: 'population',
+    isRequiredInternal: true,
   },
   {
     header: 'Sample QC Flags',
@@ -208,6 +212,7 @@ export const INDIVIDUAL_DETAIL_FIELDS = [
     field: 'features',
     header: 'Features',
     isEditable: true,
+    isRequiredInternal: true,
   },
   {
     field: 'disorders',
@@ -263,11 +268,17 @@ const familyIsInReview = (family, individualsByGuid) => getFamilyCaseReviewStatu
 const familyIsAssignedToMe = (family, user) => (
   family.assignedAnalyst ? family.assignedAnalyst.email === user.email : null)
 
-const familyHasFeatures = (family, individualsByGuid) => {
+const REQUIRED_METADATA_FIELDS = INDIVIDUAL_DETAIL_FIELDS.filter(
+  ({ isRequiredInternal }) => isRequiredInternal,
+).map(({ field, subFields }) => (subFields ? subFields[0].field : field))
+
+const familyHasRequiredMetadata = (family, individualsByGuid) => {
   const individuals = family.individualGuids.map(
     individualGuid => individualsByGuid[individualGuid],
   ).filter(individual => individual)
-  return individuals.length ? individuals.some(({ features }) => (features || []).length > 0) : family.hasFeatures
+  return individuals.length ? individuals.some(individual => REQUIRED_METADATA_FIELDS.every(
+    field => individual[field] || individual[field] === false,
+  ) && individual.features.length > 0) : family.hasRequiredMetadata
 }
 
 const ALL_FAMILIES_FILTER = { value: SHOW_ALL, name: 'All', createFilter: () => () => (true) }
@@ -339,13 +350,13 @@ export const CATEGORY_FAMILY_FILTERS = {
     },
     {
       value: SHOW_PHENOTYPES_ENTERED,
-      name: 'Phenotypes Entered',
-      createFilter: individualsByGuid => family => familyHasFeatures(family, individualsByGuid),
+      name: 'Required Metadata Entered',
+      createFilter: individualsByGuid => family => familyHasRequiredMetadata(family, individualsByGuid),
     },
     {
       value: SHOW_NO_PHENOTYPES_ENTERED,
-      name: 'No Phenotypes Entered',
-      createFilter: individualsByGuid => family => !familyHasFeatures(family, individualsByGuid),
+      name: 'Required Metadata Missing',
+      createFilter: individualsByGuid => family => !familyHasRequiredMetadata(family, individualsByGuid),
     },
   ],
   [FAMILY_FIELD_SAVED_VARIANTS]: [MME_TAG_NAME, ANALYST_HIGH_PRIORITY_TAG].map(tagName => ({
