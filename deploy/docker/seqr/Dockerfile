@@ -1,4 +1,4 @@
-FROM python:3.7-slim-bullseye as build
+FROM python:3.9-slim-bullseye as build
 
 LABEL maintainer="Broad TGG"
 
@@ -36,8 +36,8 @@ COPY ./requirements.txt .
 
 # install seqr python dependencies
 RUN pip install --no-cache-dir wheel && \
-    pip install --no-cache-dir -r requirements.txt && \
-    ln -s python3 /opt/venv/bin/python3.7
+    pip install --no-cache-dir -U setuptools && \
+    pip install --no-cache-dir -r requirements.txt
 
 # install seqr nodejs dependencies
 WORKDIR /build/ui
@@ -50,7 +50,7 @@ COPY ./ui/ .
 
 RUN npm run build
 
-FROM python:3.7-slim-bullseye as runtime
+FROM python:3.9-slim-bullseye as runtime
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -73,7 +73,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update && apt-get install -y --no-install-recommends \
-        google-cloud-sdk \
+    google-cloud-sdk \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
