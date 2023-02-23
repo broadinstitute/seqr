@@ -714,6 +714,26 @@ export const getMmeDefaultContactEmail = createSelector(
   },
 )
 
+export const getParentOptionsByIndividual = createSelector(
+  getSortedIndividualsByFamily,
+  individualsByFamily => Object.values(individualsByFamily).reduce((acc, individuals) => {
+    const options = individuals.reduce((optAcc, { sex, individualGuid, displayName }) => {
+      if (optAcc[sex]) {
+        optAcc[sex].push({ value: individualGuid, text: displayName })
+      }
+      return optAcc
+    }, { F: [], M: [] })
+    const individualOptions = individuals.reduce((indAcc, { individualGuid }) => ({
+      ...indAcc,
+      [individualGuid]: {
+        M: options.M.filter(({ value }) => value !== individualGuid),
+        F: options.F.filter(({ value }) => value !== individualGuid),
+      },
+    }), {})
+    return { ...acc, ...individualOptions }
+  }, {}),
+)
+
 // user options selectors
 export const getUserOptions = createSelector(
   getUserOptionsByUsername,
