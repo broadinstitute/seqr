@@ -320,9 +320,8 @@ class BaseHailTableQuery(object):
 
         logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
-        # TODO - use query_table
-        annotation_ht = hl.read_table(f'/hail_datasets/{data_source}.ht', **load_table_kwargs)
-        ht = families_ht.annotate(**annotation_ht[families_ht.key])
+        annotation_ht_query_result = hl.query_table(f'/hail_datasets/{data_source}.ht', families_ht.key).first()
+        ht = families_ht.annotate(**annotation_ht_query_result)
 
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
