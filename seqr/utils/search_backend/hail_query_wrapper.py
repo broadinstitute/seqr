@@ -245,6 +245,7 @@ class BaseHailTableQuery(object):
                               consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
         logger.info(load_table_kwargs)
+        load_table_kwargs = {}
 
         quality_filter = quality_filter or {}
         vcf_quality_filter = quality_filter.get('vcf_filter')
