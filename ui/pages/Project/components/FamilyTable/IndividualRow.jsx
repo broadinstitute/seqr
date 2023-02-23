@@ -7,7 +7,7 @@ import { Field } from 'react-final-form'
 import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup } from 'shared/components/form/Inputs'
+import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import Modal from 'shared/components/modal/Modal'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
@@ -515,11 +515,16 @@ const NON_CASE_REVIEW_FIELDS = [
 ]
 const EMPTY_FIELDS = [{ id: 'blank', colWidth: 10, component: () => null }]
 
+const mapParentOptionsStateToProps = (state, ownProps) => {
+  const options = getParentOptionsByIndividual(state)[ownProps.meta.data.formId][ownProps.sex] || []
+  return { options, disabled: options.length < 1 }
+}
+
 const EDIT_INDIVIDUAL_FIELDS = [
   { name: INDIVIDUAL_FIELD_SEX, component: ButtonRadioGroup, groupContainer: PaddedRadioButtonGroup },
   { name: INDIVIDUAL_FIELD_AFFECTED, component: ButtonRadioGroup, groupContainer: PaddedRadioButtonGroup },
-  { name: INDIVIDUAL_FIELD_PATERNAL_ID },
-  { name: INDIVIDUAL_FIELD_MATERNAL_ID },
+  { name: INDIVIDUAL_FIELD_PATERNAL_ID, component: connect(mapParentOptionsStateToProps)(Select), sex: 'M' },
+  { name: INDIVIDUAL_FIELD_MATERNAL_ID, component: connect(mapParentOptionsStateToProps)(Select), sex: 'F' },
 ].map(({ name, ...props }) => {
   const { label, formFieldProps = {} } = INDIVIDUAL_FIELD_CONFIGS[name]
   return { name, label, ...formFieldProps, ...props }
