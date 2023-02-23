@@ -244,8 +244,6 @@ class BaseHailTableQuery(object):
     def import_filtered_table(cls, data_source, samples, intervals=None, inheritance_mode=None, quality_filter=None,
                               consequence_overrides=None, **kwargs):
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
-        logger.info(load_table_kwargs)
-        load_table_kwargs = {}
 
         quality_filter = quality_filter or {}
         vcf_quality_filter = quality_filter.get('vcf_filter')
