@@ -421,8 +421,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         samples = validate_samples(samples, sample_id_to_tissue_type, warnings)
 
     # Delete old data
-    individual_db_ids = {s.individual_id for s in samples}
-    to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
+    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
     prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
