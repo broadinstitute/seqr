@@ -250,9 +250,8 @@ class BaseHailTableQuery(object):
         quality_filter = cls._format_quality_filter(quality_filter)
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides)
 
-        # family_filter_kwargs = cls._get_family_table_filter_kwargs(
-        #     load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs)
-        family_filter_kwargs = {}
+        family_filter_kwargs = cls._get_family_table_filter_kwargs(
+            load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs)
 
         family_samples = defaultdict(list)
         for s in samples:
