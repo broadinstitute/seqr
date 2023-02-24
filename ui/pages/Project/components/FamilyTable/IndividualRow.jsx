@@ -60,7 +60,7 @@ const IndividualContainer = styled.div`
 `
 
 const PaddedRadioButtonGroup = styled(RadioButtonGroup)`
-  padding: 5px;
+  padding: 10px;
 `
 
 const FLAG_TITLE = {
