@@ -23,7 +23,7 @@ import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import {
   AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
-  INDIVIDUAL_FIELD_PATERNAL_ID, INDIVIDUAL_FIELD_MATERNAL_ID, INDIVIDUAL_FIELD_AFFECTED,
+  INDIVIDUAL_FIELD_AFFECTED,
 } from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
@@ -520,15 +520,14 @@ const mapParentOptionsStateToProps = (state, ownProps) => {
   return { options, disabled: options.length < 1 }
 }
 
-const EDIT_INDIVIDUAL_FIELDS = [
-  { name: INDIVIDUAL_FIELD_SEX, component: ButtonRadioGroup, groupContainer: PaddedRadioButtonGroup },
-  { name: INDIVIDUAL_FIELD_AFFECTED, component: ButtonRadioGroup, groupContainer: PaddedRadioButtonGroup },
-  { name: INDIVIDUAL_FIELD_PATERNAL_ID, component: connect(mapParentOptionsStateToProps)(Select), sex: 'M' },
-  { name: INDIVIDUAL_FIELD_MATERNAL_ID, component: connect(mapParentOptionsStateToProps)(Select), sex: 'F' },
-].map(({ name, ...props }) => {
+const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED].map((name) => {
   const { label, formFieldProps = {} } = INDIVIDUAL_FIELD_CONFIGS[name]
-  return { name, label, ...formFieldProps, ...props }
-})
+  return { name, label, ...formFieldProps, component: ButtonRadioGroup, groupContainer: PaddedRadioButtonGroup }
+}).concat([
+  { name: 'paternalGuid', label: 'Father', sex: 'M' }, { name: 'maternalGuid', label: 'Mother', sex: 'F' },
+].map(field => (
+  { ...field, component: connect(mapParentOptionsStateToProps)(Select), clearable: true, inline: true, width: 8 }
+)))
 
 class IndividualRow extends React.PureComponent {
 
