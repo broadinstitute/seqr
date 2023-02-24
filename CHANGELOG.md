@@ -1,7 +1,10 @@
 # _seqr_ Changes
 
 ## dev
+
+## 2/24/23
 * Updated Gregor sample manifest (REQUIRES DB MIGRATION)
+* Bumps python to 3.9
 
 ## 2/15/23
 * Support sharded VCFs in AnVIL loading
