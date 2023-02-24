@@ -832,6 +832,22 @@
         "affected": "A"
     }
 },
+    {
+    "model": "seqr.individual",
+    "pk": 19,
+    "fields": {
+        "guid": "I000019_na21987",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.980Z",
+        "family": 14,
+        "individual_id": "NA21987",
+        "mother_id": null,
+        "father_id": null,
+        "sex": "M",
+        "affected": "A"
+    }
+},
 {
     "model": "seqr.sample",
     "pk": 129,

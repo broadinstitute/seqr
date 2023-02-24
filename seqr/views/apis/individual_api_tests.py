@@ -60,7 +60,7 @@ PM_REQUIRED_INDIVIDUAL_UPDATE_DATA = {
     'individualGuid': PM_REQUIRED_INDIVIDUAL_GUID, 'individualId': 'NA20889', 'familyId': '12', 'displayName': 'NA20889_a'
 }
 
-EXTERNAL_WORKSPACE_INDIVIDUAL_GUID = 'I000018_na21234'
+EXTERNAL_WORKSPACE_INDIVIDUAL_GUID = 'I000019_na21987'
 EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA = {
     'individualGuid': EXTERNAL_WORKSPACE_INDIVIDUAL_GUID,
 }
@@ -300,8 +300,7 @@ class IndividualAPITest(object):
             ext_anvil_delete_individuals_url, content_type='application/json', data=json.dumps({
                 'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
             }))
-        self.assertEqual(response.status_code, 403)
-
+        self.assertEqual(response.status_code, 200 if self.HAS_EXTERNAL_PROJECT_ACCESS else 403)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_individuals_table_handler(self):
@@ -592,7 +591,9 @@ class IndividualAPITest(object):
 
 class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
+    HAS_EXTERNAL_PROJECT_ACCESS = False
 
 
 class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    HAS_EXTERNAL_PROJECT_ACCESS = True

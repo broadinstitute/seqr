@@ -360,7 +360,29 @@ ANVIL_WORKSPACES = [{
         'authorizationDomain': [{'membersGroupName': 'AUTH_restricted_group'}],
         'bucketName': 'test_bucket'
     },
-}
+}, {
+    'workspace_namespace': 'ext-data',
+    'workspace_name': 'anvil-non-analyst-project 1000 Genomes Demo',
+    'public': True,
+    'acl': {
+        'test_user_manager@test.com': {
+            "accessLevel": "WRITER",
+            "pending": False,
+            "canShare": True,
+            "canCompute": True
+        },
+        'test_user_collaborator@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": True
+        },
+    },
+    'workspace': {
+        'authorizationDomain': [],
+        'bucketName': 'test_bucket'
+    },
+},
 ]
 
 
