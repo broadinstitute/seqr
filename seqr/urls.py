@@ -307,7 +307,7 @@ api_endpoints = {
     'report/anvil/(?P<project_guid>[^/]+)': anvil_export,
     'report/sample_metadata/(?P<project_guid>[^/]+)': sample_metadata_export,
     'report/discovery_sheet/(?P<project_guid>[^/]+)': discovery_sheet,
-    'report/gregor/(?P<consent_code>[^/]+)': gregor_export,
+    'report/gregor': gregor_export,
     'report/get_category_projects/(?P<category>[^/]+)': get_category_projects,
     'report/seqr_stats': seqr_stats,
 

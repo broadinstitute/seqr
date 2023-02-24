@@ -99,9 +99,9 @@ class PedigreeInfoUtilsTest(object):
             parse_pedigree_table(no_error_data, FILENAME, self.collaborator_user, fail_on_warnings=True)
         self.assertListEqual(ec.exception.errors, no_error_warnings)
 
-    def _assert_errors_warnings_exception(self, ec, error):
+    def _assert_errors_warnings_exception(self, ec, error, warning=None):
         self.assertListEqual(ec.exception.errors, [error])
-        self.assertListEqual(ec.exception.warnings, [])
+        self.assertListEqual(ec.exception.warnings, [warning] if warning else [])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
@@ -109,15 +109,15 @@ class PedigreeInfoUtilsTest(object):
         mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
 
         header_1 = [
-            'Do not modify - Broad use', '', '', 'Please fill in columns D - O', '', '', '', '', '', '', '', '', '',
-            '', '', '', '', '', '', '']
+            'Do not modify - Broad use', '', '', 'Please fill in columns D - T', '', '', '', '', '', '', '', '', '',
+            '', '', '', '', '', '', '', '']
         header_2 = [
             'Kit ID', 'Well', 'Sample ID', 'Family ID', 'Alias', 'Alias', 'Paternal Sample ID', 'Maternal Sample ID',
             'Gender', 'Affected Status', 'Primary Biosample', 'Analyte Type', 'Tissue Affected Status', 'Recontactable',
-            'Volume', 'Concentration', 'Notes', 'Coded Phenotype', 'Consent Code', 'Data Use Restrictions']
+            'Volume', 'Concentration', 'Notes', 'MONDO Label', 'MONDO ID', 'Consent Code', 'Data Use Restrictions']
         header_3 = [
             '', 'Position', '', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', '', '', '', '', '',
-            '(i.e yes, no)', '(i.e yes, no, unknown)', 'ul', 'ng/ul', '', '', '', 'indicate study/protocol number']
+            '(i.e yes, no)', '(i.e yes, no, unknown)', 'ul', 'ng/ul', '', '', '(i.e. "MONDO:0031632")', '', 'indicate study/protocol number']
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([header_1], FILENAME, user=self.analyst_user)
@@ -148,7 +148,8 @@ class PedigreeInfoUtilsTest(object):
         self._assert_errors_warnings_exception(
             ec, f'Error while parsing file: {FILENAME}. Expected vs. actual header columns: | '
                 f'Sample ID| Family ID| Alias|-Alias|-Paternal Sample ID| Maternal Sample ID| Gender| Affected Status|'
-                f'-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes')
+                f'-Primary Biosample|-Analyte Type|-Tissue Affected Status|-Recontactable| Volume| Concentration| Notes|'
+                f'-MONDO Label|-MONDO ID|+Coded Phenotype| Consent Code| Data Use Restrictions')
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table([
@@ -160,37 +161,53 @@ class PedigreeInfoUtilsTest(object):
         original_data = [
             header_1, header_2, header_3,
             ['SK-3QVD', 'A02', 'SM-IRW6C', 'PED073', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', '', '', 'male',
-             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', 'No', 'Unknown', '20', '94.8', 'probably dad', '',
-             'GMB', '1234'],
+             'unaffected', 'UBERON:0000479 (tissue)', 'blood plasma', '', 'Unknown', '20', '94.8', 'probably dad', '',
+             '', 'GMB', '1234'],
             ['SK-3QVD', 'A03', 'SM-IRW69', 'PED073', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1',
              'SCO_PED073B_GA0339_1', 'SCO_PED073A_GA0338_1', 'female', 'affected', 'UBERON:0002371 (bone marrow)',
-             'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'HMB', '',
+             'DNA', 'Yes', 'No', '20', '98', '', 'Perinatal death', 'MONDO:0100086', 'HMB', '',
+             ],
+            ['SK-3QVD', 'A04', 'SM-IRW61', 'PED073', 'SCO_PED073C_GA0341', 'SCO_PED073C_GA0341_1',
+             'SCO_PED073B_GA0339_1', '', 'male', 'affected', 'UBERON:0002371 (bone marrow)',
+             'RNA', 'No', 'No', '17', '83', 'half sib', 'Perinatal death', 'MONDO:0100086', '', '',
              ]]
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
-        self._assert_errors_warnings_exception(
-            ec, f'Error while converting {FILENAME} rows to json: Multiple consent codes specified in manifest: GMB, HMB')
+        self.assertListEqual(ec.exception.errors, [
+            'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status',
+            'Multiple consent codes specified in manifest: GMB, HMB',
+        ])
+        expected_warning = 'SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. ' \
+                           'Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID'
+        self.assertListEqual(ec.exception.warnings, [expected_warning])
 
+        original_data[3][12] = 'No'
+        original_data[3][17] = 'microcephaly'
+        original_data[3][18] = 'MONDO:0001149'
         original_data[4][-2] = 'GMB'
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self._assert_errors_warnings_exception(
-            ec, f'Error while converting {FILENAME} rows to json: Consent code in manifest "GMB" does not match project consent code "HMB"')
+            ec, 'Consent code in manifest "GMB" does not match project consent code "HMB"', warning=expected_warning)
 
         original_data[3][-2] = ''
         original_data[4][-2] = 'HMB'
         records, warnings = parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
         self.assertListEqual(records, [
             {'affected': 'N', 'maternalId': '', 'notes': 'probably dad', 'individualId': 'SCO_PED073B_GA0339_1',
-             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': None,
-             'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,},
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': '', 'codedPhenotype': 'microcephaly',
+              'mondoId': 'MONDO:0001149', 'primaryBiosample': 'T', 'analyteType': 'B', 'tissueAffectedStatus': False,
+              'probandRelationship': 'F',},
             {'affected': 'A', 'maternalId': 'SCO_PED073A_GA0338_1', 'notes': None, 'individualId': 'SCO_PED073C_GA0340_1',
              'sex': 'F', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
-             'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
+             'mondoId': 'MONDO:0100086', 'primaryBiosample': 'BM', 'analyteType': 'D', 'tissueAffectedStatus': True,
+             'probandRelationship': 'S',
+             }, {'affected': 'A', 'maternalId': '', 'notes': 'half sib', 'individualId': 'SCO_PED073C_GA0341_1',
+             'sex': 'M', 'familyId': 'PED073', 'paternalId': 'SCO_PED073B_GA0339_1', 'codedPhenotype': 'Perinatal death',
+             'mondoId': 'MONDO:0100086', 'primaryBiosample': 'BM', 'analyteType': 'R', 'tissueAffectedStatus': False,
+             'probandRelationship': 'J',
              }])
-        self.assertListEqual(warnings, [
-            "SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. "
-            "Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID"])
+        self.assertListEqual(warnings, [expected_warning])
 
         mock_email.assert_called_with(
             subject='SK-3QVD Merged Sample Pedigree File',
@@ -227,7 +244,8 @@ class PedigreeInfoUtilsTest(object):
             [['Well', 'Sample ID', 'Alias', 'Alias', 'Gender', 'Volume', 'Concentration'],
              ['Position', '', 'Collaborator Participant ID', 'Collaborator Sample ID', '', 'ul', 'ng/ul'],
              ['A02', 'SM-IRW6C', 'SCO_PED073B_GA0339', 'SCO_PED073B_GA0339_1', 'male', '20', '94.8'],
-             ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98']])
+             ['A03', 'SM-IRW69', 'SCO_PED073C_GA0340', 'SCO_PED073C_GA0340_1', 'female', '20', '98'],
+             ['A04', 'SM-IRW61', 'SCO_PED073C_GA0341', 'SCO_PED073C_GA0341_1', 'male', '17', '83']])
 
         # Test original file copy is correct
         original_wb = load_workbook(BytesIO(mock_email.call_args.kwargs['attachments'][1][1]))

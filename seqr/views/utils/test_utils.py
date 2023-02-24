@@ -527,7 +527,7 @@ ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGui
 FAMILY_FIELDS = {
     'projectGuid', 'familyGuid', 'analysedBy', 'pedigreeImage', 'familyId', 'displayName', 'description',
     'analysisStatus', 'pedigreeImage', 'createdDate', 'assignedAnalyst', 'codedPhenotype', 'postDiscoveryOmimNumber',
-    'pedigreeDataset', 'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy'
+    'pedigreeDataset', 'analysisStatusLastModifiedDate', 'analysisStatusLastModifiedBy', 'mondoId',
 }
 CASE_REVIEW_FAMILY_FIELDS = {
     'caseReviewNotes', 'caseReviewSummary'
