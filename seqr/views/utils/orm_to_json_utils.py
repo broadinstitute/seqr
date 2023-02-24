@@ -689,7 +689,8 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
             collaborator_json = _get_collaborator_json(
                 collaborator or email, fields, include_permissions, can_edit=permission == CAN_EDIT,
                 get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
-            collaborators[collaborator_json['username']] = collaborator_json
+            username = collaborator.username if collaborator else collaborator_json['username']
+            collaborators[username] = collaborator_json
 
     return collaborators
 

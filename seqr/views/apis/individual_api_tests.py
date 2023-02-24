@@ -11,8 +11,8 @@ from seqr.views.apis.individual_api import edit_individuals_handler, update_indi
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
     get_hpo_terms, get_individual_rna_seq_data
-from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS, INDIVIDUAL_CORE_FIELDS, \
-    CORE_INTERNAL_INDIVIDUAL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, INDIVIDUAL_FIELDS, \
+    INDIVIDUAL_CORE_FIELDS, CORE_INTERNAL_INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 PM_REQUIRED_PROJECT_GUID = 'R0003_test'
@@ -67,8 +67,7 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 }
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
-class IndividualAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data']
+class IndividualAPITest(object):
 
     def test_update_individual_handler(self):
         edit_individuals_url = reverse(update_individual_handler, args=[INDIVIDUAL_UPDATE_GUID])
@@ -213,6 +212,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
         response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
         }))
@@ -264,6 +264,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
         response = self.client.post(
             pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
                 'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
@@ -565,3 +566,10 @@ class IndividualAPITest(AuthenticationTestCase):
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
+
+class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+
+
+class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
