@@ -27,9 +27,6 @@ def update_family_from_json(family, json, user, allow_unknown_keys=False, immuta
 
 
 def update_individual_from_json(individual, json, user, allow_unknown_keys=False):
-    _parse_parent_field(json, individual, 'mother', 'maternalId')
-    _parse_parent_field(json, individual, 'father', 'paternalId')
-
     if json.get('displayName') and json['displayName'] == individual.individual_id:
         json['displayName'] = ''
 
@@ -43,12 +40,27 @@ def update_individual_from_json(individual, json, user, allow_unknown_keys=False
     )
 
 
-def _parse_parent_field(json, individual, parent_key, parent_id_key):
+def update_individual_parents(individual, json, user):
+    if 'maternalGuid' in json:
+        mother_id_field = 'maternalGuid'
+        father_id_field = 'paternalGuid'
+        lookup_field = 'guid'
+    else:
+        mother_id_field = 'maternalId'
+        father_id_field = 'paternalId'
+        lookup_field = 'individual_id'
+
+    update_json = {}
+    _parse_parent_field(update_json, individual, 'mother', json[mother_id_field], lookup_field)
+    _parse_parent_field(update_json, individual, 'father', json[father_id_field], lookup_field)
+
+    return update_model_from_json(individual, update_json, user)
+
+
+def _parse_parent_field(json, individual, parent_key, parent_id, lookup_field):
     parent = getattr(individual, parent_key, None)
-    if parent_id_key in json:
-        parent_id = json.pop(parent_id_key)
-        if parent_id != (parent.individual_id if parent else None):
-            json[parent_key] = Individual.objects.get(individual_id=parent_id, family=individual.family) if parent_id else None
+    if parent_id != (getattr(parent, lookup_field) if parent else None):
+        json[parent_key] = Individual.objects.get(**{lookup_field: parent_id, 'family': individual.family}) if parent_id else None
 
 
 def update_model_from_json(model_obj, json, user, allow_unknown_keys=False, immutable_keys=None, updated_fields=None, verbose=True):

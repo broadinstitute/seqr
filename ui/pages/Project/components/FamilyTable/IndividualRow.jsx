@@ -518,7 +518,7 @@ const EMPTY_FIELDS = [{ id: 'blank', colWidth: 10, component: () => null }]
 
 const mapParentOptionsStateToProps = (state, ownProps) => {
   const options = getParentOptionsByIndividual(state)[ownProps.meta.data.formId][ownProps.sex] || []
-  return { options, disabled: options.length < 1 }
+  return options.length > 0 ? { options: [{ value: null, text: 'None' }, ...options] } : { options, disabled: true }
 }
 
 const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED].map((name) => {
@@ -527,7 +527,7 @@ const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 }).concat([
   { name: 'paternalGuid', label: 'Father', sex: 'M' }, { name: 'maternalGuid', label: 'Mother', sex: 'F' },
 ].map(field => (
-  { ...field, component: connect(mapParentOptionsStateToProps)(Select), clearable: true, inline: true, width: 8 }
+  { ...field, component: connect(mapParentOptionsStateToProps)(Select), inline: true, width: 8 }
 )))
 
 class IndividualRow extends React.PureComponent {

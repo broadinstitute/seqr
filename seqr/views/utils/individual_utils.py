@@ -6,7 +6,7 @@ from collections import defaultdict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.views.utils.json_to_orm_utils import update_individual_from_json, create_model_from_json
+from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
 from seqr.views.utils.pedigree_info_utils import JsonConstants
 
@@ -75,7 +75,7 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
 
     for update in parent_updates:
         individual = update.pop('individual')
-        is_updated = update_individual_from_json(individual, update, user=user)
+        is_updated = update_individual_parents(individual, update, user=user)
         if is_updated:
             updated_individuals.add(individual)
             if individual.family.pedigree_image:
@@ -125,7 +125,13 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         record['displayName'] = ''
 
     # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
-    if record.get('maternalId') or record.get('paternalId'):
+    if 'paternalGuid' in record or 'maternalGuid' in record:
+        parent_updates.append({
+            'individual': individual,
+            'maternalGuid': record.pop('maternalGuid', None),
+            'paternalGuid': record.pop('paternalGuid', None),
+        })
+    elif record.get('maternalId') or record.get('paternalId'):
         parent_updates.append({
             'individual': individual,
             'maternalId': record.pop('maternalId', None),

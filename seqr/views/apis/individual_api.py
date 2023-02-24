@@ -18,7 +18,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_fo
     _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions
+    get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, project_has_anvil, \
+    is_internal_anvil_project
 from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 
 
@@ -100,6 +101,11 @@ def update_individual_hpo_terms(request, individual_guid):
     })
 
 
+def _anvil_project_can_edit_pedigree(project, user):
+    return project_has_anvil(project) and has_project_permissions(project, user, can_edit=True) and not \
+        is_internal_anvil_project(project)
+
+
 @login_and_policies_required
 def edit_individuals_handler(request, project_guid):
     """Modify one or more Individual records.
@@ -129,7 +135,8 @@ def edit_individuals_handler(request, project_guid):
             }
     """
 
-    project = get_project_and_check_pm_permissions(project_guid, request.user)
+    project = get_project_and_check_pm_permissions(project_guid, request.user,
+                                                   override_permission_func=_anvil_project_can_edit_pedigree)
 
     request_json = json.loads(request.body)
 
@@ -139,11 +146,13 @@ def edit_individuals_handler(request, project_guid):
             {}, status=400, reason="'individuals' not specified")
 
     update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
-    update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
+    update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys()).prefetch_related('family')}
     for modified_ind in modified_individuals_list:
         model = update_individual_models[modified_ind['individualGuid']]
         if modified_ind[JsonConstants.INDIVIDUAL_ID_COLUMN] != model.individual_id:
             modified_ind[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = model.individual_id
+        if not (modified_ind.get('familyId') or modified_ind.get('family')):
+            modified_ind['familyId'] = model.family.family_id
 
     modified_family_ids = {ind.get('familyId') or ind['family']['familyId'] for ind in modified_individuals_list}
     modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
@@ -190,7 +199,8 @@ def delete_individuals_handler(request, project_guid):
     """
 
     # validate request
-    project = get_project_and_check_pm_permissions(project_guid, request.user)
+    project = get_project_and_check_pm_permissions(project_guid, request.user,
+                                                   override_permission_func=_anvil_project_can_edit_pedigree)
 
     request_json = json.loads(request.body)
     individuals_list = request_json.get('individuals')
