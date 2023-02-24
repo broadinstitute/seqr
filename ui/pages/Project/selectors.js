@@ -116,9 +116,6 @@ export const getProjectAnalysisGroupDataLoadedFamilyIndividualCounts = createSel
   getProjectAnalysisGroupFamiliesByGuid,
   getSamplesByFamily,
   (familiesByGuid, samplesByFamily) => Object.values(familiesByGuid).map(((family) => {
-    if ((family.individualGuids || []).length > 4) {
-      console.log(family)
-    }
     const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).map(sample => sample.individualGuid))
     const hasSampleParentCounts = (family.parents || []).map(
       ({ maternalGuid, paternalGuid }) => [maternalGuid, paternalGuid].filter(guid => sampleIndividuals.has(guid)),

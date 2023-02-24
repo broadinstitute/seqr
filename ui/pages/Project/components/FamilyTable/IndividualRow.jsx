@@ -34,6 +34,7 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
+import { updateIndividuals } from '../../reducers'
 import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
@@ -537,6 +538,7 @@ class IndividualRow extends React.PureComponent {
     mmeSubmission: PropTypes.object,
     samplesByGuid: PropTypes.object.isRequired,
     dispatchUpdateIndividual: PropTypes.func,
+    updateIndividualPedigree: PropTypes.func,
     tableName: PropTypes.string,
   }
 
@@ -558,7 +560,7 @@ class IndividualRow extends React.PureComponent {
   }
 
   render() {
-    const { project, individual, mmeSubmission, samplesByGuid, tableName } = this.props
+    const { project, individual, mmeSubmission, samplesByGuid, tableName, updateIndividualPedigree } = this.props
     const { displayName, sex, affected, createdDate, sampleGuids } = individual
 
     let loadedSamples = sampleGuids.map(
@@ -590,7 +592,7 @@ class IndividualRow extends React.PureComponent {
           formFields={EDIT_INDIVIDUAL_FIELDS}
           modalTitle={`Edit ${displayName}`}
           showErrorPanel
-          onSubmit={console.log}
+          onSubmit={updateIndividualPedigree}
         />
       </IndividualContainer>
     )
@@ -624,6 +626,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   dispatchUpdateIndividual: updateIndividual,
+  updateIndividualPedigree: values => updateIndividuals({ individuals: [values], delete: values.delete }),
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)
