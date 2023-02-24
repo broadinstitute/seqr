@@ -529,6 +529,8 @@ class DataManagerAPITest(AuthenticationTestCase):
         mock_file_iter.stdout = SAMPLE_SV_WES_QC_DATA
         mock_subprocess.side_effect = [mock_does_file_exist, mock_file_iter]
         response = self.client.post(url, content_type='application/json', data=request_data)
+        if response.status_code == 500:
+            self.assertEqual(response.status_code, 200)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'info', 'errors', 'warnings'})
@@ -640,7 +642,7 @@ class DataManagerAPITest(AuthenticationTestCase):
             'message_data_type': 'Expression',
             'header': ['sample_id', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', 'NA19675_D3', 'ENSG00000135953', 'muscle', 1.34],
+            'loaded_data_row': ['NA19675_D2', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
             'new_data': [
                 ['NA19675_D2', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
                 ['NA19675_D2', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],

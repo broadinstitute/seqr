@@ -421,7 +421,8 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         samples = validate_samples(samples, sample_id_to_tissue_type, warnings)
 
     # Delete old data
-    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
+    individual_db_ids = {s.individual_id for s in samples}
+    to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
     prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
@@ -431,10 +432,11 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
 
+    filters = {'filter': ~Q(family__individual__id__in=prev_loaded_individual_ids)} if prev_loaded_individual_ids else {}
     sample_projects = Project.objects.filter(family__individual__sample__in=samples_to_load.keys()).values(
         'guid', 'name', new_sample_ids=ArrayAgg(
             'family__individual__sample__sample_id', distinct=True, ordering='family__individual__sample__sample_id',
-            filter=~Q(family__individual__id__in=prev_loaded_individual_ids)
+            **filters,
         ))
     project_names = ', '.join(sorted([project['name'] for project in sample_projects]))
     message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
