@@ -156,8 +156,9 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS)
 
         self.assertEqual(len(response_json['familiesByGuid']), 11)
-        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {'projectGuid', 'familyGuid', 'displayName'})
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {'projectGuid', 'familyGuid', 'displayName', 'analysisStatus'})
         self.assertEqual(response_json['familiesByGuid']['F000001_1']['displayName'], '1')
+        self.assertEqual(response_json['familiesByGuid']['F000001_1']['analysisStatus'], 'Q')
 
 
     def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):

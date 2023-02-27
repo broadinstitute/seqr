@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
 from django.db.utils import IntegrityError
-from django.db.models import Q
+from django.db.models import Q, F, Value
 from math import ceil
 
 from reference_data.models import GENOME_VERSION_GRCh37
@@ -21,7 +21,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
-    get_json_for_saved_searches
+    get_json_for_saved_searches, FAMILY_DISPLAY_NAME_EXPR
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
@@ -368,24 +368,18 @@ def search_context_handler(request):
     project_guid = projects[0].guid if len(projects) == 1 else None
     response.update(get_projects_child_entities(projects, project_guid, request.user))
 
-    family_models = Family.objects.filter(project__in=projects)
-    response['familiesByGuid'] = {f.guid: {
-        'projectGuid' if project_guid else 'projectId': project_guid or f.project_id,
-        'familyGuid': f.guid,
-        'displayName': f.display_name or f.family_id,
-    } for f in family_models}
+    response['familiesByGuid'] = {f['familyGuid']: f for f in Family.objects.filter(project__in=projects).values(
+        projectGuid=Value(project_guid) if project_guid else F('project__guid'),
+        familyGuid=F('guid'),
+        displayName=FAMILY_DISPLAY_NAME_EXPR,
+        analysisStatus=F('analysis_status'),
+    )}
 
     project_dataset_types = Sample.objects.filter(
         individual__family__project__in=projects, is_active=True, elasticsearch_index__isnull=False,
     ).values('individual__family__project__guid').annotate(dataset_types=ArrayAgg('dataset_type', distinct=True))
     for agg in project_dataset_types:
         response['projectsByGuid'][agg['individual__family__project__guid']]['datasetTypes'] = agg['dataset_types']
-
-    if not project_guid:
-        project_id_to_guid = {project.id: project.guid for project in projects}
-        for family in response['familiesByGuid'].values():
-            project_guid = project_id_to_guid[family.pop('projectId')]
-            family['projectGuid'] = project_guid
 
     project_category_guid = context.get('projectCategoryGuid')
     if project_category_guid:
