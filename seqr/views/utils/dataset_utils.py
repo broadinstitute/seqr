@@ -1,17 +1,20 @@
 import elasticsearch_dsl
 from collections import defaultdict
-from django.db.models import prefetch_related_objects
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import prefetch_related_objects, Q
 from django.utils import timezone
 from tqdm import tqdm
 import random
 
-from seqr.models import Sample, Individual, Family, RnaSeqOutlier, RnaSeqTpm
+from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaSeqTpm
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, BASE_URL
 
 logger = SeqrLogger(__name__)
 
@@ -105,6 +108,7 @@ def match_sample_ids_to_sample_records(
         loaded_date=None,
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
+        allow_partial_families=False,
 ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
@@ -183,7 +187,10 @@ def match_sample_ids_to_sample_records(
         samples += list(Sample.bulk_create(user, new_samples))
         log_model_bulk_update(logger, new_samples, user, 'create')
 
-    included_families = _validate_samples_families(samples, sample_type, dataset_type)
+    prefetch_related_objects(samples, 'individual__family')
+    included_families = {sample.individual.family for sample in samples}
+    if not allow_partial_families:
+        _validate_samples_families(samples, included_families, sample_type, dataset_type)
 
     return samples, included_families, matched_individual_ids, remaining_sample_ids
 
@@ -212,10 +219,7 @@ def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_typ
     ))
 
 
-def _validate_samples_families(samples, sample_type, dataset_type):
-    prefetch_related_objects(samples, 'individual__family')
-    included_families = {sample.individual.family for sample in samples}
-
+def _validate_samples_families(samples, included_families, sample_type, dataset_type):
     missing_individuals = Individual.objects.filter(
         family__in=included_families,
         sample__is_active=True,
@@ -233,7 +237,6 @@ def _validate_samples_families(samples, sample_type, dataset_type):
                     ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
                      for family, missing_indivs in missing_family_individuals.items()]
                 ))))
-    return included_families
 
 
 def update_variant_samples(samples, user, elasticsearch_index, data_source=None, loaded_date=None,
@@ -266,7 +269,7 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
 def match_and_update_samples(
         projects, user, sample_ids, sample_type, elasticsearch_index=None, data_source=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
-        raise_unmatched_error_template=None,
+        raise_unmatched_error_template=None, allow_partial_families=False,
 ):
     loaded_date = timezone.now()
     samples, included_families, matched_individual_ids, remaining_sample_ids = match_sample_ids_to_sample_records(
@@ -281,6 +284,7 @@ def match_and_update_samples(
         loaded_date=loaded_date,
         raise_no_match_error=raise_no_match_error,
         raise_unmatched_error_template=raise_unmatched_error_template,
+        allow_partial_families=allow_partial_families,
     )
 
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
@@ -409,6 +413,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample_ids=samples_by_id.keys(),
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
+        allow_partial_families=True,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
     )
@@ -420,6 +425,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     # Delete old data
     individual_db_ids = {s.individual_id for s in samples}
     to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
+    prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
 
@@ -428,12 +434,17 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
     }
 
-    prefetch_related_objects(list(samples_to_load.keys()), 'individual__family__project')
-    projects = {sample.individual.family.project.name for sample in samples_to_load}
-    project_names = ', '.join(sorted(projects))
-    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(projects)} projects: {project_names}'
+    sample_projects = Project.objects.filter(family__individual__sample__in=samples_to_load.keys()).values(
+        'guid', 'name', new_sample_ids=ArrayAgg(
+            'family__individual__sample__sample_id', distinct=True, ordering='family__individual__sample__sample_id',
+            filter=~Q(family__individual__id__in=prev_loaded_individual_ids)
+        ))
+    project_names = ', '.join(sorted([project['name'] for project in sample_projects]))
+    message = f'Attempted data loading for {len(samples_to_load)} RNA-seq samples in the following {len(sample_projects)} projects: {project_names}'
     info.append(message)
     logger.info(message, user)
+
+    _notify_rna_loading(model_cls, sample_projects)
 
     if remaining_sample_ids:
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
@@ -447,6 +458,17 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         logger.warning(warning, user)
 
     return samples_to_load, info, warnings
+
+
+def _notify_rna_loading(model_cls, sample_projects):
+    data_type = 'Outlier' if model_cls == RnaSeqOutlier else 'Expression'
+    for project_agg in sample_projects:
+        new_ids = project_agg["new_sample_ids"]
+        project_link = f'<{BASE_URL}project/{project_agg["guid"]}/project_page|{project_agg["name"]}>'
+        safe_post_to_slack(
+            SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
+            f'{len(new_ids)} new RNA {data_type} samples are loaded in {project_link}\n```{", ".join(new_ids)}```'
+        )
 
 
 PHENOTYPE_PRIORITIZATION_HEADER = ['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName']

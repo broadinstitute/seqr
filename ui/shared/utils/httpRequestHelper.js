@@ -36,12 +36,13 @@ export class HttpRequestHelper {
    * @param urlParams A dictionary of key-value pairs {gene: 'ENSG00012345', chrom: '1'} to encode
    *   and append to the url as HTTP GET params (eg. "?gene=ENSG00012345&chrom=1")
    */
-  get = (urlParams = {}) => {
+  get = (urlParams = {}, fetchParams = {}) => {
     const urlQueryString = getUrlQueryString(urlParams)
 
     const p = fetch(`${this.url}?${urlQueryString}`, {
       method: 'GET',
       credentials: 'include',
+      ...fetchParams,
     })
 
     return this.handlePromise(p, urlParams)
@@ -102,13 +103,14 @@ export class HttpRequestHelper {
       return -1
     })
     .catch((exception) => {
+      let handled
       if (this.onError) {
-        this.onError(exception)
+        handled = this.onError(exception)
       } else {
         return Promise.reject(exception)
       }
 
-      return -1 // don't ever hide the error message
+      return handled || -1 // don't ever hide the error message
     })
     .then((httpPostId) => {
       if (this.onClear && httpPostId === this.httpPostId) {

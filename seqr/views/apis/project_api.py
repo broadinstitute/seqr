@@ -6,7 +6,7 @@ import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Q, Case, When, Value
 from django.db.models.functions import JSONObject
 from django.utils import timezone
 
@@ -20,7 +20,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
-    has_workspace_perm
+    has_workspace_perm, has_case_review_permissions
 from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
@@ -180,25 +180,27 @@ def project_page_data(request, project_guid):
 @login_and_policies_required
 def project_families(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
-    family_models = Family.objects.filter(project=project)
-    families = _get_json_for_families(
-        family_models, request.user, project_guid=project_guid, add_individual_guids_field=True
+    family_models = Family.objects.filter(project=project).annotate(
+        metadata_individual_count=Count('individual', filter=Q(
+            individual__features__0__isnull=False, individual__birth_year__isnull=False,
+            individual__population__isnull=False, individual__consanguinity__isnull=False,
+            individual__proband_relationship__isnull=False,
+        ))
     )
-    response = families_discovery_tags(families)
-    has_features_families = set(family_models.filter(individual__features__isnull=False).values_list('guid', flat=True))
-    annotated_families = family_models.values(
-        'guid',
-        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True),
+    family_annotations = dict(
+        caseReviewStatuses=ArrayAgg('individual__case_review_status', distinct=True, filter=~Q(individual__case_review_status='')),
         caseReviewStatusLastModified=Max('individual__case_review_status_last_modified_date'),
+        hasRequiredMetadata=Case(When(metadata_individual_count__gt=0, then=Value(True)), default=Value(False)),
         parents=ArrayAgg(
             JSONObject(paternalGuid='individual__father__guid', maternalGuid='individual__mother__guid'),
             filter=Q(individual__mother__isnull=False) | Q(individual__father__isnull=False), distinct=True,
         ),
     )
-    for family in annotated_families:
-        family_guid = family.pop('guid')
-        response['familiesByGuid'][family_guid]['hasFeatures'] = family_guid in has_features_families
-        response['familiesByGuid'][family_guid].update(family)
+    families = _get_json_for_families(
+        family_models, request.user, has_case_review_perm=has_case_review_permissions(project, request.user),
+        project_guid=project_guid, add_individual_guids_field=True, additional_values=family_annotations,
+    )
+    response = families_discovery_tags(families)
     return create_json_response(response)
 
 
@@ -245,7 +247,8 @@ def project_collaborators(request, project_guid):
 def project_individuals(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
     individuals = _get_json_for_individuals(
-        Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid, add_hpo_details=True)
+        Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid,
+        add_hpo_details=True, has_case_review_perm=has_case_review_permissions(project, request.user))
 
     return create_json_response({
         'individualsByGuid': {i['individualGuid']: i for i in individuals},

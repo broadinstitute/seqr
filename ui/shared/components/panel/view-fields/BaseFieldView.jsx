@@ -31,6 +31,7 @@ class BaseFieldView extends React.PureComponent {
     isPrivate: PropTypes.bool,
     isEditable: PropTypes.bool,
     isDeletable: PropTypes.bool,
+    isRequired: PropTypes.bool,
     onSubmit: PropTypes.func,
     modalTitle: PropTypes.string,
     addConfirm: PropTypes.string,
@@ -160,7 +161,7 @@ class BaseFieldView extends React.PureComponent {
   render() {
     const {
       isVisible, isPrivate, isEditable, isDeletable, user, field, initialValues, fieldValue: propFieldValue, style,
-      showEmptyValues, onSubmit, deleteConfirm, fieldName, compact, hideValue, fieldDisplay,
+      showEmptyValues, onSubmit, deleteConfirm, fieldName, compact, hideValue, fieldDisplay, isRequired,
     } = this.props
     const { showInLineButton } = this.state
 
@@ -171,7 +172,7 @@ class BaseFieldView extends React.PureComponent {
       return null
     }
     const fieldValue = propFieldValue || initialValues[field]
-    const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || showEmptyValues
+    const hasValue = (fieldValue && (!Object.getOwnPropertyNames(fieldValue).includes('length') || fieldValue.length > 0)) || showEmptyValues || isRequired
     if (!isEditable && !hasValue) {
       return null
     }
@@ -199,6 +200,7 @@ class BaseFieldView extends React.PureComponent {
           content="Only visible to internal users."
         />
       ),
+      isRequired && <Icon key="required" name="asterisk" size="small" />,
       fieldName && [
         <b key="name">{`${fieldName}${hasValue ? ':' : ''}`}</b>,
         <HorizontalSpacer key="spacer" width={10} />,

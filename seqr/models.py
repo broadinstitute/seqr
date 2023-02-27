@@ -311,6 +311,7 @@ class Family(ModelWithGUID):
     success_story = models.TextField(null=True, blank=True)
 
     coded_phenotype = models.TextField(null=True, blank=True)
+    mondo_id = models.CharField(null=True, blank=True, max_length=30)
     post_discovery_omim_number = models.TextField(null=True, blank=True)
     pubmed_ids = ArrayField(models.TextField(), default=list)
 
@@ -333,8 +334,8 @@ class Family(ModelWithGUID):
         unique_together = ('project', 'family_id')
 
         json_fields = [
-            'guid', 'family_id', 'display_name', 'description', 'analysis_status', 'pedigree_image', 'created_date',
-            'post_discovery_omim_number', 'assigned_analyst', 'pedigree_dataset', 'coded_phenotype',
+            'guid', 'family_id', 'description', 'analysis_status', 'created_date',
+            'post_discovery_omim_number', 'pedigree_dataset', 'coded_phenotype', 'mondo_id',
         ]
         internal_json_fields = [
             'success_story_types', 'success_story', 'pubmed_ids',
@@ -455,30 +456,35 @@ class Individual(ModelWithGUID):
         ('M', 'Mitochondrial inheritance'),
     ]
 
+    MOTHER_RELATIONSHIP = 'M'
+    FATHER_RELATIONSHIP = 'F'
+    SELF_RELATIONSHIP = 'S'
+    SIBLING_RELATIONSHIP = 'B'
+    CHILD_RELATIONSHIP = 'C'
+    MATERNAL_SIBLING_RELATIONSHIP = 'H'
+    PATERNAL_SIBLING_RELATIONSHIP = 'J'
     FEMALE_RELATIONSHIP_CHOICES = {
-        'M': 'Mother',
+        MOTHER_RELATIONSHIP: 'Mother',
         'G': 'Maternal Grandmother',
         'X': 'Paternal Grandmother',
         'A': 'Maternal Aunt',
         'E': 'Paternal Aunt',
         'N': 'Niece',
     }
-
     MALE_RELATIONSHIP_CHOICES = {
-        'F': 'Father',
+        FATHER_RELATIONSHIP: 'Father',
         'W': 'Maternal Grandfather',
         'Y': 'Paternal Grandfather',
         'L': 'Maternal Uncle',
         'D': 'Paternal Uncle',
         'P': 'Nephew',
     }
-
     RELATIONSHIP_CHOICES = list(FEMALE_RELATIONSHIP_CHOICES.items()) + list(MALE_RELATIONSHIP_CHOICES.items()) + [
-        ('S', 'Self'),
-        ('B', 'Sibling'),
-        ('C', 'Child'),
-        ('H', 'Maternal Half Sibling'),
-        ('J', 'Paternal Half Sibling'),
+        (SELF_RELATIONSHIP, 'Self'),
+        (SIBLING_RELATIONSHIP, 'Sibling'),
+        (CHILD_RELATIONSHIP, 'Child'),
+        (MATERNAL_SIBLING_RELATIONSHIP, 'Maternal Half Sibling'),
+        (PATERNAL_SIBLING_RELATIONSHIP, 'Paternal Half Sibling'),
         ('Z', 'Maternal 1st Cousin'),
         ('K', 'Paternal 1st Cousin'),
         ('O', 'Other'),
@@ -592,7 +598,7 @@ class Individual(ModelWithGUID):
         unique_together = ('family', 'individual_id')
 
         json_fields = [
-            'guid', 'individual_id', 'father', 'mother', 'sex', 'affected', 'display_name', 'notes',
+            'guid', 'individual_id', 'sex', 'affected', 'display_name', 'notes',
             'created_date', 'last_modified_date', 'filter_flags', 'pop_platform_filters', 'population', 'sv_flags',
             'birth_year', 'death_year', 'onset_age', 'maternal_ethnicity', 'paternal_ethnicity', 'consanguinity',
             'affected_relatives', 'expected_inheritance', 'disorders', 'candidate_genes', 'rejected_genes',
