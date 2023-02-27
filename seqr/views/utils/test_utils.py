@@ -371,12 +371,6 @@ ANVIL_WORKSPACES = [{
             "canShare": True,
             "canCompute": True
         },
-        'test_user_collaborator@test.com': {
-            "accessLevel": "READER",
-            "pending": False,
-            "canShare": False,
-            "canCompute": True
-        },
     },
     'workspace': {
         'authorizationDomain': [],
