@@ -97,7 +97,7 @@ def load_mapping_file_content(file_content):
 def match_sample_ids_to_sample_records(
         projects,
         user,
-        sample_ids,
+        sample_id_to_tissue_type,
         elasticsearch_index,
         sample_type,
         data_source=None,
@@ -116,7 +116,7 @@ def match_sample_ids_to_sample_records(
     Args:
         projects (object array): List of Django ORM project models
         user (object): Django ORM User model
-        sample_ids (list): a list of sample ids for which to find matching Sample records
+        sample_id_to_tissue_type (object): sample ids to tissue types mapping, the sample ids are for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
@@ -133,9 +133,11 @@ def match_sample_ids_to_sample_records(
             [2] array: ids of Individuals with exact-matching existing samples
     """
 
+    sample_ids = sample_id_to_tissue_type.keys()
     samples = _find_matching_sample_records(
         projects, sample_ids, sample_type, dataset_type, elasticsearch_index,
     )
+    samples = _check_invalid_tissues(samples, sample_id_to_tissue_type)
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
@@ -174,6 +176,7 @@ def match_sample_ids_to_sample_records(
             Sample(
                 guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE], # nosec
                 sample_id=sample_id,
+                tissue_type=sample_id_to_tissue_type[sample_id],
                 sample_type=sample_type,
                 dataset_type=dataset_type,
                 elasticsearch_index=elasticsearch_index,
@@ -265,7 +268,7 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
 
 
 def match_and_update_samples(
-        projects, user, sample_ids, sample_type, elasticsearch_index=None, data_source=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        projects, user, sample_id_to_tissue_type, sample_type, elasticsearch_index=None, data_source=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
         raise_unmatched_error_template=None, allow_partial_families=False,
 ):
@@ -273,7 +276,7 @@ def match_and_update_samples(
     samples, included_families, matched_individual_ids, remaining_sample_ids = match_sample_ids_to_sample_records(
         projects=projects,
         user=user,
-        sample_ids=sample_ids,
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
         elasticsearch_index=elasticsearch_index,
         data_source=data_source,
         sample_type=sample_type,
@@ -320,42 +323,28 @@ TISSUE_TYPE_MAP = {
 
 REVERSE_TISSUE_TYPE = {v: k for k, v in TISSUE_TYPE_MAP.items()}
 
-def _parse_outlier_row(row, **kwargs):
+def _parse_outlier_row(row):
     yield row['sampleID'], {mapped_key: row[key] for key, mapped_key in RNA_OUTLIER_COLUMNS.items()}
 
-def _parse_tpm_row(row, sample_id_to_tissue_type=None):
+def _parse_tpm_row(row):
     sample_id = row[SAMPLE_ID_COL]
     if row[TPM_COL] != '0.0' and not sample_id.startswith('GTEX'):
-        prev_tissue = sample_id_to_tissue_type.get(sample_id)
         tissue = row[TISSUE_COL]
         if not tissue:
             raise ValueError(f'Sample {sample_id} has no tissue type')
-        if prev_tissue and prev_tissue != tissue:
-            raise ValueError(f'Mismatched tissue types for sample {sample_id}: {prev_tissue}, {tissue}')
-        sample_id_to_tissue_type[sample_id] = tissue
 
-        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL]}
+        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL], TISSUE_COL: tissue}
         if INDIV_ID_COL in row:
             parsed[INDIV_ID_COL] = row[INDIV_ID_COL]
 
         yield sample_id, parsed
 
-def _check_invalid_tissues(samples, sample_id_to_tissue_type, warnings):
+def _check_invalid_tissues(samples, sample_id_to_tissue_type):
     invalid_tissues = {}
     for sample in samples:
-        tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
-        if not sample.tissue_type:
-            sample.tissue_type = tissue_type
-            sample.save()
-        elif sample.tissue_type != tissue_type:
+        tissue_type = sample_id_to_tissue_type[sample.sample_id]
+        if sample.tissue_type != tissue_type:
             invalid_tissues[sample] = tissue_type
-
-    if invalid_tissues:
-        mismatch = ', '.join([
-            f'{sample.sample_id} ({REVERSE_TISSUE_TYPE[expected_tissue]} to {REVERSE_TISSUE_TYPE[sample.tissue_type]})'
-            for sample, expected_tissue in invalid_tissues.items()])
-        message = f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {mismatch}'
-        warnings.append(message)
 
     return [sample for sample in samples if sample not in invalid_tissues]
 
@@ -366,14 +355,11 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
     )
 
 def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    sample_id_to_tissue_type = {}
     return _load_rna_seq(
         RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
-        sample_id_to_tissue_type=sample_id_to_tissue_type, validate_samples=_check_invalid_tissues,
     )
 
-def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
-                  sample_id_to_tissue_type=None, validate_samples=None):
+def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns):
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -385,9 +371,18 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     if missing_cols:
         raise ValueError(f'Invalid file: missing column(s) {", ".join(sorted(missing_cols))}')
 
+    sample_id_to_tissue_type = {}
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
-        for sample_id, row_dict in parse_row(row, sample_id_to_tissue_type=sample_id_to_tissue_type):
+        for sample_id, row_dict in parse_row(row):
+            tissue_type = TISSUE_TYPE_MAP.get(row_dict.pop(TISSUE_COL, None), None)
+            if sample_id in sample_id_to_tissue_type:
+                prev_tissue_type = sample_id_to_tissue_type[sample_id]
+                if tissue_type != prev_tissue_type:
+                    raise ValueError(f'Mismatched tissue types for sample {sample_id}:'
+                                     f' {REVERSE_TISSUE_TYPE[prev_tissue_type]}, {REVERSE_TISSUE_TYPE[tissue_type]}')
+            sample_id_to_tissue_type[sample_id] = tissue_type
+
             gene_id = row_dict['gene_id']
             existing_data = samples_by_id[sample_id].get(gene_id)
             if existing_data and existing_data != row_dict:
@@ -408,7 +403,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
         projects=get_internal_projects(),
         user=user,
-        sample_ids=samples_by_id.keys(),
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         allow_partial_families=True,
@@ -417,12 +412,11 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     )
 
     warnings = []
-    if validate_samples:
-        samples = validate_samples(samples, sample_id_to_tissue_type, warnings)
 
     # Delete old data
     individual_db_ids = {s.individual_id for s in samples}
-    to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
+    filters = {'sample__individual_id__in': individual_db_ids} if model_cls == RnaSeqOutlier else {'sample__in': samples}
+    to_delete = model_cls.objects.filter(**filters).exclude(sample__data_source=data_source)
     prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
