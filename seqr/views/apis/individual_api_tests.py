@@ -63,6 +63,13 @@ PM_REQUIRED_INDIVIDUAL_UPDATE_DATA = {
 EXTERNAL_WORKSPACE_INDIVIDUAL_GUID = 'I000019_na21987'
 EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA = {
     'individualGuid': EXTERNAL_WORKSPACE_INDIVIDUAL_GUID,
+    'individualId': 'NA21987',
+    'paternalGuid': 'I000018_na21234',
+    'maternalGuid': None,
+    'maternalId': '',
+    'paternalId': '',
+    'sex': 'U',
+    'affected': 'N',
 }
 
 FAMILY_UPDATE_GUID = "I000007_na20870"
@@ -227,6 +234,39 @@ class IndividualAPITest(object):
             'individualsByGuid': {PM_REQUIRED_INDIVIDUAL_GUID: mock.ANY},
             'familiesByGuid': {}
         })
+
+        # Test External AnVIL projects
+        ext_anvil_edit_individuals_url = reverse(edit_individuals_handler, args=[EXTERNAL_WORKSPACE_PROJECT_GUID])
+        self.login_collaborator()
+        response = self.client.post(
+            ext_anvil_edit_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
+            }))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_manager()
+        response = self.client.post(
+            ext_anvil_edit_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
+            }))
+
+        if not self.HAS_EXTERNAL_PROJECT_ACCESS:
+            self.assertEqual(response.status_code, 403)
+            return
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {
+            'individualsByGuid': {EXTERNAL_WORKSPACE_INDIVIDUAL_GUID: mock.ANY},
+            'familiesByGuid': {}
+        })
+        updated_individual = response_json['individualsByGuid'][EXTERNAL_WORKSPACE_INDIVIDUAL_GUID]
+        self.assertEqual(updated_individual['sex'], 'U')
+        self.assertEqual(updated_individual['affected'], 'N')
+        self.assertEqual(updated_individual['maternalGuid'], None)
+        self.assertEqual(updated_individual['maternalId'], None)
+        self.assertEqual(updated_individual['paternalGuid'], 'I000018_na21234')
+        self.assertEqual(updated_individual['paternalId'], 'NA21234')
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
