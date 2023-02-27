@@ -97,7 +97,7 @@ def load_mapping_file_content(file_content):
 def match_sample_ids_to_sample_records(
         projects,
         user,
-        sample_id_to_tissue_type,
+        sample_ids,
         elasticsearch_index,
         sample_type,
         data_source=None,
@@ -107,6 +107,7 @@ def match_sample_ids_to_sample_records(
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
         allow_partial_families=False,
+        sample_id_to_tissue_type=None,
 ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
@@ -116,7 +117,7 @@ def match_sample_ids_to_sample_records(
     Args:
         projects (object array): List of Django ORM project models
         user (object): Django ORM User model
-        sample_id_to_tissue_type (object): sample ids to tissue types mapping, the sample ids are for which to find matching Sample records
+        sample_ids (list): a list of sample ids for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
@@ -125,6 +126,7 @@ def match_sample_ids_to_sample_records(
         loaded_date (object): datetime object
         raise_no_match_error (bool): whether to raise an exception if no sample matches are found
         raise_unmatched_error_template (string): optional template to use to raise an exception if samples are unmatched, will not raise if not provided
+        sample_id_to_tissue_type (object): a mapping from sample ids to tissue types
 
     Returns:
         tuple:
@@ -133,11 +135,11 @@ def match_sample_ids_to_sample_records(
             [2] array: ids of Individuals with exact-matching existing samples
     """
 
-    sample_ids = sample_id_to_tissue_type.keys()
     samples = _find_matching_sample_records(
         projects, sample_ids, sample_type, dataset_type, elasticsearch_index,
     )
-    samples = _check_invalid_tissues(samples, sample_id_to_tissue_type)
+    if sample_id_to_tissue_type:
+        samples = _check_invalid_tissues(samples, sample_id_to_tissue_type)
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
     remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
@@ -176,7 +178,7 @@ def match_sample_ids_to_sample_records(
             Sample(
                 guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE], # nosec
                 sample_id=sample_id,
-                tissue_type=sample_id_to_tissue_type[sample_id],
+                tissue_type=sample_id_to_tissue_type[sample_id] if sample_id_to_tissue_type else None,
                 sample_type=sample_type,
                 dataset_type=dataset_type,
                 elasticsearch_index=elasticsearch_index,
@@ -268,15 +270,15 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
 
 
 def match_and_update_samples(
-        projects, user, sample_id_to_tissue_type, sample_type, elasticsearch_index=None, data_source=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
-        raise_unmatched_error_template=None, allow_partial_families=False,
+        projects, user, sample_ids, sample_type, elasticsearch_index=None, data_source=None,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
+        raise_unmatched_error_template=None, allow_partial_families=False, sample_id_to_tissue_type=None,
 ):
     loaded_date = timezone.now()
     samples, included_families, matched_individual_ids, remaining_sample_ids = match_sample_ids_to_sample_records(
         projects=projects,
         user=user,
-        sample_id_to_tissue_type=sample_id_to_tissue_type,
+        sample_ids=sample_ids,
         elasticsearch_index=elasticsearch_index,
         data_source=data_source,
         sample_type=sample_type,
@@ -286,6 +288,7 @@ def match_and_update_samples(
         raise_no_match_error=raise_no_match_error,
         raise_unmatched_error_template=raise_unmatched_error_template,
         allow_partial_families=allow_partial_families,
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
     )
 
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
@@ -403,6 +406,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
         projects=get_internal_projects(),
         user=user,
+        sample_ids=sample_id_to_tissue_type.keys(),
         sample_id_to_tissue_type=sample_id_to_tissue_type,
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
