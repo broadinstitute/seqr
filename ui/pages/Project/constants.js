@@ -38,7 +38,6 @@ import {
   FAMILY_ANALYSED_BY_DATA_TYPES,
   MME_TAG_NAME,
   SAMPLE_TYPE_RNA,
-  DATASET_TYPE_VARIANT_CALLS,
   DATASET_TYPE_SV_CALLS,
   DATASET_TYPE_MITO_CALLS,
   DATASET_TITLE_LOOKUP,
@@ -360,9 +359,9 @@ export const CATEGORY_FAMILY_FILTERS = {
       name: 'Data Loaded - RNA',
       createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
     },
-    ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS, DATASET_TYPE_VARIANT_CALLS].map(dataType => ({
+    ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({
       value: `${SHOW_DATA_LOADED}_${dataType}`,
-      name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType] || ' SNP'}`,
+      name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType]}`,
       createFilter: hasMatchingSampleFilter(
         ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
       ),
