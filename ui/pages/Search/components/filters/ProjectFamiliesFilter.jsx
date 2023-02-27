@@ -94,7 +94,6 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
           options={familyOptions}
           disabled={allFamiliesSelected}
           label="Families"
-          color="violet"
         />
         <Multiselect
           {...props}
