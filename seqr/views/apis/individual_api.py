@@ -147,21 +147,34 @@ def edit_individuals_handler(request, project_guid):
 
     update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
     update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys()).prefetch_related('family')}
+    parent_guids = set()
     for modified_ind in modified_individuals_list:
         model = update_individual_models[modified_ind['individualGuid']]
         if modified_ind[JsonConstants.INDIVIDUAL_ID_COLUMN] != model.individual_id:
             modified_ind[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN] = model.individual_id
         if not (modified_ind.get('familyId') or modified_ind.get('family')):
             modified_ind['familyId'] = model.family.family_id
+        if modified_ind.get('paternalGuid'):
+            parent_guids.add(modified_ind['paternalGuid'])
+        if modified_ind.get('maternalGuid'):
+            parent_guids.add(modified_ind['maternalGuid'])
 
-    modified_family_ids = {ind.get('familyId') or ind['family']['familyId'] for ind in modified_individuals_list}
-    modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
-    related_individuals = Individual.objects.filter(
-        family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
+    errors = []
+    if parent_guids:
+        related_individuals = Individual.objects.filter(guid__in=parent_guids)
+        parents_by_guid = {i.guid: i for i in related_individuals}
+        for modified_ind in modified_individuals_list:
+            _set_parent_relationships(modified_ind, parents_by_guid, 'paternalGuid', 'father', 'paternalId', errors)
+            _set_parent_relationships(modified_ind, parents_by_guid, 'maternalGuid', 'mother', 'maternalId', errors)
+    else:
+        modified_family_ids = {ind.get('familyId') or ind['family']['familyId'] for ind in modified_individuals_list}
+        modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
+        related_individuals = Individual.objects.filter(family__family_id__in=modified_family_ids, family__project=project)
+    related_individuals = related_individuals.exclude(guid__in=update_individuals.keys())
     related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
     individuals_list = modified_individuals_list + list(related_individuals_json)
 
-    validate_fam_file_records(individuals_list, fail_on_warnings=True)
+    validate_fam_file_records(individuals_list, fail_on_warnings=True, errors=errors)
 
     return _update_and_parse_individuals_and_families(
         project, modified_individuals_list, user=request.user
@@ -338,6 +351,18 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
 def _update_and_parse_individuals_and_families(project, individual_records, user):
     pedigree_json = add_or_update_individuals_and_families(project, individual_records, user)
     return create_json_response(pedigree_json)
+
+
+def _set_parent_relationships(record, parents_by_guid, guid_key, parent_key, parent_id_key, errors):
+    parent_guid = record.get(guid_key)
+    new_parent = parents_by_guid.get(parent_guid)
+    if parent_guid and not new_parent:
+        errors.append(f'Invalid parental guid {parent_guid}')
+        return
+    record.update({
+        parent_key: new_parent,
+        parent_id_key: new_parent.individual_id if new_parent else None,
+    })
 
 
 FAMILY_ID_COL = 'family_id'

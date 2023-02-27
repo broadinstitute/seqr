@@ -65,9 +65,9 @@ EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA = {
     'individualGuid': EXTERNAL_WORKSPACE_INDIVIDUAL_GUID,
     'individualId': 'NA21987',
     'paternalGuid': 'I000018_na21234',
-    'maternalGuid': None,
+    'maternalGuid': 'I000020_na65432',
     'maternalId': '',
-    'paternalId': '',
+    'paternalId': 'foobar',
     'sex': 'U',
     'affected': 'N',
 }
@@ -254,6 +254,18 @@ class IndividualAPITest(object):
             self.assertEqual(response.status_code, 403)
             return
 
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Invalid parental guid I000020_na65432',
+            'NA21234 is recorded as Female and also as the father of NA21987',
+        ])
+
+        update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
+        update_json['maternalGuid'] = update_json.pop('paternalGuid')
+        response = self.client.post(ext_anvil_edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [update_json]
+        }))
+
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertDictEqual(response_json, {
@@ -263,10 +275,10 @@ class IndividualAPITest(object):
         updated_individual = response_json['individualsByGuid'][EXTERNAL_WORKSPACE_INDIVIDUAL_GUID]
         self.assertEqual(updated_individual['sex'], 'U')
         self.assertEqual(updated_individual['affected'], 'N')
-        self.assertEqual(updated_individual['maternalGuid'], None)
-        self.assertEqual(updated_individual['maternalId'], None)
-        self.assertEqual(updated_individual['paternalGuid'], 'I000018_na21234')
-        self.assertEqual(updated_individual['paternalId'], 'NA21234')
+        self.assertEqual(updated_individual['maternalGuid'], 'I000018_na21234')
+        self.assertEqual(updated_individual['maternalId'], 'NA21234')
+        self.assertIsNone(updated_individual['paternalGuid'])
+        self.assertIsNone(updated_individual['paternalGuid'])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):

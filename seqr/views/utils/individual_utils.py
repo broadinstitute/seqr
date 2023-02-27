@@ -125,11 +125,11 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         record['displayName'] = ''
 
     # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
-    if 'paternalGuid' in record or 'maternalGuid' in record:
+    if 'father' in record or 'mother' in record:
         parent_updates.append({
             'individual': individual,
-            'maternalGuid': record.pop('maternalGuid', None),
-            'paternalGuid': record.pop('paternalGuid', None),
+            'mother': record.pop('mother', None),
+            'father': record.pop('father', None),
         })
     elif record.get('maternalId') or record.get('paternalId'):
         parent_updates.append({
