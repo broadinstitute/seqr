@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Form } from 'semantic-ui-react'
+import { Form, Button } from 'semantic-ui-react'
 
 import {
   getProjectsByGuid,
@@ -11,11 +11,19 @@ import {
   getAnalysisGroupsByGuid,
   getProjectDatasetTypes,
 } from 'redux/selectors'
-import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { Multiselect, ButtonRadioGroup } from 'shared/components/form/Inputs'
 import { ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
+
+const ALL = 'ALL'
+const MULTI_FAMILY_OPTIONS = [
+  { text: 'All Families', value: ALL },
+  { text: 'Select', value: null },
+]
+
+const RadioGroupContainer = props => <Form.Field control={Button.Group} size="small" width={6} {...props} />
 
 class ProjectFamiliesFilterInput extends React.PureComponent {
 
@@ -29,7 +37,7 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
 
   allFamiliesSelected = () => {
     const { familyOptions, value } = this.props
-    return !value.familyGuids || value.familyGuids.length === familyOptions.length
+    return !value.familyGuids || value.familyGuids.length === familyOptions.length ? ALL : null
   }
 
   selectedAnalysisGroups = () => {
@@ -80,12 +88,12 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
 
     return (
       <Form.Group inline widths="equal">
-        <BooleanCheckbox
+        <ButtonRadioGroup
           {...props}
           value={allFamiliesSelected}
           onChange={this.selectAllFamilies}
-          width={5}
-          label="Include All Families"
+          formGroupAs={RadioGroupContainer}
+          options={MULTI_FAMILY_OPTIONS}
         />
         <Multiselect
           {...props}
