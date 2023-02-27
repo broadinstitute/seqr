@@ -37,6 +37,11 @@ import {
   SNP_DATA_TYPE,
   FAMILY_ANALYSED_BY_DATA_TYPES,
   MME_TAG_NAME,
+  SAMPLE_TYPE_RNA,
+  DATASET_TYPE_VARIANT_CALLS,
+  DATASET_TYPE_SV_CALLS,
+  DATASET_TYPE_MITO_CALLS,
+  DATASET_TITLE_LOOKUP,
 } from 'shared/utils/constants'
 
 export const CASE_REVIEW_TABLE_NAME = 'Case Review'
@@ -299,6 +304,9 @@ const ASSIGNED_TO_ME_FILTER = {
 }
 const ANALYST_HIGH_PRIORITY_TAG = 'Analyst high priority'
 
+const hasMatchingSampleFilter = isMatchingSample => (individualsByGuid, user, samplesByFamily) => family => (
+  (samplesByFamily[family.familyGuid] || []).some(sample => sample.isActive && isMatchingSample(sample)))
+
 export const CATEGORY_FAMILY_FILTERS = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: [
     ...SELECTABLE_FAMILY_ANALYSIS_STATUS_OPTIONS.map(option => ({
@@ -345,9 +353,20 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: SHOW_DATA_LOADED,
       name: 'Data Loaded',
-      createFilter: (individualsByGuid, user, samplesByFamily) => family => (
-        (samplesByFamily[family.familyGuid] || []).filter(sample => sample.isActive).length > 0),
+      createFilter: hasMatchingSampleFilter(() => true),
     },
+    {
+      value: `${SHOW_DATA_LOADED}_RNA`,
+      name: 'Data Loaded - RNA',
+      createFilter: hasMatchingSampleFilter(({ sampleType }) => sampleType === SAMPLE_TYPE_RNA),
+    },
+    ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS, DATASET_TYPE_VARIANT_CALLS].map(dataType => ({
+      value: `${SHOW_DATA_LOADED}_${dataType}`,
+      name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType] || ' SNP'}`,
+      createFilter: hasMatchingSampleFilter(
+        ({ sampleType, datasetType }) => sampleType !== SAMPLE_TYPE_RNA && datasetType === dataType,
+      ),
+    })),
     {
       value: SHOW_PHENOTYPES_ENTERED,
       name: 'Required Metadata Entered',
