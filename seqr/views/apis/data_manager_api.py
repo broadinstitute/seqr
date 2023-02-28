@@ -386,10 +386,10 @@ def load_rna_seq_sample_data(request, sample_guid):
     data_type = request_json['dataType']
     with gzip.open(os.path.join(get_temp_upload_directory(), file_name), 'rt') as f:
         row = next(line for line in f if line.split('\t\t')[0] == sample_guid)
-        data = json.loads(row.split('\t\t')[1])
+        data_by_gene = json.loads(row.split('\t\t')[1])
 
     model_cls = RNA_DATA_TYPE_CONFIGS[data_type]['model_class']
-    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data])
+    model_cls.bulk_create(request.user, [model_cls(sample=sample, **data) for data in data_by_gene.values()])
 
     return create_json_response({'success': True})
 

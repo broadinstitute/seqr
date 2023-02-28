@@ -1,8 +1,7 @@
 import elasticsearch_dsl
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Q, Value, TextField
-from django.db.models.functions import Concat
+from django.db.models import prefetch_related_objects, Q
 from django.utils import timezone
 from tqdm import tqdm
 import random
@@ -148,18 +147,17 @@ def match_sample_ids_to_sample_records(
         samples = _check_invalid_tissues(samples, sample_id_to_tissue_type)
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
-    remaining_sample_ids = {sample_id: tissue_type for sample_id, tissue_type in sample_id_to_tissue_type.items()
-                            if _get_sample_tissue_id(sample_id, tissue_type) in {sample.sample_id_tissue_type for sample in samples}}
+    remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
     matched_individual_ids = {sample.individual_id for sample in samples}
     if len(remaining_sample_ids) > 0:
         remaining_individuals_dict = {
             i.individual_id: i for i in
-            Individual.objects.filter(family__project__in=projects)
+            Individual.objects.filter(family__project__in=projects).exclude(id__in=matched_individual_ids)
         }
 
         # find Individual records with exactly-matching individual_ids
         sample_id_to_individual_record = {}
-        for sample_id, tissue_type in remaining_sample_ids.items():
+        for sample_id in remaining_sample_ids:
             individual_id = sample_id
             if sample_id_to_individual_id_mapping and sample_id in sample_id_to_individual_id_mapping:
                 individual_id = sample_id_to_individual_id_mapping[sample_id]
@@ -167,6 +165,9 @@ def match_sample_ids_to_sample_records(
             if individual_id not in remaining_individuals_dict:
                 continue
             sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
+            del remaining_individuals_dict[individual_id]
+
+        logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
         remaining_sample_ids -= set(sample_id_to_individual_record.keys())
         if raise_no_match_error and len(remaining_sample_ids) == len(sample_ids):
@@ -202,13 +203,13 @@ def match_sample_ids_to_sample_records(
     return samples, included_families, matched_individual_ids, remaining_sample_ids
 
 
-def _find_matching_sample_records(projects, sample_id_to_tissue_type, sample_type, dataset_type, elasticsearch_index):
+def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index):
     """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
     If elasticsearch_index is provided, will only match samples with the same index or with no index set
 
     Args:
         project (object): Django ORM project model
-        sample_id_to_tissue_type (object): the keys are sample ids for which to find matching Sample records
+        sample_ids (list): a list of sample ids for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
@@ -217,13 +218,11 @@ def _find_matching_sample_records(projects, sample_id_to_tissue_type, sample_typ
         dict: sample_id_to_sample_record containing the matching Sample records
     """
 
-    return list(Sample.objects.select_related('individual').annotate(
-        sample_id_tissue_type=Concat('sample_id', Value('/', output_field=TextField()), 'tissue_type',
-                                     output_field=TextField)).filter(
+    return list(Sample.objects.select_related('individual').filter(
         individual__family__project__in=projects,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        sample_id_tissue_type__in=[f'{sample_id}/{tissue if tissue else ""}' for sample_id, tissue in sample_id_to_tissue_type.items()],
+        sample_id__in=sample_ids,
         elasticsearch_index=elasticsearch_index,
     ))
 
@@ -487,7 +486,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
     loaded_sample_db_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     samples_to_load = {
-        sample: samples_by_id[sample.sample_id].values() for sample in samples if sample.id not in loaded_sample_db_ids
+        sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_db_ids
     }
 
     filters = {'filter': ~Q(family__individual__id__in=prev_loaded_individual_ids)} if prev_loaded_individual_ids else {}
