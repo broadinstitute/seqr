@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7]
+        python-version: [3.9]
 
     services:
       # Label used to access the service container
@@ -58,6 +58,10 @@ jobs:
         python -m pip install --upgrade pip wheel
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
+
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16
     - name: Build UI
       run: |
         pushd ui

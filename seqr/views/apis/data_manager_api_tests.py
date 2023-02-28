@@ -268,6 +268,7 @@ SAMPLE_SV_WGS_QC_DATA = [
 ]
 
 RNA_SAMPLE_GUID = 'S000150_na19675_d2'
+PLACEHOLDER_GUID = 'S0000100'
 RNA_FILE_ID = 'gs://rna_data/new_muscle_samples.tsv.gz'
 SAMPLE_GENE_OUTLIER_DATA = {
     'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.01', 'p_adjust': '0.13', 'z_score': '-3.1'},
@@ -277,8 +278,14 @@ SAMPLE_GENE_TPM_DATA = {
     'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '7.8'},
     'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.064'},
 }
-RNA_OUTLIER_SAMPLE_DATA = [f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n']
-RNA_TPM_SAMPLE_DATA = [f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n']
+RNA_OUTLIER_SAMPLE_DATA = [
+    f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_OUTLIER_DATA)}\n',
+    f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'p_value': '0.04', 'p_adjust': '0.112', 'z_score': '1.9'}})}\n",
+]
+RNA_TPM_SAMPLE_DATA = [
+    f'{RNA_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
+    f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
+]
 RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00.json.gz'
 
 PHENOTYPE_PRIORITIZATION_HEADER = [['tool', 'project', 'sampleId', 'rank', 'geneId', 'diseaseId', 'diseaseName',
@@ -608,6 +615,7 @@ class DataManagerAPITest(AuthenticationTestCase):
     RNA_DATA_TYPE_PARAMS = {
         'outlier': {
             'model_cls': RnaSeqOutlier,
+            'message_data_type': 'Outlier',
             'header': ['sampleID', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
             'loaded_data_row': ['NA19675_D2', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
@@ -616,8 +624,9 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D2', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
                 ['NA19675_D2', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20888', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
-            'num_parsed_samples': 2,
+            'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
             'get_models_json': get_json_for_rna_seq_outliers,
@@ -629,6 +638,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
+            'message_data_type': 'Expression',
             'header': ['sample_id', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
             'loaded_data_row': ['NA19675_D2', 'NA19675_D3', 'ENSG00000135953', 'muscle', 1.34],
@@ -639,8 +649,10 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20889', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
                 ['NA19675_D3', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
                 ['GTEX_001', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
+                ['NA20888', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
             ],
-            'num_parsed_samples': 3,
+            'created_sample_tissue_type': 'F',
+            'num_parsed_samples': 4,
             'initial_model_count': 2,
             'deleted_count': 1,
             'extra_warnings': [
@@ -818,7 +830,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                     }
                 )
 
-                self.assertListEqual(params['get_models_json'](models), params['expected_models_json'])
+                self.assertListEqual(list(params['get_models_json'](models)), params['expected_models_json'])
 
     @classmethod
     def _join_data(cls, data):

@@ -29,7 +29,7 @@ import {
   FAMILY_FIELD_OMIM_NUMBER,
   FAMILY_FIELD_PMIDS, FAMILY_FIELD_DESCRIPTION, FAMILY_FIELD_SUCCESS_STORY, FAMILY_NOTES_FIELDS,
   FAMILY_FIELD_CODED_PHENOTYPE, FAMILY_FIELD_INTERNAL_NOTES, FAMILY_FIELD_INTERNAL_SUMMARY,
-  FAMILY_FIELD_ANALYSIS_GROUPS,
+  FAMILY_FIELD_ANALYSIS_GROUPS, FAMILY_FIELD_MONDO_ID,
 } from '../../../utils/constants'
 import { FirstSample, AnalystEmailDropdown, AnalysedBy, AnalysisGroups, analysisStatusIcon } from './FamilyFields'
 import FamilyLayout from './FamilyLayout'
@@ -103,6 +103,15 @@ const FAMILY_FIELD_RENDER_LOOKUP = {
     fieldDisplay: (loadedSample, compact, familyGuid) => <FirstSample familyGuid={familyGuid} compact={compact} />,
   },
   [FAMILY_FIELD_CODED_PHENOTYPE]: { component: SingleFieldView, canEdit: true },
+  [FAMILY_FIELD_MONDO_ID]: {
+    component: SingleFieldView,
+    canEdit: true,
+    fieldDisplay: value => (
+      <a target="_blank" rel="noreferrer" href={`http://purl.obolibrary.org/obo/MONDO_${value.replace('MONDO:', '')}`}>
+        {value}
+      </a>
+    ),
+  },
   [FAMILY_FIELD_OMIM_NUMBER]: {
     canEdit: true,
     component: SingleFieldView,
@@ -136,6 +145,7 @@ class Family extends React.PureComponent {
     annotation: PropTypes.node,
     disableEdit: PropTypes.bool,
     disableInternalEdit: PropTypes.bool,
+    toggleDetails: PropTypes.func,
   }
 
   familyField = (field) => {
@@ -163,7 +173,7 @@ class Family extends React.PureComponent {
   render() {
     const {
       project, family, fields, rightContent, compact, useFullWidth, disablePedigreeZoom, disableEdit,
-      showFamilyPageLink, annotation, hidePedigree,
+      showFamilyPageLink, annotation, hidePedigree, toggleDetails,
     } = this.props
 
     if (!family) {
@@ -189,7 +199,7 @@ class Family extends React.PureComponent {
               {`(${family.individualGuids.length})`}
             </span>
           ) : (
-            <div key="header">
+            <span key="header">
               {familyHeader}
               <PedigreeImagePanel
                 key="pedigree"
@@ -197,7 +207,7 @@ class Family extends React.PureComponent {
                 disablePedigreeZoom={disablePedigreeZoom}
                 isEditable={!disableEdit && project.canEdit}
               />
-            </div>
+            </span>
           )}
         </span>
       )
@@ -212,6 +222,7 @@ class Family extends React.PureComponent {
         fieldDisplay={this.familyField}
         leftContent={leftContent}
         rightContent={rightContent}
+        toggleDetails={toggleDetails}
       />
     )
   }
