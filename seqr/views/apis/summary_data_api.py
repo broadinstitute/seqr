@@ -127,14 +127,14 @@ def bulk_update_family_analysed_by(request):
     }
 
     warnings = []
-    if len(family_db_id_lookup) < len(families_data):
+    if len(family_db_id_lookup) < len(requested_families):
         family_models_set = set(family_db_id_lookup.keys())
         missing_families = ', '.join([f'{fam[0]} ({fam[1]})' for fam in sorted(requested_families - family_models_set)])
         warnings.append(f'No match found for the following families: {missing_families}')
 
     analysed_by_models = [
         FamilyAnalysedBy(family_id=family_db_id_lookup[family_key], data_type=data_type, last_modified_date=datetime.now())
-        for family_key in requested_families
+        for family_key in requested_families if family_key in family_db_id_lookup
     ]
     for ab in analysed_by_models:
         ab.guid = f'FAB{randint(10**5, 10**6)}_{ab}'[:FamilyAnalysedBy.MAX_GUID_SIZE] # nosec
