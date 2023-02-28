@@ -128,13 +128,13 @@ const getLitSearch = (genes, variations) => {
   return search
 }
 
+const has37Coords = ({ genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
+  genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
+
 const VARIANT_LINKS = [
   {
     name: 'gnomAD',
-    shouldShow: ({ svType, genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
-      !!svType && (
-        genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
-    ),
+    shouldShow: variant => !!variant.svType && has37Coords(variant),
     getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant, '-', GENOME_VERSION_37)}?dataset=gnomad_sv_r2_1`,
   },
   {
@@ -183,6 +183,13 @@ const VARIANT_LINKS = [
     name: 'Mastermind',
     shouldShow: ({ svType, hgvsc }) => !svType && hgvsc,
     getHref: ({ genes, hgvsc }) => `https://mastermind.genomenon.com/detail?gene=${genes[0].geneSymbol}&mutation=${genes[0].geneSymbol}:${hgvsc}`,
+  },
+  {
+    name: 'BCH',
+    shouldShow: has37Coords,
+    getHref: ({ chrom, pos, ref, alt, genomeVersion, liftedOverPos }) => (
+      `https://aggregator.bchresearch.org/variant.html?variant=${chrom}:${genomeVersion === GENOME_VERSION_37 ? pos : liftedOverPos}:${ref}:${alt}`
+    ),
   },
 ]
 
