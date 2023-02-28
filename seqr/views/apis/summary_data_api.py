@@ -113,23 +113,28 @@ def bulk_update_family_analysed_by(request):
         return create_json_response({'error': 'Project and Family columns are required'}, status=400)
     families_data = [dict(zip(header, row)) for row in family_upload_data[1:]]
 
-    family_qs = [Q(family_id=row['family'], project__name=row['project']) for row in families_data]
-    family_filter_q = family_qs[0]
-    for f_q in family_qs[1:]:
-        family_filter_q |= f_q
-    families = Family.objects.filter(family_filter_q)
+    projects = set()
+    families = set()
+    requested_families = set()
+    for row in families_data:
+        projects.add(row['project'])
+        families.add(row['family'])
+        requested_families.add((row['project'], row['family']))
+
+    family_db_id_lookup = {
+        (f['project__name'], f['family_id']): f['id'] for f in Family.objects.filter(
+            family_id__in=families, project__name__in=projects).values('id', 'family_id', 'project__name')
+    }
 
     warnings = []
-    if len(families) < len(families_data):
-        prefetch_related_objects(families, 'project')
-        family_models_set = {(f.family_id, f.project.name) for f in families}
-        requested_family_set = {(row['family'], row['project']) for row in families_data}
-        missing_families = ', '.join([f'{fam[0]} ({fam[1]})' for fam in sorted(requested_family_set - family_models_set)])
+    if len(family_db_id_lookup) < len(families_data):
+        family_models_set = set(family_db_id_lookup.keys())
+        missing_families = ', '.join([f'{fam[0]} ({fam[1]})' for fam in sorted(requested_families - family_models_set)])
         warnings.append(f'No match found for the following families: {missing_families}')
 
     analysed_by_models = [
-        FamilyAnalysedBy(family=family, data_type=data_type, last_modified_date=datetime.now())
-        for family in families
+        FamilyAnalysedBy(family_id=family_db_id_lookup[family_key], data_type=data_type, last_modified_date=datetime.now())
+        for family_key in requested_families
     ]
     for ab in analysed_by_models:
         ab.guid = f'FAB{randint(10**5, 10**6)}_{ab}'[:FamilyAnalysedBy.MAX_GUID_SIZE] # nosec
