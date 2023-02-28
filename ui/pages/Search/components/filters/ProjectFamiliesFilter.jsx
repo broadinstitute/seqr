@@ -13,17 +13,20 @@ import {
 } from 'redux/selectors'
 import { Multiselect, ButtonRadioGroup } from 'shared/components/form/Inputs'
 import { ProjectFilter } from 'shared/components/panel/search/ProjectsField'
+import { SOLVED_FAMILY_STATUS_OPTIONS } from 'shared/utils/constants'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
 
 const ALL = 'ALL'
+const UNSOLVED = 'UNSOLVED'
 const MULTI_FAMILY_OPTIONS = [
   { text: 'All Families', value: ALL },
+  { text: 'Unsolved', value: UNSOLVED },
   { text: 'Select', value: null },
 ]
 
-const RadioGroupContainer = props => <Form.Field control={Button.Group} size="small" width={6} {...props} />
+const RadioGroupContainer = props => <Form.Field control={Button.Group} size="tiny" width={8} {...props} />
 
 class ProjectFamiliesFilterInput extends React.PureComponent {
 
@@ -35,15 +38,28 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
     onChange: PropTypes.func,
   }
 
-  allFamiliesSelected = () => {
+  multiFamiliesSelected = () => {
     const { familyOptions, value } = this.props
-    return !value.familyGuids || value.familyGuids.length === familyOptions.length ? ALL : null
+    if (!value.familyGuids || value.familyGuids.length === familyOptions.length) {
+      return ALL
+    }
+    if (this.unsolvedFamilyGuids().sort().join(',') === value.familyGuids.sort().join(',')) {
+      return UNSOLVED
+    }
+    return null
+  }
+
+  unsolvedFamilyGuids = () => {
+    const { familyOptions } = this.props
+    return familyOptions.filter(
+      ({ analysisStatus }) => !SOLVED_FAMILY_STATUS_OPTIONS.has(analysisStatus),
+    ).map((({ value }) => value))
   }
 
   selectedAnalysisGroups = () => {
     const { projectAnalysisGroupsByGuid, value } = this.props
 
-    return this.allFamiliesSelected() ? [] :
+    return this.multiFamiliesSelected() ? [] :
       getSelectedAnalysisGroups(projectAnalysisGroupsByGuid, value.familyGuids).map(group => group.analysisGroupGuid)
   }
 
@@ -72,10 +88,11 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
     }
   }
 
-  selectAllFamilies = (checked) => {
+  selectAllFamilies = (value) => {
     const { familyOptions } = this.props
-    if (checked) {
-      this.onFamiliesChange(familyOptions.map((opt => opt.value)))
+    if (value) {
+      this.onFamiliesChange(value === UNSOLVED ?
+        this.unsolvedFamilyGuids() : familyOptions.map((opt => opt.value)))
     } else {
       this.onFamiliesChange([])
     }
@@ -83,14 +100,14 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
 
   render() {
     const { familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props } = this.props
-    const allFamiliesSelected = this.allFamiliesSelected()
-    const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
+    const multiFamiliesSelected = this.multiFamiliesSelected()
+    const selectedFamilies = multiFamiliesSelected ? [] : value.familyGuids
 
     return (
       <Form.Group inline widths="equal">
         <ButtonRadioGroup
           {...props}
-          value={allFamiliesSelected}
+          value={multiFamiliesSelected}
           onChange={this.selectAllFamilies}
           formGroupAs={RadioGroupContainer}
           options={MULTI_FAMILY_OPTIONS}
@@ -100,7 +117,7 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
           value={selectedFamilies}
           onChange={this.onFamiliesChange}
           options={familyOptions}
-          disabled={allFamiliesSelected}
+          disabled={!!multiFamiliesSelected}
           label="Families"
         />
         <Multiselect
@@ -108,7 +125,7 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
           value={this.selectedAnalysisGroups()}
           onChange={this.selectAnalysisGroup}
           options={analysisGroupOptions}
-          disabled={allFamiliesSelected}
+          disabled={!!multiFamiliesSelected}
           label="Analysis Groups"
           color="pink"
         />
