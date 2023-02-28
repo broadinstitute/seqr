@@ -97,6 +97,9 @@ def _get_or_create_results_model(search_hash, search_context, user):
         else:
             raise Exception('Invalid search: no projects/ families specified')
 
+        if search_context.get('unsolvedFamiliesOnly'):
+            families = families.exclude(analysis_status__in=Family.SOLVED_ANALYSIS_STATUSES)
+
         search_dict = search_context.get('search', {})
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()

@@ -620,12 +620,17 @@ class VariantSearchAPITest(object):
         self._assert_expected_search_context(response_json)
 
         # Test all project search context
-        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(
-            {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allGenomeProjectFamilies': '37', 'search': SEARCH}}))
+        body = {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allGenomeProjectFamilies': '37', 'search': SEARCH}}
+        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self._assert_expected_search_context(response_json)
 
+        body['unsolvedFamiliesOnly'] = True
+        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self._assert_expected_search_context(response_json)
 
     @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
     def test_query_single_variant(self, mock_get_variant):
@@ -813,7 +818,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_no_al_has_list_ws(self, 12)
+        assert_no_al_has_list_ws(self, 13)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
