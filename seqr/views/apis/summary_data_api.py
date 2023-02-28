@@ -128,8 +128,8 @@ def bulk_update_family_analysed_by(request):
 
     warnings = []
     if len(family_db_id_lookup) < len(requested_families):
-        family_models_set = set(family_db_id_lookup.keys())
-        missing_families = ', '.join([f'{fam[0]} ({fam[1]})' for fam in sorted(requested_families - family_models_set)])
+        missing = requested_families - set(family_db_id_lookup.keys())
+        missing_families = ', '.join([f'{family} ({project})' for project, family in sorted(missing)])
         warnings.append(f'No match found for the following families: {missing_families}')
 
     analysed_by_models = [
@@ -142,5 +142,5 @@ def bulk_update_family_analysed_by(request):
 
     return create_json_response({
         'warnings': warnings,
-        'info': [f'Updated "analysed by" for {len(families)} families'],
+        'info': [f'Updated "analysed by" for {len(analysed_by_models)} families'],
     })
