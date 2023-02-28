@@ -520,9 +520,8 @@ class VariantSearchAPITest(object):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
-        self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
-        self.assertDictEqual(response_json, expected_search_results)
+        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
+        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
         self._assert_expected_results_context(response_json)
         self.assertSetEqual(
             set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
@@ -634,6 +633,7 @@ class VariantSearchAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self._assert_expected_search_context(response_json)
+
 
     @mock.patch('seqr.views.apis.variant_search_api.get_single_es_variant')
     def test_query_single_variant(self, mock_get_variant):
