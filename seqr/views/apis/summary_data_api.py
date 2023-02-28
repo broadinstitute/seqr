@@ -127,9 +127,9 @@ def bulk_update_family_analysed_by(request):
     }
 
     warnings = []
-    if len(family_db_id_lookup) < len(requested_families):
-        missing = requested_families - set(family_db_id_lookup.keys())
-        missing_families = ', '.join([f'{family} ({project})' for project, family in sorted(missing)])
+    missing_from_db = requested_families - set(family_db_id_lookup.keys())
+    if missing_from_db:
+        missing_families = ', '.join([f'{family} ({project})' for project, family in sorted(missing_from_db)])
         warnings.append(f'No match found for the following families: {missing_families}')
 
     analysed_by_models = [
