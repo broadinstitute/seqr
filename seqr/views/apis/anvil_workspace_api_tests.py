@@ -231,305 +231,305 @@ DATA_LINES = [
 ]
 
 
-@mock.patch('seqr.views.utils.permissions_utils.logger')
-class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project']
-
-    @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
-    def test_anvil_workspace_page(self, mock_api_logger, mock_logger):
-        # Requesting to load data from a workspace without an existing project
-        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-        collaborator_response = self.check_manager_login(url, login_redirect_url='/login/google-oauth2', policy_redirect_url='/accept_policies')
-
-        mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
-                                               .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME),
-                                               self.collaborator_user)
-        self.assertEqual(collaborator_response.get('Content-Type'), 'text/html')
-        initial_json = self.get_initial_page_json(collaborator_response)
-        self.assertEqual(initial_json['user']['username'], 'test_user_collaborator')
-
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/create_project_from_workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
-        self.mock_get_ws_access_level.assert_called_with(
-            self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.authorizationDomain']
-        )
-        mock_api_logger.warning.assert_not_called()
-
-        # Test workspace with authorization domains
-        auth_domains_url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
-        response = self.client.post(auth_domains_url)
-        self.assertEqual(response.status_code, 403)
-        self.mock_get_ws_access_level.assert_called_with(
-            self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2,
-            meta_fields=['workspace.authorizationDomain']
-        )
-        mock_api_logger.warning.assert_called_with(
-            'Unable to load data from anvil workspace with authorization domains "my-seqr-billing/anvil-no-project-workspace2"',
-            self.manager_user)
-
-        # Test error handling when token refresh fails
-        self.mock_get_ws_access_level.side_effect = TerraRefreshTokenFailedException('Failed to refresh token')
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response.url,
-            '/login/google-oauth2?next=/workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
-        )
-        self.mock_get_ws_access_level.assert_called_with(
-            self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.authorizationDomain']
-        )
-
-        # Requesting to load data for an existing project
-        self.mock_get_ws_access_level.reset_mock()
-        url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, '/project/R0001_1kg/project_page')
-        self.mock_get_ws_access_level.assert_not_called()
-
-    @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.time')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.has_service_account_access')
-    @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
-    def test_grant_workspace_access(self, mock_add_service_account, mock_has_service_account, mock_time, mock_logger, mock_utils_logger):
-
-        # Requesting to load data from a workspace without an existing project
-        url = reverse(grant_workspace_access,
-                      args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-        self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
-        mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
-                                                     .format(TEST_WORKSPACE_NAMESPACE,
-                                                             TEST_NO_PROJECT_WORKSPACE_NAME),
-                                                     self.collaborator_user)
-        self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, TEST_WORKSPACE_NAMESPACE,
-                                                         TEST_NO_PROJECT_WORKSPACE_NAME)
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase,
-                         'Must agree to grant seqr access to the data in the associated workspace.')
-
-        # Test adding service account exception
-        mock_add_service_account.side_effect = TerraAPIException(
-            'Failed to grant seqr service account access to the workspace {}/{}'
-            .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME), 400)
-        response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'],
-                         'Failed to grant seqr service account access to the workspace {}/{}'
-                         .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
-
-        # Test adding service account never processes
-        mock_add_service_account.reset_mock(side_effect=True)
-        mock_add_service_account.return_value = True
-        mock_has_service_account.return_value = False
-        response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Failed to grant seqr service account access to the workspace')
-        mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
-                                                    TEST_NO_PROJECT_WORKSPACE_NAME)
-        self.assertEqual(mock_has_service_account.call_count, 2)
-        self.assertEqual(mock_time.sleep.call_count, 2)
-
-        # Test valid operation
-        mock_time.reset_mock()
-        mock_has_service_account.reset_mock()
-        mock_add_service_account.return_value = False
-        response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'success': True})
-        mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
-                                                    TEST_NO_PROJECT_WORKSPACE_NAME)
-        mock_has_service_account.assert_not_called()
-        mock_time.sleep.assert_not_called()
-        mock_logger.info.assert_called_with(
-            f'Added service account for {TEST_WORKSPACE_NAMESPACE}/{TEST_NO_PROJECT_WORKSPACE_NAME}, waiting for access to grant',
-            self.manager_user,
-        )
-
-        # Test logged in locally
-        remove_token(
-            self.manager_user)  # The user will look like having logged in locally after the access token is removed
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url,
-                         '/login/google-oauth2?next=/api/create_project_from_workspace/my-seqr-billing/anvil-no-project-workspace1/grant_access')
-
-    @mock.patch('seqr.utils.file_utils.logger')
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_validate_anvil_vcf(self, mock_subprocess, mock_file_logger, mock_utils_logger):
-        # Requesting to load data from a workspace without an existing project
-        url = reverse(validate_anvil_vcf,
-                      args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
-        self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
-        mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
-                                                     .format(TEST_WORKSPACE_NAMESPACE,
-                                                             TEST_NO_PROJECT_WORKSPACE_NAME),
-                                                     self.collaborator_user)
-
-        # Test missing required fields in the request body
-        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'dataPath is required')
-        self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
-                                                         TEST_NO_PROJECT_WORKSPACE_NAME,
-                                                         meta_fields=['workspace.bucketName'])
-
-        # Test bad data path
-        mock_subprocess.return_value.wait.return_value = -1
-        mock_subprocess.return_value.stdout = [b'File not found']
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], 'Data file or path /test_path-*.vcf.gz is not found.')
-        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-2, shell=True)
-        mock_file_logger.info.assert_has_calls([
-            mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
-            mock.call('File not found', self.manager_user),
-        ])
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_BAD_DATA_PATH))
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'],
-                         'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
-
-        # test no header line
-        mock_subprocess.reset_mock()
-        mock_subprocess.return_value.wait.return_value = 0
-        mock_subprocess.return_value.stdout = BASIC_META + DATA_LINES
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['No header found in the VCF file.'])
-        mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket/test_path.vcf.gz', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-            mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path.vcf.gz | gunzip -c -q - ',
-                      stdout=-1, stderr=-2, shell=True),
-        ])
-        mock_file_logger.info.assert_has_calls([
-            mock.call('==> gsutil ls gs://test_bucket/test_path.vcf.gz', self.manager_user),
-            mock.call('==> gsutil cat -r 0-65536 gs://test_bucket/test_path.vcf.gz | gunzip -c -q - ', None),
-        ])
-
-        # test header errors
-        mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [
-            'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.'
-        ])
-
-        # test no samples
-        mock_subprocess.return_value.stdout = BASIC_META + NO_SAMPLE_HEADER_LINE + DATA_LINES
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['No samples found in the provided VCF.'])
-
-        # test meta info errors
-        mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], [
-            'Missing required INFO field(s) AN',
-            'Incorrect meta Type for INFO.AF - expected "Float", got "Integer"',
-            'Missing required FORMAT field(s) GQ, GT',
-            'Incorrect meta Type for FORMAT.DP - expected "Integer", got "String"'
-        ])
-
-        # Test valid operations
-        mock_subprocess.reset_mock()
-        mock_file_logger.reset_mock()
-        mock_subprocess.return_value.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
-        response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
-        mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-            mock.call('gsutil cat gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),
-        ])
-        mock_file_logger.info.assert_has_calls([
-            mock.call('==> gsutil ls gs://test_bucket/test_path.vcf', self.manager_user),
-            mock.call('==> gsutil cat gs://test_bucket/test_path.vcf', None),
-        ])
-
-        # Test a valid sharded VCF file path
-        mock_subprocess.reset_mock()
-        mock_file_exist_or_list_subproc = mock.MagicMock()
-        mock_get_header_subproc = mock.MagicMock()
-        mock_subprocess.side_effect = [mock_file_exist_or_list_subproc] * 2 + [mock_get_header_subproc]
-        mock_file_exist_or_list_subproc.wait.return_value = 0
-        mock_get_header_subproc.wait.return_value = 0
-        mock_file_exist_or_list_subproc.stdout = [b'gs://test_bucket/test_path-001.vcf.gz', b'gs://test_bucket/test_path-102.vcf.gz']
-        mock_get_header_subproc.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
-        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'fullDataPath': 'gs://test_bucket/test_path-*.vcf.gz', 'vcfSamples': ['HG00735', 'NA19675', 'NA19678']})
-        mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-2, shell=True),
-            mock.call('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-2, shell=True),
-            mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path-001.vcf.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),
-        ])
-        mock_file_logger.info.assert_has_calls([
-            mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
-            mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
-            mock.call('==> gsutil cat -r 0-65536 gs://test_bucket/test_path-001.vcf.gz | gunzip -c -q - ', None),
-        ])
-
-        # Test logged in locally
-        remove_token(
-            self.manager_user)  # The user will look like having logged in locally after the access token is removed
-        response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url,
-                         '/login/google-oauth2?next=/api/create_project_from_workspace/my-seqr-billing/anvil-no-project-workspace1/validate_vcf')
-
-    @mock.patch('seqr.utils.file_utils.logger')
-    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_get_anvil_vcf_list(self, mock_subprocess, mock_file_logger, mock_utils_logger):
-        # Requesting to load data from a workspace without an existing project
-        url = reverse(get_anvil_vcf_list, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
-        self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
-        mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
-                                                     .format(TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1),
-                                                     self.collaborator_user)
-
-        # Test empty bucket
-        mock_subprocess.return_value.wait.return_value = 0
-        mock_subprocess.return_value.stdout = []
-        response = self.client.get(url, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'dataPathList': []})
-        mock_subprocess.assert_called_with('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True)
-        mock_file_logger.info.assert_called_with('==> gsutil ls gs://test_bucket', self.manager_user)
-
-        # Test a valid operation
-        mock_subprocess.reset_mock()
-        mock_file_logger.reset_mock()
-        mock_subprocess.return_value.stdout = [
-            b'Warning: some packages are out of date',
-            b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.tsv',
-            # path with common prefix but not sharded VCFs
-            b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/data/test-101.vcf.gz',
-            b'gs://test_bucket/data/test-102.vcf.gz',
-            # sharded VCFs
-            b'gs://test_bucket/sharded/test-101.vcf.gz', b'gs://test_bucket/sharded/test-102.vcf.gz',
-            b'gs://test_bucket/sharded/test-2345.vcf.gz'
-        ]
-        response = self.client.get(url, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz',
-                                                                '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz']})
-        mock_subprocess.assert_has_calls([
-            mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-            mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-2, shell=True),
-            mock.call().wait(),
-        ])
-        mock_file_logger.info.assert_has_calls([
-            mock.call('==> gsutil ls gs://test_bucket', self.manager_user),
-            mock.call('==> gsutil ls gs://test_bucket/**', self.manager_user),
-        ])
+# @mock.patch('seqr.views.utils.permissions_utils.logger')
+# class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
+#     fixtures = ['users', 'social_auth', '1kg_project']
+#
+#     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
+#     def test_anvil_workspace_page(self, mock_api_logger, mock_logger):
+#         # Requesting to load data from a workspace without an existing project
+#         url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+#         collaborator_response = self.check_manager_login(url, login_redirect_url='/login/google-oauth2', policy_redirect_url='/accept_policies')
+#
+#         mock_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
+#                                                .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME),
+#                                                self.collaborator_user)
+#         self.assertEqual(collaborator_response.get('Content-Type'), 'text/html')
+#         initial_json = self.get_initial_page_json(collaborator_response)
+#         self.assertEqual(initial_json['user']['username'], 'test_user_collaborator')
+#
+#         response = self.client.post(url)
+#         self.assertEqual(response.status_code, 302)
+#         self.assertEqual(response.url, '/create_project_from_workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+#         self.mock_get_ws_access_level.assert_called_with(
+#             self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.authorizationDomain']
+#         )
+#         mock_api_logger.warning.assert_not_called()
+#
+#         # Test workspace with authorization domains
+#         auth_domains_url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2])
+#         response = self.client.post(auth_domains_url)
+#         self.assertEqual(response.status_code, 403)
+#         self.mock_get_ws_access_level.assert_called_with(
+#             self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME2,
+#             meta_fields=['workspace.authorizationDomain']
+#         )
+#         mock_api_logger.warning.assert_called_with(
+#             'Unable to load data from anvil workspace with authorization domains "my-seqr-billing/anvil-no-project-workspace2"',
+#             self.manager_user)
+#
+#         # Test error handling when token refresh fails
+#         self.mock_get_ws_access_level.side_effect = TerraRefreshTokenFailedException('Failed to refresh token')
+#         response = self.client.post(url)
+#         self.assertEqual(response.status_code, 302)
+#         self.assertEqual(
+#             response.url,
+#             '/login/google-oauth2?next=/workspace/{}/{}'.format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+#         )
+#         self.mock_get_ws_access_level.assert_called_with(
+#             self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME, meta_fields=['workspace.authorizationDomain']
+#         )
+#
+#         # Requesting to load data for an existing project
+#         self.mock_get_ws_access_level.reset_mock()
+#         url = reverse(anvil_workspace_page, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME])
+#         response = self.client.post(url)
+#         self.assertEqual(response.status_code, 302)
+#         self.assertEqual(response.url, '/project/R0001_1kg/project_page')
+#         self.mock_get_ws_access_level.assert_not_called()
+#
+#     @mock.patch('seqr.views.apis.anvil_workspace_api.logger')
+#     @mock.patch('seqr.views.apis.anvil_workspace_api.time')
+#     @mock.patch('seqr.views.apis.anvil_workspace_api.has_service_account_access')
+#     @mock.patch('seqr.views.apis.anvil_workspace_api.add_service_account')
+#     def test_grant_workspace_access(self, mock_add_service_account, mock_has_service_account, mock_time, mock_logger, mock_utils_logger):
+#
+#         # Requesting to load data from a workspace without an existing project
+#         url = reverse(grant_workspace_access,
+#                       args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+#         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
+#         mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
+#                                                      .format(TEST_WORKSPACE_NAMESPACE,
+#                                                              TEST_NO_PROJECT_WORKSPACE_NAME),
+#                                                      self.collaborator_user)
+#         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, TEST_WORKSPACE_NAMESPACE,
+#                                                          TEST_NO_PROJECT_WORKSPACE_NAME)
+#
+#         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertEqual(response.reason_phrase,
+#                          'Must agree to grant seqr access to the data in the associated workspace.')
+#
+#         # Test adding service account exception
+#         mock_add_service_account.side_effect = TerraAPIException(
+#             'Failed to grant seqr service account access to the workspace {}/{}'
+#             .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME), 400)
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertEqual(response.json()['error'],
+#                          'Failed to grant seqr service account access to the workspace {}/{}'
+#                          .format(TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME))
+#
+#         # Test adding service account never processes
+#         mock_add_service_account.reset_mock(side_effect=True)
+#         mock_add_service_account.return_value = True
+#         mock_has_service_account.return_value = False
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertEqual(response.json()['error'], 'Failed to grant seqr service account access to the workspace')
+#         mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
+#                                                     TEST_NO_PROJECT_WORKSPACE_NAME)
+#         self.assertEqual(mock_has_service_account.call_count, 2)
+#         self.assertEqual(mock_time.sleep.call_count, 2)
+#
+#         # Test valid operation
+#         mock_time.reset_mock()
+#         mock_has_service_account.reset_mock()
+#         mock_add_service_account.return_value = False
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
+#         self.assertEqual(response.status_code, 200)
+#         self.assertDictEqual(response.json(), {'success': True})
+#         mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
+#                                                     TEST_NO_PROJECT_WORKSPACE_NAME)
+#         mock_has_service_account.assert_not_called()
+#         mock_time.sleep.assert_not_called()
+#         mock_logger.info.assert_called_with(
+#             f'Added service account for {TEST_WORKSPACE_NAMESPACE}/{TEST_NO_PROJECT_WORKSPACE_NAME}, waiting for access to grant',
+#             self.manager_user,
+#         )
+#
+#         # Test logged in locally
+#         remove_token(
+#             self.manager_user)  # The user will look like having logged in locally after the access token is removed
+#         response = self.client.post(url)
+#         self.assertEqual(response.status_code, 302)
+#         self.assertEqual(response.url,
+#                          '/login/google-oauth2?next=/api/create_project_from_workspace/my-seqr-billing/anvil-no-project-workspace1/grant_access')
+#
+#     @mock.patch('seqr.utils.file_utils.logger')
+#     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+#     def test_validate_anvil_vcf(self, mock_subprocess, mock_file_logger, mock_utils_logger):
+#         # Requesting to load data from a workspace without an existing project
+#         url = reverse(validate_anvil_vcf,
+#                       args=[TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME])
+#         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
+#         mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
+#                                                      .format(TEST_WORKSPACE_NAMESPACE,
+#                                                              TEST_NO_PROJECT_WORKSPACE_NAME),
+#                                                      self.collaborator_user)
+#
+#         # Test missing required fields in the request body
+#         response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertEqual(response.reason_phrase, 'dataPath is required')
+#         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
+#                                                          TEST_NO_PROJECT_WORKSPACE_NAME,
+#                                                          meta_fields=['workspace.bucketName'])
+#
+#         # Test bad data path
+#         mock_subprocess.return_value.wait.return_value = -1
+#         mock_subprocess.return_value.stdout = [b'File not found']
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertEqual(response.json()['error'], 'Data file or path /test_path-*.vcf.gz is not found.')
+#         mock_subprocess.assert_called_with('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-2, shell=True)
+#         mock_file_logger.info.assert_has_calls([
+#             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
+#             mock.call('File not found', self.manager_user),
+#         ])
+#
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_BAD_DATA_PATH))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertEqual(response.json()['error'],
+#                          'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz')
+#
+#         # test no header line
+#         mock_subprocess.reset_mock()
+#         mock_subprocess.return_value.wait.return_value = 0
+#         mock_subprocess.return_value.stdout = BASIC_META + DATA_LINES
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertListEqual(response.json()['errors'], ['No header found in the VCF file.'])
+#         mock_subprocess.assert_has_calls([
+#             mock.call('gsutil ls gs://test_bucket/test_path.vcf.gz', stdout=-1, stderr=-2, shell=True),
+#             mock.call().wait(),
+#             mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path.vcf.gz | gunzip -c -q - ',
+#                       stdout=-1, stderr=-2, shell=True),
+#         ])
+#         mock_file_logger.info.assert_has_calls([
+#             mock.call('==> gsutil ls gs://test_bucket/test_path.vcf.gz', self.manager_user),
+#             mock.call('==> gsutil cat -r 0-65536 gs://test_bucket/test_path.vcf.gz | gunzip -c -q - ', None),
+#         ])
+#
+#         # test header errors
+#         mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + BAD_HEADER_LINE + DATA_LINES
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertListEqual(response.json()['errors'], [
+#             'Missing required VCF header field(s) POS, FILTER, INFO, FORMAT.'
+#         ])
+#
+#         # test no samples
+#         mock_subprocess.return_value.stdout = BASIC_META + NO_SAMPLE_HEADER_LINE + DATA_LINES
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertListEqual(response.json()['errors'], ['No samples found in the provided VCF.'])
+#
+#         # test meta info errors
+#         mock_subprocess.return_value.stdout = BASIC_META + BAD_INFO_META + BAD_FORMAT_META + HEADER_LINE + DATA_LINES
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_GZ_DATA_PATH))
+#         self.assertEqual(response.status_code, 400)
+#         self.assertListEqual(response.json()['errors'], [
+#             'Missing required INFO field(s) AN',
+#             'Incorrect meta Type for INFO.AF - expected "Float", got "Integer"',
+#             'Missing required FORMAT field(s) GQ, GT',
+#             'Incorrect meta Type for FORMAT.DP - expected "Integer", got "String"'
+#         ])
+#
+#         # Test valid operations
+#         mock_subprocess.reset_mock()
+#         mock_file_logger.reset_mock()
+#         mock_subprocess.return_value.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(VALIDATE_VCF_BODY))
+#         self.assertEqual(response.status_code, 200)
+#         self.assertDictEqual(response.json(), VALIDATE_VFC_RESPONSE)
+#         mock_subprocess.assert_has_calls([
+#             mock.call('gsutil ls gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),
+#             mock.call().wait(),
+#             mock.call('gsutil cat gs://test_bucket/test_path.vcf', stdout=-1, stderr=-2, shell=True),
+#         ])
+#         mock_file_logger.info.assert_has_calls([
+#             mock.call('==> gsutil ls gs://test_bucket/test_path.vcf', self.manager_user),
+#             mock.call('==> gsutil cat gs://test_bucket/test_path.vcf', None),
+#         ])
+#
+#         # Test a valid sharded VCF file path
+#         mock_subprocess.reset_mock()
+#         mock_file_exist_or_list_subproc = mock.MagicMock()
+#         mock_get_header_subproc = mock.MagicMock()
+#         mock_subprocess.side_effect = [mock_file_exist_or_list_subproc] * 2 + [mock_get_header_subproc]
+#         mock_file_exist_or_list_subproc.wait.return_value = 0
+#         mock_get_header_subproc.wait.return_value = 0
+#         mock_file_exist_or_list_subproc.stdout = [b'gs://test_bucket/test_path-001.vcf.gz', b'gs://test_bucket/test_path-102.vcf.gz']
+#         mock_get_header_subproc.stdout = BASIC_META + INFO_META + FORMAT_META + HEADER_LINE + DATA_LINES
+#         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_SHARDED_DATA_PATH))
+#         self.assertEqual(response.status_code, 200)
+#         self.assertEqual(response.json(), {'fullDataPath': 'gs://test_bucket/test_path-*.vcf.gz', 'vcfSamples': ['HG00735', 'NA19675', 'NA19678']})
+#         mock_subprocess.assert_has_calls([
+#             mock.call('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-2, shell=True),
+#             mock.call('gsutil ls gs://test_bucket/test_path-*.vcf.gz', stdout=-1, stderr=-2, shell=True),
+#             mock.call('gsutil cat -r 0-65536 gs://test_bucket/test_path-001.vcf.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),
+#         ])
+#         mock_file_logger.info.assert_has_calls([
+#             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
+#             mock.call('==> gsutil ls gs://test_bucket/test_path-*.vcf.gz', self.manager_user),
+#             mock.call('==> gsutil cat -r 0-65536 gs://test_bucket/test_path-001.vcf.gz | gunzip -c -q - ', None),
+#         ])
+#
+#         # Test logged in locally
+#         remove_token(
+#             self.manager_user)  # The user will look like having logged in locally after the access token is removed
+#         response = self.client.post(url)
+#         self.assertEqual(response.status_code, 302)
+#         self.assertEqual(response.url,
+#                          '/login/google-oauth2?next=/api/create_project_from_workspace/my-seqr-billing/anvil-no-project-workspace1/validate_vcf')
+#
+#     @mock.patch('seqr.utils.file_utils.logger')
+#     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+#     def test_get_anvil_vcf_list(self, mock_subprocess, mock_file_logger, mock_utils_logger):
+#         # Requesting to load data from a workspace without an existing project
+#         url = reverse(get_anvil_vcf_list, args=[TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1])
+#         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
+#         mock_utils_logger.warning.assert_called_with('User does not have sufficient permissions for workspace {}/{}'
+#                                                      .format(TEST_WORKSPACE_NAMESPACE, TEST_WORKSPACE_NAME1),
+#                                                      self.collaborator_user)
+#
+#         # Test empty bucket
+#         mock_subprocess.return_value.wait.return_value = 0
+#         mock_subprocess.return_value.stdout = []
+#         response = self.client.get(url, content_type='application/json')
+#         self.assertEqual(response.status_code, 200)
+#         self.assertDictEqual(response.json(), {'dataPathList': []})
+#         mock_subprocess.assert_called_with('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True)
+#         mock_file_logger.info.assert_called_with('==> gsutil ls gs://test_bucket', self.manager_user)
+#
+#         # Test a valid operation
+#         mock_subprocess.reset_mock()
+#         mock_file_logger.reset_mock()
+#         mock_subprocess.return_value.stdout = [
+#             b'Warning: some packages are out of date',
+#             b'gs://test_bucket/test.vcf', b'gs://test_bucket/test.tsv',
+#             # path with common prefix but not sharded VCFs
+#             b'gs://test_bucket/data/test.vcf.gz', b'gs://test_bucket/data/test-101.vcf.gz',
+#             b'gs://test_bucket/data/test-102.vcf.gz',
+#             # sharded VCFs
+#             b'gs://test_bucket/sharded/test-101.vcf.gz', b'gs://test_bucket/sharded/test-102.vcf.gz',
+#             b'gs://test_bucket/sharded/test-2345.vcf.gz'
+#         ]
+#         response = self.client.get(url, content_type='application/json')
+#         self.assertEqual(response.status_code, 200)
+#         self.assertDictEqual(response.json(), {'dataPathList': ['/test.vcf', '/data/test.vcf.gz', '/data/test-101.vcf.gz',
+#                                                                 '/data/test-102.vcf.gz', '/sharded/test-*.vcf.gz']})
+#         mock_subprocess.assert_has_calls([
+#             mock.call('gsutil ls gs://test_bucket', stdout=-1, stderr=-2, shell=True),
+#             mock.call().wait(),
+#             mock.call('gsutil ls gs://test_bucket/**', stdout=-1, stderr=-2, shell=True),
+#             mock.call().wait(),
+#         ])
+#         mock_file_logger.info.assert_has_calls([
+#             mock.call('==> gsutil ls gs://test_bucket', self.manager_user),
+#             mock.call('==> gsutil ls gs://test_bucket/**', self.manager_user),
+#         ])
 
 
 class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
