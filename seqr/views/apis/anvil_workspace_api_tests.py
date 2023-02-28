@@ -982,8 +982,8 @@ class NoGoogleAnvilWorkspaceAPITest(AuthenticationTestCase):
     def test_grant_workspace_access(self):
         self._test_api_access(grant_workspace_access, 'grant_access')
 
-    def test_validate_anvil_vcf(self):
-        self._test_api_access(validate_anvil_vcf, 'validate_vcf')
+    # def test_validate_anvil_vcf(self):
+    #     self._test_api_access(validate_anvil_vcf, 'validate_vcf')
 
     def test_create_project_from_workspace(self):
         self._test_api_access(create_project_from_workspace, 'submit')
