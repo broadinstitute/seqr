@@ -232,7 +232,7 @@
         "display_name": "7",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_status": "Q",
+        "analysis_status": "ES",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
     }
@@ -286,7 +286,7 @@
         "display_name": "10",
         "description": "",
         "pedigree_image": "ped.png",
-        "analysis_status": "Q",
+        "analysis_status": "S_ng",
         "case_review_notes": "",
         "case_review_summary": "internal_case_review_summary"
     }

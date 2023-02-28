@@ -473,9 +473,8 @@ class VariantSearchAPITest(object):
 
         mock_get_variants.side_effect = _get_variants
 
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH
-        }))
+        body = {'allGenomeProjectFamilies': '37', 'search': SEARCH}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         empty_search_response = {
@@ -490,9 +489,7 @@ class VariantSearchAPITest(object):
 
         VariantSearchResults.objects.filter(search_hash=SEARCH_HASH).delete()
         self.login_data_manager_user()
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH
-        }))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), empty_search_response)
 
@@ -501,10 +498,8 @@ class VariantSearchAPITest(object):
         expected_searched_families = {
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13'}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH,
-            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1']}]
-        }))
+        body['projectFamilies'] = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1']}]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
@@ -517,6 +512,20 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(expected_searched_families, {f.guid for f in result_model.families.all()})
         mock_get_variants.assert_called_with(result_model, sort='xpos', page=1, num_results=100,
                                              skip_genotype_filter=True, user=self.collaborator_user)
+
+        result_model.delete()
+        expected_searched_families.remove('F000007_7')
+        expected_searched_families.remove('F000010_10')
+        body['unsolvedFamiliesOnly'] = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        expected_search_results = deepcopy(EXPECTED_SEARCH_RESPONSE)
+        self.assertSetEqual(set(response_json.keys()), set(expected_search_results.keys()))
+        self.assertDictEqual(response_json, expected_search_results)
+        self._assert_expected_results_context(response_json)
+        self.assertSetEqual(
+            set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
@@ -620,14 +629,8 @@ class VariantSearchAPITest(object):
         self._assert_expected_search_context(response_json)
 
         # Test all project search context
-        body = {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allGenomeProjectFamilies': '37', 'search': SEARCH}}
-        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self._assert_expected_search_context(response_json)
-
-        body['unsolvedFamiliesOnly'] = True
-        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(body))
+        response = self.client.post(search_context_url, content_type='application/json', data=json.dumps(
+            {'searchHash': 'djd29394hfw2njr2hod2', 'searchParams': {'allGenomeProjectFamilies': '37', 'search': SEARCH}}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self._assert_expected_search_context(response_json)
@@ -810,7 +813,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        assert_no_al_has_list_ws(self)
+        assert_no_al_has_list_ws(self, group_count=2)
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)
@@ -818,7 +821,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_search_context(self):
         super(AnvilVariantSearchAPITest, self).test_search_context()
-        assert_no_al_has_list_ws(self, 13)
+        assert_no_al_has_list_ws(self, 12)
 
     def test_query_single_variant(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_single_variant(*args)
