@@ -103,7 +103,7 @@ def _get_sample_tissue_id(sample_id, tissue_type):
 def match_sample_ids_to_sample_records(
         projects,
         user,
-        sample_id_to_tissue_type,
+        sample_ids,
         elasticsearch_index,
         sample_type,
         data_source=None,
@@ -113,6 +113,7 @@ def match_sample_ids_to_sample_records(
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
         allow_partial_families=False,
+        sample_id_to_tissue_type=None,
 ):
     """Goes through the given list of sample_ids and finds existing Sample records of the given
     sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
@@ -122,7 +123,7 @@ def match_sample_ids_to_sample_records(
     Args:
         projects (object array): List of Django ORM project models
         user (object): Django ORM User model
-        sample_id_to_tissue_type (object): the keys are sample ids for which to find matching Sample records
+        sample_ids (list): a list of sample ids for which to find matching Sample records
         sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
         dataset_type (string): one of the Sample.DATASET_TYPE_* constants
         elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
@@ -131,6 +132,7 @@ def match_sample_ids_to_sample_records(
         loaded_date (object): datetime object
         raise_no_match_error (bool): whether to raise an exception if no sample matches are found
         raise_unmatched_error_template (string): optional template to use to raise an exception if samples are unmatched, will not raise if not provided
+        sample_id_to_tissue_type (object): a mapping from sample ids to tissue types
 
     Returns:
         tuple:
@@ -139,10 +141,11 @@ def match_sample_ids_to_sample_records(
             [2] array: ids of Individuals with exact-matching existing samples
     """
 
-    sample_id_to_tissue_type
     samples = _find_matching_sample_records(
-        projects, sample_id_to_tissue_type, sample_type, dataset_type, elasticsearch_index,
+        projects, sample_ids, sample_type, dataset_type, elasticsearch_index,
     )
+    if sample_id_to_tissue_type:
+        samples = _check_invalid_tissues(samples, sample_id_to_tissue_type)
     logger.debug(str(len(samples)) + " exact sample record matches", user)
 
     remaining_sample_ids = {sample_id: tissue_type for sample_id, tissue_type in sample_id_to_tissue_type.items()
@@ -179,6 +182,7 @@ def match_sample_ids_to_sample_records(
             Sample(
                 guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE], # nosec
                 sample_id=sample_id,
+                tissue_type=sample_id_to_tissue_type[sample_id] if sample_id_to_tissue_type else None,
                 sample_type=sample_type,
                 dataset_type=dataset_type,
                 elasticsearch_index=elasticsearch_index,
@@ -272,15 +276,15 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
 
 
 def match_and_update_samples(
-        projects, user, sample_id_to_tissue_type, sample_type, elasticsearch_index=None, data_source=None,
+        projects, user, sample_ids, sample_type, elasticsearch_index=None, data_source=None,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
-        raise_unmatched_error_template=None, allow_partial_families=False,
+        raise_unmatched_error_template=None, allow_partial_families=False, sample_id_to_tissue_type=None,
 ):
     loaded_date = timezone.now()
     samples, included_families, matched_individual_ids, remaining_sample_ids = match_sample_ids_to_sample_records(
         projects=projects,
         user=user,
-        sample_id_to_tissue_type=sample_id_to_tissue_type,
+        sample_ids=sample_ids,
         elasticsearch_index=elasticsearch_index,
         data_source=data_source,
         sample_type=sample_type,
@@ -290,6 +294,7 @@ def match_and_update_samples(
         raise_no_match_error=raise_no_match_error,
         raise_unmatched_error_template=raise_unmatched_error_template,
         allow_partial_families=allow_partial_families,
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
     )
 
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
@@ -380,22 +385,12 @@ def _parse_tpm_row(row):
 
         yield sample_id, parsed
 
-def _check_invalid_tissues(samples, sample_id_to_tissue_type, warnings):
+def _check_invalid_tissues(samples, sample_id_to_tissue_type):
     invalid_tissues = {}
     for sample in samples:
-        tissue_type = TISSUE_TYPE_MAP[sample_id_to_tissue_type[sample.sample_id]]
-        if not sample.tissue_type:
-            sample.tissue_type = tissue_type
-            sample.save()
-        elif sample.tissue_type != tissue_type:
+        tissue_type = sample_id_to_tissue_type[sample.sample_id]
+        if sample.tissue_type != tissue_type:
             invalid_tissues[sample] = tissue_type
-
-    if invalid_tissues:
-        mismatch = ', '.join([
-            f'{sample.sample_id} ({REVERSE_TISSUE_TYPE[expected_tissue]} to {REVERSE_TISSUE_TYPE[sample.tissue_type]})'
-            for sample, expected_tissue in invalid_tissues.items()])
-        message = f'Skipped data loading for the following {len(invalid_tissues)} samples due to mismatched tissue type: {mismatch}'
-        warnings.append(message)
 
     return [sample for sample in samples if sample not in invalid_tissues]
 
@@ -408,8 +403,7 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
 def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
     return _load_rna_seq(
         RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
-        validate_samples=_check_invalid_tissues,
-    )
+   )
 
 
 def _get_splice_id(row):
@@ -424,7 +418,7 @@ def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_
 
 
 def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
-                  sample_id_to_tissue_type=None, validate_samples=None, get_unique_key=None):
+                  get_unique_key=None):
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -440,11 +434,20 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
+            tissue_type = TISSUE_TYPE_MAP.get(row_dict.pop(TISSUE_COL, None), None)
+            if sample_id in sample_id_to_tissue_type:
+                prev_tissue_type = sample_id_to_tissue_type[sample_id]
+                if tissue_type != prev_tissue_type:
+                    raise ValueError(f'Mismatched tissue types for sample {sample_id}:'
+                                     f' {REVERSE_TISSUE_TYPE[prev_tissue_type]}, {REVERSE_TISSUE_TYPE[tissue_type]}')
+            sample_id_to_tissue_type[sample_id] = tissue_type
+
             if get_unique_key:
                 gene_or_unique_id = get_unique_key(row_dict)
             else:
                 gene_or_unique_id = row_dict['gene_id']
             existing_data = samples_by_id[sample_id].get(gene_or_unique_id)
+
             if existing_data and existing_data != row_dict:
                 raise ValueError(
                     f'Error in {sample_id} data for {gene_or_unique_id}: mismatched entries {existing_data} and {row_dict}')
@@ -455,12 +458,6 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
             samples_by_id[sample_id][gene_or_unique_id] = row_dict
 
-            prev_tissue = sample_id_to_tissue_type.get(sample_id)
-            tissue = row_dict.pop(TISSUE_COL, None)
-            if prev_tissue and prev_tissue != tissue:
-                raise ValueError(f'Mismatched tissue types for sample {sample_id}: {prev_tissue}, {tissue}')
-            sample_id_to_tissue_type[sample_id] = tissue
-
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
     logger.info(message, user)
@@ -469,20 +466,21 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
         projects=get_internal_projects(),
         user=user,
-        sample_id_to_tissue_type=sample_id_to_tissue_type,
+        sample_ids=sample_id_to_tissue_type.keys(),
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         allow_partial_families=True,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}',
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
     )
 
     warnings = []
-    if validate_samples:
-        samples = validate_samples(samples, sample_id_to_tissue_type, warnings)
 
     # Delete old data
-    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
+    individual_db_ids = {s.individual_id for s in samples}
+    filters = {'sample__individual_id__in': individual_db_ids} if model_cls == RnaSeqOutlier else {'sample__in': samples}
+    to_delete = model_cls.objects.filter(**filters).exclude(sample__data_source=data_source)
     prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
@@ -509,8 +507,8 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         skipped_samples = ', '.join(sorted(remaining_sample_ids))
         message = f'Skipped loading for the following {len(remaining_sample_ids)} unmatched samples: {skipped_samples}'
         warnings.append(message)
-    if loaded_sample_ids:
-        message = f'Skipped loading for {len(loaded_sample_ids)} samples already loaded from this file'
+    if loaded_sample_db_ids:
+        message = f'Skipped loading for {len(loaded_sample_db_ids)} samples already loaded from this file'
         warnings.append(message)
 
     for warning in warnings:

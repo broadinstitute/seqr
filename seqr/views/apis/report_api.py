@@ -7,13 +7,17 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Prefetch, Count, F, Q, Value, CharField
 from django.db.models.functions import Replace, JSONObject
 from django.utils import timezone
+import json
+import requests
 
+from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist, mv_file_to_gs
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
 
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.views.utils.export_utils import export_multiple_files
+from seqr.views.utils.export_utils import export_multiple_files, write_multiple_temp_files
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.permissions_utils import analyst_required, get_project_and_check_permissions, \
@@ -23,6 +27,7 @@ from seqr.views.utils.terra_api_utils import anvil_enabled
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, VariantTag, VariantTagType, Sample, SavedVariant, Individual, FamilyNote
 from reference_data.models import Omim, HumanPhenotypeOntology
+from settings import GREGOR_DATA_MODEL_URL
 
 
 logger = SeqrLogger(__name__)
@@ -183,8 +188,9 @@ def anvil_export(request, project_guid):
 
 @analyst_required
 def sample_metadata_export(request, project_guid):
-    omit_airtable = project_guid == 'all'
-    if omit_airtable:
+    is_all_projects = project_guid == 'all'
+    omit_airtable = is_all_projects or 'true' in request.GET.get('omitAirtable', '')
+    if is_all_projects:
         projects = get_internal_projects()
     else:
         projects = [get_project_and_check_permissions(project_guid, request.user)]
@@ -687,6 +693,21 @@ CALLED_TABLE_COLUMNS = [
     'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id', 'called_variants_dna_file', 'md5sum',
     'caller_software', 'variant_types', 'analysis_details',
 ]
+ALL_AIRTABLE_COLUMNS = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
+
+TABLE_COLUMNS = {
+    'participant': PARTICIPANT_TABLE_COLUMNS,
+    'family': GREGOR_FAMILY_TABLE_COLUMNS,
+    'phenotype': PHENOTYPE_TABLE_COLUMNS,
+    'analyte': ANALYTE_TABLE_COLUMNS,
+    'experiment_dna_short_read': EXPERIMENT_TABLE_COLUMNS,
+    'aligned_dna_short_read': READ_TABLE_COLUMNS,
+    'aligned_dna_short_read_set': READ_SET_TABLE_COLUMNS,
+    'called_variants_dna_short_read': CALLED_TABLE_COLUMNS,
+}
+WARN_MISSING_TABLE_COLUMNS = {
+    'participant': ['recontactable',  'reported_race', 'affected_status', 'phenotype_description', 'age_at_enrollment'],
+}
 
 GREGOR_ANCESTRY_DETAIL_MAP = deepcopy(ANCESTRY_DETAIL_MAP)
 GREGOR_ANCESTRY_DETAIL_MAP.pop(MIDDLE_EASTERN)
@@ -741,7 +762,19 @@ HPO_QUALIFIERS = {
 
 
 @analyst_required
-def gregor_export(request, consent_code):
+def gregor_export(request):
+    request_json = json.loads(request.body)
+    missing_required_fields = [field for field in ['consentCode', 'deliveryPath'] if not request_json.get(field)]
+    if missing_required_fields:
+        raise ErrorsWarningsException([f'Missing required field(s): {", ".join(missing_required_fields)}'])
+
+    consent_code = request_json['consentCode']
+    file_path = request_json['deliveryPath']
+    if not is_google_bucket_file_path(file_path):
+        raise ErrorsWarningsException(['Delivery Path must be a valid google bucket path (starts with gs://)'])
+    if not does_file_exist(file_path, user=request.user):
+        raise ErrorsWarningsException(['Invalid Delivery Path: folder not found'])
+
     projects = get_internal_projects().filter(guid__in=get_project_guids_user_can_view(request.user))
     individuals = Individual.objects.filter(
         family__project__consent_code=consent_code[0],
@@ -800,16 +833,23 @@ def gregor_export(request, consent_code):
         # analyte table
         analyte_rows.append(dict(participant_id=participant_id, analyte_id=analyte_id, **_get_analyte_row(individual)))
 
-    return export_multiple_files([
-        ['participant', PARTICIPANT_TABLE_COLUMNS, participant_rows],
-        ['family', GREGOR_FAMILY_TABLE_COLUMNS, list(family_map.values())],
-        ['phenotype', PHENOTYPE_TABLE_COLUMNS, phenotype_rows],
-        ['analyte', ANALYTE_TABLE_COLUMNS, analyte_rows],
-        ['experiment_dna_short_read', EXPERIMENT_TABLE_COLUMNS, airtable_rows],
-        ['aligned_dna_short_read', READ_TABLE_COLUMNS, airtable_rows],
-        ['aligned_dna_short_read_set', READ_SET_TABLE_COLUMNS, airtable_rows],
-        ['called_variants_dna_short_read', CALLED_TABLE_COLUMNS, airtable_rows],
-    ], f'GREGoR Reports {consent_code}', file_format='tsv')
+    files, warnings = _get_validated_gregor_files([
+        ('participant', participant_rows),
+        ('family', list(family_map.values())),
+        ('phenotype', phenotype_rows),
+        ('analyte', analyte_rows),
+        ('experiment_dna_short_read', airtable_rows),
+        ('aligned_dna_short_read', airtable_rows),
+        ('aligned_dna_short_read_set', airtable_rows),
+        ('called_variants_dna_short_read', airtable_rows),
+    ])
+    with write_multiple_temp_files(files, file_format='tsv') as temp_dir_name:
+        mv_file_to_gs(f'{temp_dir_name}/*', file_path, request.user)
+
+    return create_json_response({
+        'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],
+        'warnings': warnings,
+    })
 
 
 def _get_gregor_airtable_data(individuals, user):
@@ -818,7 +858,7 @@ def _get_gregor_airtable_data(individuals, user):
         fields=[SMID_FIELD, 'CollaboratorSampleID', 'Recontactable'],
     )
 
-    fields = EXPERIMENT_TABLE_AIRTABLE_FIELDS + READ_TABLE_AIRTABLE_FIELDS + CALLED_TABLE_COLUMNS
+    fields = ALL_AIRTABLE_COLUMNS
     airtable_metadata = session.fetch_records(
         'GREGoR Data Model',
         fields=[SMID_FIELD] + fields,
@@ -891,6 +931,112 @@ def _get_experiment_ids(airtable_sample, airtable_metadata):
         'experiment_sample_id': collaborator_sample_id,
         'aligned_dna_short_read_id': f'{experiment_dna_short_read_id}_1'
     }
+
+
+def _get_validated_gregor_files(file_data):
+    errors = []
+    warnings = []
+    try:
+        validators, required_tables = _load_data_model_validators()
+    except Exception as e:
+        warnings.append(f'Unable to load data model for validation: {e}')
+        validators = {}
+        required_tables = set()
+
+    missing_tables = required_tables.difference({f[0] for f in file_data})
+    if missing_tables:
+        warnings.append(
+            f'The following tables are required in the data model but absent from the reports: {", ".join(missing_tables)}'
+        )
+
+    files = []
+    for file_name, data in file_data:
+        columns = TABLE_COLUMNS[file_name]
+        files.append([file_name, columns, data])
+
+        table_validator = validators.get(file_name)
+        if not table_validator:
+            warnings.append(f'No data model found for "{file_name}" table so no validation was performed')
+            continue
+
+        extra_columns = set(columns).difference(table_validator.keys())
+        if extra_columns:
+            col_summary = ', '.join(sorted(extra_columns))
+            warnings.append(
+                f'The following columns are included in the "{file_name}" table but are missing from the data model: {col_summary}'
+            )
+        missing_columns = set(table_validator.keys()).difference(columns)
+        if missing_columns:
+            col_summary = ', '.join(sorted(missing_columns))
+            warnings.append(
+                f'The following columns are included in the "{file_name}" data model but are missing in the report: {col_summary}'
+            )
+
+        for column in columns:
+            _validate_column_data(
+                column, file_name, data, column_validator=table_validator.get(column, {}),
+                warnings=warnings, errors=errors,
+            )
+
+    if errors:
+        raise ErrorsWarningsException(errors, warnings)
+
+    return files, warnings
+
+
+def _load_data_model_validators():
+    response = requests.get(GREGOR_DATA_MODEL_URL)
+    response.raise_for_status()
+    table_models = response.json()['tables']
+    validators = {
+        t['table']: {c['column']: c for c in t['columns']}
+        for t in table_models
+    }
+    required_tables = {t['table'] for t in table_models if t.get('required')}
+    return validators, required_tables
+
+
+def _validate_column_data(column, file_name, data, column_validator, warnings, errors):
+    enum = column_validator.get('enumerations')
+    required = column_validator.get('required')
+    recommended = column in WARN_MISSING_TABLE_COLUMNS.get(file_name, [])
+    if not (required or enum or recommended):
+        return
+
+    missing = []
+    warn_missing = []
+    invalid = []
+    for row in data:
+        value = row.get(column)
+        if not value:
+            if required:
+                missing.append(_get_row_id(row))
+            elif recommended:
+                warn_missing.append(_get_row_id(row))
+        elif enum and value not in enum:
+            invalid.append(f'{_get_row_id(row)} ({value})')
+    if missing or warn_missing or invalid:
+        airtable_summary = ' (from Airtable)' if column in ALL_AIRTABLE_COLUMNS else ''
+        error_template = f'The following entries {{issue}} "{column}"{airtable_summary} in the "{file_name}" table'
+        if missing:
+            errors.append(
+                f'{error_template.format(issue="are missing required")}: {", ".join(sorted(missing))}'
+            )
+        if invalid:
+            invalid_values = f'Invalid values: {", ".join(sorted(invalid))}'
+            errors.append(
+                f'{error_template.format(issue="have invalid values for")}. Allowed values: {", ".join(enum)}. {invalid_values}'
+            )
+        if warn_missing:
+            warnings.append(
+                f'{error_template.format(issue="are missing recommended")}: {", ".join(sorted(warn_missing))}'
+            )
+
+
+def _get_row_id(row):
+    id_col = next(col for col in ['participant_id', 'experiment_sample_id', 'family_id'] if col in row)
+    return row[id_col]
+
 
 # Discovery Sheet
 

@@ -8,9 +8,9 @@ from seqr.views.utils.test_utils import AuthenticationTestCase
 
 RNA_FILE_ID = 'all_tissue_tpms.tsv.gz'
 MAPPING_FILE_ID = 'mapping.tsv'
-EXISTING_SAMPLE_GUID = 'S000150_na19675_d2'
+EXISTING_SAMPLE_GUID = 'S000152_na19675_d2'
 
-EXPECTED_MISMATCHED_TISSUE_WARNING = 'Skipped data loading for the following 1 samples due to mismatched tissue type: NA19678_D1 (fibroblasts to whole_blood)'
+EXPECTED_MISMATCHED_TISSUE_WARNING = 'Skipped loading for the following 2 unmatched samples: NA19677, NA19678_D1'
 
 class LoadRnaSeqTest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'reference_data']
@@ -64,8 +64,9 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(RnaSeqOutlier.objects.count(), 3)
 
         # Test database models
-        existing_sample = Sample.objects.get(individual_id=1, sample_type='RNA')
+        existing_sample = Sample.objects.get(individual_id=1, sample_type='RNA', tissue_type='M')
         existing_sample2 = Sample.objects.get(individual_id=17, sample_type='RNA')
+        existing_sample3 = Sample.objects.get(individual_id=1, sample_type='RNA', tissue_type='F')
         self.assertEqual(existing_sample.guid, EXISTING_SAMPLE_GUID)
         self.assertEqual(existing_sample.sample_id, 'NA19675_D2')
         self.assertTrue(existing_sample.is_active)
@@ -81,8 +82,8 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(new_sample.tissue_type, 'WB')
 
         models = RnaSeqTpm.objects.all()
-        self.assertEqual(models.count(), 4)
-        self.assertSetEqual({model.sample for model in models}, {existing_sample, existing_sample2, new_sample})
+        self.assertEqual(models.count(), 5)
+        self.assertSetEqual({model.sample for model in models}, {existing_sample, existing_sample2, existing_sample3, new_sample})
         self.assertEqual(models.get(sample=existing_sample, gene_id='ENSG00000240361').tpm, 12.6)
         self.assertEqual(models.get(sample=new_sample, gene_id='ENSG00000233750').tpm, 6.04)
 

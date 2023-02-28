@@ -233,7 +233,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     if additional_values:
         family_additional_values.update(additional_values)
     if add_individual_guids_field:
-        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
+        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False), distinct=True)
 
     additional_model_fields = _get_case_review_fields(families.model, has_case_review_perm)
     nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
@@ -689,7 +689,8 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
             collaborator_json = _get_collaborator_json(
                 collaborator or email, fields, include_permissions, can_edit=permission == CAN_EDIT,
                 get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
-            collaborators[collaborator_json['username']] = collaborator_json
+            username = collaborator.username if collaborator else collaborator_json['username']
+            collaborators[username] = collaborator_json
 
     return collaborators
 
