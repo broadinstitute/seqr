@@ -334,6 +334,8 @@ class ProjectAPITest(object):
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
 
+        self.assertEqual(len(family_1['individualGuids']), 3)
+        self.assertEqual(len(family_3['individualGuids']), 1)
         self.assertListEqual(family_1['caseReviewStatuses'], ['A', 'I', 'U'])
         self.assertListEqual(family_3['caseReviewStatuses'], [])
         self.assertEqual(family_1['caseReviewStatusLastModified'], '2017-03-12T22:34:49.964Z')

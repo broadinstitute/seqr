@@ -103,13 +103,14 @@ export class HttpRequestHelper {
       return -1
     })
     .catch((exception) => {
+      let handled
       if (this.onError) {
-        this.onError(exception)
+        handled = this.onError(exception)
       } else {
         return Promise.reject(exception)
       }
 
-      return -1 // don't ever hide the error message
+      return handled || -1 // don't ever hide the error message
     })
     .then((httpPostId) => {
       if (this.onClear && httpPostId === this.httpPostId) {
