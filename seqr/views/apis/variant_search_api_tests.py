@@ -12,7 +12,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
+    GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
     VARIANT_NOTE_FIELDS, TAG_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_DETAIL_FIELDS
 

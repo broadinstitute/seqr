@@ -1,5 +1,4 @@
 import datetime
-from django.contrib.auth.models import User
 import mock
 from openpyxl import load_workbook
 from io import BytesIO
