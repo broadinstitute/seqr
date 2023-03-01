@@ -264,12 +264,19 @@ export const getTagTypeCounts = createSelector(
 
 export const getVariantGeneId = ({ variantGuid, geneId }, variantGeneId) => `${variantGuid}-${variantGeneId || geneId}`
 
+const getFamilyGuidByIndividual = createSelector(
+  getIndividualsByGuid,
+  individualsByGuid => Object.values(individualsByGuid).reduce(
+    (acc, { familyGuid, individualGuid }) => ({ ...acc, [individualGuid]: familyGuid }), {},
+  ),
+)
+
 export const getIndividualTaggedVariants = createSelector(
   getTaggedVariantsByFamily,
-  getIndividualsByGuid,
+  getFamilyGuidByIndividual,
   (state, props) => props.individualGuid,
-  (taggedVariants, individualsByGuid, individualGuid) => {
-    const { familyGuid } = individualsByGuid[individualGuid]
+  (taggedVariants, familyGuidByIndividual, individualGuid) => {
+    const familyGuid = familyGuidByIndividual[individualGuid]
     return Object.values(taggedVariants[familyGuid] || []).reduce((acc, variant) => {
       const variantDetail = {
         ...variant.genotypes[individualGuid],
@@ -858,15 +865,17 @@ export const getPageHeaderEntityLinks = createSelector(
 
 export const getIndividualPhenotypeGeneScores = createSelector(
   getGenesById,
+  getFamilyGuidByIndividual,
   getPhenotypeGeneScoresByIndividual,
-  (genesById, phenotypeGeneScoresByIndividual) => (
+  (genesById, familyGuidByIndividual, phenotypeGeneScoresByIndividual) => (
     Object.entries(phenotypeGeneScoresByIndividual || {}).reduce((acc, [individualGuid, dataByGene]) => ({
       ...acc,
       [individualGuid]: Object.entries(dataByGene).reduce((acc2, [geneId, dataByTool]) => ([
         ...acc2,
         ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
-          ...acc3,
-          ...data.map(d => ({ ...d, tool, gene: genesById[geneId], rowId: `${geneId}-${tool}-${d.diseaseId}` })),
+          ...acc3, ...data.map(d => (
+            { ...d, tool, familyGuid: familyGuidByIndividual[individualGuid], gene: genesById[geneId], rowId: `${geneId}-${tool}-${d.diseaseId}` }
+          )),
         ]), []),
       ]), []),
     }), {})
