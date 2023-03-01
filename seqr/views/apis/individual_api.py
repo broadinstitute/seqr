@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import prefetch_related_objects
 
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Individual, Family, Sample, RnaSeqOutlier
+from seqr.models import Individual, Family, RnaSeqOutlier
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
