@@ -6,10 +6,9 @@ import DataLoader from 'shared/components/DataLoader'
 import { RareGeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
 import { BaseVariantGene } from 'shared/components/panel/variants/VariantGene'
-import { getIndividualPhenotypeGeneScores } from 'shared/components/panel/variants/selectors'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { loadPhenotypeGeneScores } from '../reducers'
-import { getPhenotypeDataLoading } from '../selectors'
+import { getPhenotypeDataLoading, getIndividualPhenotypeGeneScores } from '../selectors'
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
   {

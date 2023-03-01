@@ -20,7 +20,7 @@ import {
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchableSampleByFamily, getSelectableTagTypesByProject,
   getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
-  getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants,
+  getSamplesGroupedByProjectGuid, getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
 } from 'redux/selectors'
 
 import {
@@ -854,4 +854,21 @@ export const getPageHeaderEntityLinks = createSelector(
     }
     return entityLinks
   },
+)
+
+export const getIndividualPhenotypeGeneScores = createSelector(
+  getGenesById,
+  getPhenotypeGeneScoresByIndividual,
+  (genesById, phenotypeGeneScoresByIndividual) => (
+    Object.entries(phenotypeGeneScoresByIndividual || {}).reduce((acc, [individualGuid, dataByGene]) => ({
+      ...acc,
+      [individualGuid]: Object.entries(dataByGene).reduce((acc2, [geneId, dataByTool]) => ([
+        ...acc2,
+        ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
+          ...acc3,
+          ...data.map(d => ({ ...d, tool, gene: genesById[geneId], rowId: `${geneId}-${tool}-${d.diseaseId}` })),
+        ]), []),
+      ]), []),
+    }), {})
+  ),
 )
