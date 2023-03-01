@@ -149,7 +149,7 @@ test('getIndividualPhenotypeGeneScores', () => {
           geneId: 'ENSG00000228198',
           geneSymbol: 'OR2M3',
         },
-        rowId: 'ENSG00000228198OMIM:618460',
+        rowId: 'ENSG00000228198-lirical-OMIM:618460',
         rank: 1,
         scores: { compositeLR: 0.066, post_test_probability: 0 },
       },
