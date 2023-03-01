@@ -264,19 +264,12 @@ export const getTagTypeCounts = createSelector(
 
 export const getVariantGeneId = ({ variantGuid, geneId }, variantGeneId) => `${variantGuid}-${variantGeneId || geneId}`
 
-const getFamilyGuidByIndividual = createSelector(
-  getIndividualsByGuid,
-  individualsByGuid => Object.values(individualsByGuid).reduce(
-    (acc, { familyGuid, individualGuid }) => ({ ...acc, [individualGuid]: familyGuid }), {},
-  ),
-)
-
 export const getIndividualTaggedVariants = createSelector(
   getTaggedVariantsByFamily,
-  getFamilyGuidByIndividual,
+  getIndividualsByGuid,
   (state, props) => props.individualGuid,
-  (taggedVariants, familyGuidByIndividual, individualGuid) => {
-    const familyGuid = familyGuidByIndividual[individualGuid]
+  (taggedVariants, individualsByGuid, individualGuid) => {
+    const { familyGuid } = individualsByGuid[individualGuid]
     return Object.values(taggedVariants[familyGuid] || []).reduce((acc, variant) => {
       const variantDetail = {
         ...variant.genotypes[individualGuid],
@@ -865,16 +858,16 @@ export const getPageHeaderEntityLinks = createSelector(
 
 export const getIndividualPhenotypeGeneScores = createSelector(
   getGenesById,
-  getFamilyGuidByIndividual,
+  getIndividualsByGuid,
   getPhenotypeGeneScoresByIndividual,
-  (genesById, familyGuidByIndividual, phenotypeGeneScoresByIndividual) => (
+  (genesById, individualsByGuid, phenotypeGeneScoresByIndividual) => (
     Object.entries(phenotypeGeneScoresByIndividual || {}).reduce((acc, [individualGuid, dataByGene]) => ({
       ...acc,
       [individualGuid]: Object.entries(dataByGene).reduce((acc2, [geneId, dataByTool]) => ([
         ...acc2,
         ...Object.entries(dataByTool).reduce((acc3, [tool, data]) => ([
           ...acc3, ...data.map(d => (
-            { ...d, tool, familyGuid: familyGuidByIndividual[individualGuid], gene: genesById[geneId], rowId: `${geneId}-${tool}-${d.diseaseId}` }
+            { ...d, tool, familyGuid: individualsByGuid[individualGuid].familyGuid, gene: genesById[geneId], rowId: `${geneId}-${tool}-${d.diseaseId}` }
           )),
         ]), []),
       ]), []),
