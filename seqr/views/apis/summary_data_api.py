@@ -1,5 +1,6 @@
 from datetime import datetime
-from django.db.models import Q, prefetch_related_objects
+from django.db.models import CharField, Q, prefetch_related_objects
+from django.db.models.functions import Concat
 import json
 from random import randint
 
@@ -122,8 +123,10 @@ def bulk_update_family_analysed_by(request):
         requested_families.add((row['project'], row['family']))
 
     family_db_id_lookup = {
-        (f['project__name'], f['family_id']): f['id'] for f in Family.objects.filter(
-            family_id__in=families, project__name__in=projects).values('id', 'family_id', 'project__name')
+        (f['project__name'], f['family_id']): f['id'] for f in Family.objects.annotate(
+            project_family=Concat('project__name', 'family_id', output_field=CharField())
+        ).filter(project_family__in=[f'{project}{family}' for project, family in requested_families])
+        .values('id', 'family_id', 'project__name')
     }
 
     warnings = []
