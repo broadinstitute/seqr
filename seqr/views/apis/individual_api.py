@@ -754,10 +754,10 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 def get_individual_rna_seq_data(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     check_project_permissions(individual.family.project, request.user)
-    sample = Sample.objects.get(individual=individual, is_active=True, sample_type=Sample.SAMPLE_TYPE_RNA, tissue_type=None)
+    outlier_data = RnaSeqOutlier.objects.filter(sample__individual=individual, sample__is_active=True)
 
     rna_seq_data = {
-        data['geneId']: data for data in get_json_for_rna_seq_outliers(RnaSeqOutlier.objects.filter(sample=sample))
+        data['geneId']: data for data in get_json_for_rna_seq_outliers(outlier_data)
     }
     genes_to_show = get_genes([gene_id for gene_id, data in rna_seq_data.items() if data['isSignificant']])
 

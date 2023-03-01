@@ -822,6 +822,14 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_open.assert_called_with(file_name, 'wt')
                 self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
+                # test loading new data without existing data
+                data = [params['new_data'][0]]
+                data[0][0] = 'NA19678'  # load data for a new individual
+                _set_file_iter_stdout([header] + data)
+                body.pop('mappingFile')
+                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+                self.assertEqual(response.status_code, 200)
+
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
     @mock.patch('seqr.views.apis.data_manager_api.logger')
