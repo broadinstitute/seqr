@@ -1014,7 +1014,7 @@ export const STATE_WITH_2_FAMILIES = {
       username: 'test_user2',
     },
   },
-    rnaSeqDataByIndividual: {
+  rnaSeqDataByIndividual: {
     I021476_na19678_1: {
       outliers: {
         ENSG00000228198: { isSignificant: true, pValue: 0.0004 },
