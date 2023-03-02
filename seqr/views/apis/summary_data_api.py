@@ -112,15 +112,7 @@ def bulk_update_family_analysed_by(request):
     header = [col.split()[0].lower() for col in family_upload_data[0]]
     if not ('project' in header and 'family' in header):
         return create_json_response({'error': 'Project and Family columns are required'}, status=400)
-    families_data = [dict(zip(header, row)) for row in family_upload_data[1:]]
-
-    projects = set()
-    families = set()
-    requested_families = set()
-    for row in families_data:
-        projects.add(row['project'])
-        families.add(row['family'])
-        requested_families.add((row['project'], row['family']))
+    requested_families = {(row[header.index('project')], row[header.index('family')]) for row in family_upload_data[1:]}
 
     family_db_id_lookup = {
         (f['project__name'], f['family_id']): f['id'] for f in Family.objects.annotate(
