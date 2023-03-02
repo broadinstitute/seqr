@@ -1,7 +1,7 @@
 from collections import defaultdict
 from django.db.models import Q, prefetch_related_objects
 
-from seqr.models import Individual, Sample, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
+from seqr.models import Individual, IgvSample, AnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, _get_json_for_models, \
