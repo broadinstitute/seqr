@@ -328,14 +328,16 @@ END_COL = 'end'
 STRAND_COL = 'strand'
 READ_COUNT_COL = 'read_count'
 DOT_SIZE_COL = 'dot_size'
+SPLICE_TYPE_COL = 'type'
 P_VALUE_COL ='p_value'
 Z_SCORE_COL = 'z_score'
 DELTA_PSI_COL = 'delta_psi'
 RARE_DISEASE_SAMPLES_WITH_JUNCTION = 'rare_disease_samples_with_junction'
 RARE_DISEASE_SAMPLES_TOTAL = 'rare_disease_samples_total'
 SPLICE_OUTLIER_COLS = [
-    CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, 'gene_name', 'type', P_VALUE_COL, Z_SCORE_COL, DELTA_PSI_COL,
-    READ_COUNT_COL, GENE_ID_COL, TISSUE_COL, DOT_SIZE_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION, RARE_DISEASE_SAMPLES_TOTAL
+    CHROM_COL, START_COL, END_COL, STRAND_COL, INDIV_ID_COL, 'gene_name', SPLICE_TYPE_COL, P_VALUE_COL, Z_SCORE_COL,
+    DELTA_PSI_COL, READ_COUNT_COL, GENE_ID_COL, TISSUE_COL, DOT_SIZE_COL, RARE_DISEASE_SAMPLES_WITH_JUNCTION,
+    RARE_DISEASE_SAMPLES_TOTAL
 ]
 SPLICE_OUTLIER_FORMATTER = {
     CHROM_COL: lambda chr: chr[3:],
@@ -406,7 +408,8 @@ def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_sampl
 
 
 def _get_splice_id(row):
-    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], row[START_COL], row[END_COL], row[STRAND_COL]])
+    return '-'.join([row[GENE_ID_COL], row[CHROM_COL], str(row[START_COL]), str(row[END_COL]), row[STRAND_COL],
+                    row[SPLICE_TYPE_COL]])
 
 
 def load_rna_seq_splice_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):

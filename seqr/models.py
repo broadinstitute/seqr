@@ -1093,18 +1093,32 @@ class RnaSeqTpm(DeletableSampleMetadataModel):
 
 
 class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
+    STRAND_CHOICES = (
+        ('+', '5′ to 3′ direction'),
+        ('-', '3′ to 5′ direction'),
+        ('*', 'Any direction'),
+    )
+
     p_value = models.FloatField()
     z_score = models.FloatField()
     chrom = models.CharField(max_length=2)
     start = models.IntegerField()
     end = models.IntegerField()
-    strand = models.CharField(max_length=1)  # "+" or "-"
-    read_counts = models.IntegerField()  # RNA-seq reads that span the splice junction
+    strand = models.CharField(max_length=1, choices=STRAND_CHOICES)  # "+", "-", or "*"
+    gene_name = models.CharField(max_length=20)
+    type = models.CharField(max_length=10)
+    delta_psi = models.FloatField()
+    read_count = models.IntegerField()  # RNA-seq reads that span the splice junction
+    dot_size = models.FloatField()
+    rare_disease_samples_with_junction = models.IntegerField()
+    rare_disease_samples_total = models.IntegerField()
 
     class Meta:
-        unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end')
+        unique_together = ('sample', 'gene_id', 'chrom', 'start', 'end', 'strand', 'type')
 
-        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_counts']
+        json_fields = ['gene_id', 'p_value', 'z_score', 'chrom', 'start', 'end', 'strand', 'read_count', 'gene_name',
+                       'type', 'delta_psi', 'dot_size', 'rare_disease_samples_with_junction',
+                       'rare_disease_samples_total']
 
 
 class PhenotypePrioritization(BulkOperationBase):
