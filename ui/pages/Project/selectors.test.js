@@ -141,6 +141,7 @@ test('getIndividualPhenotypeGeneScores', () => {
         tool: 'lirical',
         diseaseId: 'OMIM:618460',
         diseaseName: 'Khan-Khan-Katsanis syndrome',
+        familyGuid: 'F011652_1',
         gene: {
           geneId: 'ENSG00000228198',
           geneSymbol: 'OR2M3',

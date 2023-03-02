@@ -552,7 +552,7 @@ const getGeneConsequence = (geneId, variant) => {
 
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData, geneModalId,
-  noExpand,
+  noExpand, geneSearchFamily,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -579,6 +579,8 @@ export const BaseVariantGene = React.memo(({
   if (compact) {
     summaryDetail = showInlineDetails ? (
       <span>
+        {geneSearchFamily &&
+          <GeneSearchLinkWithPopup location={geneId} familyGuid={geneSearchFamily} buttonText="" icon="search" size="tiny" />}
         {geneConsequence}
         &nbsp; &nbsp;
         {geneDetails}
@@ -651,6 +653,7 @@ BaseVariantGene.propTypes = {
   individualGeneData: PropTypes.object,
   geneModalId: PropTypes.string,
   noExpand: PropTypes.bool,
+  geneSearchFamily: PropTypes.string,
 }
 
 const getRnaSeqProps = (state, ownProps) => ({
