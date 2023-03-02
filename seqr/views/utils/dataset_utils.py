@@ -11,6 +11,7 @@ from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
 from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
+from seqr.utils.xpos_utils import get_chrom
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
@@ -340,7 +341,7 @@ SPLICE_OUTLIER_COLS = [
     RARE_DISEASE_SAMPLES_TOTAL
 ]
 SPLICE_OUTLIER_FORMATTER = {
-    CHROM_COL: lambda chr: chr[3:],
+    CHROM_COL: get_chrom,
     START_COL: int,
     END_COL: int,
     READ_COUNT_COL: int,
