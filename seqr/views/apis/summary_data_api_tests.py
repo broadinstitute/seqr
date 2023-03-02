@@ -156,7 +156,7 @@ class SummaryDataAPITest(object):
             {'dataType': 'RNA', 'familiesFile': {'uploadedFileId': 'abc123'}}))
         self.assertDictEqual(response.json(), {
             'warnings': [
-                'No match found for the following families: 2 (not_a_project), not_a_family (Test Reprocessed Project)'
+                'No match found for the following families: not_a_family (Test Reprocessed Project), 2 (not_a_project)'
             ],
             'info': ['Updated "analysed by" for 2 families'],
         })
@@ -165,6 +165,7 @@ class SummaryDataAPITest(object):
         self.assertEqual(len(models), 2)
         self.assertSetEqual({fab.data_type for fab in models}, {'RNA'})
         self.assertSetEqual({fab.created_by for fab in models}, {self.analyst_user})
+        self.assertSetEqual({fab.family.family_id for fab in models}, {'1', '12'})
 
         self.check_no_analyst_no_access(url)
 
