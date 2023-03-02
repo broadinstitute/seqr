@@ -204,19 +204,21 @@ class LocusListAPITest(AuthenticationTestCase):
         new_locus_list = LocusList.objects.filter(guid=LOCUS_LIST_GUID)
         self.assertEqual(len(new_locus_list), 0)
 
-    def test_add_and_remove_project_locus_lists(self):
-        existing_guid = 'LL00005_retina_proteome'
+    def _test_project_locus_list_response(self, response, has_extra_locus_list):
+        self.assertEqual(response.status_code, 200)
+        expected_guids = ([LOCUS_LIST_GUID] if has_extra_locus_list else []) + ['LL00005_retina_proteome']
+        self.assertListEqual(response.json()['locusListGuids'], expected_guids)
+        ll_projects = LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.all()
+        self.assertEqual(ll_projects.count(), len(expected_guids))
+        self.assertEqual(PROJECT_GUID in {p.guid for p in ll_projects}, has_extra_locus_list)
 
+    def test_add_and_remove_project_locus_lists(self):
         # add a locus list
         url = reverse(add_project_locus_lists, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
-        self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['locusListGuids'], [LOCUS_LIST_GUID, existing_guid])
-        ll_projects = LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.all()
-        self.assertEqual(ll_projects.count(), 2)
-        self.assertTrue(PROJECT_GUID in {p.guid for p in ll_projects})
+        self._test_project_locus_list_response(response, has_extra_locus_list=True)
 
         # remove a locus list
         url = reverse(delete_project_locus_lists, args=[PROJECT_GUID])
@@ -225,9 +227,5 @@ class LocusListAPITest(AuthenticationTestCase):
 
         self.login_manager()
         response = self.client.post(url, content_type='application/json', data=json.dumps({'locusListGuids': [LOCUS_LIST_GUID]}))
-        self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['locusListGuids'], [existing_guid])
-        ll_projects = LocusList.objects.get(guid=LOCUS_LIST_GUID).projects.all()
-        self.assertEqual(ll_projects.count(), 1)
-        self.assertFalse(PROJECT_GUID in {p.guid for p in ll_projects})
+        self._test_project_locus_list_response(response, has_extra_locus_list=False)
 
