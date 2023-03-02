@@ -50,24 +50,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
                 raise ValueError('Unsupported file format')
             if not project:
                 raise ValueError('Project argument required for parsing sample manifest')
-            # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
-            headers = rows[:2]
-            rows = rows[2:]
-
-            # validate manifest_header_row1
-            expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
-            expected_header_1_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
-
-            expected = expected_header_1_columns
-            actual = headers[0]
-            if expected == actual:
-                expected = expected_header_columns[4:6]
-                actual = headers[1][4:6]
-            unexpected_header_columns = '|'.join(difflib.unified_diff(expected, actual)).split('\n')[3:]
-            if unexpected_header_columns:
-                raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
-
-            header = expected_header_columns
+            header, rows = _parse_merged_pedigree_sample_manifest_rows(rows)
         else:
             if _is_header_row(header_string):
                 header_row = parsed_file[0]
@@ -303,6 +286,27 @@ def _is_header_row(row):
         return True
     else:
         return False
+
+
+def _parse_merged_pedigree_sample_manifest_rows(rows):
+    # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
+    headers = rows[:2]
+    rows = rows[2:]
+
+    # validate manifest_header_row1
+    expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
+    expected_header_1_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
+
+    expected = expected_header_1_columns
+    actual = headers[0]
+    if expected == actual:
+        expected = expected_header_columns[4:6]
+        actual = headers[1][4:6]
+    unexpected_header_columns = '|'.join(difflib.unified_diff(expected, actual)).split('\n')[3:]
+    if unexpected_header_columns:
+        raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
+
+    return expected_header_columns, rows
 
 
 def _parse_merged_pedigree_sample_manifest_format(rows, project):
