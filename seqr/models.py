@@ -1106,7 +1106,7 @@ class RnaSeqSpliceOutlier(DeletableSampleMetadataModel):
     end = models.IntegerField()
     strand = models.CharField(max_length=1, choices=STRAND_CHOICES)  # "+", "-", or "*"
     gene_name = models.CharField(max_length=20)
-    type = models.CharField(max_length=10)
+    type = models.CharField(max_length=12)
     delta_psi = models.FloatField()
     read_count = models.IntegerField()  # RNA-seq reads that span the splice junction
     dot_size = models.FloatField()
