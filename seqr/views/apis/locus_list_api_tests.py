@@ -36,6 +36,7 @@ class BaseLocusListAPITest(object):
 
         locus_lists_dict = response.json()['locusListsByGuid']
         self.assertSetEqual(set(locus_lists_dict.keys()), self.EXPECTED_LOCUS_LISTS)
+        self._test_expected_locus_list(locus_lists_dict)
 
         self.login_analyst_user()
         response = self.client.get(url)
