@@ -94,50 +94,18 @@ def load_mapping_file_content(file_content):
         id_mapping[line[0]] = line[1]
     return id_mapping
 
-def match_sample_ids_to_sample_records(
+def _find_or_create_missing_sample_records(
+        samples,
         projects,
         user,
         sample_ids,
-        elasticsearch_index,
-        sample_type,
-        data_source=None,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id_to_individual_id_mapping=None,
-        loaded_date=None,
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
-        allow_partial_families=False,
+        create_active=False,
+        **kwargs
 ):
-    """Goes through the given list of sample_ids and finds existing Sample records of the given
-    sample_type and dataset_type with ids from the list. For sample_ids that aren't found to have existing Sample
-    records, it looks for Individual records that have an individual_id that exactly equals one of the sample_ids in
-    the list or is contained in the optional sample_id_to_individual_id_mapping and creates new Sample records for these
-
-    Args:
-        projects (object array): List of Django ORM project models
-        user (object): Django ORM User model
-        sample_ids (list): a list of sample ids for which to find matching Sample records
-        sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
-        dataset_type (string): one of the Sample.DATASET_TYPE_* constants
-        elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
-        data_source (string): an optional string specifying the a non-elasticsearch source for the dataset
-        sample_id_to_individual_id_mapping (object): Mapping between sample ids and their corresponding individual ids
-        loaded_date (object): datetime object
-        raise_no_match_error (bool): whether to raise an exception if no sample matches are found
-        raise_unmatched_error_template (string): optional template to use to raise an exception if samples are unmatched, will not raise if not provided
-
-    Returns:
-        tuple:
-            [0] array: matching Sample records (including any newly-created ones)
-            [1] array: Family records with matched samples
-            [2] array: ids of Individuals with exact-matching existing samples
-    """
-
-    samples = _find_matching_sample_records(
-        projects, sample_ids, sample_type, dataset_type, elasticsearch_index,
-    )
-    logger.debug(str(len(samples)) + " exact sample record matches", user)
-
+    samples = list(samples)
     remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
     matched_individual_ids = {sample.individual_id for sample in samples}
     if len(remaining_sample_ids) > 0:
@@ -174,47 +142,15 @@ def match_sample_ids_to_sample_records(
             Sample(
                 guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE], # nosec
                 sample_id=sample_id,
-                sample_type=sample_type,
-                dataset_type=dataset_type,
-                elasticsearch_index=elasticsearch_index,
-                data_source=data_source,
                 individual=individual,
                 created_date=timezone.now(),
-                loaded_date=loaded_date or timezone.now(),
+                is_active=create_active,
+                **kwargs,
             ) for sample_id, individual in sample_id_to_individual_record.items()]
         samples += list(Sample.bulk_create(user, new_samples))
         log_model_bulk_update(logger, new_samples, user, 'create')
 
-    prefetch_related_objects(samples, 'individual__family')
-    included_families = {sample.individual.family for sample in samples}
-    if not allow_partial_families:
-        _validate_samples_families(samples, included_families, sample_type, dataset_type)
-
-    return samples, included_families, matched_individual_ids, remaining_sample_ids
-
-
-def _find_matching_sample_records(projects, sample_ids, sample_type, dataset_type, elasticsearch_index):
-    """Find and return Samples of the given sample_type and dataset_type whose sample ids are in sample_ids list.
-    If elasticsearch_index is provided, will only match samples with the same index or with no index set
-
-    Args:
-        project (object): Django ORM project model
-        sample_ids (list): a list of sample ids for which to find matching Sample records
-        sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
-        dataset_type (string): one of the Sample.DATASET_TYPE_* constants
-        elasticsearch_index (string): an optional string specifying the index where the dataset is loaded
-
-    Returns:
-        dict: sample_id_to_sample_record containing the matching Sample records
-    """
-
-    return list(Sample.objects.select_related('individual').filter(
-        individual__family__project__in=projects,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        sample_id__in=sample_ids,
-        elasticsearch_index=elasticsearch_index,
-    ))
+    return samples, matched_individual_ids, remaining_sample_ids
 
 
 def _validate_samples_families(samples, included_families, sample_type, dataset_type):
@@ -264,29 +200,38 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
     return activated_sample_guids, inactivate_sample_guids
 
 
-def match_and_update_samples(
-        projects, user, sample_ids, sample_type, elasticsearch_index=None, data_source=None, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_id_to_individual_id_mapping=None, raise_no_match_error=False,
-        raise_unmatched_error_template=None, allow_partial_families=False,
+def match_and_update_search_samples(
+        project, user, sample_ids, elasticsearch_index, sample_type, dataset_type,
+        sample_id_to_individual_id_mapping, raise_unmatched_error_template,
 ):
+    samples = Sample.objects.select_related('individual').filter(
+        individual__family__project=project,
+        sample_type=sample_type,
+        dataset_type=dataset_type,
+        sample_id__in=sample_ids,
+        elasticsearch_index=elasticsearch_index,
+    )
     loaded_date = timezone.now()
-    samples, included_families, matched_individual_ids, remaining_sample_ids = match_sample_ids_to_sample_records(
-        projects=projects,
+    samples, matched_individual_ids, remaining_sample_ids = _find_or_create_missing_sample_records(
+        samples=samples,
+        projects=[project],
         user=user,
         sample_ids=sample_ids,
         elasticsearch_index=elasticsearch_index,
-        data_source=data_source,
         sample_type=sample_type,
         dataset_type=dataset_type,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         loaded_date=loaded_date,
-        raise_no_match_error=raise_no_match_error,
+        raise_no_match_error=not raise_unmatched_error_template,
         raise_unmatched_error_template=raise_unmatched_error_template,
-        allow_partial_families=allow_partial_families,
     )
 
+    prefetch_related_objects(samples, 'individual__family')
+    included_families = {sample.individual.family for sample in samples}
+    _validate_samples_families(samples, included_families, sample_type, dataset_type)
+
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
-        samples, user, elasticsearch_index, data_source, loaded_date, dataset_type, sample_type)
+        samples, user, elasticsearch_index, loaded_date=loaded_date, dataset_type=dataset_type, sample_type=sample_type)
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
@@ -297,7 +242,34 @@ def match_and_update_samples(
     # refresh sample models to get updated values
     samples = Sample.objects.filter(id__in=[s.id for s in samples])
 
-    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update, remaining_sample_ids
+    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update, included_families
+
+
+def _match_and_update_rna_samples(
+    projects, user, sample_ids, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
+):
+    samples = Sample.objects.select_related('individual').filter(
+        individual__family__project__in=projects,
+        sample_type=Sample.SAMPLE_TYPE_RNA,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_id__in=sample_ids,
+    )
+    samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
+        samples=samples,
+        projects=projects,
+        user=user,
+        sample_ids=sample_ids,
+        data_source=data_source,
+        sample_type=Sample.SAMPLE_TYPE_RNA,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        loaded_date=timezone.now(),
+        raise_no_match_error=False,
+        raise_unmatched_error_template=raise_unmatched_error_template,
+        create_active=True
+    )
+
+    return samples, remaining_sample_ids
 
 def _parse_tsv_row(row):
     return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
@@ -405,13 +377,11 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     logger.info(message, user)
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
-    samples, _, _, _, _, remaining_sample_ids = match_and_update_samples(
+    samples, remaining_sample_ids = _match_and_update_rna_samples(
         projects=get_internal_projects(),
         user=user,
         sample_ids=samples_by_id.keys(),
         data_source=data_source,
-        sample_type=Sample.SAMPLE_TYPE_RNA,
-        allow_partial_families=True,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
     )

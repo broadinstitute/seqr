@@ -4,7 +4,7 @@ from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, ANVIL_UI_URL, 
     SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL
 from seqr.utils.communication_utils import send_html_email, safe_post_to_slack
 from seqr.models import Individual, Sample, Family
-from seqr.views.utils.dataset_utils import match_and_update_samples, load_mapping_file, \
+from seqr.views.utils.dataset_utils import match_and_update_search_samples, load_mapping_file, \
     validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_samples
@@ -58,15 +58,14 @@ def add_variants_dataset_handler(request, project_guid):
 
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     try:
-        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids, _ = match_and_update_samples(
-            projects=[project],
+        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids, _ = match_and_update_search_samples(
+            project=project,
             user=request.user,
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
             dataset_type=dataset_type,
             sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-            raise_no_match_error=ignore_extra_samples,
             raise_unmatched_error_template=None if ignore_extra_samples else 'Matches not found for ES sample ids: {sample_ids}. Uploading a mapping file for these samples, or select the "Ignore extra samples in callset" checkbox to ignore.'
         )
     except ValueError as e:

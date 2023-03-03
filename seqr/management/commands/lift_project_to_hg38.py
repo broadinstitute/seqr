@@ -6,7 +6,7 @@ from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, SavedVariant
-from seqr.views.utils.dataset_utils import match_sample_ids_to_sample_records, update_variant_samples, \
+from seqr.views.utils.dataset_utils import match_and_update_search_samples, update_variant_samples, \
     validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
@@ -37,12 +37,14 @@ class Command(BaseCommand):
         sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
             elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
-        samples, included_families, _, _ = match_sample_ids_to_sample_records(
-            projects=[project],
+        samples, _, _, _, _, included_families = match_and_update_search_samples(
+            project=project,
             user=None,
             sample_ids=sample_ids,
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
+            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            sample_id_to_individual_id_mapping=None,
             raise_unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
         )
 
