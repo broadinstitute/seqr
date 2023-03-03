@@ -817,12 +817,32 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
                 # test loading new data without existing data
-                data = [params['new_data'][0]]
+                mock_logger.reset_mock()
+                data = [params['new_data'][3]]
                 data[0][0] = 'NA19678'  # load data for a new individual
                 _set_file_iter_stdout([header] + data)
                 body.pop('mappingFile')
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
+                info = [
+                    f'Parsed 1 RNA-seq samples',
+                    'Attempted data loading for 1 RNA-seq samples in the following 1 projects: 1kg project nåme with uniçøde'
+                ]
+                response_json = response.json()
+                self.assertDictEqual(response_json, {'info': info, 'warnings': [], 'sampleGuids': mock.ANY, 'fileName': file_name})
+                new_sample_guid = self._check_rna_sample_model(
+                    individual_id=2, data_source='new_muscle_samples.tsv.gz', tissue_type=params.get('created_sample_tissue_type'),
+                )
+                self.assertListEqual(response_json['sampleGuids'], [new_sample_guid])
+                info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
+                if test_round == 0:
+                    info_log_calls.insert(1, mock.call(
+                        'create 1 Samples', self.data_manager_user, db_update={
+                            'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][0]],
+                            'updateType': 'bulk_create',
+                        }
+                    ))
+                mock_logger.info.assert_has_calls(info_log_calls)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
