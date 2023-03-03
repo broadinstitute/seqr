@@ -825,7 +825,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
                 info = [
-                    f'Parsed 1 RNA-seq samples',
+                    'Parsed 1 RNA-seq samples',
                     'Attempted data loading for 1 RNA-seq samples in the following 1 projects: 1kg project nåme with uniçøde'
                 ]
                 response_json = response.json()
