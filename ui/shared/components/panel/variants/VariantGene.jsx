@@ -13,6 +13,7 @@ import {
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
+import { BehindModalPopup } from '../../PopupWithModal'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../StyledComponents'
 import { GeneSearchLink } from '../../buttons/SearchResultsLink'
@@ -611,7 +612,7 @@ export const BaseVariantGene = React.memo(({
   )
 
   return compactDetails ? (
-    <Popup
+    <BehindModalPopup
       header="Gene Details"
       size="tiny"
       position="bottom left"

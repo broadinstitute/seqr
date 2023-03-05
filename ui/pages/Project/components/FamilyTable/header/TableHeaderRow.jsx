@@ -191,7 +191,6 @@ const TableHeaderRow = React.memo(({
         <OverflowHeaderCell colSpan={2} textAlign="left">
           <FamilyLayout
             compact
-            offset
             fields={fields}
             fieldDisplay={familyFieldDisplay}
             rightContent={showVariantDetails ? <FamilyTableFilter category={FAMILY_FIELD_SAVED_VARIANTS} /> : null}

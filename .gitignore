@@ -22,3 +22,5 @@ seqr_settings
 django_key
 .coverage
 .vscode/
+generated_files/
+parsed_omim_records.txt

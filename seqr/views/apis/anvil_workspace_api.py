@@ -2,8 +2,11 @@
 import json
 import time
 import tempfile
+import os
+import re
 from datetime import datetime
 from functools import wraps
+from collections import defaultdict
 import requests
 
 from google.auth.transport.requests import Request
@@ -25,7 +28,7 @@ from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.views.utils.terra_api_utils import add_service_account, has_service_account_access, TerraAPIException, \
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, JsonConstants
-from seqr.views.utils.individual_utils import add_or_update_individuals_and_families, get_updated_pedigree_json
+from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.communication_utils import safe_post_to_slack, send_html_email
 from seqr.utils.file_utils import does_file_exist, mv_file_to_gs, get_gs_file_list
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples
@@ -127,6 +130,7 @@ def get_anvil_vcf_list(request, namespace, name, workspace_meta):
     bucket_path = 'gs://{bucket}'.format(bucket=bucket_name.rstrip('/'))
     data_path_list = [path.replace(bucket_path, '') for path in get_gs_file_list(bucket_path, request.user)
                       if path.endswith(VCF_FILE_EXTENSIONS)]
+    data_path_list = _merge_sharded_vcf(data_path_list)
 
     return create_json_response({'dataPathList': data_path_list})
 
@@ -148,8 +152,10 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
         error = 'Data file or path {} is not found.'.format(path)
         return create_json_response({'error': error}, status=400, reason=error)
 
+    file_to_check = get_gs_file_list(data_path, request.user, check_subfolders=False)[0] if '*' in data_path else data_path
+
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(data_path)
+    samples = validate_vcf_and_get_samples(file_to_check)
 
     return create_json_response({'vcfSamples': sorted(samples), 'fullDataPath': data_path})
 
@@ -232,11 +238,9 @@ def add_workspace_data(request, project_guid):
                      ' The following samples were previously loaded in this project but are missing from the VCF: {}'.format(
                 ', '.join(sorted(missing_loaded_samples)))}, status=400)
 
-    updated_individuals, updated_families, updated_notes = _trigger_add_workspace_data(
+    pedigree_json = _trigger_add_workspace_data(
         project, pedigree_records, request.user, request_json['fullDataPath'], previous_samples.first().sample_type,
-        previous_loaded_ids=previous_loaded_individuals)
-
-    pedigree_json = get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, request.user)
+        previous_loaded_ids=previous_loaded_individuals, get_pedigree_json=True)
 
     return create_json_response(pedigree_json)
 
@@ -260,16 +264,16 @@ def _parse_uploaded_pedigree(request_json, user):
     return pedigree_records
 
 
-def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None):
+def _trigger_add_workspace_data(project, pedigree_records, user, data_path, sample_type, previous_loaded_ids=None, get_pedigree_json=False):
     # add families and individuals according to the uploaded individual records
-    updated_individuals, updated_families, updated_notes = add_or_update_individuals_and_families(
-        project, individual_records=pedigree_records, user=user
+    pedigree_json, sample_ids = add_or_update_individuals_and_families(
+        project, individual_records=pedigree_records, user=user, get_update_json=get_pedigree_json, get_updated_individual_ids=True,
     )
+    num_updated_individuals = len(sample_ids)
 
     # Upload sample IDs to a file on Google Storage
     ids_path = '{}base/{guid}_ids.txt'.format(_get_loading_project_path(project, sample_type), guid=project.guid)
-    sample_ids = [individual.individual_id for individual in updated_individuals]
-    sample_ids += previous_loaded_ids if previous_loaded_ids else []
+    sample_ids.update(previous_loaded_ids or [])
     try:
         temp_path = save_temp_data('\n'.join(['s'] + sorted(sample_ids)))
         mv_file_to_gs(temp_path, ids_path, user=user)
@@ -280,7 +284,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
     # use airflow api to trigger AnVIL dags
     trigger_success = _trigger_data_loading(project, data_path, sample_type, user)
     # Send a slack message to the slack channel
-    _send_load_data_slack_msg(project, ids_path, data_path, len(updated_individuals), sample_type, user)
+    _send_load_data_slack_msg(project, ids_path, data_path, num_updated_individuals, sample_type, user)
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_record(
         'AnVIL Seqr Loading Requests Tracking', {
             'Requester Name': user.get_full_name(),
@@ -305,7 +309,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         except Exception as e:
             logger.error('AnVIL loading delay email error: {}'.format(e), user)
 
-    return updated_individuals, updated_families, updated_notes
+    return pedigree_json
 
 def _wait_for_service_account_access(user, namespace, name):
     for _ in range(2):
@@ -451,4 +455,20 @@ def _make_airflow_api_request(endpoint, method='GET', timeout=90, **kwargs):
     return resp.json()
 
 
+def _merge_sharded_vcf(vcf_files):
+    files_by_path = defaultdict(list)
 
+    for vcf_file in vcf_files:
+        subfolder_path, file = vcf_file.rsplit('/', 1)
+        files_by_path[subfolder_path].append(file)
+
+    # discover the sharded VCF files in each folder, replace the sharded VCF files with a single path with '*'
+    for subfolder_path, files in files_by_path.items():
+        if len(files) < 2:
+            continue
+        prefix = os.path.commonprefix(files)
+        suffix = re.fullmatch(r'{}\d*(?P<suffix>\D.*)'.format(prefix), files[0]).groupdict()['suffix']
+        if all([re.fullmatch(r'{}\d+{}'.format(prefix, suffix), file) for file in files]):
+            files_by_path[subfolder_path] = [f'{prefix}*{suffix}']
+
+    return [f'{path}/{file}' for path, files in files_by_path.items() for file in files]

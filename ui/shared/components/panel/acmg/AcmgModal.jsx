@@ -1,28 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Button, Label, Loader } from 'semantic-ui-react'
+import { Loader } from 'semantic-ui-react'
 import Modal from '../../modal/Modal'
+import { ButtonLink } from '../../StyledComponents'
 
 const AcmgCriteria = React.lazy(() => import('./AcmgCriteria'))
-
-const getButtonBackgroundColor = (classification) => {
-  const categoryColors = {
-    Unknown: 'grey',
-    Benign: 'blue',
-    'Likely Benign': 'blue',
-    Pathogenic: 'orange',
-    'Likely Pathogenic': 'orange',
-    Uncertain: 'yellow',
-  }
-  return categoryColors[classification] || 'grey'
-}
 
 const AcmgModal = (props) => {
   const { variant, familyGuid } = props
   const modalName = `acmg-${variant.variantGuid}-${familyGuid}`
-
-  const { classify } = variant.acmgClassification || {}
-  const buttonBackgroundColor = getButtonBackgroundColor(classify)
 
   return (
     <Modal
@@ -30,7 +16,7 @@ const AcmgModal = (props) => {
       size="fullscreen"
       modalName={modalName}
       trigger={
-        <Button as={Label} color={buttonBackgroundColor} content={`Classify ${classify || ''}`} horizontal basic={!classify} size="small" />
+        <ButtonLink content="In seqr" />
       }
     >
       <React.Suspense fallback={<Loader />}>

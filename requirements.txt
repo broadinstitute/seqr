@@ -16,13 +16,13 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==3.0.1
     # via requests
-cryptography==39.0.0
+cryptography==39.0.1
     # via social-auth-core
 defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==3.2.16
+django==3.2.18
     # via
     #   -r requirements.in
     #   django-anymail
@@ -33,7 +33,7 @@ django==3.2.16
     #   django-storages
 django-anymail==9.0
     # via -r requirements.in
-django-cors-headers==3.13.0
+django-cors-headers==3.14.0
     # via -r requirements.in
 django-csp==3.7
     # via -r requirements.in
@@ -57,7 +57,7 @@ google-api-core[grpc]==2.11.0
     #   google-cloud-core
     #   google-cloud-logging
     #   google-cloud-storage
-google-auth==2.16.0
+google-auth==2.16.1
     # via
     #   google-api-core
     #   google-cloud-core
@@ -85,11 +85,11 @@ googleapis-common-protos==1.58.0
     #   google-api-core
     #   google-cloud-audit-log
     #   grpcio-status
-grpcio==1.51.1
+grpcio==1.51.3
     # via
     #   google-api-core
     #   grpcio-status
-grpcio-status==1.51.1
+grpcio-status==1.51.3
     # via google-api-core
 gunicorn==20.1.0
     # via -r requirements.in
@@ -101,7 +101,7 @@ oauthlib==3.2.2
     # via
     #   requests-oauthlib
     #   social-auth-core
-openpyxl==3.0.10
+openpyxl==3.1.1
     # via -r requirements.in
 packaging==23.0
     # via
@@ -113,7 +113,7 @@ proto-plus==1.22.2
     # via
     #   google-cloud-appengine-logging
     #   google-cloud-logging
-protobuf==4.21.12
+protobuf==4.22.0
     # via
     #   google-api-core
     #   google-cloud-audit-log
@@ -183,7 +183,7 @@ urllib3==1.26.14
     # via
     #   elasticsearch
     #   requests
-whitenoise==6.3.0
+whitenoise==6.4.0
     # via -r requirements.in
 
 # The following packages are considered to be unsafe in a requirements file:

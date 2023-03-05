@@ -13,14 +13,13 @@ from seqr.models import Individual, Family, Sample, RnaSeqOutlier
 from seqr.utils.gene_utils import get_genes
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_model_from_json
-from seqr.views.utils.json_utils import create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_individual, _get_json_for_individuals, _get_json_for_family,\
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_individuals, add_individual_hpo_details, \
     _get_json_for_families, get_json_for_rna_seq_outliers, get_project_collaborators_by_username
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, JsonConstants, ErrorsWarningsException
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, service_account_access
-from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families,\
-    get_updated_pedigree_json
+from seqr.views.utils.individual_utils import delete_individuals, get_parsed_feature, add_or_update_individuals_and_families
 
 
 _SEX_TO_EXPORTED_VALUE = dict(Individual.SEX_LOOKUP)
@@ -64,10 +63,13 @@ def update_individual_handler(request, individual_guid):
     update_json = request_json if can_edit else {k: v for k, v in request_json.items() if k in {'notes'}}
 
     update_individual_from_json(individual, update_json, user=request.user, allow_unknown_keys=True)
+    individual_json = _get_json_for_model(individual, user=request.user)
+    individual_json['displayName'] = individual_json['displayName'] or individual_json['individualId']
 
     return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user)
+        individual.guid: individual_json
     })
+
 
 
 @login_and_policies_required
@@ -83,14 +85,18 @@ def update_individual_hpo_terms(request, individual_guid):
 
     request_json = json.loads(request.body)
 
+    feature_fields = ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']
     update_json = {
         key: [get_parsed_feature(feature) for feature in request_json[key]] if request_json.get(key) else None
-        for key in ['features', 'absentFeatures', 'nonstandardFeatures', 'absentNonstandardFeatures']
+        for key in feature_fields
     }
     update_model_from_json(individual, update_json, user=request.user)
 
+    individual_json = {k: getattr(individual, _to_snake_case(k)) for k in feature_fields}
+    add_individual_hpo_details([individual_json])
+
     return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user, add_hpo_details=True)
+        individual.guid: individual_json
     })
 
 
@@ -144,7 +150,7 @@ def edit_individuals_handler(request, project_guid):
     related_individuals = Individual.objects.filter(
         family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
     related_individuals_json = _get_json_for_individuals(related_individuals, project_guid=project_guid, family_fields=['family_id'])
-    individuals_list = modified_individuals_list + related_individuals_json
+    individuals_list = modified_individuals_list + list(related_individuals_json)
 
     validate_fam_file_records(individuals_list, fail_on_warnings=True)
 
@@ -202,8 +208,9 @@ def delete_individuals_handler(request, project_guid):
     }
 
     families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in families_with_deleted_individuals
-    }  # families whose list of individuals may have changed
+        family['familyGuid']: family for family in
+        _get_json_for_families(families_with_deleted_individuals, request.user, add_individual_guids_field=True)
+    } # families whose list of individuals may have changed
 
     # send response
     return create_json_response({
@@ -254,7 +261,7 @@ def receive_individuals_table_handler_base(request, project_guid):
         related_individuals_json = _get_json_for_individuals(
             related_individuals, project_guid=project_guid, family_fields=['family_id'])
 
-        validate_fam_file_records(json_records + related_individuals_json, fail_on_warnings=True)
+        validate_fam_file_records(json_records + list(related_individuals_json), fail_on_warnings=True)
 
     # send back some stats
     individual_ids_by_family = defaultdict(set)
@@ -326,12 +333,7 @@ def save_individuals_table_handler_base(request, project_guid, upload_file_id):
 
 
 def _update_and_parse_individuals_and_families(project, individual_records, user):
-    updated_individuals, updated_families, updated_notes = add_or_update_individuals_and_families(
-        project, individual_records, user
-    )
-
-    pedigree_json = get_updated_pedigree_json(updated_individuals, updated_families, updated_notes, user)
-
+    pedigree_json = add_or_update_individuals_and_families(project, individual_records, user)
     return create_json_response(pedigree_json)
 
 
@@ -745,7 +747,7 @@ def save_individuals_metadata_table_handler_base(request, project_guid, upload_f
     response = {
         'individualsByGuid': {
             individual['individualGuid']: individual for individual in _get_json_for_individuals(
-            list(individuals_by_guid.values()), user=request.user, add_hpo_details=True, project_guid=project_guid,
+            individuals, user=request.user, add_hpo_details=True, project_guid=project_guid,
         )},
     }
 

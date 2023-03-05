@@ -11,7 +11,7 @@ from seqr.utils.elasticsearch.utils import get_es_variants_for_variant_ids
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    _get_json_for_models, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
+    get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
     get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
@@ -97,7 +97,7 @@ def _saved_variant_genes_transcripts(variants):
             gene['locusListGuids'] = []
 
     transcripts = {
-        t['transcriptId']: t for t in _get_json_for_models(
+        t['transcriptId']: t for t in get_json_for_queryset(
             TranscriptInfo.objects.filter(transcript_id__in=transcript_ids),
             nested_fields=[{'fields': ('refseqtranscript', 'refseq_id'), 'key': 'refseqId'}]
         )
@@ -106,18 +106,18 @@ def _saved_variant_genes_transcripts(variants):
     return genes, transcripts
 
 
-def _add_locus_lists(projects, genes, add_list_detail=False, user=None, is_analyst=None):
+def _add_locus_lists(projects, genes, add_list_detail=False, user=None):
     locus_lists = LocusList.objects.filter(projects__in=projects)
 
     if add_list_detail:
         locus_lists_by_guid = {
             ll['locusListGuid']: dict(intervals=[], **ll)
-            for ll in get_json_for_locus_lists(locus_lists, user, is_analyst=is_analyst)
+            for ll in get_json_for_locus_lists(locus_lists, user)
         }
     else:
         locus_lists_by_guid = defaultdict(lambda: {'intervals': []})
     intervals = LocusListInterval.objects.filter(locus_list__in=locus_lists)
-    for interval in _get_json_for_models(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
+    for interval in get_json_for_queryset(intervals, nested_fields=[{'fields': ('locus_list', 'guid')}]):
         locus_lists_by_guid[interval['locusListGuid']]['intervals'].append(interval)
 
     for locus_list_gene in LocusListGene.objects.filter(locus_list__in=locus_lists, gene_id__in=genes.keys()).prefetch_related('locus_list', 'palocuslistgene'):
@@ -147,7 +147,7 @@ def get_phenotype_prioritization(family_guids, gene_ids=None):
     data_by_individual_gene = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
     gene_filter = {'gene_id__in': gene_ids} if gene_ids is not None else {}
-    data_dicts = _get_json_for_models(
+    data_dicts = get_json_for_queryset(
         PhenotypePrioritization.objects.filter(
             individual__family__guid__in=family_guids, rank__lte=10, **gene_filter).order_by('disease_id'),
         nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}],
@@ -211,7 +211,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     genes, transcripts = _saved_variant_genes_transcripts(variants)
     response['transcriptsById'] = transcripts
     response['locusListsByGuid'] = _add_locus_lists(
-        projects, genes, add_list_detail=add_locus_list_detail, user=request.user, is_analyst=is_analyst)
+        projects, genes, add_list_detail=add_locus_list_detail, user=request.user)
 
     if discovery_tags:
         _add_discovery_tags(variants, discovery_tags)

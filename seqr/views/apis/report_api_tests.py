@@ -1,12 +1,13 @@
 from django.urls.base import reverse
 from django.utils.dateparse import parse_datetime
+import json
 import mock
 import pytz
 import responses
 from settings import AIRTABLE_URL
 
 from seqr.models import Project
-from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
+from seqr.views.apis.report_api import seqr_stats, get_category_projects, discovery_sheet, anvil_export, \
     sample_metadata_export, gregor_export
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
@@ -71,8 +72,8 @@ AIRTABLE_SAMPLE_RECORDS = {
     {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
-        "SeqrCollaboratorSampleID": "NA19675",
-        "CollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "CollaboratorSampleID": "NA19675",
         "Collaborator": ["recW24C2CJW5lT64K"],
         "dbgap_study_id": "dbgap_stady_id_1",
         "dbgap_subject_id": "dbgap_subject_id_1",
@@ -91,7 +92,7 @@ AIRTABLE_SAMPLE_RECORDS = {
       "id": "rec2Nkg10N1KssPc3",
       "fields": {
         "SeqrCollaboratorSampleID": "HG00731",
-        "CollaboratorSampleID": "VCGS_FAM203_621_D2",
+        "CollaboratorSampleID": "NA20885",
         "Collaborator": ["reca4hcBnbA2cnZf9"],
         "dbgap_study_id": "dbgap_stady_id_2",
         "dbgap_subject_id": "dbgap_subject_id_2",
@@ -111,7 +112,7 @@ AIRTABLE_SAMPLE_RECORDS = {
 PAGINATED_AIRTABLE_SAMPLE_RECORDS = {
     'offset': 'abc123',
     'records': [{
-      'id': 'rec2B6OGmQpfuRW3s',
+      'id': 'rec2B6OGmQpfuRW5z',
       'fields': {
         'CollaboratorSampleID': 'NA19675',
         'Collaborator': ['recW24C2CJW5lT64K'],
@@ -147,15 +148,70 @@ AIRTABLE_COLLABORATOR_RECORDS = {
     ]
 }
 
-EXPECTED_SAMPLE_METADATA_ROW = {
+
+AIRTABLE_GREGOR_SAMPLE_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B6OGmQpAkQW3s",
+      "fields": {
+        "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
+        "CollaboratorSampleID": "NA19675_1",
+        'SMID': 'SM-AGHT',
+        'Recontactable': 'Yes',
+      },
+    },
+    {
+      "id": "rec2Nkg10N1KssPc3",
+      "fields": {
+        "SeqrCollaboratorSampleID": "HG00731",
+        "CollaboratorSampleID": "VCGS_FAM203_621_D2",
+        'SMID': 'SM-JDBTM',
+      },
+    }
+]}
+AIRTABLE_GREGOR_RECORDS = {
+  "records": [
+    {
+      "id": "rec2B6OGmQpAkQW3s",
+      "fields": {
+        'SMID': 'SM-JDBTM',
+        'seq_library_prep_kit_method': 'Kapa HyperPrep',
+        'read_length': '151',
+        'experiment_type': 'exome',
+        'targeted_regions_method': 'Twist',
+        'targeted_region_bed_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed',
+        'date_data_generation': '2022-08-15',
+        'target_insert_size': '385',
+        'sequencing_platform': 'NovaSeq',
+        'aligned_dna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
+        'aligned_dna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
+        'md5sum': '129c28163df082',
+        'reference_assembly': 'GRCh38',
+        'alignment_software': 'BWA-MEM-2.3',
+        'mean_coverage': '42.4',
+        'analysis_details': 'DOI:10.5281/zenodo.4469317',
+        'called_variants_dna_short_read_id': 'SX2-3',
+        'aligned_dna_short_read_set_id': 'BCM_H7YG5DSX2',
+        'called_variants_dna_file': 'gs://fc-fed09429-e563-44a7-aaeb-776c8336ba02/COL_FAM1_1_D1.SV.vcf',
+        'caller_software': 'gatk4.1.2',
+        'variant_types': 'SNV',
+      },
+    },
+    {
+      "id": "rec2B6OGmCVzkQW3s",
+      "fields": {
+        'SMID': 'SM-AGHT',
+      },
+    },
+]}
+
+EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "project_guid": "R0003_test",
     "num_saved_variants": 2,
-    "dbgap_submission": "No",
     "solve_state": "Tier 1",
     "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
-    "sample_provider": "",
     "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
     "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
     "hpo_absent": "",
@@ -170,7 +226,6 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Ref-1": "TC",
     "sv_type-2": "Deletion",
     "sv_name-2": "DEL:chr12:49045487-49045898",
-    "multiple_datasets": "No",
     "ancestry_detail": "Ashkenazi Jewish",
     "maternal_id": "",
     "paternal_id": "",
@@ -193,8 +248,8 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Chrom-1": "1",
     "Alt-1": "T",
     "Gene-1": "OR4G11P",
-    "pmid_id": "",
-    "phenotype_description": "",
+    "pmid_id": None,
+    "phenotype_description": None,
     "affected_status": "Affected",
     "family_id": "12",
     "MME": "Y",
@@ -202,7 +257,62 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "proband_relationship": "",
     "consanguinity": "None suspected",
     "sequencing_center": "Broad",
-  }
+}
+EXPECTED_SAMPLE_METADATA_ROW = {
+    "dbgap_submission": "No",
+    "dbgap_study_id": "",
+    "dbgap_subject_id": "",
+    "sample_provider": "",
+    "multiple_datasets": "No",
+}
+EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
+
+MOCK_DATA_MODEL_URL = 'http://raw.githubusercontent.com/gregor_data_model.json'
+MOCK_DATA_MODEL = {
+    'name': 'test data model',
+    'tables': [
+        {
+            'table': 'subject',
+            'required': True,
+            'columns': [{'column': 'subject_id', 'required': True}],
+        },
+        {
+            'table': 'participant',
+            'required': True,
+            'columns': [
+                {'column': 'participant_id', 'required': True},
+                {'column': 'internal_project_id'},
+                {'column': 'gregor_center', 'required': True, 'enumerations': ['BCM', 'BROAD', 'UW']},
+                {'column': 'consent_code', 'required': True, 'enumerations': ['GRU', 'HMB']},
+                {'column': 'recontactable', 'enumerations': ['Yes', 'No', 'Unknown']},
+                {'column': 'prior_testing'},
+                {'column': 'family_id', 'required': True},
+                {'column': 'paternal_id'},
+                {'column': 'maternal_id'},
+                {'column': 'proband_relationship', 'required': True},
+                {'column': 'sex', 'required': True, 'enumerations': ['Male', 'Female', 'Unknown']},
+                {'column': 'reported_race', 'enumerations': ['Asian', 'White', 'Black', 'Unknown']},
+                {'column': 'reported_ethnicity', 'enumerations': ['Hispanic', 'Not Hispanic', 'Unknown']},
+                {'column': 'ancestry_metadata'},
+                {'column': 'affected_status', 'required': True, 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
+                {'column': 'phenotype_description'},
+                {'column': 'age_at_enrollment'},
+            ],
+        },
+        {
+            'table': 'aligned_dna_short_read_set',
+            'columns': [
+                {'column': 'aligned_dna_short_read_set_id', 'required': True},
+                {'column': 'aligned_dna_short_read_id', 'required': True},
+            ],
+        },
+        {
+            'table': 'dna_read_data',
+            'columns': [{'column': 'analyte_id', 'required': True}],
+        },
+    ]
+}
+
 
 def _get_list_param(call, param):
     query_params = call.url.split('?')[1].split('&')
@@ -221,6 +331,17 @@ class ReportAPITest(object):
             [row.split('\t') for row in mock_write_zip.call_args_list[i][0][1].split('\n') if row]
             for i in range(len(filenames))
         )
+
+    def _assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
+        expected_params = {
+            'fields[]': mock.ANY,
+            'pageSize': '100',
+            'filterByFormula': filter_formula,
+        }
+        if additional_params:
+            expected_params.update(additional_params)
+        self.assertDictEqual(responses.calls[call_index].request.params, expected_params)
+        self.assertListEqual(_get_list_param(responses.calls[call_index].request, 'fields%5B%5D'), fields)
 
     def test_seqr_stats(self):
         no_access_project = Project.objects.get(id=2)
@@ -241,8 +362,8 @@ class ReportAPITest(object):
 
         self.check_no_analyst_no_access(url)
 
-    def test_get_cmg_projects(self):
-        url = reverse(get_cmg_projects)
+    def test_get_category_projects(self):
+        url = reverse(get_category_projects, args=['GREGoR'])
         self.check_analyst_login(url)
 
         response = self.client.get(url)
@@ -581,6 +702,7 @@ class ReportAPITest(object):
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    ADDITIONAL_SAMPLES = ['NA21234']
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},

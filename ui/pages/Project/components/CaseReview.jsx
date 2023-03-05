@@ -26,7 +26,6 @@ const FIELDS = [
 const CaseReviewTable = React.memo(({ headerStatus }) => (
   <div>
     <FamilyTable
-      showDetails
       tableName={CASE_REVIEW_TABLE_NAME}
       headerStatus={headerStatus}
       detailFields={FIELDS}

@@ -175,7 +175,7 @@ const BaseFamilyDetail = React.memo(({ familyGuid, family, compact, tableName, s
     <Family
       family={family}
       compact={compact}
-      rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : null}
+      rightContent={showVariantDetails ? <VariantDetail family={family} compact={compact} /> : <div />}
       {...props}
     />
   )
