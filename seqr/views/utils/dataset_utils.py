@@ -181,15 +181,11 @@ def _validate_samples_families(samples, included_families, sample_type, dataset_
                 ))
 
 
-def update_variant_samples(samples, user, elasticsearch_index, data_source=None, loaded_date=None,
-                            dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS, sample_type=Sample.SAMPLE_TYPE_WES):
-    if not loaded_date:
-        loaded_date = timezone.now()
+def _update_variant_samples(samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type):
     updated_samples = [sample.id for sample in samples]
 
     activated_sample_guids = Sample.bulk_update(user, {
         'elasticsearch_index': elasticsearch_index,
-        'data_source': data_source,
         'is_active': True,
         'loaded_date': loaded_date,
     }, id__in=updated_samples, is_active=False)
@@ -238,7 +234,7 @@ def match_and_update_search_samples(
     included_families = {sample.individual.family for sample in samples}
     _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=expected_families)
 
-    activated_sample_guids, inactivated_sample_guids = update_variant_samples(
+    activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
         samples, user, elasticsearch_index, loaded_date=loaded_date, dataset_type=dataset_type, sample_type=sample_type)
 
     family_guids_to_update = [
