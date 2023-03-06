@@ -133,7 +133,7 @@ class LiftProjectToHg38Test(TestCase):
     def test_command_error_missing_families(self, mock_get_es_samples, mock_logger):
         mock_get_es_samples.return_value = ['HG00731', 'HG00732', 'HG00733'], SAMPLE_TYPE
 
-        with self.assertRaises(CommandError) as ce:
+        with self.assertRaises(ValueError) as ce:
             call_command('lift_project_to_hg38', '--project={}'.format(PROJECT_NAME),
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 

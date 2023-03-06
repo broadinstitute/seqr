@@ -6,7 +6,7 @@ from pyliftover.liftover import LiftOver
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, SavedVariant, Sample
-from seqr.views.utils.dataset_utils import match_and_update_search_samples, update_variant_samples, \
+from seqr.views.utils.dataset_utils import match_and_update_search_samples, \
     validate_index_metadata_and_get_elasticsearch_index_samples
 from seqr.views.utils.json_to_orm_utils import update_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
@@ -37,6 +37,11 @@ class Command(BaseCommand):
         sample_ids, sample_type = validate_index_metadata_and_get_elasticsearch_index_samples(
             elasticsearch_index, genome_version=GENOME_VERSION_GRCh38)
 
+        # Get expected saved variants
+        saved_variant_models = SavedVariant.objects.filter(family__project=project)
+        saved_variant_models_by_guid = {v.guid: v for v in saved_variant_models}
+        expected_families = {sv.family for sv in saved_variant_models}
+
         samples, _, _, _, _, included_families = match_and_update_search_samples(
             project=project,
             user=None,
@@ -44,24 +49,12 @@ class Command(BaseCommand):
             elasticsearch_index=elasticsearch_index,
             sample_type=sample_type,
             dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            expected_families=expected_families,
             sample_id_to_individual_id_mapping=None,
             raise_unmatched_error_template='Matches not found for ES sample ids: {sample_ids}.'
         )
 
-        # Get expected saved variants
-        saved_variant_models = SavedVariant.objects.filter(family__project=project)
-        saved_variant_models_by_guid = {v.guid: v for v in saved_variant_models}
-
-        expected_families = {sv.family for sv in saved_variant_models}
-        missing_families = expected_families - included_families
-        if missing_families:
-            raise CommandError(
-                'The following families have saved variants but are missing from the callset: {}.'.format(
-                    ', '.join([f.family_id for f in missing_families])
-                ))
-
         # Lift-over saved variants
-        update_variant_samples(samples, None, elasticsearch_index)
         saved_variants = get_json_for_saved_variants(saved_variant_models, add_details=True)
         saved_variants_to_lift, hg37_to_hg38_xpos, lift_failed = _get_variants_to_lift(saved_variants)
 

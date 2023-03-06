@@ -153,7 +153,7 @@ def _find_or_create_missing_sample_records(
     return samples, matched_individual_ids, remaining_sample_ids
 
 
-def _validate_samples_families(samples, included_families, sample_type, dataset_type):
+def _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=None):
     missing_individuals = Individual.objects.filter(
         family__in=included_families,
         sample__is_active=True,
@@ -171,6 +171,14 @@ def _validate_samples_families(samples, included_families, sample_type, dataset_
                     ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
                      for family, missing_indivs in missing_family_individuals.items()]
                 ))))
+
+    if expected_families:
+        missing_families = expected_families - included_families
+        if missing_families:
+            raise ValueError(
+                'The following families have saved variants but are missing from the callset: {}.'.format(
+                    ', '.join([f.family_id for f in missing_families])
+                ))
 
 
 def update_variant_samples(samples, user, elasticsearch_index, data_source=None, loaded_date=None,
@@ -202,7 +210,7 @@ def update_variant_samples(samples, user, elasticsearch_index, data_source=None,
 
 def match_and_update_search_samples(
         project, user, sample_ids, elasticsearch_index, sample_type, dataset_type,
-        sample_id_to_individual_id_mapping, raise_unmatched_error_template,
+        sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
 ):
     samples = Sample.objects.select_related('individual').filter(
         individual__family__project=project,
@@ -228,7 +236,7 @@ def match_and_update_search_samples(
 
     prefetch_related_objects(samples, 'individual__family')
     included_families = {sample.individual.family for sample in samples}
-    _validate_samples_families(samples, included_families, sample_type, dataset_type)
+    _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=expected_families)
 
     activated_sample_guids, inactivated_sample_guids = update_variant_samples(
         samples, user, elasticsearch_index, loaded_date=loaded_date, dataset_type=dataset_type, sample_type=sample_type)
