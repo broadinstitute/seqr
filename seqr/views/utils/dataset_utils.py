@@ -235,7 +235,7 @@ def match_and_update_search_samples(
     _validate_samples_families(samples, included_families, sample_type, dataset_type, expected_families=expected_families)
 
     activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
-        samples, user, elasticsearch_index, loaded_date=loaded_date, dataset_type=dataset_type, sample_type=sample_type)
+        samples, user, elasticsearch_index, loaded_date, dataset_type, sample_type)
 
     family_guids_to_update = [
         family.guid for family in included_families if family.analysis_status == Family.ANALYSIS_STATUS_WAITING_FOR_DATA
