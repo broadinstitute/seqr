@@ -216,7 +216,7 @@ def match_and_update_search_samples(
         elasticsearch_index=elasticsearch_index,
     )
     loaded_date = timezone.now()
-    samples, matched_individual_ids, remaining_sample_ids = _find_or_create_missing_sample_records(
+    samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
         samples=samples,
         projects=[project],
         user=user,
@@ -246,7 +246,7 @@ def match_and_update_search_samples(
     # refresh sample models to get updated values
     samples = Sample.objects.filter(id__in=[s.id for s in samples])
 
-    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update, included_families
+    return samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, family_guids_to_update
 
 
 def _match_and_update_rna_samples(

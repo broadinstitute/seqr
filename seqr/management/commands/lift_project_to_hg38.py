@@ -42,7 +42,7 @@ class Command(BaseCommand):
         saved_variant_models_by_guid = {v.guid: v for v in saved_variant_models}
         expected_families = {sv.family for sv in saved_variant_models}
 
-        samples, _, _, _, _, included_families = match_and_update_search_samples(
+        match_and_update_search_samples(
             project=project,
             user=None,
             sample_ids=sample_ids,

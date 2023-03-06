@@ -58,7 +58,7 @@ def add_variants_dataset_handler(request, project_guid):
 
     ignore_extra_samples = request_json.get('ignoreExtraSamplesInCallset')
     try:
-        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids, _ = match_and_update_search_samples(
+        samples, matched_individual_ids, activated_sample_guids, inactivated_sample_guids, updated_family_guids = match_and_update_search_samples(
             project=project,
             user=request.user,
             sample_ids=sample_ids,
