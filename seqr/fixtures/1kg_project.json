@@ -1303,6 +1303,14 @@
         "gene_id": "ENSG00000135953",
         "tpm": 1.01
     }
+}, {
+    "model": "seqr.rnaseqtpm",
+    "pk": 5,
+    "fields": {
+        "sample": 150,
+        "gene_id": "ENSG00000227232",
+        "tpm": 9.1
+    }
 },
 {
     "model": "seqr.phenotypeprioritization",
