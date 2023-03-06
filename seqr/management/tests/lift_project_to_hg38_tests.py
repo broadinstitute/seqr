@@ -2,7 +2,7 @@
 import mock
 from copy import deepcopy
 from django.core.management.base import CommandError
-from seqr.models import Family
+from seqr.models import Family, Sample
 from pyliftover.liftover import LiftOver
 from seqr.views.utils.test_utils import VARIANTS, SINGLE_VARIANT
 
@@ -11,7 +11,7 @@ from django.test import TestCase
 
 PROJECT_NAME = '1kg project n\u00e5me with uni\u00e7\u00f8de'
 PROJECT_GUID = 'R0001_1kg'
-ELASTICSEARCH_INDEX = 'test_index'
+ELASTICSEARCH_INDEX = 'test_new_index'
 SAMPLE_TYPE = 'WES'
 GENOME_VERSION = '38'
 SAMPLE_IDS = ["NA19679", "NA19675_1", "NA19678", "HG00731", "HG00732", "HG00733"]
@@ -36,6 +36,9 @@ def mock_convert_coordinate(chrom, pos):
 class LiftProjectToHg38Test(TestCase):
     fixtures = ['users', '1kg_project']
 
+    def _get_num_new_index_samples(self):
+        return Sample.objects.filter(elasticsearch_index=ELASTICSEARCH_INDEX, is_active=True).count()
+
     @mock.patch('seqr.management.commands.lift_project_to_hg38.input')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.get_es_variants_for_variant_tuples')
     @mock.patch('seqr.management.commands.lift_project_to_hg38.LiftOver')
@@ -50,7 +53,7 @@ class LiftProjectToHg38Test(TestCase):
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)'),
             mock.call('Successfully lifted over 3 variants'),
             mock.call('Successfully updated 3 variants'),
@@ -60,6 +63,7 @@ class LiftProjectToHg38Test(TestCase):
         mock_logger.info.assert_has_calls(calls)
 
         mock_get_es_samples.assert_called_with(ELASTICSEARCH_INDEX, genome_version=GENOME_VERSION)
+        self.assertEqual(self._get_num_new_index_samples(), 6)
 
         calls = [
             mock.call('chr21', 3343353),
@@ -85,7 +89,7 @@ class LiftProjectToHg38Test(TestCase):
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
         ]
         mock_logger.info.assert_has_calls(calls)
 
@@ -97,10 +101,11 @@ class LiftProjectToHg38Test(TestCase):
                     '--es-index={}'.format(ELASTICSEARCH_INDEX))
 
         self.assertEqual(str(ce.exception), 'Matches not found for ES sample ids: ID_NOT_EXIST.')
+        self.assertEqual(self._get_num_new_index_samples(), 0)
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index')
+            mock.call('Validating es index test_new_index')
         ]
         mock_logger.info.assert_has_calls(calls)
 
@@ -115,10 +120,11 @@ class LiftProjectToHg38Test(TestCase):
 
         self.assertEqual(str(ce.exception),
             'The following families are included in the callset but are missing some family members: 1 (NA19678).')
+        self.assertEqual(self._get_num_new_index_samples(), 0)
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
         ]
         mock_logger.info.assert_has_calls(calls)
 
@@ -133,10 +139,11 @@ class LiftProjectToHg38Test(TestCase):
 
         self.assertEqual(str(ce.exception),
             'The following families have saved variants but are missing from the callset: 1.')
+        self.assertEqual(self._get_num_new_index_samples(), 0)
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
         ]
         mock_logger.info.assert_has_calls(calls)
 
@@ -162,7 +169,7 @@ class LiftProjectToHg38Test(TestCase):
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)')
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -179,7 +186,7 @@ class LiftProjectToHg38Test(TestCase):
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)')
         ]
         mock_logger.info.assert_has_calls(calls)
@@ -205,7 +212,7 @@ class LiftProjectToHg38Test(TestCase):
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
             mock.call('Lifting over 4 variants (skipping 0 that are already lifted)'),
             mock.call('Successfully lifted over 4 variants')
         ]
@@ -220,7 +227,7 @@ class LiftProjectToHg38Test(TestCase):
 
         calls = [
             mock.call('Updating project genome version for {}'.format(PROJECT_NAME)),
-            mock.call('Validating es index test_index'),
+            mock.call('Validating es index test_new_index'),
             mock.call('Lifting over 3 variants (skipping 1 that are already lifted)'),
             mock.call('Successfully lifted over 4 variants'),
             mock.call('Successfully updated 4 variants'),
