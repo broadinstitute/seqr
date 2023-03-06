@@ -17,7 +17,7 @@ from seqr.models import Individual
 logger = SeqrLogger(__name__)
 
 
-NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES = ['CMG']
+NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES = ['CMG', 'TGG_Non-Report']
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
