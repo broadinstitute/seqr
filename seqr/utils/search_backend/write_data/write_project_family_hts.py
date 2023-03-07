@@ -50,7 +50,18 @@ ENTRY_FIELDS = {
 }
 
 
-def write_family_hts(file, project, data_type):
+def _write_entries_ht(mt, data_type, sample_ids, num_partitions=1):
+    ht = mt.annotate_rows(entry_agg=hl.agg.collect(hl.struct(
+        **{k: mt[k] for k in ['s', 'GT', *ANNOTATIONS[data_type].keys(), *ENTRY_FIELDS.get(data_type, [])]}
+    ))).rows()
+    ht = ht.annotate_globals(sample_ids=sorted(sample_ids))
+    ht = ht.annotate(entries=ht.sample_ids.map(
+        lambda sample_id: ht.entry_agg.find(lambda et: et.s == sample_id).drop('s'))).drop('entry_agg')
+    ht = ht.repartition(num_partitions)
+    return ht
+
+
+def write_project_family_hts(file, project, data_type, skip_write_project=False, skip_write_families=False):
     families_ht = hl.import_table(f'gs://seqr-project-subsets/{project}_fam.csv', key='s', delimiter=',')
     family_guids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.familyGuid))
 
@@ -63,8 +74,21 @@ def write_family_hts(file, project, data_type):
 
     mt = mt.semi_join_cols(families_ht)
     mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
-    annotations = ANNOTATIONS[data_type]
-    mt = mt.annotate_entries(**{k: v(mt) for k, v in annotations.items()})
+    mt = mt.annotate_entries(**{k: v(mt) for k, v in ANNOTATIONS[data_type].items()})
+    
+    if skip_write_project:
+        print('Skipping project export')
+    else:
+        print('Exporting project')
+        project_ht = _write_entries_ht(
+            mt, data_type, sample_ids=families_ht.aggregate(hl.agg.collect(families_ht.s)))
+        count = project_ht.count()
+        print(f'Project {project}: {families_ht.count()} samples, {count} rows')
+        project_ht.write(f'gs://hail-backend-datasets/{file}__projects/{project}.ht')
+    
+    if skip_write_families:
+        print('Skipping families export')
+        return
 
     print(f'Exporting {len(family_guids)} families')
     totals = []
@@ -76,14 +100,8 @@ def write_family_hts(file, project, data_type):
         family_mt = mt.semi_join_cols(family_subset_ht)
         family_mt = family_mt.filter_rows(hl.agg.any(family_mt.GT.is_non_ref()))
 
-        family_ht = family_mt.annotate_rows(entry_agg=hl.agg.collect(hl.struct(
-            **{k: family_mt[k] for k in ['s', 'GT', *annotations.keys(), *ENTRY_FIELDS.get(data_type, [])]}
-        ))).rows()
-        family_ht = family_ht.annotate_globals(
-            sample_ids=sorted(family_subset_ht.aggregate(hl.agg.collect(family_subset_ht.s))))
-        family_ht = family_ht.annotate(entries=family_ht.sample_ids.map(
-            lambda sample_id: family_ht.entry_agg.find(lambda et: et.s == sample_id).drop('s'))).drop('entry_agg')
-        family_ht = family_ht.repartition(1)
+        family_ht = _write_entries_ht(
+            family_mt, data_type, sample_ids=family_subset_ht.aggregate(hl.agg.collect(family_subset_ht.s)))
 
         count = family_ht.count()
         print(f'{family_guid}: {family_subset_ht.count()} samples, {count} rows')
@@ -106,6 +124,10 @@ if __name__ == "__main__":
     p.add_argument('file')
     p.add_argument('project')
     p.add_argument('data_type', choices=ANNOTATIONS.keys())
+    p.add_argument('--skip-write-project', action='store_true')
+    p.add_argument('--skip-write-families', action='store_true')
     args = p.parse_args()
 
-    write_family_hts(args.file, args.project, args.data_type)
+    write_project_family_hts(
+        args.file, args.project, args.data_type,
+        skip_write_project=args.skip_write_project, skip_write_families=args.skip_write_families)
