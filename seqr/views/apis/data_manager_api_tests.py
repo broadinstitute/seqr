@@ -638,17 +638,17 @@ class DataManagerAPITest(AuthenticationTestCase):
         'tpm': {
             'model_cls': RnaSeqTpm,
             'message_data_type': 'Expression',
-            'header': ['sample_id', 'gene_id', 'individual_id', 'tissue', 'TPM'],
+            'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', 'NA19675_D3', 'ENSG00000135953', 'muscle', 1.34],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
             'new_data': [
-                ['NA19675_D2', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
-                ['NA19675_D2', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
-                ['NA19675_D2', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
-                ['NA20889', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
-                ['NA19675_D3', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
-                ['GTEX_001', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
-                ['NA20888', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                ['NA20889', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
+                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+                ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
             ],
             'created_sample_tissue_type': 'F',
             'num_parsed_samples': 4,
@@ -725,7 +725,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {'error': mock.ANY})
                 self.assertTrue(response.json()['error'].startswith(
-                    f'Error in NA19675_D2 data for {mismatch_row[1]}: mismatched entries '))
+                    f'Error in NA19675_D2 data for {mismatch_row[2 if data_type == "tpm" else 1]}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
@@ -820,6 +820,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 mock_logger.reset_mock()
                 data = [params['new_data'][3]]
                 data[0][0] = 'NA19678'  # load data for a new individual
+                if data_type == 'tpm':
+                    data[0][1] = '1kg project nåme with uniçøde'
                 _set_file_iter_stdout([header] + data)
                 body.pop('mappingFile')
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))

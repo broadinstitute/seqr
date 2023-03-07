@@ -1,7 +1,8 @@
 import elasticsearch_dsl
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Q
+from django.db.models import prefetch_related_objects, Q, Value, TextField
+from django.db.models.functions import Concat
 from django.utils import timezone
 from tqdm import tqdm
 import random
@@ -250,13 +251,22 @@ def match_and_update_search_samples(
 
 
 def _match_and_update_rna_samples(
-    projects, user, sample_ids, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
+    projects, user, sample_ids, sample_id_project_names, data_source, sample_id_to_individual_id_mapping,
+        raise_unmatched_error_template,
 ):
-    samples = Sample.objects.select_related('individual').filter(
+    sample_project_filter = {'sample_id_project_name__in': sample_id_project_names} if sample_id_project_names else {}
+    samples = Sample.objects.select_related('individual').annotate(
+        sample_id_project_name=Concat(
+            'sample_id',
+            Value('--', output_field=TextField()),
+            'individual__family__project__name',
+            output_field=TextField()
+        )).filter(
         individual__family__project__in=projects,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id__in=sample_ids,
+        **sample_project_filter
     )
     samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
         samples=samples,
@@ -285,7 +295,8 @@ GENE_ID_COL = 'gene_id'
 TPM_COL = 'TPM'
 TISSUE_COL = 'tissue'
 INDIV_ID_COL = 'individual_id'
-TPM_HEADER_COLS = [SAMPLE_ID_COL, GENE_ID_COL, TISSUE_COL, TPM_COL]
+PROJECT_COL = 'project'
+TPM_HEADER_COLS = [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL, TPM_COL]
 
 TISSUE_TYPE_MAP = {
     'whole_blood': 'WB',
@@ -310,7 +321,7 @@ def _parse_tpm_row(row, sample_id_to_tissue_type=None):
             raise ValueError(f'Mismatched tissue types for sample {sample_id}: {prev_tissue}, {tissue}')
         sample_id_to_tissue_type[sample_id] = tissue
 
-        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL]}
+        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL], PROJECT_COL: row[PROJECT_COL]}
         if INDIV_ID_COL in row:
             parsed[INDIV_ID_COL] = row[INDIV_ID_COL]
 
@@ -361,6 +372,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     if missing_cols:
         raise ValueError(f'Invalid file: missing column(s) {", ".join(sorted(missing_cols))}')
 
+    sample_id_project_tuples = set()
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row, sample_id_to_tissue_type=sample_id_to_tissue_type):
@@ -374,6 +386,9 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
+            project = row_dict.pop(PROJECT_COL, None)
+            if project:
+                sample_id_project_tuples.add((sample_id, project))
             samples_by_id[sample_id][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
@@ -381,10 +396,12 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     logger.info(message, user)
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
+    projects = Project.objects.filter(name__in={project for _, project in sample_id_project_tuples})
     samples, remaining_sample_ids = _match_and_update_rna_samples(
-        projects=get_internal_projects(),
+        projects=projects if len(projects) > 0 else get_internal_projects(),
         user=user,
         sample_ids=samples_by_id.keys(),
+        sample_id_project_names={f'{sample_id}--{project}' for sample_id, project in sample_id_project_tuples},
         data_source=data_source,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
