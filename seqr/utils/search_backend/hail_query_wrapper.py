@@ -269,7 +269,8 @@ class BaseHailTableQuery(object):
 
         families_ht = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
-        for f, f_samples in family_samples.items():
+        if len(family_samples) == 1:
+            f, f_samples = list(family_samples.items())[0]
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
 
             logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
@@ -287,34 +288,16 @@ class BaseHailTableQuery(object):
                 )))
 
             family_ht = family_ht.select_globals()
-            if families_ht is not None:
-                families_ht = families_ht.join(family_ht, how='outer')
-                families_ht = families_ht.select(
-                    genotypes=hl.bind(
-                        lambda g1, g2: g1.extend(g2),
-                        hl.or_else(families_ht.genotypes, hl.empty_array(families_ht.genotypes.dtype.element_type)),
-                        hl.or_else(families_ht.genotypes_1, hl.empty_array(families_ht.genotypes.dtype.element_type)),
-                    ),
-                    **{k: hl.bind(
-                        lambda family_set: hl.if_else(
-                            hl.is_defined(families_ht[field]) & families_ht[field], family_set.add(f.guid), family_set),
-                        hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
-                    ) for k, field in family_set_fields.items()},
-                    **{k: hl.bind(
-                        lambda family_arr: hl.if_else(
-                            hl.is_defined(families_ht[field]), family_arr.append((f.guid, families_ht[field])), family_arr,
-                        ),
-                        hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
-                    ) for k, field in family_dict_fields.items()},
-                )
-            else:
-                families_ht = family_ht.transmute(
-                    **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
-                    **{k: hl.or_missing(hl.is_defined(family_ht[field]), [(f.guid, family_ht[field])])
-                       for k, field in family_dict_fields.items()},
-                )
+            families_ht = family_ht.transmute(
+                **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
+                **{k: hl.or_missing(hl.is_defined(family_ht[field]), [(f.guid, family_ht[field])])
+                   for k, field in family_dict_fields.items()},
+            )
+        else:
+            raise NotImplementedError
 
         if families_ht is None:
+            # TODO raise this lower down?
             raise InvalidSearchException(
                 'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
