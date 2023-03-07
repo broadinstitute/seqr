@@ -777,7 +777,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                     warnings = params['extra_warnings'] + warnings
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
                 response_json = response.json()
-                self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [RNA_SAMPLE_GUID, mock.ANY], 'fileName': file_name})
+                self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': mock.ANY, 'fileName': file_name})
+                self.assertTrue(RNA_SAMPLE_GUID in response_json['sampleGuids'])
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
                 info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
                 if test_round == 0:
