@@ -652,8 +652,8 @@ class DataManagerAPITest(AuthenticationTestCase):
             ],
             'created_sample_tissue_type': 'F',
             'num_parsed_samples': 4,
-            'initial_model_count': 2,
-            'deleted_count': 1,
+            'initial_model_count': 3,
+            'deleted_count': 2,
             'extra_warnings': [
                 'Skipped data loading for the following 1 samples due to mismatched tissue type: NA20889 (fibroblasts to muscle)'],
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F
 import logging
 import redis
@@ -159,12 +160,12 @@ def get_phenotype_prioritization(family_guids, gene_ids=None):
     return data_by_individual_gene
 
 
-def _add_family_has_rna_tpm(families_by_guid):
-    tpm_families = RnaSeqTpm.objects.filter(
-        sample__individual__family__guid__in=families_by_guid.keys(),
-    ).values_list('sample__individual__family__guid', flat=True).distinct()
-    for family_guid in tpm_families:
-        families_by_guid[family_guid]['hasRnaTpmData'] = True
+def _add_family_has_rna_tpm(families_by_guid, gene_ids):
+    tpm_family_genes = RnaSeqTpm.objects.filter(
+        sample__individual__family__guid__in=families_by_guid.keys(), gene_id__in=gene_ids,
+    ).values('sample__individual__family__guid').annotate(genes=ArrayAgg('gene_id', distinct=True))
+    for agg in tpm_family_genes:
+        families_by_guid[agg['sample__individual__family__guid']]['tpmGenes'] = agg['genes']
 
 
 def _add_discovery_tags(variants, discovery_tags):
@@ -250,7 +251,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         response['rnaSeqData'] = _get_rna_seq_outliers(genes.keys(), loaded_family_guids)
         families_by_guid = response.get('familiesByGuid')
         if families_by_guid:
-            _add_family_has_rna_tpm(families_by_guid)
+            _add_family_has_rna_tpm(families_by_guid, genes.keys())
 
         response['phenotypeGeneScores'] = get_phenotype_prioritization(loaded_family_guids, gene_ids=genes.keys())
 

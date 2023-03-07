@@ -102,10 +102,12 @@ class PedigreeInfoUtilsTest(object):
         self.assertListEqual(ec.exception.errors, [error])
         self.assertListEqual(ec.exception.warnings, [warning] if warning else [])
 
+    @mock.patch('seqr.views.utils.pedigree_info_utils.NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     @mock.patch('seqr.utils.communication_utils.EmailMultiAlternatives')
-    def test_parse_sample_manifest(self, mock_email, mock_pm_group):
+    def test_parse_sample_manifest(self, mock_email, mock_pm_group, mock_no_validate_categories):
         mock_pm_group.__eq__.side_effect = lambda s: str(mock_pm_group) == s
+        mock_no_validate_categories.resolve_expression.return_value = ['GREGoR']
 
         header_1 = [
             'Do not modify - Broad use', '', '', 'Please fill in columns D - T', '', '', '', '', '', '', '', '', '',
@@ -172,23 +174,24 @@ class PedigreeInfoUtilsTest(object):
              ]]
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
-        self.assertListEqual(ec.exception.errors, [
-            'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status',
-            'Multiple consent codes specified in manifest: GMB, HMB',
-        ])
         expected_warning = 'SCO_PED073A_GA0338_1 is the mother of SCO_PED073C_GA0340_1 but is not included. ' \
                            'Make sure to create an additional record with SCO_PED073A_GA0338_1 as the Individual ID'
+        self._assert_errors_warnings_exception(
+            ec, 'Multiple consent codes specified in manifest: GMB, HMB', warning=expected_warning)
+
+        original_data[4][-2] = 'GMB'
+        mock_no_validate_categories.resolve_expression.return_value = ['Not-used category']
+        with self.assertRaises(ErrorsWarningsException) as ec:
+            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
+        self.assertListEqual(ec.exception.errors, [
+            'SCO_PED073B_GA0339_1 is missing the following required columns: MONDO ID, MONDO Label, Tissue Affected Status',
+            'Consent code in manifest "GMB" does not match project consent code "HMB"',
+        ])
         self.assertListEqual(ec.exception.warnings, [expected_warning])
 
         original_data[3][12] = 'No'
         original_data[3][17] = 'microcephaly'
         original_data[3][18] = 'MONDO:0001149'
-        original_data[4][-2] = 'GMB'
-        with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
-        self._assert_errors_warnings_exception(
-            ec, 'Consent code in manifest "GMB" does not match project consent code "HMB"', warning=expected_warning)
-
         original_data[3][-2] = ''
         original_data[4][-2] = 'HMB'
         records, warnings = parse_pedigree_table(original_data, FILENAME, self.pm_user, project=project)
