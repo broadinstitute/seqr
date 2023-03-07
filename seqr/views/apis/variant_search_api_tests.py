@@ -169,8 +169,9 @@ class VariantSearchAPITest(object):
         if len(response_json['familiesByGuid']) > 1:
             self.assertSetEqual(set(response_json['familiesByGuid']['F000002_2'].keys()), family_fields)
 
-        family_fields.add('hasRnaTpmData')
+        family_fields.add('tpmGenes')
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1']['tpmGenes']), {'ENSG00000227232'})
 
         self.assertEqual(len(response_json['individualsByGuid']), len(response_json['familiesByGuid'])*3)
         individual_fields = {'igvSampleGuids'}
