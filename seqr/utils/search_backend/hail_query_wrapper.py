@@ -321,7 +321,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
         annotation_ht_query_result = hl.query_table(
-            f'/hail_datasets/{data_source}.ht', families_ht.key).first().drop('locus', 'alleles')
+            f'/hail_datasets/{data_source}.ht', families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
 
         if clinvar_path_terms and quality_filter:
