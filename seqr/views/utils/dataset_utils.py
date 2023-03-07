@@ -1,8 +1,7 @@
 import elasticsearch_dsl
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Q, Value, TextField
-from django.db.models.functions import Concat
+from django.db.models import prefetch_related_objects, Q
 from django.utils import timezone
 from tqdm import tqdm
 import random
@@ -251,14 +250,14 @@ def match_and_update_search_samples(
 
 
 def _match_and_update_rna_samples(
-        projects, user, sample_ids, data_source, sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template, sample_project_tuples
+    projects, user, sample_ids, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
+    sample_project_tuples
 ):
     samples = Sample.objects.select_related('individual', 'individual__family__project').filter(
         individual__family__project__in=projects,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_id__in=sample_ids
+        sample_id__in=sample_ids,
     )
     if sample_project_tuples and samples:
         sample_project_lookup = {(sample.sample_id, sample.individual.family.project.name): sample for sample in samples}
