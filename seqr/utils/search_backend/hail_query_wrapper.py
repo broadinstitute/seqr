@@ -216,18 +216,19 @@ class BaseHailTableQuery(object):
 
         self._load_filtered_table(data_source, samples, **kwargs)
 
-    def _load_filtered_table(self, data_source, samples, intervals=None, inheritance_mode=None, pathogenicity=None,
-                             annotations=None, annotations_secondary=None, **kwargs):
+    def _load_filtered_table(self, data_source, samples, intervals=None, exclude_intervals=False, inheritance_mode=None,
+                             pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
 
         consequence_overrides = self._parse_overrides(pathogenicity, annotations, annotations_secondary)
 
         self._ht = self.import_filtered_table(
             data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
-            allowed_consequences_secondary=self._allowed_consequences_secondary, inheritance_mode=inheritance_mode, **kwargs,
+            allowed_consequences_secondary=self._allowed_consequences_secondary, inheritance_mode=inheritance_mode,
+            exclude_intervals=exclude_intervals, has_location_search=bool(intervals) and not exclude_intervals, **kwargs,
         )
         if self._filtered_genes:
-            self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)
+            self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)  # TODO belongs in import_filtered_table?
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             is_all_recessive_search = inheritance_mode == RECESSIVE
@@ -254,11 +255,13 @@ class BaseHailTableQuery(object):
             load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs)
 
         family_samples = defaultdict(list)
+        project_families = defaultdict(set)
         for s in samples:
-            family_samples[s.individual.family].append(s)
+            family = s.individual.family
+            family_samples[family].append(s)
+            project_families[family.project].add(family)
         cls._validate_search_criteria(
-            num_families=len(family_samples), has_location_search=bool(intervals), inheritance_mode=inheritance_mode,
-            **kwargs)
+            num_projects=len(project_families), num_families=len(family_samples), inheritance_mode=inheritance_mode, **kwargs)
 
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
         if clinvar_path_terms and quality_filter:
@@ -340,7 +343,10 @@ class BaseHailTableQuery(object):
             vcf_quality_filter=vcf_quality_filter, **kwargs)
 
     @classmethod
-    def _validate_search_criteria(cls, inheritance_mode=None, allowed_consequences=None, **kwargs):
+    def _validate_search_criteria(cls, inheritance_mode=None, allowed_consequences=None, num_projects=None,
+                                  has_location_search=None, **kwargs):
+        if num_projects > 1 and not has_location_search:
+            raise InvalidSearchException('Location must be specified to search across multiple projects')
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and not allowed_consequences:
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
@@ -1004,7 +1010,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     def _validate_search_criteria(cls, num_families=None, has_location_search=None, inheritance_mode=None, **kwargs):
         if inheritance_mode in {RECESSIVE, COMPOUND_HET} and num_families > MAX_NO_LOCATION_COMP_HET_FAMILIES and not has_location_search:
             raise InvalidSearchException('Location must be specified to search for compound heterozygous variants across many families')
-        super(VariantHailTableQuery, cls)._validate_search_criteria(inheritance_mode=inheritance_mode, **kwargs)
+        super(VariantHailTableQuery, cls)._validate_search_criteria(inheritance_mode=inheritance_mode, has_location_search=has_location_search, **kwargs)
 
     @classmethod
     def _get_family_table_filter_kwargs(cls, frequencies=None, load_table_kwargs=None, clinvar_path_terms=None, **kwargs):
