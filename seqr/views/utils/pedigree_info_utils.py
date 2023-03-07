@@ -17,6 +17,7 @@ from seqr.models import Individual
 logger = SeqrLogger(__name__)
 
 
+NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES = ['CMG', 'TGG_Non-Report']
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
@@ -322,29 +323,30 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
     Returns:
          3-tuple: rows, sample_manifest_rows, kit_id
     """
-
     c = MergedPedigreeSampleManifestConstants
     kit_id = rows[0][c.KIT_ID_COLUMN]
 
+    is_no_validate_project = project.projectcategory_set.filter(name__in=NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES).exists()
     pedigree_rows = []
     sample_manifest_rows = []
     errors = []
     consent_codes = set()
     for row in rows:
         sample_manifest_rows.append({
-            column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
+            column_name: row[column_name] for column_name in c.SAMPLE_MANIFEST_COLUMN_NAMES
         })
 
         pedigree_rows.append({
-            key: row[column_name] for column_name, key in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.items()
+            key: row[column_name] for column_name, key in c.MERGED_PEDIGREE_COLUMN_MAP.items()
         })
 
-        missing_cols = {col for col in MergedPedigreeSampleManifestConstants.REQUIRED_COLUMNS if not row[col]}
-        if missing_cols:
-            individual_id = row[MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN]
-            errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_cols))}')
+        if not is_no_validate_project:
+            missing_cols = {col for col in c.REQUIRED_COLUMNS if not row[col]}
+            if missing_cols:
+                individual_id = row[c.COLLABORATOR_SAMPLE_ID_COLUMN]
+                errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_cols))}')
 
-        consent_code = row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN]
+        consent_code = row[c.CONSENT_CODE_COLUMN]
         if consent_code:
             consent_codes.add(consent_code)
 
