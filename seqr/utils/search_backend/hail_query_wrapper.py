@@ -294,17 +294,27 @@ class BaseHailTableQuery(object):
                    for k, field in family_dict_fields.items()},
             )
         else:
+            filtered_project_hts = []
+            exception_messages = set()
             for project, families in project_families.items():
                 project_ht = hl.read_table(f'/hail_datasets/{data_source}_projects/{project.guid}.ht', **load_table_kwargs)
                 logger.info(f'Initial count for {project.guid}: {project_ht.count()}')
-                # TODO
-                family_ht = cls._filter_project_table(
-                    project_ht, families=families, family_samples=family_samples, quality_filter=quality_filter,
-                    clinvar_path_terms=clinvar_path_terms,
-                    inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
-                    **kwargs, **family_filter_kwargs)
-                logger.info(f'Prefiltered {project.guid} to {project_ht.count()} rows')
+                try:
+                    # TODO
+                    filtered_project_hts.append(cls._filter_project_table(
+                        project_ht, families=families, family_samples=family_samples, quality_filter=quality_filter,
+                        clinvar_path_terms=clinvar_path_terms,
+                        inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
+                        **kwargs, **family_filter_kwargs))
+                    logger.info(f'Prefiltered {project.guid} to {filtered_project_hts[-1].count()} rows')
+                except InvalidSearchException as e:
+                    logger.info(f'Skipped {project.guid}: {e}')
+                    exception_messages.add(str(e))
 
+            if len(filtered_project_hts) < 1:
+                raise InvalidSearchException('; '.join(exception_messages))
+
+            for project_ht in filtered_project_hts:
                 if families_ht is not None:
                     # TODO
                     families_ht = families_ht.join(project_ht, how='outer')
@@ -334,11 +344,6 @@ class BaseHailTableQuery(object):
                         **{k: hl.or_missing(hl.is_defined(family_ht[field]), [(f.guid, family_ht[field])])
                            for k, field in family_dict_fields.items()},
                     )
-
-        if families_ht is None:
-            # TODO raise this lower down?
-            raise InvalidSearchException(
-                'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         if family_dict_fields:
             families_ht = families_ht.annotate(**{k: hl.dict(families_ht[k]) for k in family_dict_fields.keys()})
@@ -390,10 +395,14 @@ class BaseHailTableQuery(object):
     def _filter_family_table(cls, family_ht, family_samples=None, inheritance_mode=None, inheritance_filter=None,
                              genome_version=None, quality_filter=None, clinvar_path_terms=None, **kwargs):
         family_ht = cls._filter_entries_table(family_ht, genome_version=genome_version, **kwargs)
-        family_ht = cls._filter_family_inheritance(
+        family_ht, any_entry_filer, entry_genotypes = cls._filter_inheritance(
             family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version)
-        if family_ht is None:
-            return None
+
+        if any_entry_filer is not None:
+            family_ht = family_ht.filter(family_ht.entries.any(any_entry_filer))
+        elif entry_genotypes is not None:
+            for entry_index, genotype in entry_genotypes.items():
+                family_ht = family_ht.filter(cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT))
 
         if quality_filter:
             quality_filter_expr = family_ht.entries.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
@@ -411,7 +420,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_inheritance(cls, samples, ht, inheritance_mode, inheritance_filter, genome_version):
         any_entry_filer = None
-        genotype_filter = None
+        entry_genotypes = None
 
         sample_index_id_map = dict(enumerate(hl.eval(ht.sample_ids)))
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
@@ -436,7 +445,7 @@ class BaseHailTableQuery(object):
             )))
 
         if not (inheritance_filter or inheritance_mode):
-            return ht, any_entry_filer, genotype_filter
+            return ht, any_entry_filer, entry_genotypes
 
         individual_affected_status = inheritance_filter.get('affected') or {}
         sample_affected_statuses = {
@@ -447,7 +456,8 @@ class BaseHailTableQuery(object):
             s.sample_id for s, status in sample_affected_statuses.items() if status == AFFECTED
         }
         if not affected_status_samples:
-            return None, any_entry_filer, genotype_filter
+            raise InvalidSearchException(
+                'Inheritance based search is disabled in families with no data loaded for affected individuals')
 
         if inheritance_mode == X_LINKED_RECESSIVE:
             x_chrom_interval = hl.parse_locus_interval(
@@ -457,29 +467,16 @@ class BaseHailTableQuery(object):
         if inheritance_mode == ANY_AFFECTED:
             any_entry_filer = lambda x: hl.set(affected_status_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[HAS_ALT](x.GT)
         else:
-            # TODO will not work for project ht
             inheritance_filter.update(INHERITANCE_FILTERS[inheritance_mode])
-            genotype_filter = cls._get_sample_genotype_filter(
-                ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter)
+            entry_genotypes = cls._get_entry_index_genotypes(
+                sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter)
 
             if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
+                # TODO does not work
                 ht, genotype_filter = cls._filter_comp_hets(
-                    ht, genotype_filter, sample_id_index_map, inheritance_mode, inheritance_filter, sample_affected_statuses)
+                    ht, entry_genotypes, sample_id_index_map, inheritance_mode, inheritance_filter, sample_affected_statuses)
 
-        return ht, any_entry_filer, genotype_filter
-
-    @classmethod
-    def _filter_family_inheritance(cls, family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version):
-        family_ht, any_entry_filer, genotype_filter = cls._filter_inheritance(family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version)
-        if family_ht is None:
-            return None
-
-        if any_entry_filer is not None:
-            family_ht = family_ht.filter(family_ht.entries.any(any_entry_filer))
-        elif genotype_filter is not None:
-            family_ht = family_ht.filter(genotype_filter)
-
-        return family_ht
+        return ht, any_entry_filer, entry_genotypes
 
     @classmethod
     def _missing_entry(cls, entry):
@@ -525,7 +522,21 @@ class BaseHailTableQuery(object):
         return family_ht, genotype_filter
 
     @classmethod
+    def _get_entry_index_genotypes(cls, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
+        individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
+        entry_genotypes = {}
+        for s, status in sample_affected_statuses.items():
+            genotype = individual_genotype_filter.get(s.individual.guid) or inheritance_filter.get(status)
+            if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s.individual.sex == Individual.SEX_MALE:
+                genotype = REF_REF
+            if genotype:
+                entry_genotypes[sample_id_index_map[s.sample_id]] = genotype
+
+        return entry_genotypes
+
+    @classmethod
     def _get_sample_genotype_filter(cls, family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
+        # TODO remove
         individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
         genotype_filter_exprs = []
         for s, status in sample_affected_statuses.items():
