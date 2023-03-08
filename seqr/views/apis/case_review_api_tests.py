@@ -20,12 +20,12 @@ NO_CASE_REVIEW_INDIVIDUAL_GUID = 'I000015_na20885'
 class CaseReviewAPITest(AuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
-    def test_save_internal_case_review_notes(self):
-        url = reverse(save_internal_case_review_notes, args=[FAMILY_GUID])
+    def _test_save_internal_case_review_field(self, url_func, field):
+        url = reverse(url_func, args=[FAMILY_GUID])
         self.check_manager_login(url)
 
         req_values = {
-            'caseReviewNotes': 'some case review notes'
+            field: 'some case review notes'
         }
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(req_values))
@@ -34,34 +34,19 @@ class CaseReviewAPITest(AuthenticationTestCase):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(response_json[FAMILY_GUID]['familyGuid'], FAMILY_GUID)
-        self.assertEqual(response_json[FAMILY_GUID]['caseReviewNotes'], 'some case review notes')
+        self.assertEqual(response_json[FAMILY_GUID][field], 'some case review notes')
 
         # send request for invalid project
-        url = reverse(save_internal_case_review_notes, args=[NO_CASE_REVIEW_FAMILY_GUID])
+        url = reverse(url_func, args=[NO_CASE_REVIEW_FAMILY_GUID])
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+    def test_save_internal_case_review_notes(self):
+        self._test_save_internal_case_review_field(save_internal_case_review_notes, 'caseReviewNotes')
 
     def test_save_internal_case_review_summary(self):
-        url = reverse(save_internal_case_review_summary, args=[FAMILY_GUID])
-        self.check_manager_login(url)
-
-        req_values = {
-            'caseReviewSummary': 'some case review notes'
-        }
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-
-        self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
-        self.assertEqual(response_json[FAMILY_GUID]['caseReviewSummary'], 'some case review notes')
-
-        # send request for invalid project
-        url = reverse(save_internal_case_review_summary, args=[NO_CASE_REVIEW_FAMILY_GUID])
-        response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 403)
-        self.assertEqual(response.json()['error'], 'Permission Denied')
+        self._test_save_internal_case_review_field(save_internal_case_review_summary, 'caseReviewSummary')
 
     @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_case_review_status(self):

@@ -640,22 +640,24 @@ class DataManagerAPITest(AuthenticationTestCase):
         'tpm': {
             'model_cls': RnaSeqTpm,
             'message_data_type': 'Expression',
-            'header': ['sample_id', 'gene_id', 'individual_id', 'tissue', 'TPM'],
+            'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
             'new_data': [
-                ['NA19675_D2', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
-                ['NA19675_D2', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
-                ['NA19675_D2', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
-                ['NA20889', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
-                ['NA19675_D3', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
-                ['GTEX_001', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
-                ['NA20889', 'ENSG00000240361', 'NA20889', 'fibroblasts', 0.112],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                ['NA20889', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
+                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+                ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
             ],
             'created_sample_tissue_type': 'F',
-            'num_parsed_samples': 3,
+            'num_parsed_samples': 4,
             'initial_model_count': 3,
-            'deleted_count': 1,
+            'deleted_count': 2,
+            'extra_warnings': [
+                'Skipped data loading for the following 1 samples due to mismatched tissue type: NA20889 (fibroblasts to muscle)'],
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750',0.064)],
@@ -726,7 +728,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {'error': mock.ANY})
                 self.assertTrue(response.json()['error'].startswith(
-                    f'Error in NA19675_D2 data for {mismatch_row[1]}: mismatched entries '))
+                    f'Error in NA19675_D2 data for {mismatch_row[2 if data_type == "tpm" else 1]}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
@@ -776,8 +778,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 warnings = ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
                 file_name = RNA_FILENAME_TEMPLATE.format(data_type)
                 response_json = response.json()
-                self.assertDictEqual(response_json, {'info': info, 'warnings': warnings,
-                                                     'sampleGuids': [params['sample_guid'], mock.ANY], 'fileName': file_name})
+                self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': mock.ANY, 'fileName': file_name})
+                self.assertTrue(RNA_SAMPLE_GUID in response_json['sampleGuids'])
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
                 info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
                 info_log_calls.insert(1, mock.call(
@@ -823,12 +825,34 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
                 # test loading new data without existing data
-                data = [params['new_data'][0]]
+                mock_logger.reset_mock()
+                data = [params['new_data'][3]]
                 data[0][0] = 'NA19678'  # load data for a new individual
+                if data_type == 'tpm':
+                    data[0][1] = '1kg project nåme with uniçøde'
                 _set_file_iter_stdout([header] + data)
                 body.pop('mappingFile')
                 response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                 self.assertEqual(response.status_code, 200)
+                info = [
+                    'Parsed 1 RNA-seq samples',
+                    'Attempted data loading for 1 RNA-seq samples in the following 1 projects: 1kg project nåme with uniçøde'
+                ]
+                response_json = response.json()
+                self.assertDictEqual(response_json, {'info': info, 'warnings': [], 'sampleGuids': mock.ANY, 'fileName': file_name})
+                new_sample_guid = self._check_rna_sample_model(
+                    individual_id=2, data_source='new_muscle_samples.tsv.gz', tissue_type=params.get('created_sample_tissue_type'),
+                )
+                self.assertListEqual(response_json['sampleGuids'], [new_sample_guid])
+                info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
+                if test_round == 0:
+                    info_log_calls.insert(1, mock.call(
+                        'create 1 Samples', self.data_manager_user, db_update={
+                            'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][0]],
+                            'updateType': 'bulk_create',
+                        }
+                    ))
+                mock_logger.info.assert_has_calls(info_log_calls)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')

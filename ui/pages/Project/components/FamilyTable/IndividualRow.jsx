@@ -7,7 +7,7 @@ import { Field } from 'react-final-form'
 import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { SearchInput, YearSelector, RadioButtonGroup } from 'shared/components/form/Inputs'
+import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import Modal from 'shared/components/modal/Modal'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
@@ -21,7 +21,10 @@ import Sample from 'shared/components/panel/sample'
 import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA } from 'shared/utils/constants'
+import {
+  AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
+} from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
@@ -31,7 +34,8 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
-import { getCurrentProject } from '../../selectors'
+import { updateIndividuals } from '../../reducers'
+import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 import CollapsableLayout from './CollapsableLayout'
@@ -54,6 +58,10 @@ const CaseReviewDropdownContainer = styled.div`
 
 const IndividualContainer = styled.div`
  display: inline-block;
+`
+
+const PaddedRadioButtonGroup = styled(RadioButtonGroup)`
+  padding: 10px;
 `
 
 const FLAG_TITLE = {
@@ -508,6 +516,20 @@ const NON_CASE_REVIEW_FIELDS = [
 ]
 const EMPTY_FIELDS = [{ id: 'blank', colWidth: 10, component: () => null }]
 
+const mapParentOptionsStateToProps = (state, ownProps) => {
+  const options = getParentOptionsByIndividual(state)[ownProps.meta.data.formId][ownProps.sex] || []
+  return options.length > 0 ? { options: [{ value: null, text: 'None' }, ...options] } : { options, disabled: true }
+}
+
+const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED].map((name) => {
+  const { label, formFieldProps = {} } = INDIVIDUAL_FIELD_CONFIGS[name]
+  return { name, label, ...formFieldProps, component: ButtonRadioGroup, groupContainer: PaddedRadioButtonGroup }
+}).concat([
+  { name: 'paternalGuid', label: 'Father', sex: 'M' }, { name: 'maternalGuid', label: 'Mother', sex: 'F' },
+].map(field => (
+  { ...field, component: connect(mapParentOptionsStateToProps)(Select), inline: true, width: 8 }
+)))
+
 class IndividualRow extends React.PureComponent {
 
   static propTypes = {
@@ -516,6 +538,7 @@ class IndividualRow extends React.PureComponent {
     mmeSubmission: PropTypes.object,
     samplesByGuid: PropTypes.object.isRequired,
     dispatchUpdateIndividual: PropTypes.func,
+    updateIndividualPedigree: PropTypes.func,
     tableName: PropTypes.string,
   }
 
@@ -537,7 +560,7 @@ class IndividualRow extends React.PureComponent {
   }
 
   render() {
-    const { individual, mmeSubmission, samplesByGuid, tableName } = this.props
+    const { project, individual, mmeSubmission, samplesByGuid, tableName, updateIndividualPedigree } = this.props
     const { displayName, sex, affected, createdDate, sampleGuids } = individual
 
     let loadedSamples = sampleGuids.map(
@@ -558,6 +581,19 @@ class IndividualRow extends React.PureComponent {
             {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
           </Detail>
         </div>
+        <BaseFieldView
+          field="coreEdit"
+          idField="individualGuid"
+          initialValues={individual}
+          isEditable={!!project.workspaceName && !project.isAnalystProject && project.canEdit}
+          isDeletable
+          deleteConfirm={`Are you sure you want to delete ${displayName}? This action can not be undone`}
+          editLabel="Edit Individual"
+          formFields={EDIT_INDIVIDUAL_FIELDS}
+          modalTitle={`Edit ${displayName}`}
+          showErrorPanel
+          onSubmit={updateIndividualPedigree}
+        />
       </IndividualContainer>
     )
 
@@ -590,6 +626,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   dispatchUpdateIndividual: updateIndividual,
+  updateIndividualPedigree: values => updateIndividuals({ individuals: [values], delete: values.delete }),
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)

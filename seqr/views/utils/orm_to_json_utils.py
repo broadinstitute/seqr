@@ -213,6 +213,9 @@ def _get_case_review_fields(model_cls, has_case_review_perm):
     return [field.name for field in model_cls._meta.fields if field.name.startswith('case_review')]
 
 
+FAMILY_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'family_id')
+
+
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
                            has_case_review_perm=False, additional_values=None):
 
@@ -227,7 +230,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
             )), default=Value(None),
         ),
-        'displayName': Coalesce(NullIf('display_name', Value('')), 'family_id'),
+        'displayName': FAMILY_DISPLAY_NAME_EXPR,
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
     if additional_values:
