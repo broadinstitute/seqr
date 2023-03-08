@@ -265,7 +265,7 @@ class BaseHailTableQuery(object):
 
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
         if clinvar_path_terms and quality_filter:
-            family_set_fields['passesQualityFamilies'] = 'passesQuality'
+            family_set_fields.add('passesQualityFamilies')
 
         families_ht = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
@@ -280,19 +280,12 @@ class BaseHailTableQuery(object):
                 **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
-            family_ht = family_ht.transmute(
+            families_ht = family_ht.select_globals().transmute(
                 genotypes=family_ht.entries.map(lambda gt: gt.select(
                     'sampleId', 'individualGuid', 'familyGuid',
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
                 )))
-
-            family_ht = family_ht.select_globals()
-            families_ht = family_ht.transmute(
-                **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
-                **{k: hl.or_missing(hl.is_defined(family_ht[field]), [(f.guid, family_ht[field])])
-                   for k, field in family_dict_fields.items()},
-            )
         else:
             filtered_project_hts = []
             exception_messages = set()
@@ -300,7 +293,7 @@ class BaseHailTableQuery(object):
                 project_ht = hl.read_table(f'/hail_datasets/{data_source}_projects/{project.guid}.ht', **load_table_kwargs)
                 logger.info(f'Initial count for {project.guid}: {project_ht.count()}')
                 try:
-                    # TODO
+                    # TODO projects table
                     filtered_project_hts.append(cls._filter_project_table(
                         project_ht, families=families, family_samples=family_samples, quality_filter=quality_filter,
                         clinvar_path_terms=clinvar_path_terms,
@@ -316,7 +309,7 @@ class BaseHailTableQuery(object):
 
             for project_ht in filtered_project_hts:
                 if families_ht is not None:
-                    # TODO
+                    # TODO projects table
                     families_ht = families_ht.join(project_ht, how='outer')
                     families_ht = families_ht.select(
                         genotypes=hl.bind(
@@ -328,25 +321,26 @@ class BaseHailTableQuery(object):
                             lambda family_set: hl.if_else(
                                 hl.is_defined(families_ht[field]) & families_ht[field], family_set.add(f.guid), family_set),
                             hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
-                        ) for k, field in family_set_fields.items()},
+                        ) for k in family_set_fields},
                         **{k: hl.bind(
                             lambda family_arr: hl.if_else(
                                 hl.is_defined(families_ht[field]), family_arr.append((f.guid, families_ht[field])),
                                 family_arr,
                             ),
                             hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
-                        ) for k, field in family_dict_fields.items()},
+                        ) for k in family_dict_fields},
                     )
                 else:
-                    # TODO
+                    # TODO projects table
                     families_ht = project_ht.transmute(
-                        **{k: hl.or_missing(family_ht[field], {f.guid}) for k, field in family_set_fields.items()},
+                        **{k: hl.or_missing(family_ht[field], {f.guid}) for k in family_set_fields},
                         **{k: hl.or_missing(hl.is_defined(family_ht[field]), [(f.guid, family_ht[field])])
-                           for k, field in family_dict_fields.items()},
+                           for k in family_dict_fields},
                     )
 
         if family_dict_fields:
-            families_ht = families_ht.annotate(**{k: hl.dict(families_ht[k]) for k in family_dict_fields.keys()})
+            # TODO unneeded once clean up dict merging?
+            families_ht = families_ht.annotate(**{k: hl.dict(families_ht[k]) for k in family_dict_fields})
 
         logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
@@ -383,12 +377,12 @@ class BaseHailTableQuery(object):
 
     @staticmethod
     def _get_families_annotation_fields(inheritance_mode):
-        family_dict_fields = {}
-        family_set_fields = {}
+        family_dict_fields = set()
+        family_set_fields = set()
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
-            family_dict_fields['compHetFamilyCarriers'] = 'unaffectedCompHetCarriers'
+            family_dict_fields.add('compHetFamilyCarriers')
             if inheritance_mode == RECESSIVE:
-                family_set_fields['recessiveFamilies'] = 'isRecessiveFamily'
+                family_set_fields.add('recessiveFamilies')
         return family_set_fields, family_dict_fields
 
     @classmethod
@@ -405,11 +399,15 @@ class BaseHailTableQuery(object):
                 family_ht = family_ht.filter(cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT))
 
         if quality_filter:
-            quality_filter_expr = family_ht.entries.all(lambda gt: cls._genotype_passes_quality(gt, quality_filter))
+            gt_passes_quality = lambda gt: cls._genotype_passes_quality(gt, quality_filter)
             if clinvar_path_terms:
-                family_ht = family_ht.annotate(passesQuality=quality_filter_expr)
+                # TODO currently not working, only return clinvar and not high quality
+                family_ht = family_ht.annotate(
+                    passesQualityFamilies=hl.set(family_ht.entries.group_by(lambda x: x.familyGuid).items().filter(
+                        lambda x: x[1].all(gt_passes_quality)
+                    ).map(lambda x: x[0])))
             else:
-                family_ht = family_ht.filter(quality_filter_expr)
+                family_ht = family_ht.filter(family_ht.entries.all(gt_passes_quality))
 
         return family_ht
 
@@ -488,12 +486,11 @@ class BaseHailTableQuery(object):
             s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
 
-        # TODO does not work for project table
         ht = ht.annotate(
-            unaffectedCompHetCarriers=hl.set(
+            compHetFamilyCarriers=hl.set(
                 ht.entries.filter(
                     lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
-                ).map(lambda x: x.sampleId)
+                ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId)
             ),
         )
 
@@ -502,6 +499,7 @@ class BaseHailTableQuery(object):
             lambda x: hl.set(unaffected_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
 
         if inheritance_mode == RECESSIVE:
+            # TODO does not work for project table
             recessive_filter = None
             for entry_index, genotype in entry_genotypes.items():
                 entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT)
@@ -523,11 +521,11 @@ class BaseHailTableQuery(object):
                     comp_het_filter &= entry_filter
 
             ht = ht.annotate(
-                isRecessiveFamily=recessive_filter,
-                unaffectedCompHetCarriers=hl.or_missing(comp_het_filter, ht.unaffectedCompHetCarriers),
+                recessiveFamilies=hl.set(ht.entries.filter(recessive_filter).map(lambda x: x.familyGuid)),
+                compHetFamilyCarriers=hl.or_missing(comp_het_filter, ht.compHetFamilyCarriers),
             )
 
-            ht = ht.filter(ht.isRecessiveFamily | hl.is_defined(ht.unaffectedCompHetCarriers))
+            ht = ht.filter(ht.recessiveFamilies.size() > 0 | hl.is_defined(ht.compHetFamilyCarriers))
             entry_genotypes = None
             any_entry_filter = None
 
@@ -1334,8 +1332,8 @@ class MultiDataTypeHailTableQuery(object):
 
         all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus'}
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(kwargs['inheritance_mode'])
-        all_type_merge_fields.update(family_set_fields.keys())
-        all_type_merge_fields.update(family_dict_fields.keys())
+        all_type_merge_fields.update(family_set_fields)
+        all_type_merge_fields.update(family_dict_fields)
 
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
         for data_type in data_types[1:]:
