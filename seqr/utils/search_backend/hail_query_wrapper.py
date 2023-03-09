@@ -392,11 +392,35 @@ class BaseHailTableQuery(object):
         family_ht, any_entry_filter, entry_genotypes = cls._filter_inheritance(
             family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version)
 
-        if any_entry_filter is not None:
-            family_ht = family_ht.filter(family_ht.entries.any(any_entry_filter))
-        if entry_genotypes:
-            for entry_index, genotype in entry_genotypes.items():
-                family_ht = family_ht.filter(cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT))
+        if inheritance_mode == RECESSIVE:
+            recessive_filter = None
+            for entry_index, genotype in entry_genotypes['recessive'].items():
+                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT)
+                if recessive_filter is None:
+                    recessive_filter = entry_filter
+                else:
+                    recessive_filter &= entry_filter
+
+            comp_het_filter = family_ht.entries.any(any_entry_filter) if any_entry_filter else None
+            for entry_index, genotype in entry_genotypes['comp_het'].items():
+                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT)
+                if comp_het_filter is None:
+                    comp_het_filter = entry_filter
+                else:
+                    comp_het_filter &= entry_filter
+
+            family_ht = family_ht.annotate(
+                recessiveFamilies=hl.or_missing(recessive_filter, hl.set(family_ht.entries.map(lambda x: x.familyGuid))),
+                compHetFamilyCarriers=hl.or_missing(comp_het_filter, family_ht.compHetFamilyCarriers),
+            )
+
+            family_ht = family_ht.filter(hl.is_defined(family_ht.recessiveFamilies) | hl.is_defined(family_ht.compHetFamilyCarriers))
+        else:
+            if any_entry_filter is not None:
+                family_ht = family_ht.filter(family_ht.entries.any(any_entry_filter))
+            if entry_genotypes:
+                for entry_index, genotype in entry_genotypes.items():
+                    family_ht = family_ht.filter(cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT))
 
         if quality_filter:
             gt_passes_quality = lambda gt: cls._genotype_passes_quality(gt, quality_filter)
@@ -498,35 +522,12 @@ class BaseHailTableQuery(object):
             lambda x: hl.set(unaffected_samples).contains(x.sampleId) & cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
 
         if inheritance_mode == RECESSIVE:
-            # TODO does not work for project table
-            recessive_filter = None
-            for entry_index, genotype in entry_genotypes.items():
-                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT)
-                if recessive_filter is None:
-                    recessive_filter = entry_filter
-                else:
-                    recessive_filter &= entry_filter
-
             inheritance_filter.update(INHERITANCE_FILTERS[COMPOUND_HET])
-            comp_het_entry_genotypes = cls._get_entry_index_genotypes(
-                sample_id_index_map, sample_affected_statuses, COMPOUND_HET, inheritance_filter)
-
-            comp_het_filter = ht.entries.any(any_entry_filter) if any_entry_filter else None
-            for entry_index, genotype in comp_het_entry_genotypes.items():
-                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT)
-                if comp_het_filter is None:
-                    comp_het_filter = entry_filter
-                else:
-                    comp_het_filter &= entry_filter
-
-            ht = ht.annotate(
-                recessiveFamilies=hl.set(ht.entries.filter(recessive_filter).map(lambda x: x.familyGuid)),
-                compHetFamilyCarriers=hl.or_missing(comp_het_filter, ht.compHetFamilyCarriers),
-            )
-
-            ht = ht.filter(ht.recessiveFamilies.size() > 0 | hl.is_defined(ht.compHetFamilyCarriers))
-            entry_genotypes = None
-            any_entry_filter = None
+            entry_genotypes = {
+                'recessive': entry_genotypes,
+                'comp_het': cls._get_entry_index_genotypes(
+                    sample_id_index_map, sample_affected_statuses, COMPOUND_HET, inheritance_filter),
+            }
 
         return ht, entry_genotypes, any_entry_filter
 
