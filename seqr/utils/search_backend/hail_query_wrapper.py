@@ -487,7 +487,7 @@ class BaseHailTableQuery(object):
         }
 
         ht = ht.annotate(
-            compHetFamilyCarriers=hl.set(ht.entries).filter(
+            compHetFamilyCarriers=ht.entries.filter(
                 lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
             ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
         )
@@ -863,8 +863,8 @@ class BaseHailTableQuery(object):
         both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
         # filter variants that are non-ref for any unaffected individual in both variants
         return both_var_families.filter(
-            lambda family_guid: ch_ht.v1.compHetFamilyCarriers[family_guid].intersection(
-                ch_ht.v2.compHetFamilyCarriers[family_guid]).size() == 0)
+            lambda family_guid: hl.set(ch_ht.v1.compHetFamilyCarriers[family_guid]).intersection(
+                hl.set(ch_ht.v2.compHetFamilyCarriers[family_guid])).size() == 0)
 
     def _format_results(self, ht):
         results = ht.annotate(
