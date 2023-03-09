@@ -883,8 +883,11 @@ class BaseHailTableQuery(object):
     def search(self, page, num_results, sort):
         if self._ht:
             ht = self._format_results(self._ht)
+            logger.info(f'main ht: {ht.count()}')
             if self._comp_het_ht:
+                logger.info(f'comp het: {self._comp_het_ht.count()}')
                 ht = ht.join(self._comp_het_ht, 'outer')
+                logger.info(f'total ht: {ht.count()}')
         else:
             ht = self._comp_het_ht
 
