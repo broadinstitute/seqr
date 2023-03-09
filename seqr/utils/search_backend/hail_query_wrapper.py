@@ -280,12 +280,12 @@ class BaseHailTableQuery(object):
                 **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
-            families_ht = family_ht.select_globals().transmute(
+            families_ht = family_ht.transmute(
                 genotypes=family_ht.entries.map(lambda gt: gt.select(
                     'sampleId', 'individualGuid', 'familyGuid',
                     numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                     **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
-                )))
+                ))).select_globals()
         else:
             filtered_project_hts = []
             exception_messages = set()
@@ -487,11 +487,9 @@ class BaseHailTableQuery(object):
         }
 
         ht = ht.annotate(
-            compHetFamilyCarriers=hl.set(
-                ht.entries.filter(
-                    lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
-                ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId)
-            ),
+            compHetFamilyCarriers=ht.entries.filter(
+                lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
+            ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
         )
 
         # remove variants where all unaffected individuals are carriers
