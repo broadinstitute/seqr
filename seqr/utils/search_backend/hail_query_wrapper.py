@@ -842,6 +842,12 @@ class BaseHailTableQuery(object):
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
+        logger.info(ch_ht.aggregate(hl.agg.collect(ch_ht.row.select(
+            'family_guids',
+            v1Id=ch_ht.v1[VARIANT_KEY_FIELD], v2Id=ch_ht.v2[VARIANT_KEY_FIELD],
+            v1Carrieres=v1.compHetFamilyCarriers,  v2Carrieres=v1.compHetFamilyCarriers,
+        ))))
+
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
             v1=self._format_results(ch_ht.v1).annotate(**{
@@ -1348,7 +1354,6 @@ class MultiDataTypeHailTableQuery(object):
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'value_type', map_func='map_values'))
-            logger.info(f'Merging {sorted(transmute_expressions.keys())}')
             ht = ht.transmute(**transmute_expressions)
 
         return ht
