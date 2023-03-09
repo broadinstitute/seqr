@@ -883,14 +883,8 @@ class BaseHailTableQuery(object):
     def search(self, page, num_results, sort):
         if self._ht:
             ht = self._format_results(self._ht)
-            coll = ht.aggregate(hl.agg.take(ht.row, num_results))
-            logger.info(f'main ht: {len(coll)}')
             if self._comp_het_ht:
-                coll = self._comp_het_ht.aggregate(hl.agg.take(self._comp_het_ht.row, num_results))
-                logger.info(f'comp het: {len(coll)}')
                 ht = ht.join(self._comp_het_ht, 'outer')
-                coll = ht.aggregate(hl.agg.take(ht.row, num_results))
-                logger.info(f'total ht: {len(coll)}')
         else:
             ht = self._comp_het_ht
 
