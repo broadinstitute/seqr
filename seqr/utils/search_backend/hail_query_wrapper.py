@@ -845,7 +845,7 @@ class BaseHailTableQuery(object):
         logger.info(ch_ht.aggregate(hl.agg.collect(ch_ht.row.select(
             'family_guids',
             v1Id=ch_ht.v1[VARIANT_KEY_FIELD], v2Id=ch_ht.v2[VARIANT_KEY_FIELD],
-            v1Carrieres=v1.compHetFamilyCarriers,  v2Carrieres=v1.compHetFamilyCarriers,
+            v1Carrieres=v1.compHetFamilyCarriers,  v2Carrieres=v2.compHetFamilyCarriers,
         ))))
 
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
