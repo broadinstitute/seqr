@@ -486,18 +486,12 @@ class BaseHailTableQuery(object):
             s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
 
-        # ht = ht.annotate(
-        #     compHetFamilyCarriers=ht.entries.filter(
-        #         lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
-        #     ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
-        # )
         ht = ht.annotate(compHetFamilyCarriers=hl.dict(ht.entries.group_by(lambda x: x.familyGuid).items().map(
             lambda item: (item[0], hl.set(item[1].filter(
                 lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
             ).map(lambda x: x.sampleId)))
         )),
         )
-        # hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0])))
 
         # remove variants where all unaffected individuals are carriers
         any_entry_filter = None if len(unaffected_samples) < 2 else \
