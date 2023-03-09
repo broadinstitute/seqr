@@ -1348,6 +1348,7 @@ class MultiDataTypeHailTableQuery(object):
             transmute_expressions = {k: hl.or_else(ht[k], ht[f'{k}_1']) for k in to_merge}
             transmute_expressions.update(cls._merge_nested_structs(ht, 'sortedTranscriptConsequences', 'element_type'))
             transmute_expressions.update(cls._merge_nested_structs(ht, 'genotypes', 'value_type', map_func='map_values'))
+            logger.info(f'Merging {sorted(transmute_expressions.keys())}')
             ht = ht.transmute(**transmute_expressions)
 
         return ht
