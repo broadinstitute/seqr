@@ -492,9 +492,10 @@ class BaseHailTableQuery(object):
         #     ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
         # )
         ht = ht.annotate(compHetFamilyCarriers=hl.dict(ht.entries.group_by(lambda x: x.familyGuid).items().map(
-            lambda x: (x[0], hl.set(x[1].filter(
-                lambda entry: hl.set(unaffected_samples).contains(entry.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](entry.GT)
-            ))))),
+            lambda item: (item[0], hl.set(item[1].filter(
+                lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
+            ).map(lambda x: x.sampleId)))
+        )),
         )
         # hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0])))
 
