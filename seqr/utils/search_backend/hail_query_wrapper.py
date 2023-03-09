@@ -487,9 +487,9 @@ class BaseHailTableQuery(object):
         }
 
         ht = ht.annotate(
-            compHetFamilyCarriers=hl.set(ht.entries.filter(
+            compHetFamilyCarriers=hl.set(ht.entries).filter(
                 lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
-            )).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
+            ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
         )
 
         # remove variants where all unaffected individuals are carriers
