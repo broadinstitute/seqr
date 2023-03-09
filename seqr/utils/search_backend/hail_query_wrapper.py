@@ -486,11 +486,17 @@ class BaseHailTableQuery(object):
             s.sample_id for s, status in sample_affected_statuses.items() if status == UNAFFECTED
         }
 
-        ht = ht.annotate(
-            compHetFamilyCarriers=ht.entries.filter(
-                lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
-            ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
+        # ht = ht.annotate(
+        #     compHetFamilyCarriers=ht.entries.filter(
+        #         lambda x: hl.set(unaffected_samples).contains(x.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)
+        #     ).group_by(lambda x: x.familyGuid).map_values(lambda x: x.sampleId),
+        # )
+        ht = ht.annotate(compHetFamilyCarriers=hl.dict(ht.entries.group_by(lambda x: x.familyGuid).items().map(
+            lambda x: (x[0], hl.set(x[1].filter(
+                lambda entry: hl.set(unaffected_samples).contains(entry.sampleId) & ~cls.GENOTYPE_QUERY_MAP[REF_REF](entry.GT)
+            ))))),
         )
+        # hl.dict(r.transcripts.items().filter(lambda t: gene_ids.contains(t[0])))
 
         # remove variants where all unaffected individuals are carriers
         any_entry_filter = None if len(unaffected_samples) < 2 else \
@@ -842,11 +848,6 @@ class BaseHailTableQuery(object):
 
         # Filter variant pairs for family and genotype
         ch_ht = ch_ht.annotate(family_guids=self._valid_comp_het_families_expr(ch_ht))
-        logger.info(ch_ht.aggregate(hl.agg.collect(ch_ht.row.select(
-            'family_guids',
-            v1Id=ch_ht.v1[VARIANT_KEY_FIELD], v2Id=ch_ht.v2[VARIANT_KEY_FIELD],
-            v1Carrieres=ch_ht.v1.compHetFamilyCarriers,  v2Carrieres=ch_ht.v2.compHetFamilyCarriers,
-        ))))
 
         ch_ht = ch_ht.filter(ch_ht.family_guids.size() > 0)
         ch_ht = ch_ht.annotate(
@@ -869,8 +870,8 @@ class BaseHailTableQuery(object):
         both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
         # filter variants that are non-ref for any unaffected individual in both variants
         return both_var_families.filter(
-            lambda family_guid: hl.set(ch_ht.v1.compHetFamilyCarriers[family_guid]).intersection(
-                hl.set(ch_ht.v2.compHetFamilyCarriers[family_guid])).size() == 0)
+            lambda family_guid: ch_ht.v1.compHetFamilyCarriers[family_guid].intersection(
+                ch_ht.v2.compHetFamilyCarriers[family_guid]).size() == 0)
 
     def _format_results(self, ht):
         results = ht.annotate(
