@@ -756,7 +756,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                def _test_basic_data_loading(data, samples, projects, project_names, individual_id):
+                def _test_basic_data_loading(data, samples, projects, project_names, individual_id, sample_guid_idx):
                     mock_logger.reset_mock()
                     _set_file_iter_stdout([header] + data)
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -778,7 +778,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                     if test_round == 0:
                         info_log_calls.insert(1, mock.call(
                             'create 1 Samples', self.data_manager_user, db_update={
-                                'dbEntity': 'Sample', 'entityIds': mock.ANY,
+                                'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][sample_guid_idx]],
                                 'updateType': 'bulk_create',
                             }
                         ))
@@ -797,11 +797,11 @@ class DataManagerAPITest(AuthenticationTestCase):
                 body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
                 response_json, new_sample_guid = _test_basic_data_loading(
                     params['new_data'], params["num_parsed_samples"], 2,
-                    '1kg project nåme with uniçøde, Test Reprocessed Project', 16)
+                    '1kg project nåme with uniçøde, Test Reprocessed Project', 16, 1)
+                self.assertTrue(RNA_SAMPLE_GUID in response_json['sampleGuids'])
                 warnings = ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
                 if params.get('extra_warnings'):
                     warnings = params['extra_warnings'] + warnings
-                self.assertTrue(RNA_SAMPLE_GUID in response_json['sampleGuids'])
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
                 mock_model_logger.info.assert_called_with(
                     f'delete {model_cls.__name__}s', self.data_manager_user,
@@ -834,7 +834,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 data = [params['new_data'][4]]
                 data[0][0] = 'NA19678'  # load data for a new individual
                 body.pop('mappingFile')
-                _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 2)
+                _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 2, 0)
 
                 # Test loading data when where are duplicated individual ids in different projects.
                 # Add an individual with the individual_is identical to an existing individual
@@ -844,7 +844,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 data[0][0] = 'NA20881'
                 if data_type == 'tpm':
                     data[0][3] = 'NA20881'
-                _test_basic_data_loading(data, 1, 1, 'Test Reprocessed Project', 20)
+                _test_basic_data_loading(data, 1, 1, 'Test Reprocessed Project', 20, 0)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
