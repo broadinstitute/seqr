@@ -469,9 +469,6 @@ def get_family_phenotype_gene_scores(request, family_guid):
 
 # SERVICE ACCOUNT METHODS
 @service_account_access
-def sa_edit_families(request, project_guid):
+def sa_sync_families(request, project_guid):
     return edit_families_handler_base(request, project_guid)
 
-@service_account_access
-def sa_receive_families_table(request, project_guid):
-    return receive_families_table_handler_base(request, project_guid)

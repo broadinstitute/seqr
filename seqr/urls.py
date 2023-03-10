@@ -29,8 +29,7 @@ from seqr.views.apis.family_api import \
     get_family_rna_seq_data, \
     get_family_phenotype_gene_scores, \
     family_variant_tag_summary, \
-    sa_edit_families, \
-    sa_receive_families_table
+    sa_sync_families
 
 from seqr.views.apis.individual_api import \
     get_individual_rna_seq_data, \
@@ -43,10 +42,8 @@ from seqr.views.apis.individual_api import \
     save_individuals_table_handler, \
     receive_individuals_metadata_handler, \
     save_individuals_metadata_table_handler, \
-    sa_receive_individuals_metadata, \
-    sa_receive_individuals_table, \
-    sa_save_individuals_table, \
-    sa_save_individuals_metadata_table
+    sa_sync_individuals, \
+    sa_sync_individuals_metadata
 
 from seqr.views.apis.case_review_api import \
     update_case_review_discussion, \
@@ -139,8 +136,9 @@ from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, login_view, logout_view, policies_required_error
-from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
-    igv_genomes_proxy
+from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, \
+    update_individual_igv_sample, \
+    igv_genomes_proxy, sa_get_igv_updates_required, sa_update_igv_individual
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
@@ -337,15 +335,14 @@ api_endpoints = {
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/get_vcf_list': get_anvil_vcf_list,
 
     # service-account access
-    'project/(?P<project_guid>[^/]+)/upload_families_table/sa': sa_receive_families_table,
-    'project/(?P<project_guid>[^/]+)/edit_families/sa': sa_edit_families,
-    'project/(?P<project_guid>[^/]+)/upload_individuals_table/sa': sa_receive_individuals_table,
-    'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)/sa': sa_save_individuals_table,
-    'project/(?P<project_guid>[^/]+)/upload_individuals_metadata_table/sa': sa_receive_individuals_metadata,
-    'project/(?P<project_guid>[^/]+)/save_individuals_metadata_table/(?P<upload_file_id>[^/]+)/sa': sa_save_individuals_metadata_table,
-    'project/(?P<project_guid>[^/]+)/add_dataset/variants/sa': sa_add_variants_dataset,
-    'project/(?P<project_guid>[^/]+)/update_saved_variant_json/sa': sa_update_saved_variant_json,
+    'project/sa/(?P<project_guid>[^/]+)/add_dataset/variants': sa_add_variants_dataset,
+    'project/sa/(?P<project_guid>[^/]+)/saved_variant/update': sa_update_saved_variant_json,
 
+    'project/sa/(?P<project_guid>[^/]+)/families/sync': sa_sync_families,
+    'project/sa/(?P<project_guid>[^/]+)/individuals/sync': sa_sync_individuals,
+    'project/sa/(?P<project_guid>[^/]+)/individuals_metadata/sync': sa_sync_individuals_metadata,
+    'project/sa/(?P<project_guid>[^/]+)/igv/diff': sa_get_igv_updates_required,
+    'individual/sa/(?P<individual_guid>[\w.|-]+)/igv/update': sa_update_igv_individual,
 
     # EXTERNAL APIS: DO NOT CHANGE
     # matchmaker public facing MME URLs

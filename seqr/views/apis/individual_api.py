@@ -718,17 +718,17 @@ def _get_metadata_warnings(invalid_hpo_term_individuals, invalid_values, missing
 
 @login_and_policies_required
 def save_individuals_metadata_table_handler(request, project_guid, upload_file_id):
-    return save_individuals_metadata_table_handler_base(request, project_guid, upload_file_id)
-
-
-def save_individuals_metadata_table_handler_base(request, project_guid, upload_file_id):
-    """
-    Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_individuals_metadata_handler
-    """
     project = get_project_and_check_permissions(project_guid, request.user)
 
     json_records, _ = load_uploaded_file(upload_file_id)
+    return create_json_response(save_individuals_metadata_table_handler_base(project, json_records, request.user))
 
+
+def save_individuals_metadata_table_handler_base(project, json_records, user):
+    """
+    Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_individuals_metadata_handler
+    """
+    project_guid = project.guid
     individual_guids = [record[INDIVIDUAL_GUID_COL] for record in json_records]
     individuals = Individual.objects.filter(family__project=project, guid__in=individual_guids)
     individuals_by_guid = {i.guid: i for i in individuals}
@@ -740,29 +740,29 @@ def save_individuals_metadata_table_handler_base(request, project_guid, upload_f
     for record in json_records:
         individual = individuals_by_guid[record[INDIVIDUAL_GUID_COL]]
         update_model_from_json(
-            individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS.keys() if k in record}, user=request.user)
+            individual, {k: record[k] for k in INDIVIDUAL_METADATA_FIELDS.keys() if k in record}, user=user)
         if record.get(ASSIGNED_ANALYST_COL):
             family_assigned_analysts[record[ASSIGNED_ANALYST_COL]].append(individual.family.id)
 
     response = {
         'individualsByGuid': {
             individual['individualGuid']: individual for individual in _get_json_for_individuals(
-            individuals, user=request.user, add_hpo_details=True, project_guid=project_guid,
+            individuals, user=user, add_hpo_details=True, project_guid=project_guid,
         )},
     }
 
     if family_assigned_analysts:
         updated_families = set()
         for user in User.objects.filter(email__in=family_assigned_analysts.keys()):
-            updated = Family.bulk_update(request.user, {'assigned_analyst': user}, id__in=family_assigned_analysts[user.email])
+            updated = Family.bulk_update(user, {'assigned_analyst': user}, id__in=family_assigned_analysts[user.email])
             updated_families.update(updated)
 
         response['familiesByGuid'] = {
             family['familyGuid']: family for family in _get_json_for_families(
-            Family.objects.filter(guid__in=updated_families), request.user, project_guid=project_guid, has_case_review_perm=False,
+            Family.objects.filter(guid__in=updated_families), user, project_guid=project_guid, has_case_review_perm=False,
         )}
 
-    return create_json_response(response)
+    return response
 
 @login_and_policies_required
 def get_individual_rna_seq_data(request, individual_guid):
@@ -797,17 +797,47 @@ def get_hpo_terms(request, hpo_parent_id):
 # SERVICE account access
 
 @service_account_access
-def sa_receive_individuals_table(request, project_guid):
-    return receive_individuals_table_handler_base(request, project_guid)
+def sa_sync_individuals(request, project_guid):
+    project = get_project_and_check_pm_permissions(project_guid, request.user)
+    json_body = json.loads(request.body)
+    json_records = json_body.get('individuals')
+    if not json_records:
+        return create_json_response({'errors': ['missing individuals in body']}, status=400)
+
+
+    warnings = validate_fam_file_records(json_records)
+    _ = add_or_update_individuals_and_families(
+        project=project,
+        individual_records=json_records,
+        user=request.user,
+        get_update_json=False,
+        get_updated_individual_ids=False,
+    )
+
+    response = {'success': True}
+    if warnings:
+        response['warnings'] = warnings
+
+    return create_json_response(response)
+
 
 @service_account_access
-def sa_save_individuals_table(request, project_guid, upload_file_id):
-    return save_individuals_table_handler_base(request, project_guid, upload_file_id)
+def sa_sync_individuals_metadata(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
-@service_account_access
-def sa_receive_individuals_metadata(request, project_guid):
-    return  receive_individuals_metadata_handler_base(request, project_guid)
+    json_body = json.loads(request.body)
+    json_records = json_body.get('individuals')
+    records, errors, warnings = _parse_individual_hpo_terms(
+        json_records, project, request.user
+    )
+    if errors:
+        raise ErrorsWarningsException(errors, warnings)
 
-@service_account_access
-def sa_save_individuals_metadata_table(request, project_guid, upload_file_id):
-    return save_individuals_metadata_table_handler_base(request, project_guid, upload_file_id)
+    response = save_individuals_metadata_table_handler_base(
+        project, records, request.user
+    )
+    if warnings:
+        response['warnings'] = warnings
+
+    return create_json_response(response)
+
