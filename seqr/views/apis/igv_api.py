@@ -12,8 +12,9 @@ from seqr.views.utils.file_utils import save_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    login_and_policies_required, pm_or_data_manager_required
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, \
+    check_project_permissions, \
+    login_and_policies_required, pm_or_data_manager_required, service_account_access
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -22,10 +23,51 @@ CLOUD_STORAGE_URLS = {
     'gs': GS_STORAGE_URL,
 }
 
+
+def _post_process_igv_records(project, individual_dataset_mapping, filename):
+    info = []
+
+    matched_individuals = Individual.objects.filter(family__project=project,
+                                                    individual_id__in=individual_dataset_mapping.keys())
+    unmatched_individuals = set(individual_dataset_mapping.keys()) - {i.individual_id
+                                                                      for i in
+                                                                      matched_individuals}
+    if len(unmatched_individuals) > 0:
+        raise Exception('The following Individual IDs do not exist: {}'.format(
+            ", ".join(unmatched_individuals)))
+
+    info.append('Parsed {} rows in {} individuals from {}'.format(
+        sum([len(rows) for rows in individual_dataset_mapping.values()]),
+        len(individual_dataset_mapping), filename))
+
+    existing_sample_files = defaultdict(set)
+    for sample in IgvSample.objects.select_related('individual').filter(
+            individual__in=matched_individuals):
+        existing_sample_files[sample.individual.individual_id].add(sample.file_path)
+
+    unchanged_rows = set()
+    for individual_id, updates in individual_dataset_mapping.items():
+        unchanged_rows.update([
+            (individual_id, update['filePath']) for update in updates
+            if update['filePath'] in existing_sample_files[individual_id]
+        ])
+
+    if unchanged_rows:
+        info.append('No change detected for {} rows'.format(len(unchanged_rows)))
+
+    all_updates = []
+    for i in matched_individuals:
+        all_updates += [
+            dict(individualGuid=i.guid, **update) for update in
+            individual_dataset_mapping[i.individual_id]
+            if (i.individual_id, update['filePath']) not in unchanged_rows
+        ]
+
+    return info, all_updates
+
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    info = []
 
     def _process_alignment_records(rows, **kwargs):
         invalid_row = next((row for row in rows if not 2 <= len(row) <= 3), None)
@@ -39,35 +81,7 @@ def receive_igv_table_handler(request, project_guid):
     try:
         uploaded_file_id, filename, individual_dataset_mapping = save_uploaded_file(request, process_records=_process_alignment_records)
 
-        matched_individuals = Individual.objects.filter(family__project=project, individual_id__in=individual_dataset_mapping.keys())
-        unmatched_individuals = set(individual_dataset_mapping.keys()) - {i.individual_id for i in matched_individuals}
-        if len(unmatched_individuals) > 0:
-            raise Exception('The following Individual IDs do not exist: {}'.format(", ".join(unmatched_individuals)))
-
-        info.append('Parsed {} rows in {} individuals from {}'.format(
-            sum([len(rows) for rows in individual_dataset_mapping.values()]), len(individual_dataset_mapping), filename))
-
-        existing_sample_files = defaultdict(set)
-        for sample in IgvSample.objects.select_related('individual').filter(individual__in=matched_individuals):
-            existing_sample_files[sample.individual.individual_id].add(sample.file_path)
-
-        unchanged_rows = set()
-        for individual_id, updates in individual_dataset_mapping.items():
-            unchanged_rows.update([
-                (individual_id, update['filePath']) for update in updates
-                if update['filePath'] in existing_sample_files[individual_id]
-            ])
-
-        if unchanged_rows:
-            info.append('No change detected for {} rows'.format(len(unchanged_rows)))
-
-        all_updates = []
-        for i in matched_individuals:
-            all_updates += [
-                dict(individualGuid=i.guid, **update) for update in individual_dataset_mapping[i.individual_id]
-                if (i.individual_id, update['filePath']) not in unchanged_rows
-            ]
-
+        info, all_updates = _post_process_igv_records(project, individual_dataset_mapping, filename)
     except Exception as e:
         return create_json_response({'errors': [str(e)]}, status=400)
 
@@ -91,6 +105,10 @@ SAMPLE_TYPE_MAP = [
 
 @pm_or_data_manager_required
 def update_individual_igv_sample(request, individual_guid):
+    return update_individual_igv_sample_base(request, individual_guid)
+
+
+def update_individual_igv_sample_base(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     project = individual.family.project
     check_project_permissions(project, request.user, can_edit=True)
@@ -220,3 +238,27 @@ def igv_genomes_proxy(request, cloud_host, file_path):
         status=genome_response.status_code,
     )
     return proxy_response
+
+
+@service_account_access
+def sa_get_igv_updates_required(request, project_guid):
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    json_body = json.loads(request.body)
+    json_records = json_body.get('mapping')
+
+    info, all_updates = _post_process_igv_records(
+        project, json_records, '<body>'
+    )
+
+    # I was initially looking to completely merge this in, except the call is slow
+    # and I genuinely think the request will time out, so make the caller do the
+    # spacing out.
+    return create_json_response({
+        'updates': all_updates,
+        'errors': [],
+        'info': info,
+    })
+
+@service_account_access
+def sa_update_igv_individual(request, individual_guid):
+    return update_individual_igv_sample_base(request, individual_guid)
