@@ -21,7 +21,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions
-from seqr.views.utils.project_context_utils import get_projects_child_entities, families_discovery_tags, \
+from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_types, get_project_analysis_groups, get_project_locus_lists, MME_TAG_NAME
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 

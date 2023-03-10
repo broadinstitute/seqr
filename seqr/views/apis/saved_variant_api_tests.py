@@ -211,9 +211,10 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
-        family_fields = {'individualGuids', 'hasRnaTpmData'}
+        family_fields = {'individualGuids', 'tpmGenes'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1']['tpmGenes']), {'ENSG00000135953'})
         individual_fields = {'igvSampleGuids'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), individual_fields)

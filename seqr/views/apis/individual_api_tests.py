@@ -11,11 +11,12 @@ from seqr.views.apis.individual_api import edit_individuals_handler, update_indi
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
     get_hpo_terms, get_individual_rna_seq_data
-from seqr.views.utils.test_utils import AuthenticationTestCase, INDIVIDUAL_FIELDS, INDIVIDUAL_CORE_FIELDS, \
-    CORE_INTERNAL_INDIVIDUAL_FIELDS
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, INDIVIDUAL_FIELDS, \
+    INDIVIDUAL_CORE_FIELDS, CORE_INTERNAL_INDIVIDUAL_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
 PM_REQUIRED_PROJECT_GUID = 'R0003_test'
+EXTERNAL_WORKSPACE_PROJECT_GUID = 'R0004_non_analyst_project'
 
 INDIVIDUAL_GUID = "I000001_na19675"
 ID_UPDATE_GUID = "I000002_na19678"
@@ -59,6 +60,18 @@ PM_REQUIRED_INDIVIDUAL_UPDATE_DATA = {
     'individualGuid': PM_REQUIRED_INDIVIDUAL_GUID, 'individualId': 'NA20889', 'familyId': '12', 'displayName': 'NA20889_a'
 }
 
+EXTERNAL_WORKSPACE_INDIVIDUAL_GUID = 'I000019_na21987'
+EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA = {
+    'individualGuid': EXTERNAL_WORKSPACE_INDIVIDUAL_GUID,
+    'individualId': 'NA21987',
+    'paternalGuid': 'I000018_na21234',
+    'maternalGuid': 'I000020_na65432',
+    'maternalId': '',
+    'paternalId': 'foobar',
+    'sex': 'U',
+    'affected': 'N',
+}
+
 FAMILY_UPDATE_GUID = "I000007_na20870"
 INDIVIDUAL_FAMILY_UPDATE_DATA = {
     "individualGuid": FAMILY_UPDATE_GUID,
@@ -67,8 +80,7 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 }
 
 @mock.patch('seqr.utils.middleware.DEBUG', False)
-class IndividualAPITest(AuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'reference_data']
+class IndividualAPITest(object):
 
     def test_update_individual_handler(self):
         edit_individuals_url = reverse(update_individual_handler, args=[INDIVIDUAL_UPDATE_GUID])
@@ -213,6 +225,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
         response = self.client.post(pm_required_edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
         }))
@@ -221,6 +234,51 @@ class IndividualAPITest(AuthenticationTestCase):
             'individualsByGuid': {PM_REQUIRED_INDIVIDUAL_GUID: mock.ANY},
             'familiesByGuid': {}
         })
+
+        # Test External AnVIL projects
+        ext_anvil_edit_individuals_url = reverse(edit_individuals_handler, args=[EXTERNAL_WORKSPACE_PROJECT_GUID])
+        self.login_collaborator()
+        response = self.client.post(
+            ext_anvil_edit_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
+            }))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_manager()
+        response = self.client.post(
+            ext_anvil_edit_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
+            }))
+
+        if not self.HAS_EXTERNAL_PROJECT_ACCESS:
+            self.assertEqual(response.status_code, 403)
+            return
+
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Invalid parental guid I000020_na65432',
+            'NA21234 is recorded as Female and also as the father of NA21987',
+        ])
+
+        update_json = deepcopy(EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA)
+        update_json['maternalGuid'] = update_json.pop('paternalGuid')
+        response = self.client.post(ext_anvil_edit_individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [update_json]
+        }))
+
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertDictEqual(response_json, {
+            'individualsByGuid': {EXTERNAL_WORKSPACE_INDIVIDUAL_GUID: mock.ANY},
+            'familiesByGuid': {}
+        })
+        updated_individual = response_json['individualsByGuid'][EXTERNAL_WORKSPACE_INDIVIDUAL_GUID]
+        self.assertEqual(updated_individual['sex'], 'U')
+        self.assertEqual(updated_individual['affected'], 'N')
+        self.assertEqual(updated_individual['maternalGuid'], 'I000018_na21234')
+        self.assertEqual(updated_individual['maternalId'], 'NA21234')
+        self.assertIsNone(updated_individual['paternalGuid'])
+        self.assertIsNone(updated_individual['paternalGuid'])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_individuals(self, mock_pm_group):
@@ -264,6 +322,7 @@ class IndividualAPITest(AuthenticationTestCase):
 
         mock_pm_group.__bool__.return_value = True
         mock_pm_group.resolve_expression.return_value = 'project-managers'
+        mock_pm_group.__eq__.side_effect = lambda s: s == 'project-managers'
         response = self.client.post(
             pm_required_delete_individuals_url, content_type='application/json', data=json.dumps({
                 'individuals': [PM_REQUIRED_INDIVIDUAL_UPDATE_DATA]
@@ -278,6 +337,22 @@ class IndividualAPITest(AuthenticationTestCase):
             }))
 
         self.assertEqual(response.status_code, 200)
+
+        # Test External AnVIL projects
+        ext_anvil_delete_individuals_url = reverse(delete_individuals_handler, args=[EXTERNAL_WORKSPACE_PROJECT_GUID])
+        self.login_collaborator()
+        response = self.client.post(
+            ext_anvil_delete_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
+            }))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_manager()
+        response = self.client.post(
+            ext_anvil_delete_individuals_url, content_type='application/json', data=json.dumps({
+                'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
+            }))
+        self.assertEqual(response.status_code, 200 if self.HAS_EXTERNAL_PROJECT_ACCESS else 403)
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_individuals_table_handler(self):
@@ -565,3 +640,12 @@ class IndividualAPITest(AuthenticationTestCase):
         })
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000268903'})
 
+
+class LocalIndividualAPITest(AuthenticationTestCase, IndividualAPITest):
+    fixtures = ['users', '1kg_project', 'reference_data']
+    HAS_EXTERNAL_PROJECT_ACCESS = False
+
+
+class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data']
+    HAS_EXTERNAL_PROJECT_ACCESS = True
