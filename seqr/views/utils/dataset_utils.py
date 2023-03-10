@@ -129,8 +129,8 @@ def _find_or_create_missing_sample_records(
         sample_id_to_individual_record = {}
         for sample_id in remaining_sample_ids:
             individual_id = sample_id
-            if sample_id_to_individual_id_mapping and individual_id in sample_id_to_individual_id_mapping:
-                individual_id = sample_id_to_individual_id_mapping[individual_id]
+            if sample_id_to_individual_id_mapping and sample_id in sample_id_to_individual_id_mapping:
+                individual_id = sample_id_to_individual_id_mapping[sample_id]
 
             if individual_id not in remaining_individuals_dict:
                 continue
