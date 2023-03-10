@@ -392,7 +392,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
-            if PROJECT_COL in row_dict:
+            if PROJECT_COL in expected_columns:
                 sample_id_to_project_name[sample_id] = row_dict.pop(PROJECT_COL)
             samples_by_id[sample_id][gene_id] = row_dict
 
@@ -402,7 +402,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
     samples, remaining_sample_ids = _match_and_update_rna_samples(
-        projects=get_internal_projects() if not sample_id_to_project_name else Project.objects.filter(
+        projects=get_internal_projects() if PROJECT_COL not in expected_columns else Project.objects.filter(
             name__in={project for project in sample_id_to_project_name.values()}),
         user=user,
         sample_ids=samples_by_id.keys(),
