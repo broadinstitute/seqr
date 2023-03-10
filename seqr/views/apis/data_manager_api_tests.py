@@ -625,6 +625,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20888', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
+            'mismatch_row_index': 1,
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
@@ -650,6 +651,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
             ],
+            'mismatch_row_index': 2,
             'created_sample_tissue_type': 'F',
             'num_parsed_samples': 4,
             'initial_model_count': 3,
@@ -725,7 +727,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {'error': mock.ANY})
                 self.assertTrue(response.json()['error'].startswith(
-                    f'Error in NA19675_D2 data for {mismatch_row[2 if data_type == "tpm" else 1]}: mismatched entries '))
+                    f'Error in NA19675_D2 data for {mismatch_row[params["mismatch_row_index"]]}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
