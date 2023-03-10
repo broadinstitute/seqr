@@ -756,36 +756,53 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                # Test loading new data
+                def _test_basic_data_loading(data, samples, projects, project_names, individual_id, sample_guid_idx):
+                    mock_logger.reset_mock()
+                    _set_file_iter_stdout([header] + data)
+                    response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+                    self.assertEqual(response.status_code, 200)
+                    info = [
+                        f'Parsed {samples} RNA-seq samples',
+                        f'Attempted data loading for {projects} RNA-seq samples in the following {projects} projects: {project_names}'
+                    ]
+                    file_name = RNA_FILENAME_TEMPLATE.format(data_type)
+                    response_json = response.json()
+                    self.assertDictEqual(response_json, {'info': info, 'warnings': mock.ANY, 'sampleGuids': mock.ANY,
+                                                         'fileName': file_name})
+                    new_sample_guid = self._check_rna_sample_model(
+                        individual_id=individual_id, data_source='new_muscle_samples.tsv.gz',
+                        tissue_type=params.get('created_sample_tissue_type'),
+                    )
+                    self.assertTrue(new_sample_guid in response_json['sampleGuids'])
+                    info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
+                    if test_round == 0:
+                        info_log_calls.insert(1, mock.call(
+                            'create 1 Samples', self.data_manager_user, db_update={
+                                'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][sample_guid_idx]],
+                                'updateType': 'bulk_create',
+                            }
+                        ))
+                    mock_logger.info.assert_has_calls(info_log_calls)
+
+                    return response_json, new_sample_guid
+
+            # Test loading new data
                 mock_open.reset_mock()
                 mock_logger.reset_mock()
-                _set_file_iter_stdout([header] + params['new_data'])
                 mock_load_uploaded_file.return_value = [['NA19675_D2', 'NA19675_1']]
                 mock_writes = []
                 def mock_write(content):
                     mock_writes.append(content)
                 mock_open.return_value.__enter__.return_value.write.side_effect = mock_write
                 body.update({'ignoreExtraSamples': True, 'mappingFile': {'uploadedFileId': 'map.tsv'}, 'file': RNA_FILE_ID})
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 200)
-                info = [
-                    f'Parsed {params["num_parsed_samples"]} RNA-seq samples',
-                    'Attempted data loading for 2 RNA-seq samples in the following 2 projects: 1kg project nåme with uniçøde, Test Reprocessed Project',
-                ]
+                response_json, new_sample_guid = _test_basic_data_loading(
+                    params['new_data'], params["num_parsed_samples"], 2,
+                    '1kg project nåme with uniçøde, Test Reprocessed Project', 16, 1)
+                self.assertTrue(RNA_SAMPLE_GUID in response_json['sampleGuids'])
                 warnings = ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
                 if params.get('extra_warnings'):
                     warnings = params['extra_warnings'] + warnings
-                file_name = RNA_FILENAME_TEMPLATE.format(data_type)
-                response_json = response.json()
-                self.assertDictEqual(response_json, {'info': info, 'warnings': warnings, 'sampleGuids': [RNA_SAMPLE_GUID, mock.ANY], 'fileName': file_name})
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
-                info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
-                if test_round == 0:
-                    info_log_calls.insert(1, mock.call(
-                        'create 1 Samples', self.data_manager_user, db_update={
-                            'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][1]], 'updateType': 'bulk_create',
-                        }))
-                mock_logger.info.assert_has_calls(info_log_calls)
                 mock_model_logger.info.assert_called_with(
                     f'delete {model_cls.__name__}s', self.data_manager_user,
                     db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
@@ -806,43 +823,18 @@ class DataManagerAPITest(AuthenticationTestCase):
                 # test database models are correct
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
                 sample_guid = self._check_rna_sample_model(individual_id=1, data_source='muscle_samples.tsv.gz', tissue_type='M')
-                new_sample_guid = self._check_rna_sample_model(
-                    individual_id=16, data_source='new_muscle_samples.tsv.gz', tissue_type=params.get('created_sample_tissue_type'),
-                )
                 self.assertListEqual(response_json['sampleGuids'], [sample_guid, new_sample_guid])
 
                 # test correct file interactions
                 mock_subprocess.assert_called_with(f'gsutil cat {RNA_FILE_ID} | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True)
-                mock_open.assert_called_with(file_name, 'wt')
+                mock_open.assert_called_with(RNA_FILENAME_TEMPLATE.format(data_type), 'wt')
                 self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
-                # test loading new data without existing data
-                mock_logger.reset_mock()
+                # test loading new data without deleting existing data
                 data = [params['new_data'][3]]
                 data[0][0] = 'NA19678'  # load data for a new individual
-                _set_file_iter_stdout([header] + data)
                 body.pop('mappingFile')
-                response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-                self.assertEqual(response.status_code, 200)
-                info = [
-                    'Parsed 1 RNA-seq samples',
-                    'Attempted data loading for 1 RNA-seq samples in the following 1 projects: 1kg project nåme with uniçøde'
-                ]
-                response_json = response.json()
-                self.assertDictEqual(response_json, {'info': info, 'warnings': [], 'sampleGuids': mock.ANY, 'fileName': file_name})
-                new_sample_guid = self._check_rna_sample_model(
-                    individual_id=2, data_source='new_muscle_samples.tsv.gz', tissue_type=params.get('created_sample_tissue_type'),
-                )
-                self.assertListEqual(response_json['sampleGuids'], [new_sample_guid])
-                info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
-                if test_round == 0:
-                    info_log_calls.insert(1, mock.call(
-                        'create 1 Samples', self.data_manager_user, db_update={
-                            'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][0]],
-                            'updateType': 'bulk_create',
-                        }
-                    ))
-                mock_logger.info.assert_has_calls(info_log_calls)
+                _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 2, 0)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
