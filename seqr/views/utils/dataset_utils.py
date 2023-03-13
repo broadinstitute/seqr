@@ -100,6 +100,8 @@ def _get_individual_sample_lookup(individuals):
 
 
 def _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping):
+    sample_id_to_individual_id_mapping = sample_id_to_individual_id_mapping or {}
+
     def _get_mapped_id(sample_id):
         return sample_id_to_individual_id_mapping.get(sample_id, sample_id)
     return _get_mapped_id
@@ -224,7 +226,7 @@ def match_and_update_search_samples(
         elasticsearch_index=elasticsearch_index,
     )
     loaded_date = timezone.now()
-    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping) if sample_id_to_individual_id_mapping else None
+    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
     samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
         samples=samples,
         projects=[project],
@@ -267,7 +269,7 @@ def _match_and_update_rna_samples(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id__in=sample_ids,
     )
-    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping) if sample_id_to_individual_id_mapping else None
+    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
     samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
         samples=samples,
         projects=projects,
