@@ -350,7 +350,7 @@ class BaseHailTableQuery(object):
 
         if clinvar_path_terms and quality_filter:
             logger.info(ht.aggregate(hl.agg.collect(ht.row.select(
-                fail_families=ht.failQualityFamilies, clinvar=ht.clinvar.clinical_significance_id,
+                fail_families=ht.failQualityFamilies, clinvar=ht.clinvar.clinical_significance_id, variantId=ht.variantId,
                 num_gts=ht.genotypes.size(), all_families=hl.set(ht.genotypes.map(lambda x: x.familyGuid))
             ))))
             ht = ht.annotate(genotypes=hl.if_else(
@@ -358,6 +358,12 @@ class BaseHailTableQuery(object):
                 ht.genotypes, ht.genotypes.filter(lambda x: ~ht.failQualityFamilies.contains(x.familyGuid))
             )).drop('failQualityFamilies')
             ht = ht.filter(ht.genotypes.size() > 0)
+            logger.info(f'Quality filtered to {ht.count()}')
+            logger.info(ht.aggregate(hl.agg.collect(ht.row.select(
+                fail_families=ht.failQualityFamilies, clinvar=ht.clinvar.clinical_significance_id,
+                variantId=ht.variantId,
+                num_gts=ht.genotypes.size(), all_families=hl.set(ht.genotypes.map(lambda x: x.familyGuid))
+            ))))
 
         ht = ht.annotate(
             familyGuids=ht.genotypes.group_by(lambda x: x.familyGuid).key_set(),
