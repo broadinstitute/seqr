@@ -274,9 +274,9 @@ class BaseHailTableQuery(object):
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
 
             logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
-            family_ht = cls._filter_family_table(
-                family_ht, family_samples=f_samples, quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms,
-                inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
+            family_ht = cls._filter_entries_table(
+                family_ht, family_guid=f.guid, family_samples=f_samples, quality_filter=quality_filter,
+                clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
                 **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
 
@@ -294,7 +294,7 @@ class BaseHailTableQuery(object):
                 logger.info(f'Initial count for {project.guid}: {project_ht.count()}')
                 try:
                     # TODO projects table
-                    filtered_project_hts.append(cls._filter_project_table(
+                    filtered_project_hts.append(cls._filter_entries_table(
                         project_ht, families=families, family_samples=family_samples, quality_filter=quality_filter,
                         clinvar_path_terms=clinvar_path_terms,
                         inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
@@ -386,9 +386,9 @@ class BaseHailTableQuery(object):
         return family_set_fields, family_dict_fields
 
     @classmethod
-    def _filter_family_table(cls, family_ht, family_samples=None, inheritance_mode=None, inheritance_filter=None,
-                             genome_version=None, quality_filter=None, clinvar_path_terms=None, **kwargs):
-        family_ht = cls._filter_entries_table(family_ht, genome_version=genome_version, **kwargs)
+    def _filter_entries_table(cls, family_ht, family_guid=None, family_samples=None, inheritance_mode=None,
+                              inheritance_filter=None, genome_version=None, quality_filter=None, clinvar_path_terms=None,
+                              **kwargs):
         family_ht, any_entry_filter, entry_genotypes = cls._filter_inheritance(
             family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version)
 
@@ -410,7 +410,8 @@ class BaseHailTableQuery(object):
                     comp_het_filter &= entry_filter
 
             family_ht = family_ht.annotate(
-                recessiveFamilies=hl.or_missing(recessive_filter, hl.set(family_ht.entries.map(lambda x: x.familyGuid))),
+                recessiveFamilies=hl.or_missing(recessive_filter, hl.set(
+                    {family_guid} if family_guid else family_ht.entries.map(lambda x: x.familyGuid))),
                 compHetFamilyCarriers=hl.or_missing(comp_het_filter, family_ht.compHetFamilyCarriers),
             )
 
@@ -431,10 +432,6 @@ class BaseHailTableQuery(object):
                 family_ht = family_ht.filter(family_ht.entries.all(gt_passes_quality))
 
         return family_ht
-
-    @classmethod
-    def _filter_entries_table(cls, ht, **kwargs):
-        return ht
 
     @classmethod
     def _filter_inheritance(cls, samples, ht, inheritance_mode, inheritance_filter, genome_version):
