@@ -426,9 +426,8 @@ class BaseHailTableQuery(object):
             gt_passes_quality = lambda gt: cls._genotype_passes_quality(gt, quality_filter)
             if clinvar_path_terms:
                 # TODO currently not working, only return clinvar and not high quality
-                family_ht = family_ht.annotate(
-                    failQualityFamilies=hl.set(family_ht.entries.filter(~gt_passes_quality).map(lambda x: x.familyGuid))
-                )
+                family_ht = family_ht.annotate(failQualityFamilies=hl.set(family_ht.entries.filter(
+                    lambda gt: ~gt_passes_quality(gt)).map(lambda x: x.familyGuid)))
             else:
                 family_ht = family_ht.filter(family_ht.entries.all(gt_passes_quality))
 
