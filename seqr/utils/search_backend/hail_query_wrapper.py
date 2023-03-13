@@ -349,6 +349,10 @@ class BaseHailTableQuery(object):
         ht = families_ht.annotate(**annotation_ht_query_result)
 
         if clinvar_path_terms and quality_filter:
+            logger.info(ht.aggregate(hl.agg.take(ht.row.select(
+                fail_families=ht.failQualityFamilies, clinvar=ht.clinvar.clinical_significance_id,
+                num_gts=ht.genotypes.size(), all_families=hl.set(ht.genotypes.map(lambda x: x.familyGuid))
+            ))))
             ht = ht.annotate(genotypes=hl.if_else(
                 cls._has_clivar_terms_expr(ht, clinvar_path_terms),
                 ht.genotypes, ht.genotypes.filter(lambda x: ~ht.failQualityFamilies.contains(x.familyGuid))
@@ -425,7 +429,6 @@ class BaseHailTableQuery(object):
         if quality_filter:
             gt_passes_quality = lambda gt: cls._genotype_passes_quality(gt, quality_filter)
             if clinvar_path_terms:
-                # TODO currently not working, only return clinvar and not high quality
                 family_ht = family_ht.annotate(failQualityFamilies=hl.set(family_ht.entries.filter(
                     lambda gt: ~gt_passes_quality(gt)).map(lambda x: x.familyGuid)))
             else:
