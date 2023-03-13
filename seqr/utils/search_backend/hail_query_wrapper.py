@@ -360,8 +360,7 @@ class BaseHailTableQuery(object):
             ht = ht.filter(ht.genotypes.size() > 0)
             logger.info(f'Quality filtered to {ht.count()}')
             logger.info(ht.aggregate(hl.agg.collect(ht.row.select(
-                fail_families=ht.failQualityFamilies, clinvar=ht.clinvar.clinical_significance_id,
-                variantId=ht.variantId,
+                clinvar=ht.clinvar.clinical_significance_id, variantId=ht.variantId,
                 num_gts=ht.genotypes.size(), all_families=hl.set(ht.genotypes.map(lambda x: x.familyGuid))
             ))))
 
