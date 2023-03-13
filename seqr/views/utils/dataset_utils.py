@@ -398,7 +398,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
             if indiv_id_to_project_name is not None:
-                indiv_id_to_project_name[indiv_id or sample_id] = row_dict.pop(PROJECT_COL)
+                indiv_id_to_project_name[sample_id_to_individual_id_mapping.get(sample_id, sample_id)] = row_dict.pop(PROJECT_COL)
             samples_by_id[sample_id][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
