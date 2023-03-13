@@ -349,7 +349,7 @@ class BaseHailTableQuery(object):
         ht = families_ht.annotate(**annotation_ht_query_result)
 
         if clinvar_path_terms and quality_filter:
-            logger.info(ht.aggregate(hl.agg.take(ht.row.select(
+            logger.info(ht.aggregate(hl.agg.collect(ht.row.select(
                 fail_families=ht.failQualityFamilies, clinvar=ht.clinvar.clinical_significance_id,
                 num_gts=ht.genotypes.size(), all_families=hl.set(ht.genotypes.map(lambda x: x.familyGuid))
             ))))
