@@ -545,25 +545,6 @@ class BaseHailTableQuery(object):
         return entry_genotypes
 
     @classmethod
-    def _get_sample_genotype_filter(cls, family_ht, sample_id_index_map, sample_affected_statuses, inheritance_mode, inheritance_filter):
-        # TODO remove
-        individual_genotype_filter = (inheritance_filter or {}).get('genotype') or {}
-        genotype_filter_exprs = []
-        for s, status in sample_affected_statuses.items():
-            genotype = individual_genotype_filter.get(s.individual.guid) or inheritance_filter.get(status)
-            if inheritance_mode == X_LINKED_RECESSIVE and status == UNAFFECTED and s.individual.sex == Individual.SEX_MALE:
-                genotype = REF_REF
-            if genotype:
-                genotype_filter_exprs.append(
-                    cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[sample_id_index_map[s.sample_id]].GT)
-                )
-
-        genotype_filter = genotype_filter_exprs[0]
-        for f in genotype_filter_exprs:
-            genotype_filter &= f
-        return genotype_filter
-
-    @classmethod
     def _genotype_passes_quality(cls, gt, quality_filter):
         quality_filter_expr = None
         for field, value in quality_filter.items():
