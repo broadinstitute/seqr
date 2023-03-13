@@ -94,37 +94,47 @@ def load_mapping_file_content(file_content):
         id_mapping[line[0]] = line[1]
     return id_mapping
 
+
+def _get_individual_sample_lookup(individuals):
+    return {i.individual_id: i for i in individuals}
+
+
+def _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping):
+    sample_id_to_individual_id_mapping = sample_id_to_individual_id_mapping or {}
+
+    def _get_mapped_id(sample_id):
+        return sample_id_to_individual_id_mapping.get(sample_id, sample_id)
+    return _get_mapped_id
+
+
 def _find_or_create_missing_sample_records(
         samples,
         projects,
         user,
         sample_ids,
-        sample_id_to_individual_id_mapping=None,
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
         create_active=False,
+        get_individual_sample_lookup=_get_individual_sample_lookup,
+        get_individual_sample_key=None,
         **kwargs
 ):
     samples = list(samples)
     remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
     matched_individual_ids = {sample.individual_id for sample in samples}
     if len(remaining_sample_ids) > 0:
-        remaining_individuals_dict = {
-            i.individual_id: i for i in
+        remaining_individuals_dict = get_individual_sample_lookup(
             Individual.objects.filter(family__project__in=projects).exclude(id__in=matched_individual_ids)
-        }
+        )
 
         # find Individual records with exactly-matching individual_ids
         sample_id_to_individual_record = {}
         for sample_id in remaining_sample_ids:
-            individual_id = sample_id
-            if sample_id_to_individual_id_mapping and sample_id in sample_id_to_individual_id_mapping:
-                individual_id = sample_id_to_individual_id_mapping[sample_id]
-
-            if individual_id not in remaining_individuals_dict:
+            individual_key = get_individual_sample_key(sample_id) if get_individual_sample_key else sample_id
+            if individual_key not in remaining_individuals_dict:
                 continue
-            sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_id]
-            del remaining_individuals_dict[individual_id]
+            sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_key]
+            del remaining_individuals_dict[individual_key]
 
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
@@ -216,6 +226,7 @@ def match_and_update_search_samples(
         elasticsearch_index=elasticsearch_index,
     )
     loaded_date = timezone.now()
+    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
     samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
         samples=samples,
         projects=[project],
@@ -224,7 +235,7 @@ def match_and_update_search_samples(
         elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        get_individual_sample_key=get_individual_sample_key,
         loaded_date=loaded_date,
         raise_no_match_error=not raise_unmatched_error_template,
         raise_unmatched_error_template=raise_unmatched_error_template,
@@ -258,6 +269,7 @@ def _match_and_update_rna_samples(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id__in=sample_ids,
     )
+    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
     samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
         samples=samples,
         projects=projects,
@@ -266,7 +278,7 @@ def _match_and_update_rna_samples(
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
+        get_individual_sample_key=get_individual_sample_key,
         loaded_date=timezone.now(),
         raise_no_match_error=False,
         raise_unmatched_error_template=raise_unmatched_error_template,
