@@ -265,7 +265,7 @@ class BaseHailTableQuery(object):
 
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
         if clinvar_path_terms and quality_filter:
-            family_set_fields.add('passesQualityFamilies')
+            family_set_fields.add('failQualityFamilies')
 
         families_ht = None
         logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
@@ -351,8 +351,8 @@ class BaseHailTableQuery(object):
         if clinvar_path_terms and quality_filter:
             ht = ht.annotate(genotypes=hl.if_else(
                 cls._has_clivar_terms_expr(ht, clinvar_path_terms),
-                ht.genotypes, ht.genotypes.filter(lambda x: ht.passesQualityFamilies.contains(x.familyGuid))
-            )).drop('passesQualityFamilies')
+                ht.genotypes, ht.genotypes.filter(lambda x: ~ht.failQualityFamilies.contains(x.familyGuid))
+            )).drop('failQualityFamilies')
             ht = ht.filter(ht.genotypes.size() > 0)
 
         ht = ht.annotate(
@@ -427,9 +427,8 @@ class BaseHailTableQuery(object):
             if clinvar_path_terms:
                 # TODO currently not working, only return clinvar and not high quality
                 family_ht = family_ht.annotate(
-                    passesQualityFamilies=hl.set(family_ht.entries.group_by(lambda x: x.familyGuid).items().filter(
-                        lambda x: x[1].all(gt_passes_quality)
-                    ).map(lambda x: x[0])))
+                    failQualityFamilies=hl.set(family_ht.entries.filter(~gt_passes_quality).map(lambda x: x.familyGuid))
+                )
             else:
                 family_ht = family_ht.filter(family_ht.entries.all(gt_passes_quality))
 
