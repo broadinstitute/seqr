@@ -270,7 +270,6 @@ class BaseHailTableQuery(object):
         if clinvar_path_terms and quality_filter:
             family_set_fields.add('failQualityFamilies')
 
-        families_ht = None
         logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
         if len(family_samples) == 1:
             f, f_samples = list(family_samples.items())[0]
