@@ -275,7 +275,7 @@ class BaseHailTableQuery(object):
 
             logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
             family_ht = cls._filter_entries_table(
-                family_ht, family_guid=f.guid, family_samples=f_samples, quality_filter=quality_filter,
+                family_ht, family_guid=f.guid, samples=f_samples, quality_filter=quality_filter,
                 clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
                 **kwargs, **family_filter_kwargs)
             logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
@@ -295,7 +295,7 @@ class BaseHailTableQuery(object):
                 try:
                     # TODO projects table
                     filtered_project_hts.append(cls._filter_entries_table(
-                        project_ht, families=families, family_samples=family_samples, quality_filter=quality_filter,
+                        project_ht, families=families, samples=family_samples, quality_filter=quality_filter,
                         clinvar_path_terms=clinvar_path_terms,
                         inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
                         **kwargs, **family_filter_kwargs))
@@ -386,7 +386,7 @@ class BaseHailTableQuery(object):
         return family_set_fields, family_dict_fields
 
     @classmethod
-    def _filter_entries_table(cls, ht, family_guid=None, family_samples=None, inheritance_mode=None, inheritance_filter=None, 
+    def _filter_entries_table(cls, ht, family_guid=None, samples=None, inheritance_mode=None, inheritance_filter=None,
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
                               **kwargs):
 
@@ -398,7 +398,7 @@ class BaseHailTableQuery(object):
             ht = ht.filter(cls.get_x_chrom_filter(ht, x_chrom_interval))
 
         ht = cls._filter_inheritance(
-            ht, inheritance_mode, inheritance_filter or {}, family_samples, sample_id_index_map,
+            ht, inheritance_mode, inheritance_filter or {}, samples, sample_id_index_map,
             consequence_overrides=consequence_overrides,
         )
 
