@@ -272,34 +272,22 @@ class BaseHailTableQuery(object):
         if len(family_samples) == 1:
             f, f_samples = list(family_samples.items())[0]
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
-
-            logger.info(f'Initial count for {f.guid}: {family_ht.count()}')
-            family_ht = cls._filter_entries_table(
+            families_ht = cls._filter_entries_table(
                 family_ht, family_guid=f.guid, samples=f_samples, quality_filter=quality_filter,
                 clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
                 **kwargs, **family_filter_kwargs)
-            logger.info(f'Prefiltered {f.guid} to {family_ht.count()} rows')
-
-            families_ht = family_ht.transmute(
-                genotypes=family_ht.entries.map(lambda gt: gt.select(
-                    'sampleId', 'individualGuid', 'familyGuid',
-                    numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
-                    **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
-                ))).select_globals()
         else:
             filtered_project_hts = []
             exception_messages = set()
             for project, families in project_families.items():
                 project_ht = hl.read_table(f'/hail_datasets/{data_source}_projects/{project.guid}.ht', **load_table_kwargs)
-                logger.info(f'Initial count for {project.guid}: {project_ht.count()}')
                 try:
                     # TODO projects table
                     filtered_project_hts.append(cls._filter_entries_table(
                         project_ht, families=families, samples=family_samples, quality_filter=quality_filter,
-                        clinvar_path_terms=clinvar_path_terms,
+                        clinvar_path_terms=clinvar_path_terms, table_name=project.guid,
                         inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
                         **kwargs, **family_filter_kwargs))
-                    logger.info(f'Prefiltered {project.guid} to {filtered_project_hts[-1].count()} rows')
                 except InvalidSearchException as e:
                     logger.info(f'Skipped {project.guid}: {e}')
                     exception_messages.add(str(e))
@@ -388,7 +376,9 @@ class BaseHailTableQuery(object):
     @classmethod
     def _filter_entries_table(cls, ht, family_guid=None, samples=None, inheritance_mode=None, inheritance_filter=None,
                               genome_version=None, quality_filter=None, clinvar_path_terms=None, consequence_overrides=None,
-                              **kwargs):
+                              table_name=None, **kwargs):
+        table_name = family_guid or table_name
+        logger.info(f'Initial count for {table_name}: {ht.count()}')
 
         ht, sample_id_index_map = cls._add_entry_sample_families(ht, samples, family_guid)
 
@@ -412,7 +402,14 @@ class BaseHailTableQuery(object):
         if not family_guid:
             ht = ht.annotate(entries=ht.entries.filter(lambda x: ht.families.contains(x.familyGuid)))
 
-        return ht
+        logger.info(f'Prefiltered {table_name} to {ht.count()} rows')
+
+        return ht.transmute(
+            genotypes=family_ht.entries.map(lambda gt: gt.select(
+                'sampleId', 'individualGuid', 'familyGuid',
+                numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
+                **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
+            ))).select_globals()
 
     @classmethod
     def _add_entry_sample_families(cls, ht, samples, family_guid):
@@ -958,6 +955,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
 
     @classmethod
     def _filter_entries_table(cls, ht, excluded_intervals=None, variant_ids=None, genome_version=None, **kwargs):
+        if excluded_intervals or variant_ids:
+            logger.info(f'Unfiltered count: {ht.count()}')
+
         if excluded_intervals:
             ht = hl.filter_intervals(ht, excluded_intervals, keep=False)
         if variant_ids:
@@ -1058,6 +1058,7 @@ class VariantHailTableQuery(BaseVariantHailTableQuery):
     @classmethod
     def _filter_entries_table(cls, ht, high_af_ht=None, **kwargs):
         if high_af_ht is not None:
+            logger.info(f'No AF filter count: {ht.count()}')
             ht = ht.filter(hl.is_missing(high_af_ht[ht.key]))
 
         return super(VariantHailTableQuery, cls)._filter_entries_table(ht, **kwargs)
