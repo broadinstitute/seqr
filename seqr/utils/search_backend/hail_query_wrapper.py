@@ -396,6 +396,7 @@ class BaseHailTableQuery(object):
     @classmethod
     def _add_entry_sample_families(cls, ht, samples, family_guid):
         sample_index_id_map = dict(enumerate(hl.eval(ht.sample_ids)))
+        logger.info(sample_index_id_map)  # TODO remove
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
         sample_individual_map = {s.sample_id: s.individual.guid for s in samples}
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
@@ -479,6 +480,7 @@ class BaseHailTableQuery(object):
                 genotype = REF_REF
             if genotype:
                 entry_index = sample_id_index_map[s.sample_id]
+                logger.info(f'sample - {s.sample_id}; index - {entry_index}; genotype - {genotype}')   # TODO remove
                 ht = ht.annotate(families=hl.if_else(
                     cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT), ht.families,
                     ht.families.remove(ht.entries[entry_index].familyGuid)
