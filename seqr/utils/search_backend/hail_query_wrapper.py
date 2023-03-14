@@ -251,43 +251,40 @@ class BaseHailTableQuery(object):
         quality_filter = cls._format_quality_filter(quality_filter)
         clinvar_path_terms = cls._get_clinvar_path_terms(consequence_overrides)
 
-        family_filter_kwargs = cls._get_family_table_filter_kwargs(
-            load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs)
+        family_filter_kwargs = dict(
+            quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode,
+            consequence_overrides=consequence_overrides, **kwargs)
+        family_filter_kwargs.update(cls._get_family_table_filter_kwargs(
+            load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs))
 
         family_samples = defaultdict(list)
-        project_families = defaultdict(set)
+        project_samples = defaultdict(list)
         for s in samples:
             family = s.individual.family
             family_samples[family].append(s)
-            project_families[family.project].add(family)
+            project_samples[family.project].append(s)
         cls._validate_search_criteria(
-            num_projects=len(project_families), num_families=len(family_samples), inheritance_mode=inheritance_mode, **kwargs)
+            num_projects=len(project_samples), num_families=len(family_samples), inheritance_mode=inheritance_mode, **kwargs)
 
         family_set_fields, family_dict_fields = cls._get_families_annotation_fields(inheritance_mode)
         if clinvar_path_terms and quality_filter:
             family_set_fields.add('failQualityFamilies')
 
         families_ht = None
-        logger.info(f'Loading data for {len(family_samples)} families ({cls.__name__})')
+        logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
         if len(family_samples) == 1:
             f, f_samples = list(family_samples.items())[0]
             family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
             families_ht = cls._filter_entries_table(
-                family_ht, family_guid=f.guid, samples=f_samples, quality_filter=quality_filter,
-                clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
-                **kwargs, **family_filter_kwargs)
+                family_ht, family_guid=f.guid, samples=f_samples, **family_filter_kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
-            for project, families in project_families.items():
+            for project, samples in project_samples.items():
                 project_ht = hl.read_table(f'/hail_datasets/{data_source}_projects/{project.guid}.ht', **load_table_kwargs)
                 try:
-                    # TODO projects table
                     filtered_project_hts.append(cls._filter_entries_table(
-                        project_ht, families=families, samples=family_samples, quality_filter=quality_filter,
-                        clinvar_path_terms=clinvar_path_terms, table_name=project.guid,
-                        inheritance_mode=inheritance_mode, consequence_overrides=consequence_overrides,
-                        **kwargs, **family_filter_kwargs))
+                        project_ht, samples=samples, table_name=project.guid, **family_filter_kwargs))
                 except InvalidSearchException as e:
                     logger.info(f'Skipped {project.guid}: {e}')
                     exception_messages.add(str(e))
@@ -295,40 +292,26 @@ class BaseHailTableQuery(object):
             if len(filtered_project_hts) < 1:
                 raise InvalidSearchException('; '.join(exception_messages))
 
-            for project_ht in filtered_project_hts:
-                if families_ht is not None:
-                    # TODO projects table
-                    families_ht = families_ht.join(project_ht, how='outer')
-                    families_ht = families_ht.select(
-                        genotypes=hl.bind(
-                            lambda g1, g2: g1.extend(g2),
-                            hl.or_else(families_ht.genotypes, hl.empty_array(families_ht.genotypes.dtype.element_type)),
-                            hl.or_else(families_ht.genotypes_1, hl.empty_array(families_ht.genotypes.dtype.element_type)),
-                        ),
-                        **{k: hl.bind(
-                            lambda family_set: hl.if_else(
-                                hl.is_defined(families_ht[field]) & families_ht[field], family_set.add(f.guid), family_set),
-                            hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
-                        ) for k in family_set_fields},
-                        **{k: hl.bind(
-                            lambda family_arr: hl.if_else(
-                                hl.is_defined(families_ht[field]), family_arr.append((f.guid, families_ht[field])),
-                                family_arr,
-                            ),
-                            hl.or_else(families_ht[k], hl.empty_array(families_ht[k].dtype.element_type)),
-                        ) for k in family_dict_fields},
-                    )
-                else:
-                    # TODO projects table
-                    families_ht = project_ht.transmute(
-                        **{k: hl.or_missing(family_ht[field], {f.guid}) for k in family_set_fields},
-                        **{k: hl.or_missing(hl.is_defined(family_ht[field]), [(f.guid, family_ht[field])])
-                           for k in family_dict_fields},
-                    )
-
-        if family_dict_fields:
-            # TODO unneeded once clean up dict merging?
-            families_ht = families_ht.annotate(**{k: hl.dict(families_ht[k]) for k in family_dict_fields})
+            families_ht = filtered_project_hts[0]
+            for project_ht in filtered_project_hts[1:]:
+                families_ht = families_ht.join(project_ht, how='outer')
+                families_ht = families_ht.select(
+                    genotypes=hl.bind(
+                        lambda g1, g2: g1.extend(g2),
+                        hl.or_else(families_ht.genotypes, hl.empty_array(families_ht.genotypes.dtype.element_type)),
+                        hl.or_else(families_ht.genotypes_1, hl.empty_array(families_ht.genotypes.dtype.element_type)),
+                    ),
+                    **{k: hl.bind(
+                        lambda s1, s2: s1.union(s2),
+                        hl.or_else(families_ht[k], hl.empty_set(hl.tstr)),
+                        hl.or_else(families_ht[f'{k}_1'], hl.empty_set(hl.tstr)),
+                    ) for k in family_set_fields},
+                    **{k: hl.bind(
+                        lambda d1, d2: hl.dict(d1.items().extend(d2.items())),
+                        hl.or_else(families_ht[k], hl.empty_dict(hl.tstr, families_ht[k].dtype.value_type)),
+                        hl.or_else(families_ht[f'{k}_1'], hl.empty_dict(hl.tstr, families_ht[k].dtype.value_type)),
+                    ) for k in family_dict_fields},
+                )
 
         logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
