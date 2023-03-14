@@ -387,7 +387,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Prefiltered {table_name} to {ht.count()} rows')
 
         return ht.transmute(
-            genotypes=ht.entries.filter(lambda gt: gt.individualGuid).map(lambda gt: gt.select(
+            genotypes=ht.entries.filter(lambda gt: hl.is_defined(gt.individualGuid)).map(lambda gt: gt.select(
                 'sampleId', 'individualGuid', 'familyGuid',
                 numAlt=hl.if_else(hl.is_defined(gt.GT), gt.GT.n_alt_alleles(), -1),
                 **{cls.GENOTYPE_RESPONSE_KEYS.get(k, k): gt[field] for k, field in cls.GENOTYPE_FIELDS.items()}
