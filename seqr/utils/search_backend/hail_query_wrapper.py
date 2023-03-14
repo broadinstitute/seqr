@@ -851,6 +851,9 @@ class BaseHailTableQuery(object):
             result = dict(result)
 
         if isinstance(result, dict):
+            if 'familyGuids' in result:
+                result['familyGuids'] = []
+                result['genotypes'] = {}
             return {k: cls._json_serialize(v) for k, v in result.items()}
 
         return result
