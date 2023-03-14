@@ -414,7 +414,9 @@ class BaseHailTableQuery(object):
                 individualGuid=hl.dict(sample_index_individual_map).get(x[0]),
                 familyGuid=hl.dict(sample_index_family_map).get(x[0]),
             )))
-        ht = ht.annotate(families=hl.set({family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid)))
+        ht = ht.annotate(families=hl.set(
+            {family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid).filter(lambda x: hl.is_defined(x))
+        ))
 
         return ht, sample_id_index_map
 
