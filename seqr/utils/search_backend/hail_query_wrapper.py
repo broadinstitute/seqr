@@ -386,52 +386,55 @@ class BaseHailTableQuery(object):
         return family_set_fields, family_dict_fields
 
     @classmethod
-    def _filter_entries_table(cls, family_ht, family_guid=None, family_samples=None, inheritance_mode=None,
+    def _filter_entries_table(cls, ht, family_guid=None, family_samples=None, inheritance_mode=None,
                               inheritance_filter=None, genome_version=None, quality_filter=None, clinvar_path_terms=None,
                               **kwargs):
-        family_ht, any_entry_filter, entry_genotypes = cls._filter_inheritance(
-            family_samples, family_ht, inheritance_mode, inheritance_filter, genome_version)
+        ht, any_entry_filter, entry_genotypes = cls._filter_inheritance(
+            family_samples, ht, inheritance_mode, inheritance_filter, genome_version)
+
+        ht = ht.annotate(entries=ht.entries.map(
+            lambda x: x.annotate(passes_entry_filter=True if any_entry_filter is None else any_entry_filter(x))
+        ))
 
         if inheritance_mode == RECESSIVE:
             recessive_filter = None
             for entry_index, genotype in entry_genotypes['recessive'].items():
-                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT)
+                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT)
                 if recessive_filter is None:
                     recessive_filter = entry_filter
                 else:
                     recessive_filter &= entry_filter
 
-            comp_het_filter = family_ht.entries.any(any_entry_filter) if any_entry_filter else None
+            comp_het_filter = ht.entries.any(lambda x: x.passes_entry_filter)
             for entry_index, genotype in entry_genotypes['comp_het'].items():
-                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT)
+                entry_filter = cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT)
                 if comp_het_filter is None:
                     comp_het_filter = entry_filter
                 else:
                     comp_het_filter &= entry_filter
 
-            family_ht = family_ht.annotate(
+            ht = ht.annotate(
                 recessiveFamilies=hl.or_missing(recessive_filter, hl.set(
-                    {family_guid} if family_guid else family_ht.entries.map(lambda x: x.familyGuid))),
-                compHetFamilyCarriers=hl.or_missing(comp_het_filter, family_ht.compHetFamilyCarriers),
+                    {family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid))),
+                compHetFamilyCarriers=hl.or_missing(comp_het_filter, ht.compHetFamilyCarriers),
             )
 
-            family_ht = family_ht.filter(hl.is_defined(family_ht.recessiveFamilies) | hl.is_defined(family_ht.compHetFamilyCarriers))
+            ht = ht.filter(hl.is_defined(ht.recessiveFamilies) | hl.is_defined(ht.compHetFamilyCarriers))
         else:
-            if any_entry_filter is not None:
-                family_ht = family_ht.filter(family_ht.entries.any(any_entry_filter))
+            ht = ht.filter(ht.entries.any(lambda x: x.passes_entry_filter))
             if entry_genotypes:
                 for entry_index, genotype in entry_genotypes.items():
-                    family_ht = family_ht.filter(cls.GENOTYPE_QUERY_MAP[genotype](family_ht.entries[entry_index].GT))
+                    ht = ht.filter(cls.GENOTYPE_QUERY_MAP[genotype](ht.entries[entry_index].GT))
 
         if quality_filter:
             gt_passes_quality = lambda gt: cls._genotype_passes_quality(gt, quality_filter)
             if clinvar_path_terms:
-                family_ht = family_ht.annotate(failQualityFamilies=hl.set(family_ht.entries.filter(
+                ht = ht.annotate(failQualityFamilies=hl.set(ht.entries.filter(
                     lambda gt: ~gt_passes_quality(gt)).map(lambda x: x.familyGuid)))
             else:
-                family_ht = family_ht.filter(family_ht.entries.all(gt_passes_quality))
+                ht = ht.filter(ht.entries.all(gt_passes_quality))
 
-        return family_ht
+        return ht
 
     @classmethod
     def _filter_inheritance(cls, samples, ht, inheritance_mode, inheritance_filter, genome_version):
@@ -1182,11 +1185,11 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
         return hl.array(SV_CONSEQUENCE_RANKS)[transcript.major_consequence_id]
 
     @classmethod
-    def _filter_family_table(cls, family_ht, consequence_overrides=None, **kwargs):
+    def _filter_entries_table(cls, ht, consequence_overrides=None, **kwargs):
         if consequence_overrides[NEW_SV_FIELD]:
-            family_ht = family_ht.filter(family_ht.entries.any(lambda x: x.newCall))
+            ht = ht.filter(ht.entries.any(lambda x: x.newCall))
 
-        return super(BaseSvHailTableQuery, cls)._filter_family_table(family_ht, **kwargs)
+        return super(BaseSvHailTableQuery, cls)._filter_entries_table(ht, consequence_overrides=consequence_overrides, **kwargs)
 
 
 class GcnvHailTableQuery(BaseSvHailTableQuery):
