@@ -465,7 +465,7 @@ class BaseHailTableQuery(object):
                         families=ht.families.union(ht.recessiveFamilies),
                     )
                 else:
-                    ht = ht.annotate(families=ht.compHetFamilyCarriers.key_set())
+                    ht = ht.annotate(families=ht.families.intersection(ht.compHetFamilyCarriers.key_set()))
 
         return ht.filter(ht.families.size() > 0)
 
