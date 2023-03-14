@@ -397,6 +397,7 @@ class BaseHailTableQuery(object):
     def _add_entry_sample_families(cls, ht, samples, family_guid):
         sample_index_id_map = dict(enumerate(hl.eval(ht.sample_ids)))
         logger.info(len(hl.eval(ht.sample_ids)))  # TODO remove
+        logger.info(ht.aggregate(hl.agg.collect_as_set(ht.entries.size())))  # TODO remove
         sample_id_index_map = {v: k for k, v in sample_index_id_map.items()}
         sample_individual_map = {s.sample_id: s.individual.guid for s in samples}
         missing_samples = set(sample_individual_map.keys()) - set(sample_id_index_map.keys())
@@ -417,6 +418,7 @@ class BaseHailTableQuery(object):
                 individualGuid=hl.dict(sample_index_individual_map)[x[0]],
                 familyGuid=hl.dict(sample_index_family_map)[x[0]],
             )))
+        logger.info(ht.aggregate(hl.agg.collect_as_set(ht.entries.size())))  # TODO remove
         ht = ht.annotate(families=hl.set({family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid)))
 
         return ht, sample_id_index_map
