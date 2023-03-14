@@ -403,13 +403,11 @@ class BaseHailTableQuery(object):
         )
 
         if quality_filter:
-            # TODO
-            gt_passes_quality = lambda gt: cls._genotype_passes_quality(gt, quality_filter)
-            if clinvar_path_terms:
-                ht = ht.annotate(failQualityFamilies=hl.set(ht.entries.filter(
-                    lambda gt: ~gt_passes_quality(gt)).map(lambda x: x.familyGuid)))
-            else:
-                ht = ht.filter(ht.entries.all(gt_passes_quality))
+            ht = ht.annotate(failQualityFamilies=hl.set(ht.entries.filter(
+                lambda gt: ~cls._genotype_passes_quality(gt, quality_filter)).map(lambda x: x.familyGuid)))
+            if not clinvar_path_terms:
+                ht = ht.transmute(families=ht.families.difference(ht.failQualityFamilies))
+                ht = ht.filter(ht.families.size() > 0)
 
         if not family_guid:
             ht = ht.annotate(entries=ht.entries.filter(lambda x: ht.families.contains(x.familyGuid)))
