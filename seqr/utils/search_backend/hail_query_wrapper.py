@@ -408,13 +408,12 @@ class BaseHailTableQuery(object):
         }
         sample_index_family_map = {sample_id_index_map[s.sample_id]: s.individual.family.guid for s in samples}
 
-        ht = ht.annotate(entries=hl.enumerate(ht.entries).map(lambda x: hl.or_missing(
-            hl.set(set(sample_index_individual_map.keys())).contains(x[0]),
-            hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
-                sampleId=hl.dict(sample_index_id_map)[x[0]],
-                individualGuid=hl.dict(sample_index_individual_map)[x[0]],
-                familyGuid=hl.dict(sample_index_family_map)[x[0]],
-            ))))
+        ht = ht.annotate(entries=hl.enumerate(ht.entries).map(
+            lambda x: hl.or_else(x[1], cls._missing_entry(x[1])).annotate(
+                sampleId=hl.dict(sample_index_id_map).get(x[0]),
+                individualGuid=hl.dict(sample_index_individual_map).get(x[0]),
+                familyGuid=hl.dict(sample_index_family_map).get(x[0]),
+            )))
         ht = ht.annotate(families=hl.set({family_guid} if family_guid else ht.entries.map(lambda x: x.familyGuid)))
 
         return ht, sample_id_index_map
