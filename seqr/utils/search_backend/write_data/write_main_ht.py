@@ -27,7 +27,18 @@ CLINVAR_SIGNIFICANCES = {sig: i for i, sig in enumerate([
     'Benign/Likely_benign,_drug_response', 'Benign/Likely_benign,_other', 'Benign/Likely_benign', 'Benign,_risk_factor',
     'Benign,_confers_sensitivity', 'Benign,_association,_confers_sensitivity', 'Benign,_drug_response', 'Benign,_other',
     'Benign,_protective', 'Benign', 'protective,_risk_factor', 'protective',
+    # In production - sort these correctly (get current list of values from actual clinvar file)
+    'Pathogenic/Pathogenic,_low_penetrance', 'Pathogenic/Pathogenic,_low_penetrance|risk_factor',
+    'Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance', 'Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance|other',
+    'Pathogenic/Likely_pathogenic,_low_penetrance', 'Conflicting_interpretations_of_pathogenicity,_protective',
+    'Likely_risk_allele', 'Uncertain_significance,_drug_response', 'Uncertain_significance/Uncertain_risk_allele',
+    'Uncertain_risk_allele', 'Uncertain_risk_allele,_risk_factor', 'Uncertain_risk_allele,_protective',
+    'association,_risk_factor', 'association,_drug_response', 'association,_drug_response,_risk_factor',
+    'association_not_found', 'drug_response,_other', 'Likely_benign,_association', 'Benign/Likely_benign,_association',
+    'Benign/Likely_benign,_drug_response,_other', 'Benign/Likely_benign,_other,_risk_factor', 'Benign,_association',
 ])}
+# In production - use actual values in latest clinvar file version
+CLINVAR_SIGNIFICANCES.update({sig.replace(',_', '|'): i for sig, i in CLINVAR_SIGNIFICANCES.items()})
 HGMD_SIGNIFICANCES = {sig: i for i, sig in enumerate([
     'DM', 'DM?', 'DP', 'DFP', 'FP', 'FTV', 'R',
 ])}
@@ -263,7 +274,7 @@ SELECT_FIELDS = {
 }
 
 PARSED_HT_EXTS = {
-    VARIANT_TYPE: 'interval_annotations',
+    # VARIANT_TYPE: 'interval_annotations',
     GCNV_TYPE: 'grouped',
     SV_TYPE: 'annotated',
 }
