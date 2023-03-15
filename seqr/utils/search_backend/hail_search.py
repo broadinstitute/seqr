@@ -36,38 +36,31 @@ class HailSearch(object):
         self.previous_search_results = previous_search_results or {}
 
     def _load_filtered_table(self, data_type, **kwargs):
-        sample_data_sources_by_type = defaultdict(lambda: defaultdict(list))
+        samples_by_data_type = defaultdict(list)
         for s in self.samples:
             data_type_key = f'{s.dataset_type}_{s.sample_type}' if s.dataset_type == Sample.DATASET_TYPE_SV_CALLS else s.dataset_type
-            sample_data_sources_by_type[data_type_key][s.elasticsearch_index].append(s)  # In production: should use a different model field, not elasticsearch_index
-        multi_data_sources = next(
-            (data_sources for data_sources in sample_data_sources_by_type.values() if len(data_sources) > 1), None)
-        if multi_data_sources:
-            raise InvalidSearchException(
-                f'Search is only enabled on a single data source, requested {", ".join(multi_data_sources.keys())}')
-        data_sources_by_type = {k: list(v.keys())[0] for k, v in sample_data_sources_by_type.items()}
-        samples_by_data_type = {k: list(v.values())[0] for k, v in sample_data_sources_by_type.items()}
+            samples_by_data_type[data_type_key].append(s)
+        data_types = list(samples_by_data_type.keys())
 
         if data_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-            data_sources_by_type = {
-                k: v for k, v in data_sources_by_type.items()
-                if k in {Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS}
-            }
+            data_types = [
+                dt for dt in data_types if dt in {Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS}
+            ]
         elif data_type == Sample.DATASET_TYPE_SV_CALLS:
-            data_sources_by_type = {k: v for k, v in data_sources_by_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
+            data_types = [dt for dt in data_types if dt.startswith(Sample.DATASET_TYPE_SV_CALLS)]
             samples_by_data_type = {k: v for k, v in samples_by_data_type.items() if k.startswith(Sample.DATASET_TYPE_SV_CALLS)}
 
-        single_data_type = list(data_sources_by_type.keys())[0] if len(data_sources_by_type) == 1 else None
+        single_data_type = data_types[0] if len(data_types) == 1 else None
 
         if single_data_type:
             samples = samples_by_data_type[single_data_type]
-            data_source = data_sources_by_type[single_data_type]
+            data_type = single_data_type
             query_cls = QUERY_CLASS_MAP[single_data_type]
         else:
             samples = samples_by_data_type
-            data_source = data_sources_by_type
-            is_all_svs = all(k.startswith(Sample.DATASET_TYPE_SV_CALLS) for k in data_sources_by_type)
-            is_no_sv = all(not k.startswith(Sample.DATASET_TYPE_SV_CALLS) for k in data_sources_by_type)
+            data_type = data_types
+            is_all_svs = all(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
+            is_no_sv = all(not dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in data_types)
 
             if is_all_svs:
                 query_cls = AllSvHailTableQuery
@@ -76,7 +69,7 @@ class HailSearch(object):
             else:
                 query_cls = AllDataTypeHailTableQuery
 
-        self._query_wrapper = query_cls(data_source, samples=samples, genome_version=self._genome_version, **kwargs)
+        self._query_wrapper = query_cls(data_type, samples=samples, genome_version=self._genome_version, **kwargs)
 
     @classmethod
     def process_previous_results(cls, previous_search_results, page=1, num_results=100, load_all=False):

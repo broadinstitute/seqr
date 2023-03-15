@@ -216,22 +216,22 @@ class BaseHailTableQuery(object):
     def get_major_consequence(transcript):
         raise NotImplementedError
 
-    def __init__(self, data_source, samples, genome_version, gene_ids=None, **kwargs):
+    def __init__(self, data_type, samples, genome_version, gene_ids=None, **kwargs):
         self._genome_version = genome_version
         self._comp_het_ht = None
         self._filtered_genes = gene_ids
         self._allowed_consequences = None
         self._allowed_consequences_secondary = None
 
-        self._load_filtered_table(data_source, samples, **kwargs)
+        self._load_filtered_table(data_type, samples, **kwargs)
 
-    def _load_filtered_table(self, data_source, samples, intervals=None, exclude_intervals=False, inheritance_mode=None,
+    def _load_filtered_table(self, data_type, samples, intervals=None, exclude_intervals=False, inheritance_mode=None,
                              pathogenicity=None, annotations=None, annotations_secondary=None, **kwargs):
 
         consequence_overrides = self._parse_overrides(pathogenicity, annotations, annotations_secondary)
 
         self._ht = self.import_filtered_table(
-            data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
+            data_type, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
             allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
             inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
@@ -250,8 +250,9 @@ class BaseHailTableQuery(object):
                 self._ht = None
 
     @classmethod
-    def import_filtered_table(cls, data_source, samples, intervals=None, inheritance_mode=None, quality_filter=None,
-                              consequence_overrides=None, **kwargs):
+    def import_filtered_table(cls, data_type, samples, intervals=None, inheritance_mode=None, quality_filter=None,
+                              consequence_overrides=None, genome_version=None, **kwargs):
+        tables_path = f'/hail_datasets/{genome_version}/{data_type}'
         load_table_kwargs = {'_intervals': intervals, '_filter_intervals': bool(intervals)}
 
         quality_filter = quality_filter or {}
@@ -261,7 +262,7 @@ class BaseHailTableQuery(object):
 
         family_filter_kwargs = dict(
             quality_filter=quality_filter, clinvar_path_terms=clinvar_path_terms, inheritance_mode=inheritance_mode,
-            consequence_overrides=consequence_overrides, **kwargs)
+            consequence_overrides=consequence_overrides, genome_version=genome_version, **kwargs)
         family_filter_kwargs.update(cls._get_family_table_filter_kwargs(
             load_table_kwargs=load_table_kwargs, clinvar_path_terms=clinvar_path_terms, **kwargs))
 
@@ -281,14 +282,14 @@ class BaseHailTableQuery(object):
         logger.info(f'Loading data for {len(family_samples)} families in {len(project_samples)} projects ({cls.__name__})')
         if len(family_samples) == 1:
             f, f_samples = list(family_samples.items())[0]
-            family_ht = hl.read_table(f'/hail_datasets/{data_source}_families/{f.guid}.ht', **load_table_kwargs)
+            family_ht = hl.read_table(f'{tables_path}/families/{f.guid}.ht', **load_table_kwargs)
             families_ht = cls._filter_entries_table(
                 family_ht, family_guid=f.guid, samples=f_samples, **family_filter_kwargs)
         else:
             filtered_project_hts = []
             exception_messages = set()
             for project, samples in project_samples.items():
-                project_ht = hl.read_table(f'/hail_datasets/{data_source}_projects/{project.guid}.ht', **load_table_kwargs)
+                project_ht = hl.read_table(f'{tables_path}/projects/{project.guid}.ht', **load_table_kwargs)
                 try:
                     filtered_project_hts.append(cls._filter_entries_table(
                         project_ht, samples=samples, table_name=project.guid, **family_filter_kwargs))
@@ -323,7 +324,7 @@ class BaseHailTableQuery(object):
         logger.info(f'Prefiltered to {families_ht.count()} rows ({cls.__name__})')
 
         annotation_ht_query_result = hl.query_table(
-            f'/hail_datasets/{data_source}.ht', families_ht.key).first().drop(*families_ht.key)
+            f'{tables_path}/annotations.ht', families_ht.key).first().drop(*families_ht.key)
         ht = families_ht.annotate(**annotation_ht_query_result)
 
         if clinvar_path_terms and quality_filter:
@@ -941,9 +942,9 @@ class BaseVariantHailTableQuery(BaseHailTableQuery):
     }
 
     @classmethod
-    def import_filtered_table(cls, data_source, samples, intervals=None, exclude_intervals=False, **kwargs):
+    def import_filtered_table(cls, data_type, samples, intervals=None, exclude_intervals=False, **kwargs):
         ht = super(BaseVariantHailTableQuery, cls).import_filtered_table(
-            data_source, samples, intervals=None if exclude_intervals else intervals,
+            data_type, samples, intervals=None if exclude_intervals else intervals,
             excluded_intervals=intervals if exclude_intervals else None, **kwargs)
         ht = ht.key_by(VARIANT_KEY_FIELD)
         return ht
@@ -1147,8 +1148,8 @@ class BaseSvHailTableQuery(BaseHailTableQuery):
     ANNOTATION_OVERRIDE_FIELDS = [STRUCTURAL_ANNOTATION_FIELD, NEW_SV_FIELD]
 
     @classmethod
-    def import_filtered_table(cls, data_source, samples, intervals=None, exclude_intervals=False, **kwargs):
-        ht = super(BaseSvHailTableQuery, cls).import_filtered_table(data_source, samples, **kwargs)
+    def import_filtered_table(cls, data_type, samples, intervals=None, exclude_intervals=False, **kwargs):
+        ht = super(BaseSvHailTableQuery, cls).import_filtered_table(data_type, samples, **kwargs)
         if intervals:
             interval_filter = hl.array(intervals).all(lambda interval: not interval.overlaps(ht.interval)) \
                 if exclude_intervals else hl.array(intervals).any(lambda interval: interval.overlaps(ht.interval))
@@ -1247,8 +1248,8 @@ class MultiDataTypeHailTableQuery(object):
         VARIANT_DATASET: VARIANT_MERGE_FIELDS, MITO_DATASET: VARIANT_MERGE_FIELDS,
     }
 
-    def __init__(self, data_source, *args, **kwargs):
-        self._data_types = list(data_source.keys())
+    def __init__(self, data_type, *args, **kwargs):
+        self._data_types = list(data_type.keys())
         self.POPULATIONS = {}
         self.PREDICTION_FIELDS_CONFIG = {}
         self.BASE_ANNOTATION_FIELDS = {}
@@ -1265,7 +1266,7 @@ class MultiDataTypeHailTableQuery(object):
         })
         self.CORE_FIELDS = list(self.CORE_FIELDS - set(self.BASE_ANNOTATION_FIELDS.keys()))
 
-        super(MultiDataTypeHailTableQuery, self).__init__(data_source, *args, **kwargs)
+        super(MultiDataTypeHailTableQuery, self).__init__(data_type, *args, **kwargs)
 
     def _annotation_for_data_type(self, field):
         def field_annotation(r):
@@ -1284,11 +1285,10 @@ class MultiDataTypeHailTableQuery(object):
         )
 
     @classmethod
-    def import_filtered_table(cls, data_source, samples, **kwargs):
-        data_types = list(data_source.keys())
-        data_type_0 = data_types[0]
+    def import_filtered_table(cls, data_type, samples, **kwargs):
+        data_type_0 = data_type[0]
 
-        ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_source[data_type_0], samples[data_type_0], **kwargs)
+        ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type[data_type_0], samples[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus'}
@@ -1297,13 +1297,13 @@ class MultiDataTypeHailTableQuery(object):
         all_type_merge_fields.update(family_dict_fields)
 
         merge_fields = deepcopy(cls.MERGE_FIELDS[data_type_0])
-        for data_type in data_types[1:]:
-            data_type_cls = QUERY_CLASS_MAP[data_type]
-            sub_ht = data_type_cls.import_filtered_table(data_source[data_type], samples[data_type], **kwargs)
-            sub_ht = sub_ht.annotate(dataType=data_type)
+        for dt in data_type[1:]:
+            data_type_cls = QUERY_CLASS_MAP[dt]
+            sub_ht = data_type_cls.import_filtered_table(dt, samples[dt], **kwargs)
+            sub_ht = sub_ht.annotate(dataType=dt)
             ht = ht.join(sub_ht, how='outer')
 
-            new_merge_fields = cls.MERGE_FIELDS[data_type]
+            new_merge_fields = cls.MERGE_FIELDS[dt]
             to_merge = merge_fields.intersection(new_merge_fields)
             to_merge.update(all_type_merge_fields)
             merge_fields.update(new_merge_fields)
