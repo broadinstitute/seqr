@@ -757,15 +757,13 @@ class BaseHailTableQuery(object):
         return x_interval.contains(ht.locus)
 
     def _filter_compound_hets(self, is_all_recessive_search):
-        ch_ht = self._ht.annotate(gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)))
+        ch_ht = self._ht.annotate(
+            gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
+            compHetFamilies=self._ht.familyGuids.intersection(compHetFamilyCarriers.key_set()),
+        )
 
         if is_all_recessive_search:
-            ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilyCarriers) & (ch_ht.compHetFamilyCarriers.size() > 0))
-            ch_ht = ch_ht.annotate(familyGuids=ch_ht.compHetFamilyCarriers.key_set())
-
-        logger.info(ch_ht.aggregate(hl.agg.collect(ch_ht.row.select(
-            variantId=ch_ht[VARIANT_KEY_FIELD], familyGuids=ch_ht.familyGuids, compHetFamilyCarriers=ch_ht.compHetFamilyCarriers, # TODO remove
-        ))))
+            ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilies) & (ch_ht.compHetFamilies.size() > 0))
 
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
@@ -807,7 +805,7 @@ class BaseHailTableQuery(object):
         self._comp_het_ht = ch_ht.distinct()
 
     def _valid_comp_het_families_expr(self, ch_ht):
-        both_var_families = ch_ht.v1.compHetFamilyCarriers.key_set().intersection(ch_ht.v2.compHetFamilyCarriers.key_set())
+        both_var_families = ch_ht.v1.compHetFamilies.intersection(ch_ht.v2.compHetFamilies)
         # filter variants that are non-ref for any unaffected individual in both variants
         return both_var_families.filter(
             lambda family_guid: ch_ht.v1.compHetFamilyCarriers[family_guid].intersection(
