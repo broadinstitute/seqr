@@ -224,11 +224,10 @@ class BaseHailTableQuery(object):
         self._ht = self.import_filtered_table(
             data_source, samples, intervals=self._parse_intervals(intervals), genome_version=self._genome_version,
             consequence_overrides=consequence_overrides, allowed_consequences=self._allowed_consequences,
-            allowed_consequences_secondary=self._allowed_consequences_secondary, inheritance_mode=inheritance_mode,
-            exclude_intervals=exclude_intervals, has_location_search=bool(intervals) and not exclude_intervals, **kwargs,
+            allowed_consequences_secondary=self._allowed_consequences_secondary, filtered_genes=self._filtered_genes,
+            inheritance_mode=inheritance_mode, has_location_search=bool(intervals) and not exclude_intervals,
+            exclude_intervals=exclude_intervals, **kwargs,
         )
-        if self._filtered_genes:
-            self._ht = self._filter_gene_ids(self._ht, self._filtered_genes)  # TODO belongs in _filter_annotated_table?
 
         if inheritance_mode in {RECESSIVE, COMPOUND_HET}:
             is_all_recessive_search = inheritance_mode == RECESSIVE
@@ -516,12 +515,15 @@ class BaseHailTableQuery(object):
 
     @classmethod
     def _filter_annotated_table(cls, ht, custom_query=None, frequencies=None, in_silico=None, clinvar_path_terms=None,
-                                vcf_quality_filter=None, consequence_overrides=None,
+                                vcf_quality_filter=None, consequence_overrides=None, filtered_genes=None,
                                 allowed_consequences=None, allowed_consequences_secondary=None, **kwargs):
         if custom_query:
             # In production: should either remove the "custom search" functionality,
             # or should come up with a simple json -> hail query parsing here
             raise NotImplementedError
+
+        if filtered_genes:
+            ht = cls._filter_gene_ids(ht, filtered_genes)
 
         ht = cls._filter_by_frequency(ht, frequencies, clinvar_path_terms)
         ht = cls._filter_by_in_silico(ht, in_silico)
