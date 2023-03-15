@@ -759,7 +759,7 @@ class BaseHailTableQuery(object):
     def _filter_compound_hets(self, is_all_recessive_search):
         ch_ht = self._ht.annotate(
             gene_ids=hl.set(self._ht.sortedTranscriptConsequences.map(lambda t: t.gene_id)),
-            compHetFamilies=self._ht.familyGuids.intersection(compHetFamilyCarriers.key_set()),
+            compHetFamilies=self._ht.familyGuids.intersection(self._ht.compHetFamilyCarriers.key_set()),
         )
 
         if is_all_recessive_search:
