@@ -1249,13 +1249,13 @@ class MultiDataTypeHailTableQuery(object):
     }
 
     def __init__(self, data_type, *args, **kwargs):
-        self._data_types = list(data_type.keys())
+        self._data_types = data_type
         self.POPULATIONS = {}
         self.PREDICTION_FIELDS_CONFIG = {}
         self.BASE_ANNOTATION_FIELDS = {}
         self.COMPUTED_ANNOTATION_FIELDS = {}
         self.CORE_FIELDS = set()
-        for cls in [QUERY_CLASS_MAP[data_type] for data_type in self._data_types]:
+        for cls in [QUERY_CLASS_MAP[dt] for dt in self._data_types]:
             self.POPULATIONS.update(cls.POPULATIONS)
             self.PREDICTION_FIELDS_CONFIG.update(cls.PREDICTION_FIELDS_CONFIG)
             self.BASE_ANNOTATION_FIELDS.update(cls.BASE_ANNOTATION_FIELDS)
