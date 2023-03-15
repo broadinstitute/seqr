@@ -1288,7 +1288,7 @@ class MultiDataTypeHailTableQuery(object):
     def import_filtered_table(cls, data_type, samples, **kwargs):
         data_type_0 = data_type[0]
 
-        ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type[data_type_0], samples[data_type_0], **kwargs)
+        ht = QUERY_CLASS_MAP[data_type_0].import_filtered_table(data_type_0, samples[data_type_0], **kwargs)
         ht = ht.annotate(dataType=data_type_0)
 
         all_type_merge_fields = {'dataType', 'familyGuids', 'override_consequences', 'rg37_locus'}
