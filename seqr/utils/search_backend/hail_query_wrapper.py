@@ -763,6 +763,10 @@ class BaseHailTableQuery(object):
             ch_ht = ch_ht.filter(hl.is_defined(ch_ht.compHetFamilyCarriers) & (ch_ht.compHetFamilyCarriers.size() > 0))
             ch_ht = ch_ht.annotate(familyGuids=ch_ht.compHetFamilyCarriers.key_set())
 
+        logger.info(ch_ht.aggregate(hl.agg.collect(ch_ht.row.select(
+            variantId=ch_ht[VARIANT_KEY_FIELD], familyGuids=ch_ht.familyGuids, compHetFamilyCarriers=ch_ht.compHetFamilyCarriers, # TODO remove
+        ))))
+
         # Get possible pairs of variants within the same gene
         ch_ht = ch_ht.explode(ch_ht.gene_ids)
         formatted_rows_expr = hl.agg.collect(ch_ht.row)
