@@ -497,7 +497,7 @@ class BaseHailTableQuery(object):
             lambda item: (item[0], item[1].filter(lambda x: hl.set(unaffected_samples).contains(x.sampleId)))
         ).filter(
             # remove comp het variants where all unaffected individuals are carriers
-            lambda item: (item[1].size() < 2) | item[1].any(lambda x: cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT))
+            lambda item: hl.is_defined(item[0]) & ((item[1].size() < 2) | item[1].any(lambda x: cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)))
         ).map(lambda item: (
             # get carrier sample IDs per family
             item[0], hl.set(item[1].filter(lambda x: ~cls.GENOTYPE_QUERY_MAP[REF_REF](x.GT)).map(lambda x: x.sampleId))
