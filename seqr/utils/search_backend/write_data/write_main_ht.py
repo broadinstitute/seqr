@@ -291,10 +291,28 @@ def write_main_ht(file, data_type):
     ht.write(f'gs://hail-backend-datasets/{file}.ht')
 
 
+def merge_main_hts(file, merge_file, data_type):
+    ht = hl.read_table(f'gs://hail-backend-datasets/{file}.ht')
+    merge_ht = hl.read_table(f'gs://hail-backend-datasets/{merge_file}.ht').anti_join(ht)
+
+    print(f'merging {merge_ht.count()} new rows')
+
+    ht = ht.join(merge_ht, how='outer')
+    ht = ht.select(
+        **{field: hl.or_else(ht[field], ht[f'{field}_1'])
+           for field in SELECT_FIELDS[data_type] + list(ANNOTATIONS[data_type].keys())})
+    ht = ht.repartition(60)
+    ht.write(f'gs://hail-backend-datasets/all_{data_type.lower()}.ht')
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument('file')
     p.add_argument('data_type', choices=ANNOTATIONS.keys())
+    p.add_argument('--merge-file')
     args = p.parse_args()
 
-    write_main_ht(args.file, args.data_type)
+    if args.merge_file:
+        merge_main_hts(args.file, args.merge_file, args.data_type)
+    else:
+        write_main_ht(args.file, args.data_type)
