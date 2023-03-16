@@ -64,6 +64,7 @@ def _write_entries_ht(mt, data_type, sample_ids, num_partitions=1):
 def write_project_family_hts(file, project, data_type, skip_write_project=False, skip_write_families=False):
     families_ht = hl.import_table(f'gs://seqr-project-subsets/{project}_fam.csv', key='s', delimiter=',')
     family_guids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.familyGuid))
+    sample_ids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.s))
 
     mt = hl.read_matrix_table(f'gs://hail-backend-datasets/{file}.mt').select_globals()
     format_mt = FORMAT_MT_IMPORT.get(data_type)
@@ -72,16 +73,23 @@ def write_project_family_hts(file, project, data_type, skip_write_project=False,
     mt = mt.select_rows()
     print(f'Total MT rows: {mt.rows().count()}')
 
-    mt = mt.semi_join_cols(families_ht)
-    mt = mt.filter_rows(hl.agg.any(mt.GT.is_non_ref()))
+    project_mt = mt.semi_join_cols(families_ht)
+    missing_samples = sample_ids - project_mt.aggregate_cols(hl.agg.collect_as_set(project_mt.s))
+    if missing_samples:
+        mt_sample_ids = mt.aggregate_cols(hl.agg.collect_as_set(mt.s))
+        raise ValueError(
+            f'The following {len(missing_samples)} samples are missing from the main mt: {", ".join(sorted(missing_samples))}\n'
+            f'Found Samples: {", ".join(sorted(mt_sample_ids))}'
+        )
+
+    mt = project_mt.filter_rows(hl.agg.any(project_mt.GT.is_non_ref()))
     mt = mt.annotate_entries(**{k: v(mt) for k, v in ANNOTATIONS[data_type].items()})
     
     if skip_write_project:
         print('Skipping project export')
     else:
         print('Exporting project')
-        project_ht = _write_entries_ht(
-            mt, data_type, sample_ids=families_ht.aggregate(hl.agg.collect(families_ht.s)))
+        project_ht = _write_entries_ht(mt, data_type, sample_ids=sample_ids)
         count = project_ht.count()
         print(f'Project {project}: {families_ht.count()} samples, {count} rows')
         project_ht.write(f'gs://hail-backend-datasets/{file}__projects/{project}.ht')
