@@ -61,7 +61,7 @@ def _write_entries_ht(mt, data_type, sample_ids, num_partitions=1):
     return ht
 
 
-def write_project_family_hts(file, project, data_type, skip_write_project=False, skip_write_families=False):
+def write_project_family_hts(file, project, data_type, num_project_partitions=None, skip_write_project=False, skip_write_families=False, ignore_missing=False):
     families_ht = hl.import_table(f'gs://seqr-project-subsets/{project}_fam.csv', key='s', delimiter=',')
     family_guids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.familyGuid))
     sample_ids = families_ht.aggregate(hl.agg.collect_as_set(families_ht.s))
@@ -76,11 +76,16 @@ def write_project_family_hts(file, project, data_type, skip_write_project=False,
     project_mt = mt.semi_join_cols(families_ht)
     missing_samples = sample_ids - project_mt.aggregate_cols(hl.agg.collect_as_set(project_mt.s))
     if missing_samples:
-        mt_sample_ids = mt.aggregate_cols(hl.agg.collect_as_set(mt.s))
-        raise ValueError(
-            f'The following {len(missing_samples)} samples are missing from the main mt: {", ".join(sorted(missing_samples))}\n'
-            f'Found Samples: {", ".join(sorted(mt_sample_ids))}'
-        )
+        missing_sample_str = ", ".join(sorted(missing_samples))
+        if ignore_missing:
+            print(f'Skipping loading for {len(missing_samples)} samples: {missing_sample_str}')
+            sample_ids -= missing_samples
+        else:
+            mt_sample_ids = mt.aggregate_cols(hl.agg.collect_as_set(mt.s))
+            raise ValueError(
+                f'The following {len(missing_samples)} samples are missing from the main mt: {missing_sample_str}\n'
+                f'Found Samples: {", ".join(sorted(mt_sample_ids))}'
+            )
 
     mt = project_mt.filter_rows(hl.agg.any(project_mt.GT.is_non_ref()))
     mt = mt.annotate_entries(**{k: v(mt) for k, v in ANNOTATIONS[data_type].items()})
@@ -89,7 +94,7 @@ def write_project_family_hts(file, project, data_type, skip_write_project=False,
         print('Skipping project export')
     else:
         print('Exporting project')
-        project_ht = _write_entries_ht(mt, data_type, sample_ids=sample_ids)
+        project_ht = _write_entries_ht(mt, data_type, sample_ids=sample_ids, num_partitions=int(num_project_partitions or 1))
         count = project_ht.count()
         print(f'Project {project}: {families_ht.count()} samples, {count} rows')
         project_ht.write(f'gs://hail-backend-datasets/{file}__projects/{project}.ht')
@@ -108,8 +113,8 @@ def write_project_family_hts(file, project, data_type, skip_write_project=False,
         family_mt = mt.semi_join_cols(family_subset_ht)
         family_mt = family_mt.filter_rows(hl.agg.any(family_mt.GT.is_non_ref()))
 
-        family_ht = _write_entries_ht(
-            family_mt, data_type, sample_ids=family_subset_ht.aggregate(hl.agg.collect(family_subset_ht.s)))
+        family_sample_ids = family_subset_ht.aggregate(hl.agg.collect_as_set(family_subset_ht.s)) - missing_samples
+        family_ht = _write_entries_ht(family_mt, data_type, sample_ids=family_sample_ids)
 
         count = family_ht.count()
         print(f'{family_guid}: {family_subset_ht.count()} samples, {count} rows')
@@ -132,10 +137,12 @@ if __name__ == "__main__":
     p.add_argument('file')
     p.add_argument('project')
     p.add_argument('data_type', choices=ANNOTATIONS.keys())
+    p.add_argument('--num-project-partitions')
     p.add_argument('--skip-write-project', action='store_true')
     p.add_argument('--skip-write-families', action='store_true')
+    p.add_argument('--ignore-missing', action='store_true')
     args = p.parse_args()
 
     write_project_family_hts(
-        args.file, args.project, args.data_type,
-        skip_write_project=args.skip_write_project, skip_write_families=args.skip_write_families)
+        args.file, args.project, args.data_type, args.num_project_partitions,
+        skip_write_project=args.skip_write_project, skip_write_families=args.skip_write_families, ignore_missing=args.ignore_missing)
