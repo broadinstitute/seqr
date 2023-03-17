@@ -10,7 +10,7 @@ social-auth-core                  # the Python social authentication package. Re
 elasticsearch==7.9.1              # elasticsearch client
 elasticsearch-dsl==7.2.1          # elasticsearch query utilities
 gunicorn                          # web server
-hail>=0.2.110,<0.3                          # provides convenient apis for working with files in google cloud storage
+hail>=0.2.112,<0.3                # provides convenient apis for working with files in google cloud storage
 jmespath
 openpyxl                          # library for reading/writing Excel files
 pillow                            # required dependency of Djagno ImageField-type database records

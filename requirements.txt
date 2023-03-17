@@ -130,7 +130,7 @@ googleapis-common-protos==1.58.0
     # via google-api-core
 gunicorn==20.1.0
     # via -r requirements.in
-hail==0.2.110
+hail==0.2.112
     # via -r requirements.in
 humanize==1.1.0
     # via hail
