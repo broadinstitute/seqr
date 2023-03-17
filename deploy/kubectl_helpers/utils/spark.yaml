@@ -34,12 +34,13 @@ spec:
         app.kubernetes.io/name: spark
         deployment: prototype
     spec:
-#      volumes:
-#      - name: hail-datasets
-#        gcePersistentDisk:
-#          # This disk must already exist.
-#          pdName: hail-datasets-disk-2
-#          fsType: ext4
+      volumes:
+      - name: hail-datasets
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: hail-datasets-disk-2
+          fsType: ext4
+          readOnly: true
       containers:
       - name: spark
         image: apache/spark:v3.3.0
@@ -50,10 +51,10 @@ spec:
         securityContext:
           privileged: true
           runAsUser: 0
-#        volumeMounts:
-#        - name: gcloud-client-secrets-volume
-#          mountPath: /.config
-#          readOnly: true
+        volumeMounts:
+        - name: hail-datasets
+          mountPath: /hail_datasets
+          readOnly: true
         resources:
           requests:
             memory: "27Gi"

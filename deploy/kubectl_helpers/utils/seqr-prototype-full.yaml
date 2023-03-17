@@ -54,6 +54,7 @@ spec:
           # This disk must already exist.
           pdName: hail-datasets-disk-2
           fsType: ext4
+          readOnly: true
       # - name: elasticsearch-es-http-certs-public
       #   secret:
       #     secretName: elasticsearch-es-http-certs-public
@@ -71,6 +72,7 @@ spec:
         
         - name: hail-datasets
           mountPath: /hail_datasets
+          readOnly: true
         # - name: elasticsearch-es-http-certs-public
         #   mountPath: "/elasticsearch-certs"
         #   readOnly: true
