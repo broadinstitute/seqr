@@ -37,7 +37,7 @@ spec:
     metadata:
       annotations:
         linkerd.io/inject: enabled
-        config.linkerd.io/opaque-ports: "6379,5432"
+        config.linkerd.io/opaque-ports: "6379,5432,7077"
       labels:
         name: seqr
         app.kubernetes.io/name: seqr
