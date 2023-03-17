@@ -1,0 +1,85 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: spark
+  namespace: seqr-prototype
+  labels:
+    name: spark
+    deployment: prototype
+spec:
+  type: ClusterIP
+  ports:
+  - port: 7077
+  selector:
+    name: spark
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: spark
+  namespace: seqr-prototype
+  labels:
+    app.kubernetes.io/name: spark
+    name: spark
+    deployment: prototype
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: spark
+  template:
+    metadata:
+      labels:
+        name: spark
+        app.kubernetes.io/name: spark
+        deployment: prototype
+    spec:
+#      volumes:
+#      - name: hail-datasets
+#        gcePersistentDisk:
+#          # This disk must already exist.
+#          pdName: hail-datasets-disk-2
+#          fsType: ext4
+      containers:
+      - name: spark
+        image: apache/spark:v3.3.0
+        command:
+          - /bin/bash
+          - -c
+          - "/opt/spark/sbin/start-master.sh && /opt/spark/sbin/start-worker.sh spark://localhost:7077 && sleep 1000000000000"
+        securityContext:
+          privileged: true
+          runAsUser: 0
+#        volumeMounts:
+#        - name: gcloud-client-secrets-volume
+#          mountPath: /.config
+#          readOnly: true
+        resources:
+          requests:
+            memory: "27Gi"
+            cpu: "3"
+          limits:
+            memory: "32Gi"
+            cpu: "4"
+        env:
+          - name: SPARK_MASTER_HOST
+            value: 0.0.0.0
+          - name: SPARK_MASTER_OPTS
+            value: "-Dspark.deploy.defaultCores=3"
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 1.0
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: "name"
+                      operator: In
+                      values:
+                      - spark
+                topologyKey: "kubernetes.io/hostname"
+      nodeSelector:
+        cloud.google.com/gke-nodepool: 'spark-nodes'
+---
