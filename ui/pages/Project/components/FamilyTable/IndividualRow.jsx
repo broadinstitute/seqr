@@ -7,7 +7,7 @@ import { Field } from 'react-final-form'
 import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 
-import { SearchInput, YearSelector, RadioButtonGroup } from 'shared/components/form/Inputs'
+import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import Modal from 'shared/components/modal/Modal'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
@@ -21,7 +21,10 @@ import Sample from 'shared/components/panel/sample'
 import FamilyLayout from 'shared/components/panel/family/FamilyLayout'
 import { ColoredIcon, ButtonLink } from 'shared/components/StyledComponents'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA } from 'shared/utils/constants'
+import {
+  AFFECTED, PROBAND_RELATIONSHIP_OPTIONS, SAMPLE_TYPE_RNA, INDIVIDUAL_FIELD_CONFIGS, INDIVIDUAL_FIELD_SEX,
+  INDIVIDUAL_FIELD_AFFECTED,
+} from 'shared/utils/constants'
 
 import { updateIndividual } from 'redux/rootReducer'
 import { getSamplesByGuid, getMmeSubmissionsByGuid } from 'redux/selectors'
@@ -31,9 +34,11 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
   ONSET_AGE_OPTIONS, INHERITANCE_MODE_OPTIONS, INHERITANCE_MODE_LOOKUP, AR_FIELDS,
 } from '../../constants'
-import { getCurrentProject } from '../../selectors'
+import { updateIndividuals } from '../../reducers'
+import { getCurrentProject, getParentOptionsByIndividual } from '../../selectors'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
+import CollapsableLayout from './CollapsableLayout'
 
 const RnaSeqOutliers = React.lazy(() => import('../RnaSeqOutliers'))
 const PhenotypePrioritizedGenes = React.lazy(() => import('../PhenotypePrioritizedGenes'))
@@ -49,6 +54,14 @@ const Detail = styled.div`
 const CaseReviewDropdownContainer = styled.div`
   float: right;
   width: 100%;
+`
+
+const IndividualContainer = styled.div`
+ display: inline-block;
+`
+
+const PaddedRadioButtonGroup = styled(RadioButtonGroup)`
+  padding: 10px;
 `
 
 const FLAG_TITLE = {
@@ -130,6 +143,7 @@ const SHOW_DATA_MODAL_CONFIG = [
     component: PhenotypePrioritizedGenes,
     modalName: ({ individualId }) => `PHENOTYPE-PRIORITIZATION-${individualId}`,
     title: ({ individualId }) => `Phenotype Prioritized Genes: ${individualId}`,
+    modalSize: 'large',
     linkText: 'Show Phenotype Prioritized Genes',
   },
 ]
@@ -173,7 +187,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
       ) : <MmeStatusLabel title="Submitted to MME" dateField="lastModifiedDate" color="violet" individual={individual} mmeSubmission={mmeSubmission} />
     )}
     {SHOW_DATA_MODAL_CONFIG.filter(({ shouldShowField }) => individual[shouldShowField]).map(
-      ({ modalName, title, linkText, component }) => {
+      ({ modalName, title, modalSize, linkText, component }) => {
         const sample = loadedSamples.find(({ sampleType, isActive }) => isActive && sampleType === SAMPLE_TYPE_RNA)
         const titleIds = { sampleId: sample?.sampleId, individualId: individual.individualId }
         return (
@@ -181,6 +195,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
             key={modalName(titleIds)}
             modalName={modalName(titleIds)}
             title={title(titleIds)}
+            size={modalSize}
             trigger={<ButtonLink padding="1em 0 0 0" content={linkText} />}
           >
             <React.Suspense fallback={<Loader />}>
@@ -358,7 +373,7 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
   maternalEthnicity: ETHNICITY_FIELD,
   paternalEthnicity: ETHNICITY_FIELD,
   population: {
-    fieldDisplay: population => POPULATION_MAP[population] || population,
+    fieldDisplay: population => POPULATION_MAP[population] || population || 'Not Loaded',
   },
   filterFlags: {
     fieldDisplay: filterFlags => Object.entries(filterFlags).map(([flag, val]) => (
@@ -411,9 +426,11 @@ const INDIVIDUAL_FIELD_RENDER_LOOKUP = {
 }
 
 const INDIVIDUAL_FIELDS = INDIVIDUAL_DETAIL_FIELDS.map(
-  ({ field, header, subFields, isEditable, isCollaboratorEditable, isPrivate }) => {
+  ({ field, header, subFields, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate }) => {
     const { subFieldsLookup, subFieldProps, ...fieldProps } = INDIVIDUAL_FIELD_RENDER_LOOKUP[field]
-    const formattedField = { field, fieldName: header, isEditable, isCollaboratorEditable, isPrivate, ...fieldProps }
+    const formattedField = {
+      field, fieldName: header, isEditable, isCollaboratorEditable, isRequiredInternal, isPrivate, ...fieldProps,
+    }
     if (subFields) {
       formattedField.formFields = subFields.map(subField => (
         { name: subField.field, label: subField.header, ...subFieldProps, ...(subFieldsLookup || {})[subField.field] }
@@ -497,6 +514,21 @@ const NON_CASE_REVIEW_FIELDS = [
   },
   ...INDIVIDUAL_FIELDS,
 ]
+const EMPTY_FIELDS = [{ id: 'blank', colWidth: 10, component: () => null }]
+
+const mapParentOptionsStateToProps = (state, ownProps) => {
+  const options = getParentOptionsByIndividual(state)[ownProps.meta.data.formId][ownProps.sex] || []
+  return options.length > 0 ? { options: [{ value: null, text: 'None' }, ...options] } : { options, disabled: true }
+}
+
+const EDIT_INDIVIDUAL_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED].map((name) => {
+  const { label, formFieldProps = {} } = INDIVIDUAL_FIELD_CONFIGS[name]
+  return { name, label, ...formFieldProps, component: ButtonRadioGroup, groupContainer: PaddedRadioButtonGroup }
+}).concat([
+  { name: 'paternalGuid', label: 'Father', sex: 'M' }, { name: 'maternalGuid', label: 'Mother', sex: 'F' },
+].map(field => (
+  { ...field, component: connect(mapParentOptionsStateToProps)(Select), inline: true, width: 8 }
+)))
 
 class IndividualRow extends React.PureComponent {
 
@@ -506,16 +538,18 @@ class IndividualRow extends React.PureComponent {
     mmeSubmission: PropTypes.object,
     samplesByGuid: PropTypes.object.isRequired,
     dispatchUpdateIndividual: PropTypes.func,
+    updateIndividualPedigree: PropTypes.func,
     tableName: PropTypes.string,
   }
 
-  individualFieldDisplay = (
-    { component, isEditable, isCollaboratorEditable, onSubmit, individualFields = () => {}, ...field },
-  ) => {
+  individualFieldDisplay = ({
+    component, isEditable, isCollaboratorEditable, isRequiredInternal, onSubmit, individualFields = () => {}, ...field
+  }) => {
     const { project, individual, dispatchUpdateIndividual } = this.props
     return React.createElement(component || BaseFieldView, {
       key: field.field,
       isEditable: isCollaboratorEditable || (isEditable && project.canEdit),
+      isRequired: isRequiredInternal && individual.affected === AFFECTED && project.isAnalystProject,
       onSubmit: (isEditable || isCollaboratorEditable) && dispatchUpdateIndividual,
       modalTitle: (isEditable || isCollaboratorEditable) && `${field.fieldName} for Individual ${individual.displayName}`,
       initialValues: individual,
@@ -526,7 +560,7 @@ class IndividualRow extends React.PureComponent {
   }
 
   render() {
-    const { individual, mmeSubmission, samplesByGuid, tableName } = this.props
+    const { project, individual, mmeSubmission, samplesByGuid, tableName, updateIndividualPedigree } = this.props
     const { displayName, sex, affected, createdDate, sampleGuids } = individual
 
     let loadedSamples = sampleGuids.map(
@@ -537,7 +571,7 @@ class IndividualRow extends React.PureComponent {
     loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
 
     const leftContent = (
-      <div>
+      <IndividualContainer>
         <div>
           <PedigreeIcon sex={sex} affected={affected} />
           {displayName}
@@ -547,7 +581,20 @@ class IndividualRow extends React.PureComponent {
             {`ADDED ${new Date(createdDate).toLocaleDateString().toUpperCase()}`}
           </Detail>
         </div>
-      </div>
+        <BaseFieldView
+          field="coreEdit"
+          idField="individualGuid"
+          initialValues={individual}
+          isEditable={!!project.workspaceName && !project.isAnalystProject && project.canEdit}
+          isDeletable
+          deleteConfirm={`Are you sure you want to delete ${displayName}? This action can not be undone`}
+          editLabel="Edit Individual"
+          formFields={EDIT_INDIVIDUAL_FIELDS}
+          modalTitle={`Edit ${displayName}`}
+          showErrorPanel
+          onSubmit={updateIndividualPedigree}
+        />
+      </IndividualContainer>
     )
 
     const editCaseReview = tableName === CASE_REVIEW_TABLE_NAME
@@ -555,11 +602,11 @@ class IndividualRow extends React.PureComponent {
       <CaseReviewStatus individual={individual} /> :
       <DataDetails loadedSamples={loadedSamples} individual={individual} mmeSubmission={mmeSubmission} />
 
-    const fields = editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS
-
     return (
-      <FamilyLayout
-        fields={fields}
+      <CollapsableLayout
+        layoutComponent={FamilyLayout}
+        detailFields={editCaseReview ? CASE_REVIEW_FIELDS : NON_CASE_REVIEW_FIELDS}
+        noDetailFields={editCaseReview ? EMPTY_FIELDS : null}
         fieldDisplay={this.individualFieldDisplay}
         leftContent={leftContent}
         rightContent={rightContent}
@@ -579,6 +626,7 @@ const mapStateToProps = (state, ownProps) => ({
 
 const mapDispatchToProps = {
   dispatchUpdateIndividual: updateIndividual,
+  updateIndividualPedigree: values => updateIndividuals({ individuals: [values], delete: values.delete }),
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)

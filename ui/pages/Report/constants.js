@@ -4,6 +4,10 @@ import { Link } from 'react-router-dom'
 const PROJECT_ID_FIELD = 'project_id'
 const FAMILY_FIELD_ID = 'family_id'
 
+export const ALL_PROJECTS_PATH = 'all'
+export const GREGOR_PROJECT_PATH = 'gregor'
+export const CMG_PROJECT_PATH = 'cmg'
+
 export const CORE_ANVIL_COLUMNS = [
   { name: 'subject_id' },
   {
@@ -19,10 +23,6 @@ export const CORE_ANVIL_COLUMNS = [
     noFormatExport: true,
   },
   { name: 'pmid_id' },
-  { name: 'dbgap_submission' },
-  { name: 'dbgap_study_id' },
-  { name: 'dbgap_subject_id' },
-  { name: 'multiple_datasets' },
   { name: 'paternal_id' },
   { name: 'maternal_id' },
   { name: 'proband_relationship' },
@@ -39,12 +39,19 @@ export const CORE_ANVIL_COLUMNS = [
   { name: 'solve_state' },
   { name: 'MME' },
   { name: 'sample_id' },
-  { name: 'dbgap_sample_id' },
-  { name: 'sample_provider' },
   { name: 'data_type' },
   { name: 'date_data_generation' },
   { name: 'consanguinity' },
   { name: 'family_history' },
+]
+
+export const AIRTABLE_ANVIL_COLUMNS = [
+  { name: 'dbgap_submission' },
+  { name: 'dbgap_study_id' },
+  { name: 'dbgap_subject_id' },
+  { name: 'multiple_datasets' },
+  { name: 'dbgap_sample_id' },
+  { name: 'sample_provider' },
 ]
 
 export const VARIANT_ANVIL_COLUMNS = [

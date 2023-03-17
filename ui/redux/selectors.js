@@ -1,5 +1,5 @@
 import { createSelector } from 'reselect'
-import uniqBy from 'lodash/uniqBy'
+import uniqWith from 'lodash/uniqWith'
 
 import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -317,7 +317,7 @@ export const getDisplayVariants = createSelector(
     const flattened = flattenCompoundHet.all ? searchedVariants.flat() : searchedVariants.reduce((acc, variant) => (
       (Array.isArray(variant) && flattenCompoundHet[compHetGene(variant)]) ? [...acc, ...variant] : [...acc, variant]
     ), [])
-    return uniqBy(flattened, 'variantId')
+    return uniqWith(flattened, (a, b) => !Array.isArray(a) && !Array.isArray(b) && a.variantId === b.variantId)
   },
 )
 

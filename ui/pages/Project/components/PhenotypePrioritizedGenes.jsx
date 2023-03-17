@@ -6,21 +6,21 @@ import DataLoader from 'shared/components/DataLoader'
 import { RareGeneSearchLink } from 'shared/components/buttons/SearchResultsLink'
 import DataTable from 'shared/components/table/DataTable'
 import { BaseVariantGene } from 'shared/components/panel/variants/VariantGene'
-import { getIndividualPhenotypeGeneScores } from 'shared/components/panel/variants/selectors'
 import { camelcaseToTitlecase } from 'shared/utils/stringUtils'
 import { loadPhenotypeGeneScores } from '../reducers'
-import { getPhenotypeDataLoading } from '../selectors'
+import { getPhenotypeDataLoading, getIndividualPhenotypeGeneScores } from '../selectors'
 
 const PHENOTYPE_GENE_INFO_COLUMNS = [
   {
     name: 'geneId',
-    width: 6,
+    width: 5,
     content: 'Gene',
-    format: ({ gene, rowId }) => (
+    format: ({ gene, rowId, familyGuid }) => (
       <BaseVariantGene
         geneId={gene.geneId}
         gene={gene}
         geneModalId={rowId}
+        geneSearchFamily={familyGuid}
         compact
         showInlineDetails
         noExpand
@@ -30,7 +30,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
   { name: 'tool', width: 1, content: 'Tool' },
   {
     name: 'diseaseName',
-    width: 3,
+    width: 5,
     content: 'Disease',
     format: ({ diseaseName, diseaseId }) => (
       <div>
@@ -43,7 +43,7 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
   { name: 'rank', width: 1, content: 'Rank' },
   {
     name: 'scores',
-    width: 5,
+    width: 4,
     content: 'Scores',
     format: ({ scores }) => Object.keys(scores).sort().map(scoreName => (
       <div key={scoreName}>
@@ -62,9 +62,10 @@ const BasePhenotypePriGenes = React.memo((
     <RareGeneSearchLink
       buttonText="Search for variants in high-ranked genes"
       icon="search"
-      location={(phenotypeGeneScores[individualGuid] || []).map(({ geneId }) => geneId).join(',')}
+      location={[...(new Set((phenotypeGeneScores[individualGuid] || []).map(({ gene }) => gene.geneId)))].join(',')}
       familyGuid={familyGuid}
       floated="right"
+      padding="0 1em 1em 0"
     />
     <DataTable
       data={phenotypeGeneScores[individualGuid]}

@@ -23,6 +23,8 @@ const MarkdownContainer = styled.div`
   }  
 `
 
+const MAPPED_HTML_COMPONENTS = { code: 'div', pre: 'p' }
+
 const LazyRichTextEditor = props => <React.Suspense fallback={<Loader />}><RichTextEditor {...props} /></React.Suspense>
 
 const RICH_TEXT_FIELD = { component: LazyRichTextEditor }
@@ -32,7 +34,7 @@ const markdownDisplay = (textPopup, textAnnotation) => (initialText) => {
   const markdown = (
     <MarkdownContainer inline={!!textAnnotation}>
       <React.Suspense fallback={<Loader />}>
-        <ReactMarkdown linkTarget="_blank">{initialText || ''}</ReactMarkdown>
+        <ReactMarkdown linkTarget="_blank" components={MAPPED_HTML_COMPONENTS}>{initialText || ''}</ReactMarkdown>
       </React.Suspense>
     </MarkdownContainer>
   )

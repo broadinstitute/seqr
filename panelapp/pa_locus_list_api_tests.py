@@ -7,6 +7,7 @@ from django.urls.base import reverse
 from seqr.models import LocusList
 from seqr.views.apis.locus_list_api import locus_lists, locus_list_info, add_project_locus_lists, \
     delete_project_locus_lists
+from seqr.views.apis.locus_list_api_tests import BaseLocusListAPITest
 from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS
 
 PROJECT_GUID = 'R0001_1kg'
@@ -36,94 +37,18 @@ def _get_json_from_file(filepath):
     return json.loads(filedata)
 
 
-class PaLocusListAPITest(AuthenticationTestCase):
+class PaLocusListAPITest(AuthenticationTestCase, BaseLocusListAPITest):
     fixtures = ['users', '1kg_project', 'panelapp', 'reference_data']
 
-    def test_locus_lists(self):
-        url = reverse(locus_lists)
-        self.check_require_login(url)
+    EXPECTED_LOCUS_LISTS = {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID}
+    MAIN_LIST_GUID = EXISTING_AU_PA_LOCUS_LIST_GUID
+    DETAIL_FIELDS = PA_LOCUS_LIST_DETAIL_FIELDS
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()),
-                            {LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID, EXISTING_UK_PA_LOCUS_LIST_GUID})
-
+    def _test_expected_locus_list(self, locus_lists_dict):
         locus_list = locus_lists_dict[EXISTING_AU_PA_LOCUS_LIST_GUID]
         fields = {'numProjects', 'geneNames'}
         fields.update(PA_LOCUS_LIST_FIELDS)
         self.assertSetEqual(set(locus_list.keys()), fields)
-
-        self.login_analyst_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        locus_lists_dict = response.json()['locusListsByGuid']
-        self.assertSetEqual(set(locus_lists_dict.keys()),
-                            {LOCUS_LIST_GUID, PRIVATE_LOCUS_LIST_GUID, EXISTING_AU_PA_LOCUS_LIST_GUID,
-                             EXISTING_UK_PA_LOCUS_LIST_GUID})
-
-    def test_public_locus_list_info(self):
-        url = reverse(locus_list_info, args=[EXISTING_AU_PA_LOCUS_LIST_GUID])
-        self.check_require_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        response_json = response.json()
-        locus_lists_dict = response_json['locusListsByGuid']
-        self.assertListEqual(list(locus_lists_dict.keys()), [EXISTING_AU_PA_LOCUS_LIST_GUID])
-        self.assertTrue(all('pagene' in item for k, v in locus_lists_dict.items() for item in v['items']))
-
-        locus_list = locus_lists_dict[EXISTING_AU_PA_LOCUS_LIST_GUID]
-        self.assertSetEqual(set(locus_list.keys()), PA_LOCUS_LIST_DETAIL_FIELDS)
-        self.assertSetEqual(
-            {item['geneId'] for item in locus_list['items'] if item.get('geneId')},
-            set(response_json['genesById'].keys())
-        )
-
-    def test_private_locus_list_info(self):
-        url = reverse(locus_list_info, args=[PRIVATE_LOCUS_LIST_GUID])
-        self.check_collaborator_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        response_json = response.json()
-        locus_lists_dict = response_json['locusListsByGuid']
-        self.assertListEqual(list(locus_lists_dict.keys()), [PRIVATE_LOCUS_LIST_GUID])
-
-    def test_add_and_remove_project_locus_lists(self):
-        existing_guids = {'LL00005_retina_proteome', LOCUS_LIST_GUID}
-
-        # add a locus list to project
-        url = reverse(add_project_locus_lists, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
-
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
-        self.assertEqual(response.status_code, 200)
-        expected_guids = {EXISTING_AU_PA_LOCUS_LIST_GUID}
-        expected_guids.update(existing_guids)
-        self.assertSetEqual(set(response.json()['locusListGuids']), expected_guids)
-        ll_projects = LocusList.objects.get(guid=EXISTING_AU_PA_LOCUS_LIST_GUID).projects.all()
-        self.assertEqual(ll_projects.count(), 2)
-        self.assertTrue(PROJECT_GUID in {p.guid for p in ll_projects})
-
-        # remove previously added locus list from project
-        url = reverse(delete_project_locus_lists, args=[PROJECT_GUID])
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
-        self.assertEqual(response.status_code, 403)
-
-        self.login_data_manager_user()
-        response = self.client.post(url, content_type='application/json',
-                                    data=json.dumps({'locusListGuids': [EXISTING_AU_PA_LOCUS_LIST_GUID]}))
-        self.assertEqual(response.status_code, 200)
-        self.assertSetEqual(set(response.json()['locusListGuids']), existing_guids)
-        ll_projects = LocusList.objects.get(guid=EXISTING_AU_PA_LOCUS_LIST_GUID).projects.all()
-        self.assertEqual(ll_projects.count(), 1)
-        self.assertFalse(PROJECT_GUID in {p.guid for p in ll_projects})
 
     @responses.activate
     def test_import_all_panels(self):

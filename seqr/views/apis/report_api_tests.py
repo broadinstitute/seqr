@@ -1,12 +1,13 @@
 from django.urls.base import reverse
 from django.utils.dateparse import parse_datetime
+import json
 import mock
 import pytz
 import responses
 from settings import AIRTABLE_URL
 
 from seqr.models import Project
-from seqr.views.apis.report_api import seqr_stats, get_cmg_projects, discovery_sheet, anvil_export, \
+from seqr.views.apis.report_api import seqr_stats, get_category_projects, discovery_sheet, anvil_export, \
     sample_metadata_export, gregor_export
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
 
@@ -182,7 +183,6 @@ AIRTABLE_GREGOR_RECORDS = {
         'date_data_generation': '2022-08-15',
         'target_insert_size': '385',
         'sequencing_platform': 'NovaSeq',
-        'aligned_dna_short_read_id': 'BCM_H7YG5DSX2-3-IDUDI0014-1',
         'aligned_dna_short_read_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
         'aligned_dna_short_read_index_file': 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai',
         'md5sum': '129c28163df082',
@@ -197,17 +197,21 @@ AIRTABLE_GREGOR_RECORDS = {
         'variant_types': 'SNV',
       },
     },
+    {
+      "id": "rec2B6OGmCVzkQW3s",
+      "fields": {
+        'SMID': 'SM-AGHT',
+      },
+    },
 ]}
 
-EXPECTED_SAMPLE_METADATA_ROW = {
+EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "project_guid": "R0003_test",
     "num_saved_variants": 2,
-    "dbgap_submission": "No",
     "solve_state": "Tier 1",
     "sample_id": "NA20889",
     "Gene_Class-1": "Tier 1 - Candidate",
     "Gene_Class-2": "Tier 1 - Candidate",
-    "sample_provider": "",
     "inheritance_description-1": "Autosomal recessive (compound heterozygous)",
     "inheritance_description-2": "Autosomal recessive (compound heterozygous)",
     "hpo_absent": "",
@@ -222,7 +226,6 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Ref-1": "TC",
     "sv_type-2": "Deletion",
     "sv_name-2": "DEL:chr12:49045487-49045898",
-    "multiple_datasets": "No",
     "ancestry_detail": "Ashkenazi Jewish",
     "maternal_id": "",
     "paternal_id": "",
@@ -245,8 +248,8 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "Chrom-1": "1",
     "Alt-1": "T",
     "Gene-1": "OR4G11P",
-    "pmid_id": "",
-    "phenotype_description": "",
+    "pmid_id": None,
+    "phenotype_description": None,
     "affected_status": "Affected",
     "family_id": "12",
     "MME": "Y",
@@ -254,7 +257,62 @@ EXPECTED_SAMPLE_METADATA_ROW = {
     "proband_relationship": "",
     "consanguinity": "None suspected",
     "sequencing_center": "Broad",
-  }
+}
+EXPECTED_SAMPLE_METADATA_ROW = {
+    "dbgap_submission": "No",
+    "dbgap_study_id": "",
+    "dbgap_subject_id": "",
+    "sample_provider": "",
+    "multiple_datasets": "No",
+}
+EXPECTED_SAMPLE_METADATA_ROW.update(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW)
+
+MOCK_DATA_MODEL_URL = 'http://raw.githubusercontent.com/gregor_data_model.json'
+MOCK_DATA_MODEL = {
+    'name': 'test data model',
+    'tables': [
+        {
+            'table': 'subject',
+            'required': True,
+            'columns': [{'column': 'subject_id', 'required': True}],
+        },
+        {
+            'table': 'participant',
+            'required': True,
+            'columns': [
+                {'column': 'participant_id', 'required': True},
+                {'column': 'internal_project_id'},
+                {'column': 'gregor_center', 'required': True, 'enumerations': ['BCM', 'BROAD', 'UW']},
+                {'column': 'consent_code', 'required': True, 'enumerations': ['GRU', 'HMB']},
+                {'column': 'recontactable', 'enumerations': ['Yes', 'No', 'Unknown']},
+                {'column': 'prior_testing'},
+                {'column': 'family_id', 'required': True},
+                {'column': 'paternal_id'},
+                {'column': 'maternal_id'},
+                {'column': 'proband_relationship', 'required': True},
+                {'column': 'sex', 'required': True, 'enumerations': ['Male', 'Female', 'Unknown']},
+                {'column': 'reported_race', 'enumerations': ['Asian', 'White', 'Black', 'Unknown']},
+                {'column': 'reported_ethnicity', 'enumerations': ['Hispanic', 'Not Hispanic', 'Unknown']},
+                {'column': 'ancestry_metadata'},
+                {'column': 'affected_status', 'required': True, 'enumerations': ['Affected', 'Unaffected', 'Unknown']},
+                {'column': 'phenotype_description'},
+                {'column': 'age_at_enrollment'},
+            ],
+        },
+        {
+            'table': 'aligned_dna_short_read_set',
+            'columns': [
+                {'column': 'aligned_dna_short_read_set_id', 'required': True},
+                {'column': 'aligned_dna_short_read_id', 'required': True},
+            ],
+        },
+        {
+            'table': 'dna_read_data',
+            'columns': [{'column': 'analyte_id', 'required': True}],
+        },
+    ]
+}
+
 
 def _get_list_param(call, param):
     query_params = call.url.split('?')[1].split('&')
@@ -277,6 +335,7 @@ class ReportAPITest(object):
     def _assert_expected_airtable_call(self, call_index, filter_formula, fields, additional_params=None):
         expected_params = {
             'fields[]': mock.ANY,
+            'pageSize': '100',
             'filterByFormula': filter_formula,
         }
         if additional_params:
@@ -303,8 +362,8 @@ class ReportAPITest(object):
 
         self.check_no_analyst_no_access(url)
 
-    def test_get_cmg_projects(self):
-        url = reverse(get_cmg_projects)
+    def test_get_category_projects(self):
+        url = reverse(get_category_projects, args=['GREGoR'])
         self.check_analyst_login(url)
 
         response = self.client.get(url)
@@ -520,17 +579,48 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
-        self.assertIn(EXPECTED_SAMPLE_METADATA_ROW, response_json['rows'])
+        self.assertEqual(len(response_json['rows']), 3)
+        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_SAMPLE_METADATA_ROW, test_row)
         self.assertEqual(len(responses.calls), 8)
         self._assert_expected_airtable_call(
             -1, "OR(RECORD_ID()='recW24C2CJW5lT64K',RECORD_ID()='reca4hcBnbA2cnZf9')", ['CollaboratorID'])
         self.assertSetEqual({call.request.headers['Authorization'] for call in responses.calls}, {'Bearer mock_key'})
+
+        # Test omit airtable columns
+        responses.reset()
+        response = self.client.get(f'{url}?omitAirtable=true')
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        self.assertEqual(len(response_json['rows']), 3)
+        expected_samples = {'NA20885', 'NA20888', 'NA20889'}
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
 
         # Test empty project
         empty_project_url = reverse(sample_metadata_export, args=[PROJECT_EMPTY_GUID])
         response = self.client.get(empty_project_url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'rows': []})
+
+        # Test all projects
+        all_projects_url = reverse(sample_metadata_export, args=['all'])
+        response = self.client.get(all_projects_url)
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertListEqual(list(response_json.keys()), ['rows'])
+        expected_samples.update({
+            'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675', 'HG00731',
+            'NA20872', 'NA20881', 'HG00733',
+        })
+        expected_samples.update(self.ADDITIONAL_SAMPLES)
+        self.assertSetEqual({r['sample_id'] for r in response_json['rows']}, expected_samples)
+        test_row = next(r for r in response_json['rows'] if r['sample_id'] == 'NA20889')
+        self.assertDictEqual(EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row)
 
         self.check_no_analyst_no_access(url)
 
@@ -540,39 +630,91 @@ class ReportAPITest(object):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
+    @mock.patch('seqr.views.apis.report_api.GREGOR_DATA_MODEL_URL', MOCK_DATA_MODEL_URL)
     @mock.patch('seqr.views.utils.airtable_utils.is_google_authenticated')
     @mock.patch('seqr.views.apis.report_api.datetime')
-    @mock.patch('seqr.views.utils.export_utils.zipfile.ZipFile')
+    @mock.patch('seqr.views.utils.export_utils.open')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
     @responses.activate
-    def test_gregor_export(self, mock_zip, mock_datetime, mock_google_authenticated):
+    def test_gregor_export(self, mock_subprocess, mock_temp_dir, mock_open, mock_datetime, mock_google_authenticated):
         mock_datetime.now.return_value.year = 2020
         mock_google_authenticated.return_value = False
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        mock_subprocess.return_value.wait.return_value = 1
+
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/Samples'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_SAMPLE_RECORDS,
             status=200)
         responses.add(
             responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
             status=200)
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, json=MOCK_DATA_MODEL, status=200)
 
-        url = reverse(gregor_export, args=['HMB'])
+        url = reverse(gregor_export)
         self.check_analyst_login(url)
 
-        response = self.client.get(url)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({}))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Missing required field(s): consentCode, deliveryPath'])
+
+        body = {'consentCode': 'HMB', 'deliveryPath': '/test/file'}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Delivery Path must be a valid google bucket path (starts with gs://)'])
+
+        body['deliveryPath'] = 'gs://anvil-upload'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Invalid Delivery Path: folder not found'])
+
+        mock_subprocess.return_value.wait.return_value = 0
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
         mock_google_authenticated.return_value = True
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.get('content-disposition'),
-            'attachment; filename="GREGoR Reports HMB.zip"'
-        )
-
-        files = self._get_zip_files(mock_zip, [
-            'participant.tsv', 'family.tsv', 'phenotype.tsv', 'analyte.tsv', 'experiment_dna_short_read.tsv',
-            'aligned_dna_short_read.tsv', 'aligned_dna_short_read_set.tsv', 'called_variants_dna_short_read.tsv',
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        expected_files = [
+            'participant', 'family', 'phenotype', 'analyte', 'experiment_dna_short_read',
+            'aligned_dna_short_read', 'aligned_dna_short_read_set', 'called_variants_dna_short_read',
+        ]
+        skipped_file_validation_warnings = [
+            f'No data model found for "{file}" table so no validation was performed' for file in expected_files
+        ]
+        self.assertListEqual(response.json()['warnings'], [
+            'The following tables are required in the data model but absent from the reports: subject',
+            'The following columns are included in the "participant" table but are missing from the data model: age_at_last_observation, ancestry_detail, pmid_id, proband_relationship_detail, sex_detail, twin_id',
+            'The following columns are included in the "participant" data model but are missing in the report: ancestry_metadata',
+            'The following entries are missing recommended "phenotype_description" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries are missing recommended "age_at_enrollment" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+        ] + skipped_file_validation_warnings[1:6] + skipped_file_validation_warnings[7:])
+        self.assertListEqual(response.json()['errors'], [
+            'The following entries are missing required "proband_relationship" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20877, Broad_NA20881',
+            'The following entries have invalid values for "reported_race" in the "participant" table. Allowed values: Asian, White, Black, Unknown. Invalid values: Broad_NA19675_1 (Middle Eastern or North African)',
+            'The following entries are missing required "aligned_dna_short_read_set_id" (from Airtable) in the "aligned_dna_short_read_set" table: NA19675_1',
         ])
+
+        responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
+        responses.calls.reset()
+        mock_subprocess.reset_mock()
+        mock_google_authenticated.return_value = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
+            'warnings': [
+                'Unable to load data model for validation: 404 Client Error: Not Found for url: http://raw.githubusercontent.com/gregor_data_model.json',
+            ] + skipped_file_validation_warnings,
+        })
+
+        self.assertListEqual(
+            mock_open.call_args_list, [mock.call(f'/mock/tmp/{file}.tsv', 'w') for file in expected_files])
+        files = [
+            [row.split('\t') for row in write_call.args[0].split('\n')]
+            for write_call in mock_open.return_value.__enter__.return_value.write.call_args_list
+        ]
         participant_file, family_file, phenotype_file, analyte_file, experiment_file, read_file, read_set_file, called_file = files
 
         self.assertEqual(len(participant_file), 14)
@@ -583,7 +725,7 @@ class ReportAPITest(object):
             'age_at_last_observation', 'affected_status', 'phenotype_description', 'age_at_enrollment',
         ])
         self.assertIn([
-            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'Broad', 'HMB', 'Yes', 'IKBKAP|CCDC102B',
+            'Broad_NA19675_1', 'Broad_1kg project nme with unide', 'BROAD', 'HMB', 'Yes', 'IKBKAP|CCDC102B|CMA - normal',
             '34415322|33665635', 'Broad_1', 'Broad_NA19678', 'Broad_NA19679', '', 'Self', '', 'Male', '',
             'Middle Eastern or North African', 'Unknown', '', '21', 'Affected', 'myopathy', '18',
         ], participant_file)
@@ -618,33 +760,34 @@ class ReportAPITest(object):
             ['Broad_SM-AGHT', 'Broad_NA19675_1', 'DNA', '', 'UBERON:0003714', '', '', 'No', '', '', '', '', '', '', ''],
             analyte_file)
 
-        self.assertEqual(len(experiment_file), 2)
+        self.assertEqual(len(experiment_file), 3)
         self.assertEqual(experiment_file[0], [
             'experiment_dna_short_read_id', 'analyte_id', 'experiment_sample_id', 'seq_library_prep_kit_method',
             'read_length', 'experiment_type', 'targeted_regions_method', 'targeted_region_bed_file',
             'date_data_generation', 'target_insert_size', 'sequencing_platform',
         ])
-        self.assertEqual(experiment_file[1], [
-            'Broad_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
+        self.assertIn([
+            'Broad_exome_VCGS_FAM203_621_D2', 'Broad_SM-JDBTM', 'VCGS_FAM203_621_D2', 'Kapa HyperPrep', '151', 'exome',
             'Twist', 'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/SR_experiment.bed', '2022-08-15', '385', 'NovaSeq',
-        ])
+        ], experiment_file)
+        self.assertIn(['Broad_NA_NA19675_1', 'Broad_SM-AGHT', 'NA19675_1', '', '', '', '', '', '', '', ''], experiment_file)
 
-        self.assertEqual(len(read_file), 2)
+        self.assertEqual(len(read_file), 3)
         self.assertEqual(read_file[0], [
             'aligned_dna_short_read_id', 'experiment_dna_short_read_id', 'aligned_dna_short_read_file',
             'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly', 'alignment_software', 'mean_coverage',
             'analysis_details',
         ])
-        self.assertEqual(read_file[1], [
-            'BCM_H7YG5DSX2-3-IDUDI0014-1', 'Broad_VCGS_FAM203_621_D2',
+        self.assertIn([
+            'Broad_exome_VCGS_FAM203_621_D2_1', 'Broad_exome_VCGS_FAM203_621_D2',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.cram',
             'gs://fc-eb352699-d849-483f-aefe-9d35ce2b21ac/Broad_COL_FAM1_1_D1.crai', '129c28163df082', 'GRCh38',
             'BWA-MEM-2.3', '42.4', 'DOI:10.5281/zenodo.4469317',
-        ])
+        ], read_file)
 
-        self.assertEqual(len(read_set_file), 2)
+        self.assertEqual(len(read_set_file), 3)
         self.assertEqual(read_set_file[0], ['aligned_dna_short_read_set_id', 'aligned_dna_short_read_id'])
-        self.assertEqual(read_set_file[1], ['BCM_H7YG5DSX2', 'BCM_H7YG5DSX2-3-IDUDI0014-1'])
+        self.assertIn(['BCM_H7YG5DSX2', 'Broad_exome_VCGS_FAM203_621_D2_1'], read_set_file)
 
         self.assertEqual(len(called_file), 2)
         self.assertEqual(called_file[0], [
@@ -657,7 +800,7 @@ class ReportAPITest(object):
         ])
 
         # test airtable calls
-        self.assertEqual(len(responses.calls), 3)
+        self.assertEqual(len(responses.calls), 4)
         sample_filter = "OR({CollaboratorSampleID}='HG00731',{CollaboratorSampleID}='HG00732',{CollaboratorSampleID}='HG00733'," \
                         "{CollaboratorSampleID}='NA19675_1',{CollaboratorSampleID}='NA19678',{CollaboratorSampleID}='NA19679'," \
                         "{CollaboratorSampleID}='NA20870',{CollaboratorSampleID}='NA20872',{CollaboratorSampleID}='NA20874'," \
@@ -676,21 +819,32 @@ class ReportAPITest(object):
             'SMID', 'seq_library_prep_kit_method', 'read_length', 'experiment_type', 'targeted_regions_method',
             'targeted_region_bed_file', 'date_data_generation', 'target_insert_size', 'sequencing_platform',
             'aligned_dna_short_read_file', 'aligned_dna_short_read_index_file', 'md5sum', 'reference_assembly',
-            'alignment_software', 'mean_coverage', 'analysis_details',  'aligned_dna_short_read_set_id',
-            'aligned_dna_short_read_id', 'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id',
+            'alignment_software', 'mean_coverage', 'analysis_details',
+            'called_variants_dna_short_read_id', 'aligned_dna_short_read_set_id',
             'called_variants_dna_file', 'md5sum', 'caller_software', 'variant_types', 'analysis_details',
         ]
         self._assert_expected_airtable_call(2, "OR(SMID='SM-AGHT',SMID='SM-JDBTM')", metadata_fields)
+
+        self.assertEqual(responses.calls[3].request.url, MOCK_DATA_MODEL_URL)
+
+        # test gsutil commands
+        mock_subprocess.assert_has_calls([
+            mock.call('gsutil ls gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+            mock.call('gsutil mv /mock/tmp/* gs://anvil-upload', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
 
         self.check_no_analyst_no_access(url)
 
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    ADDITIONAL_SAMPLES = ['NA21234']
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
-        'individualsCount': {'non_demo': 15, 'demo': 3},
+        'individualsCount': {'non_demo': 16, 'demo': 3},
         'sampleCountsByType': {
             'WES__VARIANTS': {'demo': 1, 'non_demo': 7},
             'WGS__MITO': {'non_demo': 1},
@@ -703,10 +857,11 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+    ADDITIONAL_SAMPLES = []
     STATS_DATA = {
         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},
-        'individualsCount': {'internal': 14, 'external': 1, 'no_anvil': 0, 'demo': 3},
+        'individualsCount': {'internal': 14, 'external': 2, 'no_anvil': 0, 'demo': 3},
         'sampleCountsByType': {
             'WES__VARIANTS': {'internal': 7, 'demo': 1},
             'WGS__MITO': {'internal': 1},

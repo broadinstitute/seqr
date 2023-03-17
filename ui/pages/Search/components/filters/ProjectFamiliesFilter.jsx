@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Form } from 'semantic-ui-react'
+import { Form, Button } from 'semantic-ui-react'
 
 import {
   getProjectsByGuid,
@@ -11,11 +11,22 @@ import {
   getAnalysisGroupsByGuid,
   getProjectDatasetTypes,
 } from 'redux/selectors'
-import { Multiselect, BooleanCheckbox } from 'shared/components/form/Inputs'
+import { Multiselect, ButtonRadioGroup } from 'shared/components/form/Inputs'
 import { ProjectFilter } from 'shared/components/panel/search/ProjectsField'
+import { SOLVED_FAMILY_STATUS_OPTIONS } from 'shared/utils/constants'
 import { getSelectedAnalysisGroups } from '../../constants'
 import { getProjectFamilies, getSearchContextIsLoading, getFamilyOptions, getAnalysisGroupOptions } from '../../selectors'
 import { loadProjectFamiliesContext } from '../../reducers'
+
+const ALL = 'ALL'
+const UNSOLVED = 'UNSOLVED'
+const MULTI_FAMILY_OPTIONS = [
+  { text: 'All Families', value: ALL },
+  { text: 'Unsolved', value: UNSOLVED },
+  { text: 'Select', value: null },
+]
+
+const RadioGroupContainer = props => <Form.Field control={Button.Group} size="tiny" width={8} {...props} />
 
 class ProjectFamiliesFilterInput extends React.PureComponent {
 
@@ -27,15 +38,28 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
     onChange: PropTypes.func,
   }
 
-  allFamiliesSelected = () => {
+  multiFamiliesSelected = () => {
     const { familyOptions, value } = this.props
-    return !value.familyGuids || value.familyGuids.length === familyOptions.length
+    if (!value.familyGuids || value.familyGuids.length === familyOptions.length) {
+      return ALL
+    }
+    if (this.unsolvedFamilyGuids().sort().join(',') === value.familyGuids.sort().join(',')) {
+      return UNSOLVED
+    }
+    return null
+  }
+
+  unsolvedFamilyGuids = () => {
+    const { familyOptions } = this.props
+    return familyOptions.filter(
+      ({ analysisStatus }) => !SOLVED_FAMILY_STATUS_OPTIONS.has(analysisStatus),
+    ).map((({ value }) => value))
   }
 
   selectedAnalysisGroups = () => {
     const { projectAnalysisGroupsByGuid, value } = this.props
 
-    return this.allFamiliesSelected() ? [] :
+    return this.multiFamiliesSelected() ? [] :
       getSelectedAnalysisGroups(projectAnalysisGroupsByGuid, value.familyGuids).map(group => group.analysisGroupGuid)
   }
 
@@ -64,10 +88,11 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
     }
   }
 
-  selectAllFamilies = (checked) => {
+  selectAllFamilies = (value) => {
     const { familyOptions } = this.props
-    if (checked) {
-      this.onFamiliesChange(familyOptions.map((opt => opt.value)))
+    if (value) {
+      this.onFamiliesChange(value === UNSOLVED ?
+        this.unsolvedFamilyGuids() : familyOptions.map((opt => opt.value)))
     } else {
       this.onFamiliesChange([])
     }
@@ -75,33 +100,32 @@ class ProjectFamiliesFilterInput extends React.PureComponent {
 
   render() {
     const { familyOptions, analysisGroupOptions, projectAnalysisGroupsByGuid, value, onChange, ...props } = this.props
-    const allFamiliesSelected = this.allFamiliesSelected()
-    const selectedFamilies = allFamiliesSelected ? [] : value.familyGuids
+    const multiFamiliesSelected = this.multiFamiliesSelected()
+    const selectedFamilies = multiFamiliesSelected ? [] : value.familyGuids
 
     return (
       <Form.Group inline widths="equal">
-        <BooleanCheckbox
+        <ButtonRadioGroup
           {...props}
-          value={allFamiliesSelected}
+          value={multiFamiliesSelected}
           onChange={this.selectAllFamilies}
-          width={5}
-          label="Include All Families"
+          formGroupAs={RadioGroupContainer}
+          options={MULTI_FAMILY_OPTIONS}
         />
         <Multiselect
           {...props}
           value={selectedFamilies}
           onChange={this.onFamiliesChange}
           options={familyOptions}
-          disabled={allFamiliesSelected}
+          disabled={!!multiFamiliesSelected}
           label="Families"
-          color="violet"
         />
         <Multiselect
           {...props}
           value={this.selectedAnalysisGroups()}
           onChange={this.selectAnalysisGroup}
           options={analysisGroupOptions}
-          disabled={allFamiliesSelected}
+          disabled={!!multiFamiliesSelected}
           label="Analysis Groups"
           color="pink"
         />
