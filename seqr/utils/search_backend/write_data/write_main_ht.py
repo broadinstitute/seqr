@@ -302,7 +302,7 @@ def merge_main_hts(file, merge_file, data_type):
         **{field: hl.or_else(ht[field], ht[f'{field}_1'])
            for field in SELECT_FIELDS[data_type] + list(ANNOTATIONS[data_type].keys())})
     ht = ht.repartition(60)
-    ht.write(f'gs://hail-backend-datasets/all_{data_type.lower()}.ht')
+    ht.write(f'gs://hail-backend-datasets/all_merged_{data_type.lower()}.ht')
 
 
 if __name__ == "__main__":
