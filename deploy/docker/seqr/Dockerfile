@@ -35,7 +35,6 @@ WORKDIR /opt
 COPY ./requirements.txt .
 
 # install seqr python dependencies
-ENV CLOUDSDK_PYTHON=/opt/venv/bin/python3.7
 RUN pip install --no-cache-dir wheel && \
     pip install --no-cache-dir -U setuptools && \
     pip install --no-cache-dir -r requirements.txt
@@ -73,7 +72,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /opt/venv /opt/venv
-ENV CLOUDSDK_PYTHON=/opt/venv/bin/python3.7
 
 # install gcloud tools
 RUN echo "deb http://packages.cloud.google.com/apt cloud-sdk-bullseye main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
