@@ -12,7 +12,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler, query_sin
     export_variants_handler, search_context_handler, get_saved_search_handler, create_saved_search_handler, \
     update_saved_search_handler, delete_saved_search_handler, get_variant_gene_breakdown
 from seqr.views.utils.test_utils import AuthenticationTestCase, VARIANTS, AnvilAuthenticationTestCase,\
-    GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, PROJECT_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
+    GENE_VARIANT_FIELDS, GENE_VARIANT_DISPLAY_FIELDS, LOCUS_LIST_FIELDS, FAMILY_FIELDS, \
     PA_LOCUS_LIST_FIELDS, INDIVIDUAL_FIELDS, FUNCTIONAL_FIELDS, IGV_SAMPLE_FIELDS, FAMILY_NOTE_FIELDS, ANALYSIS_GROUP_FIELDS, \
     VARIANT_NOTE_FIELDS, TAG_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_DETAIL_FIELDS
 
@@ -156,8 +156,9 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(set(response_json['analysisGroupsByGuid']['AG0000183_test_group'].keys()), ANALYSIS_GROUP_FIELDS)
 
         self.assertEqual(len(response_json['familiesByGuid']), 11)
-        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {'projectGuid', 'familyGuid', 'displayName'})
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), {'projectGuid', 'familyGuid', 'displayName', 'analysisStatus'})
         self.assertEqual(response_json['familiesByGuid']['F000001_1']['displayName'], '1')
+        self.assertEqual(response_json['familiesByGuid']['F000001_1']['analysisStatus'], 'Q')
 
 
     def _assert_expected_results_family_context(self, response_json, locus_list_detail=False):
@@ -168,8 +169,9 @@ class VariantSearchAPITest(object):
         if len(response_json['familiesByGuid']) > 1:
             self.assertSetEqual(set(response_json['familiesByGuid']['F000002_2'].keys()), family_fields)
 
-        family_fields.add('hasRnaTpmData')
+        family_fields.add('tpmGenes')
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1']['tpmGenes']), {'ENSG00000227232'})
 
         self.assertEqual(len(response_json['individualsByGuid']), len(response_json['familiesByGuid'])*3)
         individual_fields = {'igvSampleGuids'}
@@ -472,9 +474,8 @@ class VariantSearchAPITest(object):
 
         mock_get_variants.side_effect = _get_variants
 
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH
-        }))
+        body = {'allGenomeProjectFamilies': '37', 'search': SEARCH}
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         empty_search_response = {
@@ -489,9 +490,7 @@ class VariantSearchAPITest(object):
 
         VariantSearchResults.objects.filter(search_hash=SEARCH_HASH).delete()
         self.login_data_manager_user()
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH
-        }))
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), empty_search_response)
 
@@ -500,10 +499,8 @@ class VariantSearchAPITest(object):
         expected_searched_families = {
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13'}
-        response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'allGenomeProjectFamilies': '37', 'search': SEARCH,
-            'projectFamilies': [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1']}]
-        }))
+        body['projectFamilies'] = [{'projectGuid': PROJECT_GUID, 'familyGuids': ['F000001_1']}]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
@@ -516,6 +513,19 @@ class VariantSearchAPITest(object):
         self.assertSetEqual(expected_searched_families, {f.guid for f in result_model.families.all()})
         mock_get_variants.assert_called_with(result_model, sort='xpos', page=1, num_results=100,
                                              skip_genotype_filter=True, user=self.collaborator_user)
+
+        result_model.delete()
+        expected_searched_families.remove('F000007_7')
+        expected_searched_families.remove('F000010_10')
+        body['unsolvedFamiliesOnly'] = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        response_json = response.json()
+        self.assertSetEqual(set(response_json.keys()), set(EXPECTED_SEARCH_RESPONSE.keys()))
+        self.assertDictEqual(response_json, EXPECTED_SEARCH_RESPONSE)
+        self._assert_expected_results_context(response_json)
+        self.assertSetEqual(
+            set(response_json['search']['projectFamilies'][0]['familyGuids']), expected_searched_families)
 
     @mock.patch('seqr.views.apis.variant_search_api.get_es_variants')
     def test_query_all_project_families_variants(self, mock_get_variants):
@@ -804,7 +814,7 @@ class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITes
 
     def test_query_all_projects_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_projects_variants(*args)
-        assert_no_al_has_list_ws(self)
+        assert_no_al_has_list_ws(self, group_count=2)
 
     def test_query_all_project_families_variants(self, *args):
         super(AnvilVariantSearchAPITest, self).test_query_all_project_families_variants(*args)

@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Popup, Label, Icon } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid } from 'redux/selectors'
+import { getGenesById, getLocusListIntervalsByChromProject, getFamiliesByGuid, getUser } from 'redux/selectors'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import SearchResultsLink from '../../buttons/SearchResultsLink'
 import Modal from '../../modal/Modal'
@@ -110,30 +110,32 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral Allele', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const getSvRegion = ({ chrom, endChrom, pos, end, liftedOverGenomeVersion, liftedOverPos }, divider) => {
+const getSvRegion = (
+  { chrom, endChrom, pos, end, liftedOverGenomeVersion, liftedOverPos }, divider, useLiftoverVersion,
+) => {
   const endOffset = endChrom ? 0 : end - pos
-  const start = liftedOverGenomeVersion === GENOME_VERSION_37 ? liftedOverPos : pos
-  return `${chrom}${divider || '-'}${start}-${start + endOffset}`
+  const start = (useLiftoverVersion && liftedOverGenomeVersion === useLiftoverVersion) ? liftedOverPos : pos
+  return `${chrom}${divider}${start}-${start + endOffset}`
 }
 
 const getGeneNames = genes => genes.reduce((acc, gene) => [gene.geneSymbol, ...getOtherGeneNames(gene), ...acc], [])
 
-const getPubmedSearch = (genes, variations) => {
-  let pubmedSearch = `(${getGeneNames(genes).join(' OR ')})`
+const getLitSearch = (genes, variations) => {
+  let search = `(${getGeneNames(genes).join(' OR ')})`
   if (variations.length) {
-    pubmedSearch = `${pubmedSearch} AND ( ${variations.join(' OR ')})`
+    search = `${search} AND (${variations.join(' OR ')})`
   }
-  return pubmedSearch
+  return search
 }
+
+const has37Coords = ({ genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
+  genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
 
 const VARIANT_LINKS = [
   {
     name: 'gnomAD',
-    shouldShow: ({ svType, genomeVersion, liftedOverGenomeVersion, liftedOverPos }) => (
-      !!svType && (
-        genomeVersion === GENOME_VERSION_37 || (liftedOverGenomeVersion === GENOME_VERSION_37 && liftedOverPos))
-    ),
-    getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant)}?dataset=gnomad_sv_r2_1`,
+    shouldShow: variant => !!variant.svType && has37Coords(variant),
+    getHref: variant => `https://gnomad.broadinstitute.org/region/${getSvRegion(variant, '-', GENOME_VERSION_37)}?dataset=gnomad_sv_r2_1`,
   },
   {
     name: 'Decipher',
@@ -153,9 +155,19 @@ const VARIANT_LINKS = [
     getHref: ({ pos, ref, alt }) => `https://www.mitovisualize.org/variant/m-${pos}-${ref}-${alt}`,
   },
   {
-    name: 'Geno2MP',
-    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
-    getHref: ({ chrom, pos }) => `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
+    name: 'google',
+    shouldShow: ({ genes, variations }) => genes.length && variations.length,
+    getHref: ({ genes, variations }) => `https://scholar.google.com/scholar?q=${getLitSearch(genes, variations).replaceAll('=', '')}`,
+  },
+  {
+    name: 'pubmed',
+    shouldShow: ({ genes }) => genes.length,
+    getHref: ({ genes, variations }) => `https://www.ncbi.nlm.nih.gov/pubmed?term=${getLitSearch(genes, variations)}`,
+  },
+  {
+    name: 'AoU',
+    shouldShow: ({ svType }) => !svType,
+    getHref: ({ chrom, pos, ref, alt }) => `https://databrowser.researchallofus.org/genomic-variants/${chrom}-${pos}-${ref}-${alt}`,
   },
   {
     name: 'Iranome',
@@ -163,22 +175,30 @@ const VARIANT_LINKS = [
     getHref: ({ chrom, pos, ref, alt }) => `http://www.iranome.ir/variant/${chrom}-${pos}-${ref}-${alt}`,
   },
   {
-    name: 'google',
-    shouldShow: ({ genes, variations }) => genes.length && variations.length,
-    getHref: ({ genes, variations }) => `https://www.google.com/search?q=(${getGeneNames(genes).join('|')})+(${variations.join('|')}`,
+    name: 'Geno2MP',
+    shouldShow: ({ svType, chrom }) => !svType && chrom !== 'M',
+    getHref: ({ chrom, pos }) => `https://geno2mp.gs.washington.edu/Geno2MP/#/gene/${chrom}:${pos}/chrLoc/${pos}/${pos}/${chrom}`,
   },
   {
-    name: 'pubmed',
-    shouldShow: ({ genes }) => genes.length,
-    getHref: ({ genes, variations }) => `https://www.ncbi.nlm.nih.gov/pubmed?term=${getPubmedSearch(genes, variations)}`,
+    name: 'Mastermind',
+    shouldShow: ({ svType, hgvsc }) => !svType && hgvsc,
+    getHref: ({ genes, hgvsc }) => `https://mastermind.genomenon.com/detail?gene=${genes[0].geneSymbol}&mutation=${genes[0].geneSymbol}:${hgvsc}`,
+  },
+  {
+    name: 'BCH',
+    shouldShow: (variant, user) => has37Coords(variant) && user.isAnalyst,
+    getHref: ({ chrom, pos, ref, alt, genomeVersion, liftedOverPos }) => (
+      `https://aggregator.bchresearch.org/variant.html?variant=${chrom}:${genomeVersion === GENOME_VERSION_37 ? pos : liftedOverPos}:${ref}:${alt}`
+    ),
   },
 ]
 
-const variantSearchLinks = (variant, mainTranscript, genesById) => {
+const variantSearchLinks = (variant, mainTranscript, genesById, user) => {
   const { chrom, endChrom, pos, end, ref, alt, genomeVersion, svType, variantId, transcripts } = variant
 
   const mainGene = genesById[mainTranscript.geneId]
   let genes
+  let hgvsc
   const variations = []
 
   if (mainGene) {
@@ -194,7 +214,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
     }
 
     if (mainTranscript.hgvsc) {
-      const hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
+      hgvsc = mainTranscript.hgvsc.split(':')[1].replace('c.', '')
       variations.unshift(
         `c.${hgvsc}`, // c.1282C>T
         hgvsc, // 1282C>T
@@ -206,7 +226,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
     genes = Object.keys(transcripts || {}).map(geneId => genesById[geneId]).filter(gene => gene)
   }
 
-  const linkVariant = { genes, variations, ...variant }
+  const linkVariant = { genes, variations, hgvsc, ...variant }
 
   return [
     <Popup
@@ -224,7 +244,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById) => {
       content={`Search for this variant across all your seqr projects${svType ? '. Any structural variant with ≥20% reciprocal overlap will be returned.' : ''}`}
       size="tiny"
     />,
-    ...VARIANT_LINKS.filter(({ shouldShow }) => shouldShow(linkVariant)).map(
+    ...VARIANT_LINKS.filter(({ shouldShow }) => shouldShow(linkVariant, user)).map(
       ({ name, getHref }) => <DividedLink key={name} href={getHref(linkVariant)}>{name}</DividedLink>,
     ),
   ]
@@ -236,6 +256,7 @@ class BaseSearchLinks extends React.PureComponent {
     variant: PropTypes.object,
     mainTranscript: PropTypes.object,
     genesById: PropTypes.object,
+    user: PropTypes.object,
   }
 
   state = { showAll: false }
@@ -245,12 +266,15 @@ class BaseSearchLinks extends React.PureComponent {
   }
 
   render() {
-    const { variant, mainTranscript, genesById } = this.props
+    const { variant, mainTranscript, genesById, user } = this.props
     const { showAll } = this.state
 
-    const links = variantSearchLinks(variant, mainTranscript, genesById)
-    if (links.length < 5 || showAll) {
+    const links = variantSearchLinks(variant, mainTranscript, genesById, user)
+    if (links.length < 5) {
       return links
+    }
+    if (showAll) {
+      return [...links.slice(0, 5), <br key="break" />, ...links.slice(5)]
     }
 
     return [
@@ -263,6 +287,7 @@ class BaseSearchLinks extends React.PureComponent {
 
 const mapStateToProps = state => ({
   genesById: getGenesById(state),
+  user: getUser(state),
 })
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)

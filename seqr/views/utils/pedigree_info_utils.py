@@ -4,6 +4,7 @@ import os
 import json
 import tempfile
 import openpyxl as xl
+from collections import defaultdict
 from datetime import date
 
 from seqr.utils.communication_utils import send_html_email
@@ -16,6 +17,7 @@ from seqr.models import Individual
 logger = SeqrLogger(__name__)
 
 
+NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES = ['CMG', 'TGG_Non-Report']
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
@@ -49,24 +51,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
                 raise ValueError('Unsupported file format')
             if not project:
                 raise ValueError('Project argument required for parsing sample manifest')
-            # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
-            headers = rows[:2]
-            rows = rows[2:]
-
-            # validate manifest_header_row1
-            expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
-            expected_header_1_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
-
-            expected = expected_header_1_columns
-            actual = headers[0]
-            if expected == actual:
-                expected = expected_header_columns[4:6]
-                actual = headers[1][4:6]
-            unexpected_header_columns = '|'.join(difflib.unified_diff(expected, actual)).split('\n')[3:]
-            if unexpected_header_columns:
-                raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
-
-            header = expected_header_columns
+            header, rows = _parse_merged_pedigree_sample_manifest_rows(rows)
         else:
             if _is_header_row(header_string):
                 header_row = parsed_file[0]
@@ -88,10 +73,11 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         raise ErrorsWarningsException(['Error while parsing file: {}. {}'.format(filename, e)], [])
 
     # convert to json and validate
+    errors = None
     try:
         if is_merged_pedigree_sample_manifest:
             logger.info("Parsing merged pedigree-sample-manifest file", user)
-            rows, sample_manifest_rows, kit_id = _parse_merged_pedigree_sample_manifest_format(rows, project)
+            rows, sample_manifest_rows, kit_id, errors = _parse_merged_pedigree_sample_manifest_format(rows, project)
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
@@ -102,9 +88,10 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings)
+    warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
+        _set_proband_relationship(json_records)
         _send_sample_manifest(sample_manifest_rows, kit_id, filename, parsed_file, user, project)
 
     return json_records, warnings
@@ -208,7 +195,7 @@ def _parse_row_dict(row_dict, i):
     return json_record
 
 
-def validate_fam_file_records(records, fail_on_warnings=False):
+def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -226,7 +213,7 @@ def validate_fam_file_records(records, fail_on_warnings=False):
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
 
-    errors = []
+    errors = errors or []
     warnings = []
     for r in records:
         individual_id = r[JsonConstants.INDIVIDUAL_ID_COLUMN]
@@ -302,6 +289,27 @@ def _is_header_row(row):
         return False
 
 
+def _parse_merged_pedigree_sample_manifest_rows(rows):
+    # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
+    headers = rows[:2]
+    rows = rows[2:]
+
+    # validate manifest_header_row1
+    expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
+    expected_header_1_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
+
+    expected = expected_header_1_columns
+    actual = headers[0]
+    if expected == actual:
+        expected = expected_header_columns[4:6]
+        actual = headers[1][4:6]
+    unexpected_header_columns = '|'.join(difflib.unified_diff(expected, actual)).split('\n')[3:]
+    if unexpected_header_columns:
+        raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
+
+    return expected_header_columns, rows
+
+
 def _parse_merged_pedigree_sample_manifest_format(rows, project):
     """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
 
@@ -315,36 +323,93 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
     Returns:
          3-tuple: rows, sample_manifest_rows, kit_id
     """
-
     c = MergedPedigreeSampleManifestConstants
     kit_id = rows[0][c.KIT_ID_COLUMN]
 
+    is_no_validate_project = project.projectcategory_set.filter(name__in=NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES).exists()
     pedigree_rows = []
     sample_manifest_rows = []
+    errors = []
     consent_codes = set()
     for row in rows:
         sample_manifest_rows.append({
-            column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
+            column_name: row[column_name] for column_name in c.SAMPLE_MANIFEST_COLUMN_NAMES
         })
 
         pedigree_rows.append({
-            key: row[column_name] for column_name, key in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.items()
+            key: row[column_name] for column_name, key in c.MERGED_PEDIGREE_COLUMN_MAP.items()
         })
 
-        consent_code = row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN]
+        if not is_no_validate_project:
+            missing_cols = {col for col in c.REQUIRED_COLUMNS if not row[col]}
+            if missing_cols:
+                individual_id = row[c.COLLABORATOR_SAMPLE_ID_COLUMN]
+                errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_cols))}')
+
+        consent_code = row[c.CONSENT_CODE_COLUMN]
         if consent_code:
             consent_codes.add(consent_code)
 
-    if consent_codes:
-        if len(consent_codes) > 1:
-            raise ValueError(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
+    if len(consent_codes) > 1:
+        errors.append(f'Multiple consent codes specified in manifest: {", ".join(sorted(consent_codes))}')
+    elif len(consent_codes) == 1:
         consent_code = consent_codes.pop()
         project_consent_code = project.get_consent_code_display()
         if consent_code != project_consent_code:
-            raise ValueError(
+            errors.append(
                 f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
 
-    return pedigree_rows, sample_manifest_rows, kit_id
+    return pedigree_rows, sample_manifest_rows, kit_id, errors
+
+
+def _set_proband_relationship(json_records):
+    records_by_family = defaultdict(list)
+    for r in json_records:
+        records_by_family[r[JsonConstants.FAMILY_ID_COLUMN]].append(r)
+
+    family_relationships = {}
+    for family_id, records in records_by_family.items():
+        affected = [r for r in records if r[JsonConstants.AFFECTED_COLUMN] == 'A']
+        if len(affected) > 1:
+            affected_children = sorted(
+                [r for r in affected if r[JsonConstants.PATERNAL_ID_COLUMN] or r[JsonConstants.MATERNAL_ID_COLUMN]],
+                key=lambda r: bool(r[JsonConstants.PATERNAL_ID_COLUMN]) and bool(r[JsonConstants.MATERNAL_ID_COLUMN]),
+                reverse=True
+            )
+            if affected_children:
+                affected = affected_children
+        if not affected:
+            continue
+        affected = affected[0]
+
+        relationships = {
+            affected[JsonConstants.MATERNAL_ID_COLUMN]: Individual.MOTHER_RELATIONSHIP,
+            affected[JsonConstants.PATERNAL_ID_COLUMN]: Individual.FATHER_RELATIONSHIP,
+        }
+
+        maternal_siblings = {
+            r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
+            if affected[JsonConstants.MATERNAL_ID_COLUMN] == r[JsonConstants.MATERNAL_ID_COLUMN]
+        }
+        paternal_siblings = {
+            r[JsonConstants.INDIVIDUAL_ID_COLUMN] for r in records
+            if affected[JsonConstants.PATERNAL_ID_COLUMN] == r[JsonConstants.PATERNAL_ID_COLUMN]
+        }
+        relationships.update({r_id: Individual.MATERNAL_SIBLING_RELATIONSHIP for r_id in maternal_siblings})
+        relationships.update({r_id: Individual.PATERNAL_SIBLING_RELATIONSHIP for r_id in paternal_siblings})
+        relationships.update({r_id: Individual.SIBLING_RELATIONSHIP for r_id in paternal_siblings.intersection(maternal_siblings)})
+
+        relationships.update({
+            r[JsonConstants.INDIVIDUAL_ID_COLUMN]: Individual.CHILD_RELATIONSHIP for r in records
+            if affected[JsonConstants.INDIVIDUAL_ID_COLUMN] in {r[JsonConstants.MATERNAL_ID_COLUMN], r[JsonConstants.PATERNAL_ID_COLUMN]}
+        })
+
+        relationships[affected[JsonConstants.INDIVIDUAL_ID_COLUMN]] = Individual.SELF_RELATIONSHIP
+        family_relationships[family_id] = relationships
+
+    for r in json_records:
+        r[JsonConstants.PROBAND_RELATIONSHIP] = family_relationships.get(
+            r[JsonConstants.FAMILY_ID_COLUMN], {}).get(r[JsonConstants.INDIVIDUAL_ID_COLUMN])
 
 
 def _send_sample_manifest(sample_manifest_rows, kit_id, original_filename, original_file_rows, user, project):
@@ -666,6 +731,7 @@ class JsonConstants:
     NOTES_COLUMN = 'notes'
     FAMILY_NOTES_COLUMN = 'familyNotes'
     CODED_PHENOTYPE_COLUMN = 'codedPhenotype'
+    MONDO_ID_COLUMN = 'mondoId'
     PROBAND_RELATIONSHIP = 'probandRelationship'
     MATERNAL_ETHNICITY = 'maternalEthnicity'
     PATERNAL_ETHNICITY = 'paternalEthnicity'
@@ -707,6 +773,7 @@ class JsonConstants:
         (ANALYTE_TYPE, ['analyte', 'type']),
         (AFFECTED_COLUMN, ['affected']),
         (CODED_PHENOTYPE_COLUMN, ['coded', 'phenotype']),
+        (MONDO_ID_COLUMN, ['mondo', 'id']),
         (PROBAND_RELATIONSHIP, ['proband', 'relation']),
     ]
 
@@ -731,7 +798,8 @@ class MergedPedigreeSampleManifestConstants:
     VOLUME_COLUMN = "Volume"
     CONCENTRATION_COLUMN = "Concentration"
     NOTES_COLUMN = "Notes"
-    CODED_PHENOTYPE_COLUMN = "Coded Phenotype"
+    CODED_PHENOTYPE_COLUMN = 'MONDO Label'
+    MONDO_ID_COLUMN = 'MONDO ID'
     CONSENT_CODE_COLUMN = 'Consent Code'
     DATA_USE_RESTRICTIONS_COLUMN = "Data Use Restrictions"
 
@@ -755,6 +823,7 @@ class MergedPedigreeSampleManifestConstants:
         CONCENTRATION_COLUMN,
         NOTES_COLUMN,
         CODED_PHENOTYPE_COLUMN,
+        MONDO_ID_COLUMN,
         CONSENT_CODE_COLUMN,
         DATA_USE_RESTRICTIONS_COLUMN,
     ]
@@ -768,10 +837,22 @@ class MergedPedigreeSampleManifestConstants:
         AFFECTED_COLUMN: JsonConstants.AFFECTED_COLUMN,
         NOTES_COLUMN: JsonConstants.NOTES_COLUMN,
         CODED_PHENOTYPE_COLUMN: JsonConstants.CODED_PHENOTYPE_COLUMN,
+        MONDO_ID_COLUMN: JsonConstants.MONDO_ID_COLUMN,
         BIOSAMPLE_COLUMN: JsonConstants.PRIMARY_BIOSAMPLE,
         ANALYTE_TYPE_COLUMN: JsonConstants.ANALYTE_TYPE,
         TISSUE_AFFECTED_COLUMN: JsonConstants.TISSUE_AFFECTED_STATUS,
     }
+
+    REQUIRED_COLUMNS = [
+        COLLABORATOR_SAMPLE_ID_COLUMN,
+        SEX_COLUMN,
+        AFFECTED_COLUMN,
+        BIOSAMPLE_COLUMN,
+        ANALYTE_TYPE_COLUMN,
+        TISSUE_AFFECTED_COLUMN,
+        CODED_PHENOTYPE_COLUMN,
+        MONDO_ID_COLUMN,
+    ]
 
     SAMPLE_MANIFEST_COLUMN_NAMES = [
         WELL_POSITION_COLUMN,

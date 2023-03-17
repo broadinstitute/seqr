@@ -213,12 +213,15 @@ def _get_case_review_fields(model_cls, has_case_review_perm):
     return [field.name for field in model_cls._meta.fields if field.name.startswith('case_review')]
 
 
+FAMILY_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'family_id')
+
+
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
                            has_case_review_perm=False, additional_values=None):
 
     family_additional_values = {
         'analysedBy': ArrayAgg(JSONObject(
-            createdBy=_user_expr('created_by'),
+            createdBy=_user_expr('familyanalysedby__created_by'),
             dataType='familyanalysedby__data_type',
             lastModifiedDate='familyanalysedby__last_modified_date',
         ), filter=Q(familyanalysedby__isnull=False)),
@@ -227,13 +230,13 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
                 fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
             )), default=Value(None),
         ),
-        'displayName': Coalesce(NullIf('display_name', Value('')), 'family_id'),
+        'displayName': FAMILY_DISPLAY_NAME_EXPR,
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
     if additional_values:
         family_additional_values.update(additional_values)
     if add_individual_guids_field:
-        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False))
+        family_additional_values['individualGuids'] = ArrayAgg('individual__guid', filter=Q(individual__isnull=False), distinct=True)
 
     additional_model_fields = _get_case_review_fields(families.model, has_case_review_perm)
     nested_fields = [{'fields': ('project', 'guid'), 'value': project_guid}]
@@ -391,10 +394,12 @@ def get_json_for_analysis_group(analysis_group, **kwargs):
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
-def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None):
-    additional_values = {
+def get_json_for_saved_variants(saved_variants, add_details=False, additional_model_fields=None, additional_values=None):
+    sv_additional_values = {
         'familyGuids': ArrayAgg('family__guid', distinct=True),
     }
+    if additional_values:
+        sv_additional_values.update(additional_values)
 
     additional_fields = []
     additional_fields += additional_model_fields or []
@@ -402,7 +407,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
         additional_fields.append('saved_variant_json')
 
     results = get_json_for_queryset(
-        saved_variants, guid_key='variantGuid', additional_values=additional_values,
+        saved_variants, guid_key='variantGuid', additional_values=sv_additional_values,
         additional_model_fields=additional_fields,
     )
 
@@ -687,7 +692,8 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
             collaborator_json = _get_collaborator_json(
                 collaborator or email, fields, include_permissions, can_edit=permission == CAN_EDIT,
                 get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
-            collaborators[collaborator_json['username']] = collaborator_json
+            username = collaborator.username if collaborator else collaborator_json['username']
+            collaborators[username] = collaborator_json
 
     return collaborators
 

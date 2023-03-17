@@ -3,7 +3,7 @@
 import orderBy from 'lodash/orderBy'
 import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getProjectExportUrls,
   getCaseReviewStatusCounts, getProjectAnalysisGroupFamiliesByGuid, getIndividualTaggedVariants,
-  getDefaultMmeSubmission, getMmeResultsBySubmission, getMmeDefaultContactEmail, getAnalystOptions
+  getDefaultMmeSubmission, getMmeResultsBySubmission, getMmeDefaultContactEmail, getIndividualPhenotypeGeneScores,
 } from './selectors'
 
 import { STATE_WITH_2_FAMILIES } from './fixtures'
@@ -131,5 +131,25 @@ test('getMmeDefaultContactEmail', () => {
     to: 'crowley@unc.edu,test@test.com,test@broadinstitute.org',
     subject: 'OR2M3 Matchmaker Exchange connection (NA19675_1)',
     body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
+  })
+})
+
+test('getIndividualPhenotypeGeneScores', () => {
+  expect(getIndividualPhenotypeGeneScores(STATE_WITH_2_FAMILIES)).toEqual({
+    I021476_na19678_1: [
+      {
+        tool: 'lirical',
+        diseaseId: 'OMIM:618460',
+        diseaseName: 'Khan-Khan-Katsanis syndrome',
+        familyGuid: 'F011652_1',
+        gene: {
+          geneId: 'ENSG00000228198',
+          geneSymbol: 'OR2M3',
+        },
+        rowId: 'ENSG00000228198-lirical-OMIM:618460',
+        rank: 1,
+        scores: { compositeLR: 0.066, post_test_probability: 0 },
+      },
+    ],
   })
 })

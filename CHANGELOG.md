@@ -2,6 +2,13 @@
 
 ## dev
 
+## 2/24/23
+* Updated Gregor sample manifest (REQUIRES DB MIGRATION)
+* Bumps python to 3.9
+
+## 2/15/23
+* Support sharded VCFs in AnVIL loading
+
 ## 1/11/23
 * Require PHI disclaimer when uploading AnVIL pedigree
 

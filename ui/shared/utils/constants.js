@@ -179,6 +179,11 @@ export const FAMILY_ANALYSIS_STATUS_LOOKUP = ALL_FAMILY_ANALYSIS_STATUS_OPTIONS.
   (acc, tag) => ({ [tag.value]: tag, ...acc }), {},
 )
 
+export const SOLVED_FAMILY_STATUS_OPTIONS = new Set([
+  FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE, FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE,
+  FAMILY_STATUS_SOLVED_NOVEL_GENE, FAMILY_STATUS_EXTERNAL_SOLVE, FAMILY_STATUS_SOLVED,
+])
+
 export const SNP_DATA_TYPE = 'SNP'
 export const FAMILY_ANALYSED_BY_DATA_TYPES = [
   [SNP_DATA_TYPE, 'WES/WGS'],
@@ -234,6 +239,7 @@ export const FAMILY_FIELD_INTERNAL_NOTES = 'caseReviewNotes'
 export const FAMILY_FIELD_INTERNAL_SUMMARY = 'caseReviewSummary'
 export const FAMILY_FIELD_FIRST_SAMPLE = 'firstSample'
 export const FAMILY_FIELD_CODED_PHENOTYPE = 'codedPhenotype'
+export const FAMILY_FIELD_MONDO_ID = 'mondoId'
 export const FAMILY_FIELD_OMIM_NUMBER = 'postDiscoveryOmimNumber'
 export const FAMILY_FIELD_PMIDS = 'pubmedIds'
 export const FAMILY_FIELD_PEDIGREE = 'pedigreeImage'
@@ -253,7 +259,8 @@ export const FAMILY_FIELD_NAME_LOOKUP = {
   [FAMILY_FIELD_CASE_NOTES]: 'Case Notes',
   [FAMILY_FIELD_ANALYSIS_NOTES]: 'Analysis Notes',
   [FAMILY_FIELD_MME_NOTES]: 'Matchmaker Notes',
-  [FAMILY_FIELD_CODED_PHENOTYPE]: 'Coded Phenotype',
+  [FAMILY_FIELD_CODED_PHENOTYPE]: 'Phenotype Description',
+  [FAMILY_FIELD_MONDO_ID]: 'MONDO ID',
   [FAMILY_FIELD_OMIM_NUMBER]: 'Post-discovery OMIM #',
   [FAMILY_FIELD_PMIDS]: 'Publications on this discovery',
   [FAMILY_FIELD_INTERNAL_NOTES]: 'Internal Notes',
@@ -281,6 +288,7 @@ export const FAMILY_DETAIL_FIELDS = [
   { id: FAMILY_FIELD_SUCCESS_STORY },
   ...FAMILY_NOTES_FIELDS,
   { id: FAMILY_FIELD_CODED_PHENOTYPE },
+  { id: FAMILY_FIELD_MONDO_ID },
   { id: FAMILY_FIELD_OMIM_NUMBER },
   { id: FAMILY_FIELD_PMIDS },
 ]

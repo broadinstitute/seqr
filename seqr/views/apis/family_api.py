@@ -51,8 +51,6 @@ def family_page_data(request, family_guid):
     for sample in outlier_samples:
         individual_guid = response['samplesByGuid'][sample.guid]['individualGuid']
         response['individualsByGuid'][individual_guid]['hasRnaOutlierData'] = True
-    if sample_models.filter(sample_type=Sample.SAMPLE_TYPE_RNA).exclude(rnaseqtpm=None):
-        response['familiesByGuid'][family_guid]['hasRnaTpmData'] = True
 
     has_phentoype_score_indivs = PhenotypePrioritization.objects.filter(individual__family=family).values_list(
         'individual__guid', flat=True)
@@ -358,10 +356,12 @@ def receive_families_table_handler(request, project_guid):
                     column_map[FAMILY_ID_FIELD] = i
             elif 'display' in key:
                 column_map['displayName'] = i
-            elif 'description' in key:
-                column_map['description'] = i
             elif 'phenotype' in key:
                 column_map['codedPhenotype'] = i
+            elif 'mondo' in key and 'id' in key:
+                column_map['mondoId'] = i
+            elif 'description' in key:
+                column_map['description'] = i
         if FAMILY_ID_FIELD not in column_map:
             raise ValueError('Invalid header, missing family id column')
 

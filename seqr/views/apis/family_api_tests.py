@@ -48,11 +48,14 @@ class FamilyAPITest(AuthenticationTestCase):
 
         self.assertEqual(len(response_json['familiesByGuid']), 1)
         family = response_json['familiesByGuid'][FAMILY_GUID]
-        family_fields = {'individualGuids', 'hasRnaTpmData', 'detailsLoaded'}
+        family_fields = {'individualGuids', 'detailsLoaded'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(family.keys()), family_fields)
         self.assertEqual(family['projectGuid'], PROJECT_GUID)
         self.assertSetEqual(set(family['individualGuids']), set(response_json['individualsByGuid'].keys()))
+        self.assertListEqual(family['analysedBy'], [
+            {'createdBy': 'Test No Access User', 'dataType': 'SNP', 'lastModifiedDate': '2022-07-22T19:27:08.563+00:00'},
+        ])
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
@@ -384,9 +387,9 @@ class FamilyAPITest(AuthenticationTestCase):
             'errors': ['Could not find families with the following previous IDs: 1_old'], 'warnings': []})
 
         # send valid request
-        data = b'Family ID	Previous Family ID	Display Name	Description	Coded Phenotype\n\
-"1_renamed"	"1"	"1"	"family one description"	""\n\
-"2"	""	"2"	"family two description"	""'
+        data = b'Family ID	Previous Family ID	Display Name	Description	Phenotype Description	MONDO ID\n\
+"1_renamed"	"1"	"1"	"family one description"	"dystrophy"	"MONDO:12345"\n\
+"2"	""	"2"	"family two description"	""	""'
 
         response = self.client.post(url, {'f': SimpleUploadedFile("1000_genomes demo_families.tsv", data)})
         self.assertEqual(response.status_code, 200)
@@ -406,6 +409,8 @@ class FamilyAPITest(AuthenticationTestCase):
         family_1 = response_json['familiesByGuid'][FAMILY_GUID]
         self.assertEqual(family_1['description'], 'family one description')
         self.assertEqual(family_1['familyId'], '1_renamed')
+        self.assertEqual(family_1['codedPhenotype'], 'dystrophy')
+        self.assertEqual(family_1['mondoId'], 'MONDO:12345')
         family_2 = response_json['familiesByGuid'][FAMILY_GUID2]
         self.assertEqual(family_2['description'], 'family two description')
         self.assertEqual(family_2['familyId'], '2')
