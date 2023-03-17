@@ -1,7 +1,7 @@
 import elasticsearch_dsl
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Q
+from django.db.models import prefetch_related_objects, Q, F, Value, TextField
 from django.utils import timezone
 from tqdm import tqdm
 import random
@@ -96,7 +96,7 @@ def load_mapping_file_content(file_content):
 
 
 def _get_individual_sample_lookup(individuals):
-    return {i.individual_id: i for i in individuals}
+    return {(i.individual_id, None): i for i in individuals}
 
 
 def _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping):
@@ -111,39 +111,41 @@ def _find_or_create_missing_sample_records(
         samples,
         projects,
         user,
-        sample_ids,
+        sample_project_tuples,
+        get_individual_sample_key,
         raise_no_match_error=False,
         raise_unmatched_error_template=None,
         create_active=False,
         get_individual_sample_lookup=_get_individual_sample_lookup,
-        get_individual_sample_key=None,
         **kwargs
 ):
     samples = list(samples)
-    remaining_sample_ids = set(sample_ids) - {sample.sample_id for sample in samples}
+    remaining_sample_keys = set(sample_project_tuples) - {(sample.sample_id, sample.project_name) for sample in samples}
+    remaining_sample_ids = set()
     matched_individual_ids = {sample.individual_id for sample in samples}
-    if len(remaining_sample_ids) > 0:
+    if len(remaining_sample_keys) > 0:
         remaining_individuals_dict = get_individual_sample_lookup(
             Individual.objects.filter(family__project__in=projects).exclude(id__in=matched_individual_ids)
         )
 
         # find Individual records with exactly-matching individual_ids
         sample_id_to_individual_record = {}
-        for sample_id in remaining_sample_ids:
-            individual_key = get_individual_sample_key(sample_id) if get_individual_sample_key else sample_id
+        for sample_key in remaining_sample_keys:
+            individual_key = (get_individual_sample_key(sample_key[0]), sample_key[1])
             if individual_key not in remaining_individuals_dict:
                 continue
-            sample_id_to_individual_record[sample_id] = remaining_individuals_dict[individual_key]
+            sample_id_to_individual_record[sample_key] = remaining_individuals_dict[individual_key]
             del remaining_individuals_dict[individual_key]
 
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
-        remaining_sample_ids -= set(sample_id_to_individual_record.keys())
-        if raise_no_match_error and len(remaining_sample_ids) == len(sample_ids):
+        remaining_sample_keys -= set(sample_id_to_individual_record.keys())
+        if raise_no_match_error and len(remaining_sample_keys) == len(sample_project_tuples):
             raise ValueError(
                 'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
-                    len(sample_ids)
+                    len(sample_project_tuples)
                 ))
+        remaining_sample_ids = {sample_id for sample_id, _ in remaining_sample_keys}
         if raise_unmatched_error_template and remaining_sample_ids:
             raise ValueError(raise_unmatched_error_template.format(sample_ids=(', '.join(sorted(remaining_sample_ids)))))
 
@@ -155,8 +157,8 @@ def _find_or_create_missing_sample_records(
                 individual=individual,
                 created_date=timezone.now(),
                 is_active=create_active,
-                **kwargs,
-            ) for sample_id, individual in sample_id_to_individual_record.items()]
+                **kwargs
+            ) for (sample_id, _), individual in sample_id_to_individual_record.items()]
         samples += list(Sample.bulk_create(user, new_samples))
         log_model_bulk_update(logger, new_samples, user, 'create')
 
@@ -224,18 +226,18 @@ def match_and_update_search_samples(
         dataset_type=dataset_type,
         sample_id__in=sample_ids,
         elasticsearch_index=elasticsearch_index,
-    )
+    ).annotate(project_name=Value(None, output_field=TextField()))
     loaded_date = timezone.now()
     get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
     samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
         samples=samples,
         projects=[project],
         user=user,
-        sample_ids=sample_ids,
+        sample_project_tuples=[(sample_id, None) for sample_id in sample_ids],
+        get_individual_sample_key=get_individual_sample_key,
         elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
-        get_individual_sample_key=get_individual_sample_key,
         loaded_date=loaded_date,
         raise_no_match_error=not raise_unmatched_error_template,
         raise_unmatched_error_template=raise_unmatched_error_template,
@@ -261,37 +263,41 @@ def match_and_update_search_samples(
 
 
 def _match_and_update_rna_samples(
-    projects, user, sample_ids, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
-    indiv_id_to_project_name
+    projects, user, sample_project_tuples, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
 ):
-    samples = Sample.objects.select_related('individual').filter(
+    sample_project_lookup = defaultdict(set)
+    for sample_id, project_name in sample_project_tuples:
+        sample_project_lookup[sample_id].add(project_name)
+    no_project_key = next(iter(list(sample_project_tuples)), ('', None))[1] is None
+    samples = Sample.objects.select_related('individual__family__project').filter(
         individual__family__project__in=projects,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        sample_id__in=sample_ids,
-    )
+        sample_id__in=sample_project_lookup.keys(),
+    ).annotate(project_name=Value(None, output_field=TextField()) if no_project_key else F('individual__family__project__name'))
+
+    samples = [s for s in samples if no_project_key or s.project_name in sample_project_lookup[s.sample_id]]
+
     get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
 
     def _get_indiv_sample_project_lookup(individuals):
-        return {i.individual_id: i for i in individuals.select_related('family__project') if
-                i.individual_id in indiv_id_to_project_name and
-                i.family.project.name == indiv_id_to_project_name[i.individual_id]}
+        return {(i.individual_id, None if no_project_key else i.family.project.name):
+                    i for i in individuals.select_related('family__project')}
 
-    kwargs = {} if indiv_id_to_project_name is None else {'get_individual_sample_lookup': _get_indiv_sample_project_lookup}
     samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
         samples=samples,
         projects=projects,
         user=user,
-        sample_ids=sample_ids,
+        sample_project_tuples=sample_project_tuples,
+        get_individual_sample_key=get_individual_sample_key,
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        get_individual_sample_key=get_individual_sample_key,
         loaded_date=timezone.now(),
         raise_no_match_error=False,
         raise_unmatched_error_template=raise_unmatched_error_template,
         create_active=True,
-        **kwargs
+        get_individual_sample_lookup=_get_indiv_sample_project_lookup,
     )
 
     return samples, remaining_sample_ids
@@ -373,7 +379,6 @@ def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_sampl
 def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
                   sample_id_to_tissue_type=None, validate_samples=None):
     sample_id_to_individual_id_mapping = {}
-    indiv_id_to_project_name = {} if PROJECT_COL in expected_columns else None
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
 
@@ -388,7 +393,8 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row, sample_id_to_tissue_type=sample_id_to_tissue_type):
             gene_id = row_dict['gene_id']
-            existing_data = samples_by_id[sample_id].get(gene_id)
+            project = row_dict.pop(PROJECT_COL, None)
+            existing_data = samples_by_id[(sample_id, project)].get(gene_id)
             if existing_data and existing_data != row_dict:
                 raise ValueError(
                     f'Error in {sample_id} data for {gene_id}: mismatched entries {existing_data} and {row_dict}')
@@ -397,9 +403,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             if indiv_id and sample_id not in sample_id_to_individual_id_mapping:
                 sample_id_to_individual_id_mapping[sample_id] = indiv_id
 
-            if indiv_id_to_project_name is not None:
-                indiv_id_to_project_name[sample_id_to_individual_id_mapping.get(sample_id, sample_id)] = row_dict.pop(PROJECT_COL)
-            samples_by_id[sample_id][gene_id] = row_dict
+            samples_by_id[(sample_id, project)][gene_id] = row_dict
 
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
@@ -409,11 +413,10 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     samples, remaining_sample_ids = _match_and_update_rna_samples(
         projects=get_internal_projects(),
         user=user,
-        sample_ids=samples_by_id.keys(),
+        sample_project_tuples=samples_by_id.keys(),
         data_source=data_source,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}',
-        indiv_id_to_project_name=indiv_id_to_project_name,
     )
 
     warnings = []
@@ -421,15 +424,16 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         samples = validate_samples(samples, sample_id_to_tissue_type, warnings)
 
     # Delete old data
-    individual_db_ids = {s.individual_id for s in samples}
-    to_delete = model_cls.objects.filter(sample__individual_id__in=individual_db_ids).exclude(sample__data_source=data_source)
+    to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)
     prev_loaded_individual_ids = set(to_delete.values_list('sample__individual_id', flat=True))
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
 
     loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
+    samples = Sample.objects.filter(id__in={s.id for s in samples} - loaded_sample_ids).annotate(
+        project_name=F('individual__family__project__name') if PROJECT_COL in expected_columns else Value(None, output_field=TextField()))
     samples_to_load = {
-        sample: samples_by_id[sample.sample_id] for sample in samples if sample.id not in loaded_sample_ids
+        sample: samples_by_id[(sample.sample_id, sample.project_name)] for sample in samples
     }
 
     sample_projects = Project.objects.filter(family__individual__sample__in=samples_to_load.keys()).values(
