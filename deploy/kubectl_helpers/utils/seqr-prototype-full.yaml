@@ -54,9 +54,6 @@ spec:
           # This disk must already exist.
           pdName: hail-datasets-disk-2
           fsType: ext4
-      # - name: elasticsearch-es-http-certs-public
-      #   secret:
-      #     secretName: elasticsearch-es-http-certs-public
       containers:
       - name: seqr-pod
         ports:
@@ -68,12 +65,8 @@ spec:
         - name: gcloud-client-secrets-volume
           mountPath: /.config
           readOnly: true
-        
         - name: hail-datasets
           mountPath: /hail_datasets
-        # - name: elasticsearch-es-http-certs-public
-        #   mountPath: "/elasticsearch-certs"
-        #   readOnly: true
         resources:
           requests:
             memory: "0.5Gi"
@@ -139,8 +132,6 @@ spec:
           value: ""
         - name: ELASTICSEARCH_PROTOCOL
           value: "http"
-        # - name: ELASTICSEARCH_CA_PATH
-        #   value: ""
         - name: TERRA_PERMS_CACHE_EXPIRE_SECONDS
           value: "60"
         - name: TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS
