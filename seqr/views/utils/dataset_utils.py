@@ -276,7 +276,6 @@ def _match_and_update_rna_samples(
     samples = [s for s in samples if no_project_key or (s.sample_id, s.project_name) in sample_project_tuples]
 
     get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
-
     samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
         samples=samples,
         projects=projects,
@@ -410,7 +409,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample_project_tuples=samples_by_id.keys(),
         data_source=data_source,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}',
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
     )
 
     warnings = []
