@@ -44,6 +44,7 @@ spec:
       containers:
       - name: spark
         image: apache/spark:v3.3.0
+        # TODO 2 containers, one for master one for worker
         command:
           - /bin/bash
           - -c
