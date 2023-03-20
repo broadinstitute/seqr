@@ -265,15 +265,14 @@ def match_and_update_search_samples(
 def _match_and_update_rna_samples(
     projects, user, sample_project_tuples, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
 ):
-    no_project_key = next(iter(list(sample_project_tuples)), ('', None))[1] is None
     samples = Sample.objects.select_related('individual__family__project').filter(
         individual__family__project__in=projects,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
-    ).annotate(project_name=Value(None, output_field=TextField()) if no_project_key else F('individual__family__project__name'))
+    ).annotate(project_name=F('individual__family__project__name'))
 
-    samples = [s for s in samples if no_project_key or (s.sample_id, s.project_name) in sample_project_tuples]
+    samples = [s for s in samples if (s.sample_id, s.project_name) in sample_project_tuples]
 
     get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
     samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
@@ -289,7 +288,7 @@ def _match_and_update_rna_samples(
         raise_no_match_error=False,
         raise_unmatched_error_template=raise_unmatched_error_template,
         create_active=True,
-        get_individual_sample_lookup=lambda inds: {(i.individual_id, None if no_project_key else i.family.project.name):
+        get_individual_sample_lookup=lambda inds: {(i.individual_id, i.family.project.name):
                                                        i for i in inds.select_related('family__project')},
     )
 
@@ -298,14 +297,15 @@ def _match_and_update_rna_samples(
 def _parse_tsv_row(row):
     return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
 
-RNA_OUTLIER_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score'}
+PROJECT_COL = 'project'
+RNA_OUTLIER_COLUMNS = {'geneID': 'gene_id', 'pValue': 'p_value', 'padjust': 'p_adjust', 'zScore': 'z_score',
+                       PROJECT_COL: PROJECT_COL}
 
 SAMPLE_ID_COL = 'sample_id'
 GENE_ID_COL = 'gene_id'
 TPM_COL = 'TPM'
 TISSUE_COL = 'tissue'
 INDIV_ID_COL = 'individual_id'
-PROJECT_COL = 'project'
 TPM_HEADER_COLS = [SAMPLE_ID_COL, PROJECT_COL, GENE_ID_COL, TISSUE_COL, TPM_COL]
 
 TISSUE_TYPE_MAP = {
@@ -386,7 +386,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row, sample_id_to_tissue_type=sample_id_to_tissue_type):
             gene_id = row_dict['gene_id']
-            project = row_dict.pop(PROJECT_COL, None)
+            project = row_dict.pop(PROJECT_COL)
             existing_data = samples_by_id[(sample_id, project)].get(gene_id)
             if existing_data and existing_data != row_dict:
                 raise ValueError(
@@ -424,7 +424,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
     loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     samples = Sample.objects.filter(id__in={s.id for s in samples} - loaded_sample_ids).annotate(
-        project_name=F('individual__family__project__name') if PROJECT_COL in expected_columns else Value(None, output_field=TextField()))
+        project_name=F('individual__family__project__name'))
     samples_to_load = {
         sample: samples_by_id[(sample.sample_id, sample.project_name)] for sample in samples
     }

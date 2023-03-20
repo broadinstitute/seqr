@@ -615,18 +615,17 @@ class DataManagerAPITest(AuthenticationTestCase):
         'outlier': {
             'model_cls': RnaSeqOutlier,
             'message_data_type': 'Outlier',
-            'header': ['sampleID', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
+            'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
-            'loaded_data_row': ['NA19675_D2', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
             'new_data': [
-                ['NA19675_D2', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
-                ['NA19675_D2', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
-                ['NA19675_D2', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA19675_D3', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20888', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
             'skipped_samples': 'NA19675_D3',
-            'mismatch_row_index': 1,
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
@@ -654,7 +653,6 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
-            'mismatch_row_index': 2,
             'created_sample_tissue_type': 'F',
             'num_parsed_samples': 5,
             'initial_model_count': 3,
@@ -730,7 +728,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertDictEqual(response.json(), {'error': mock.ANY})
                 self.assertTrue(response.json()['error'].startswith(
-                    f'Error in NA19675_D2 data for {mismatch_row[params["mismatch_row_index"]]}: mismatched entries '))
+                    f'Error in NA19675_D2 data for {mismatch_row[2]}: mismatched entries '))
 
                 missing_sample_row = ['NA19675_D3'] + loaded_data_row[1:]
                 _set_file_iter_stdout([header, loaded_data_row, missing_sample_row])
@@ -839,8 +837,10 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
                 # test loading new data without deleting existing data
-                data = [params['new_data'][4]]
-                data[0][0] = 'NA19678'  # load data for a new individual
+                if data_type == 'tpm':
+                    data = [['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064]]
+                else:
+                    data = [['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8]]
                 body.pop('mappingFile')
                 _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 1, 2, 0)
 
