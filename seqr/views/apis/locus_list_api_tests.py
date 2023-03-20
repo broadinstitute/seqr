@@ -80,6 +80,16 @@ class BaseLocusListAPITest(object):
         locus_lists_dict = response_json['locusListsByGuid']
         self.assertListEqual(list(locus_lists_dict.keys()), [PRIVATE_LOCUS_LIST_GUID])
 
+        # Removing the locus list from projects removes user aaccess
+        LocusList.objects.get(guid=PRIVATE_LOCUS_LIST_GUID).projects.clear()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        # The list creator should still have access
+        self.login_analyst_user()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
     def _test_project_locus_list_response(self, response, has_main_list):
         self.assertEqual(response.status_code, 200)
         expected_guids = {LOCUS_LIST_GUID, PRIVATE_LOCUS_LIST_GUID, self.MAIN_LIST_GUID}
