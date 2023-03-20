@@ -42,13 +42,36 @@ spec:
           fsType: ext4
           readOnly: true
       containers:
-      - name: spark
+      - name: spark-master
         image: apache/spark:v3.3.0
-        # TODO 2 containers, one for master one for worker
         command:
-          - /bin/bash
-          - -c
-          - "/opt/spark/sbin/start-master.sh && /opt/spark/sbin/start-worker.sh spark://localhost:7077 && sleep 1000000000000"
+          - /opt/spark/sbin/start-master.sh
+        securityContext:
+          privileged: true
+          runAsUser: 0
+        volumeMounts:
+          - name: hail-datasets
+            mountPath: /hail_datasets
+            readOnly: true
+        resources:
+          requests:
+            memory: "9Gi"
+            cpu: "1"
+          limits:
+            memory: "32Gi"
+            cpu: "4"
+        env:
+          - name: SPARK_MASTER_HOST
+            value: 0.0.0.0
+          - name: SPARK_NO_DAEMONIZE
+            value: "1"
+          - name: SPARK_MASTER_OPTS
+            value: "-Dspark.deploy.defaultCores=2"
+      - name: spark-worker
+        image: apache/spark:v3.3.0
+        command:
+          - /opt/spark/sbin/start-worker.sh
+          - spark://localhost:7077
         securityContext:
           privileged: true
           runAsUser: 0
@@ -58,16 +81,18 @@ spec:
           readOnly: true
         resources:
           requests:
-            memory: "27Gi"
-            cpu: "3"
+            memory: "18Gi"
+            cpu: "2"
           limits:
             memory: "32Gi"
             cpu: "4"
         env:
           - name: SPARK_MASTER_HOST
             value: 0.0.0.0
+          - name: SPARK_NO_DAEMONIZE
+            value: "1"
           - name: SPARK_MASTER_OPTS
-            value: "-Dspark.deploy.defaultCores=3"
+            value: "-Dspark.deploy.defaultCores=2"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
       affinity:
