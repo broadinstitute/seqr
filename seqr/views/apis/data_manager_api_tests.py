@@ -846,12 +846,10 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 # Test loading data when where are duplicated individual ids in different projects.
                 # Add an individual with the individual_is identical to an existing individual
-                indiv = Individual(id=20, family_id=12, individual_id='NA20881', sex='M', affected='A')
-                indiv.save()
                 data = [params['new_data'][3]]
-                data[0][0] = 'NA20881'
+                data[0][0] = 'NA20870'
                 if data_type == 'tpm':
-                    data[0][3] = 'NA20881'
+                    data[0][3] = 'NA20870'
                 _test_basic_data_loading(data, 1, 1, 'Test Reprocessed Project', 1, 20, 0)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')

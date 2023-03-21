@@ -5,7 +5,7 @@ import mock
 from django.urls.base import reverse
 import responses
 
-from seqr.models import Project
+from seqr.models import Project, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
@@ -697,11 +697,13 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             ' HG00731, HG00732, HG00733, NA19675_1, NA20870, NA20874')
 
         # Test a valid operation
+        first_available_individual_id = Individual.objects.all().values_list('id', flat=True).order_by('-id').first() + 1
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'familiesByGuid', 'familyNotesByGuid', 'individualsByGuid'})
-        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {'I0000020_hg00735', 'I000001_na19675', 'I000002_na19678'})
+        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {
+            f'I0000{first_available_individual_id:03}_hg00735', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000015_21'})
         self.assertEqual(list(response_json['familyNotesByGuid'].keys()), ['FAN000004_21_c_a_new_family'])
 
