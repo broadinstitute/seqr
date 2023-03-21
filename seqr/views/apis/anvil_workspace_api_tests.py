@@ -5,7 +5,7 @@ import mock
 from django.urls.base import reverse
 import responses
 
-from seqr.models import Project, Individual
+from seqr.models import Project
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
