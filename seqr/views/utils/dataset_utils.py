@@ -96,22 +96,28 @@ def load_mapping_file_content(file_content):
 
 
 def _get_individual_sample_lookup(individuals):
-    return {(i.individual_id, None): i for i in individuals}
+    return {i.individual_id: i for i in individuals}
 
 
-def _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping):
+def _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping, is_rna=False):
     sample_id_to_individual_id_mapping = sample_id_to_individual_id_mapping or {}
 
-    def _get_mapped_id(sample_id):
-        return sample_id_to_individual_id_mapping.get(sample_id, sample_id)
-    return _get_mapped_id
+    def _get_mapped_key(sample_key):
+        if is_rna:
+            return sample_id_to_individual_id_mapping.get(sample_key[0], sample_key[0]), sample_key[1]
+        return sample_id_to_individual_id_mapping.get(sample_key, sample_key)
+    return _get_mapped_key
+
+
+def _get_sample_id_from_dict_key(key):
+    return key[0] if isinstance(key, tuple) else key
 
 
 def _find_or_create_missing_sample_records(
         samples,
         projects,
         user,
-        sample_project_tuples,
+        sample_count,
         get_individual_sample_key,
         remaining_sample_keys,
         raise_no_match_error=False,
@@ -131,7 +137,7 @@ def _find_or_create_missing_sample_records(
         # find Individual records with exactly-matching individual_ids
         sample_id_to_individual_record = {}
         for sample_key in remaining_sample_keys:
-            individual_key = (get_individual_sample_key(sample_key[0]), sample_key[1])
+            individual_key = get_individual_sample_key(sample_key)
             if individual_key not in remaining_individuals_dict:
                 continue
             sample_id_to_individual_record[sample_key] = remaining_individuals_dict[individual_key]
@@ -140,25 +146,23 @@ def _find_or_create_missing_sample_records(
         logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
 
         remaining_sample_keys -= set(sample_id_to_individual_record.keys())
-        if raise_no_match_error and len(remaining_sample_keys) == len(sample_project_tuples):
+        if raise_no_match_error and len(remaining_sample_keys) == sample_count:
             raise ValueError(
-                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(
-                    len(sample_project_tuples)
-                ))
-        remaining_sample_ids = {sample_id for sample_id, _ in remaining_sample_keys}
+                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(sample_count))
+        remaining_sample_ids = {_get_sample_id_from_dict_key(sample_key) for sample_key in remaining_sample_keys}
         if raise_unmatched_error_template and remaining_sample_ids:
             raise ValueError(raise_unmatched_error_template.format(sample_ids=(', '.join(sorted(remaining_sample_ids)))))
 
         # create new Sample records for Individual records that matches
         new_samples = [
             Sample(
-                guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE], # nosec
-                sample_id=sample_id,
+                guid='S{}_{}'.format(random.randint(10**9, 10**10), _get_sample_id_from_dict_key(sample_key))[:Sample.MAX_GUID_SIZE],  # nosec
+                sample_id=_get_sample_id_from_dict_key(sample_key),
                 individual=individual,
                 created_date=timezone.now(),
                 is_active=create_active,
                 **kwargs
-            ) for (sample_id, _), individual in sample_id_to_individual_record.items()]
+            ) for sample_key, individual in sample_id_to_individual_record.items()]
         samples += list(Sample.bulk_create(user, new_samples))
         log_model_bulk_update(logger, new_samples, user, 'create')
 
@@ -228,15 +232,13 @@ def match_and_update_search_samples(
         elasticsearch_index=elasticsearch_index,
     )
     loaded_date = timezone.now()
-    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
-    sample_project_tuples = [(sample_id, None) for sample_id in sample_ids]
     samples, matched_individual_ids, _ = _find_or_create_missing_sample_records(
         samples=samples,
         projects=[project],
         user=user,
-        sample_project_tuples=sample_project_tuples,
-        get_individual_sample_key=get_individual_sample_key,
-        remaining_sample_keys=set(sample_project_tuples) - {(sample.sample_id, None) for sample in samples},
+        sample_count=len(sample_ids),
+        get_individual_sample_key=_get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping),
+        remaining_sample_keys=set(sample_ids) - {sample.sample_id for sample in samples},
         elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
@@ -276,15 +278,13 @@ def _match_and_update_rna_samples(
 
     samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples]
 
-    get_individual_sample_key = _get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping)
     samples, _, remaining_sample_ids = _find_or_create_missing_sample_records(
         samples=samples,
         projects=projects,
         user=user,
-        sample_project_tuples=sample_project_tuples,
-        get_individual_sample_key=get_individual_sample_key,
-        remaining_sample_keys=set(sample_project_tuples) - {
-            (s.sample_id, s.individual.family.project.name) for s in samples},
+        sample_count=len(sample_project_tuples),
+        get_individual_sample_key=_get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping, True),
+        remaining_sample_keys=set(sample_project_tuples) - {(s.sample_id, s.individual.family.project.name) for s in samples},
         data_source=data_source,
         sample_type=Sample.SAMPLE_TYPE_RNA,
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
