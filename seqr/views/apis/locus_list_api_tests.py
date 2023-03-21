@@ -80,7 +80,7 @@ class BaseLocusListAPITest(object):
         locus_lists_dict = response_json['locusListsByGuid']
         self.assertListEqual(list(locus_lists_dict.keys()), [PRIVATE_LOCUS_LIST_GUID])
 
-        # Removing the locus list from projects removes user aaccess
+        # Removing the locus list from projects removes user access
         LocusList.objects.get(guid=PRIVATE_LOCUS_LIST_GUID).projects.clear()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
