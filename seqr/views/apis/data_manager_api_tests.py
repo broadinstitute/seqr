@@ -618,6 +618,8 @@ class DataManagerAPITest(AuthenticationTestCase):
             'header': ['sampleID', 'project', 'geneID', 'detail', 'pValue', 'padjust', 'zScore'],
             'optional_headers': ['detail'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.001, -3.1],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
+            'reused_indiv_id_data': ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
@@ -642,6 +644,8 @@ class DataManagerAPITest(AuthenticationTestCase):
             'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064],
+            'reused_indiv_id_data': ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
@@ -837,19 +841,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertListEqual(mock_writes, [row.replace(PLACEHOLDER_GUID, new_sample_guid) for row in params['parsed_file_data']])
 
                 # test loading new data without deleting existing data
-                if data_type == 'tpm':
-                    data = [['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064]]
-                else:
-                    data = [['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8]]
+                data = [params['no_existing_data']]
                 body.pop('mappingFile')
                 _test_basic_data_loading(data, 1, 1, '1kg project nåme with uniçøde', 1, 2, 0)
 
                 # Test loading data when where are duplicated individual ids in different projects.
-                # Add an individual with the individual_is identical to an existing individual
-                data = [params['new_data'][3]]
-                data[0][0] = 'NA20870'
-                if data_type == 'tpm':
-                    data[0][3] = 'NA20870'
+                data = [params['reused_indiv_id_data']]
                 _test_basic_data_loading(data, 1, 1, 'Test Reprocessed Project', 1, 20, 0)
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
