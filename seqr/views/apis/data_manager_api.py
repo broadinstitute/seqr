@@ -2,6 +2,7 @@ import base64
 from collections import defaultdict
 from datetime import datetime
 import gzip
+import itertools
 import json
 import os
 import re
@@ -19,11 +20,12 @@ from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
 from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file
+from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import data_manager_required, get_internal_projects
 
-from seqr.models import Sample, Individual, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
+from seqr.models import Sample, Individual, Project, RnaSeqOutlier, RnaSeqTpm, PhenotypePrioritization
 
 from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD
 
@@ -456,6 +458,27 @@ def load_phenotype_prioritization_data(request):
         'info': info,
         'success': True
     })
+
+
+@data_manager_required
+def write_pedigree(request, project_guid):
+    project = Project.objects.get(guid=project_guid)
+
+    possible_file_paths = [
+        f'gs://seqr-datasets/v02/{project.get_genome_version_display()}/RDG_{sample_type}_Broad_{callset}/base/projects/{project.guid}'
+        for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
+    ]
+    file_path = next((path for path in possible_file_paths if does_file_exist(path)), None)
+    if not file_path:
+        return create_json_response(
+            {'error': f'No gs://seqr-datasets project directory found for {project.guid}'}, status=400,
+        )
+
+    header = []
+    rows = []
+    write_multiple_files_to_gs([(f'{project.guid}_pedigree', header, rows)], file_path, request.user, file_format='tsv')
+
+    return create_json_response({'success': True})
 
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
