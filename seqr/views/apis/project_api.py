@@ -308,6 +308,7 @@ def _add_tag_type_counts(project, project_variant_tags):
     note_counts_by_family = VariantNote.objects.filter(saved_variants__family__project=project)\
         .values('saved_variants__family__guid').annotate(count=Count('*'))
     num_tags = sum(count['count'] for count in note_counts_by_family)
+    # SavedVariant.objects.filter(family__project=project, variantnote__isnull=False).distinct().count()
     note_tag_type = {
         'variantTagTypeGuid': 'notes',
         'name': 'Has Notes',
