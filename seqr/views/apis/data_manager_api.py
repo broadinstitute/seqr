@@ -1,5 +1,5 @@
 import base64
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from datetime import datetime
 import gzip
 import itertools
@@ -10,7 +10,7 @@ import requests
 import urllib3
 
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import Max
+from django.db.models import Max, Value, F
 from django.http.response import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
@@ -474,9 +474,14 @@ def write_pedigree(request, project_guid):
             {'error': f'No gs://seqr-datasets project directory found for {project.guid}'}, status=400,
         )
 
-    header = []
-    rows = []
-    write_multiple_files_to_gs([(f'{project.guid}_pedigree', header, rows)], file_path, request.user, file_format='tsv')
+    annotations = OrderedDict({
+        'Project_GUID': Value(project.guid), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
+        'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
+    })
+    data = Individual.objects.filter(family__project=project).values(**dict(annotations))
+    write_multiple_files_to_gs(
+        [(f'{project.guid}_pedigree', annotations.keys(), data)],
+        file_path, request.user, file_format='tsv')
 
     return create_json_response({'success': True})
 
