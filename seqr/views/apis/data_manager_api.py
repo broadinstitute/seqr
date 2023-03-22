@@ -478,7 +478,7 @@ def write_pedigree(request, project_guid):
         'Project_GUID': Value(project.guid), 'Family_ID': F('family__family_id'), 'Individual_ID': F('individual_id'),
         'Paternal_ID': F('father__individual_id'), 'Maternal_ID': F('mother__individual_id'), 'Sex': F('sex'),
     })
-    data = Individual.objects.filter(family__project=project).values(**dict(annotations))
+    data = Individual.objects.filter(family__project=project).order_by('family_id', 'individual_id').values(**dict(annotations))
     write_multiple_files_to_gs(
         [(f'{project.guid}_pedigree', annotations.keys(), data)],
         file_path, request.user, file_format='tsv')
