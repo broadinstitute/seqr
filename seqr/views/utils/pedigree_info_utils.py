@@ -78,15 +78,18 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         if is_merged_pedigree_sample_manifest:
             logger.info("Parsing merged pedigree-sample-manifest file", user)
             rows, sample_manifest_rows, kit_id, errors = _parse_merged_pedigree_sample_manifest_format(rows, project)
+            column_map = {k: k for k in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.values()}  # TODO
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
+            column_map = DSMConstants.COLUMN_MAP
         else:
             logger.info("Parsing regular pedigree file", user)
+            column_map = _parse_header_columns(header)
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    json_records = _convert_fam_file_rows_to_json(header, rows, required_columns=required_columns)
+    json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns)
     warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
@@ -116,7 +119,7 @@ def _parse_affected(affected):
     return None
 
 
-def _convert_fam_file_rows_to_json(header, rows, required_columns=None):
+def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
     """Parse the values in rows and convert them to a json representation.
 
     Args:
@@ -143,7 +146,6 @@ def _convert_fam_file_rows_to_json(header, rows, required_columns=None):
     Raises:
         ValueError: if there are unexpected values or row sizes
     """
-    column_map = _parse_header_columns(header)
     required_columns = [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN] + (required_columns or [])
     missing_cols = set(required_columns) - set(column_map.values())
     if missing_cols:
@@ -155,7 +157,7 @@ def _convert_fam_file_rows_to_json(header, rows, required_columns=None):
     for i, row_dict in enumerate(rows):
         json_record = {}
         for key, column in column_map.items():
-            value = (row_dict[key] or '').strip()
+            value = (row_dict.get(key) or '').strip()
             try:
                 value = _format_value(value, column, i)
             except ValueError:
@@ -1020,3 +1022,18 @@ class DSMConstants:
         CHILDREN: {'MALE': 'Son', 'FEMALE': 'Daughter', 'Other': 'Child (unspecified sex)'},
         OTHER_RELATIVES: {'MALE': 'Male', 'FEMALE': 'Female', 'Other': 'unspecified sex'},
     }
+
+    COLUMN_MAP = {k: k for k in [  # TODO
+        JsonConstants.FAMILY_ID_COLUMN,
+        JsonConstants.INDIVIDUAL_ID_COLUMN,
+        JsonConstants.MATERNAL_ID_COLUMN,
+        JsonConstants.PATERNAL_ID_COLUMN,
+        JsonConstants.AFFECTED_COLUMN,
+        JsonConstants.SEX_COLUMN,
+        JsonConstants.FAMILY_NOTES_COLUMN,
+        JsonConstants.MATERNAL_ETHNICITY,
+        JsonConstants.PATERNAL_ETHNICITY,
+        JsonConstants.BIRTH_YEAR,
+        JsonConstants.DEATH_YEAR,
+        JsonConstants.ONSET_AGE,
+        JsonConstants.AFFECTED_RELATIVES,]}

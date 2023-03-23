@@ -25,42 +25,31 @@ class PedigreeInfoUtilsTest(object):
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                 ['', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
-        self.assertEqual(len(ec.exception.errors), 1)
-        self.assertEqual(ec.exception.errors[0],
-                         "Error while converting {} rows to json: Family Id, Individual Id not specified in row #1".format(FILENAME))
-        self.assertListEqual(ec.exception.warnings, [])
+        self.assertEqual(len(ec.exception.errors), 2)
+        self.assertListEqual(ec.exception.errors, ['Missing Family Id in row #1', 'Missing Individual Id in row #1'])
+        self.assertIsNone(ec.exception.warnings)
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
-                 ['fam1', '', 'male', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
-        self.assertEqual(len(ec.exception.errors), 1)
-        self.assertEqual(ec.exception.errors[0],
-                         "Error while converting {} rows to json: Individual Id not specified in row #1".format(FILENAME))
-        self.assertListEqual(ec.exception.warnings, [])
-
-        with self.assertRaises(ErrorsWarningsException) as ec:
-            parse_pedigree_table(
-                [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
+                 ['fam1', '', 'male', 'u', '.', 'ind2'],
                  ['fam1', 'ind1', 'boy', 'u', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertListEqual(
-            ec.exception.errors, ['Error while converting {} rows to json: Invalid value "boy" for sex in row #1'.format(FILENAME)])
-        self.assertListEqual(ec.exception.warnings, [])
+            ec.exception.errors, ['Missing Individual Id in row #1', 'Invalid value "boy" for Sex in row #2'])
+        self.assertIsNone(ec.exception.warnings)
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother'],
                  ['fam1', 'ind1', 'male', 'no', '.', 'ind2']], FILENAME, self.collaborator_user)
         self.assertListEqual(
-            ec.exception.errors, ['Error while converting {} rows to json: Invalid value "no" for affected in row #1'.format(FILENAME)])
+            ec.exception.errors, ['Invalid value "no" for Affected in row #1'])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
                 [['family_id', 'individual_id', 'sex', 'affected', 'father', 'mother', 'proband_relation'],
                  ['fam1', 'ind1', 'male', 'aff.', 'ind3', 'ind2', 'mom']], FILENAME, self.collaborator_user)
-        self.assertListEqual(ec.exception.errors, [
-            'Error while converting {} rows to json: Invalid value "mom" for proband_relationship in row #1'.format(
-                FILENAME)])
+        self.assertListEqual(ec.exception.errors, ['Invalid value "mom" for Proband Relationship in row #1'])
 
         with self.assertRaises(ErrorsWarningsException) as ec:
             parse_pedigree_table(
@@ -322,16 +311,24 @@ class PedigreeInfoUtilsTest(object):
 * __Relatives:__ None"""
 
         self.assertListEqual(records, [
-            {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N'},
-            {'familyId': 'RGP_123', 'individualId': 'RGP_123_2', 'sex': 'M', 'affected': 'N'},
+            {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N',
+             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
+             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
+            {'familyId': 'RGP_123', 'individualId': 'RGP_123_2', 'sex': 'M', 'affected': 'N',
+             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
+             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
             {
                 'familyId': 'RGP_123', 'individualId': 'RGP_123_3', 'sex': 'M', 'affected': 'A',
                 'maternalId': 'RGP_123_1', 'paternalId': 'RGP_123_2', 'familyNotes': note_1,
                 'maternalEthnicity': ['White', 'Asian', 'Not Hispanic'], 'paternalEthnicity': ['Black'],
                 'birthYear': 1986, 'deathYear': 2019, 'onsetAge': 'A', 'affectedRelatives': True,
             },
-            {'familyId': 'RGP_987', 'individualId': 'RGP_987_1', 'sex': 'F', 'affected': 'N'},
-            {'familyId': 'RGP_987', 'individualId': 'RGP_987_2', 'sex': 'M', 'affected': 'N'},
+            {'familyId': 'RGP_987', 'individualId': 'RGP_987_1', 'sex': 'F', 'affected': 'N',
+             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
+             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
+            {'familyId': 'RGP_987', 'individualId': 'RGP_987_2', 'sex': 'M', 'affected': 'N',
+             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
+             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
             {
                 'familyId': 'RGP_987', 'individualId': 'RGP_987_3', 'sex': 'U', 'affected': 'A',
                 'maternalId': 'RGP_987_1', 'paternalId': 'RGP_987_2', 'familyNotes': note_2,
