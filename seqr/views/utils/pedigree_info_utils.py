@@ -83,11 +83,10 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
             rows = _parse_rgp_dsm_export_format(rows)
         else:
             logger.info("Parsing regular pedigree file", user)
-
-        json_records = _convert_fam_file_rows_to_json(rows, required_columns=required_columns)
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
+    json_records = _convert_fam_file_rows_to_json(header, rows, required_columns=required_columns)
     warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
@@ -117,7 +116,7 @@ def _parse_affected(affected):
     return None
 
 
-def _convert_fam_file_rows_to_json(rows, required_columns=None):
+def _convert_fam_file_rows_to_json(header, rows, required_columns=None):
     """Parse the values in rows and convert them to a json representation.
 
     Args:
@@ -144,31 +143,41 @@ def _convert_fam_file_rows_to_json(rows, required_columns=None):
     Raises:
         ValueError: if there are unexpected values or row sizes
     """
+    column_map = _parse_header_columns(header)
+    required_columns = [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN] + (required_columns or [])
+    missing_cols = set(required_columns) - set(column_map.values())
+    if missing_cols:
+        raise ErrorsWarningsException(
+            [f"Missing required columns {', '.join([_to_title_case(_to_snake_case(col)) for col in missing_cols])}"])
+
     json_results = []
+    errors = []
     for i, row_dict in enumerate(rows):
+        json_record = {}
+        for key, column in column_map.items():
+            value = (row_dict[key] or '').strip()
+            try:
+                value = _format_value(value, column, i)
+            except ValueError:
+                errors.append(f'Invalid value "{value}" for {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
+                continue
 
-        json_record = _parse_row_dict(row_dict, i)
-
-        # validate
-        columns = [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN]
-        if required_columns:
-            columns += required_columns
-        missing_cols = [col for col in columns if not json_record.get(col)]
-        if missing_cols:
-            raise ValueError(f"{', '.join([_to_title_case(_to_snake_case(col)) for col in missing_cols])} not specified in row #{i + 1}")
+            if column in required_columns and not value:
+                errors.append(f'Missing {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
+            json_record[column] = value
 
         json_results.append(json_record)
 
+    if errors:
+        raise ErrorsWarningsException(errors)
     return json_results
 
 
-def _parse_row_dict(row_dict, i):
-    json_record = {}
-    for key, value in row_dict.items():
+def _parse_header_columns(header):
+    column_map = {}
+    for key in header:
         full_key = key
         key = key.lower()
-        value = (value or '').strip()
-
         if full_key in JsonConstants.JSON_COLUMNS:
             column = full_key
         elif key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
@@ -182,17 +191,21 @@ def _parse_row_dict(row_dict, i):
             ), None)
 
         if column:
-            format_func = JsonConstants.FORMAT_COLUMNS.get(column)
-            if format_func:
-                if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
-                    parsed_value = format_func(value)
-                    if parsed_value is None and column not in JsonConstants.JSON_COLUMNS:
-                        raise ValueError(f'Invalid value "{value}" for {_to_snake_case(column)} in row #{i + 1}')
-                    value = parsed_value
-            elif value == '':
-                value = None
-            json_record[column] = value
-    return json_record
+            column_map[full_key] = column
+    return column_map
+
+
+def _format_value(value, column, i):
+    format_func = JsonConstants.FORMAT_COLUMNS.get(column)
+    if format_func:
+        if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
+            parsed_value = format_func(value)
+            if parsed_value is None and column not in JsonConstants.JSON_COLUMNS:
+                raise ValueError()
+            value = parsed_value
+    elif value == '':
+        value = None
+    return value
 
 
 def validate_fam_file_records(records, fail_on_warnings=False, errors=None):
