@@ -162,14 +162,15 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
         json_record = {}
         for key, column in column_map.items():
             value = (row_dict.get(key) or '').strip()
+            if column in required_columns and not value:
+                errors.append(f'Missing {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
+
             try:
                 value = _format_value(value, column)
             except ValueError:
                 errors.append(f'Invalid value "{value}" for {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
                 continue
 
-            if column in required_columns and not value:
-                errors.append(f'Missing {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
             json_record[column] = value
 
         json_results.append(json_record)
