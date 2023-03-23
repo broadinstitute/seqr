@@ -115,7 +115,7 @@ def _find_or_create_missing_sample_records(
         get_individual_sample_key,
         remaining_sample_keys,
         raise_no_match_error=False,
-        raise_unmatched_error_template=None,
+        get_unmatched_error=None,
         create_active=False,
         get_individual_sample_lookup=_get_individual_sample_lookup,
         **kwargs
@@ -142,22 +142,19 @@ def _find_or_create_missing_sample_records(
         if raise_no_match_error and len(remaining_sample_keys) == sample_count:
             raise ValueError(
                 'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(sample_count))
-        if raise_unmatched_error_template and remaining_sample_keys:
-            remaining_sample_ids = {sample_id for sample_id, _ in remaining_sample_keys}\
-                if isinstance(list(remaining_sample_keys)[0], tuple) else remaining_sample_keys
-            raise ValueError(raise_unmatched_error_template.format(sample_ids=(', '.join(sorted(remaining_sample_ids)))))
+        if get_unmatched_error and remaining_sample_keys:
+            raise ValueError(get_unmatched_error(remaining_sample_keys))
 
         # create new Sample records for Individual records that matches
         new_samples = [
             Sample(
-                guid='S{}_{}'.format(random.randint(10**9, 10**10), sample_id)[:Sample.MAX_GUID_SIZE], # nosec
-                sample_id=sample_id,
+                guid='S{}_{}'.format(random.randint(10**9, 10**10), individual.individual_id)[:Sample.MAX_GUID_SIZE], # nosec
+                sample_id=sample_key[0] if isinstance(sample_key, tuple) else sample_key,
                 individual=individual,
                 created_date=timezone.now(),
                 is_active=create_active,
                 **kwargs
-            ) for sample_id, individual in [(sample_key[0] if isinstance(sample_key, tuple) else sample_key, individual)
-                                            for sample_key, individual in sample_id_to_individual_record.items()]]
+            ) for sample_key, individual in sample_id_to_individual_record.items()]
         samples += list(Sample.bulk_create(user, new_samples))
         log_model_bulk_update(logger, new_samples, user, 'create')
 
@@ -219,6 +216,9 @@ def match_and_update_search_samples(
         project, user, sample_ids, elasticsearch_index, sample_type, dataset_type,
         sample_id_to_individual_id_mapping, raise_unmatched_error_template, expected_families=None,
 ):
+    def _get_unmatched_error(remaining_sample_ids):
+        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted(remaining_sample_ids))))
+
     samples = Sample.objects.select_related('individual').filter(
         individual__family__project=project,
         sample_type=sample_type,
@@ -239,7 +239,7 @@ def match_and_update_search_samples(
         dataset_type=dataset_type,
         loaded_date=loaded_date,
         raise_no_match_error=not raise_unmatched_error_template,
-        raise_unmatched_error_template=raise_unmatched_error_template,
+        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
     )
 
     prefetch_related_objects(samples, 'individual__family')
@@ -264,6 +264,9 @@ def match_and_update_search_samples(
 def _match_and_update_rna_samples(
     projects, user, sample_project_tuples, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
 ):
+    def _get_unmatched_error(sample_keys):
+        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _ in sample_keys]))))
+
     samples = Sample.objects.select_related('individual__family__project').filter(
         individual__family__project__in=projects,
         sample_type=Sample.SAMPLE_TYPE_RNA,
@@ -285,7 +288,7 @@ def _match_and_update_rna_samples(
         dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
         loaded_date=timezone.now(),
         raise_no_match_error=False,
-        raise_unmatched_error_template=raise_unmatched_error_template,
+        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
         create_active=True,
         get_individual_sample_lookup=lambda inds: {(i.individual_id, i.family.project.name):
                                                        i for i in inds.select_related('family__project')},
