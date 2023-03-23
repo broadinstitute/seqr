@@ -995,7 +995,7 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()['error'], f'No gs://seqr-datasets project directory found for {PROJECT_GUID}')
+        self.assertEqual(response.json()['error'], f'No gs://seqr-datasets/v02 project directory found for {PROJECT_GUID}')
         mock_subprocess.assert_has_calls(
             self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
             self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg') +

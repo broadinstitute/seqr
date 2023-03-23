@@ -19,7 +19,8 @@ from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 
-from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file
+from seqr.views.utils.dataset_utils import load_rna_seq_outlier, load_rna_seq_tpm, load_phenotype_prioritization_data_file, \
+    SEQR_DATSETS_GS_PATH
 from seqr.views.utils.export_utils import write_multiple_files_to_gs
 from seqr.views.utils.file_utils import parse_file, get_temp_upload_directory, load_uploaded_file
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
@@ -465,13 +466,13 @@ def write_pedigree(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
     possible_file_paths = [
-        f'gs://seqr-datasets/v02/{project.get_genome_version_display()}/RDG_{sample_type}_Broad_{callset}/base/projects/{project.guid}'
+        f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/RDG_{sample_type}_Broad_{callset}/base/projects/{project.guid}'
         for callset, sample_type in itertools.product(['Internal', 'External'], ['WGS', 'WES'])
     ]
     file_path = next((path for path in possible_file_paths if does_file_exist(path)), None)
     if not file_path:
         return create_json_response(
-            {'error': f'No gs://seqr-datasets project directory found for {project.guid}'}, status=400,
+            {'error': f'No {SEQR_DATSETS_GS_PATH} project directory found for {project.guid}'}, status=400,
         )
 
     annotations = OrderedDict({
