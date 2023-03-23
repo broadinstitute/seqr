@@ -22,15 +22,15 @@ class LoadRnaSeqTest(TestCase):
 
         with self.assertRaises(ValueError) as e:
             call_command('load_rna_seq_outlier', RNA_FILE_ID)
-        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) geneID, pValue, padjust, sampleID, zScore')
+        self.assertEqual(str(e.exception), 'Invalid file: missing column(s) geneID, pValue, padjust, project, sampleID, zScore')
 
         mock_gzip_file.__iter__.return_value = [
-            'sampleID\tgeneID\tdetail\tpValue\tpadjust\tzScore\n',
-            'NA19675_D2\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1\n',
-            'NA19675_D2\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\n',
-            'NA19675_D2\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
-            'NA19675_D3\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
-            'NA19675_D4\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
+            'sampleID\tproject\tgeneID\tdetail\tpValue\tpadjust\tzScore\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1\n',
+            'NA19675_D2\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
+            'NA19675_D3\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
+            'NA19675_D4\t1kg project nåme with uniçøde\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8\n',
         ]
         mock_open.return_value.__enter__.return_value.__iter__.return_value = ['NA19675_D4\tNA19678']
 

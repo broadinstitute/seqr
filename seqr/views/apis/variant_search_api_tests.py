@@ -89,7 +89,10 @@ EXPECTED_SEARCH_RESPONSE = {
         'VT1708633_2103343353_r0390_100': EXPECTED_TAG, 'VT1726945_2103343353_r0390_100': EXPECTED_TAG,
         'VT1726970_2103343353_r0004_tes': EXPECTED_TAG, 'VT1726961_2103343353_r0390_100': EXPECTED_TAG,
     },
-    'variantNotesByGuid': {'VN0714935_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS}},
+    'variantNotesByGuid': {
+        'VN0714935_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS},
+        'VN0714937_2103343353_r0390_100': {k: mock.ANY for k in VARIANT_NOTE_FIELDS},
+    },
     'variantFunctionalDataByGuid': {
         'VFD0000023_1248367227_r0390_10': expected_functional_tag, 'VFD0000024_1248367227_r0390_10': expected_functional_tag,
         'VFD0000025_1248367227_r0390_10': expected_functional_tag, 'VFD0000026_1248367227_r0390_10': expected_functional_tag,
@@ -351,7 +354,7 @@ class VariantSearchAPITest(object):
             ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
              '1', '', '', '', '', '', 'NA19679', '0', '99.0', '0.0', '', '', '', ''],
             ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xf8te (None)', '', '', '', '', '', '',
+             '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '', '', '',
              '', '', '', '', '']]
         self.assertEqual(response.content, ('\n'.join(['\t'.join(line) for line in expected_content])+'\n').encode('utf-8'))
 
@@ -373,7 +376,7 @@ class VariantSearchAPITest(object):
                 ['3', '835', 'AAAG', 'A', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
                  '1', '', '', 'NA19679', '0', '99.0', '0.0',],
                 ['12', '48367227', 'TC', 'T', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
-                 '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'test n\xf8te (None)', '', '', '', '',]]
+                 '', '2', 'Known gene for phenotype (None)|Excluded (None)', 'a later note (None)|test n\xf8te (None)', '', '', '', '',]]
             self.assertEqual(response.content,
                              ('\n'.join(['\t'.join(line) for line in expected_content]) + '\n').encode('utf-8'))
 
@@ -662,7 +665,7 @@ class VariantSearchAPITest(object):
         expected_search_response['savedVariantsByGuid'].pop('SV0000002_1248367227_r0390_100')
         expected_search_response['variantTagsByGuid'].pop('VT1726945_2103343353_r0390_100')
         expected_search_response['variantTagsByGuid'].pop('VT1726970_2103343353_r0004_tes')
-        expected_search_response['variantNotesByGuid'].pop('VN0714935_2103343353_r0390_100')
+        expected_search_response['variantNotesByGuid'] = {}
         expected_search_response['genesById'].pop('ENSG00000233653')
         expected_search_response['searchedVariants'] = [single_family_variant]
         self.assertDictEqual(response_json, expected_search_response)
