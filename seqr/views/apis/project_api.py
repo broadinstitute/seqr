@@ -11,7 +11,7 @@ from django.db.models.functions import JSONObject
 from django.utils import timezone
 
 from matchmaker.models import MatchmakerSubmission
-from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, VariantNote, \
+from seqr.models import Project, Family, Individual, Sample, IgvSample, VariantTag, SavedVariant, \
     FamilyNote, CAN_EDIT
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
@@ -305,9 +305,6 @@ def project_mme_submisssions(request, project_guid):
 
 def _add_tag_type_counts(project, project_variant_tags):
     family_tag_type_counts = defaultdict(dict)
-    note_counts_by_family = VariantNote.objects.filter(saved_variants__family__project=project)\
-        .values('saved_variants__family__guid').annotate(count=Count('*'))
-    num_tags = sum(count['count'] for count in note_counts_by_family)
     note_tag_type = {
         'variantTagTypeGuid': 'notes',
         'name': 'Has Notes',
@@ -315,7 +312,7 @@ def _add_tag_type_counts(project, project_variant_tags):
         'description': '',
         'color': 'grey',
         'order': 100,
-        'numTags': num_tags,
+        'numTags': SavedVariant.objects.filter(family__project=project, variantnote__isnull=False).distinct().count(),
     }
 
     project_variants = VariantTag.objects.filter(saved_variants__family__project=project)
