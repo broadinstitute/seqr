@@ -35,10 +35,13 @@ const NON_ID_REQUIRED_FIELDS = [INDIVIDUAL_FIELD_SEX, INDIVIDUAL_FIELD_AFFECTED]
 const FIELD_DESCRIPTIONS = {
   [FAMILY_FIELD_ID]: 'Family ID',
   [INDIVIDUAL_FIELD_ID]: 'Individual ID (needs to match the VCF ids)',
+  [INDIVIDUAL_FIELD_SEX]: 'Male, Female, or Unknown',
+  [INDIVIDUAL_FIELD_AFFECTED]: 'Affected, Unaffected, or Unknown',
 }
-const REQUIRED_FIELDS = INDIVIDUAL_ID_EXPORT_DATA.map(config => (
-  { ...config, description: FIELD_DESCRIPTIONS[config.field] }))
-REQUIRED_FIELDS.push(...INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => NON_ID_REQUIRED_FIELDS.includes(field)))
+const REQUIRED_FIELDS = [
+  ...INDIVIDUAL_ID_EXPORT_DATA,
+  ...INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => NON_ID_REQUIRED_FIELDS.includes(field)),
+].map(config => ({ ...config, description: FIELD_DESCRIPTIONS[config.field] }))
 
 const OPTIONAL_FIELDS = INDIVIDUAL_CORE_EXPORT_DATA.filter(({ field }) => !NON_ID_REQUIRED_FIELDS.includes(field))
 
