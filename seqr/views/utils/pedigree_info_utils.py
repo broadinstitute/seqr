@@ -77,8 +77,8 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
     try:
         if is_merged_pedigree_sample_manifest:
             logger.info("Parsing merged pedigree-sample-manifest file", user)
-            rows, sample_manifest_rows, kit_id, errors = _parse_merged_pedigree_sample_manifest_format(rows, project)
-            column_map = {k: k for k in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.values()}  # TODO
+            sample_manifest_rows, kit_id, errors = _parse_merged_pedigree_sample_manifest_format(rows, project)
+            column_map = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
@@ -342,17 +342,12 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
     kit_id = rows[0][c.KIT_ID_COLUMN]
 
     is_no_validate_project = project.projectcategory_set.filter(name__in=NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES).exists()
-    pedigree_rows = []
     sample_manifest_rows = []
     errors = []
     consent_codes = set()
     for row in rows:
         sample_manifest_rows.append({
             column_name: row[column_name] for column_name in c.SAMPLE_MANIFEST_COLUMN_NAMES
-        })
-
-        pedigree_rows.append({
-            key: row[column_name] for column_name, key in c.MERGED_PEDIGREE_COLUMN_MAP.items()
         })
 
         if not is_no_validate_project:
@@ -374,7 +369,7 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
             errors.append(
                 f'Consent code in manifest "{consent_code}" does not match project consent code "{project_consent_code}"')
 
-    return pedigree_rows, sample_manifest_rows, kit_id, errors
+    return sample_manifest_rows, kit_id, errors
 
 
 def _set_proband_relationship(json_records):
