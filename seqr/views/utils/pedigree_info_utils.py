@@ -154,7 +154,7 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
     missing_cols = set(required_columns) - set(column_map.values())
     if missing_cols:
         raise ErrorsWarningsException(
-            [f"Missing required columns {', '.join([_to_title_case(_to_snake_case(col)) for col in missing_cols])}"])
+            [f"Missing required columns: {', '.join([_to_title_case(_to_snake_case(col)) for col in sorted(missing_cols)])}"])
 
     json_results = []
     errors = []

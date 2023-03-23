@@ -723,8 +723,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
-        self.assertListEqual(response_json['errors'], [
-            'Error while converting uploaded pedigree file rows to json: Sex, Affected not specified in row #1'])
+        self.assertListEqual(response_json['errors'], ['Missing required columns: Affected, Sex'])
 
         # test sample data error
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA
