@@ -311,24 +311,16 @@ class PedigreeInfoUtilsTest(object):
 * __Relatives:__ None"""
 
         self.assertListEqual(records, [
-            {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N',
-             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
-             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
-            {'familyId': 'RGP_123', 'individualId': 'RGP_123_2', 'sex': 'M', 'affected': 'N',
-             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
-             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
+            {'familyId': 'RGP_123', 'individualId': 'RGP_123_1', 'sex': 'F', 'affected': 'N'},
+            {'familyId': 'RGP_123', 'individualId': 'RGP_123_2', 'sex': 'M', 'affected': 'N'},
             {
                 'familyId': 'RGP_123', 'individualId': 'RGP_123_3', 'sex': 'M', 'affected': 'A',
                 'maternalId': 'RGP_123_1', 'paternalId': 'RGP_123_2', 'familyNotes': note_1,
                 'maternalEthnicity': ['White', 'Asian', 'Not Hispanic'], 'paternalEthnicity': ['Black'],
                 'birthYear': 1986, 'deathYear': 2019, 'onsetAge': 'A', 'affectedRelatives': True,
             },
-            {'familyId': 'RGP_987', 'individualId': 'RGP_987_1', 'sex': 'F', 'affected': 'N',
-             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
-             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
-            {'familyId': 'RGP_987', 'individualId': 'RGP_987_2', 'sex': 'M', 'affected': 'N',
-             'maternalId': '', 'paternalId': '', 'familyNotes': None, 'maternalEthnicity': '', 'paternalEthnicity': '',
-             'birthYear': '', 'deathYear': '', 'onsetAge': '', 'affectedRelatives': '',},
+            {'familyId': 'RGP_987', 'individualId': 'RGP_987_1', 'sex': 'F', 'affected': 'N'},
+            {'familyId': 'RGP_987', 'individualId': 'RGP_987_2', 'sex': 'M', 'affected': 'N'},
             {
                 'familyId': 'RGP_987', 'individualId': 'RGP_987_3', 'sex': 'U', 'affected': 'A',
                 'maternalId': 'RGP_987_1', 'paternalId': 'RGP_987_2', 'familyNotes': note_2,

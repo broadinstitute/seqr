@@ -82,14 +82,18 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
         elif 'participant_guid' in header:
             logger.info("Parsing RGP DSM export file", user)
             rows = _parse_rgp_dsm_export_format(rows)
-            column_map = DSMConstants.COLUMN_MAP
+            column_map = None
         else:
             logger.info("Parsing regular pedigree file", user)
             column_map = _parse_header_columns(header)
     except Exception as e:
         raise ErrorsWarningsException(['Error while converting {} rows to json: {}'.format(filename, e)], [])
 
-    json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns)
+    if column_map:
+        json_records = _convert_fam_file_rows_to_json(column_map, rows, required_columns=required_columns)
+    else:
+        json_records = rows
+
     warnings = validate_fam_file_records(json_records, fail_on_warnings=fail_on_warnings, errors=errors)
 
     if is_merged_pedigree_sample_manifest:
@@ -486,21 +490,21 @@ def _parse_rgp_dsm_export_format(rows):
             JsonConstants.INDIVIDUAL_ID_COLUMN: '{}_3'.format(family_id),
             JsonConstants.MATERNAL_ID_COLUMN: maternal_id,
             JsonConstants.PATERNAL_ID_COLUMN: paternal_id,
-            JsonConstants.AFFECTED_COLUMN: 'A',
+            JsonConstants.AFFECTED_COLUMN: Individual.AFFECTED_STATUS_AFFECTED,
         }
         proband_row.update(_get_rgp_dsm_proband_fields(row))
 
         mother_row = {
             JsonConstants.FAMILY_ID_COLUMN: family_id,
             JsonConstants.INDIVIDUAL_ID_COLUMN: maternal_id,
-            JsonConstants.SEX_COLUMN: 'F',
-            JsonConstants.AFFECTED_COLUMN: 'U',
+            JsonConstants.SEX_COLUMN: Individual.SEX_FEMALE,
+            JsonConstants.AFFECTED_COLUMN: Individual.AFFECTED_STATUS_UNAFFECTED,
         }
         father_row = {
             JsonConstants.FAMILY_ID_COLUMN: family_id,
             JsonConstants.INDIVIDUAL_ID_COLUMN: paternal_id,
-            JsonConstants.SEX_COLUMN: 'M',
-            JsonConstants.AFFECTED_COLUMN: 'U',
+            JsonConstants.SEX_COLUMN: Individual.SEX_MALE,
+            JsonConstants.AFFECTED_COLUMN: Individual.AFFECTED_STATUS_UNAFFECTED,
         }
         pedigree_rows += [mother_row, father_row, proband_row]
 
@@ -644,8 +648,7 @@ def _get_rgp_dsm_family_notes(row):
 * __Father:__ {father}
 * __Siblings:__ {siblings}
 * __Children:__ {children}
-* __Relatives:__ {relatives}
-    """.format(
+* __Relatives:__ {relatives}""".format(
         specified_relationship=row[DC.RELATIONSHIP_SPECIFY_COLUMN] or 'Unspecified other relationship'
             if row[DC.RELATIONSHIP_COLUMN] == DC.OTHER else '',
         relationship=DC.RELATIONSHIP_MAP[row[DC.RELATIONSHIP_COLUMN]][row[DC.SEX_COLUMN] or DC.PREFER_NOT_ANSWER],
@@ -718,14 +721,14 @@ def _get_rgp_dsm_proband_fields(row):
         for relative in [DC.SIBLINGS, DC.CHILDREN])
 
     return {
-        JsonConstants.SEX_COLUMN: row[DC.SEX_COLUMN],
+        JsonConstants.SEX_COLUMN: _parse_sex(row[DC.SEX_COLUMN]),
         JsonConstants.FAMILY_NOTES_COLUMN: _get_rgp_dsm_family_notes(row),
-        JsonConstants.MATERNAL_ETHNICITY: json.dumps(_get_rgp_dsm_parent_ethnicity(row, DC.MOTHER)),
-        JsonConstants.PATERNAL_ETHNICITY: json.dumps(_get_rgp_dsm_parent_ethnicity(row, DC.FATHER)),
-        JsonConstants.BIRTH_YEAR: json.dumps(birth_year),
-        JsonConstants.DEATH_YEAR: json.dumps(death_year),
-        JsonConstants.ONSET_AGE: json.dumps(onset_age),
-        JsonConstants.AFFECTED_RELATIVES: json.dumps(affected_relatives),
+        JsonConstants.MATERNAL_ETHNICITY: _get_rgp_dsm_parent_ethnicity(row, DC.MOTHER),
+        JsonConstants.PATERNAL_ETHNICITY: _get_rgp_dsm_parent_ethnicity(row, DC.FATHER),
+        JsonConstants.BIRTH_YEAR: birth_year,
+        JsonConstants.DEATH_YEAR: death_year,
+        JsonConstants.ONSET_AGE: onset_age,
+        JsonConstants.AFFECTED_RELATIVES: affected_relatives,
     }
 
 
@@ -1017,18 +1020,3 @@ class DSMConstants:
         CHILDREN: {'MALE': 'Son', 'FEMALE': 'Daughter', 'Other': 'Child (unspecified sex)'},
         OTHER_RELATIVES: {'MALE': 'Male', 'FEMALE': 'Female', 'Other': 'unspecified sex'},
     }
-
-    COLUMN_MAP = {k: k for k in [  # TODO
-        JsonConstants.FAMILY_ID_COLUMN,
-        JsonConstants.INDIVIDUAL_ID_COLUMN,
-        JsonConstants.MATERNAL_ID_COLUMN,
-        JsonConstants.PATERNAL_ID_COLUMN,
-        JsonConstants.AFFECTED_COLUMN,
-        JsonConstants.SEX_COLUMN,
-        JsonConstants.FAMILY_NOTES_COLUMN,
-        JsonConstants.MATERNAL_ETHNICITY,
-        JsonConstants.PATERNAL_ETHNICITY,
-        JsonConstants.BIRTH_YEAR,
-        JsonConstants.DEATH_YEAR,
-        JsonConstants.ONSET_AGE,
-        JsonConstants.AFFECTED_RELATIVES,]}
