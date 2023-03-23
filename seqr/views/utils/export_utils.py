@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from contextlib import contextmanager
 import json
 import openpyxl as xl
 from tempfile import NamedTemporaryFile, TemporaryDirectory
@@ -7,6 +6,7 @@ import zipfile
 
 from django.http.response import HttpResponse
 
+from seqr.utils.file_utils import mv_file_to_gs
 from seqr.views.utils.json_utils import _to_title_case
 
 DELIMITERS = {
@@ -97,10 +97,9 @@ def export_multiple_files(files, zip_filename, **kwargs):
         return response
 
 
-@contextmanager
-def write_multiple_temp_files(files, **kwargs):
+def write_multiple_files_to_gs(files, gs_path, user, **kwargs):
     with TemporaryDirectory() as temp_dir_name:
         for filename, content in _format_files_content(files, **kwargs):
             with open(f'{temp_dir_name}/{filename}', 'w') as f:
                 f.write(content)
-        yield temp_dir_name
+        mv_file_to_gs(f'{temp_dir_name}/*', gs_path, user)

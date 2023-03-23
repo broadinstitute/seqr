@@ -6,7 +6,7 @@ from requests import HTTPError
 import responses
 
 from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pipeline_output, delete_index, \
-    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data
+    update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
 from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample, Project, PhenotypePrioritization
@@ -972,3 +972,62 @@ class DataManagerAPITest(AuthenticationTestCase):
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
+
+    @staticmethod
+    def _ls_subprocess_calls(file, is_error=True):
+        calls = [
+            mock.call(f'gsutil ls {file}',stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ]
+        if is_error:
+            calls.append(mock.call().stdout.__iter__())
+        return calls
+
+    @mock.patch('seqr.views.utils.export_utils.open')
+    @mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
+    @mock.patch('seqr.utils.file_utils.subprocess.Popen')
+    def test_write_pedigree(self, mock_subprocess, mock_temp_dir, mock_open):
+        mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
+        mock_subprocess.return_value.wait.return_value = 1
+
+        url = reverse(write_pedigree, args=[PROJECT_GUID])
+        self.check_data_manager_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], f'No gs://seqr-datasets/v02 project directory found for {PROJECT_GUID}')
+        mock_subprocess.assert_has_calls(
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_External/base/projects/R0001_1kg') +
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_External/base/projects/R0001_1kg')
+        )
+
+        # Test success
+        mock_subprocess.reset_mock()
+        mock_subprocess.return_value.wait.side_effect = [1, 0, 0]
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        mock_open.assert_called_with(f'/mock/tmp/{PROJECT_GUID}_pedigree.tsv', 'w')
+        write_call = mock_open.return_value.__enter__.return_value.write.call_args.args[0]
+        file = [row.split('\t') for row in write_call.split('\n')]
+        self.assertEqual(len(file), 15)
+        self.assertListEqual(file[:5], [
+            ['Project_GUID', 'Family_ID', 'Individual_ID', 'Paternal_ID', 'Maternal_ID', 'Sex'],
+            ['R0001_1kg', '1', 'NA19675_1', 'NA19678', 'NA19679', 'M'],
+            ['R0001_1kg', '1', 'NA19678', '', '', 'M'],
+            ['R0001_1kg', '1', 'NA19679', '', '', 'F'],
+            ['R0001_1kg', '2', 'HG00731', 'HG00732', 'HG00733', 'F'],
+         ])
+
+        mock_subprocess.assert_has_calls(
+            self._ls_subprocess_calls('gs://seqr-datasets/v02/GRCh37/RDG_WGS_Broad_Internal/base/projects/R0001_1kg') +
+            self._ls_subprocess_calls(
+                'gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', is_error=False,
+            ) + [
+            mock.call('gsutil mv /mock/tmp/* gs://seqr-datasets/v02/GRCh37/RDG_WES_Broad_Internal/base/projects/R0001_1kg', stdout=-1, stderr=-2, shell=True),
+            mock.call().wait(),
+        ])
+
