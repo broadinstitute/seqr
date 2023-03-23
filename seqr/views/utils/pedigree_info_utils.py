@@ -163,7 +163,7 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
         for key, column in column_map.items():
             value = (row_dict.get(key) or '').strip()
             try:
-                value = _format_value(value, column, i)
+                value = _format_value(value, column)
             except ValueError:
                 errors.append(f'Invalid value "{value}" for {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
                 continue
@@ -201,7 +201,7 @@ def _parse_header_columns(header):
     return column_map
 
 
-def _format_value(value, column, i):
+def _format_value(value, column):
     format_func = JsonConstants.FORMAT_COLUMNS.get(column)
     if format_func:
         if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
