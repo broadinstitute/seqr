@@ -285,7 +285,7 @@ RNA_OUTLIER_SAMPLE_DATA = [
 ]
 RNA_TPM_SAMPLE_DATA = [
     f'{RNA_TPM_SAMPLE_GUID}\t\t{json.dumps(SAMPLE_GENE_TPM_DATA)}\n',
-    f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000233750': {'gene_id': 'ENSG00000233750', 'tpm': '0.064'},'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
+    f"{PLACEHOLDER_GUID}\t\t{json.dumps({'ENSG00000240361': {'gene_id': 'ENSG00000240361', 'tpm': '0.112'}})}\n",
 ]
 RNA_FILENAME_TEMPLATE = 'rna_sample_data__{}__2020-04-15T00:00:00.json.gz'
 
@@ -645,26 +645,24 @@ class DataManagerAPITest(AuthenticationTestCase):
             'message_data_type': 'Expression',
             'header': ['sample_id', 'project', 'gene_id', 'individual_id', 'tissue', 'TPM'],
             'optional_headers': ['individual_id'],
-            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D3', 'muscle', 1.34],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', '', 'muscle', 1.34],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064],
             'reused_indiv_id_data': ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.064],
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
-                ['NA20889', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20889', 'fibroblasts', 0.064],
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
                 ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
+            'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
-            'num_parsed_samples': 5,
-            'initial_model_count': 3,
-            'deleted_count': 2,
-            'extra_warnings': [
-                'Skipped data loading for the following 1 samples due to mismatched tissue type: NA20889 (fibroblasts to muscle)'],
+            'num_parsed_samples': 4,
+            'initial_model_count': 4,
+            'deleted_count': 1,
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750',0.064)],
@@ -672,9 +670,9 @@ class DataManagerAPITest(AuthenticationTestCase):
         },
     }
 
-    def _check_rna_sample_model(self, individual_id, data_source, tissue_type, expected_samples):
+    def _check_rna_sample_model(self, individual_id, data_source, tissue_type):
         rna_samples = Sample.objects.filter(individual_id=individual_id, sample_type='RNA', tissue_type=tissue_type)
-        self.assertEqual(len(rna_samples), expected_samples)
+        self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
         self.assertTrue(sample.is_active)
         self.assertIsNone(sample.elasticsearch_index)
@@ -698,7 +696,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         url = reverse(update_rna_seq)
         self.check_data_manager_login(url)
 
-        for test_round, (data_type, params) in enumerate(self.RNA_DATA_TYPE_PARAMS.items()):
+        for data_type, params in self.RNA_DATA_TYPE_PARAMS.items():
             with self.subTest(data_type):
                 model_cls = params['model_cls']
                 header = params['header']
@@ -766,15 +764,15 @@ class DataManagerAPITest(AuthenticationTestCase):
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'])
                 mock_send_slack.assert_not_called()
 
-                def _test_basic_data_loading(data, parsed_samples, loaded_samples, project_names, projects,
+                def _test_basic_data_loading(data, num_parsed_samples, num_loaded_samples, project_names, num_projects,
                                              individual_id, sample_guid_idx):
                     mock_logger.reset_mock()
                     _set_file_iter_stdout([header] + data)
                     response = self.client.post(url, content_type='application/json', data=json.dumps(body))
                     self.assertEqual(response.status_code, 200)
                     info = [
-                        f'Parsed {parsed_samples} RNA-seq samples',
-                        f'Attempted data loading for {loaded_samples} RNA-seq samples in the following {projects}'
+                        f'Parsed {num_parsed_samples} RNA-seq samples',
+                        f'Attempted data loading for {num_loaded_samples} RNA-seq samples in the following {num_projects}'
                         f' projects: {project_names}'
                     ]
                     file_name = RNA_FILENAME_TEMPLATE.format(data_type)
@@ -787,13 +785,12 @@ class DataManagerAPITest(AuthenticationTestCase):
                     )
                     self.assertTrue(new_sample_guid in response_json['sampleGuids'])
                     info_log_calls = [mock.call(info_log, self.data_manager_user) for info_log in info]
-                    if test_round == 0:
-                        info_log_calls.insert(1, mock.call(
-                            'create 1 Samples', self.data_manager_user, db_update={
-                                'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][sample_guid_idx]],
-                                'updateType': 'bulk_create',
-                            }
-                        ))
+                    info_log_calls.insert(1, mock.call(
+                        'create 1 Samples', self.data_manager_user, db_update={
+                            'dbEntity': 'Sample', 'entityIds': [response_json['sampleGuids'][sample_guid_idx]],
+                            'updateType': 'bulk_create',
+                        }
+                    ))
                     mock_logger.info.assert_has_calls(info_log_calls)
 
                     return response_json, new_sample_guid
@@ -810,11 +807,9 @@ class DataManagerAPITest(AuthenticationTestCase):
                 response_json, new_sample_guid = _test_basic_data_loading(
                     params['new_data'], params["num_parsed_samples"], 2,
                     '1kg project nåme with uniçøde, Test Reprocessed Project', 2, 16, 1)
-                self.assertTrue(RNA_SAMPLE_GUID in response_json['sampleGuids'])
+                self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
                 warnings = [f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
                             f'unmatched samples: {params["skipped_samples"]}']
-                if params.get('extra_warnings'):
-                    warnings = params['extra_warnings'] + warnings
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
                 mock_model_logger.info.assert_called_with(
                     f'delete {model_cls.__name__}s', self.data_manager_user,
@@ -830,20 +825,17 @@ class DataManagerAPITest(AuthenticationTestCase):
                     ), mock.call(
                         'seqr-data-loading',
                         f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/'
-                        f'R0003_test/project_page|Test Reprocessed Project>\n```NA20888```' if test_round == 0 else
-                        f'1 new RNA {params["message_data_type"]} samples are loaded in <https://test-seqr.org/project/'
-                        f'R0003_test/project_page|Test Reprocessed Project>\n```NA20889```'
-                        ,
+                        f'R0003_test/project_page|Test Reprocessed Project>\n```NA20888```',
                     ),
                 ])
 
                 # test database models are correct
                 self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
                 sample_guid = self._check_rna_sample_model(individual_id=1, data_source='muscle_samples.tsv.gz',
-                                                           tissue_type='M' if test_round else None, expected_samples=1)
+                                                           tissue_type=params.get('exist_sample_tissue_type'))
                 new_sample_guid = self._check_rna_sample_model(
-                    individual_id=16+test_round, data_source='new_muscle_samples.tsv.gz',
-                    tissue_type=params.get('created_sample_tissue_type'), expected_samples=1
+                    individual_id=16, data_source='new_muscle_samples.tsv.gz',
+                    tissue_type=params.get('created_sample_tissue_type'),
                 )
                 self.assertListEqual(response_json['sampleGuids'], [sample_guid, new_sample_guid])
 

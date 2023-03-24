@@ -120,6 +120,7 @@ def _find_or_create_missing_sample_records(
         get_unmatched_error=None,
         create_active=False,
         get_individual_sample_lookup=_get_individual_sample_lookup,
+        sample_id_to_tissue_type=None,
         **kwargs
 ):
     samples = list(samples)
@@ -155,6 +156,7 @@ def _find_or_create_missing_sample_records(
                 individual=individual,
                 created_date=timezone.now(),
                 is_active=create_active,
+                tissue_type=sample_id_to_tissue_type.get(sample_key[0], None) if sample_id_to_tissue_type else None,
                 **kwargs
             ) for sample_key, individual in sample_id_to_individual_record.items()]
         samples += list(Sample.bulk_create(user, new_samples))
@@ -236,12 +238,12 @@ def match_and_update_search_samples(
         sample_count=len(sample_ids),
         get_individual_sample_key=_get_mapped_individual_lookup_key(sample_id_to_individual_id_mapping),
         remaining_sample_keys=set(sample_ids) - {sample.sample_id for sample in samples},
+        raise_no_match_error=not raise_unmatched_error_template,
+        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
         elasticsearch_index=elasticsearch_index,
         sample_type=sample_type,
         dataset_type=dataset_type,
         loaded_date=loaded_date,
-        raise_no_match_error=not raise_unmatched_error_template,
-        get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
     )
 
     prefetch_related_objects(samples, 'individual__family')
@@ -265,9 +267,10 @@ def match_and_update_search_samples(
 
 def _match_and_update_rna_samples(
     projects, user, sample_project_tuples, data_source, sample_id_to_individual_id_mapping, raise_unmatched_error_template,
+    sample_id_to_tissue_type,
 ):
     def _get_unmatched_error(sample_keys):
-        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _ in sample_keys]))))
+        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _, in sample_keys]))))
 
     samples = Sample.objects.select_related('individual__family__project').filter(
         individual__family__project__in=projects,
@@ -276,7 +279,8 @@ def _match_and_update_rna_samples(
         sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
     )
 
-    samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples]
+    samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples and
+               sample_id_to_tissue_type[s.sample_id] == s.tissue_type]
 
     samples, _, remaining_sample_keys = _find_or_create_missing_sample_records(
         samples=samples,
@@ -285,15 +289,16 @@ def _match_and_update_rna_samples(
         sample_count=len(sample_project_tuples),
         get_individual_sample_key=lambda key: (sample_id_to_individual_id_mapping.get(key[0], key[0]), key[1]),
         remaining_sample_keys=set(sample_project_tuples) - {(s.sample_id, s.individual.family.project.name) for s in samples},
-        data_source=data_source,
-        sample_type=Sample.SAMPLE_TYPE_RNA,
-        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
-        loaded_date=timezone.now(),
         raise_no_match_error=False,
         get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
         create_active=True,
         get_individual_sample_lookup=lambda inds: {(i.individual_id, i.family.project.name):
                                                        i for i in inds.select_related('family__project')},
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
+        data_source=data_source,
+        sample_type=Sample.SAMPLE_TYPE_RNA,
+        dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+        loaded_date=timezone.now(),
     )
 
     return samples, {sample_id for sample_id, _ in remaining_sample_keys}
@@ -331,20 +336,11 @@ def _parse_tpm_row(row):
         if not tissue:
             raise ValueError(f'Sample {sample_id} has no tissue type')
 
-        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL], PROJECT_COL: row[PROJECT_COL]}
+        parsed = {GENE_ID_COL: row[GENE_ID_COL], 'tpm': row[TPM_COL], PROJECT_COL: row[PROJECT_COL], TISSUE_COL: tissue}
         if INDIV_ID_COL in row:
             parsed[INDIV_ID_COL] = row[INDIV_ID_COL]
 
         yield sample_id, parsed
-
-def _check_invalid_tissues(samples, sample_id_to_tissue_type):
-    invalid_tissues = {}
-    for sample in samples:
-        tissue_type = sample_id_to_tissue_type[sample.sample_id]
-        if sample.tissue_type != tissue_type:
-            invalid_tissues[sample] = tissue_type
-
-    return [sample for sample in samples if sample not in invalid_tissues]
 
 def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
     expected_columns = ['sampleID'] + list(RNA_OUTLIER_COLUMNS.keys())
@@ -353,14 +349,11 @@ def load_rna_seq_outlier(file_path, user=None, mapping_file=None, ignore_extra_s
     )
 
 def load_rna_seq_tpm(file_path, user=None, mapping_file=None, ignore_extra_samples=False):
-    sample_id_to_tissue_type = {}
     return _load_rna_seq(
         RnaSeqTpm, file_path, user, mapping_file, ignore_extra_samples, _parse_tpm_row, TPM_HEADER_COLS,
-        sample_id_to_tissue_type=sample_id_to_tissue_type, validate_samples=_check_invalid_tissues,
     )
 
-def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns,
-                  sample_id_to_tissue_type=None, validate_samples=None):
+def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples, parse_row, expected_columns):
     sample_id_to_individual_id_mapping = {}
     if mapping_file:
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
@@ -408,7 +401,8 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample_project_tuples=samples_by_id.keys(),
         data_source=data_source,
         sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}'
+        raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}',
+        sample_id_to_tissue_type=sample_id_to_tissue_type,
     )
 
     warnings = []

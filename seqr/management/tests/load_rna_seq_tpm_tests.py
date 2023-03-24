@@ -61,8 +61,7 @@ class LoadRnaSeqTest(AuthenticationTestCase):
 
         # Test database models
         existing_sample = Sample.objects.get(individual_id=1, sample_type='RNA', tissue_type='M')
-        existing_sample2 = Sample.objects.get(individual_id=17, sample_type='RNA')
-        existing_sample3 = Sample.objects.get(individual_id=1, sample_type='RNA', tissue_type='F')
+        existing_rna_samples = Sample.objects.filter(sample_type='RNA')
         self.assertEqual(existing_sample.guid, EXISTING_SAMPLE_GUID)
         self.assertEqual(existing_sample.sample_id, 'NA19675_D2')
         self.assertTrue(existing_sample.is_active)
@@ -78,8 +77,8 @@ class LoadRnaSeqTest(AuthenticationTestCase):
         self.assertEqual(new_sample.tissue_type, 'WB')
 
         models = RnaSeqTpm.objects.all()
-        self.assertEqual(models.count(), 5)
-        self.assertSetEqual({model.sample for model in models}, {existing_sample, existing_sample2, existing_sample3, new_sample})
+        self.assertEqual(models.count(), 6)
+        self.assertSetEqual({model.sample for model in models}, {*list(existing_rna_samples), new_sample})
         self.assertEqual(models.get(sample=existing_sample, gene_id='ENSG00000240361').tpm, 12.6)
         self.assertEqual(models.get(sample=new_sample, gene_id='ENSG00000233750').tpm, 6.04)
 
