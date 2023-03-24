@@ -5,7 +5,7 @@ import { FormSpy } from 'react-final-form'
 import { Grid, Header } from 'semantic-ui-react'
 
 import { getProjectsByGuid, getProjectDatasetTypes, getCurrentSearchParams } from 'redux/selectors'
-import { Select, ButtonRadioGroup, BaseSemanticInput } from 'shared/components/form/Inputs'
+import { Select, ButtonRadioGroup, BaseSemanticInput, BooleanCheckbox } from 'shared/components/form/Inputs'
 import { configuredField } from 'shared/components/form/FormHelpers'
 import VariantSearchFormContainer from 'shared/components/panel/search/VariantSearchFormContainer'
 import VariantSearchFormPanels, {
@@ -14,6 +14,7 @@ import VariantSearchFormPanels, {
 import { AddProjectButton, ProjectFilter } from 'shared/components/panel/search/ProjectsField'
 import VariantSearchResults from 'shared/components/panel/search/VariantSearchResults'
 import DataLoader from 'shared/components/DataLoader'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 import { InlineHeader } from 'shared/components/StyledComponents'
 import { INHERITANCE_FILTER_OPTIONS, ALL_INHERITANCE_FILTER, GENOME_VERSION_OPTIONS } from 'shared/utils/constants'
 import { loadProjectContext, loadProjectGroupContext, loadSearchHashContext } from '../reducers'
@@ -48,6 +49,13 @@ const INCLUDE_ALL_PROJECTS_FIELD = {
     ...GENOME_VERSION_OPTIONS.map(opt => ({ ...opt, color: 'black' })),
     { value: '', text: 'Custom', color: 'grey' },
   ],
+}
+
+const UNSOLVED_ONLY_FIELD = {
+  name: 'unsolvedFamiliesOnly',
+  component: BooleanCheckbox,
+  label: 'Unsolved Families Only',
+  inline: true,
 }
 
 const getParsedJson = (value) => {
@@ -110,6 +118,8 @@ const CustomSearch = React.memo(({ match, history, loadContext, loading, searchP
           >
             <InlineHeader content="Include All Projects: " />
             {configuredField(INCLUDE_ALL_PROJECTS_FIELD)}
+            <HorizontalSpacer width={20} />
+            {configuredField(UNSOLVED_ONLY_FIELD)}
             <FormSpy subscription={SUBSCRIPTION}>
               {({ values }) => (values[INCLUDE_ALL_PROJECTS] ? null : configuredField(PROJECT_FAMILIES_FIELD))}
             </FormSpy>

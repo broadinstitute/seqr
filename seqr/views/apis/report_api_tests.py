@@ -706,7 +706,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
     STATS_DATA = {
         'projectsCount': {'non_demo': 3, 'demo': 1},
         'familiesCount': {'non_demo': 12, 'demo': 2},
-        'individualsCount': {'non_demo': 15, 'demo': 3},
+        'individualsCount': {'non_demo': 16, 'demo': 3},
         'sampleCountsByType': {
             'WES__VARIANTS': {'demo': 1, 'non_demo': 7},
             'WGS__MITO': {'non_demo': 1},
@@ -719,6 +719,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
 # class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
 #     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants']
+#     ADDITIONAL_SAMPLES = []
 #     STATS_DATA = {
 #         'projectsCount': {'internal': 1, 'external': 1, 'no_anvil': 1, 'demo': 1},
 #         'familiesCount': {'internal': 11, 'external': 1, 'no_anvil': 0, 'demo': 2},

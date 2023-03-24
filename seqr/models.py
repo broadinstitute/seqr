@@ -262,6 +262,11 @@ class ProjectCategory(ModelWithGUID):
 class Family(ModelWithGUID):
     ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS='I'
     ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
+    ANALYSIS_STATUS_SOLVED = 'S'
+    ANALYSIS_STATUS_SOLVED_KGP = 'S_kgfp'
+    ANALYSIS_STATUS_SOLVED_KGDP = 'S_kgdp'
+    ANALYSIS_STATUS_SOLVED_NOVEL = 'S_ng'
+    ANALYSIS_STATUS_SOLVED_EXTERNAL = 'ES'
     ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
         ('S_kgfp', 'Solved - known gene for phenotype'),
@@ -278,6 +283,10 @@ class Family(ModelWithGUID):
         ('Q', 'Waiting for data'),
         ('N', 'No data expected'),
     )
+    SOLVED_ANALYSIS_STATUSES = [
+        ANALYSIS_STATUS_SOLVED, ANALYSIS_STATUS_SOLVED_KGP, ANALYSIS_STATUS_SOLVED_KGDP, ANALYSIS_STATUS_SOLVED_NOVEL,
+        ANALYSIS_STATUS_SOLVED_EXTERNAL,
+    ]
 
     SUCCESS_STORY_TYPE_CHOICES = (
         ('N', 'Novel Discovery'),

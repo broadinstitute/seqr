@@ -162,16 +162,20 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
      """
     return _get_project_and_check_permissions(project_guid, user, check_project_permissions, **kwargs)
 
-def get_project_and_check_pm_permissions(project_guid, user):
-    return _get_project_and_check_permissions(project_guid, user, _check_project_pm_permission)
+def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
+    return _get_project_and_check_permissions(project_guid, user, _check_project_pm_permission,
+                                              override_permission_func=override_permission_func)
 
 def _get_project_and_check_permissions(project_guid, user, _check_permission_func, **kwargs):
     project = Project.objects.get(guid=project_guid)
     _check_permission_func(project, user, **kwargs)
     return project
 
-def _check_project_pm_permission(project, user, **kwargs):
+def _check_project_pm_permission(project, user, override_permission_func=None, **kwargs):
     if user_is_pm(user) or (project.has_case_review and has_project_permissions(project, user, can_edit=True)):
+        return
+
+    if override_permission_func and override_permission_func(project, user):
         return
 
     raise PermissionDenied("{user} does not have sufficient project management permissions for {project}".format(

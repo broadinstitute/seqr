@@ -701,7 +701,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'familiesByGuid', 'familyNotesByGuid', 'individualsByGuid'})
-        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {'I0000019_hg00735', 'I000001_na19675', 'I000002_na19678'})
+        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {'I0000020_hg00735', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000015_21'})
         self.assertEqual(list(response_json['familyNotesByGuid'].keys()), ['FAN000004_21_c_a_new_family'])
 
