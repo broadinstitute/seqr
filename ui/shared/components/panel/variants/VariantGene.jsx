@@ -551,8 +551,8 @@ const getGeneConsequence = (geneId, variant) => {
 }
 
 export const BaseVariantGene = React.memo(({
-  geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, hasRnaTpmData, individualGeneData, geneModalId,
-  noExpand,
+  geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, tpmGenes, individualGeneData, geneModalId,
+  noExpand, geneSearchFamily,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -579,6 +579,8 @@ export const BaseVariantGene = React.memo(({
   if (compact) {
     summaryDetail = showInlineDetails ? (
       <span>
+        {geneSearchFamily &&
+          <GeneSearchLinkWithPopup location={geneId} familyGuid={geneSearchFamily} buttonText="" icon="search" size="tiny" />}
         {geneConsequence}
         &nbsp; &nbsp;
         {geneDetails}
@@ -625,7 +627,7 @@ export const BaseVariantGene = React.memo(({
     <div>
       {geneSummary}
       {!showInlineDetails && geneDetails}
-      {hasRnaTpmData && (
+      {tpmGenes && tpmGenes.includes(gene.geneId) && (
         <Modal
           trigger={<Button basic compact color="blue" size="mini" content="Show Gene Expression" />}
           title={`${gene.geneSymbol} Expression`}
@@ -640,6 +642,11 @@ export const BaseVariantGene = React.memo(({
   )
 })
 
+const RNA_SEQ_PROP_TYPES = {
+  tpmGenes: PropTypes.arrayOf(PropTypes.string),
+  individualGeneData: PropTypes.object,
+}
+
 BaseVariantGene.propTypes = {
   geneId: PropTypes.string.isRequired,
   gene: PropTypes.object.isRequired,
@@ -647,14 +654,14 @@ BaseVariantGene.propTypes = {
   compact: PropTypes.bool,
   showInlineDetails: PropTypes.bool,
   compoundHetToggle: PropTypes.func,
-  hasRnaTpmData: PropTypes.bool,
-  individualGeneData: PropTypes.object,
   geneModalId: PropTypes.string,
   noExpand: PropTypes.bool,
+  geneSearchFamily: PropTypes.string,
+  ...RNA_SEQ_PROP_TYPES,
 }
 
 const getRnaSeqProps = (state, ownProps) => ({
-  hasRnaTpmData: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.hasRnaTpmData,
+  tpmGenes: getFamiliesByGuid(state)[ownProps.variant.familyGuids[0]]?.tpmGenes,
   individualGeneData: getIndividualGeneDataByFamilyGene(state)[ownProps.variant.familyGuids[0]],
 })
 
@@ -671,9 +678,8 @@ class VariantGenes extends React.PureComponent {
     variant: PropTypes.object.isRequired,
     mainGeneId: PropTypes.string,
     genesById: PropTypes.object.isRequired,
-    individualGeneData: PropTypes.object,
-    hasRnaTpmData: PropTypes.bool,
     showMainGene: PropTypes.bool,
+    ...RNA_SEQ_PROP_TYPES,
   }
 
   static defaultProps = {
@@ -687,7 +693,7 @@ class VariantGenes extends React.PureComponent {
   }
 
   render() {
-    const { variant, genesById, mainGeneId, showMainGene, individualGeneData, hasRnaTpmData } = this.props
+    const { variant, genesById, mainGeneId, showMainGene, individualGeneData, tpmGenes } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {})
     const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
@@ -707,7 +713,7 @@ class VariantGenes extends React.PureComponent {
               gene={gene}
               variant={variant}
               individualGeneData={individualGeneData}
-              hasRnaTpmData={hasRnaTpmData}
+              tpmGenes={tpmGenes}
               showInlineDetails={!mainGeneId}
               compact
             />

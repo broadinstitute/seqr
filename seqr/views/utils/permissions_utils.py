@@ -120,16 +120,20 @@ def get_project_and_check_permissions(project_guid, user, **kwargs):
      """
     return _get_project_and_check_permissions(project_guid, user, check_project_permissions, **kwargs)
 
-def get_project_and_check_pm_permissions(project_guid, user):
-    return _get_project_and_check_permissions(project_guid, user, _check_project_pm_permission)
+def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
+    return _get_project_and_check_permissions(project_guid, user, _check_project_pm_permission,
+                                              override_permission_func=override_permission_func)
 
 def _get_project_and_check_permissions(project_guid, user, _check_permission_func, **kwargs):
     project = Project.objects.get(guid=project_guid)
     _check_permission_func(project, user, **kwargs)
     return project
 
-def _check_project_pm_permission(project, user, **kwargs):
+def _check_project_pm_permission(project, user, override_permission_func=None, **kwargs):
     if user_is_pm(user) or (project.has_case_review and has_project_permissions(project, user, can_edit=True)):
+        return
+
+    if override_permission_func and override_permission_func(project, user):
         return
 
     raise PermissionDenied("{user} does not have sufficient project management permissions for {project}".format(
@@ -212,24 +216,34 @@ def check_project_permissions(project, user, **kwargs):
         user=user, project=project))
 
 
+def _is_user_created_object(obj, user):
+    return obj.created_by == user
+
+
 def check_user_created_object_permissions(obj, user):
-    if obj.created_by == user:
+    if _is_user_created_object(obj, user):
         return
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
+def _get_all_can_view_project_guids_set(user):
+    return set(get_project_guids_user_can_view(user, limit_data_manager=False))
+
+
 def check_projects_view_permission(projects, user):
-    can_view = set(get_project_guids_user_can_view(user, limit_data_manager=False))
-    no_access_projects = set(projects.values_list('guid', flat=True)) - can_view
+    no_access_projects = set(projects.values_list('guid', flat=True)) - _get_all_can_view_project_guids_set(user)
     if no_access_projects:
         raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
 
 
-def check_multi_project_permissions(obj, user):
-    try:
-        check_projects_view_permission(obj.projects.all(), user)
-    except PermissionDenied:
-        raise PermissionDenied("{user} does not have view permissions for {object}".format(user=user, object=obj))
+def check_locus_list_permissions(locus_list, user):
+    if locus_list.is_public or _is_user_created_object(locus_list, user):
+        return
+    access_projects = set(locus_list.projects.values_list('guid', flat=True)).intersection(
+        _get_all_can_view_project_guids_set(user)
+    )
+    if not access_projects:
+        raise PermissionDenied(f'{user} does not have view permissions for {locus_list}')
 
 
 def get_project_guids_user_can_view(user, limit_data_manager=True):

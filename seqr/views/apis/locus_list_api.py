@@ -12,7 +12,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_multi_project_permissions, \
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_locus_list_permissions, \
     check_user_created_object_permissions, login_and_policies_required, get_project_guids_user_can_view
 
 logger = SeqrLogger(__name__)
@@ -61,9 +61,7 @@ def _get_user_list_filter(user):
 @login_and_policies_required
 def locus_list_info(request, locus_list_guid):
     locus_list = LocusList.objects.get(guid=locus_list_guid)
-
-    if not locus_list.is_public:
-        check_multi_project_permissions(locus_list, request.user)
+    check_locus_list_permissions(locus_list, request.user)
 
     locus_list_json = get_json_for_locus_list(locus_list, request.user)
 

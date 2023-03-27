@@ -17,6 +17,7 @@ from seqr.models import Individual
 logger = SeqrLogger(__name__)
 
 
+NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES = ['CMG', 'TGG_Non-Report']
 RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_LOOKUP.items()}
 
 
@@ -50,24 +51,7 @@ def parse_pedigree_table(parsed_file, filename, user, project=None, fail_on_warn
                 raise ValueError('Unsupported file format')
             if not project:
                 raise ValueError('Project argument required for parsing sample manifest')
-            # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
-            headers = rows[:2]
-            rows = rows[2:]
-
-            # validate manifest_header_row1
-            expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
-            expected_header_1_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
-
-            expected = expected_header_1_columns
-            actual = headers[0]
-            if expected == actual:
-                expected = expected_header_columns[4:6]
-                actual = headers[1][4:6]
-            unexpected_header_columns = '|'.join(difflib.unified_diff(expected, actual)).split('\n')[3:]
-            if unexpected_header_columns:
-                raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
-
-            header = expected_header_columns
+            header, rows = _parse_merged_pedigree_sample_manifest_rows(rows)
         else:
             if _is_header_row(header_string):
                 header_row = parsed_file[0]
@@ -305,6 +289,27 @@ def _is_header_row(row):
         return False
 
 
+def _parse_merged_pedigree_sample_manifest_rows(rows):
+    # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
+    headers = rows[:2]
+    rows = rows[2:]
+
+    # validate manifest_header_row1
+    expected_header_columns = MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES
+    expected_header_1_columns = expected_header_columns[:4] + ["Alias", "Alias"] + expected_header_columns[6:]
+
+    expected = expected_header_1_columns
+    actual = headers[0]
+    if expected == actual:
+        expected = expected_header_columns[4:6]
+        actual = headers[1][4:6]
+    unexpected_header_columns = '|'.join(difflib.unified_diff(expected, actual)).split('\n')[3:]
+    if unexpected_header_columns:
+        raise ValueError("Expected vs. actual header columns: {}".format("\t".join(unexpected_header_columns)))
+
+    return expected_header_columns, rows
+
+
 def _parse_merged_pedigree_sample_manifest_format(rows, project):
     """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
 
@@ -318,29 +323,30 @@ def _parse_merged_pedigree_sample_manifest_format(rows, project):
     Returns:
          3-tuple: rows, sample_manifest_rows, kit_id
     """
-
     c = MergedPedigreeSampleManifestConstants
     kit_id = rows[0][c.KIT_ID_COLUMN]
 
+    is_no_validate_project = project.projectcategory_set.filter(name__in=NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES).exists()
     pedigree_rows = []
     sample_manifest_rows = []
     errors = []
     consent_codes = set()
     for row in rows:
         sample_manifest_rows.append({
-            column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES
+            column_name: row[column_name] for column_name in c.SAMPLE_MANIFEST_COLUMN_NAMES
         })
 
         pedigree_rows.append({
-            key: row[column_name] for column_name, key in MergedPedigreeSampleManifestConstants.MERGED_PEDIGREE_COLUMN_MAP.items()
+            key: row[column_name] for column_name, key in c.MERGED_PEDIGREE_COLUMN_MAP.items()
         })
 
-        missing_cols = {col for col in MergedPedigreeSampleManifestConstants.REQUIRED_COLUMNS if not row[col]}
-        if missing_cols:
-            individual_id = row[MergedPedigreeSampleManifestConstants.COLLABORATOR_SAMPLE_ID_COLUMN]
-            errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_cols))}')
+        if not is_no_validate_project:
+            missing_cols = {col for col in c.REQUIRED_COLUMNS if not row[col]}
+            if missing_cols:
+                individual_id = row[c.COLLABORATOR_SAMPLE_ID_COLUMN]
+                errors.append(f'{individual_id} is missing the following required columns: {", ".join(sorted(missing_cols))}')
 
-        consent_code = row[MergedPedigreeSampleManifestConstants.CONSENT_CODE_COLUMN]
+        consent_code = row[c.CONSENT_CODE_COLUMN]
         if consent_code:
             consent_codes.add(consent_code)
 

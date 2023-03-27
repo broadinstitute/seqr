@@ -669,7 +669,8 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             ['HG00735', 'NA19675', 'NA19678'], 'GRCh38', REQUEST_BODY)
 
     @responses.activate
-    def test_add_workspace_data(self):
+    @mock.patch('seqr.views.utils.individual_utils.Individual._compute_guid')
+    def test_add_workspace_data(self, mock_compute_indiv_guid):
         # Test insufficient Anvil workspace permission
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self.check_manager_login(url, login_redirect_url='/login/google-oauth2')
@@ -697,16 +698,18 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
             ' HG00731, HG00732, HG00733, NA19675_1, NA20870, NA20874')
 
         # Test a valid operation
+        mock_compute_indiv_guid.return_value = 'I0000020_hg00735'
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'familiesByGuid', 'familyNotesByGuid', 'individualsByGuid'})
-        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {'I0000019_hg00735', 'I000001_na19675', 'I000002_na19678'})
+        self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {'I0000020_hg00735', 'I000001_na19675', 'I000002_na19678'})
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000015_21'})
         self.assertEqual(list(response_json['familyNotesByGuid'].keys()), ['FAN000004_21_c_a_new_family'])
 
         self._assert_valid_operation(Project.objects.get(guid=PROJECT1_GUID))
 
+        mock_compute_indiv_guid.side_effect = ['I0000021_na19675_1', 'I0000022_na19678', 'I0000023_hg00735']
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self._test_mv_file_and_triggering_dag_exception(url, {'guid': PROJECT2_GUID}, PROJECT2_SAMPLES, 'GRCh37', REQUEST_BODY_ADD_DATA2)
 

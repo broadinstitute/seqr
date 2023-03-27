@@ -20,7 +20,7 @@ import { getLocus } from '../variants/VariantUtils'
 import { AFFECTED, GENOME_VERSION_38, getVariantMainGeneId } from '../../../utils/constants'
 import {
   ALIGNMENT_TYPE, COVERAGE_TYPE, GCNV_TYPE, JUNCTION_TYPE, BUTTON_PROPS, TRACK_OPTIONS,
-  MAPPABILITY_TRACK_OPTIONS, CRAM_PROXY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
+  MAPPABILITY_TRACK_OPTIONS, BAM_TRACK_OPTIONS,
   DNA_TRACK_TYPE_OPTIONS, RNA_TRACK_TYPE_OPTIONS, IGV_OPTIONS, REFERENCE_LOOKUP, RNA_TRACK_TYPE_LOOKUP,
   JUNCTION_TRACK_FIELDS, NORM_GTEX_TRACK_OPTIONS, AGG_GTEX_TRACK_OPTIONS,
 } from './constants'
@@ -72,14 +72,10 @@ const getIgvTracks = (igvSampleIndividuals, sortedIndividuals, sampleTypes) => {
 
         if (type === ALIGNMENT_TYPE) {
           if (sample.filePath.endsWith('.cram')) {
-            if (sample.filePath.startsWith('gs://')) {
-              Object.assign(track, {
-                format: 'cram',
-                indexURL: `${track.url}.crai`,
-              })
-            } else {
-              Object.assign(track, CRAM_PROXY_TRACK_OPTIONS)
-            }
+            Object.assign(track, {
+              format: 'cram',
+              indexURL: `${track.url}.crai`,
+            })
           } else {
             Object.assign(track, BAM_TRACK_OPTIONS)
           }

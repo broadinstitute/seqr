@@ -21,7 +21,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Project, CAN_EDIT, Sample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession
-from seqr.views.utils.dataset_utils import VCF_FILE_EXTENSIONS
+from seqr.views.utils.dataset_utils import VCF_FILE_EXTENSIONS, SEQR_DATSETS_GS_PATH
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.file_utils import load_uploaded_file
@@ -320,11 +320,8 @@ def _wait_for_service_account_access(user, namespace, name):
 
 
 def _get_loading_project_path(project, sample_type):
-    return 'gs://seqr-datasets/v02/{genome_version}/AnVIL_{sample_type}/{guid}/'.format(
-        guid=project.guid,
-        sample_type=sample_type,
-        genome_version=GENOME_VERSION_LOOKUP.get(project.genome_version),
-    )
+    return f'{SEQR_DATSETS_GS_PATH}/{project.get_genome_version_display()}/AnVIL_{sample_type}/{project.guid}/'
+
 
 def _get_seqr_project_url(project):
     return f'{BASE_URL}project/{project.guid}/project_page'
