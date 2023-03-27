@@ -205,10 +205,9 @@ def _format_value(value, column):
     format_func = JsonConstants.FORMAT_COLUMNS.get(column)
     if format_func:
         if (value or column in {JsonConstants.SEX_COLUMN, JsonConstants.AFFECTED_COLUMN}):
-            parsed_value = format_func(value)
-            if parsed_value is None and column not in JsonConstants.JSON_COLUMNS:
+            value = format_func(value)
+            if value is None and column not in JsonConstants.JSON_COLUMNS:
                 raise ValueError()
-            value = parsed_value
     elif value == '':
         value = None
     return value
