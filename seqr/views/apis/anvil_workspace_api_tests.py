@@ -5,7 +5,7 @@ import mock
 from django.urls.base import reverse
 import responses
 
-from seqr.models import Project
+from seqr.models import Project, Family, Individual
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
     validate_anvil_vcf, grant_workspace_access, add_workspace_data, get_anvil_vcf_list
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, TEST_WORKSPACE_NAMESPACE,\
@@ -834,6 +834,32 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
                    project_name=project.name)
         self.mock_slack.assert_called_with(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, slack_message)
         self.mock_send_email.assert_not_called()
+
+        # test database models
+        family_model_data = list(Family.objects.filter(project=project).values('family_id', 'familynote__note'))
+        self.assertEqual(len(family_model_data), 14 if test_add_data else 2)
+        self.assertIn({
+            'family_id': '1',
+            'familynote__note':  '*\r\n                        Fåmily analysis nøtes\r\n*' if test_add_data else None,
+        }, family_model_data)
+        self.assertIn({'family_id': '21', 'familynote__note': 'a new family'}, family_model_data)
+
+        individual_model_data = list(Individual.objects.filter(family__project=project).values(
+            'family__family_id', 'individual_id', 'mother__individual_id', 'father__individual_id', 'sex', 'affected', 'notes',
+        ))
+        self.assertEqual(len(individual_model_data), 15 if test_add_data else 3)
+        self.assertIn({
+            'family__family_id': '21', 'individual_id': 'HG00735', 'mother__individual_id': None,
+            'father__individual_id': None, 'sex': 'U', 'affected': 'U', 'notes': None,
+        }, individual_model_data)
+        self.assertIn({
+            'family__family_id': '1', 'individual_id': 'NA19675', 'mother__individual_id': None,
+            'father__individual_id': 'NA19678', 'sex': 'F', 'affected': 'A', 'notes': 'A affected individual, test1-zsf',
+        }, individual_model_data)
+        self.assertIn({
+            'family__family_id': '1', 'individual_id': 'NA19678', 'mother__individual_id': None,
+            'father__individual_id': None, 'sex': 'M', 'affected': 'N', 'notes': 'a individual note'
+        }, individual_model_data)
 
     def _test_mv_file_and_triggering_dag_exception(self, url, workspace, samples, genome_version, request_body):
         # Test saving ID file exception
