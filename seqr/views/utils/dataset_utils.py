@@ -270,7 +270,7 @@ def _match_and_update_rna_samples(
     sample_id_to_tissue_type,
 ):
     def _get_unmatched_error(sample_keys):
-        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _, in sample_keys]))))
+        return raise_unmatched_error_template.format(sample_ids=(', '.join(sorted([sample_id for sample_id, _ in sample_keys]))))
 
     samples = Sample.objects.select_related('individual__family__project').filter(
         individual__family__project__in=projects,
@@ -365,6 +365,8 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     if missing_cols:
         raise ValueError(f'Invalid file: missing column(s) {", ".join(sorted(missing_cols))}')
 
+    warnings = []
+
     sample_id_to_tissue_type = {}
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
@@ -373,8 +375,9 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
             if sample_id in sample_id_to_tissue_type:
                 prev_tissue_type = sample_id_to_tissue_type[sample_id]
                 if tissue_type != prev_tissue_type:
-                    raise ValueError(f'Mismatched tissue types for sample {sample_id}:'
-                                     f' {REVERSE_TISSUE_TYPE[prev_tissue_type]}, {REVERSE_TISSUE_TYPE[tissue_type]}')
+                    warnings.append(f'Skipped loading row with mismatched tissue types for sample {sample_id}:'
+                                    f' {REVERSE_TISSUE_TYPE[prev_tissue_type]}, {REVERSE_TISSUE_TYPE[tissue_type]}')
+                    continue
             sample_id_to_tissue_type[sample_id] = tissue_type
 
             gene_id = row_dict['gene_id']
@@ -404,8 +407,6 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         raise_unmatched_error_template=None if ignore_extra_samples else 'Unable to find matches for the following samples: {sample_ids}',
         sample_id_to_tissue_type=sample_id_to_tissue_type,
     )
-
-    warnings = []
 
     # Delete old data
     to_delete = model_cls.objects.filter(sample__in=samples).exclude(sample__data_source=data_source)

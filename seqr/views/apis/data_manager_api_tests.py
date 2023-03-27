@@ -628,7 +628,6 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['NA19675_D3', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', '', 0.04, 0.112, 1.9],
             ],
-            'skipped_samples': 'NA19675_D3',
             'num_parsed_samples': 3,
             'initial_model_count': 3,
             'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
@@ -639,6 +638,7 @@ class DataManagerAPITest(AuthenticationTestCase):
                  'isSignificant': True},
             ],
             'sample_guid': RNA_SAMPLE_GUID,
+            'warnings': ['Skipped loading for the following 1 unmatched samples: NA19675_D3']
         },
         'tpm': {
             'model_cls': RnaSeqTpm,
@@ -656,8 +656,8 @@ class DataManagerAPITest(AuthenticationTestCase):
                 ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19675_D2', 'fibroblasts', 0.05],
             ],
-            'skipped_samples': 'NA19675_D3, NA20878',
             'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
             'num_parsed_samples': 4,
@@ -667,6 +667,8 @@ class DataManagerAPITest(AuthenticationTestCase):
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750',0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
+            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19675_D2: muscle, fibroblasts',
+                         'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']
         },
     }
 
@@ -808,15 +810,13 @@ class DataManagerAPITest(AuthenticationTestCase):
                     params['new_data'], params["num_parsed_samples"], 2,
                     '1kg project nåme with uniçøde, Test Reprocessed Project', 2, 16, 1)
                 self.assertTrue(params['sample_guid'] in response_json['sampleGuids'])
-                warnings = [f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
-                            f'unmatched samples: {params["skipped_samples"]}']
                 deleted_count = params.get('deleted_count', params['initial_model_count'])
                 mock_model_logger.info.assert_called_with(
                     f'delete {model_cls.__name__}s', self.data_manager_user,
                     db_update={'dbEntity': model_cls.__name__, 'numEntities': deleted_count,
                                'parentEntityIds': {params['sample_guid']}, 'updateType': 'bulk_delete'}
                 )
-                mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in warnings])
+                mock_logger.warning.assert_has_calls([mock.call(warn_log, self.data_manager_user) for warn_log in params['warnings']])
                 self.assertEqual(mock_send_slack.call_count, 2)
                 mock_send_slack.assert_has_calls([
                     mock.call(
