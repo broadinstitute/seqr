@@ -183,8 +183,7 @@ def project_families(request, project_guid):
     family_models = Family.objects.filter(project=project).annotate(
         metadata_individual_count=Count('individual', filter=Q(
             individual__features__0__isnull=False, individual__birth_year__isnull=False,
-            individual__population__isnull=False, individual__consanguinity__isnull=False,
-            individual__proband_relationship__isnull=False,
+            individual__population__isnull=False, individual__proband_relationship__isnull=False,
         ))
     )
     family_annotations = dict(
