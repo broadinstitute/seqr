@@ -9,7 +9,7 @@ from seqr.views.apis.data_manager_api import elasticsearch_status, upload_qc_pip
     update_rna_seq, load_rna_seq_sample_data, load_phenotype_prioritization_data, write_pedigree
 from seqr.views.utils.orm_to_json_utils import get_json_for_rna_seq_outliers, _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, urllib3_responses
-from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, Sample, Project, PhenotypePrioritization
+from seqr.models import Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, Sample, Project, PhenotypePrioritization
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -666,6 +666,40 @@ class DataManagerAPITest(AuthenticationTestCase):
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
             'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750',0.064)],
+            'sample_guid': RNA_TPM_SAMPLE_GUID,
+            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19675_D2: muscle, fibroblasts',
+                         'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']
+        },
+        'splice': {
+            'model_cls': RnaSeqSpliceOutlier,
+            'message_data_type': 'Splice Junction',
+            'header': ['chrom', 'start', 'end', 'strand', 'individualId', 'gene_name', 'type', 'pValue', 'zScore',
+                       'deltaPsi', 'readCount', 'geneId', 'tissue', 'dotSize', 'rareDiseaseSamplesWithJunction',
+                       'rareDiseaseSamplesTotal'],
+            'optional_headers': ['individual_id'],
+            'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', '', 'muscle', 1.34],
+            'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678',
+                                 'fibroblasts', 0.064],
+            'reused_indiv_id_data': ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20870', 'fibroblasts',
+                                     0.064],
+            'new_data': [
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+                ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
+                ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
+                ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
+                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19675_D2', 'fibroblasts', 0.05],
+            ],
+            'exist_sample_tissue_type': 'M',
+            'created_sample_tissue_type': 'F',
+            'num_parsed_samples': 4,
+            'initial_model_count': 4,
+            'deleted_count': 1,
+            'parsed_file_data': RNA_TPM_SAMPLE_DATA,
+            'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
+            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
             'warnings': ['Skipped loading row with mismatched tissue types for sample NA19675_D2: muscle, fibroblasts',
                          'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']

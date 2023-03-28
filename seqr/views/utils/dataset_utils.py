@@ -507,7 +507,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
 
 def _notify_rna_loading(model_cls, sample_projects):
-    data_type = 'Outlier' if model_cls == RnaSeqOutlier else 'Expression'
+    data_type = 'Outlier' if model_cls == RnaSeqOutlier else 'Expression' if model_cls == RnaSeqTpm else 'Splice Junction'
     for project_agg in sample_projects:
         new_ids = project_agg["new_sample_ids"]
         project_link = f'<{BASE_URL}project/{project_agg["guid"]}/project_page|{project_agg["name"]}>'
