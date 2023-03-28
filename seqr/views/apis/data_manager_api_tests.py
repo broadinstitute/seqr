@@ -411,9 +411,8 @@ class DataManagerAPITest(AuthenticationTestCase):
 
         self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
 
-    @mock.patch('seqr.utils.file_utils.logger')
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
-    def test_upload_qc_pipeline_output(self, mock_subprocess, mock_file_logger):
+    def test_upload_qc_pipeline_output(self, mock_subprocess):
         url = reverse(upload_qc_pipeline_output,)
         self.check_data_manager_login(url)
 
@@ -422,6 +421,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         })
 
         # Test missing file
+        self.reset_logs()
         mock_does_file_exist = mock.MagicMock()
         mock_subprocess.side_effect = [mock_does_file_exist]
         mock_does_file_exist.wait.return_value = 1
@@ -431,13 +431,13 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertListEqual(
             response.json()['errors'],
             ['File not found: gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv'])
-        mock_file_logger.info.assert_has_calls([
-            mock.call(
-                '==> gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv',
-                self.data_manager_user,
-            ),
-            mock.call('BucketNotFoundException: 404 gs://seqr-datsets bucket does not exist.', self.data_manager_user),
-        ])
+        self.assert_json_logs([{
+            'message': '==> gsutil ls gs://seqr-datasets/v02/GRCh38/RDG_WES_Broad_Internal/v15/sample_qc/final_output/seqr_sample_qc.tsv',
+            'user': self.data_manager_user.email,
+        }, {
+            'message': 'BucketNotFoundException: 404 gs://seqr-datsets bucket does not exist.',
+            'user': self.data_manager_user.email,
+        }])
 
         # Test missing columns
         mock_does_file_exist.wait.return_value = 0

@@ -4,7 +4,9 @@ from copy import deepcopy
 from django.contrib.auth.models import User, Group
 from django.test import TestCase
 from guardian.shortcuts import assign_perm
+from io import StringIO
 import json
+import logging
 import mock
 import re
 from urllib.parse import quote_plus, urlparse
@@ -50,6 +52,9 @@ class AuthenticationTestCase(TestCase):
         self.mock_analyst_group.__bool__.side_effect = lambda: bool(str(self.mock_analyst_group))
         self.mock_analyst_group.resolve_expression.return_value = 'analysts'
         self.addCleanup(patcher.stop)
+
+        self.log_stream = StringIO()
+        logging.getLogger().handlers[0].stream = self.log_stream
 
     @classmethod
     def setUpTestData(cls):
@@ -222,6 +227,24 @@ class AuthenticationTestCase(TestCase):
         response = get_response() if get_response else self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+    def reset_logs(self):
+        self.log_stream.truncate(0)
+        self.log_stream.seek(0)
+
+    def assert_json_logs(self, expected):
+        logs_iter = iter(self.log_stream.getvalue().split('\n'))
+        for expected_log in expected:
+            log = next(self._safe_load_json(row) for row in logs_iter)
+            self.assertDictEqual(log, {'timestamp': mock.ANY, 'severity': 'INFO', **expected_log})
+
+    @staticmethod
+    def _safe_load_json(data):
+        try:
+            return json.loads(data)
+        except json.decoder.JSONDecodeError:
+            return None
+
 
 TEST_WORKSPACE_NAMESPACE = 'my-seqr-billing'
 TEST_WORKSPACE_NAME = 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de'
