@@ -164,6 +164,7 @@ def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None):
             value = (row_dict.get(key) or '').strip()
             if column in required_columns and not value:
                 errors.append(f'Missing {_to_title_case(_to_snake_case(column))} in row #{i + 1}')
+                continue
 
             try:
                 value = _format_value(value, column)
