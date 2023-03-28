@@ -18,9 +18,11 @@ LOAD_SAMPLE_DATA = [
      "Notes", "familyNotes"],
     ["1", "NA19675", "NA19675_1", "NA19678", "", "Female", "Affected", "A affected individual, test1-zsf", ""],
     ["1", "NA19678", "", "", "", "Male", "Unaffected", "a individual note", ""],
-    ["21", "HG00735", "", "", "", "", "", "", "a new family"]]
+    ["21", "HG00735", "", "", "", "Unknown", "Unknown", "", "a new family"]]
 
 BAD_SAMPLE_DATA = [["1", "NA19674", "NA19674_1", "NA19678", "NA19679", "Female", "Affected", "A affected individual, test1-zsf", ""]]
+
+MISSING_REQUIRED_SAMPLE_DATA = [["21", "HG00736", "", "", "", "", "", "", ""]]
 
 LOAD_SAMPLE_DATA_EXTRA_SAMPLE = LOAD_SAMPLE_DATA + [["1", "NA19679", "", "", "", "Male", "Affected", "", ""]]
 
@@ -727,6 +729,12 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], ['Missing required columns: Affected, Sex'])
+
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA + MISSING_REQUIRED_SAMPLE_DATA
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertListEqual(response_json['errors'], ['Missing Sex in row #4', 'Missing Affected in row #4'])
 
         # test sample data error
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA
