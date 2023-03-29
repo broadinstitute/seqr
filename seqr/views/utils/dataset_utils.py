@@ -278,19 +278,20 @@ def _match_and_update_rna_samples(
         sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
     )
     tissues = set(sample_id_to_tissue_type.values())
-    query = query & Q(tissue_type__isnull=True) if None in tissues else query & Q(tissue_type__in=tissues)
+    query &= Q(tissue_type__isnull=True) if tissues == {None} else Q(tissue_type__in=tissues)
     samples = Sample.objects.select_related('individual__family__project').filter(query)
 
-    samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples and
-               sample_id_to_tissue_type[(s.sample_id, s.individual.family.project.name)] == s.tissue_type]
+    existing_samples = [s for s in samples if (s.sample_id, s.individual.family.project.name) in sample_project_tuples
+                        and sample_id_to_tissue_type[(s.sample_id, s.individual.family.project.name)] == s.tissue_type]
 
     samples, _, remaining_sample_keys = _find_or_create_missing_sample_records(
-        samples=samples,
+        samples=existing_samples,
         projects=projects,
         user=user,
         sample_count=len(sample_project_tuples),
         get_individual_sample_key=lambda key: (sample_id_to_individual_id_mapping.get(key[0], key[0]), key[1]),
-        remaining_sample_keys=set(sample_project_tuples) - {(s.sample_id, s.individual.family.project.name) for s in samples},
+        remaining_sample_keys=set(sample_project_tuples) -
+                              {(s.sample_id, s.individual.family.project.name) for s in existing_samples},
         raise_no_match_error=False,
         get_unmatched_error=_get_unmatched_error if raise_unmatched_error_template else None,
         create_active=True,
@@ -303,7 +304,7 @@ def _match_and_update_rna_samples(
         loaded_date=timezone.now(),
     )
 
-    return samples, {sample_id for sample_id, _ in remaining_sample_keys}
+    return existing_samples, samples, {sample_id for sample_id, _ in remaining_sample_keys}
 
 def _parse_tsv_row(row):
     return [s.strip().strip('"') for s in row.rstrip('\n').split('\t')]
@@ -370,16 +371,18 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     warnings = []
 
     sample_id_to_tissue_type = {}
+    samples_with_conflict_tissues = set()
     for line in tqdm(f, unit=' rows'):
         row = dict(zip(header, _parse_tsv_row(line)))
         for sample_id, row_dict in parse_row(row):
-            tissue_type = TISSUE_TYPE_MAP.get(row_dict.pop(TISSUE_COL, None), None)
+            tissue_type = TISSUE_TYPE_MAP.get(row_dict.pop(TISSUE_COL, None))
             project = row_dict.pop(PROJECT_COL)
             if (sample_id, project) in sample_id_to_tissue_type:
                 prev_tissue_type = sample_id_to_tissue_type[(sample_id, project)]
                 if tissue_type != prev_tissue_type:
                     warnings.append(f'Skipped loading row with mismatched tissue types for sample {sample_id}:'
                                     f' {REVERSE_TISSUE_TYPE[prev_tissue_type]}, {REVERSE_TISSUE_TYPE[tissue_type]}')
+                    samples_with_conflict_tissues |= {(sample_id, project)}
                     continue
 
             sample_id_to_tissue_type[(sample_id, project)] = tissue_type
@@ -396,12 +399,16 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
 
             samples_by_id[(sample_id, project)][gene_id] = row_dict
 
+    for key in samples_with_conflict_tissues:
+        sample_id_to_tissue_type.pop(key)
+        samples_by_id.pop(key)
+
     message = f'Parsed {len(samples_by_id)} RNA-seq samples'
     info = [message]
     logger.info(message, user)
 
     data_source = file_path.split('/')[-1].split('_-_')[-1]
-    samples, remaining_sample_ids = _match_and_update_rna_samples(
+    existing_samples, samples, remaining_sample_ids = _match_and_update_rna_samples(
         projects=get_internal_projects(),
         user=user,
         sample_project_tuples=samples_by_id.keys(),
@@ -417,9 +424,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
     if to_delete:
         model_cls.bulk_delete(user, to_delete)
 
-    samples_to_update = [s.id for s in samples if s.data_source != data_source]
-    if samples_to_update:
-        Sample.bulk_update(user, {'data_source': data_source}, id__in=samples_to_update)
+    Sample.bulk_update(user, {'data_source': data_source}, queryset=Sample.objects.filter(id__in={s.id for s in existing_samples}))
 
     loaded_sample_ids = set(model_cls.objects.filter(sample__in=samples).values_list('sample_id', flat=True).distinct())
     prefetch_related_objects(samples, 'individual__family__project')  # newly created samples need prefetching
