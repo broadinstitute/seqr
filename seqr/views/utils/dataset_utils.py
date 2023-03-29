@@ -10,7 +10,7 @@ from seqr.models import Sample, Individual, Family, Project, RnaSeqOutlier, RnaS
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.elasticsearch.utils import get_es_client, get_index_metadata
 from seqr.utils.file_utils import file_iter
-from seqr.utils.logging_utils import log_model_bulk_update, SeqrLogger
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.file_utils import parse_file
 from seqr.views.utils.permissions_utils import get_internal_projects
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case
@@ -158,7 +158,6 @@ def _find_or_create_missing_sample_records(
                 **kwargs
             ) for sample_key, individual in sample_id_to_individual_record.items()]
         samples += list(Sample.bulk_create(user, new_samples))
-        log_model_bulk_update(logger, new_samples, user, 'create')
 
     return samples, matched_individual_ids, remaining_sample_keys
 
@@ -380,7 +379,7 @@ def _load_rna_seq(model_cls, file_path, user, mapping_file, ignore_extra_samples
         sample_id_to_individual_id_mapping = load_mapping_file_content(mapping_file)
 
     samples_by_id = defaultdict(dict)
-    f = file_iter(file_path)
+    f = file_iter(file_path, user=user)
     header = _parse_tsv_row(next(f))
     missing_cols = set(expected_columns) - set(header)
     if missing_cols:
@@ -493,9 +492,9 @@ def _parse_phenotype_pri_row(row):
     yield record
 
 
-def load_phenotype_prioritization_data_file(file_path):
+def load_phenotype_prioritization_data_file(file_path, user):
     data_by_project_sample_id = defaultdict(lambda: defaultdict(list))
-    f = file_iter(file_path)
+    f = file_iter(file_path, user=user)
     header = _parse_tsv_row(next(f))
     missing_cols = [col for col in PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER if col not in header]
     if missing_cols:

@@ -53,8 +53,8 @@ class AuthenticationTestCase(TestCase):
         self.mock_analyst_group.resolve_expression.return_value = 'analysts'
         self.addCleanup(patcher.stop)
 
-        self.log_stream = StringIO()
-        logging.getLogger().handlers[0].stream = self.log_stream
+        self._log_stream = StringIO()
+        logging.getLogger().handlers[0].stream = self._log_stream
 
     @classmethod
     def setUpTestData(cls):
@@ -229,14 +229,15 @@ class AuthenticationTestCase(TestCase):
         self.assertEqual(response.json()['error'], 'Permission Denied')
 
     def reset_logs(self):
-        self.log_stream.truncate(0)
-        self.log_stream.seek(0)
+        self._log_stream.truncate(0)
+        self._log_stream.seek(0)
 
-    def assert_json_logs(self, expected):
-        logs_iter = iter(self.log_stream.getvalue().split('\n'))
-        for expected_log in expected:
+    def assert_json_logs(self, user, expected):
+        logs_iter = iter(self._log_stream.getvalue().split('\n'))
+        for message, extra in expected:
             log = next(self._safe_load_json(row) for row in logs_iter)
-            self.assertDictEqual(log, {'timestamp': mock.ANY, 'severity': 'INFO', **expected_log})
+            self.assertDictEqual(
+                log, {'timestamp': mock.ANY, 'severity': 'INFO', 'user': user.email, 'message': message, **(extra or {})})
 
     @staticmethod
     def _safe_load_json(data):
