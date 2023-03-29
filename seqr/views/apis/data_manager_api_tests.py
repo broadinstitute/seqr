@@ -2,6 +2,7 @@ from datetime import datetime
 from django.urls.base import reverse
 import json
 import mock
+import re
 from requests import HTTPError
 import responses
 
@@ -622,7 +623,11 @@ class DataManagerAPITest(AuthenticationTestCase):
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
             'duplicated_indiv_id_data': [
                 ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'detail1', 0.064, '0.0000057', 7.8],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233751', 'detail1', 0.064, '0.0000057', 7.8],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail2', 0.01, 0.13, -3.1],
+            ],
+            'write_data': [
+                'S_NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "p_value": "0.064", "p_adjust": "0.0000057", "z_score": "7.8"}}\n',
+                'S_NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "p_value": "0.01", "p_adjust": "0.13", "z_score": "-3.1"}}\n'
             ],
             'new_data': [
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'detail1', 0.01, 0.13, -3.1],
@@ -651,18 +656,27 @@ class DataManagerAPITest(AuthenticationTestCase):
             'loaded_data_row': ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', '', 'muscle', 1.34],
             'no_existing_data': ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'fibroblasts', 0.064],
             'duplicated_indiv_id_data': [
-                ['NA20870', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20870', 'fibroblasts', 0.01],
-                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'muscle', 1.34],
+                ['NA20870', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20870', 'fibroblasts', 7.8],
+                ['NA20870', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA20870', 'muscle', 0.064],
             ],
+            'write_data': ['S_NA20870\t\t{"ENSG00000240361": {"gene_id": "ENSG00000240361", "tpm": "7.8"}}\n',
+                           'S_NA20870\t\t{"ENSG00000233750": {"gene_id": "ENSG00000233750", "tpm": "0.064"}}\n'],
             'new_data': [
+                # existing sample NA19675_D2
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000240361', 'NA19675_D2', 'muscle', 7.8],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D2', 'muscle', 0.064],
                 ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135953', 'NA19675_D2', 'muscle', '0.0'],
+                # no matched individual NA19675_D3
                 ['NA19675_D3', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'fibroblasts', 0.064],
+                # skip GTEX samples
                 ['GTEX_001', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19675_D3', 'whole_blood', 1.95],
+                # a different project sample NA20888
                 ['NA20888', 'Test Reprocessed Project', 'ENSG00000240361', 'NA20888', 'fibroblasts', 0.112],
+                # a project mismatched sample NA20878
                 ['NA20878', 'Test Reprocessed Project', 'ENSG00000233750', 'NA20878', 'fibroblasts', 0.064],
-                ['NA19675_D2', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19675_D2', 'fibroblasts', 0.05],
+                # conflict tissue types samples
+                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000233750', 'NA19678', 'muscle', 1.34],
+                ['NA19678', '1kg project nåme with uniçøde', 'ENSG00000135954', 'NA19678', 'fibroblasts', 0.05],
             ],
             'exist_sample_tissue_type': 'M',
             'created_sample_tissue_type': 'F',
@@ -671,9 +685,9 @@ class DataManagerAPITest(AuthenticationTestCase):
             'deleted_count': 1,
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'get_models_json': lambda models: list(models.values_list('gene_id', 'tpm')),
-            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750',0.064)],
+            'expected_models_json': [('ENSG00000240361', 7.8), ('ENSG00000233750', 0.064)],
             'sample_guid': RNA_TPM_SAMPLE_GUID,
-            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19675_D2: muscle, fibroblasts',
+            'warnings': ['Skipped loading row with mismatched tissue types for sample NA19678: muscle, fibroblasts',
                          'Skipped loading for the following 2 unmatched samples: NA19675_D3, NA20878']
         },
     }
@@ -687,7 +701,7 @@ class DataManagerAPITest(AuthenticationTestCase):
         self.assertTrue(sample.is_active)
         self.assertIsNone(sample.elasticsearch_index)
         self.assertEqual(sample.sample_type, 'RNA')
-        self.assertEqual(sample.tissue_type or tissue_type, tissue_type)
+        self.assertEqual(sample.tissue_type, tissue_type)
         self.assertEqual(sample.data_source, data_source)
         return sample.guid
 
@@ -867,9 +881,12 @@ class DataManagerAPITest(AuthenticationTestCase):
 
                 # Test loading data when where are duplicated individual ids in different projects.
                 data = params['duplicated_indiv_id_data']
+                mock_writes = []
                 _test_basic_data_loading(data, 2, 2, (20, 'Test Reprocessed Project'), body,
                                          project_names='1kg project nåme with uniçøde, Test Reprocessed Project',
                                          num_created_samples=2)
+                self.assertListEqual([re.sub(r'^S[0-9]*', 'S', s) for s in mock_writes], params['write_data'])
+
 
     @mock.patch('seqr.views.apis.data_manager_api.os')
     @mock.patch('seqr.views.apis.data_manager_api.gzip.open')
